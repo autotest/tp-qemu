@@ -1,4 +1,4 @@
-Virt-Test Maintainers
+tp-qemu maintainers
 ====================
 
 The intention of this file is not to establish who owns what portions of the
@@ -13,41 +13,10 @@ development mailing list and not any specific individual privately.
 Pull request maintenance - QEMU subtests
 ----------------------------------------
 
-M: Lucas Meneghel Rodrigues <lmr@redhat.com>
-M: Cleber Rosa <crosa@redhat.com>
 M: Jiri Zupka <jzupka@redhat.com>
 M: Lukas Doktor <ldoktor@redhat.com>
 M: Yiqiao Pu <ypu@redhat.com>
 M: Feng Yang <fyang@redhat.com>
-
-
-Pull request maintenance - Libvirt subtests
--------------------------------------------
-
-M: Christopher Evich <cevich@redhat.com>
-M: Yu Mingfei <yumingfei@cn.fujitsu.com>
-M: Yang Dongsheng <yangds.fnst@cn.fujitsu.com>
-M: Li Yang <liyang.fnst@cn.fujitsu.com>
-
-
-
-Pull request maintenance - Libvirt subtests
--------------------------------------------
-
-M: Christopher Evich <cevich@redhat.com>
-
-
-Pull request maintenance - Libguestfs
--------------------------------------
-
-M: Yu Mingfei <yumingfei@cn.fujitsu.com>
-
-
-Pull request maintenance - v2v subtests
----------------------------------------
-
-M: Alex Jia <ajia@redhat.com>
-
 
 Pull request maintenance - openvswitch subtests
 ------------------------------------------------

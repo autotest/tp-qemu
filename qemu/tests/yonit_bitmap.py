@@ -2,7 +2,7 @@ import logging
 import signal
 from autotest.client.shared import error
 from virttest import utils_misc
-from tests import guest_test
+from generic.tests import guest_test
 
 
 @error.context_aware

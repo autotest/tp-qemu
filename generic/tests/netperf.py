@@ -341,7 +341,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 fd.flush()
 
                 kill_cmd = "killall netperf"
-                if params.get("os_type") = "windows":
+                if params.get("os_type") == "windows":
                     kill_cmd = "taskkill /F /IM netperf*"
                 ssh_cmd(clients[-1], kill_cmd)
 

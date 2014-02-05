@@ -21,7 +21,7 @@ def run(test, params, env):
     9) Re-enable primary link of guest and hotunplug the plug nics
 
     BEWARE OF THE NETWORK BRIDGE DEVICE USED FOR THIS TEST ("nettype=bridge"
-    and "netdst=<bridgename>" param).  The KVM autotest default bridge virbr0,
+    and "netdst=<bridgename>" param).  The virt-test default bridge virbr0,
     leveraging libvirt, works fine for the purpose of this test. When using
     other bridges, the timeouts which usually happen when the bridge
     topology changes (that is, devices get added and removed) may cause random

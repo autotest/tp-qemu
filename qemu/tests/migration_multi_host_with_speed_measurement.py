@@ -7,7 +7,7 @@ from autotest.client.shared import error, utils
 from autotest.client.shared.barrier import listen_server
 from autotest.client.shared.syncdata import SyncData
 from virttest import utils_test, utils_misc
-from provider_lib import cpuflags
+from provider import cpuflags
 
 
 def run(test, params, env):

@@ -4,7 +4,7 @@ import time
 from autotest.client.shared import error
 from virttest import utils_test, remote, virt_vm, utils_misc
 from autotest.client.shared import utils
-from provider_lib import cpuflags
+from provider import cpuflags
 
 
 def run(test, params, env):

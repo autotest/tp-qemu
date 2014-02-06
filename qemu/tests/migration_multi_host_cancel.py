@@ -7,7 +7,7 @@ import fcntl
 from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData
 from virttest import utils_test, utils_misc, remote, virt_vm
-from provider_lib import cpuflags
+from provider import cpuflags
 
 
 @error.context_aware

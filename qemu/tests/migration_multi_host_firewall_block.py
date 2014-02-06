@@ -4,7 +4,7 @@ import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_test, remote, virt_vm, utils_misc, qemu_monitor
-from provider_lib import cpuflags
+from provider import cpuflags
 
 
 @error.context_aware

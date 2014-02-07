@@ -1,12 +1,9 @@
 import logging
-import socket
-import time
-import errno
 import os
-import fcntl
 from autotest.client.shared import error
-from autotest.client.shared.syncdata import SyncData
-from virttest import utils_test, utils_misc, remote, virt_vm
+from virttest import remote
+from virttest import utils_test
+from virttest import virt_vm
 from provider import cpuflags
 
 

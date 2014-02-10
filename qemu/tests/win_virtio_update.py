@@ -104,7 +104,8 @@ def run(test, params, env):
 
         check_str[driver] = params_driver.get("check_str")
         check_cmds[driver] = params_driver.get("check_cmd")
-        op_cmds[driver] = params_driver.get("op_cmd")
+        if params_driver.get('op_cmd'):
+            op_cmds[driver] = params_driver["op_cmd"].split("::")
 
         if "pecheck.py" in check_cmds[driver]:
             setup_ps = True
@@ -229,8 +230,7 @@ def run(test, params, env):
         error.context("Do more operates in guest to check the driver",
                       logging.info)
         for driver in drivers_install:
-            if isinstance(op_cmds[driver], str):
+            if driver not in op_cmds:
+                continue
+            for cmd in op_cmds[driver]:
                 session.cmd(cmd)
-            else:
-                for cmd in op_cmds[driver]:
-                    session.cmd(cmd)

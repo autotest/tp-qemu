@@ -76,7 +76,7 @@ def run(test, params, env):
 
     def _create(cmd, img_name, fmt, img_size=None, base_img=None,
                 base_img_fmt=None, encrypted="no",
-                preallocated="no", cluster_size=None):
+                preallocated="off", cluster_size=None):
         """
         Simple wrapper of 'qemu-img create'
 
@@ -99,7 +99,7 @@ def run(test, params, env):
         cmd += " %s" % img_name
         if img_size:
             cmd += " %s" % img_size
-        if preallocated == "yes":
+        if preallocated == "metadata":
             cmd += " -o preallocation=metadata"
         if cluster_size is not None:
             cmd += " -o cluster_size=%s" % cluster_size
@@ -126,7 +126,7 @@ def run(test, params, env):
             img = device
         _create(cmd, img_name=img, fmt=image_format,
                 img_size=params["image_size_large"],
-                preallocated=params.get("preallocated", "no"))
+                preallocated=params.get("preallocated", "off"))
         os.remove(img)
 
     def _convert(cmd, output_fmt, img_name, output_filename,

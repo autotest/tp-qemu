@@ -87,22 +87,33 @@ def run(test, params, env):
         :param base_img: base image if create a snapshot image
         :param base_img_fmt: base image format if create a snapshot image
         :param encrypted: indicates whether the created image is encrypted
+        :param preallocated: if preallocation when create image,
+                             allowed values: off, metadata. Default is "off"
+        :param cluster_size: the cluster size for the image
         """
         cmd += " create"
+
         if encrypted == "yes":
             cmd += " -e"
         if base_img:
             cmd += " -b %s" % base_img
             if base_img_fmt:
                 cmd += " -F %s" % base_img_fmt
+
         cmd += " -f %s" % fmt
+
+        options = []
+        if preallocated != "off":
+            options.append("preallocation=%s" % preallocated)
+        if cluster_size is not None:
+            options.append("cluster_size=%s" % cluster_size)
+        if options:
+            cmd +=" -o %s" % ",".join(options)
+
         cmd += " %s" % img_name
         if img_size:
             cmd += " %s" % img_size
-        if preallocated == "metadata":
-            cmd += " -o preallocation=metadata"
-        if cluster_size is not None:
-            cmd += " -o cluster_size=%s" % cluster_size
+
         msg = "Creating image %s by command %s" % (img_name, cmd)
         error.context(msg, logging.info)
         utils.system(cmd, verbose=False)
@@ -126,7 +137,8 @@ def run(test, params, env):
             img = device
         _create(cmd, img_name=img, fmt=image_format,
                 img_size=params["image_size_large"],
-                preallocated=params.get("preallocated", "off"))
+                preallocated=params.get("preallocated", "off"),
+                cluster_size=params.get("image_cluster_size"))
         os.remove(img)
 
     def _convert(cmd, output_fmt, img_name, output_filename,

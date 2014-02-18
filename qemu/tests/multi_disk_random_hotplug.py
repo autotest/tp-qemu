@@ -460,4 +460,11 @@ def run(test, params, env):
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     # Check for various KVM failures
+    error.context("Validating VM after all disk hotplug/unplugs",
+                  logging.debug)
     vm.verify_alive()
+    out = session.cmd_output('dmesg')
+    if "I/O error" in out:
+        logging.warn(out)
+        raise error.TestWarn("I/O error messages occured in dmesg, check"
+                             "the log for details.")

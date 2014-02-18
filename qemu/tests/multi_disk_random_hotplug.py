@@ -201,27 +201,28 @@ def run(test, params, env):
             time.sleep(hotplug_sleep)
             hotplug_outputs.append(device.hotplug(monitor))
         time.sleep(hotplug_sleep)
-        failed = 0
-        passed = 0
-        unverif = 0
+        failed = []
+        passed = []
+        unverif = []
         for device in new_devices:      # Verify the hotplug status
             out = hotplug_outputs.pop(0)
             out = device.verify_hotplug(out, monitor)
             if out is True:
-                passed += 1
+                passed.append(str(device))
             elif out is False:
-                failed += 1
+                failed.append(str(device))
             else:
-                unverif += 1
-        if failed == 0 and unverif == 0:
-            logging.debug("%sHotplug status: verified %d", prefix, passed)
-        elif failed == 0:
-            logging.warn("%sHotplug status: verified %d, unverified %d",
+                unverif.append(str(device))
+        if not failed and not unverif:
+            logging.debug("%sAll hotplugs verified (%s)", prefix, len(passed))
+        elif not failed:
+            logging.warn("%sHotplug status:\nverified %s\nunverified %s",
                          prefix, passed, unverif)
         else:
-            logging.error("%sHotplug status: verified %d, unverified %d, "
-                          "failed %d", prefix, passed, unverif, failed)
-            raise error.TestFail("Hotplug of some devices failed.")
+            logging.error("%sHotplug status:\nverified %s\nunverified %s\n"
+                          "failed %s", prefix, passed, unverif, failed)
+            logging.error("qtree:\n%s", monitor.info("qtree", debug=False))
+            raise error.TestFail("%sHotplug of some devices failed.", prefix)
 
     def hotplug_serial(new_devices, monitor):
         _hotplug(new_devices[0], monitor)
@@ -279,9 +280,9 @@ def run(test, params, env):
                 if LOCK:
                     LOCK.release()
         time.sleep(unplug_sleep)
-        failed = 0
-        passed = 0
-        unverif = 0
+        failed = []
+        passed = []
+        unverif = []
         for device in unplug_devs:          # Verify unplugs
             _out = unplug_outs.pop(0)
             # unplug effect can be delayed as it waits for OS respone before
@@ -292,21 +293,22 @@ def run(test, params, env):
                     break
                 time.sleep(0.1)
             if out is True:
-                passed += 1
+                passed.append(str(device))
             elif out is False:
-                failed += 1
+                failed.append(str(device))
             else:
-                unverif += 1
+                unverif.append(str(device))
 
-        if failed == 0 and unverif == 0:
-            logging.debug("%sUnplug status: verified %d", prefix, passed)
-        elif failed == 0:
-            logging.warn("%sUnplug status: verified %d, unverified %d", prefix,
-                         passed, unverif)
+        if not failed and not unverif:
+            logging.debug("%sAll unplugs verified (%s)", prefix, len(passed))
+        elif not failed:
+            logging.warn("%sUnplug status:\nverified %s\nunverified %s",
+                         prefix, passed, unverif)
         else:
-            logging.error("%sUnplug status: verified %d, unverified %d, "
-                          "failed %d", prefix, passed, unverif, failed)
-            raise error.TestFail("Unplug of some devices failed.")
+            logging.error("%sUnplug status:\nverified %s\nunverified %s\n"
+                          "failed %s", prefix, passed, unverif, failed)
+            logging.error("qtree:\n%s", monitor.info("qtree", debug=False))
+            raise error.TestFail("%sUnplug of some devices failed.", prefix)
 
     def unplug_serial(new_devices, qdev, monitor):
         _unplug(new_devices[0], qdev, monitor)

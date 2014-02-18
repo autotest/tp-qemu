@@ -11,6 +11,7 @@ from autotest.client.shared import error
 from virttest import funcatexit, data_dir
 from virttest import qemu_qtree, utils_test, env_process
 from virttest.qemu_devices import utils
+from virttest.remote import LoginTimeoutError
 
 
 # qdev is not thread safe so in case of dangerous ops lock this thread
@@ -25,9 +26,12 @@ def stop_stresser(vm, stop_cmd):
     :param stop_cmd: Command to stop the stresser
     :type stop_cmd: string
     """
-    session = vm.wait_for_login(timeout=10)
-    session.cmd(stop_cmd)
-    session.close()
+    try:
+        session = vm.wait_for_login(timeout=10)
+        session.cmd(stop_cmd)
+        session.close()
+    except LoginTimeoutError:
+        vm.destroy(gracefully=False)
 
 
 # TODO: Remove this silly function when qdev vs. qtree comparison is available
@@ -415,6 +419,7 @@ def run(test, params, env):
         error.context("Verify disks after hotplug", logging.debug)
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
+        vm.verify_alive()
         proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
         verify_qtree(params, info_qtree, info_block, proc_scsi, qdev)
         qdev.set_clean()
@@ -439,6 +444,7 @@ def run(test, params, env):
         time.sleep(float(params.get('wait_after_unplug', 0)))
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
+        vm.verify_alive()
         proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
         verify_qtree(params, info_qtree, info_block, proc_scsi, qdev)
         # we verified the unplugs, set the state to 0

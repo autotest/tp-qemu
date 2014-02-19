@@ -82,29 +82,29 @@ static unsigned int print_leaf(unsigned int leaf, unsigned int idx)
 #define HYPERV_CPUID_IMPLEMENT_LIMITS           0x40000005
 #define KVM_CPUID_SIGNATURE_NEXT                0x40000100
 
-static void dump_kvm_leafs()
+static void dump_kvm_leafs(unsigned base)
 {
     unsigned int eax, ebx, ecx, edx;
 
     asm("cpuid"
         : "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
-        : "a" (KVM_CPUID_SIGNATURE));
+        : "a" (KVM_CPUID_SIGNATURE | base));
 
     /* "KVMKVMKVM\0\0\0" */
     if ((ebx == 0x4b4d564b) && (ecx == 0x564b4d56) && (edx == 0x4d)) {
-        print_leaf(KVM_CPUID_SIGNATURE, 0);
-        print_leaf(KVM_CPUID_FEATURES, 0);
+        print_leaf(base | KVM_CPUID_SIGNATURE, 0);
+        print_leaf(base | KVM_CPUID_FEATURES, 0);
 
     /* "Microsoft Hv" */
-    } else if ((ebx == 0x7263694d) && (ecx == 0x666f736f) &&
-               (edx == 0x76482074)) {
+    } else if (base == HYPERV_CPUID_VENDOR_AND_MAX_FUNCTIONS
+               && (ebx == 0x7263694d)
+               && (ecx == 0x666f736f) && (edx == 0x76482074)) {
         print_leaf(HYPERV_CPUID_VENDOR_AND_MAX_FUNCTIONS, 0);
         print_leaf(HYPERV_CPUID_INTERFACE, 0);
         print_leaf(HYPERV_CPUID_VERSION, 0);
         print_leaf(HYPERV_CPUID_FEATURES, 0);
         print_leaf(HYPERV_CPUID_ENLIGHTMENT_INFO, 0);
         print_leaf(HYPERV_CPUID_IMPLEMENT_LIMITS, 0);
-        print_leaf(KVM_CPUID_SIGNATURE_NEXT, 0);
     }
 }
 
@@ -140,5 +140,6 @@ void test()
             x2level = eax;
         }
    }
-   dump_kvm_leafs();
+   dump_kvm_leafs(KVM_CPUID_SIGNATURE);
+   dump_kvm_leafs(KVM_CPUID_SIGNATURE_NEXT);
 }

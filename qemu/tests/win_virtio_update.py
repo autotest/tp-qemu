@@ -66,7 +66,9 @@ def run(test, params, env):
             utils.system("cd /tmp/virtio_win; unzip *; rm -f *.zip")
 
         virtio_version = params.get("virtio_version", "unknown")
-        virtio_iso = params.get("cdrom_virtio", "/tmp/prewhql.iso")
+        virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
+                                         params.get("cdrom_virtio",
+                                                    "/tmp/prewhql.iso"))
         utils.system("mkisofs -J -o %s /tmp/virtio_win" % virtio_iso)
 
     drivers_install = re.split(";", params.get("drivers_install"))
@@ -104,7 +106,8 @@ def run(test, params, env):
 
         check_str[driver] = params_driver.get("check_str")
         check_cmds[driver] = params_driver.get("check_cmd")
-        op_cmds[driver] = params_driver.get("op_cmd")
+        if params_driver.get('op_cmd'):
+            op_cmds[driver] = params_driver["op_cmd"].split("::")
 
         if "pecheck.py" in check_cmds[driver]:
             setup_ps = True
@@ -229,8 +232,7 @@ def run(test, params, env):
         error.context("Do more operates in guest to check the driver",
                       logging.info)
         for driver in drivers_install:
-            if isinstance(op_cmds[driver], str):
+            if driver not in op_cmds:
+                continue
+            for cmd in op_cmds[driver]:
                 session.cmd(cmd)
-            else:
-                for cmd in op_cmds[driver]:
-                    session.cmd(cmd)

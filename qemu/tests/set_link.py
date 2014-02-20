@@ -105,12 +105,12 @@ def run(test, params, env):
         """
         if params.get("os_type") == "linux":
             if_operstate = utils_net.get_net_if_operstate(guest_ifname,
-                                                       session.cmd_output_safe)
+                                                          session.cmd_output_safe)
         else:
             if_operstate = utils_net.get_windows_nic_attribute(session,
                                                                "macaddress",
-                                                          vm.get_mac_address(),
-                                                         "netconnectionstatus")
+                                                               vm.get_mac_address(),
+                                                               "netconnectionstatus")
 
         if if_operstate != expect_status:
             err_msg = "Guest interface %s status error, " % guest_ifname

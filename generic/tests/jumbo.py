@@ -54,13 +54,13 @@ def run(test, params, env):
             guest_mtu_cmd = "ifconfig %s mtu %s" % (ethname, mtu)
         else:
             connection_id = utils_net.get_windows_nic_attribute(session,
-                    "macaddress", mac, "netconnectionid")
+                                                                "macaddress", mac, "netconnectionid")
 
             index = utils_net.get_windows_nic_attribute(session,
-                    "netconnectionid", connection_id, "index")
+                                                        "netconnectionid", connection_id, "index")
             if os_variant == "winxp":
                 pnpdevice_id = utils_net.get_windows_nic_attribute(session,
-                        "netconnectionid", connection_id, "pnpdeviceid")
+                                                                   "netconnectionid", connection_id, "pnpdeviceid")
                 cd_num = utils_misc.get_winutils_vol(session)
                 copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_num
                 session.cmd(copy_cmd)
@@ -83,7 +83,7 @@ def run(test, params, env):
 
         error.context("Chaning the MTU of host tap ...", logging.info)
         host_mtu_cmd = "ifconfig %s mtu %s"
-        #Before change macvtap mtu, must set the base interface mtu
+        # Before change macvtap mtu, must set the base interface mtu
         if params.get("nettype") == "macvtap":
             base_if = utils_net.get_macvtap_base_iface(params.get("netdst"))
             utils.run(host_mtu_cmd % (base_if, mtu))
@@ -121,8 +121,8 @@ def run(test, params, env):
         def large_frame_ping(count=100):
             logging.info("Large frame ping")
             _, output = utils_test.ping(guest_ip, count, interface=ifname,
-                                   packetsize=max_icmp_pkt_size,
-                                   timeout=float(count) * 2)
+                                        packetsize=max_icmp_pkt_size,
+                                        timeout=float(count) * 2)
             ratio = utils_test.get_loss_ratio(output)
             if ratio != 0:
                 raise error.TestFail("Loss ratio of large frame ping is %s" %

@@ -6,9 +6,11 @@ from virttest.staging import service
 
 
 class NTPTest(object):
+
     """
     This class is for ntpd test
     """
+
     def __init__(self, params, env):
         """
         Initialize the object and set a few attributes.
@@ -30,10 +32,10 @@ class NTPTest(object):
         self.vm = env.get_vm(self.vm_name)
         try:
             self.server_session = remote.wait_for_login('ssh',
-                                                     self.server_ip, "22",
-                                                     self.server_user,
-                                                     self.server_password,
-                                                     r"[\$#]\s*$")
+                                                        self.server_ip, "22",
+                                                        self.server_user,
+                                                        self.server_password,
+                                                        r"[\$#]\s*$")
             self.session = self.vm.wait_for_login()
         except remote.LoginTimeoutError, detail:
             raise error.TestNAError(str(detail))
@@ -55,9 +57,9 @@ class NTPTest(object):
         """
         logging.info("waiting for login server.....")
         self.server_hostname = self.server_session.\
-                               cmd_output('hostname').strip()
+            cmd_output('hostname').strip()
         logging.debug("service hostname is %s" % self.server_hostname)
-        cmd =  'echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock'
+        cmd = 'echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock'
         status = self.server_session.cmd_status(cmd)
         if status:
             raise error.TestError("set ZONE in server failed.")
@@ -94,7 +96,6 @@ class NTPTest(object):
         server_ntpd = service.Factory.create_service("ntpd", run=server_run.run)
         server_ntpd.restart()
 
-
     # Host configuration
     def host_config(self):
         """
@@ -105,7 +106,7 @@ class NTPTest(object):
         4.start ntpd service
         """
         # Set the time zone to New_York
-        cmd =  ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
+        cmd = ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
         try:
             utils.run(cmd, ignore_status=False)
         except error.CmdError, detail:
@@ -136,7 +137,7 @@ class NTPTest(object):
 
         # Delete server of local clock
         result = utils.run("grep '^server %s' /etc/ntp.conf" % self.local_clock,
-                           ignore_status = True)
+                           ignore_status=True)
         if result.stdout.strip():
             utils.run("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock)
         # Check the ntp.conf and add server ip into it
@@ -162,7 +163,7 @@ class NTPTest(object):
         4.restart ntpd service
         """
         # Set the time zone to american new york
-        cmd =  ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
+        cmd = ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
         self.session.cmd(cmd)
         cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
         self.session.cmd(cmd_ln)
@@ -215,7 +216,7 @@ class NTPTest(object):
         result_ntpq_ip = utils.run(cmd_ip, ignore_status=True)
         result_ntpq_name = utils.run(cmd_name, ignore_status=True)
         if (not result_ntpq_ip.stdout.strip()
-            and not result_ntpq_name.stdout.strip()):
+                and not result_ntpq_name.stdout.strip()):
             raise error.TestFail("ntpd setting failed of %s host !!"
                                  % self.vm_name)
         # Test on guest

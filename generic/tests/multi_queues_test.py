@@ -29,14 +29,12 @@ def run(test, params, env):
         guest_irq_info = session.cmd_output("cat /proc/interrupts")
         return re.findall(r"(\d+):.*virtio\d+-input.\d", guest_irq_info)
 
-
     def get_cpu_affinity_hint(session, irq_number):
         """
         Return the cpu affinity_hint of irq_number
         """
         cmd_get_cpu_affinity = r"cat /proc/irq/%s/affinity_hint" % irq_number
         return session.cmd_output(cmd_get_cpu_affinity).strip()
-
 
     def get_cpu_index(cpu_id):
         """
@@ -48,7 +46,6 @@ def run(test, params, env):
                 cpu_used_index.append(cpu_index)
         return cpu_used_index
 
-
     def set_cpu_affinity(session):
         """
         Set cpu affinity
@@ -58,7 +55,6 @@ def run(test, params, env):
         irq_list = get_virtio_queues_irq(session)
         for irq in irq_list:
             session.cmd(cmd_set_cpu_affinity % (irq, irq))
-
 
     def get_cpu_irq_statistics(session, irq_number, cpu_id=None):
         """
@@ -73,7 +69,6 @@ def run(test, params, env):
             if not cpu_id:
                 return irq_statics_list
         return []
-
 
     login_timeout = int(params.get("login_timeout", 360))
     queues = int(params.get("queues", 1))
@@ -103,7 +98,7 @@ def run(test, params, env):
             params["netperf_cmd_prefix"] = taskset_cmd
 
         check_cpu_affinity = params.get("check_cpu_affinity", 'no')
-        check_vhost =  params.get("check_vhost_threads", 'yes')
+        check_vhost = params.get("check_vhost_threads", 'yes')
         if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
             utils.system("systemctl stop irqbalance.service")
             set_cpu_affinity(session)
@@ -115,26 +110,25 @@ def run(test, params, env):
                 error.context("Run test %s background" % bg_sub_test,
                               logging.info)
 
-                #Set flag, when the sub test really running, will change this
-                #flag to True
+                # Set flag, when the sub test really running, will change this
+                # flag to True
                 bg_stress_run_flag = params.get("bg_stress_run_flag")
                 env[bg_stress_run_flag] = False
                 stress_thread = ""
                 wait_time = float(params.get("wait_bg_time", 60))
                 stress_thread = utils.InterruptedThread(
-                        utils_test.run_virt_sub_test, (test, params, env),
-                        {"sub_type": bg_sub_test})
+                    utils_test.run_virt_sub_test, (test, params, env),
+                    {"sub_type": bg_sub_test})
                 stress_thread.start()
-                #here wait sub test chang the test flag
-                utils_misc.wait_for(lambda : env.get(bg_stress_run_flag),
+                # here wait sub test chang the test flag
+                utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
                                     wait_time, 0, 5,
                                     "Wait %s start background" % bg_sub_test)
-
 
             if params.get("vhost") == 'vhost=on' and check_vhost == 'yes':
                 error.context("Check vhost threads on host", logging.info)
                 vhost_thread_pattern = params.get("vhost_thread_pattern",
-                        r"\w+\s+(\d+)\s.*\[vhost-%s\]")
+                                                  r"\w+\s+(\d+)\s.*\[vhost-%s\]")
                 vhost_threads = vm.get_vhost_threads(vhost_thread_pattern)
                 time.sleep(10)
 
@@ -150,7 +144,7 @@ def run(test, params, env):
                 if (running_threads != n_instance):
                     err_msg = "Run %s netperf session, but %s queues works"
                     raise error.TestFail(err_msg % (n_instance,
-                                                     running_threads))
+                                                    running_threads))
 
             # check cpu affinity
             if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
@@ -185,7 +179,7 @@ def run(test, params, env):
                         err_msg = "Error, taskset on cpu %s, "
                         err_msg += "but queues use cpu %s"
                         raise error.TestFail(err_msg % (taskset_cpu,
-                                                         cpu_affinity))
+                                                        cpu_affinity))
             if bg_sub_test and stress_thread:
                 env[bg_stress_run_flag] = False
                 try:

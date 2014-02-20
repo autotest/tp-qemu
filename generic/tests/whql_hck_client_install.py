@@ -5,6 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_misc, utils_test, remote
 from virttest import rss_client
 
+
 @error.context_aware
 def run_whql_hck_client_install(test, params, env):
     """
@@ -21,7 +22,6 @@ def run_whql_hck_client_install(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
 
-
     server_address = params["server_address"]
     server_shell_port = int(params["server_shell_port"])
     server_username = params["server_username"]
@@ -33,7 +33,7 @@ def run_whql_hck_client_install(test, params, env):
     server_session = remote.remote_login("nc", server_address,
                                          server_shell_port, "", "",
                                          session.prompt, session.linesep)
-    client_name =  session.cmd_output("echo %computername%").strip()
+    client_name = session.cmd_output("echo %computername%").strip()
     install_timeout = float(params.get("install_timeout", 1800))
 
     services_installed = session.cmd_output("wmic service get")

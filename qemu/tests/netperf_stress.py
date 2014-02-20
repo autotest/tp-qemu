@@ -56,7 +56,7 @@ def run(test, params, env):
     client = params.get("shell_client")
     port = params.get("shell_port")
 
-    #main vm run as server when vm_as_server is 'yes'.
+    # main vm run as server when vm_as_server is 'yes'.
     if params.get("vm_as_server", "yes") == "yes":
         netserver_ip = vm.get_address()
         netperf_client_ip = dsthost_ip
@@ -70,12 +70,12 @@ def run(test, params, env):
                                                  password=host_passwd)
 
     netperf_server = utils_netperf.NetperfServer(netserver_ip,
-                                                  server_path,
-                                                  server_md5sum,
-                                                  server_download_link,
-                                                  client, port,
-                                                  username=guest_usrname,
-                                                  password=guest_passwd)
+                                                 server_path,
+                                                 server_md5sum,
+                                                 server_download_link,
+                                                 client, port,
+                                                 username=guest_usrname,
+                                                 password=guest_passwd)
 
     # Get range of message size.
     try:
@@ -88,16 +88,16 @@ def run(test, params, env):
         netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
         test_option = "-t %s -l %s" % (test_protocol, netperf_test_duration)
         start_time = time.time()
-        stop_time =  start_time + stress_timeout
+        stop_time = start_time + stress_timeout
 
         netperf_client.bg_start(netserver_ip, test_option,
                                 netperf_para_sess, netperf_cmd_prefix)
         if utils_misc.wait_for(netperf_client.is_test_running, 10, 0, 1,
                                "Wait netperf test start"):
             logging.debug("Netperf test start successfully.")
-            #here when set a run flag, when other case call this case as a
-            #subprocess backgroundly, can set this run flag to False to stop
-            #the stress test.
+            # here when set a run flag, when other case call this case as a
+            # subprocess backgroundly, can set this run flag to False to stop
+            # the stress test.
             env["netperf_run"] = True
         else:
             raise error.TestNAError("Can not start netperf test")

@@ -31,7 +31,6 @@ def run(test, params, env):
         session.cmd_output_safe(set_cmd)
         return vm.reboot()
 
-
     def all_threads_done(threads):
         """
         Check whether all threads have finished
@@ -43,7 +42,6 @@ def run(test, params, env):
                 continue
         return True
 
-
     def all_threads_alive(threads):
         """
         Check whether all threads is alive
@@ -54,7 +52,6 @@ def run(test, params, env):
             else:
                 continue
         return True
-
 
     timeout = int(params.get("login_timeout", 360))
     transfer_timeout = int(params.get("transfer_timeout", 1000))

@@ -5,6 +5,7 @@ from autotest.client.shared import error
 from autotest.client import utils
 from virttest import data_dir, utils_misc
 
+
 @error.context_aware
 def run(test, params, env):
     """
@@ -36,7 +37,6 @@ def run(test, params, env):
             raise error.TestFail("File changed after transfer host -> guest "
                                  "and guest -> host")
 
-
     login_timeout = int(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -54,7 +54,7 @@ def run(test, params, env):
     dst_path = []
     guest_path = []
     for _ in range(scp_sessions):
-        random_file_name =  utils_misc.generate_random_string(8)
+        random_file_name = utils_misc.generate_random_string(8)
         src_path.append(os.path.join(dir_name, "h-src-%s" % random_file_name))
         guest_path.append(tmp_dir + "g-tmp-%s" % random_file_name)
         dst_path.append(os.path.join(dir_name, "h-dst-%s" % random_file_name))
@@ -70,9 +70,9 @@ def run(test, params, env):
         error.context("Do file transfer between host and guest", logging.info)
         start_time = time.time()
         stop_time = start_time + stress_timeout
-        #here when set a run flag, when other case call this case as a
-        #subprocess backgroundly, can set this run flag to False to stop
-        #the stress test.
+        # here when set a run flag, when other case call this case as a
+        # subprocess backgroundly, can set this run flag to False to stop
+        # the stress test.
         env["file_transfer_run"] = True
         while (env["file_transfer_run"] and time.time() < stop_time):
             scp_threads = []

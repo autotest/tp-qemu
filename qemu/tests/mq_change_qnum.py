@@ -32,7 +32,7 @@ def run(test, params, env):
         else:
             expect_status = 1
 
-        status, output =  session.cmd_status_output(mq_set_cmd)
+        status, output = session.cmd_status_output(mq_set_cmd)
         cur_queues_status = get_queues_status(session, ifname)
         if status != expect_status:
             err_msg = "Change queues number failed, "
@@ -46,8 +46,7 @@ def run(test, params, env):
             raise error.TestFail("params is right, but change queues failed")
         elif status and cur_queues_status != queues_status:
             raise error.TestFail("No need change queues number")
-        return [ int(_) for _ in cur_queues_status ]
-
+        return [int(_) for _ in cur_queues_status]
 
     def get_queues_status(session, ifname, timeout=240):
         """
@@ -61,10 +60,9 @@ def run(test, params, env):
             err_msg = "Oops, get guest queues info failed, "
             err_msg += "make sure your guest support MQ.\n"
             err_msg += "Check cmd is: '%s', " % mq_get_cmd
-            err_msg += "Command output is: '%s'." %  nic_mq_info
+            err_msg += "Command output is: '%s'." % nic_mq_info
             raise error.TestNAError(err_msg)
-        return [ int(x) for x in queues_info ]
-
+        return [int(x) for x in queues_info]
 
     error.context("Init guest and try to login", logging.info)
     login_timeout = int(params.get("login_timeout", 360))
@@ -88,10 +86,10 @@ def run(test, params, env):
             bg_stress_run_flag = params.get("bg_stress_run_flag")
             env[bg_stress_run_flag] = False
             stress_thread = utils.InterruptedThread(
-                    utils_test.run_virt_sub_test, (test, params, env),
-                    {"sub_type": bg_stress_test})
+                utils_test.run_virt_sub_test, (test, params, env),
+                {"sub_type": bg_stress_test})
             stress_thread.start()
-            utils_misc.wait_for(lambda : env.get(bg_stress_run_flag),
+            utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
                                 wait_time, 0, 5,
                                 "Wait %s start background" % bg_stress_test)
 
@@ -99,7 +97,7 @@ def run(test, params, env):
         repeat_counts = int(params.get("repeat_counts", 10))
         for nic_index, nic in enumerate(vm.virtnet):
             if not "virtio" in nic['nic_model']:
-                continue;
+                continue
             queues = int(vm.virtnet[nic_index].queues)
             if queues == 1:
                 logging.info("Nic with single queue, skip and continue")

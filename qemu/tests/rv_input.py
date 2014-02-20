@@ -29,7 +29,7 @@ def install_pygtk(guest_session, params):
     except ShellCmdError:
         cmd = "yum -y install pygtk2 --nogpgcheck > /dev/null"
         logging.info("Installing pygtk2 package to %s",
-                    params.get("guest_vm"))
+                     params.get("guest_vm"))
         guest_session.cmd(cmd, timeout=60)
 
 
@@ -109,7 +109,7 @@ def test_leds_and_esc_keys(client_vm, guest_session, params):
     :param params
     """
 
-    #Run PyGTK form catching KeyEvents on guest
+    # Run PyGTK form catching KeyEvents on guest
     run_test_form(guest_session, params)
     utils_spice.wait_timeout(3)
 
@@ -140,7 +140,7 @@ def test_nonus_layout(client_vm, guest_session, params):
     :param params
     """
 
-    #Run PyGTK form catching KeyEvents on guest
+    # Run PyGTK form catching KeyEvents on guest
     run_test_form(guest_session, params)
     utils_spice.wait_timeout(3)
 
@@ -187,7 +187,7 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     if rhel_ver == "release 6":
         client_vm.send_key('num_lock')
 
-    #Run PyGTK form catching KeyEvents on guest
+    # Run PyGTK form catching KeyEvents on guest
     run_test_form(guest_session, params)
     utils_spice.wait_timeout(3)
 
@@ -201,7 +201,7 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     guest_vm.migrate()
     utils_spice.wait_timeout(8)
 
-    #Tested keys after migration
+    # Tested keys after migration
     test_keys = ['a', 'kp_1', 'caps_lock', 'num_lock']
     logging.info("Sending leds keys to client machine after migration")
     for key in test_keys:
@@ -219,7 +219,7 @@ def analyze_results(file_path, test_type):
     """
 
     if test_type == "type_and_func_keys":
-        #List of expected keycodes from guest machine
+        # List of expected keycodes from guest machine
         correct_keycodes = ['65307', '49', '50', '51', '52', '53', '54', '55',
                             '56', '57', '48', '45', '61', '65288', '65289',
                             '113', '119', '101', '114', '116', '121', '117',
@@ -228,7 +228,7 @@ def analyze_results(file_path, test_type):
                             '108', '59', '39', '96', '92', '122', '120', '99',
                             '118', '98', '110', '109', '44', '46', '47', '32',
                             '65470', '65471', '65472', '65473', '65474',
-                             '65475', '65476', '65477', '65478', '65479']
+                            '65475', '65476', '65477', '65478', '65479']
     elif test_type == "leds_and_esc_keys":
         correct_keycodes = ['97', '65509', '65', '65509', '65407', '65457',
                             '65407', '65436', '97', '65505', '65', '65506',
@@ -249,7 +249,7 @@ def analyze_results(file_path, test_type):
     keycodes = fileobj.read()
     fileobj.close()
 
-    #Compare caught keycodes with expected keycodes
+    # Compare caught keycodes with expected keycodes
     test_keycodes = keycodes.split()
     logging.info("Caught keycodes:%s", test_keycodes)
     for i in range(len(correct_keycodes)):
@@ -278,8 +278,8 @@ def run(test, params, env):
     guest_session = guest_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)))
     guest_root_session = guest_vm.wait_for_login(
-              timeout=int(params.get("login_timeout", 360)),
-              username="root", password="123456")
+        timeout=int(params.get("login_timeout", 360)),
+        username="root", password="123456")
 
     # Verify that gnome is now running on the guest
     try:

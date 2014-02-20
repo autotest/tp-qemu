@@ -44,9 +44,9 @@ def run(test, params, env):
     msg_unavailable = params.get("msg_unavailable", "").split(":")
     msg_unknow = params.get("msg_unknow", "not found")
     try:
-        error.context("boot guest with -cpu %s,%s" % (guest_cpumodel,
-                                                      extra_flags),
-                                                      logging.info)
+        error.context("boot guest with -cpu %s,%s" %
+                      (guest_cpumodel, extra_flags),
+                      logging.info)
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     except Exception, err:

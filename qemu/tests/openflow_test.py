@@ -105,7 +105,7 @@ def run(test, params, env):
         nc_log = "/tmp/nc_log"
         server_cmd = "nc -l %s"
         client_cmd = "echo client | nc %s %s"
-        if udp_model == True:
+        if udp_model:
             server_cmd += " -u -w 3"
             client_cmd += " -u -w 3"
         server_cmd += " > %s &"

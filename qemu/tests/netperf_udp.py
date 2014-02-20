@@ -36,7 +36,6 @@ def run(test, params, env):
                                                 download_link)
         return download_link
 
-
     login_timeout = float(params.get("login_timeout", 360))
     dsthost = params.get("dsthost", "localhost")
 
@@ -73,7 +72,7 @@ def run(test, params, env):
     client = params.get("shell_client")
     port = params.get("shell_port")
 
-    #main vm run as server when vm_as_server is 'yes'.
+    # main vm run as server when vm_as_server is 'yes'.
     if params.get("vm_as_server") == "yes":
         netserver_ip = vm.get_address()
         netperf_client_ip = dsthost_ip
@@ -87,12 +86,12 @@ def run(test, params, env):
                                                  password=host_passwd)
 
     netperf_server = utils_netperf.NetperfServer(netserver_ip,
-                                                  server_path,
-                                                  server_md5sum,
-                                                  server_download_link,
-                                                  client, port,
-                                                  username=guest_usrname,
-                                                  password=guest_passwd)
+                                                 server_path,
+                                                 server_md5sum,
+                                                 server_download_link,
+                                                 client, port,
+                                                 username=guest_usrname,
+                                                 password=guest_passwd)
 
     # Get range of message size.
     message_size = params.get("message_size_range", "580 590 1").split()

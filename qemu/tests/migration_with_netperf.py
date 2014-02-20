@@ -29,7 +29,6 @@ def run(test, params, env):
                                                 download_link)
         return download_link
 
-
     login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")

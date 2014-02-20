@@ -1,5 +1,6 @@
 from virttest.tests import unattended_install
 
+
 def run(test, params, env):
     """
     Unattended install test:

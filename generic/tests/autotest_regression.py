@@ -193,7 +193,6 @@ def run(test, params, env):
                     logging.error(e)
                 step_failures.append(step6)
 
-
             step7 = "running_job_cli"
             try:
                 session_client.cmd("iptables -F")

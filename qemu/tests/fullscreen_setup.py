@@ -36,7 +36,7 @@ def run(test, params, env):
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
-            timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360)))
     guest_root_session = guest_vm.wait_for_login(username="root",
                                                  password="123456")
 

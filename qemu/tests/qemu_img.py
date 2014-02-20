@@ -108,7 +108,7 @@ def run(test, params, env):
         if cluster_size is not None:
             options.append("cluster_size=%s" % cluster_size)
         if options:
-            cmd +=" -o %s" % ",".join(options)
+            cmd += " -o %s" % ",".join(options)
 
         cmd += " %s" % img_name
         if img_size:

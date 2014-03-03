@@ -68,7 +68,7 @@ def run(test, params, env):
     monitor.send_args_cmd(change_insert_cmd)
     logging.info("Wait until device is ready")
     blocks_info = lambda: orig_img_name in str(monitor.info("block"))
-    if not utils_misc.wait_for(blocks_info, 10):
+    if not utils_misc.wait_for(blocks_info, 10, first=3):
         msg = "Fail to insert device %s to guest" % orig_img_name
         raise error.TestFail(msg)
 

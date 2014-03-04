@@ -343,7 +343,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 kill_cmd = "killall netperf"
                 if params.get("os_type") == "windows":
                     kill_cmd = "taskkill /F /IM netperf*"
-                ssh_cmd(clients[-1], kill_cmd)
+                ssh_cmd(clients[-1], kill_cmd, ignore_status=True)
 
                 logging.debug("Remove temporary files")
                 commands.getoutput("rm -f /tmp/netperf.%s.nf" % ret['pid'])
@@ -351,7 +351,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     fd.close()
 
 
-def ssh_cmd(session, cmd, timeout=120):
+def ssh_cmd(session, cmd, timeout=120, ignore_status=False):
     """
     Execute remote command and return the output
 
@@ -360,9 +360,11 @@ def ssh_cmd(session, cmd, timeout=120):
     :param timeout: timeout for the command
     """
     if session == "localhost":
-        return utils.system_output(cmd, timeout=timeout)
+        o = utils.system_output(cmd, timeout=timeout,
+                                ignore_status=ignore_status)
     else:
-        return session.cmd_output(cmd, timeout=timeout)
+        o = session.cmd(cmd, timeout=timeout, ignore_all_errors=ignore_status)
+    return o
 
 
 @error.context_aware

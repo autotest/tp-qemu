@@ -226,6 +226,22 @@ def run(test, params, env):
                netserver_port=params.get('netserver_port', "12865"),
                params=params, server_cyg=server_cyg, test=test)
 
+    if params.get("log_hostinfo_script"):
+        src = os.path.join(test.virtdir, params.get("log_hostinfo_script"))
+        path = os.path.join(test.resultsdir, "sysinfo")
+        utils.system_output("bash %s %s &> %s" % (src, test.resultsdir, path))
+
+    if params.get("log_guestinfo_script") and params.get("log_guestinfo_exec"):
+        src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
+        path = os.path.join(test.resultsdir, "sysinfo")
+        destpath = params.get("log_guestinfo_path", "/tmp/log_guestinfo.sh")
+        vm.copy_files_to(src, destpath)
+        logexec = params.get("log_guestinfo_exec", "bash")
+        output = server_ctl.cmd_output("%s %s" % (logexec, destpath))
+        logfile = open(path, "a+")
+        logfile.write(output)
+        logfile.close()
+
 
 @error.context_aware
 def start_test(server, server_ctl, host, clients, resultsdir, l=60,

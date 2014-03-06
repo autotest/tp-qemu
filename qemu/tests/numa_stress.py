@@ -108,7 +108,7 @@ def run(test, params, env):
                                      " Error message:%s" % (numa_node_malloc,
                                                             str(error_msg)))
         error.context("Run memory heavy stress in guest", logging.info)
-        autotest_control.run_autotest_control(test, params, env)
+        autotest_control.run(test, params, env)
         error.context("Get the qemu process memory use status", logging.info)
         node_after, memory_after = utils_test.max_mem_map_node(host_numa_node,
                                                                qemu_pid)

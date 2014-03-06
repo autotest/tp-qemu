@@ -53,7 +53,8 @@ def run(test, params, env):
                             vm.params["vhost"] = "vhost=off"
                         elif vhost_status == "vhost=off":
                             vm.params["vhost"] = "vhost=on"
-                    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay)
+                    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                               env=env)
             except Exception:
                 # If something bad happened in the main thread, ignore
                 # exceptions raised in the background thread

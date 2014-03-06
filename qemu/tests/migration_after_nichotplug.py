@@ -90,7 +90,7 @@ def run(test, params, env):
     set_link(nic_name, up=True)
 
     error.context("Migrate from source VM to Destination VM", logging.info)
-    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay)
+    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
 
     error.context("Disable the primary link", logging.info)
     set_link(nic_name, up=False)

@@ -176,7 +176,7 @@ def run(test, params, env):
                 vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                            offline, check,
                            migration_exec_cmd_src=mig_exec_cmd_src,
-                           migration_exec_cmd_dst=mig_exec_cmd_dst)
+                           migration_exec_cmd_dst=mig_exec_cmd_dst, env=env)
 
             # Set deamon thread action to stop after migrate
             params["action"] = "stop"

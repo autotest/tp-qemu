@@ -83,7 +83,7 @@ def run(test, params, env):
             m_count += 1
             error.context("Start migration iterations: %s " % m_count,
                           logging.info)
-            vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay)
+            vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
     finally:
         netperf_server.stop()
         netperf_server.env_cleanup(True)

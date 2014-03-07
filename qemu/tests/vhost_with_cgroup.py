@@ -56,15 +56,18 @@ def run(test, params, env):
     cgroup.set_property("cpu.cfs_period_us", 100000, 0)
     assign_vm_into_cgroup(vm, cgroup, 0)
 
-    vhost_pid = utils.system_output("pidof vhost-%s" % vm.get_pid())
-    if not vhost_pid:
+    vhost_pids = utils.system_output("pidof vhost-%s" % vm.get_pid())
+    if not vhost_pids:
         raise error.TestError("Vhost process not exise")
-    logging.info("Vhost have started with pid %s" % vhost_pid)
-    cgroup.set_cgroup(int(vhost_pid))
+    logging.info("Vhost have started with pid %s" % vhost_pids)
+    for vhost_pid in vhost_pids.strip().split():
+        cgroup.set_cgroup(int(vhost_pid))
 
     error.context("Check whether vhost attached to cgroup successfully",
                   logging.info)
-
-    if vhost_pid not in cgroup.get_property("tasks"):
-        raise error.TestError("Oops, vhost process attach to cgroup FAILED!")
+    cgroup_tasks = " ".join(cgroup.get_property("tasks"))
+    for vhost_pid in vhost_pids.strip().split():
+        if vhost_pid not in cgroup_tasks:
+            raise error.TestError("vhost process attach to cgroup FAILED!"
+                                  " Tasks in cgroup is:%s" % cgroup_tasks)
     logging.info("Vhost process attach to cgroup successfully")

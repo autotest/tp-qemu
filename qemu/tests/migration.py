@@ -33,7 +33,7 @@ def run(test, params, env):
 
         if guest_stress_test == "autotest":
             test_type = params.get("test_type")
-            func = autotest_control.run_autotest_control
+            func = autotest_control.run
             new_params = params.copy()
             new_params["test_control_file"] = "%s.control" % test_type
 

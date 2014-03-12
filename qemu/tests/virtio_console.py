@@ -627,7 +627,7 @@ def run(test, params, env):
 
             threads = []
             queues = []
-            for i in range(0, len(recv_pts)):
+            for i in xrange(0, len(recv_pts)):
                 queues.append(deque())
 
             # Start loopback
@@ -646,7 +646,7 @@ def run(test, params, env):
             thread.start()
             threads.append(thread)
 
-            for i in range(len(recv_pts)):
+            for i in xrange(len(recv_pts)):
                 thread = qemu_virtio_port.ThRecvCheck(recv_pts[i], queues[i],
                                                       EXIT_EVENT,
                                                       buf_len[i + 1])
@@ -1095,7 +1095,7 @@ def run(test, params, env):
         """
         if not stats:
             return None
-        for i in range((len(stats) - 1), 0, -1):
+        for i in xrange((len(stats) - 1), 0, -1):
             stats[i] = stats[i] - stats[i - 1]
             stats[i] /= scale
         stats[0] /= scale
@@ -1150,7 +1150,7 @@ def run(test, params, env):
             port.open()
 
             data = ""
-            for _ in range(buf_len):
+            for _ in xrange(buf_len):
                 data += "%c" % random.randrange(255)
 
             funcatexit.register(env, params.get('type'), __set_exit_event)
@@ -1168,7 +1168,7 @@ def run(test, params, env):
                 loads.start()
                 _time = time.time()
                 thread.start()
-                for _ in range(100):
+                for _ in xrange(100):
                     stats.append(thread.idx)
                     time.sleep(time_slice)
                 _time = time.time() - _time - duration
@@ -1213,7 +1213,7 @@ def run(test, params, env):
                 loads.start()
                 guest_worker.cmd("virt.send_loop()", 10)
                 _time = time.time()
-                for _ in range(100):
+                for _ in xrange(100):
                     stats.append(thread.idx)
                     time.sleep(time_slice)
                 _time = time.time() - _time - duration
@@ -1300,7 +1300,7 @@ def run(test, params, env):
         threads = []
         queues = []
         verified = []
-        for i in range(0, len(ports[1:])):
+        for i in xrange(0, len(ports[1:])):
             queues.append(deque())
             verified.append(0)
 
@@ -1319,7 +1319,7 @@ def run(test, params, env):
         thread.start()
         threads.append(thread)
 
-        for i in range(len(ports[1:])):
+        for i in xrange(len(ports[1:])):
             _ = threading.Event()
             thread = qemu_virtio_port.ThRecvCheck(ports[1:][i], queues[i],
                                                   EXIT_EVENT, blocklen,
@@ -1338,7 +1338,7 @@ def run(test, params, env):
             i += 1
             time.sleep(2)
 
-        for j in range(no_migrations):
+        for j in xrange(no_migrations):
             error.context("Performing migration number %s/%s"
                           % (j, no_migrations))
             vm = utils_test.qemu.migrate(vm, env, 3600, "exec", 0, offline)
@@ -1351,7 +1351,7 @@ def run(test, params, env):
                 ports = get_virtio_ports(vm)[1]
             else:
                 ports = get_virtio_ports(vm)[0]
-            for i in range(len(threads)):
+            for i in xrange(len(threads)):
                 threads[i].port = ports[i]
                 threads[i].migrate_event.set()
 
@@ -1375,7 +1375,7 @@ def run(test, params, env):
                     EXIT_EVENT.set()
                     raise error.TestFail("Send thread died unexpectedly in "
                                          "migration %d" % (j + 1))
-            for i in range(0, len(ports[1:])):
+            for i in xrange(0, len(ports[1:])):
                 if not threads[i + 1].isAlive():
                     EXIT_EVENT.set()
                     raise error.TestFail("Recv thread %d died unexpectedly in "
@@ -1547,12 +1547,12 @@ def run(test, params, env):
         consoles[0][0].sock.setblocking(0)
         consoles[1][0].sock.setblocking(0)
         logging.info("Test correct initialization of hotplug ports")
-        for bus_id in range(1, 5):  # count of pci device
+        for bus_id in xrange(1, 5):  # count of pci device
             ret = vm.monitors[0].cmd("device_add virtio-serial-pci,"
                                      "id=virtio_serial_pci%d" % (bus_id))
             if ret != "":
                 logging.error(ret)
-            for i in range(bus_id * 5 + 5):     # max ports 30
+            for i in xrange(bus_id * 5 + 5):     # max ports 30
                 _virtio_dev_add(vm, bus_id, i, console)
                 time.sleep(pause)
         # Test correct initialization of hotplug ports
@@ -1590,7 +1590,7 @@ def run(test, params, env):
 
         logging.info("Trying to add maximum count of ports to one pci device")
         # Try to add ports
-        for i in range(30):     # max port 30
+        for i in xrange(30):     # max port 30
             _virtio_dev_add(vm, 0, i, console)
             time.sleep(pause)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
@@ -1598,14 +1598,14 @@ def run(test, params, env):
 
         logging.info("Trying delete and add again part of ports")
         # Try to delete ports
-        for i in range(25):     # max port 30
+        for i in xrange(25):     # max port 30
             _virtio_dev_del(vm, 0, i)
             time.sleep(pause)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
         guest_worker.cmd('guest_exit()', 10)
 
         # Try to add ports
-        for i in range(5):      # max port 30
+        for i in xrange(5):      # max port 30
             _virtio_dev_add(vm, 0, i, console)
             time.sleep(pause)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
@@ -1613,7 +1613,7 @@ def run(test, params, env):
 
         logging.info("Trying to add and delete one port 100 times")
         # Try 100 times add and delete one port.
-        for i in range(100):
+        for i in xrange(100):
             _virtio_dev_del(vm, 0, 0)
             time.sleep(pause)
             _virtio_dev_add(vm, 0, 0, console)
@@ -1743,7 +1743,7 @@ def run(test, params, env):
 
             try:
                 sent1 = 0
-                for _ in range(1000000):
+                for _ in xrange(1000000):
                     sent1 += port.sock.send("a")
             except socket.timeout:
                 logging.info("Data sending to closed port timed out.")
@@ -1760,7 +1760,7 @@ def run(test, params, env):
             loads.start()
             try:
                 sent2 = 0
-                for _ in range(40000):
+                for _ in xrange(40000):
                     sent2 = port.sock.send("a")
             except socket.timeout:
                 logging.info("Data sending to closed port timed out.")

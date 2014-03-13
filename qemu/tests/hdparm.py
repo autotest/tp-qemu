@@ -20,24 +20,28 @@ def run(test, params, env):
     def check_setting_result(set_cmd, timeout):
         params = re.findall("(-[a-zA-Z])([0-9]*)", set_cmd)
         disk = re.findall("(\/+[a-z]*\/[a-z]*$)", set_cmd)[0]
+        unsupport_param = 0
         for (param, value) in params:
             check_value = True
             cmd = "hdparm %s %s" % (param, disk)
             (s, output) = session.cmd_status_output(cmd, timeout)
-            if s != 0:
+            failed_count = len(re.findall("failed:", output))
+            ignore_count = len(re.findall(ignore_string, output))
+            if failed_count > ignore_count:
+                raise error.TestError("Fail to get %s parameter value. "
+                                      "Output is:\n%s" % (param,
+                                                          output.strip()))
+            else:
                 check_value = False
-                failed_count = len(re.findall("failed:", output))
-                ignore_count = len(re.findall(ignore_string, output))
-                if failed_count > ignore_count:
-                    raise error.TestError("Fail to get %s parameter value. "
-                                          "Output is:\n%s" % (param,
-                                                              output.strip()))
-                else:
-                    logging.warn("Disk %s not support parameter %s" % (disk,
-                                                                       param))
+                unsupport_param += 1
+                logging.warn("Disk %s not support parameter %s" % (disk,
+                                                                   param))
             if check_value and value not in output:
                 raise error.TestFail("Fail to set %s parameter to value: %s"
                                      % (param, value))
+        if len(params) == unsupport_param:
+            raise error.TestNAError("All parameters are not supported."
+                                    " Skip the test")
 
     def perform_read_timing(disk, timeout, num=5):
         results = 0

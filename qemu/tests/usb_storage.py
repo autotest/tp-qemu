@@ -129,7 +129,7 @@ def run(test, params, env):
 
         error.context("Check removable option in monitor", logging.info)
         output = str(vm.monitor.info("qtree"))
-        regex_str = 'usb-storage.*?removable = (.*?)\n'
+        regex_str = 'usb-storage.*?removable = (.*?)\s'
         _verify_string(regex_str, output, [removable], re.S)
 
         error.context("Check removable option in guest", logging.info)
@@ -196,19 +196,19 @@ def run(test, params, env):
     if params.get("check_serial_option") == "yes":
         error.context("Check usb serial option", logging.info)
         serial = str(uuid.uuid4())
-        regex_str = 'usb-storage.*?serial = "(.*?)"\n'
+        regex_str = 'usb-storage.*?serial = "(.*?)"\s'
         _check_serial_option(serial, regex_str, serial)
 
         logging.info("Check this option with some illegal string")
         logging.info("Set usb serial to a empty string")
         # An empty string, ""
         serial = "EMPTY_STRING"
-        regex_str = 'usb-storage.*?serial = (.*?)\n'
+        regex_str = 'usb-storage.*?serial = (.*?)\s'
         _check_serial_option(serial, regex_str, '""')
 
         logging.info("Leave usb serial option blank")
         serial = "NO_EQUAL_STRING"
-        regex_str = 'usb-storage.*?serial = (.*?)\n'
+        regex_str = 'usb-storage.*?serial = (.*?)\s'
         _check_serial_option(serial, regex_str, '"on"')
 
     if params.get("check_removable_option") == "yes":

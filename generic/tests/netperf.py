@@ -6,7 +6,7 @@ import re
 import time
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc, remote, data_dir
+from virttest import utils_test, utils_misc, utils_net, remote, data_dir
 
 
 def format_result(result, base="12", fbase="2"):
@@ -109,6 +109,15 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
 
     session = vm.wait_for_login(timeout=login_timeout)
+    queues = int(params.get("queues", 1))
+    if queues > 1:
+        if params.get("os_type") == "linux":
+            ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
+            session.cmd_status_output("ethtool -L %s combined %s" %
+                                      (ethname, queues))
+        else:
+            logging.info("FIXME: support to enable MQ for Windows guest!")
+
     config_cmds = params.get("config_cmds")
     if config_cmds:
         for config_cmd in config_cmds.split(","):
@@ -140,7 +149,7 @@ def run(test, params, env):
 
     if len(params.get("nics", "").split()) > 1:
         vm.wait_for_login(nic_index=1, timeout=login_timeout)
-        server_ip = vm.wait_for_get_address(1, timeout=5)
+        server_ctl_ip = vm.wait_for_get_address(1, timeout=5)
 
     logging.debug(commands.getoutput("numactl --hardware"))
     logging.debug(commands.getoutput("numactl --show"))
@@ -263,8 +272,13 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
 
     record_list = ['size', 'sessions', 'throughput', 'trans.rate', 'CPU',
                    'thr_per_CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
-                   're_pkts', 'rx_intr', 'tx_intr', 'io_exit', 'irq_inj',
-                   'tpkt_per_exit', 'rpkt_per_irq']
+                   're_pkts', 'irq_inj', 'io_exit', 'rpkt_per_irq', 'tpkt_per_exit']
+    for i in range(int(params.get("queues", 0))):
+        record_list.append('rx_intr_%s' % i)
+    record_list.append('rx_intr_sum')
+    for i in range(int(params.get("queues", 0))):
+        record_list.append('tx_intr_%s' % i)
+    record_list.append('tx_intr_sum')
     base = params.get("format_base", "12")
     fbase = params.get("format_fbase", "2")
 
@@ -308,10 +322,10 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
                 if ret.get('rx_pkts') and ret.get('irq_inj'):
-                    ret['rpkt_per_exit'] = float(
+                    ret['rpkt_per_irq'] = float(
                         ret['rx_pkts']) / float(ret['irq_inj'])
                 if ret.get('tx_pkts') and ret.get('io_exit'):
-                    ret['tpkt_per_irq'] = float(
+                    ret['tpkt_per_exit'] = float(
                         ret['tx_pkts']) / float(ret['io_exit'])
                 ret['size'] = int(i)
                 ret['sessions'] = int(j)
@@ -343,7 +357,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 kill_cmd = "killall netperf"
                 if params.get("os_type") == "windows":
                     kill_cmd = "taskkill /F /IM netperf*"
-                ssh_cmd(clients[-1], kill_cmd)
+                ssh_cmd(clients[-1], kill_cmd, ignore_status=True)
 
                 logging.debug("Remove temporary files")
                 commands.getoutput("rm -f /tmp/netperf.%s.nf" % ret['pid'])
@@ -351,7 +365,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     fd.close()
 
 
-def ssh_cmd(session, cmd, timeout=120):
+def ssh_cmd(session, cmd, timeout=120, ignore_status=False):
     """
     Execute remote command and return the output
 
@@ -360,9 +374,11 @@ def ssh_cmd(session, cmd, timeout=120):
     :param timeout: timeout for the command
     """
     if session == "localhost":
-        return utils.system_output(cmd, timeout=timeout)
+        o = utils.system_output(cmd, timeout=timeout,
+                                ignore_status=ignore_status)
     else:
-        return session.cmd_output(cmd, timeout=timeout)
+        o = session.cmd(cmd, timeout=timeout, ignore_all_errors=ignore_status)
+    return o
 
 
 @error.context_aware
@@ -424,13 +440,18 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
 
     def count_interrupt(name):
         """
-        :param name: the name of interrupt, such as "virtio0-input"
+        Get a list of interrut number for each queue
+
+        @param name: the name of interrupt, such as "virtio0-input"
         """
-        intr = 0
+        sum = 0
+        intr = []
         stat = ssh_cmd(server_ctl, "cat /proc/interrupts |grep %s" % name)
-        stat = stat.strip().split("\n")[-1]
-        for cpu in range(int(ncpu)):
-            intr += int(stat.split()[cpu + 1])
+        for i in stat.strip().split("\n"):
+            for cpu in range(int(ncpu)):
+                sum += int(i.split()[cpu + 1])
+            intr.append(sum)
+            sum = 0
         return intr
 
     def get_state():
@@ -456,10 +477,22 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         try:
             nrx_intr = count_interrupt("virtio.-input")
             ntx_intr = count_interrupt("virtio.-output")
-            state_list.append('rx_intr')
-            state_list.append(nrx_intr)
-            state_list.append('tx_intr')
-            state_list.append(ntx_intr)
+            sum = 0
+            for i in range(len(nrx_intr)):
+                state_list.append('rx_intr_%s' % i)
+                state_list.append(nrx_intr[i])
+                sum += nrx_intr[i]
+            state_list.append('rx_intr_sum')
+            state_list.append(sum)
+
+            sum = 0
+            for i in range(len(ntx_intr)):
+                state_list.append('tx_intr_%s' % i)
+                state_list.append(ntx_intr[i])
+                sum += ntx_intr[i]
+            state_list.append('tx_intr_sum')
+            state_list.append(sum)
+
         except IndexError:
             ninit = count_interrupt("virtio.")
             state_list.append('intr')

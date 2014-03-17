@@ -4,6 +4,7 @@ from autotest.client.shared import error
 from virttest import utils_misc, utils_net, utils_conn
 
 
+@error.context_aware
 def preprocess_kdump(vm, timeout):
     """
     Backup /etc/kdump.conf file before trigger crash.
@@ -25,6 +26,7 @@ def preprocess_kdump(vm, timeout):
     session.close()
 
 
+@error.context_aware
 def postprocess_kdump(vm, timeout):
     """
     Restore /etc/kdump.conf file after trigger crash.
@@ -46,6 +48,7 @@ def postprocess_kdump(vm, timeout):
     session.close()
 
 
+@error.context_aware
 def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
                  kernel_param_cmd, kdump_enable_cmd, timeout):
     """
@@ -118,6 +121,7 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
     return session
 
 
+@error.context_aware
 def crash_test(vm, vcpu, crash_cmd, timeout):
     """
     Trigger a crash dump through sysrq-trigger
@@ -155,6 +159,7 @@ def crash_test(vm, vcpu, crash_cmd, timeout):
         postprocess_kdump(vm, timeout)
 
 
+@error.context_aware
 def check_vmcore(vm, session, timeout):
     """
     Check the vmcore file after triggering a crash

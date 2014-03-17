@@ -56,7 +56,7 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
                                  args=(test, params, env,),
-                                 kwargs={"sub_type": "pxe"})
+                                 kwargs={"sub_type": "pxe_boot"})
     bg.start()
     count = 0
     try:

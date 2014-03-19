@@ -105,13 +105,13 @@ def run(test, params, env):
             ifname = utils_net.get_linux_ifname(session_serial, macaddress)
         else:
             ifname = utils_net.get_windows_nic_attribute(session_serial,
-                    "macaddress", macaddress, "netconnectionid")
+                                                         "macaddress", macaddress, "netconnectionid")
         manage_guest_nic(session_serial, ifname)
 
         error.context("Ping dst guest after disabling it's nic", logging.info)
         ping_timeout = float(params.get("ping_timeout", 21600))
         guest_ping(session, dst_ip)
-        #This test need do infinite ping for a long time(6h)
+        # This test need do infinite ping for a long time(6h)
         logging.info("Waiting for %s(S) before next step", ping_timeout)
         end_time = time.time() + ping_timeout
         while time.time() < end_time:

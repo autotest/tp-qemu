@@ -99,7 +99,7 @@ def run(test, params, env):
         try:
             sessions[dst].read_up_to_prompt(timeout=60)
         except aexpect.ExpectError:
-            #kill server
+            # kill server
             session_ctl[dst].cmd_output_safe("killall -9 nc")
             raise error.TestFail("Fail to receive file"
                                  " from vm%s to vm%s" % (src + 1, dst + 1))
@@ -194,8 +194,8 @@ def run(test, params, env):
                     dest = ".".join((subnet, str(vlan2),
                                      ip_unit[(vm_index + 1) % 2]))
                     status, output = utils_test.ping(dest, count=2,
-                            interface=interface, session=sessions[vm_index],
-                            timeout=30)
+                                                     interface=interface, session=sessions[vm_index],
+                                                     timeout=30)
                     if ((vlan == vlan2) ^ (status == 0)):
                         err_msg = "%s ping %s unexpected, " % (interface, dest)
                         err_msg += "error info: %s" % output
@@ -213,7 +213,7 @@ def run(test, params, env):
             nc_transfer(1, 0)
 
     finally:
-        #If client can not connect the nc server, need kill the server.
+        # If client can not connect the nc server, need kill the server.
         for session in session_ctl:
             session.cmd_output_safe("killall -9 nc")
         error.base_context("Remove vlan")

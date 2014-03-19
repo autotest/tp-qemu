@@ -147,7 +147,7 @@ def run(test, params, env):
 
             # Write random values to random ports of the range
             for _ in range(fuzz_count * (end - beg + 1)):
-                inst.append(("write",[o_random.randint(beg, end),
+                inst.append(("write", [o_random.randint(beg, end),
                              o_random.randint(0, 255)]))
 
             fuzz(session, inst)

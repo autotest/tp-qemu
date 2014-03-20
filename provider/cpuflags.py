@@ -16,7 +16,8 @@ def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
     if not extra_flags:
         extra_flags = ""
 
-    cpuflags_src = os.path.join(data_dir.get_deps_dir(), "cpu_flags")
+    cpuflags_src = os.path.join(data_dir.get_deps_dir("cpu_flags"),
+                                "cpu_flags")
     cpuflags_dst = os.path.join(dst_dir, "cpu_flags")
     session = vm.wait_for_login()
     session.cmd("rm -rf %s" %
@@ -24,7 +25,7 @@ def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
     session.cmd("sync")
     vm.copy_files_to(cpuflags_src, dst_dir)
     session.cmd("sync")
-    session.cmd("cd %s; make EXTRA_FLAGS='%s';" %
+    session.cmd("cd %s; cd src; make EXTRA_FLAGS='%s';" %
                (cpuflags_dst, extra_flags))
     session.cmd("sync")
     session.close()

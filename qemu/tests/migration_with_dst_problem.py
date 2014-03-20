@@ -360,7 +360,8 @@ def run(test, params, env):
                   "-o hard,timeo=14,rsize=8192,wsize=8192")
             vm_guest.migrate(mig_timeout, mig_protocol,
                              not_wait_for_migration=True,
-                             migration_exec_cmd_src=migration_exec_cmd_src)
+                             migration_exec_cmd_src=migration_exec_cmd_src,
+                             env=env)
 
             if not utils_misc.wait_for(lambda: process_output_check(
                                        vm_guest.process, exp_str),
@@ -409,7 +410,8 @@ def run(test, params, env):
 
             vm_guest.migrate(mig_timeout, mig_protocol,
                              not_wait_for_migration=True,
-                             migration_exec_cmd_src=migration_exec_cmd_src)
+                             migration_exec_cmd_src=migration_exec_cmd_src,
+                             env=env)
 
             if not utils_misc.wait_for(lambda: process_output_check(
                                        vm_guest.process, exp_str),
@@ -490,7 +492,7 @@ def run(test, params, env):
 
             self.restart_server()
 
-            self.vm_guest.migrate(mig_timeout, mig_protocol)
+            self.vm_guest.migrate(mig_timeout, mig_protocol, env=env)
 
             try:
                 self.vm_guest.verify_alive()

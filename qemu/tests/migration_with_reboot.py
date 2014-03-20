@@ -32,7 +32,8 @@ def run(test, params, env):
         bg.start()
         try:
             while bg.isAlive():
-                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay)
+                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                           env=env)
         except Exception:
             # If something bad happened in the main thread, ignore exceptions
             # raised in the background thread

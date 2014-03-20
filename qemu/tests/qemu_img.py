@@ -285,15 +285,14 @@ def run(test, params, env):
     def commit_test(cmd):
         """
         Subcommand 'qemu-img commit' test.
-        1) Create a backing file of the qemu harddisk specified by image_name.
-        2) Start a VM using the backing file as its harddisk.
-        3) Touch a file "commit_testfile" in the backing_file, and shutdown the
+        1) Create a overlay file of the qemu harddisk specified by image_name.
+        2) Start a VM using the overlay file as its harddisk.
+        3) Touch a file "commit_testfile" in the overlay file, and shutdown the
            VM.
-        4) Make sure touching the file does not affect the original harddisk.
-        5) Commit the change to the original harddisk by executing
+        4) Commit the change to the backing harddisk by executing
            "qemu-img commit" command.
-        6) Start the VM using the original harddisk.
-        7) Check if the file "commit_testfile" exists.
+        5) Start the VM using the backing harddisk.
+        6) Check if the file "commit_testfile" exists.
 
         :param cmd: qemu-img base command.
         """
@@ -302,7 +301,7 @@ def run(test, params, env):
         image_name = params.get("image_name", "image")
         image_name = os.path.join(data_dir.get_data_dir(), image_name)
         image_format = params.get("image_format", "qcow2")
-        backing_file_name = "%s_bak" % (image_name)
+        overlay_file_name = "%s_overlay" % (image_name)
         file_create_cmd = params.get("file_create_cmd",
                                      "touch /commit_testfile")
         file_info_cmd = params.get("file_info_cmd",
@@ -314,33 +313,33 @@ def run(test, params, env):
         file_del_cmd = params.get("file_del_cmd",
                                   "rm -f /commit_testfile")
         try:
-            # Remove the existing backing file
-            backing_file = "%s.%s" % (backing_file_name, image_format)
-            if os.path.isfile(backing_file):
-                os.remove(backing_file)
+            # Remove the existing overlay file
+            overlay_file = "%s.%s" % (overlay_file_name, image_format)
+            if os.path.isfile(overlay_file):
+                os.remove(overlay_file)
 
-            # Create the new backing file
+            # Create the new overlay file
             create_cmd = "%s create -b %s.%s -f %s %s.%s" % (cmd, image_name,
                                                              image_format,
                                                              image_format,
-                                                             backing_file_name,
+                                                             overlay_file_name,
                                                              image_format)
-            msg = "Create backing file by command: %s" % create_cmd
+            msg = "Create overlay file by command: %s" % create_cmd
             error.context(msg, logging.info)
             try:
                 utils.system(create_cmd, verbose=False)
             except error.CmdError:
-                raise error.TestFail("Could not create a backing file!")
-            logging.info("backing_file created!")
+                raise error.TestFail("Could not create a overlay file!")
+            logging.info("overlay_file created!")
 
-            # Set the qemu harddisk to the backing file
+            # Set the qemu harddisk to the overlay file
             logging.info(
                 "Original image_name is: %s", params.get('image_name'))
-            params['image_name'] = backing_file_name
+            params['image_name'] = overlay_file_name
             logging.info("Param image_name changed to: %s",
                          params.get('image_name'))
 
-            msg = "Start a new VM, using backing file as its harddisk"
+            msg = "Start a new VM, using overlay file as its harddisk"
             error.context(msg, logging.info)
             vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
@@ -349,7 +348,7 @@ def run(test, params, env):
             timeout = int(params.get("login_timeout", 360))
             session = vm.wait_for_login(timeout=timeout)
 
-            # Do some changes to the backing_file harddisk
+            # Do some changes to the overlay_file harddisk
             try:
                 output = session.cmd(file_create_cmd)
                 logging.info("Output of %s: %s", file_create_cmd, output)
@@ -357,44 +356,19 @@ def run(test, params, env):
                 logging.info("Output of %s: %s", file_info_cmd, output)
             except Exception, err:
                 raise error.TestFail("Could not create commit_testfile in the "
-                                     "backing file %s" % err)
-            vm.destroy()
-
-            # Make sure there is no effect on the original harddisk
-            # First, set the harddisk back to the original one
-            logging.info("Current image_name is: %s", params.get('image_name'))
-            params['image_name'] = image_name
-            logging.info("Param image_name reverted to: %s",
-                         params.get('image_name'))
-
-            # Second, Start a new VM, using image_name as its harddisk
-            # Here, the commit_testfile should not exist
-            vm_name = params['main_vm']
-            env_process.preprocess_vm(test, params, env, vm_name)
-            vm = env.get_vm(vm_name)
-            vm.verify_alive()
-            timeout = int(params.get("login_timeout", 360))
-            session = vm.wait_for_login(timeout=timeout)
-            try:
-                output = session.cmd(file_not_exist_chk_cmd)
-                logging.info(
-                    "Output of %s: %s", file_not_exist_chk_cmd, output)
-            except Exception:
-                output = session.cmd(file_del_cmd)
-                raise error.TestFail("The commit_testfile exists on the "
-                                     "original file")
+                                     "overlay file %s" % err)
             vm.destroy()
 
             # Execute the commit command
             cmitcmd = "%s commit -f %s %s.%s" % (cmd, image_format,
-                                                 backing_file_name,
+                                                 overlay_file_name,
                                                  image_format)
             error.context("Committing image by command %s" % cmitcmd,
                           logging.info)
             try:
                 utils.system(cmitcmd, verbose=False)
             except error.CmdError:
-                raise error.TestFail("Could not commit the backing file")
+                raise error.TestFail("Could not commit the overlay file")
 
             # Start a new VM, using image_name as its harddisk
             vm_name = params['main_vm']
@@ -413,9 +387,9 @@ def run(test, params, env):
             vm.destroy()
 
         finally:
-            # Remove the backing file
-            if os.path.isfile(backing_file):
-                os.remove(backing_file)
+            # Remove the overlay file
+            if os.path.isfile(overlay_file):
+                os.remove(overlay_file)
 
     def _rebase(cmd, img_name, base_img, backing_fmt, mode="unsafe"):
         """

@@ -40,23 +40,27 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Copy time-warp-test.c to guest", logging.info)
-    src_file_name = os.path.join(data_dir.get_deps_dir("tsc_sync"),
-                                 "time-warp-test.c")
-    vm.copy_files_to(src_file_name, "/tmp")
+    time_warp_test_cmd = params.get("time_warp_test_cmd", "/tmp/time-warp-test")
 
-    error.context("Compile the time-warp-test.c", logging.info)
-    cmd = "cd /tmp/;"
-    cmd += " yum install -y popt-devel;"
-    cmd += " rm -f time-warp-test;"
-    cmd += " gcc -Wall -o time-warp-test time-warp-test.c -lrt"
-    session.cmd(cmd)
+    time_warp_cmd = time_warp_test_cmd
+    if session.get_command_status("test -x %s" % time_warp_test_cmd):
+        error.context("Copy time-warp-test.c to guest", logging.info)
+        src_file_name = os.path.join(data_dir.get_deps_dir("tsc_sync"),
+                                     "time-warp-test.c")
+        vm.copy_files_to(src_file_name, "/tmp")
+
+        error.context("Compile the time-warp-test.c", logging.info)
+        cmd = "cd /tmp/;"
+        cmd += " yum install -y popt-devel;"
+        cmd += " rm -f time-warp-test;"
+        cmd += " gcc -Wall -o time-warp-test time-warp-test.c -lrt"
+        session.cmd(cmd)
+        time_warp_cmd = "/tmp/time-warp-test"
 
     error.context("Run time-warp-test for minimum 4 hours", logging.info)
     test_run_timeout = int(params.get("test_run_timeout", 14400))
     session.sendline("$(sleep %d; pkill time-warp-test) &" % test_run_timeout)
-    cmd = "/tmp/time-warp-test"
-    _, output = session.cmd_status_output(cmd, timeout=(test_run_timeout + 60))
+    _, output = session.cmd_status_output(time_warp_cmd, timeout=(test_run_timeout + 60))
 
     re_str = "fail:(\d+).*?fail:(\d+).*fail:(\d+)"
     fail_cnt = re.findall(re_str, output)

@@ -1131,6 +1131,7 @@ def run(test, params, env):
             if not param:
                 continue
             error.context("test_perf: params %s" % param, logging.info)
+            EXIT_EVENT.clear()
             # Prepare
             param = param.split(':')
             duration = test_time
@@ -1178,14 +1179,21 @@ def run(test, params, env):
                 thread.join()
                 if thread.ret_code:
                     no_errors += 1
-                    logging.error("test_perf: error occurred in thread %s",
-                                  thread)
+                    logging.error("test_perf: error occurred in thread %s "
+                                  "(H2G)", thread)
+                elif thread.idx == 0:
+                    no_errors += 1
+                    logging.error("test_perf: no data sent (H2G)")
 
                 # Let the guest read-out all the remaining data
-                while not guest_worker._cmd("virt.poll('%s', %s)"
-                                            % (port.name, select.POLLIN),
-                                            10)[0]:
+                for _ in xrange(60):
+                    if guest_worker._cmd("virt.poll('%s', %s)"
+                                         % (port.name, select.POLLIN), 10)[0]:
+                        break
                     time.sleep(1)
+                else:
+                    raise error.TestFail("Unable to read-out all remaining "
+                                         "data in 60s.")
 
                 guest_worker.safe_exit_loopback_threads([port], [])
 
@@ -1224,8 +1232,11 @@ def run(test, params, env):
                 thread.join()
                 if thread.ret_code:
                     no_errors += 1
-                    logging.error("test_perf: error occurred in thread %s",
-                                  thread)
+                    logging.error("test_perf: error occurred in thread %s"
+                                  "(G2H)", thread)
+                elif thread.idx == 0:
+                    no_errors += 1
+                    logging.error("test_perf: No data received (G2H)")
                 # Deviation is higher than single time_slice
                 if (_time > time_slice):
                     logging.error("Test ran %fs longer which is more than one "

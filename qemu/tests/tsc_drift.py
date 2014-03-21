@@ -28,12 +28,17 @@ def run(test, params, env):
     drift_threshold = float(params.get("drift_threshold"))
     interval = float(params.get("interval"))
     cpu_chk_cmd = params.get("cpu_chk_cmd")
+    tsc_cmd_guest = params.get("tsc_cmd_guest", "./a.out")
+    tsc_cmd_host = params.get("tsc_cmd_host", "./a.out")
     tsc_freq_path = os.path.join(data_dir.get_deps_dir(),
                                  'timedrift/get_tsc.c')
     host_freq = 0
 
     def get_tsc(machine="host", i=0):
-        cmd = "taskset -c %s ./a.out" % i
+        tsc_cmd = tsc_cmd_guest
+        if tsc_cmd == "host":
+            tsc_cmd = tsc_cmd_host
+        cmd = "taskset %s %s" % (1 << i, tsc_cmd)
         if machine == "host":
             s, o = commands.getstatusoutput(cmd)
         else:
@@ -48,7 +53,9 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    commands.getoutput("gcc %s" % tsc_freq_path)
+    if not os.path.exists(tsc_cmd_guest):
+        commands.getoutput("gcc %s" % tsc_freq_path)
+
     ncpu = local_host.LocalHost().get_num_cpu()
 
     logging.info("Interval is %s" % interval)
@@ -66,9 +73,10 @@ def run(test, params, env):
         host_freq += delta / ncpu
     logging.info("Average frequency of host's cpus: %s" % host_freq)
 
-    vm.copy_files_to(tsc_freq_path, '/tmp/get_tsc.c')
-    if session.get_command_status("gcc /tmp/get_tsc.c") != 0:
-        raise error.TestError("Fail to compile program on guest")
+    if session.get_command_status("test -x %s" % tsc_cmd_guest):
+        vm.copy_files_to(tsc_freq_path, '/tmp/get_tsc.c')
+        if session.get_command_status("gcc /tmp/get_tsc.c") != 0:
+            raise error.TestError("Fail to compile program on guest")
 
     s, guest_ncpu = session.get_command_status_output(cpu_chk_cmd)
     if s != 0:

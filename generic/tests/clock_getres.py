@@ -14,22 +14,27 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    source_name = "clock_getres/clock_getres.c"
-    source_name = os.path.join(data_dir.get_deps_dir(), source_name)
-    dest_name = "/tmp/clock_getres.c"
-    bin_name = "/tmp/clock_getres"
-
-    if not os.path.isfile(source_name):
-        raise error.TestError("Could not find %s" % source_name)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    vm.copy_files_to(source_name, dest_name)
-    session.cmd("gcc -lrt -o %s %s" % (bin_name, dest_name))
-    session.cmd(bin_name)
+    getres_cmd = params.get("getres_cmd")
+
+    if not getres_cmd or session.cmd_status("test -x %s" % getres_cmd):
+        source_name = "clock_getres/clock_getres.c"
+        source_name = os.path.join(data_dir.get_deps_dir(), source_name)
+        getres_cmd = "/tmp/clock_getres"
+        dest_name = "/tmp/clock_getres.c"
+
+        if not os.path.isfile(source_name):
+            raise error.TestError("Could not find %s" % source_name)
+
+        vm.copy_files_to(source_name, dest_name)
+        session.cmd("gcc -lrt -o %s %s" % (getres_cmd, dest_name))
+
+    session.cmd(getres_cmd)
     logging.info("PASS: Guest reported appropriate clock resolution")
     sub_test = params.get("sub_test")
     if sub_test:

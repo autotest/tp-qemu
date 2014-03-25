@@ -7,6 +7,7 @@ try:
 except ImportError:
     from autotest.client.shared import utils_memory
 
+from virttest import env_process
 
 @error.context_aware
 def run(test, params, env):
@@ -53,7 +54,7 @@ def run(test, params, env):
             session.cmd(restore_level_cmd)
             session.cmd('sync')
             vm.destroy()
-            vm.create()
+            env_process.preprocess_vm(test, params, env, vm.name)
             vm.verify_alive()
             vm.wait_for_login(timeout=timeout)
         except Exception:

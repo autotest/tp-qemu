@@ -52,7 +52,7 @@ def run(test, params, env):
             restore_level_cmd = params['restore_level_cmd']
             session.cmd(restore_level_cmd)
             session.cmd('sync')
-            vm.destroy()
+            vm.destroy(gracefully=False)
             vm.create()
             vm.verify_alive()
             vm.wait_for_login(timeout=timeout)

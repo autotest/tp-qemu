@@ -127,7 +127,7 @@ def run(test, params, env):
 
     error.context("Boot up guest with two disks")
     vm = env.get_vm(params["main_vm"])
-    vm.create()
+    vm.create(params=params)
     login_timeout = int(params.get("login_timeout", 360))
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
 

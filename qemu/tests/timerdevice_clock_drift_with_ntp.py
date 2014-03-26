@@ -61,7 +61,7 @@ def run(test, params, env):
     error.context("Stop ntpd and apply load on guest", logging.info)
     sess_guest_load.cmd("yum install -y ntp; service ntpd stop")
     load_cmd = "for ((I=0; I<`grep 'processor id' /proc/cpuinfo| wc -l`; I++));"
-    load_cmd += " do taskset -c $I /bin/bash -c 'for ((;;)); do X=1; done &';"
+    load_cmd += " do taskset $(( 1 << $I )) /bin/bash -c 'for ((;;)); do X=1; done &';"
     load_cmd += " done"
     sess_guest_load.sendline(load_cmd)
 
@@ -74,7 +74,7 @@ def run(test, params, env):
         raise error.TestNAError("There isn't enough physical cpu to"
                                 " pin all the vcpus")
     for vcpu, pcpu in cpu_pin_list:
-        utils.system("taskset -p -c %s %s" % (pcpu, vcpu))
+        utils.system("taskset -p %s %s" % (1 << pcpu, vcpu))
 
     error.context("Verify each vcpu is pinned on host", logging.info)
 

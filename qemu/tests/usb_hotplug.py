@@ -76,7 +76,8 @@ def run(test, params, env):
     for i in range(repeat_times):
         error.context("Hotplug (iteration %i)" % (i + 1), logging.info)
         usb_dev_hotplug()
-        usb_dev_verify()
-        usb_dev_unplug()
+        if not params.get("usb_negative_test") == "yes":
+            usb_dev_verify()
+            usb_dev_unplug()
 
     session.close()

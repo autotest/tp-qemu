@@ -97,6 +97,6 @@ def run(test, params, env):
 
     error.context("Verify the drift file content on guest", logging.info)
     output = session.cmd("cat /var/lib/ntp/drift")
-    if int(output) > 20:
+    if int(abs(float(output))) > 20:
         raise error.TestFail("Failed to check the ntp drift."
                              " Output: '%s'" % output)

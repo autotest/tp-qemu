@@ -18,7 +18,7 @@ def run(test, params, env):
     5) Compile the time-warp-test.c.
     6) Switch host to hpet clocksource.
     6) Run time-warp-test.
-    7) Check the guest is using vsyscall.
+    7) Check the guest is not using vsyscall.
 
     :param test: QEMU test object.
     :param params: Dictionary with test parameters.

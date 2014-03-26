@@ -370,11 +370,6 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
 
                 fd.flush()
 
-                kill_cmd = "killall netperf"
-                if params.get("os_type") == "windows":
-                    kill_cmd = "taskkill /F /IM netperf*"
-                ssh_cmd(clients[-1], kill_cmd, ignore_status=True)
-
                 logging.debug("Remove temporary files")
                 commands.getoutput("rm -f /tmp/netperf.%s.nf" % ret['pid'])
                 logging.info("Netperf thread completed successfully")
@@ -602,6 +597,12 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         start_state = get_state()
     ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
     finished_result = ssh_cmd(clients[-1], "cat %s" % fname)
+
+    # stop netperf clients
+    kill_cmd = "killall netperf"
+    if params.get("os_type") == "windows":
+        kill_cmd = "taskkill /F /IM netperf*"
+    ssh_cmd(clients[-1], kill_cmd, ignore_status=True)
 
     # real & effective test ends
     if get_status_flag:

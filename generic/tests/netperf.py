@@ -9,7 +9,7 @@ from autotest.client.shared import error
 from virttest import utils_test, utils_misc, utils_net, remote, data_dir
 
 
-def format_result(result, base="12", fbase="2"):
+def format_result(result, base="12", fbase="5"):
     """
     Format the result to a fixed length string.
 

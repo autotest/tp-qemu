@@ -1,4 +1,3 @@
-CC = gcc
 PROG = clock_getres
 SRC = clock_getres.c
 LIBS = -lrt

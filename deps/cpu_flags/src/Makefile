@@ -40,9 +40,6 @@ CFLAGSXOP= ${CFLAGS} \
 CFLAGSSTRESS= ${CFLAGS} \
 	$(EXTRA_FLAGS) \
 
-CXX=g++
-CC=gcc
-
 LIBS=-lgomp
 
 .PHONY: default all cpuflags-test clean

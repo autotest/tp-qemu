@@ -6,6 +6,6 @@ LIBS = -lrt
 all: $(PROG)
 
 $(PROG):
-	$(CC) $(LIBS) -o $(PROG) $(SRC)
+	$(CC) $(SRC) $(LIBS) -o $(PROG)
 clean:
 	rm -f $(PROG)

@@ -40,9 +40,11 @@ def run(test, params, env):
     vg_name = "vg_kvm_test"
     lv_name = "lv_kvm_test"
     lv_path = "/dev/%s/%s" % (vg_name, lv_name)
-    disks = params.get("disks", "/dev/hdb /dev/hdc")
     clean = params.get("clean", "yes")
     timeout = params.get("lvm_timeout", "600")
+    output = session.cmd_output("ls /dev/[hvs]da")
+    disk_prefix = output.strip()[:len('/dev/hd')]
+    disks = "%sb %sc" % (disk_prefix, disk_prefix)
 
     try:
         error.context("adding physical volumes %s" % disks, logging.info)

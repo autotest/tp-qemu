@@ -9,7 +9,7 @@ from autotest.client.shared import error
 from virttest import utils_test, utils_misc, utils_net, remote, data_dir
 
 
-def format_result(result, base="12", fbase="2"):
+def format_result(result, base="12", fbase="5"):
     """
     Format the result to a fixed length string.
 
@@ -81,8 +81,8 @@ def run(test, params, env):
     """
     def env_setup(session, ip, user, port, password):
         error.context("Setup env for %s" % ip)
-        ssh_cmd(session, "iptables -F; true")
-        ssh_cmd(session, "service iptables stop; true")
+        ssh_cmd(session, "iptables -F", ignore_status=True)
+        ssh_cmd(session, "service iptables stop", ignore_status=True)
         ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
         download_link = params.get("netperf_download_link")
@@ -370,11 +370,6 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
 
                 fd.flush()
 
-                kill_cmd = "killall netperf"
-                if params.get("os_type") == "windows":
-                    kill_cmd = "taskkill /F /IM netperf*"
-                ssh_cmd(clients[-1], kill_cmd, ignore_status=True)
-
                 logging.debug("Remove temporary files")
                 commands.getoutput("rm -f /tmp/netperf.%s.nf" % ret['pid'])
                 logging.info("Netperf thread completed successfully")
@@ -602,6 +597,12 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         start_state = get_state()
     ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
     finished_result = ssh_cmd(clients[-1], "cat %s" % fname)
+
+    # stop netperf clients
+    kill_cmd = "killall netperf"
+    if params.get("os_type") == "windows":
+        kill_cmd = "taskkill /F /IM netperf*"
+    ssh_cmd(clients[-1], kill_cmd, ignore_status=True)
 
     # real & effective test ends
     if get_status_flag:

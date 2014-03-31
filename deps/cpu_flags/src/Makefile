@@ -2,7 +2,7 @@ MKDIR = mkdir -p
 
 OPTFLAGS=-O3
 
-CFLAGS= ${OPTFLAGS} -std=c99 -pipe \
+override CFLAGS += ${OPTFLAGS} -std=c99 -pipe \
 	-ftree-vectorize \
 	-ffast-math \
 	-fopenmp \

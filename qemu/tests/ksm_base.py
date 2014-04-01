@@ -102,7 +102,7 @@ def run(test, params, env):
 
     error.context("Start to allocate pages inside guest", logging.info)
     _start_allocator(vm, session, 60)
-    error.context("Turn off swap in guest", logging.info)
+    error.context("Start to fill memory in guest", logging.info)
     mem_fill = "mem = MemFill(%s, 0, %s)" % (shared_mem, seed)
     _execute_allocator(mem_fill, vm, session, fill_timeout)
     cmd = "mem.value_fill()"
@@ -127,6 +127,12 @@ def run(test, params, env):
     _, sharing_page_2 = commands.getstatusoutput(query_cmd)
     if query_regex:
         sharing_page_2 = re.findall(query_regex, sharing_page_2)[0]
+
+    # clean up work in guest
+    error.context("Clean up env in guest", logging.info)
+    session.cmd_output("die()", 20)
+    session.cmd_status_output("swapon -a")
+    session.cmd_output("echo 3 > /proc/sys/vm/drop_caches")
 
     sharing_page = [sharing_page_0, sharing_page_1, sharing_page_2]
     for i in sharing_page:

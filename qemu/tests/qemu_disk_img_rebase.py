@@ -60,6 +60,7 @@ def run(test, params, env):
     """
     base_image = params.get("images", "image1").split()[0]
     params_bak = copy.deepcopy(params)
+    md5_dict = {}
     params.update(
         {"image_name_%s" % base_image: params["image_name"],
          "image_format_%s" % base_image: params["image_format"]})
@@ -70,9 +71,10 @@ def run(test, params, env):
         n_params = rebase_test.create_snapshot()
         rebase_test.start_vm(n_params)
         t_file = params["guest_file_name_%s" % tag]
-        ret = rebase_test.save_file(t_file)
-        if not ret:
+        md5 = rebase_test.save_file(t_file)
+        if not md5:
             raise error.TestError("Fail to save tmp file")
+        md5_dict[t_file] = md5
         rebase_test.destroy_vm()
 
     # rebase snapshot image
@@ -95,7 +97,7 @@ def run(test, params, env):
         rebase_test.start_vm(t_params)
         check_files = params.get("check_files", "").split()
         for _file in check_files:
-            ret = rebase_test.check_file(_file)
+            ret = rebase_test.check_file(_file, md5_dict[_file])
             if not ret:
                 raise error.TestError("Check md5sum fail (file:%s)" % _file)
         rebase_test.destroy_vm()

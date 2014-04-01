@@ -49,15 +49,15 @@ def run(test, params, env):
     convert_test.start_vm(n_params)
 
     # save file md5sum before conversion
-    ret = convert_test.save_file(t_file)
-    if not ret:
+    md5 = convert_test.save_file(t_file)
+    if not md5:
         raise error.TestError("Fail to save tmp file")
     convert_test.destroy_vm()
     n_params = convert_test.convert()
     convert_test.start_vm(n_params)
 
     # check md5sum after conversion
-    ret = convert_test.check_file(t_file)
+    ret = convert_test.check_file(t_file, md5)
     if not ret:
         raise error.TestError("image content changed after convert")
     convert_test.clean()

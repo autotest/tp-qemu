@@ -1,6 +1,7 @@
 import logging
 import time
 from autotest.client.shared import error
+from virttest import utils_misc
 
 try:
     from virttest.staging import utils_memory
@@ -44,7 +45,7 @@ def run(test, params, env):
         vm.create()
         vm.verify_alive()
         session = vm.wait_for_serial_login(timeout=timeout)
-        boot_time = time.time() - vm.start_time
+        boot_time = utils_misc.monotonic_time() - vm.start_monotonic_time
         test.write_test_keyval({'result': "%ss" % boot_time})
         expect_time = int(params.get("expect_bootup_time", "17"))
         logging.info("Boot up time: %ss" % boot_time)

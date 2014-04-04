@@ -43,6 +43,7 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_serial_login(timeout=timeout)
         boot_time = time.time() - vm.start_time
+        test.write_test_keyval({'result': "%ss" % boot_time})
         expect_time = int(params.get("expect_bootup_time", "17"))
         logging.info("Boot up time: %ss" % boot_time)
 

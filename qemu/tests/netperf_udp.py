@@ -25,16 +25,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    def dlink_preprcess(download_link):
-        """
-        Preprocess the download link
-        """
-        if not download_link:
-            raise error.TestNAError("Can not get the netperf download_link")
-        if not utils.is_url(download_link):
-            download_link = utils_misc.get_path(data_dir.get_deps_dir(),
-                                                download_link)
-        return download_link
 
     login_timeout = float(params.get("login_timeout", 360))
     dsthost = params.get("dsthost", "localhost")
@@ -59,10 +49,9 @@ def run(test, params, env):
         dsthost_ip = host_nic.get_ip()
 
     error.context("Test env prepare", logging.info)
-    download_link = dlink_preprcess(params.get("netperf_download_link"))
+    download_link = params.get("netperf_download_link")
     md5sum = params.get("pkg_md5sum")
     server_download_link = params.get("server_download_link", download_link)
-    server_download_link = dlink_preprcess(server_download_link)
     server_md5sum = params.get("server_md5sum", md5sum)
     server_path = params.get("server_path", "/var/tmp/server.tar.bz2")
     client_path = params.get("client_path", "/var/tmp/client.tar.bz2")

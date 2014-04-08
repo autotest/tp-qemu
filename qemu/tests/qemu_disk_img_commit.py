@@ -41,15 +41,15 @@ def run(test, params, env):
     commit_test.start_vm(n_params)
 
     # save file md5sum before commit
-    ret = commit_test.save_file(t_file)
-    if not ret:
+    md5 = commit_test.save_file(t_file)
+    if not md5:
         raise error.TestError("Fail to save tmp file")
     commit_test.destroy_vm()
     commit_test.commit()
     commit_test.start_vm(params)
 
     # check md5sum after commit
-    ret = commit_test.check_file(t_file)
+    ret = commit_test.check_file(t_file, md5)
     if not ret:
         raise error.TestError("image content changed after commit")
     commit_test.clean()

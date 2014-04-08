@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from autotest.client.shared import error
 from autotest.client import utils
@@ -80,24 +81,31 @@ class QemuImgTest(qemu_storage.QemuImg):
         session = self.vm.wait_for_login(timeout=login_timeout)
         md5bin = self.params["md5sum_bin"]
         cmd = "%s %s" % (md5bin, cmd)
-        s, o = session.cmd_status_output(cmd)
-        if s != 0:
-            logging.info("Execute '%s' with failures('%s') " % (cmd, o))
-            return False
-        return True
+        status, output = session.cmd_status_output(cmd)
+        if status != 0:
+            logging.info("Execute '%s' with failures('%s') " % (cmd, output))
+            return None
+        md5 = re.findall("\w{32}", output)[0]
+        return md5
 
     @error.context_aware
     def save_file(self, dst):
         error.context("save file('%s') md5sum in guest" % dst, logging.info)
         self.__create_file(dst)
-        cmd = "%s > %s.md5 " % (dst, dst)
+        cmd = dst
         return self.__md5sum(cmd)
 
     @error.context_aware
-    def check_file(self, dst):
+    def check_file(self, dst, md5):
         error.context("check file('%s') md5sum in guest" % dst, logging.info)
-        cmd = "-c %s.md5 " % dst
-        return self.__md5sum(cmd)
+        cmd = " %s" % dst
+        if md5 == self.__md5sum(cmd):
+            return True
+        else:
+            err = "Md5 value does not match. Expected value: %s" % md5
+            err += "Actual value: %s" % self.__md5sum(cmd)
+            logging.error(err)
+            return False
 
     @error.context_aware
     def destroy_vm(self):

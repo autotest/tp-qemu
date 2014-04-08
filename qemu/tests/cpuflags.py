@@ -8,7 +8,7 @@ import sys
 import traceback
 from xml.parsers import expat
 from autotest.client.shared import error, utils
-from virttest import qemu_vm, virt_vm
+from virttest import qemu_vm, virt_vm, data_dir
 from virttest import utils_misc, utils_test, aexpect
 from autotest.client.shared.syncdata import SyncData
 
@@ -24,8 +24,8 @@ def run(test, params, env):
     utils_misc.Flag.aliases = utils_misc.kvm_map_flags_aliases
     qemu_binary = utils_misc.get_qemu_binary(params)
 
-    cpuflags_src = os.path.join(test.virtdir, "deps", "cpu_flags", "src")
-    cpuflags_def = os.path.join(test.virtdir, "deps", "cpu_flags",
+    cpuflags_src = os.path.join(data_dir.get_deps_dir("cpu_flags"), "src")
+    cpuflags_def = os.path.join(data_dir.get_deps_dir("cpu_flags"),
                                 "cpu_map.xml")
     smp = int(params.get("smp", 1))
 

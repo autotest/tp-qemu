@@ -23,16 +23,18 @@ def run(test, params, env):
         Linux guest env setup, install udt, set env and iptables
         """
         lib_path = "/usr/lib64"
-        if '64' not in params.get("vm_arch_name", 'x86_64'):
+        if '64' not in params.get("vm_arch_name", 'x86_64') \
+                or session.get_cmd_status("test -d %s", lib_path):
             lib_path = "/usr/lib"
-        cmd = r"git clone %s udt-git; " % params.get("udt_url")
-        cmd += r"cd udt-git/udt4; make; make install; "
-        cmd += r"cp -u src/*.so %s ; " % lib_path
-        cmd += r"cp -u app/sendfile app/recvfile /usr/bin/; "
-        cmd += r"iptables -I INPUT -p udp  -j ACCEPT; "
+        cmd = r"git clone %s udt-git && " % params.get("udt_url")
+        cmd += r"cd udt-git/udt4 && make && make install && "
+        cmd += r"cp -u src/*.so %s && " % lib_path
+        cmd += r"cp -u app/sendfile app/recvfile /usr/bin/ && "
+        cmd += r"iptables -I INPUT -p udp  -j ACCEPT && "
         cmd += r"iptables -I OUTPUT -p udp -j ACCEPT "
-        if session.cmd_status(cmd):
-            raise error.TestError("Install udt on guest failed")
+        status, output = session.cmd_status_output(cmd)
+        if status:
+            raise error.TestError("Install udt on guest failed: '%s'" % output)
 
     timeout = int(params.get("login_timeout", '360'))
     transfer_timeout = int(params.get("transfer_timeout", '120'))

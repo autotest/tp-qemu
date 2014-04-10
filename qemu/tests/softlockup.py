@@ -21,7 +21,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    stress_setup_cmd = params.get("stress_setup_cmd")
+    stress_setup_cmd = params.get("stress_setup_cmd", None)
     stress_cmd = params.get("stress_cmd")
     server_setup_cmd = params.get("server_setup_cmd")
     drift_cmd = params.get("drift_cmd")
@@ -36,8 +36,9 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))
-    stress_dir = os.path.join(os.environ['AUTODIR'], "tests/stress")
-    monitor_dir = os.path.join(test.virtdir, 'deps')
+    auto_dir = os.environ.get("AUTODIR", os.environ.get("AUTOTEST_PATH"))
+    stress_dir = os.path.join(auto_dir, "tests", "stress")
+    monitor_dir = params.get("monitor_dir", os.path.join(test.virtdir, 'deps'))
 
     def _kill_guest_programs(session, kill_stress_cmd, kill_monitor_cmd):
         logging.info("Kill stress and monitor on guest")
@@ -69,9 +70,10 @@ def run(test, params, env):
         utils.run(server_setup_cmd % (monitor_dir, threshold,
                                       monitor_log_file_server, monitor_port))
 
-        logging.info("Build stress on host")
-        # Uncompress and build stress on host
-        utils.run(stress_setup_cmd % stress_dir)
+        if not stress_setup_cmd is None:
+            logging.info("Build stress on host")
+            # Uncompress and build stress on host
+            utils.run(stress_setup_cmd % stress_dir)
 
         logging.info("Run stress on host")
         # stress_threads = 2 * n_cpus
@@ -109,22 +111,23 @@ def run(test, params, env):
         except Exception:
             pass
 
-        # Get required files and copy them from host to guest
+        # Get monitor files and copy them from host to guest
         monitor_path = os.path.join(data_dir.get_deps_dir(), 'softlockup',
                                     'heartbeat_slu.py')
-        stress_path = os.path.join(os.environ['AUTODIR'], "tests", "stress",
-                                   "stress-1.0.4.tar.gz")
         vm.copy_files_to(monitor_path, "/tmp")
-        vm.copy_files_to(stress_path, "/tmp")
 
         logging.info("Setup monitor client on guest")
         # Start heartbeat on guest
         session.cmd(params.get("client_setup_cmd") %
                     ("/tmp", host_ip, monitor_log_file_client, monitor_port))
 
-        logging.info("Build stress on guest")
-        # Uncompress and build stress on guest
-        session.cmd(stress_setup_cmd % "/tmp", timeout=200)
+        if not stress_setup_cmd is None:
+            # Copy, uncompress and build stress on guest
+            stress_source = params.get("stress_source")
+            stress_path = os.path.join(stress_dir, stress_source)
+            vm.copy_files_to(stress_path, "/tmp")
+            logging.info("Build stress on guest")
+            session.cmd(stress_setup_cmd % "/tmp", timeout=200)
 
         logging.info("Run stress on guest")
         # stress_threads = 2 * n_vcpus

@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 import re
 from autotest.client import utils
 from autotest.client.shared import error
@@ -49,28 +50,47 @@ def run(test, params, env):
 
     try:
         error.context("Test Env setup")
+        iperf_downloaded = 0
         iperf_url = linux_iperf_url
-        utils.get_file(iperf_url, host_path)
 
-        error.context("install iperf in host", logging.info)
+        app_check_cmd = params.get("linux_app_check_cmd", "false")
+        app_check_exit_status = int(params.get("linux_app_check_exit_status", "0"))
+        exit_status = utils.system(app_check_cmd)
+
+        # Install iperf in host if not available
         default_install_cmd = "tar zxvf %s; cd iperf-%s;"
         default_install_cmd += " ./configure; make; make install"
         install_cmd = params.get("linux_install_cmd", default_install_cmd)
-        utils.system(install_cmd % (host_path, iperf_version))
-
-        error.context("install iperf in guest", logging.info)
-        if os_type == "linux":
-            guest_path = (tmp_dir + "iperf.tgz")
-            clean_cmd = "rm -rf %s iperf-%s" % (guest_path, iperf_version)
-        else:
-            guest_path = (tmp_dir + "iperf.exe")
-            iperf_url = win_iperf_url
+        if not exit_status == app_check_exit_status:
+            error.context("install iperf in host", logging.info)
             utils.get_file(iperf_url, host_path)
-            clean_cmd = "del %s" % guest_path
-        vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
+            iperf_downloaded = 1
+            utils.system(install_cmd % (host_path, iperf_version))
 
-        if os_type == "linux":
-            session.cmd(install_cmd % (guest_path, iperf_version))
+        # The guest may not be running Linux, see if we should update the
+        # app_check variables
+        if not os_type == "linux":
+            app_check_cmd = params.get("win_app_check_cmd", "false")
+            app_check_exit_status = int(params.get("win_app_check_exit_status", "0"))
+
+        # Install iperf in guest if not available
+        clean_cmd = ""
+        if not session.cmd_status(app_check_cmd) == app_check_exit_status:
+            error.context("install iperf in guest", logging.info)
+            if not iperf_downloaded:
+                utils.get_file(iperf_url, host_path)
+            if os_type == "linux":
+                guest_path = (tmp_dir + "iperf.tgz")
+                clean_cmd = "rm -rf %s iperf-%s" % (guest_path, iperf_version)
+            else:
+                guest_path = (tmp_dir + "iperf.exe")
+                iperf_url = win_iperf_url
+                utils.get_file(iperf_url, host_path)
+                clean_cmd = "del %s" % guest_path
+            vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
+
+            if os_type == "linux":
+                session.cmd(install_cmd % (guest_path, iperf_version))
 
         muliticast_addr = params.get("muliticast_addr", "225.0.0.3")
         multicast_port = params.get("multicast_port", "5001")
@@ -106,13 +126,14 @@ def run(test, params, env):
         logging.info("Client start successfully")
 
         error.context("Test finish, check the result", logging.info)
-        utils.system("killall -9 iperf")
+        utils.system("pkill -2 iperf")
         t.join()
 
     finally:
         if utils.process_is_alive("iperf"):
             utils.system("killall -9 iperf")
         utils.system("rm -rf %s" % host_path)
-        session.cmd(clean_cmd)
         if session:
+            if clean_cmd:
+                session.cmd(clean_cmd)
             session.close()

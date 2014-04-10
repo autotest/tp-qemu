@@ -22,36 +22,39 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    exploit_file = os.path.join(data_dir.get_deps_dir(), 'nx', 'x64_sc_rdo.c')
-    dst_dir = '/tmp'
+    exploit_cmd = params.get("exploit_cmd", "")
+    if not exploit_cmd or session.cmd_status("test -x %s" % exploit_cmd):
+        exploit_file = os.path.join(data_dir.get_deps_dir(), 'nx', 'x64_sc_rdo.c')
+        dst_dir = '/tmp'
 
-    error.context("Copy the Exploit file to guest.", logging.info)
-    vm.copy_files_to(exploit_file, dst_dir)
+        error.context("Copy the Exploit file to guest.", logging.info)
+        vm.copy_files_to(exploit_file, dst_dir)
 
-    error.context("Build exploit program in guest.", logging.info)
-    build_exploit = "gcc -o /tmp/nx_exploit /tmp/x64_sc_rdo.c"
-    if session.cmd_status(build_exploit):
-        raise error.TestError("Failed to build the exploit program")
+        error.context("Build exploit program in guest.", logging.info)
+        build_exploit = "gcc -o /tmp/nx_exploit /tmp/x64_sc_rdo.c"
+        if session.cmd_status(build_exploit):
+            raise error.TestError("Failed to build the exploit program")
+
+        exploit_cmd = "/tmp/nx_exploit"
 
     error.context("Run exploit program in guest.", logging.info)
-    exec_exploit = "/tmp/nx_exploit"
     # if nx is enabled (by default), the program failed.
     # segmentation error. return value of shell is not zero.
-    exec_res = session.cmd_status(exec_exploit)
+    exec_res = session.cmd_status(exploit_cmd)
     nx_on = params.get('nx_on', 'yes')
     if nx_on == 'yes':
         if exec_res:
             logging.info('NX works good.')
             error.context("Using execstack to remove the protection.",
                           logging.info)
-            enable_exec = 'execstack -s /tmp/nx_exploit'
+            enable_exec = 'execstack -s %s' % exploit_cmd
             if session.cmd_status(enable_exec):
                 if session.cmd_status("execstack --help"):
                     msg = "Please make sure guest have execstack command."
                     raise error.TestError(msg)
                 raise error.TestError('Failed to enable the execstack')
 
-            if session.cmd_status(exec_exploit):
+            if session.cmd_status(exploit_cmd):
                 raise error.TestFail('NX is still protecting. Error.')
             else:
                 logging.info('NX is disabled as desired. good')

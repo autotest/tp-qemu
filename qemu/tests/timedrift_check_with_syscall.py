@@ -18,8 +18,6 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    build_cmd = params.get("build_cmd", "gcc -lrt clktest.c -o clktest")
-    test_cmd = params.get("test_cmd", "./clktest")
     check_timeout = int(params.get("check_timeout", "600"))
     tmp_dir = params.get("tmp_dir", "/tmp")
 
@@ -28,15 +26,18 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    src_dir = os.path.join(data_dir.get_deps_dir(), 'timedrift')
-    src_file = os.path.join(src_dir, "clktest.c")
-    dst_file = os.path.join(tmp_dir, "clktest.c")
-    error.context("transfer '%s' to guest('%s')" % (src_file, dst_file),
-                  logging.info)
-    vm.copy_files_to(src_file, tmp_dir, timeout=120)
+    test_cmd = params.get("test_cmd", "./clktest")
+    if session.get_command_status("test -x %s" % test_cmd):
+        src_dir = os.path.join(data_dir.get_deps_dir(), 'timedrift')
+        src_file = os.path.join(src_dir, "clktest.c")
+        dst_file = os.path.join(tmp_dir, "clktest.c")
+        error.context("transfer '%s' to guest('%s')" % (src_file, dst_file),
+                      logging.info)
+        vm.copy_files_to(src_file, tmp_dir, timeout=120)
 
-    error.context("build binary file 'clktest'", logging.info)
-    session.cmd(build_cmd)
+        build_cmd = params.get("build_cmd", "gcc -lrt clktest.c -o clktest")
+        error.context("build binary file 'clktest'", logging.info)
+        session.cmd(build_cmd)
 
     error.context("check clock offset via `clktest`", logging.info)
     logging.info("set check timeout to %s seconds", check_timeout)

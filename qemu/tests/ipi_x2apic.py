@@ -61,12 +61,17 @@ def run(test, params, env):
                 msg = "%s is not displayed in output" % check_string
                 raise error.TestFail(msg)
 
-    file_link = os.path.join(test.virtdir, "scripts/pipetest.c")
-    vm.copy_files_to(file_link, "/tmp/pipetest.c")
-    run_pipetest_cmd = params.get("run_pipetest_cmd")
+    pipetest_cmd = params.get("pipetest_cmd")
+    if session.get_command_status("test -x %s" % pipetest_cmd):
+        file_link = os.path.join(test.virtdir, "scripts/pipetest.c")
+        vm.copy_files_to(file_link, "/tmp/pipetest.c")
+        build_pipetest_cmd = params.get("build_pipetest_cmd")
+        error.context("Build pipetest script in guest.", logging.info)
+        session.cmd(build_pipetest_cmd, timeout=180)
+
     error.context("Run pipetest script in guest.", logging.info)
     try:
-        o = session.cmd(run_pipetest_cmd, timeout=180)
+        o = session.cmd(pipetest_cmd, timeout=180)
     except aexpect.ShellTimeoutError, e:
         o = e
     re_str = params.get("usec_re_str", "[0-9]*\.[0-9]+")
@@ -88,7 +93,7 @@ def run(test, params, env):
 
     error.context("Run pipetest script in guest again.", logging.info)
     try:
-        o = session.cmd(run_pipetest_cmd, timeout=180)
+        o = session.cmd(pipetest_cmd, timeout=180)
     except aexpect.ShellTimeoutError, e:
         o = e
     val2 = get_re_average(o, re_str)

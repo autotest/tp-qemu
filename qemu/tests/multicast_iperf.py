@@ -46,6 +46,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
+    clean_cmd = ""
     client_ip = vm.get_address(0)
 
     try:
@@ -54,8 +55,9 @@ def run(test, params, env):
         iperf_url = linux_iperf_url
 
         app_check_cmd = params.get("linux_app_check_cmd", "false")
-        app_check_exit_status = int(params.get("linux_app_check_exit_status", "0"))
-        exit_status = utils.system(app_check_cmd)
+        app_check_exit_status = int(params.get("linux_app_check_exit_status",
+                                               "0"))
+        exit_status = utils.system(app_check_cmd, ignore_status=True)
 
         # Install iperf in host if not available
         default_install_cmd = "tar zxvf %s; cd iperf-%s;"
@@ -71,10 +73,10 @@ def run(test, params, env):
         # app_check variables
         if not os_type == "linux":
             app_check_cmd = params.get("win_app_check_cmd", "false")
-            app_check_exit_status = int(params.get("win_app_check_exit_status", "0"))
+            app_check_exit_status = int(params.get("win_app_check_exit_status",
+                                                   "0"))
 
         # Install iperf in guest if not available
-        clean_cmd = ""
         if not session.cmd_status(app_check_cmd) == app_check_exit_status:
             error.context("install iperf in guest", logging.info)
             if not iperf_downloaded:

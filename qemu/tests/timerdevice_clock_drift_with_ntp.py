@@ -19,16 +19,18 @@ def run(test, params, env):
     7) Verify each vcpu is pinned on host.
     8) Run time-warp-test on guest.
     9) Start ntpd on guest.
-    10) Check the drift in /var/lib/ntp/drift file on guest after hours
-        of running.
+    10) Check the drift in the drift file on guest after hours of running.
 
     :param test: QEMU test object.
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+
+    ntp_drift_filename = params.get("ntp_drift_filename", "/var/lib/ntp/drift")
+
     def _drift_file_exist():
         try:
-            session.cmd("test -f /var/lib/ntp/drift")
+            session.cmd("test -f %s" % ntp_drift_filename)
             return True
         except Exception:
             return False
@@ -55,7 +57,9 @@ def run(test, params, env):
     full_build_path = builder.build()
 
     error.context("Stop ntpd and apply load on guest", logging.info)
-    sess_guest_load.cmd("yum install -y ntp; service ntpd stop")
+    default_ntp_stop_cmd = "yum install -y ntp; service ntpd stop"
+    ntp_stop_cmd = params.get("ntp_stop_cmd", default_ntp_stop_cmd)
+    sess_guest_load.cmd(ntp_stop_cmd)
     load_cmd = "for ((I=0; I<`grep 'processor id' /proc/cpuinfo| wc -l`; I++));"
     load_cmd += " do taskset $(( 1 << $I )) /bin/bash -c 'for ((;;)); do X=1; done &';"
     load_cmd += " done"
@@ -81,6 +85,8 @@ def run(test, params, env):
 
     error.context("Start ntpd on guest", logging.info)
     cmd = "service ntpd start; sleep 1; echo"
+    default_ntp_start_cmd = "service ntpd start; sleep 1; echo"
+    ntp_start_cmd = params.get("ntp_start_cmd", default_ntp_start_cmd)
     session.cmd(cmd)
 
     error.context("Check if the drift file exists on guest", logging.info)
@@ -89,10 +95,11 @@ def run(test, params, env):
         utils_misc.wait_for(_drift_file_exist, test_run_timeout, step=5)
     except aexpect.ShellCmdError, detail:
         raise error.TestError("Failed to wait for the creation of"
-                              " /var/lib/ntp/drift file. Detail: '%s'" % detail)
+                              " %s file. Detail: '%s'" %
+                              (ntp_drift_filename, detail))
 
     error.context("Verify the drift file content on guest", logging.info)
-    output = session.cmd("cat /var/lib/ntp/drift")
+    output = session.cmd("cat %s" % ntp_drift_filename)
     if int(abs(float(output))) > 20:
         raise error.TestFail("Failed to check the ntp drift."
                              " Output: '%s'" % output)

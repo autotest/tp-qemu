@@ -2,7 +2,7 @@ import logging
 import os
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import data_dir, utils_misc, aexpect
+from virttest import data_dir, utils_misc, aexpect, remote_build
 
 
 @error.context_aware
@@ -46,17 +46,13 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     sess_guest_load = vm.wait_for_login(timeout=timeout)
 
-    error.context("Copy time-warp-test.c to guest", logging.info)
-    src_file_name = os.path.join(data_dir.get_deps_dir(), "time_warp",
-                                 "time-warp-test.c")
-    vm.copy_files_to(src_file_name, "/tmp")
+    address = vm.get_address(0)
+    source_dir = data_dir.get_deps_dir("tsc_sync")
+    build_dir = params.get("build_dir", None)
+    builder = remote_build.Builder(params, address, source_dir,
+                                   build_dir=build_dir)
 
-    error.context("Compile the time-warp-test.c", logging.info)
-    cmd = "cd /tmp/;"
-    cmd += " yum install -y popt-devel;"
-    cmd += " rm -f time-warp-test;"
-    cmd += " gcc -Wall -o time-warp-test time-warp-test.c -lrt"
-    sess_guest_load.cmd(cmd)
+    full_build_path = builder.build()
 
     error.context("Stop ntpd and apply load on guest", logging.info)
     sess_guest_load.cmd("yum install -y ntp; service ntpd stop")
@@ -80,7 +76,7 @@ def run(test, params, env):
 
     error.context("Run time-warp-test", logging.info)
     session = vm.wait_for_login(timeout=timeout)
-    cmd = "/tmp/time-warp-test > /dev/null &"
+    cmd = "%s > /dev/null &" % os.path.join(full_build_path, "time-warp-test")
     session.sendline(cmd)
 
     error.context("Start ntpd on guest", logging.info)

@@ -25,7 +25,6 @@
 #include <time.h>
 #include <sys/mman.h>
 #include <dlfcn.h>
-#include <popt.h>
 #include <sys/socket.h>
 #include <ctype.h>
 #include <assert.h>

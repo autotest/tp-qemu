@@ -106,7 +106,7 @@ class DriveMirror(block_copy.BlockCopy):
         """
         params = self.parser_test_args()
         info = self.get_status()
-        ret = (info["len"] == info["offset"])
+        ret = bool(info and info["len"] == info["offset"])
         if self.vm.monitor.protocol == "qmp":
             if params.get("check_event", "no") == "yes":
                 ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))

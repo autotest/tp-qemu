@@ -79,7 +79,9 @@ class BlockCopy(object):
         """
         return block job info dict;
         """
-        return self.vm.get_job_status(self.device)
+        query_status = lambda: self.vm.get_job_status(self.device)
+        status = utils_misc.wait_for(query_status, timeout=120)
+        return status or {}
 
     def do_steps(self, tag=None):
         if not tag:

@@ -1,8 +1,9 @@
 import re
+import os
 import logging
 import time
 from autotest.client.shared import error
-from virttest import utils_net, utils_netperf, utils_misc
+from virttest import utils_net, utils_netperf, utils_misc, data_dir
 
 
 @error.context_aware
@@ -43,9 +44,12 @@ def run(test, params, env):
         host_nic = utils_net.Interface(server_interface)
         dsthost_ip = host_nic.get_ip()
 
-    download_link = params.get("netperf_download_link")
+    netperf_link = params.get("netperf_link")
+    netperf_link = os.path.join(data_dir.get_deps_dir("netperf"), netperf_link)
     md5sum = params.get("pkg_md5sum")
-    server_download_link = params.get("server_download_link", download_link)
+    netperf_server_link = params.get("netperf_server_link", netperf_link)
+    netperf_server_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                       netperf_server_link)
     server_md5sum = params.get("server_md5sum", md5sum)
     server_path = params.get("server_path", "/var/tmp")
     client_path = params.get("client_path", "/var/tmp")
@@ -66,13 +70,13 @@ def run(test, params, env):
 
     netperf_client = utils_netperf.NetperfClient(netperf_client_ip,
                                                  client_path,
-                                                 md5sum, download_link,
+                                                 md5sum, netperf_link,
                                                  password=host_passwd)
 
     netperf_server = utils_netperf.NetperfServer(netserver_ip,
                                                  server_path,
                                                  server_md5sum,
-                                                 server_download_link,
+                                                 netperf_server_link,
                                                  client, port,
                                                  username=guest_usrname,
                                                  password=guest_passwd)
@@ -92,7 +96,7 @@ def run(test, params, env):
 
         netperf_client.bg_start(netserver_ip, test_option,
                                 netperf_para_sess, netperf_cmd_prefix)
-        if utils_misc.wait_for(netperf_client.is_test_running, 10, 0, 1,
+        if utils_misc.wait_for(netperf_client.is_netperf_running, 10, 0, 1,
                                "Wait netperf test start"):
             logging.debug("Netperf test start successfully.")
             # here when set a run flag, when other case call this case as a
@@ -104,9 +108,9 @@ def run(test, params, env):
 
         while (env["netperf_run"] and time.time() < stop_time):
             run_left_time = stop_time - time.time()
-            if netperf_client.is_test_running():
+            if netperf_client.is_netperf_running():
                 if not utils_misc.wait_for(lambda: not
-                                           netperf_client.is_test_running(),
+                                           netperf_client.is_netperf_running(),
                                            run_left_time, 0, 5,
                                            "Wait netperf test finish"):
                     logging.debug("Stress test timeout, finish it")
@@ -116,8 +120,8 @@ def run(test, params, env):
 
     finally:
         netperf_server.stop()
-        netperf_server.env_cleanup(True)
-        netperf_client.env_cleanup(True)
+        netperf_server.package.env_cleanup(True)
+        netperf_client.package.env_cleanup(True)
         env["netperf_run"] = False
         if session:
             session.close()

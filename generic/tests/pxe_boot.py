@@ -16,18 +16,21 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    error.context("Try to boot from NIC", logging.info)
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
-    timeout = int(params.get("pxe_timeout", 60))
+    try:
+        error.context("Try to boot from NIC", logging.info)
+        vm = env.get_vm(params["main_vm"])
+        vm.verify_alive()
+        timeout = int(params.get("pxe_timeout", 60))
 
-    error.context("Snoop packet in the tap device", logging.info)
-    output = aexpect.run_fg("tcpdump -nli %s" % vm.get_ifname(),
-                            logging.debug, "(pxe capture) ", timeout)[1]
+        error.context("Snoop packet in the tap device", logging.info)
+        output = aexpect.run_fg("tcpdump -nli %s" % vm.get_ifname(),
+                                logging.debug, "(pxe capture) ", timeout)[1]
 
-    error.context("Analyzing the tcpdump result", logging.info)
-    if not "tftp" in output:
-        raise error.TestFail(
-            "Couldn't find any TFTP packets after %s seconds" %
-            timeout)
-    logging.info("Found TFTP packet")
+        error.context("Analyzing the tcpdump result", logging.info)
+        if not "tftp" in output:
+            raise error.TestFail(
+                "Couldn't find any TFTP packets after %s seconds" %
+                timeout)
+        logging.info("Found TFTP packet")
+    finally:
+        vm.destroy()

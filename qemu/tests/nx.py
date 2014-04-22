@@ -1,7 +1,7 @@
 import os
 import logging
 from autotest.client.shared import error
-from virttest import data_dir
+from virttest import data_dir, remote_build
 
 
 @error.context_aware
@@ -22,20 +22,13 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    exploit_cmd = params.get("exploit_cmd", "")
-    if not exploit_cmd or session.cmd_status("test -x %s" % exploit_cmd):
-        exploit_file = os.path.join(data_dir.get_deps_dir(), 'nx', 'x64_sc_rdo.c')
-        dst_dir = '/tmp'
+    address = vm.get_address(0)
+    source_dir = data_dir.get_deps_dir("nx")
+    build_dir = params.get("build_dir", None)
+    builder = remote_build.Builder(params, address, source_dir,
+                                   build_dir=build_dir)
 
-        error.context("Copy the Exploit file to guest.", logging.info)
-        vm.copy_files_to(exploit_file, dst_dir)
-
-        error.context("Build exploit program in guest.", logging.info)
-        build_exploit = "gcc -o /tmp/nx_exploit /tmp/x64_sc_rdo.c"
-        if session.cmd_status(build_exploit):
-            raise error.TestError("Failed to build the exploit program")
-
-        exploit_cmd = "/tmp/nx_exploit"
+    exploit_cmd = os.path.join(builder.build(), "nx_exploit")
 
     error.context("Run exploit program in guest.", logging.info)
     # if nx is enabled (by default), the program failed.

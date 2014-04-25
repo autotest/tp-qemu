@@ -41,20 +41,24 @@ def run(test, params, env):
         """
         error.context("Setup env for %s" % ip_addr)
         ssh_cmd(session, "service iptables stop; true")
-        netperf_links = params["netperf_links"].split()
-        remote_dir = params.get("remote_dir", "/var/tmp")
-        for netperf_link in netperf_links:
-            if utils.is_url(netperf_link):
-                download_dir = data_dir.get_download_dir()
-                md5sum = params.get("pkg_md5sum")
-                netperf_dir = utils.unmap_url_cache(download_dir,
-                                                    netperf_link, md5sum)
-            elif netperf_link:
-                netperf_dir = os.path.join(data_dir.get_root_dir(),
-                                           "shared/%s" % netperf_link)
-            remote.scp_to_remote(ip_addr, shell_port, username, password,
-                                 netperf_dir, remote_dir)
-        ssh_cmd(session, params.get("setup_cmd"))
+        app_check_cmd = params.get("app_check_cmd", "")
+
+        # Install netperf in guest if not already available
+        if not (app_check_cmd and session.cmd_status(app_check_cmd) == 0):
+            netperf_links = params["netperf_links"].split()
+            remote_dir = params.get("remote_dir", "/var/tmp")
+            for netperf_link in netperf_links:
+                if utils.is_url(netperf_link):
+                    download_dir = data_dir.get_download_dir()
+                    md5sum = params.get("pkg_md5sum")
+                    netperf_dir = utils.unmap_url_cache(download_dir,
+                                                        netperf_link, md5sum)
+                elif netperf_link:
+                    netperf_dir = os.path.join(data_dir.get_root_dir(),
+                                               "shared/%s" % netperf_link)
+                remote.scp_to_remote(ip_addr, shell_port, username, password,
+                                     netperf_dir, remote_dir)
+            ssh_cmd(session, params.get("setup_cmd"))
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -202,8 +206,10 @@ def launch_client(sessions, servers, server_ctl, clients,
     # Start netserver
     error.context("Start Netserver on guest", logging.info)
     remote_dir = params.get("remote_dir", "/var/tmp")
-    client_path = os.path.join(remote_dir, "netperf-2.6.0/src/netperf")
-    server_path = os.path.join(remote_dir, "netperf-2.6.0/src/netserver")
+    client_path_default = os.path.join(remote_dir, "netperf-2.6.0/src/netperf")
+    client_cmd = params.get("client_cmd", client_path_default)
+    server_path_default = os.path.join(remote_dir, "netperf-2.6.0/src/netserver")
+    server_cmd = params.get("server_cmd", server_path_default)
 
     if params.get("os_type") == "windows":
         winutils_vol = utils_misc.get_winutils_vol(server_ctl)
@@ -219,8 +225,8 @@ def launch_client(sessions, servers, server_ctl, clients,
                 raise error.TestError(msg)
 
     else:
-        logging.info("Netserver start cmd is '%s'" % server_path)
-        ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
+        logging.info("Netserver start cmd is '%s'" % server_cmd)
+        ssh_cmd(server_ctl, "pidof netserver || %s" % server_cmd)
     logging.info("Netserver start successfully")
 
     # start netperf
@@ -230,7 +236,7 @@ def launch_client(sessions, servers, server_ctl, clients,
     for client in clients:
         test_timeout = len(clients) * l
         server = servers[clients.index(client) % len(servers)]
-        netperf_cmd = "%s -H %s -l %s %s" % (client_path, server,
+        netperf_cmd = "%s -H %s -l %s %s" % (client_cmd, server,
                                              int(l), nf_args)
         client_threads.append([ssh_cmd, (client, netperf_cmd, test_timeout)])
 

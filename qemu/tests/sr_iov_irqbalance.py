@@ -182,7 +182,7 @@ def check_irqbalance(session, devname, cpu_count, irqs, count=6,
         for irq in irqs:
             for cpu in irq_cpus_dict[irq]:
                 if (int(pre_irq_num_dict[irq][cpu]) >=
-                   int(irq_num_dict[irq][cpu])):
+                        int(irq_num_dict[irq][cpu])):
                     msg = "'Cpu%s' did not handle more interrupt" % cpu
                     msg += "for irq '%s'." % irq
                     msg += "IRQ balance information for IRQ '%s'\n" % irq
@@ -315,7 +315,7 @@ def run(test, params, env):
                     raise error.TestError(msg)
                 for cpu in xrange(cpu_count):
                     if (int(irq_nums_dict[irq][cpu]) >=
-                       int(post_irq_nums_dict[irq][cpu])):
+                            int(post_irq_nums_dict[irq][cpu])):
                         msg = "'Cpu%s' did not handle more interrupt" % cpu
                         msg += "for irq '%s'." % irq
                         msg += "IRQ balance information for IRQ '%s'\n" % irq

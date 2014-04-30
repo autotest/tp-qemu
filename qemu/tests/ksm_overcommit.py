@@ -234,7 +234,7 @@ def run(test, params, env):
 
                     # We need to keep some memory for python to run.
                     if (free_mem < 64000) or (ksm_swap and
-                       free_mem < (450000 * perf_ratio)):
+                                              free_mem < (450000 * perf_ratio)):
                         vm.pause()
                         for j in range(0, i):
                             lvms[j].destroy(gracefully=False)
@@ -385,7 +385,7 @@ def run(test, params, env):
             out = int(data.split()[4])
             logging.debug("Performance: %dMB * 1000 / %dms = %dMB/s",
                           ksm_size / max_alloc, out,
-                         (ksm_size * 1000 / out / max_alloc))
+                          (ksm_size * 1000 / out / max_alloc))
 
         logging.debug(utils_test.get_memory_info([vm]))
         logging.info("Phase 2f: PASS")
@@ -615,7 +615,7 @@ def run(test, params, env):
                                                                      'pid')
         params['extra_params_' + vm_name] = params.get('extra_params')
         params['extra_params_' + vm_name] += (" -pidfile %s" %
-                                             (params.get('pid_' + vm_name)))
+                                              (params.get('pid_' + vm_name)))
         params['extra_params'] = params.get('extra_params_' + vm_name)
 
         # Last VM is later used to run more allocators simultaneously

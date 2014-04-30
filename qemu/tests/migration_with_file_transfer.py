@@ -72,7 +72,7 @@ def run(test, params, env):
         error.context("transferring file back to host while migrating",
                       logging.info)
         bg = utils.InterruptedThread(vm.copy_files_from,
-                                    (guest_path, host_path_returned),
+                                     (guest_path, host_path_returned),
                                      dict(verbose=True, timeout=transfer_timeout))
         run_and_migrate(bg)
 

@@ -30,4 +30,4 @@ def run(test, params, env):
             missing.append(cpuinfo)
     if missing:
         raise error.TestFail("%s is missing in the output\n %s" %
-                            (", ".join(missing), output))
+                             (", ".join(missing), output))

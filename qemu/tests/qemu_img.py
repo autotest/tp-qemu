@@ -63,14 +63,14 @@ def run(test, params, env):
         status, output = _check(cmd, test_image)
         if not status:
             raise error.TestFail("Check image '%s' failed with error: %s" %
-                                (test_image, output))
+                                 (test_image, output))
         for fmt in params["supported_image_formats"].split():
             output_image = test_image + ".%s" % fmt
             _convert(cmd, fmt, test_image, output_image)
             status, output = _check(cmd, output_image)
             if not status:
                 raise error.TestFail("Check image '%s' got error: %s" %
-                                    (output_image, output))
+                                     (output_image, output))
             os.remove(output_image)
         os.remove(test_image)
 
@@ -199,7 +199,7 @@ def run(test, params, env):
                 os.remove(output_filename)
             else:
                 raise error.TestFail("Check image '%s' failed with error: %s" %
-                                    (output_filename, output))
+                                     (output_filename, output))
         else:
             os.remove(output_filename)
 
@@ -280,7 +280,7 @@ def run(test, params, env):
             status, output = commands.getstatusoutput(delcmd)
             if status != 0:
                 raise error.TestFail("Delete snapshot '%s' failed: %s" %
-                                    (sn_name, output))
+                                     (sn_name, output))
 
     def commit_test(cmd):
         """
@@ -411,7 +411,7 @@ def run(test, params, env):
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
             raise error.TestError("Failed to rebase '%s' to '%s': %s" %
-                                 (img_name, base_img, output))
+                                  (img_name, base_img, output))
 
     def rebase_test(cmd):
         """

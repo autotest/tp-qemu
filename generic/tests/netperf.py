@@ -526,7 +526,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             n = int(re.findall(r"available: (\d+) nodes", output)[0]) - 1
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
         cmd += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (i,
-               client_path, server, int(l) * 1.5, nf_args)
+                                                                    client_path, server, int(l) * 1.5, nf_args)
         cmd += " >> %s" % fname
         logging.info("Start netperf thread by cmd '%s'" % cmd)
         ssh_cmd(client_s, cmd)

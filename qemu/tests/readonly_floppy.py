@@ -39,7 +39,7 @@ def run(test, params, env):
                      " seconds until floppies are ready to be use")
         time.sleep(20)
     try:
-    # if it is a linux OS,load the floppy module
+        # if it is a linux OS,load the floppy module
         if not sleep:
             logging.info("Loading the floppy module...")
             status = session.get_command_status("modprobe floppy")

@@ -78,8 +78,8 @@ def run(test, params, env):
             scp_threads = []
             for index in range(scp_sessions):
                 scp_threads.append((do_file_copy, (src_path[index],
-                                   guest_path[index], dst_path[index],
-                                   transfer_timeout)))
+                                                   guest_path[index], dst_path[index],
+                                                   transfer_timeout)))
             utils_misc.parallel(scp_threads)
 
     finally:

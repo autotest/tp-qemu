@@ -66,7 +66,7 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
         cmd = ('nohup bash -c "while [ true ]; do echo \"1\" | '
                'tee -a %s >> %s; sleep 0.1; done" 2> /dev/null &' %
-              (check_path, dst_path))
+               (check_path, dst_path))
         pid = re.search(r"\[.+\] (.+)",
                         session.cmd_output(cmd, timeout=copy_timeout))
         return pid.group(1)
@@ -375,7 +375,7 @@ def run(test, params, env):
                     raise error.TestFail("Data read from the floppy differs"
                                          "from the data written to it."
                                          " EXPECTED: %s GOT: %s" %
-                                        (repr(written), repr(output)))
+                                         (repr(written), repr(output)))
 
                 error.context("Change floppy.")
                 vm.monitor.cmd("eject floppy0")
@@ -415,7 +415,7 @@ def run(test, params, env):
                     raise error.TestFail("Data read from the floppy differs"
                                          "from the data written to it."
                                          " EXPECTED: %s GOT: %s" %
-                                        (repr(written), repr(output)))
+                                         (repr(written), repr(output)))
 
             self.mig._hosts_barrier(self.mig.hosts, self.mig.hosts,
                                     'finish_floppy_test', login_timeout)

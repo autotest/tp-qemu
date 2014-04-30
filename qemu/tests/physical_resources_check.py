@@ -195,7 +195,7 @@ def run(test, params, env):
             logging.error(fail_log)
         else:
             logging.info("MachineType check pass. Expected: %s, Actual: %s" %
-                        (expect_mtype, actual_mtype))
+                         (expect_mtype, actual_mtype))
         return f_fail
 
     if params.get("catch_serial_cmd") is not None:

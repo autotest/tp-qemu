@@ -127,5 +127,5 @@ def run(test, params, env):
 
                 if status != 0:
                     raise error.TestFail(("Ping external host failed,"
-                                         " status: %s, output: %s" %
-                                         (status, output)))
+                                          " status: %s, output: %s" %
+                                          (status, output)))

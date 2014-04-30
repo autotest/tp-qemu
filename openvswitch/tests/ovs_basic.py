@@ -55,7 +55,7 @@ class InfrastructureInit(MiniSubtest):
         self.dns_pidf = (utils_net.check_add_dnsmasq_to_br(self.br0_name,
                                                            test.tmpdir))
         error.context("Add new ports from vms %s to bridge %s." %
-                     (self.vms, self.br0_name))
+                      (self.vms, self.br0_name))
 
         for vm in self.vms:
             utils_net.change_iface_bridge(vm.virtnet[1],
@@ -122,9 +122,9 @@ def run(test, params, env):
 
         def iperf_client(self, machine, server_ip, add_params):
             out = machine.cmd_in_src("%s -c %s %s" %
-                                    (self.iperf_b_path,
-                                     server_ip,
-                                     add_params))
+                                     (self.iperf_b_path,
+                                      server_ip,
+                                      add_params))
             return " ".join(out.splitlines()[-1].split()[6:8])
 
         def test_bandwidth(self, add_params=None):

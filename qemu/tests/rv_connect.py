@@ -353,7 +353,7 @@ def run(test, params, env):
         timeout=int(params.get("login_timeout", 360)))
 
     if (client_vm.params.get("os_type") == "windows" and
-       client_vm.params.get("rv_installer", None)):
+            client_vm.params.get("rv_installer", None)):
         utils_spice.install_rv_win(client_vm, params.get("rv_installer"))
         return
 

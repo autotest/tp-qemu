@@ -143,7 +143,7 @@ def run(test, params, env):
             if file_list:
                 cdfile = file_list[0]
             else:
-            # try to deal with new qemu
+                # try to deal with new qemu
                 tmp_re_str = r'%s: (\S*) \(.*\)' % qemu_cdrom_device
                 file_list = re.findall(tmp_re_str, blocks)
                 if file_list:
@@ -569,7 +569,7 @@ def run(test, params, env):
             try:
                 self.session.cmd(cmd)
                 raise error.TestFail("Attempt to format cdrom %s succeeded" %
-                                    (guest_cdrom_device))
+                                     (guest_cdrom_device))
             except aexpect.ShellError:
                 pass
 

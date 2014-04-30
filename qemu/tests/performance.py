@@ -55,8 +55,8 @@ def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
     monitor = threading.Thread(target=monitor_thread, args=(monitor_cmd,
                                                             pid_file, result_file))
     test_runner = threading.Thread(target=test_thread, args=(session,
-                                   monitor_cmd, test_cmd, pid_file,
-                                   kill_thread_flag, timeout))
+                                                             monitor_cmd, test_cmd, pid_file,
+                                                             kill_thread_flag, timeout))
     monitor.start()
     test_runner.start()
     monitor.join(int(timeout))

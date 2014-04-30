@@ -113,7 +113,7 @@ def run(test, params, env):
             ret = (os.major(rdev), os.minor(rdev))
         except Exception, details:
             raise error.TestFail("get_maj_min(%s) failed: %s" %
-                                (dev, details))
+                                 (dev, details))
         return ret
 
     def rm_scsi_disks(no_disks):

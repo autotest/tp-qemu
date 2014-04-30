@@ -122,7 +122,7 @@ def run(test, params, env):
         # the guest rather than close the session.
         """
         error.context("Flood ping from %s interface %s to %s" % (vms[src].name,
-                      ifname[src], vlan_ip[dst]), logging.info)
+                                                                 ifname[src], vlan_ip[dst]), logging.info)
         session_flood = vms[src].wait_for_login(timeout=60)
         utils_test.ping(vlan_ip[dst], flood=True,
                         interface=ifname[src],

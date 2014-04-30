@@ -161,9 +161,9 @@ def run(test, params, env):
 
                 cmd = ("nohup %s/cpuflags-test --stressmem %d,32"
                        " > %s &" %
-                      (os.path.join(self.install_path, "cpu_flags"),
-                       self.stress_memory,
-                       self.cpuflags_test_out))
+                       (os.path.join(self.install_path, "cpu_flags"),
+                        self.stress_memory,
+                        self.cpuflags_test_out))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
                 if session.cmd_status("killall -s 0 cpuflags-test") != 0:
@@ -184,9 +184,9 @@ def run(test, params, env):
                                                   self.install_path)
 
                 cmd = ("nohup %s/disktest -m %s -L -S > %s &" %
-                      (os.path.join(self.install_path, "disktest", "src"),
-                       self.disk_usage,
-                       self.disktest_out))
+                       (os.path.join(self.install_path, "disktest", "src"),
+                        self.disk_usage,
+                        self.disktest_out))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
                 if session.cmd_status("killall -s 0 disktest") != 0:

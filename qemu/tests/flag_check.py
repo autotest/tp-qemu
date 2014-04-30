@@ -134,7 +134,7 @@ def run(test, params, env):
     extra_flags = params.get("cpu_model_flags", " ")
 
     error.context("Boot guest with -cpu %s,%s" %
-                 (guest_cpumodel, extra_flags), logging.info)
+                  (guest_cpumodel, extra_flags), logging.info)
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
@@ -158,7 +158,7 @@ def run(test, params, env):
             if reg_flags:
                 model_support_flags += " %s" % reg_flags
     model_support_flags = set(map(utils_misc.Flag,
-                              model_support_flags.split()))
+                                  model_support_flags.split()))
 
     error.context("Get guest flags", logging.info)
     guest_flags = get_guest_cpuflags(session)

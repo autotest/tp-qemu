@@ -149,8 +149,8 @@ def run(test, params, env):
         symbol_check_pattern = params.get("symbol_check_pattern")
         symbol_pid_pattern = params.get("symbol_pid_pattern")
         download = utils_test.BackgroundTest(session.cmd,
-                                            (symbol_file_download,
-                                             setup_timeout))
+                                             (symbol_file_download,
+                                              setup_timeout))
 
         sessioncheck = vm.wait_for_login(timeout=timeout)
         download.start()

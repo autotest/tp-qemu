@@ -25,6 +25,6 @@ def install_cpuflags_util_on_vm(test, vm, dst_dir, extra_flags=None):
     vm.copy_files_to(cpuflags_src, dst_dir)
     session.cmd("sync")
     session.cmd("cd %s; cd src; make EXTRA_FLAGS='%s';" %
-               (cpuflags_dst, extra_flags))
+                (cpuflags_dst, extra_flags))
     session.cmd("sync")
     session.close()

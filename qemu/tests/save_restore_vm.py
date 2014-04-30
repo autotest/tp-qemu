@@ -34,7 +34,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     save_file = params.get("save_file", os.path.join("/tmp",
-                           utils_misc.generate_random_string(8)))
+                                                     utils_misc.generate_random_string(8)))
 
     try:
         error.context("Pause VM", logging.info)

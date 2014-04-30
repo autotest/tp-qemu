@@ -57,7 +57,7 @@ def run(test, params, env):
         if packet_receive == drop_flow:
             err_msg = "Error, flow %s dropped, tcpdump %s receive the packets"
             raise error.TestError(err_msg % ((drop_flow and "was" or "wasn't"),
-                                  (packet_receive and "can" or "can not")))
+                                             (packet_receive and "can" or "can not")))
         logging.info("Correct, flow %s dropped, tcpdump %s receive the packet"
                      % ((drop_flow and "was" or "was not"),
                          (packet_receive and "can" or "can not")))
@@ -123,12 +123,12 @@ def run(test, params, env):
             if nc_connect == drop_flow:
                 err_msg = "Error, '%s' flow %s dropped, nc connect should '%s'"
                 raise error.TestError(err_msg % (nc_protocol,
-                                      (drop_flow and "was" or "was not"),
-                                      (nc_connect and "failed" or "success")))
+                                                 (drop_flow and "was" or "was not"),
+                                                 (nc_connect and "failed" or "success")))
 
             logging.info("Correct, '%s' flow %s dropped, and nc connect %s" %
-                        (nc_protocol, (drop_flow and "was" or "was not"),
-                         (nc_connect and "success" or "failed")))
+                         (nc_protocol, (drop_flow and "was" or "was not"),
+                          (nc_connect and "success" or "failed")))
         finally:
             for session in sessions:
                 session.cmd_output_safe("killall nc || killall ncat")

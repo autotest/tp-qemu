@@ -23,7 +23,7 @@ class QemuIOConfig(object):
         self.qemu_img_binary = params.get('qemu_img_binary')
         if not os.path.isfile(self.qemu_img_binary):
             self.qemu_img_binary = utils_misc.get_path(os.path.join(root_dir,
-                                                       params.get("vm_type")),
+                                                                    params.get("vm_type")),
                                                        self.qemu_img_binary)
         self.raw_files = ["stg1.raw", "stg2.raw"]
         self.raw_files = map(lambda f: os.path.join(self.tmpdir, f),

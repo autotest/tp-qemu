@@ -62,7 +62,7 @@ def run(test, params, env):
                 vm.set_link(nic.device_id, up=False)
 
             error.context("Hotplug %sth '%s' nic named '%s'" % (nic_index,
-                          nic_model, nic_name))
+                                                                nic_model, nic_name))
             hotplug_nic = vm.hotplug_nic(**nic_params)
             # Only run dhclient if explicitly set and guest is not windows.
             # Most modern Linux guests run NetworkManager,

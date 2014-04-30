@@ -111,21 +111,21 @@ def run(test, params, env):
                             else:
                                 cmp_str_b = cmp_str
                             if (cmp_str not in str(qmp_o[i]) and
-                               cmp_str_b not in str(qmp_o[i]) and
-                               cmp_s not in str(qmp_o[i])):
+                                    cmp_str_b not in str(qmp_o[i]) and
+                                    cmp_s not in str(qmp_o[i])):
                                 msg += ("\nCan not find '%s', '%s' or '%s' in "
                                         " QMP command output."
                                         % (cmp_s, cmp_str_b, cmp_str))
                                 raise error.TestFail(msg)
                         elif qmp_cmd == "query-balloon":
                             if (int(val) * 1024 * 1024 != qmp_o[key] and
-                               val not in str(qmp_o[key])):
+                                    val not in str(qmp_o[key])):
                                 msg += ("\n'%s' is not in QMP command output"
                                         % val)
                                 raise error.TestFail(msg)
                         else:
                             if (val not in str(qmp_o[i][key]) and
-                               str(bool(int(val))) not in str(qmp_o[i][key])):
+                                    str(bool(int(val))) not in str(qmp_o[i][key])):
                                 msg += ("\n'%s' is not in QMP command output"
                                         % val)
                                 raise error.TestFail(msg)

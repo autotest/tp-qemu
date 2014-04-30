@@ -161,7 +161,7 @@ def run(test, params, env):
                     self.last_model += self.last_arch[attrs['name']]
                     self.sub_model = True
             elif name == "feature":
-                if not self.last_model is None:
+                if self.last_model is not None:
                     self.last_model.append(attrs['name'])
                 else:
                     self.all_flags.append(attrs['name'])
@@ -381,7 +381,7 @@ def run(test, params, env):
         if set(online) != set(cpu_state_proc):
             raise error.TestError("Some cpus are disabled but %s are still "
                                   "visible like online in /proc/cpuinfo." %
-                                 (set(cpu_state_proc) - set(online)))
+                                  (set(cpu_state_proc) - set(online)))
 
         return set(online) - set(disabled_cpu)
 
@@ -441,8 +441,8 @@ def run(test, params, env):
                             " bs=10MB count=100 &")
         try:
             stress_session.cmd("%s/cpuflags-test --stress %s%s" %
-                              (os.path.join(install_path, "cpu_flags"), smp,
-                               utils_misc.kvm_flags_to_stresstests(flags[0])),
+                               (os.path.join(install_path, "cpu_flags"), smp,
+                                utils_misc.kvm_flags_to_stresstests(flags[0])),
                                timeout=timeout)
         except aexpect.ShellTimeoutError:
             ret = True
@@ -517,7 +517,7 @@ def run(test, params, env):
                 missing = []
                 cpu_models = map(separe_cpu_model, cpu_models)
                 for cpu_model in cpu_models:
-                    if not cpu_model in result.stdout:
+                    if cpu_model not in result.stdout:
                         missing.append(cpu_model)
                 if missing:
                     raise error.TestFail("CPU models %s are not in output "
@@ -537,7 +537,7 @@ def run(test, params, env):
                 cpu_models = map(separe_cpu_model, cpu_models)
                 missing = []
                 for cpu_model in cpu_models:
-                    if not cpu_model in result.stdout:
+                    if cpu_model not in result.stdout:
                         missing.append(cpu_model)
                 if missing:
                     raise error.TestFail("CPU models %s are not in output "
@@ -785,8 +785,8 @@ def run(test, params, env):
                 test_flags = flags.all_possible_guest_flags
 
             result = utils_misc.parallel([(encap, [timeout]),
-                                         (run_stress, [self.vm, timeout,
-                                                       test_flags])])
+                                          (run_stress, [self.vm, timeout,
+                                                        test_flags])])
             if not (result[0] and result[1]):
                 raise error.TestFail("Stress tests failed before"
                                      " end of testing.")

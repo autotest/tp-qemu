@@ -237,7 +237,7 @@ def run(test, params, env):
                     if wrong_check_sum:
                         raise error.TestFail("Returned file hash (%s) differs"
                                              "from original one (%s)" %
-                                            (returned_hash, orig_hash))
+                                             (returned_hash, orig_hash))
                     else:
                         # clean temp
                         utils.run("rm -rf %s" % (host_path))

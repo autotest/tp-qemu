@@ -66,7 +66,7 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
         cmd = ('nohup bash -c "while [ true ]; do echo \"1\" | '
                'tee -a %s >> %s; sleep 0.1; done" 2> /dev/null &' %
-              (check_path, dst_path))
+               (check_path, dst_path))
         pid = re.search(r"\[.+\] (.+)",
                         session.cmd_output(cmd, timeout=copy_timeout))
         return pid.group(1)
@@ -112,7 +112,7 @@ def run(test, params, env):
             # needs time to load and init floppy driver
             if self.dest_dir:
                 lsmod = self.session.cmd("lsmod")
-                if not 'floppy' in lsmod:
+                if 'floppy' not in lsmod:
                     self.session.cmd("modprobe floppy")
             else:
                 time.sleep(20)
@@ -234,7 +234,7 @@ def run(test, params, env):
                 error.context("Prepare floppy for writing.")
                 if self.mount_dir:
                     lsmod = session.cmd("lsmod")
-                    if not 'floppy' in lsmod:
+                    if 'floppy' not in lsmod:
                         session.cmd("modprobe floppy")
                 else:
                     time.sleep(20)
@@ -265,7 +265,7 @@ def run(test, params, env):
                 error.context("Wait for copy finishing.")
                 status = int(session.cmd_status("kill %s" % pid,
                                                 timeout=copy_timeout))
-                if not status in [0]:
+                if status not in [0]:
                     raise error.TestFail("Copy process was terminatted with"
                                          " error code %s" % (status))
 
@@ -338,12 +338,12 @@ def run(test, params, env):
                 error.context("Prepare floppy for writing.")
                 if self.mount_dir:   # If linux
                     lsmod = session.cmd("lsmod")
-                    if not 'floppy' in lsmod:
+                    if 'floppy' not in lsmod:
                         session.cmd("modprobe floppy")
                 else:
                     time.sleep(20)
 
-                if not floppy in vm.monitor.info("block"):
+                if floppy not in vm.monitor.info("block"):
                     raise error.TestFail("Wrong floppy image is placed in vm.")
 
                 try:
@@ -375,7 +375,7 @@ def run(test, params, env):
                     raise error.TestFail("Data read from the floppy differs"
                                          "from the data written to it."
                                          " EXPECTED: %s GOT: %s" %
-                                        (repr(written), repr(output)))
+                                         (repr(written), repr(output)))
 
                 error.context("Change floppy.")
                 vm.monitor.cmd("eject floppy0")
@@ -387,7 +387,7 @@ def run(test, params, env):
                     session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
                                                          self.mount_dir), timeout=30)
 
-                if not second_floppy in vm.monitor.info("block"):
+                if second_floppy not in vm.monitor.info("block"):
                     raise error.TestFail("Wrong floppy image is placed in vm.")
 
             sync = SyncData(self.mig.master_id(), self.mig.hostid,
@@ -415,7 +415,7 @@ def run(test, params, env):
                     raise error.TestFail("Data read from the floppy differs"
                                          "from the data written to it."
                                          " EXPECTED: %s GOT: %s" %
-                                        (repr(written), repr(output)))
+                                         (repr(written), repr(output)))
 
             self.mig._hosts_barrier(self.mig.hosts, self.mig.hosts,
                                     'finish_floppy_test', login_timeout)

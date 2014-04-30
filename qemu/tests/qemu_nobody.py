@@ -45,7 +45,7 @@ def run(test, params, env):
 
     error.context("Run the qemu as user '%s'" % exec_username)
     logging.info("The user %s :uid='%s', gid='%s'" %
-                (exec_username, exec_uid, exec_gid))
+                 (exec_username, exec_uid, exec_gid))
 
     params["extra_params"] = " -runas %s" % exec_username
     params["start_vm"] = "yes"
@@ -73,4 +73,4 @@ def run(test, params, env):
 
     if failures:
         raise error.TestFail("FAIL: Test reported %s failures:\n%s" %
-                            (len(failures), "\n".join(failures)))
+                             (len(failures), "\n".join(failures)))

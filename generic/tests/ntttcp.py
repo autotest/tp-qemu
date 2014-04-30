@@ -89,7 +89,7 @@ def run(test, params, env):
             client = params.get("shell_client")
             port = int(params.get("shell_port"))
             log_filename = ("session-%s-%s.log" % (receiver_addr,
-                            utils_misc.generate_random_string(4)))
+                                                   utils_misc.generate_random_string(4)))
             session = remote.remote_login(client, receiver_addr, port,
                                           username, password, prompt,
                                           linesep, log_filename, timeout)

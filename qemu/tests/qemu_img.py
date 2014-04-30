@@ -63,14 +63,14 @@ def run(test, params, env):
         status, output = _check(cmd, test_image)
         if not status:
             raise error.TestFail("Check image '%s' failed with error: %s" %
-                                (test_image, output))
+                                 (test_image, output))
         for fmt in params["supported_image_formats"].split():
             output_image = test_image + ".%s" % fmt
             _convert(cmd, fmt, test_image, output_image)
             status, output = _check(cmd, output_image)
             if not status:
                 raise error.TestFail("Check image '%s' got error: %s" %
-                                    (output_image, output))
+                                     (output_image, output))
             os.remove(output_image)
         os.remove(test_image)
 
@@ -199,7 +199,7 @@ def run(test, params, env):
                 os.remove(output_filename)
             else:
                 raise error.TestFail("Check image '%s' failed with error: %s" %
-                                    (output_filename, output))
+                                     (output_filename, output))
         else:
             os.remove(output_filename)
 
@@ -240,10 +240,10 @@ def run(test, params, env):
         """
         img_info = _info(cmd, image_name)
         logging.info("Info of image '%s':\n%s", image_name, img_info)
-        if not image_format in img_info:
+        if image_format not in img_info:
             raise error.TestFail("Got unexpected format of image '%s'"
                                  " in info test" % image_name)
-        if not image_size in img_info:
+        if image_size not in img_info:
             raise error.TestFail("Got unexpected size of image '%s'"
                                  " in info test" % image_name)
 
@@ -280,7 +280,7 @@ def run(test, params, env):
             status, output = commands.getstatusoutput(delcmd)
             if status != 0:
                 raise error.TestFail("Delete snapshot '%s' failed: %s" %
-                                    (sn_name, output))
+                                     (sn_name, output))
 
     def commit_test(cmd):
         """
@@ -411,7 +411,7 @@ def run(test, params, env):
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
             raise error.TestError("Failed to rebase '%s' to '%s': %s" %
-                                 (img_name, base_img, output))
+                                  (img_name, base_img, output))
 
     def rebase_test(cmd):
         """
@@ -424,7 +424,7 @@ def run(test, params, env):
 
         :param cmd: qemu-img base command.
         """
-        if not 'rebase' in utils.system_output(cmd + ' --help',
+        if 'rebase' not in utils.system_output(cmd + ' --help',
                                                ignore_status=True):
             raise error.TestNAError("Current kvm user space version does not"
                                     " support 'rebase' subcommand")
@@ -453,7 +453,7 @@ def run(test, params, env):
         # Check sn2's format and backing_file
         actual_base_img = _info(cmd, sn2, "backing file")
         base_img_name = os.path.basename(base_img)
-        if not base_img_name in actual_base_img:
+        if base_img_name not in actual_base_img:
             raise error.TestFail("After rebase the backing_file of 'sn2' is "
                                  "'%s' which is not expected as '%s'"
                                  % (actual_base_img, base_img_name))

@@ -56,7 +56,7 @@ def run(test, params, env):
             fail_msg = ("Could not determine the transferred memory from"
                         " monitor data: %s" % o)
             if isinstance(o, str):
-                if not "status: active" in o:
+                if "status: active" not in o:
                     raise error.TestWarn(warning_msg)
                 try:
                     transfered_mem = int(get_mig_speed.search(o).groups()[0])
@@ -88,8 +88,8 @@ def run(test, params, env):
         vm.monitor.migrate_set_speed(mig_speed)
 
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-              (os.path.join(install_path, "cpu_flags"),
-               vm_mem * 4, vm_mem / 2))
+               (os.path.join(install_path, "cpu_flags"),
+                vm_mem * 4, vm_mem / 2))
         logging.debug("Sending command: %s" % (cmd))
         session.sendline(cmd)
 

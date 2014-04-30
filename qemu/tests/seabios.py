@@ -46,7 +46,7 @@ def run(test, params, env):
         error.context("Display and check the SGABIOS info", logging.info)
         info_check = lambda: (len(info_list) ==
                               len([x for x in info_list
-                                  if x in get_output(vm.serial_console)]))
+                                   if x in get_output(vm.serial_console)]))
 
         if not utils_misc.wait_for(info_check, timeout, 1):
             err_msg = "Cound not get sgabios message. The output"

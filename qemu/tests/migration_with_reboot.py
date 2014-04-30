@@ -28,7 +28,7 @@ def run(test, params, env):
     try:
         # Reboot the VM in the background
         bg = utils.InterruptedThread(vm.reboot, kwargs={'session': session,
-                                     'timeout': login_timeout})
+                                                        'timeout': login_timeout})
         bg.start()
         try:
             while bg.isAlive():

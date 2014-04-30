@@ -51,7 +51,7 @@ def run(test, params, env):
         error.context("Adding pci device with command 'pci_add'")
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         pci_info.append(['', add_output])
-        if not "OK domain" in add_output:
+        if "OK domain" not in add_output:
             raise error.TestFail("Add PCI device failed. "
                                  "Monitor command is: %s, Output: %r" %
                                  (pci_add_cmd, add_output))

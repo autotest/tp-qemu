@@ -115,7 +115,7 @@ def run(test, params, env):
         error.context("Check serial option in guest", logging.info)
         session = _login()
         output = session.cmd("lsusb -v")
-        if not ("EMPTY_STRING" in serial or "NO_EQUAL_STRING" in serial):
+        if "EMPTY_STRING" not in serial or "NO_EQUAL_STRING" not in serial:
             # Verify in guest when serial is set to empty/null is meaningless.
             _verify_string(serial, output, [serial])
         _do_io_test_guest(session)

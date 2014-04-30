@@ -96,7 +96,7 @@ def run(test, params, env):
         error.context("Change queues number repeatly", logging.info)
         repeat_counts = int(params.get("repeat_counts", 10))
         for nic_index, nic in enumerate(vm.virtnet):
-            if not "virtio" in nic['nic_model']:
+            if "virtio" not in nic['nic_model']:
                 continue
             queues = int(vm.virtnet[nic_index].queues)
             if queues == 1:

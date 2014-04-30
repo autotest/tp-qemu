@@ -120,7 +120,7 @@ def run(test, params, env):
     session = vm.wait_for_serial_login(timeout=login_timeout)
     out = session.cmd_output("cat /sys/devices/system/clocksource/"
                              "clocksource0/current_clocksource")
-    if not guest_clock_source in out:
+    if guest_clock_source not in out:
         raise error.TestFail("Clock source %s missing in guest clock "
                              "sources %s." % (guest_clock_source, out))
 

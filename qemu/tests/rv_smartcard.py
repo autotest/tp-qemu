@@ -84,8 +84,8 @@ def run(test, params, env):
                 raise error.TestFail("Certificate %s was not found as a listed"
                                      " cert in the guest" % subj_string)
     elif smartcard_testtype == "pklogin_finder":
-               # pkcs11_listcerts not installed until
-               # Smart Card Support is installed
+        # pkcs11_listcerts not installed until
+        # Smart Card Support is installed
         try:
             certsinfo_output = guest_session.cmd("pklogin_finder debug")
         except aexpect.ShellTimeoutError:

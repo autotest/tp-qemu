@@ -666,7 +666,7 @@ def run(test, params, env):
                         err += "main(th%s died), " % threads[i]
                     _transfered.append(threads[i].idx)
                 if (_transfered == transferred and
-                   transferred != [0] * no_threads):
+                        transferred != [0] * no_threads):
                     err += "main(no_data), "
                 transferred = _transfered
                 if err:
@@ -1748,7 +1748,7 @@ def run(test, params, env):
         port.sock.settimeout(20.0)
 
         loads = utils.SystemLoad([(os.getpid(), 'autotest'),
-                                (vm.get_pid(), 'VM'), 0])
+                                  (vm.get_pid(), 'VM'), 0])
         try:
             loads.start()
 

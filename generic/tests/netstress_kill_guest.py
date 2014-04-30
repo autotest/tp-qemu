@@ -40,7 +40,7 @@ def run(test, params, env):
         cmd = params.get("nic_module_cmd")
         out = session.cmd(cmd)
         for module in out.split("\n"):
-            if not cmd in module:
+            if cmd not in module:
                 modules.append(module.split("/")[-1])
         modules.remove("")
         return set(modules)

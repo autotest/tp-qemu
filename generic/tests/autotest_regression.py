@@ -164,7 +164,7 @@ def run(test, params, env):
                 list_labels_output = session_server.cmd(list_labels_cmd)
                 for line in list_labels_output.splitlines():
                     logging.debug(line)
-                if not label_name in list_labels_output:
+                if label_name not in list_labels_output:
                     raise ValueError("No label %s in the output of %s" %
                                      (label_name, list_labels_cmd))
 
@@ -178,10 +178,10 @@ def run(test, params, env):
                 list_hosts_output = session_server.cmd(list_hosts_cmd)
                 for line in list_hosts_output.splitlines():
                     logging.debug(line)
-                if not client_ip in list_hosts_output:
+                if client_ip not in list_hosts_output:
                     raise ValueError("No client %s in the output of %s" %
                                      (client_ip, create_label_cmd))
-                if not label_name in list_hosts_output:
+                if label_name not in list_hosts_output:
                     raise ValueError("No label %s in the output of %s" %
                                      (label_name, create_label_cmd))
 

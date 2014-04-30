@@ -68,7 +68,7 @@ def run(test, params, env):
                     ret = s.get("migrated") == "true"
             o = vm.monitor.info("migrate")
             if isinstance(o, str):
-                return ret and (not "status: active" in o)
+                return ret and ("status: active" not in o)
             else:
                 return ret and (o.get("status") != "active")
 
@@ -169,8 +169,8 @@ def run(test, params, env):
                                                      extra_flags="-msse3 -msse2")
 
                 cmd = ("nohup %s/cpuflags-test --stressmem %d,%d &" %
-                      (os.path.join(self.install_path, "cpu_flags"),
-                       self.vm_mem * 100, self.vm_mem / 2))
+                       (os.path.join(self.install_path, "cpu_flags"),
+                        self.vm_mem * 100, self.vm_mem / 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
                 time.sleep(3)

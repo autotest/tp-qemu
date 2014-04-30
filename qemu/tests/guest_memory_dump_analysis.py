@@ -19,16 +19,16 @@ import threading
 REQ_GUEST_MEM = 4096        # exact size of guest RAM required
 REQ_GUEST_ARCH = "x86_64"    # the only supported guest arch
 REQ_GUEST_DF = 6144        # minimum guest disk space required
-                               #     after package installation
+#     after package installation
 LONG_TIMEOUT = 10 * 60       # timeout for long operations
 VMCORE_BASE = "vmcore"    # basename of the host-side file the
-                               #     guest vmcore is written to, .gz
-                               #     suffix will be appended. No
-                               #     metacharacters or leading dashes
-                               #     please.
+#     guest vmcore is written to, .gz
+#     suffix will be appended. No
+#     metacharacters or leading dashes
+#     please.
 VMCORE_FD_NAME = "vmcore_fd"  # fd identifier used in the monitor
 CRASH_SCRIPT = "crash.cmd"  # guest-side filename of the minimal
-                               # crash script
+# crash script
 
 
 def run(test, params, env):

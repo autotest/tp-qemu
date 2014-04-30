@@ -104,7 +104,7 @@ else:
 # Fetch the contents of the repo
 print "Fetching git [REP '%s' BRANCH '%s'] -> %s" % (git_repo[pkgName], branch, destDir)
 subprocess.check_call(("git fetch -q -f -u -t %s %s:%s" %
-                      (git_repo[pkgName], branch, branch)).split())
+                       (git_repo[pkgName], branch, branch)).split())
 
 # checkout the branch specified, master by default
 print "Checking out branch %s" % branch

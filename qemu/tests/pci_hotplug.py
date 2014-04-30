@@ -44,7 +44,7 @@ def run(test, params, env):
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         pci_info.append(['', '', add_output, pci_model])
 
-        if not "OK domain" in add_output:
+        if "OK domain" not in add_output:
             raise error.TestFail("Add PCI device failed. "
                                  "Monitor command is: %s, Output: %r" %
                                  (pci_add_cmd, add_output))
@@ -122,8 +122,8 @@ def run(test, params, env):
                                pci_info[pci_num][0]))
         elif drive_cmd_type == "__com.redhat_drive_add":
             driver_add_cmd = ("%s file=%s,format=%s,id=%s" %
-                             (drive_cmd_type, image_filename, image_format,
-                              pci_info[pci_num][0]))
+                              (drive_cmd_type, image_filename, image_format,
+                               pci_info[pci_num][0]))
         # add driver.
         error.context("Adding driver.")
         vm.monitor.send_args_cmd(driver_add_cmd, convert=False)

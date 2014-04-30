@@ -75,7 +75,7 @@ def run(test, params, env):
     while mount_path is None or os.path.exists(mount_path):
         test_rand = utils.generate_random_string(3)
         mount_path = ("%s/ni_mount_%s" %
-                     (test.tmpdir, test_rand))
+                      (test.tmpdir, test_rand))
 
     mig_dst = os.path.join(mount_path, "mig_dst")
 
@@ -260,7 +260,7 @@ def run(test, params, env):
             session.cmd("dd if=/dev/zero of=%s bs=1M count=%s" % (disk_path,
                                                                   disk_size))
             status, output = session.cmd_status_output("setenforce 0")
-            if not status in [0, 127]:
+            if status not in [0, 127]:
                 logging.warn("Function setenforce fails.\n %s" % (output))
 
             config = self.config % (self.server_name, disk_path,
@@ -392,7 +392,7 @@ def run(test, params, env):
             self.disk_path = None
             while self.disk_path is None or os.path.exists(self.disk_path):
                 self.disk_path = ("%s/disk_%s" %
-                                 (test.tmpdir, utils.generate_random_string(3)))
+                                  (test.tmpdir, utils.generate_random_string(3)))
 
             disk_size = utils.convert_data_size(params.get("disk_size", "10M"),
                                                 default_sufix='M')
@@ -537,8 +537,7 @@ def run(test, params, env):
             if self.copier_pid:
                 try:
                     if self.vm_guest.is_alive():
-                        session = self.vm_guest.wait_for_login(timeout=
-                                                               login_timeout)
+                        session = self.vm_guest.wait_for_login(timeout=login_timeout)
                         session.cmd("kill -9 %s" % (self.copier_pid))
                 except:
                     logging.warn("It was impossible to stop copier. Something "
@@ -585,8 +584,7 @@ def run(test, params, env):
             self.qemu_img = None
 
             vm_ds.verify_alive()
-            self.control_session_ds = vm_ds.wait_for_login(timeout=
-                                                           login_timeout)
+            self.control_session_ds = vm_ds.wait_for_login(timeout=login_timeout)
 
             set_nfs_server(vm_ds, "/mnt *(rw,async,no_root_squash)")
 
@@ -651,13 +649,12 @@ def run(test, params, env):
             self.qemu_img = None
 
             vm_ds.verify_alive()
-            self.control_session_ds = vm_ds.wait_for_login(timeout=
-                                                           login_timeout)
+            self.control_session_ds = vm_ds.wait_for_login(timeout=login_timeout)
 
             self.isci_server = IscsiServer("tgt")
             disk_path = os.path.join(self.guest_mount_path, "disk1")
             self.isci_server.set_iscsi_server(vm_ds, disk_path,
-                                             (int(float(self.disk_size) * 1.1) / (1024 * 1024)))
+                                              (int(float(self.disk_size) * 1.1) / (1024 * 1024)))
             self.host_disk_path = self.isci_server.connect(vm_ds)
 
             utils.run("mkfs.ext3 -F %s" % (self.host_disk_path))

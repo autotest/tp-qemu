@@ -121,7 +121,7 @@ def run(test, params, env):
     if bg:
         bg.join()
     mem_increase_step = int(re.findall("pages_to_scan:(\d+)",
-                            thp_cfg)[0]) / 512
+                                       thp_cfg)[0]) / 512
     mem_increase = 0
     w_step = w_time / s_time + 1
     count = 0

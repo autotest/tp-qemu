@@ -61,15 +61,15 @@ def run(test, params, env):
                                                self.time_filter_re,
                                                self.time_format)
                 session.cmd(self.create_file)
-                if not vm.name in self.start_ht.keys():
+                if vm.name not in self.start_ht.keys():
                     (self.start_ht[vm.name], self.start_gt[vm.name]) = (ht, gt)
                     if abs(ht - gt) > self.diff_limit:
                         logging.warning("Host and %s time diff %s is greater "
                                         "than time_diff_limit:%s" %
-                                       (vm.name, abs(ht - gt),
-                                        self.diff_limit))
+                                        (vm.name, abs(ht - gt),
+                                         self.diff_limit))
                         logging.warning("Host time:%s   Guest %s time:%s" %
-                                       (ht, vm.name, gt))
+                                        (ht, vm.name, gt))
                 else:
                     self.diff_ht[vm.name] = ht - self.start_ht[vm.name]
                     self.diff_gt[vm.name] = gt - self.start_gt[vm.name]
@@ -82,10 +82,10 @@ def run(test, params, env):
                 for vm in mig_data.vms:
                     difs += ("\n            VM=%s  HOST=%ss  GUEST=%ss"
                              " DIFF=%s" %
-                            (vm.name, self.diff_ht[vm.name],
-                             self.diff_gt[vm.name],
-                             (self.diff_ht[vm.name] -
-                              self.diff_gt[vm.name])))
+                             (vm.name, self.diff_ht[vm.name],
+                              self.diff_gt[vm.name],
+                              (self.diff_ht[vm.name] -
+                               self.diff_gt[vm.name])))
                 raise error.TestError("Time DIFFERENCE for VM is greater than"
                                       " LIMIT:%ss.%s\n" % (self.diff_limit,
                                                            difs))

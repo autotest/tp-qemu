@@ -260,7 +260,7 @@ def run(test, params, env):
             session.cmd("dd if=/dev/zero of=%s bs=1M count=%s" % (disk_path,
                                                                   disk_size))
             status, output = session.cmd_status_output("setenforce 0")
-            if not status in [0, 127]:
+            if status not in [0, 127]:
                 logging.warn("Function setenforce fails.\n %s" % (output))
 
             config = self.config % (self.server_name, disk_path,

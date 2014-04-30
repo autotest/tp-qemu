@@ -32,7 +32,7 @@ def run(test, params, env):
         error.context("Check the current clocksource in guest", logging.info)
         cmd = "cat /sys/devices/system/clocksource/"
         cmd += "clocksource0/current_clocksource"
-        if not expected in session.cmd(cmd):
+        if expected not in session.cmd(cmd):
             raise error.TestFail(
                 "Guest didn't use '%s' clocksource" % expected)
 

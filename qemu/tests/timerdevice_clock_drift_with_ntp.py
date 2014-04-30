@@ -36,7 +36,7 @@ def run(test, params, env):
     error.context("Check for an appropriate clocksource on host", logging.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
-    if not "tsc" in utils.system_output(host_cmd):
+    if "tsc" not in utils.system_output(host_cmd):
         raise error.TestNAError("Host must use 'tsc' clocksource")
 
     error.context("Boot the guest", logging.info)

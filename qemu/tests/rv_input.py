@@ -94,7 +94,7 @@ def test_type_and_func_keys(client_vm, guest_session, params):
     logging.info("Sending typewriter and functional keys to client machine")
     for i in range(1, 69):
         # Avoid Ctrl, RSH, LSH, PtScr, Alt, CpsLk
-        if not (i in [29, 42, 54, 55, 56, 58]):
+        if i not in [29, 42, 54, 55, 56, 58]:
             client_vm.send_key(str(hex(i)))
             utils_spice.wait_timeout(0.3)
 

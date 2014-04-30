@@ -149,7 +149,7 @@ class TimedriftTest(object):
         read_clock_cmd = "cat /sys/devices/system/clocksource/"
         read_clock_cmd += "clocksource0/current_clocksource"
         current_clocksource = session.cmd_output(read_clock_cmd)
-        if not clock_source in current_clocksource:
+        if clock_source not in current_clocksource:
             raise error.TestFail("Guest didn't use'%s'" % clock_source +
                                  "clocksource, current clocksoure " +
                                  "is %s;" % current_clocksource)

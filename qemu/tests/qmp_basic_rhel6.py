@@ -35,7 +35,7 @@ def run(test, params, env):
         if not isinstance(qmp_dict, dict):
             raise error.TestFail("qmp_dict is not a dict (it's '%s')" %
                                  type(qmp_dict))
-        if not key in qmp_dict:
+        if key not in qmp_dict:
             raise error.TestFail("'%s' key doesn't exist in dict ('%s')" %
                                  (key, str(qmp_dict)))
 

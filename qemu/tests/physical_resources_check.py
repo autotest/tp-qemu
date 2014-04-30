@@ -271,7 +271,7 @@ def run(test, params, env):
     if expected_vendor_id and cpu_vendor_id_chk_cmd:
         output = session.cmd_output(cpu_vendor_id_chk_cmd)
 
-        if not expected_vendor_id in output:
+        if expected_vendor_id not in output:
             fail_log = "CPU vendor id check failed.\n"
             fail_log += "    Assigned to VM: '%s'\n" % expected_vendor_id
             fail_log += "    Reported by OS: '%s'" % output
@@ -333,7 +333,7 @@ def run(test, params, env):
     num_nics = len(params.objects("nics"))
     for nic_index in range(num_nics):
         mac = vm.get_mac_address(nic_index)
-        if not string.lower(mac) in found_mac_addresses:
+        if string.lower(mac) not in found_mac_addresses:
             fail_log = "MAC address mismatch:\n"
             fail_log += "    Assigned to VM (not found): %s" % mac
             n_fail.append(fail_log)

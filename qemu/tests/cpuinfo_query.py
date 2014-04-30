@@ -26,7 +26,7 @@ def run(test, params, env):
     cpuinfos = params.get("cpu_info", "Conroe").split(",")
     missing = []
     for cpuinfo in cpuinfos:
-        if not cpuinfo in output:
+        if cpuinfo not in output:
             missing.append(cpuinfo)
     if missing:
         raise error.TestFail("%s is missing in the output\n %s" %

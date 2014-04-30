@@ -27,7 +27,7 @@ def run(test, params, env):
     error.context("Check for an appropriate clocksource on host", logging.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
-    if not "tsc" in utils.system_output(host_cmd):
+    if "tsc" not in utils.system_output(host_cmd):
         raise error.TestNAError("Host must use 'tsc' clocksource")
 
     error.context("Boot the guest with one cpu socket", logging.info)
@@ -40,7 +40,7 @@ def run(test, params, env):
     error.context("Check the guest is using vsyscall", logging.info)
     date_cmd = "strace date 2>&1|egrep 'clock_gettime|gettimeofday'|wc -l"
     output = session.cmd(date_cmd)
-    if not '0' in output:
+    if '0' not in output:
         raise error.TestFail("Failed to check vsyscall. Output: '%s'" % output)
 
     error.context("Copy time-warp-test.c to guest", logging.info)
@@ -99,7 +99,7 @@ def run(test, params, env):
                                  " Output (last 5 lines): '%s'" % msg)
 
         output = session.cmd(date_cmd)
-        if not "1" in output:
+        if "1" not in output:
             raise error.TestFail("Failed to check vsyscall."
                                  " Output: '%s'" % output)
     finally:

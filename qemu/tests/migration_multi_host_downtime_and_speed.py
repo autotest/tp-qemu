@@ -68,7 +68,7 @@ def run(test, params, env):
                     ret = s.get("migrated") == "true"
             o = vm.monitor.info("migrate")
             if isinstance(o, str):
-                return ret and (not "status: active" in o)
+                return ret and ("status: active" not in o)
             else:
                 return ret and (o.get("status") != "active")
 

@@ -59,7 +59,7 @@ def run(test, params, env):
             fail_msg = ("Could not determine the transferred memory from"
                         " monitor data: %s" % o)
             if isinstance(o, str):
-                if not "status: active" in o:
+                if "status: active" not in o:
                     raise error.TestWarn(warning_msg)
                 try:
                     transfered_mem = int(get_mig_speed.search(o).groups()[0])

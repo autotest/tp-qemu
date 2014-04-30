@@ -517,7 +517,7 @@ def run(test, params, env):
                 missing = []
                 cpu_models = map(separe_cpu_model, cpu_models)
                 for cpu_model in cpu_models:
-                    if not cpu_model in result.stdout:
+                    if cpu_model not in result.stdout:
                         missing.append(cpu_model)
                 if missing:
                     raise error.TestFail("CPU models %s are not in output "
@@ -537,7 +537,7 @@ def run(test, params, env):
                 cpu_models = map(separe_cpu_model, cpu_models)
                 missing = []
                 for cpu_model in cpu_models:
-                    if not cpu_model in result.stdout:
+                    if cpu_model not in result.stdout:
                         missing.append(cpu_model)
                 if missing:
                     raise error.TestFail("CPU models %s are not in output "

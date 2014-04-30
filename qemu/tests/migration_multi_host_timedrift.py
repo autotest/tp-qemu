@@ -61,7 +61,7 @@ def run(test, params, env):
                                                self.time_filter_re,
                                                self.time_format)
                 session.cmd(self.create_file)
-                if not vm.name in self.start_ht.keys():
+                if vm.name not in self.start_ht.keys():
                     (self.start_ht[vm.name], self.start_gt[vm.name]) = (ht, gt)
                     if abs(ht - gt) > self.diff_limit:
                         logging.warning("Host and %s time diff %s is greater "

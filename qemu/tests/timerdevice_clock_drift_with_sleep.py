@@ -53,7 +53,7 @@ def run(test, params, env):
                   logging.info)
     cmd = "cat /sys/devices/system/clocksource/"
     cmd += "clocksource0/current_clocksource"
-    if not "kvm-clock" in session.cmd(cmd):
+    if "kvm-clock" not in session.cmd(cmd):
         grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
         if "clocksource=" not in session.cmd("cat %s" % grub_file):
             raise error.TestFail("Guest didn't use 'kvm-clock' clocksource")

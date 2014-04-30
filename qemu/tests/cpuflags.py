@@ -161,7 +161,7 @@ def run(test, params, env):
                     self.last_model += self.last_arch[attrs['name']]
                     self.sub_model = True
             elif name == "feature":
-                if not self.last_model is None:
+                if self.last_model is not None:
                     self.last_model.append(attrs['name'])
                 else:
                     self.all_flags.append(attrs['name'])

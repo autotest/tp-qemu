@@ -70,7 +70,7 @@ def run(test, params, env):
         utils.run(server_setup_cmd % (monitor_dir, threshold,
                                       monitor_log_file_server, monitor_port))
 
-        if not stress_setup_cmd is None:
+        if stress_setup_cmd is not None:
             logging.info("Build stress on host")
             # Uncompress and build stress on host
             utils.run(stress_setup_cmd % stress_dir)
@@ -121,7 +121,7 @@ def run(test, params, env):
         session.cmd(params.get("client_setup_cmd") %
                     ("/tmp", host_ip, monitor_log_file_client, monitor_port))
 
-        if not stress_setup_cmd is None:
+        if stress_setup_cmd is not None:
             # Copy, uncompress and build stress on guest
             stress_source = params.get("stress_source")
             stress_path = os.path.join(stress_dir, stress_source)

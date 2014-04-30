@@ -75,7 +75,7 @@ class InfrastructureInit(MiniSubtest):
     def clean(self, test, params, env):
         if self.ovs:
             try:
-                if not self.dns_pidf is None:
+                if self.dns_pidf is not None:
                     utils_misc.signal_program(self.dns_pidf[0:-4],
                                               pid_files_dir=test.tmpdir)
             except:

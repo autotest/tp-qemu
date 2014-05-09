@@ -57,9 +57,9 @@ def run(test, params, env):
     bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
                                  args=(test, params, env,),
                                  kwargs={"sub_type": "pxe_boot"})
-    bg.start()
     count = 0
     try:
+        bg.start()
         error.context("Query cpus in loop", logging.info)
         vm = env.get_vm(params["main_vm"])
         while True:
@@ -67,10 +67,13 @@ def run(test, params, env):
             try:
                 vm.monitor.info("cpus")
                 vm.verify_status("running")
+                if not bg.is_alive():
+                    break
             except qemu_monitor.MonitorSocketError:
-                break
+                raise error.TestFail("Qemu looks abnormally, please read the log")
         logging.info("Execute info/query cpus %d times", count)
     finally:
+        bg.join()
         if restore_mmu_cmd:
             stopVMS(params, env)
             utils.run(restore_mmu_cmd)

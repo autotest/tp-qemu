@@ -2,7 +2,6 @@ import time
 import logging
 from autotest.client.shared import error
 from virttest import utils_test
-from generic.tests import file_transfer
 
 
 def run(test, params, env):
@@ -85,7 +84,7 @@ def run(test, params, env):
 
     def file_transfer_test():
         try:
-            bg_cmd = file_transfer.run_file_transfer
+            bg_cmd = utils_test.run_file_transfer
             args = (test, params, env)
             bg = utils_test.BackgroundTest(bg_cmd, args)
             bg.start()

@@ -2,6 +2,7 @@ import logging
 import time
 import random
 from autotest.client.shared import error
+from virttest import env_process
 
 
 @error.context_aware
@@ -24,10 +25,11 @@ def run(test, params, env):
     reset_times = int(params.get("reset_times", 20))
     interval = int(params.get("reset_interval", 10))
     wait_time = int(params.get("wait_time_for_reset", 60))
+    params["start_vm"] = "yes"
 
     if params.get("get_boot_time") == "yes":
         error.context("Check guest boot up time", logging.info)
-        vm.create()
+        env_process.preprocess_vm(test, params, env, vm.name)
         vm.wait_for_login(timeout=timeout)
         bootup_time = time.time() - vm.start_time
         if params.get("reset_during_boot") == "yes":
@@ -36,7 +38,7 @@ def run(test, params, env):
         vm.destroy()
 
     error.context("Boot the guest", logging.info)
-    vm.create()
+    env_process.preprocess_vm(test, params, env, vm.name)
     logging.info("Wait for %d seconds before reset" % wait_time)
     time.sleep(wait_time)
 

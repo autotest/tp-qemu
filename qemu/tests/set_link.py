@@ -74,7 +74,7 @@ def run(test, params, env):
         Check whether guest network is connective by ping
         """
         if link_up:
-            vm.wait_for_login()
+            vm.wait_for_login(restart_network=True)
             guest_ip = vm.get_address()
         if change_queues:
             env["run_change_queues"] = False

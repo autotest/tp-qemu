@@ -400,12 +400,12 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     netperf_version = params.get("netperf_version", "2.6.0")
     client_path = "/tmp/netperf-%s/src/netperf" % netperf_version
     server_path = "/tmp/netperf-%s/src/netserver" % netperf_version
+    get_status_flag = params.get("get_status_in_guest", "no") == "yes"
     # Start netserver
     error.context("Start Netserver on guest", logging.info)
     if params.get("os_type") == "windows":
         timeout = float(params.get("timeout", "240"))
         cdrom_drv = utils_misc.get_winutils_vol(server_ctl)
-        get_status_flag = False
         if params.get("use_cygwin") == "yes":
             netserv_start_cmd = params.get("netserv_start_cmd")
             netperf_src = params.get("netperf_src") % cdrom_drv
@@ -443,7 +443,6 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     else:
         logging.info("Netserver start cmd is '%s'" % server_path)
         ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
-        get_status_flag = True
         ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
         ncpu = re.findall(r"\d+", ncpu)[0]
 

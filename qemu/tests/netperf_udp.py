@@ -31,56 +31,96 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    main_vm_ip = vm.get_address()
     session.cmd("iptables -F", ignore_all_errors=True)
+
+    error.context("Test env prepare", logging.info)
+    netperf_link = params.get("netperf_link")
+    if netperf_link:
+        netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                    netperf_link)
+    md5sum = params.get("pkg_md5sum")
+    netperf_server_link = params.get("netperf_server_link_win")
+    if netperf_server_link:
+        netperf_server_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                           netperf_server_link)
+    netperf_client_link = params.get("netperf_client_link_win")
+    if netperf_client_link:
+        netperf_client_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                           netperf_client_link)
+
+    server_md5sum = params.get("server_md5sum")
+    client_md5sum = params.get("client_md5sum")
+    os_type = params.get("os_type")
+    server_path = params.get("server_path", "/var/tmp/")
+    client_path = params.get("client_path", "/var/tmp/")
+    server_path_win = params.get("server_path_win", "c:\\")
+    client_path_win = params.get("client_path_win", "c:\\")
+    guest_username = params.get("username", "")
+    guest_password = params.get("password", "")
+    host_password = params.get("hostpassword")
+    client = params.get("shell_client")
+    port = params.get("shell_port")
 
     if dsthost in params.get("vms", "vm1 vm2"):
         server_vm = env.get_vm(dsthost)
         server_vm.verify_alive()
         s_session = server_vm.wait_for_login(timeout=login_timeout)
         s_session.cmd("iptables -F", ignore_all_errors=True)
-        dsthost_ip = server_vm.get_address()
+        netserver_ip = server_vm.get_address()
         s_session.close()
-    elif re.match(r"((\d){1,3}\.){3}(\d){1,3}", dsthost):
-        dsthost_ip = dsthost
+        s_client = client
+        s_port = port
+        s_username = guest_username
+        s_password = guest_password
+        if os_type == "windows":
+            s_link = netperf_server_link
+            s_path = server_path_win
+            s_md5sum = server_md5sum
+        else:
+            s_link = netperf_link
+            s_path = server_path
+            s_md5sum = md5sum
     else:
-        server_interface = params.get("netdst", "switch")
-        host_nic = utils_net.Interface(server_interface)
-        dsthost_ip = host_nic.get_ip()
+        if re.match(r"((\d){1,3}\.){3}(\d){1,3}", dsthost):
+            netserver_ip = dsthost
+        else:
+            server_interface = params.get("netdst", "switch")
+            host_nic = utils_net.Interface(server_interface)
+            netserver_ip = host_nic.get_ip()
+        s_client = params.get("shell_client_%s" % dsthost, "ssh")
+        s_port = params.get("shell_port_%s" % dsthost, "22")
+        s_username = params.get("username_%s" % dsthost, "root")
+        s_password = params.get("password_%s" % dsthost, "redhat")
+        s_link = netperf_link
+        s_path = server_path
+        s_md5sum = md5sum
 
-    error.context("Test env prepare", logging.info)
-    download_link = params.get("netperf_download_link")
-    md5sum = params.get("pkg_md5sum")
-    server_download_link = params.get("server_download_link", download_link)
-    server_md5sum = params.get("server_md5sum", md5sum)
-    server_path = params.get("server_path", "/var/tmp/server.tar.bz2")
-    client_path = params.get("client_path", "/var/tmp/client.tar.bz2")
-    guest_usrname = params.get("username", "")
-    guest_passwd = params.get("password", "")
-    host_passwd = params.get("hostpasswd")
-    client = params.get("shell_client")
-    port = params.get("shell_port")
-
-    # main vm run as server when vm_as_server is 'yes'.
-    if params.get("vm_as_server") == "yes":
-        netserver_ip = vm.get_address()
-        netperf_client_ip = dsthost_ip
+    if os_type == "windows":
+        c_path = client_path_win
+        c_md5sum = client_md5sum
+        c_link = netperf_client_link
     else:
-        netserver_ip = dsthost_ip
-        netperf_client_ip = vm.get_address()
+        c_path = client_path
+        c_md5sum = md5sum
+        c_link = netperf_link
 
-    netperf_client = utils_netperf.NetperfClient(netperf_client_ip,
-                                                 client_path,
-                                                 md5sum, download_link,
-                                                 password=host_passwd)
+    netperf_client = utils_netperf.NetperfClient(main_vm_ip,
+                                                 c_path,
+                                                 c_md5sum, c_link,
+                                                 client, port,
+                                                 username=guest_username,
+                                                 password=guest_password)
 
     netperf_server = utils_netperf.NetperfServer(netserver_ip,
-                                                 server_path,
-                                                 server_md5sum,
-                                                 server_download_link,
-                                                 client, port,
-                                                 username=guest_usrname,
-                                                 password=guest_passwd)
+                                                 s_path,
+                                                 s_md5sum,
+                                                 s_link,
+                                                 s_client, s_port,
+                                                 username=s_username,
+                                                 password=s_password)
 
     # Get range of message size.
     message_size = params.get("message_size_range", "580 590 1").split()
@@ -101,14 +141,14 @@ def run(test, params, env):
             txt = "Run netperf client with protocol: '%s', packet size: '%s'"
             error.context(txt % (test_protocol, m_size), logging.info)
             output = netperf_client.start(netserver_ip, test_option)
-            if test_protocol == "UDP_STREAM":
-                speed_index = 6
-            elif test_protocol == "UDP_RR":
-                speed_index = 7
-            else:
-                error.TestNAError("Protocol %s is not support" % test_protocol)
-
-            line_tokens = output.splitlines()[speed_index].split()
+            re_str = "[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+"
+            re_str += "\s+[0-9\.]+"
+            try:
+                line_tokens = re.findall(re_str, output)[0].split()
+            except IndexError:
+                txt = "Fail to get Throughput for %s." % m_size
+                txt += " netprf client output: %s" % output
+                raise error.TestError(txt)
             if not line_tokens:
                 raise error.TestError("Output format is not expected")
             throughput.append(float(line_tokens[5]))

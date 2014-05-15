@@ -29,6 +29,11 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    pre_cmd = params.get("pre_cmd")
+    if pre_cmd:
+        session.cmd(pre_cmd, timeout=60)
+        session = vm.reboot()
+
     logging.info("Wait until device is ready")
     time.sleep(10)
     blocks_info = vm.monitor.info("block")
@@ -103,5 +108,9 @@ def run(test, params, env):
     blocks_info = vm.monitor.info("block")
     if device_name not in str(blocks_info):
         raise error.TestFail("Could remove non-removable device!")
+
+    post_cmd = params.get("post_cmd")
+    if post_cmd:
+        session.cmd(post_cmd, timeout=60)
 
     session.close()

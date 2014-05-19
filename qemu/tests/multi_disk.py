@@ -209,7 +209,7 @@ def run(test, params, env):
     if "unknown command" in str(out):
         have_qtree = False
 
-    if have_qtree:
+    if (params.get("check_guest_proc_scsi") == "yes") and have_qtree:
         error.context("Verifying qtree vs. test params")
         err = 0
         qtree = qemu_qtree.QtreeContainer()

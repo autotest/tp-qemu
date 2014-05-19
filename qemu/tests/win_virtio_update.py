@@ -154,10 +154,10 @@ def run(test, params, env):
                 check_cmds[driver][cmd_n] = cmd_c
 
     error.context("Boot up guest with setup parameters", logging.info)
-    vm = "vm1"
-    vm_params = params.copy()
-    env_process.preprocess_vm(test, vm_params, env, vm)
-    vm = env.get_vm(vm)
+    params["start_vm"] = "yes"
+    vm_name = params['main_vm']
+    env_process.preprocess_vm(test, params, env, vm_name)
+    vm = env.get_vm(vm_name)
     session = vm.wait_for_login(timeout=timeout)
 
     cdroms = params.get("cdroms")

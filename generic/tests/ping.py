@@ -58,8 +58,7 @@ def run(test, params, env):
     counts = params.get("ping_counts", 100)
     flood_minutes = float(params.get("flood_minutes", 10))
 
-    packet_sizes = [0, 1, 4, 48, 512, 1440, 1500, 1505, 4054, 4055, 4096, 4192,
-                    8878, 9000, 32767, 65507]
+    packet_sizes = params.get("packet_size", "").split()
 
     for i, nic in enumerate(vm.virtnet):
         ip = vm.get_address(i)

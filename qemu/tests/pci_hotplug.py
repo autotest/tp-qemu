@@ -40,7 +40,8 @@ def run(test, params, env):
         return pci_add(pci_add_cmd)
 
     def pci_add(pci_add_cmd):
-        error.context("Adding pci device with command 'pci_add'")
+        error.context("Adding pci device with command 'pci_add'",
+                      logging.info)
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         pci_info.append(['', '', add_output, pci_model])
 
@@ -102,18 +103,25 @@ def run(test, params, env):
         if pci_model == "virtio":
             pci_model = "virtio-blk-pci"
 
-        if pci_model == "scsi":
-            pci_model = "scsi-disk"
-            if arch.ARCH == 'ppc64':
-                controller_model = "spapr-vscsi"
-            else:
-                controller_model = "lsi53c895a"
+        if pci_model == "scsi" or pci_model == "scsi-hd":
+            if pci_model == "scsi":
+                pci_model = "scsi-disk"
+                if arch.ARCH == 'ppc64':
+                    controller_model = "spapr-vscsi"
+                else:
+                    controller_model = "lsi53c895a"
+            if pci_model == "scsi-hd":
+                controller_model = "virtio-scsi-pci"
             verify_supported_device(controller_model)
             controller_id = "controller-" + device_id
-            controller_add_cmd = ("device_add %s,id=%s" %
-                                  (controller_model, controller_id))
-            error.context("Adding SCSI controller.")
-            vm.monitor.send_args_cmd(controller_add_cmd)
+            if params.get("monitor_type") == "human":
+                controller_add_cmd = ("device_add %s,id=%s" %
+                                      (controller_model, controller_id))
+            else:
+                controller_add_cmd = ("device_add driver=%s,id=%s" %
+                                      (controller_model, controller_id))
+            error.context("Adding SCSI controller.", logging.info)
+            vm.monitor.send_args_cmd(controller_add_cmd, convert=False)
 
         verify_supported_device(pci_model)
         if drive_cmd_type == "drive_add":
@@ -124,8 +132,17 @@ def run(test, params, env):
             driver_add_cmd = ("%s file=%s,format=%s,id=%s" %
                               (drive_cmd_type, image_filename, image_format,
                                pci_info[pci_num][0]))
+        # add block device to vm device container
+        image_name = img_list[pci_num + 1]
+        image_params = params.object_params(image_name)
+        image_name = pci_info[pci_num][0]
+        blk_insert = vm.devices.images_define_by_params(image_name,
+                                                        image_params, 'disk')
+        vm.devices.insert(blk_insert)
+        env.register_vm(vm.name, vm)
+
         # add driver.
-        error.context("Adding driver.")
+        error.context("Adding driver.", logging.info)
         vm.monitor.send_args_cmd(driver_add_cmd, convert=False)
 
         pci_add_cmd = ("device_add id=%s,driver=%s,drive=%s" %
@@ -133,9 +150,10 @@ def run(test, params, env):
         return device_add(pci_num, pci_add_cmd)
 
     def device_add(pci_num, pci_add_cmd):
-        error.context("Adding pci device with command 'device_add'")
+        error.context("Adding pci device with command 'device_add'",
+                      logging.info)
         if vm.monitor.protocol == 'qmp':
-            add_output = vm.monitor.send_args_cmd(pci_add_cmd)
+            add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         else:
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         pci_info[pci_num].append(add_output)
@@ -182,7 +200,7 @@ def run(test, params, env):
                     return True
                 return False
 
-            error.context("Start checking new added device")
+            error.context("Start checking new added device", logging.info)
             # Compare the output of 'info pci'
             if after_add == info_pci_ref:
                 raise error.TestFail("No new PCI device shown after executing "
@@ -223,8 +241,20 @@ def run(test, params, env):
             cmd = "pci_del pci_addr=%s" % hex(slot_id)
             vm.monitor.send_args_cmd(cmd, convert=False)
         elif cmd_type == "device_add":
-            cmd = "device_del id=%s" % pci_info[pci_num][1]
-            vm.monitor.send_args_cmd(cmd)
+            if params.get("monitor_type") == "human":
+                cmd = "device_del %s" % pci_info[pci_num][1]
+            else:
+                cmd = "device_del id=%s" % pci_info[pci_num][1]
+            vm.monitor.send_args_cmd(cmd, convert=False)
+            pci_model = params.get("pci_model")
+            if pci_model == "scsi" or pci_model == "scsi-hd":
+                controller_id = "controller-" + pci_info[pci_num][0]
+                if params.get("monitor_type") == "human":
+                    controller_del_cmd = "device_del %s" % controller_id
+                else:
+                    controller_del_cmd = "device_del id=%s" % controller_id
+                error.context("Deleting SCSI controller.", logging.info)
+                vm.monitor.send_args_cmd(controller_del_cmd, convert=False)
 
         if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1)
                 and not ignore_failure):

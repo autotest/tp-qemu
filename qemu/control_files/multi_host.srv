@@ -29,6 +29,7 @@ VIRT_TYPE = 'qemu'
 sys.path.insert(0, VIRT_DIR)
 from virttest import utils_misc, cartesian_config, utils_params
 from virttest import bootstrap
+from virttest import asset
 
 CONTROL_MAIN_PART = """
 testname = "virt"
@@ -71,10 +72,19 @@ def run(machines):
     for host in _hosts.itervalues():
         host.at = autotest_remote.Autotest(host.host)
 
-    cfg_file = os.path.join(VIRT_DIR, "qemu", "cfg", "multi-host-tests.cfg")
+    cfg_file = os.path.join(VIRT_DIR, "backends", "qemu", "cfg",
+                            "multi-host-tests.cfg")
+    logging.info("CONFIG FILE: '%s' is used for generating configuration." %
+                 cfg_file)
 
     if not os.path.exists(cfg_file):
-        raise error.JobError("Config file %s was not found", cfg_file)
+        specific_subdirs = asset.get_test_provider_subdirs("qemu")[0]
+        orig_cfg_file = os.path.join(specific_subdirs, "cfg",
+                                     "multi-host-tests.cfg")
+        if os.path.exists(orig_cfg_file):
+            shutil.copy(orig_cfg_file, cfg_file)
+        else:
+            raise error.JobError("Config file %s was not found", cfg_file)
 
     # Get test set (dictionary list) from the configuration file
     parser = cartesian_config.Parser()
@@ -151,6 +161,7 @@ def run(machines):
 
 bootstrap.create_config_files(TEST_DIR, SHARED_DIR, interactive=False)
 bootstrap.create_subtests_cfg(VIRT_TYPE)
+asset.download_test_provider("io-github-autotest-qemu")
 
 if 'all' in args:
     # Run test with all machines at once.

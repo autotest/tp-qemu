@@ -34,7 +34,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=timeout)
+    session = vm.wait_for_serial_login(timeout=timeout)
 
     guest_is_not_windows = (params.get("os_type") != 'windows')
     run_dhclient = params.get("run_dhclient", "no")

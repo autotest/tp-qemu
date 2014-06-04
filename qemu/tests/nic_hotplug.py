@@ -34,7 +34,7 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=login_timeout)
+    session = vm.wait_for_serial_login(timeout=login_timeout)
     primary_nic = [nic for nic in vm.virtnet]
 
     run_dhclient = params.get("run_dhclient", "no")

@@ -79,7 +79,7 @@ def run(test, params, env):
                                     "shared/scripts/ksm_overcommit_guest.py")
     vm.copy_files_to(script_file_path, "/tmp")
     test_type = params.get("test_type")
-    shared_mem = params.get("shared_mem")
+    shared_mem = int(params["shared_mem"])
     get_free_mem_cmd = params.get("get_free_mem_cmd",
                                   "grep MemFree /proc/meminfo")
     free_mem = vm.get_memory_size(get_free_mem_cmd)

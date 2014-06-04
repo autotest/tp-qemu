@@ -1,9 +1,11 @@
-import logging
 import os
 import re
+import logging
 from autotest.client.shared import error
-from autotest.client import utils, os_dep
+from autotest.client import utils
+from autotest.client import os_dep
 from virttest import utils_misc
+from virttest import utils_net
 from virttest import env_process
 
 
@@ -13,10 +15,11 @@ class NFSCorruptConfig(object):
     This class sets up nfs_corrupt test environment.
     """
 
-    def __init__(self, test, params):
+    def __init__(self, test, params, ip="localhost"):
         self.nfs_dir = os.path.join(test.tmpdir, "nfs_dir")
         self.mnt_dir = os.path.join(test.tmpdir, "mnt_dir")
         self.chk_re = params.get("nfs_stat_chk_re", "running")
+        self.nfs_ip = ip
 
         cmd_list = self._get_service_cmds()
         self.start_cmd = cmd_list[0]
@@ -80,15 +83,16 @@ class NFSCorruptConfig(object):
             if not self.is_service_active():
                 self.start_service()
 
-        utils.run("exportfs localhost:%s -o rw,no_root_squash" % self.nfs_dir)
-        utils.run("mount localhost:%s %s -o rw,soft,timeo=1,retrans=1,vers=3" %
-                  (self.nfs_dir, self.mnt_dir))
+        utils.run("exportfs %s:%s -o rw,no_root_squash" %
+                  (self.nfs_ip, self.nfs_dir))
+        utils.run("mount %s:%s %s -o rw,soft,timeo=1,retrans=1,vers=3" %
+                  (self.nfs_ip, self.nfs_dir, self.mnt_dir))
 
     @error.context_aware
     def cleanup(self, force_stop=False):
         error.context("Cleaning up test NFS share")
         utils.run("umount %s" % self.mnt_dir)
-        utils.run("exportfs -u localhost:%s" % self.nfs_dir)
+        utils.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir))
         if force_stop:
             self.stop_service()
 
@@ -181,13 +185,17 @@ def run(test, params, env):
         else:
             return True
 
-    config = NFSCorruptConfig(test, params)
+    error.context("Setup NFS Server on local host", logging.info)
+    host_ip = utils_net.get_host_ip_address(params)
+    config = NFSCorruptConfig(test, params, host_ip)
     config.setup()
-    image_name = os.path.join(config.mnt_dir, 'nfs_corrupt')
+    image_name = os.path.join(config.mnt_dir, "nfs_corrupt")
     params["image_name_stg"] = image_name
     params["force_create_image_stg"] = "yes"
     params["create_image_stg"] = "yes"
     stg_params = params.object_params("stg")
+
+    error.context("Boot vm with image on NFS server", logging.info)
     env_process.preprocess_image(test, stg_params, image_name)
 
     vm = env.get_vm(params["main_vm"])
@@ -197,8 +205,8 @@ def run(test, params, env):
     nfs_devname = get_nfs_devname(params, session)
 
     # Write disk on NFS server
+    error.context("Write disk that image on NFS", logging.info)
     write_disk_cmd = "dd if=/dev/urandom of=%s" % nfs_devname
-    logging.info("Write disk on NFS server, cmd: %s" % write_disk_cmd)
     session.sendline(write_disk_cmd)
     try:
         # Read some command output, it will timeout
@@ -215,17 +223,17 @@ def run(test, params, env):
             cmd = "iptables"
             cmd += " -t filter"
             cmd += " -A INPUT"
-            cmd += " -s localhost"
+            cmd += " -d %s" % host_ip
             cmd += " -m state"
-            cmd += " --state RELATED,ESTABLISHED"
+            cmd += " --state NEW,RELATED,ESTABLISHED"
             cmd += " -p tcp"
             cmd += " --dport 2049"
             cmd += " -j REJECT"
 
-            error.context("Reject NFS connection on host")
+            error.context("Reject NFS connection on host", logging.info)
             utils.system(cmd)
 
-            error.context("Check if VM status is 'paused'")
+            error.context("Check if VM status is 'paused'", logging.info)
             if not utils_misc.wait_for(
                 lambda: check_vm_status(vm, "paused"),
                     int(params.get('wait_paused_timeout', 120))):
@@ -235,9 +243,9 @@ def run(test, params, env):
             cmd = "iptables"
             cmd += " -t filter"
             cmd += " -D INPUT"
-            cmd += " -s localhost"
+            cmd += " -d %s" % host_ip
             cmd += " -m state"
-            cmd += " --state RELATED,ESTABLISHED"
+            cmd += " --state NEW,RELATED,ESTABLISHED"
             cmd += " -p tcp"
             cmd += " --dport 2049"
             cmd += " -j REJECT"

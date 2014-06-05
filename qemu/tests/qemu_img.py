@@ -3,7 +3,7 @@ import os
 import logging
 import commands
 from autotest.client.shared import utils, error
-from virttest import utils_misc, env_process, storage, data_dir
+from virttest import utils_misc, env_process, storage, data_dir, gluster
 
 
 @error.context_aware
@@ -23,7 +23,34 @@ def run(test, params, env):
         raise error.TestError("Binary of 'qemu-img' not found")
     image_format = params["image_format"]
     image_size = params.get("image_size", "10G")
+    enable_gluster = params.get("enable_gluster", "no") == "yes"
     image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+
+    def remove(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+    def _get_image_filename(img_name, enable_gluster=False, img_fmt=None):
+        """
+        Generate an image path.
+
+        :param image_name: Force name of image.
+        :param enable_gluster: Enable gluster or not.
+        :param image_format: Format for image.
+        """
+        if enable_gluster:
+            gluster_uri = gluster.create_gluster_uri(params)
+            image_filename = "%s%s" % (gluster_uri, img_name)
+            if img_fmt:
+                image_filename += ".%s" % img_fmt
+        else:
+            if img_fmt:
+                img_name = "%s.%s" % (img_name, img_fmt)
+            image_filename = utils_misc.get_path(data_dir.get_data_dir(),
+                                                 img_name)
+        return image_filename
 
     def _check(cmd, img):
         """
@@ -53,8 +80,8 @@ def run(test, params, env):
 
         :param cmd: qemu-img base command.
         """
-        test_image = utils_misc.get_path(data_dir.get_data_dir(),
-                                         params["image_name_dd"])
+        test_image = _get_image_filename(params["image_name_dd"],
+                                         enable_gluster)
         create_image_cmd = params["create_image_cmd"]
         create_image_cmd = create_image_cmd % test_image
         msg = " Create image %s by command %s" % (test_image, create_image_cmd)
@@ -71,8 +98,8 @@ def run(test, params, env):
             if not status:
                 raise error.TestFail("Check image '%s' got error: %s" %
                                      (output_image, output))
-            os.remove(output_image)
-        os.remove(test_image)
+            remove(output_image)
+        remove(test_image)
 
     def _create(cmd, img_name, fmt, img_size=None, base_img=None,
                 base_img_fmt=None, encrypted="no",
@@ -131,15 +158,15 @@ def run(test, params, env):
         image_large = params["image_name_large"]
         device = params.get("device")
         if not device:
-            img = utils_misc.get_path(data_dir.get_data_dir(), image_large)
-            img += '.' + image_format
+            img = _get_image_filename(image_large, enable_gluster,
+                                      image_format)
         else:
             img = device
         _create(cmd, img_name=img, fmt=image_format,
                 img_size=params["image_size_large"],
                 preallocated=params.get("preallocated", "off"),
                 cluster_size=params.get("image_cluster_size"))
-        os.remove(img)
+        remove(img)
 
     def _convert(cmd, output_fmt, img_name, output_filename,
                  fmt=None, compressed="no", encrypted="no"):
@@ -196,12 +223,12 @@ def run(test, params, env):
         if dest_img_fmt == "qcow2":
             status, output = _check(cmd, output_filename)
             if status:
-                os.remove(output_filename)
+                remove(output_filename)
             else:
                 raise error.TestFail("Check image '%s' failed with error: %s" %
                                      (output_filename, output))
         else:
-            os.remove(output_filename)
+            remove(output_filename)
 
     def _info(cmd, img, sub_info=None, fmt=None):
         """
@@ -259,7 +286,8 @@ def run(test, params, env):
             sn_name = "snapshot%d" % i
             crtcmd += " -c %s %s" % (sn_name, image_name)
             msg = "Created snapshot '%s' in '%s' by command %s" % (sn_name,
-                                                                   image_name, crtcmd)
+                                                                   image_name,
+                                                                   crtcmd)
             error.context(msg, logging.info)
             status, output = commands.getstatusoutput(crtcmd)
             if status != 0:
@@ -298,32 +326,28 @@ def run(test, params, env):
         """
 
         logging.info("Commit testing started!")
-        image_name = params.get("image_name", "image")
-        image_name = os.path.join(data_dir.get_data_dir(), image_name)
+        image_name = storage.get_image_filename(params,
+                                                data_dir.get_data_dir())
+        pre_name = '.'.join(image_name.split('.')[:-1])
         image_format = params.get("image_format", "qcow2")
-        overlay_file_name = "%s_overlay" % (image_name)
+        overlay_file_name = "%s_overlay.%s" % (pre_name, image_format)
         file_create_cmd = params.get("file_create_cmd",
                                      "touch /commit_testfile")
         file_info_cmd = params.get("file_info_cmd",
                                    "ls / | grep commit_testfile")
         file_exist_chk_cmd = params.get("file_exist_chk_cmd",
                                         "[ -e /commit_testfile ] && echo $?")
-        file_not_exist_chk_cmd = params.get("file_not_exist_chk_cmd",
-                                            "[ ! -e /commit_testfile ] && echo $?")
         file_del_cmd = params.get("file_del_cmd",
                                   "rm -f /commit_testfile")
         try:
             # Remove the existing overlay file
-            overlay_file = "%s.%s" % (overlay_file_name, image_format)
-            if os.path.isfile(overlay_file):
-                os.remove(overlay_file)
+            if os.path.isfile(overlay_file_name):
+                remove(overlay_file_name)
 
             # Create the new overlay file
-            create_cmd = "%s create -b %s.%s -f %s %s.%s" % (cmd, image_name,
-                                                             image_format,
-                                                             image_format,
-                                                             overlay_file_name,
-                                                             image_format)
+            create_cmd = "%s create -b %s -f %s %s" % (cmd, image_name,
+                                                       image_format,
+                                                       overlay_file_name)
             msg = "Create overlay file by command: %s" % create_cmd
             error.context(msg, logging.info)
             try:
@@ -335,7 +359,7 @@ def run(test, params, env):
             # Set the qemu harddisk to the overlay file
             logging.info(
                 "Original image_name is: %s", params.get('image_name'))
-            params['image_name'] = overlay_file_name
+            params['image_name'] = pre_name
             logging.info("Param image_name changed to: %s",
                          params.get('image_name'))
 
@@ -360,9 +384,8 @@ def run(test, params, env):
             vm.destroy()
 
             # Execute the commit command
-            cmitcmd = "%s commit -f %s %s.%s" % (cmd, image_format,
-                                                 overlay_file_name,
-                                                 image_format)
+            cmitcmd = "%s commit -f %s %s" % (cmd, image_format,
+                                              overlay_file_name)
             error.context("Committing image by command %s" % cmitcmd,
                           logging.info)
             try:
@@ -388,8 +411,8 @@ def run(test, params, env):
 
         finally:
             # Remove the overlay file
-            if os.path.isfile(overlay_file):
-                os.remove(overlay_file)
+            if os.path.isfile(overlay_file_name):
+                remove(overlay_file_name)
 
     def _rebase(cmd, img_name, base_img, backing_fmt, mode="unsafe"):
         """
@@ -430,24 +453,23 @@ def run(test, params, env):
                                     " support 'rebase' subcommand")
         sn_fmt = params.get("snapshot_format", "qcow2")
         sn1 = params["image_name_snapshot1"]
-        sn1 = utils_misc.get_path(
-            data_dir.get_data_dir(), sn1) + ".%s" % sn_fmt
+        sn1 = _get_image_filename(sn1, enable_gluster, sn_fmt)
         base_img = storage.get_image_filename(params, data_dir.get_data_dir())
         _create(cmd, sn1, sn_fmt, base_img=base_img, base_img_fmt=image_format)
 
         # Create snapshot2 based on snapshot1
         sn2 = params["image_name_snapshot2"]
-        sn2 = utils_misc.get_path(
-            data_dir.get_data_dir(), sn2) + ".%s" % sn_fmt
+        sn2 = _get_image_filename(sn2, enable_gluster, sn_fmt)
         _create(cmd, sn2, sn_fmt, base_img=sn1, base_img_fmt=sn_fmt)
 
         rebase_mode = params.get("rebase_mode")
         if rebase_mode == "unsafe":
-            os.remove(sn1)
+            remove(sn1)
 
         _rebase(cmd, sn2, base_img, image_format, mode=rebase_mode)
         # Boot snapshot image after rebase
-        img_name, img_format = sn2.split('.')
+        img_format = sn2.split('.')[-1]
+        img_name = ".".join(sn2.split('.')[:-1])
         _boot(img_name, img_format)
 
         # Check sn2's format and backing_file
@@ -461,11 +483,8 @@ def run(test, params, env):
         if not status:
             raise error.TestFail("Check image '%s' failed after rebase;"
                                  "got error: %s" % (sn2, output))
-        try:
-            os.remove(sn2)
-            os.remove(sn1)
-        except Exception:
-            pass
+        remove(sn2)
+        remove(sn1)
 
     def _boot(img_name, img_fmt):
         """

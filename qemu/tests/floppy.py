@@ -124,8 +124,8 @@ def run(test, params, env):
 
             if self.dest_dir:
                 error.context("Mounting floppy")
-                self.session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
-                                                          self.dest_dir))
+                self.session.cmd("mount %s %s" % (guest_floppy_path,
+                                                  self.dest_dir))
             error.context("Testing floppy")
             self.session.cmd(params["test_floppy_cmd"])
 
@@ -243,8 +243,8 @@ def run(test, params, env):
 
                 error.context("Mount and copy data")
                 if self.mount_dir:
-                    session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
-                                                         self.mount_dir),
+                    session.cmd("mount %s %s" % (guest_floppy_path,
+                                                 self.mount_dir),
                                 timeout=30)
 
                 error.context("File copying test")
@@ -356,8 +356,8 @@ def run(test, params, env):
 
                 error.context("Check floppy")
                 if self.mount_dir:   # If linux
-                    session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
-                                                         self.mount_dir), timeout=30)
+                    session.cmd("mount %s %s" % (guest_floppy_path,
+                                                 self.mount_dir), timeout=30)
                     session.cmd("umount %s" % (self.mount_dir), timeout=30)
 
                 written = None
@@ -384,8 +384,8 @@ def run(test, params, env):
 
                 error.context("Mount and copy data")
                 if self.mount_dir:   # If linux
-                    session.cmd("mount -t vfat %s %s" % (guest_floppy_path,
-                                                         self.mount_dir), timeout=30)
+                    session.cmd("mount %s %s" % (guest_floppy_path,
+                                                 self.mount_dir), timeout=30)
 
                 if second_floppy not in vm.monitor.info("block"):
                     raise error.TestFail("Wrong floppy image is placed in vm.")

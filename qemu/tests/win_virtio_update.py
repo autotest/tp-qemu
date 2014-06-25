@@ -48,7 +48,8 @@ def run(test, params, env):
 
         default_parameters = {"default_drive_format": default_drive_format,
                               "default_nic_model": default_nic_model,
-                              "default_display": default_display}
+                              "default_display": default_display,
+                              "default_cd_format": default_drive_format}
 
         for key in default_parameters:
             params[key[8:]] = default_parameters[key]

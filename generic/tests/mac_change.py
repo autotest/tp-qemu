@@ -4,15 +4,34 @@ from autotest.client.shared import error
 from virttest import utils_misc, utils_net, utils_test
 
 
+def check_guest_mac(mac, vm, device_id=None):
+    error.context("Check mac address via monitor", logging.info)
+    network_info = vm.monitor.info("network")
+    if not device_id:
+        device_id = vm.virtnet[0].device_id
+
+    if device_id not in str(network_info):
+        err = "Could not find device '%s' from query-network monitor command."
+        err += "query-network command output: %s" % str(network_info)
+        raise error.TestFail(err)
+    for info in str(network_info).splitlines():
+        if device_id in info and mac not in info:
+            err = "Cold not get correct mac from qmp command!"
+            err += "query-network command output: %s" % str(network_info)
+            raise error.TestFail(err)
+
+
 @error.context_aware
 def run(test, params, env):
     """
     Change MAC address of guest.
 
     1) Get a new mac from pool, and the old mac addr of guest.
-    2) Set new mac in guest and regain new IP.
-    3) Re-log into guest with new MAC.
-    4) File transfer between host and guest. optional
+    2) Check guest mac by qmp command.
+    3) Set new mac in guest and regain new IP.
+    4) Check guest new mac by qmp command.
+    5) Re-log into guest with new MAC. (nettype != macvtap)
+    6) File transfer between host and guest. optional
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -23,7 +42,8 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session_serial = vm.wait_for_serial_login(timeout=timeout)
     # This session will be used to assess whether the IP change worked
-    session = vm.wait_for_login(timeout=timeout)
+    if params.get("nettype") != "macvtap":
+        session = vm.wait_for_login(timeout=timeout)
     old_mac = vm.get_mac_address(0)
     while True:
         vm.virtnet.free_mac_address(0)
@@ -34,8 +54,8 @@ def run(test, params, env):
     os_type = params.get("os_type")
     os_variant = params.get("os_variant")
     change_cmd_pattern = params.get("change_cmd")
-
     logging.info("The initial MAC address is %s", old_mac)
+    check_guest_mac(old_mac, vm)
     if os_type == "linux":
         interface = utils_net.get_linux_ifname(session_serial, old_mac)
         if params.get("shutdown_int", "yes") == "yes":
@@ -44,11 +64,11 @@ def run(test, params, env):
             session_serial.cmd(int_shutdown_cmd % interface)
     else:
 
-        connection_id = utils_net.get_windows_nic_attribute(session,
+        connection_id = utils_net.get_windows_nic_attribute(session_serial,
                                                             "macaddress",
                                                             old_mac,
                                                             "netconnectionid")
-        nic_index = utils_net.get_windows_nic_attribute(session,
+        nic_index = utils_net.get_windows_nic_attribute(session_serial,
                                                         "netconnectionid",
                                                         connection_id,
                                                         "index")
@@ -97,22 +117,26 @@ def run(test, params, env):
                 raise error.TestFail("Guest mac change failed")
             logging.info("Guest mac have been modified successfully")
 
-        # Re-log into the guest after changing mac address
-        if utils_misc.wait_for(session.is_responsive, 120, 20, 3):
-            # Just warning when failed to see the session become dead,
-            # because there is a little chance the ip does not change.
-            logging.warn("The session is still responsive, settings may fail.")
-        session.close()
+        if params.get("nettype") != "macvtap":
+            # Re-log into the guest after changing mac address
+            if utils_misc.wait_for(session.is_responsive, 120, 20, 3):
+                # Just warning when failed to see the session become dead,
+                # because there is a little chance the ip does not change.
+                msg = "The session is still responsive, settings may fail."
+                logging.warn(msg)
+            session.close()
 
-        # Re-log into guest and check if session is responsive
-        error.context("Re-log into the guest", logging.info)
-        session = vm.wait_for_login(timeout=timeout)
-        if not session.is_responsive():
-            raise error.TestFail("The new session is not responsive.")
-        if params.get("file_transfer", "no") == "yes":
-            error.context("File transfer between host and guest.",
-                          logging.info)
-            utils_test.run_file_transfer(test, params, env)
+            # Re-log into guest and check if session is responsive
+            error.context("Re-log into the guest", logging.info)
+            session = vm.wait_for_login(timeout=timeout)
+            if not session.is_responsive():
+                raise error.TestFail("The new session is not responsive.")
+            if params.get("file_transfer", "no") == "yes":
+                error.context("File transfer between host and guest.",
+                              logging.info)
+                utils_test.run_file_transfer(test, params, env)
+        else:
+            check_guest_mac(new_mac, vm)
     finally:
         if os_type == "windows":
             clean_cmd_pattern = params.get("clean_cmd")
@@ -124,4 +148,3 @@ def run(test, params, env):
             nic = vm.virtnet[0]
             nic.mac = old_mac
             vm.virtnet.update_db()
-        session.close()

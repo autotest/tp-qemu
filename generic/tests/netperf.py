@@ -9,6 +9,9 @@ from autotest.client.shared import error
 from virttest import utils_test, utils_misc, utils_net, remote, data_dir
 
 
+_netserver_started = False
+
+
 def format_result(result, base="12", fbase="5"):
     """
     Format the result to a fixed length string.
@@ -39,7 +42,7 @@ def netperf_record(results, filter_list, header=False, base="12", fbase="2"):
     """
     key_list = []
     for key in filter_list:
-        if results.has_key(key):
+        if key in results:
             key_list.append(key)
 
     record = ""
@@ -112,7 +115,8 @@ def run(test, params, env):
     queues = int(params.get("queues", 1))
     if queues > 1:
         if params.get("os_type") == "linux":
-            ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
+            ethname = utils_net.get_linux_ifname(session,
+                                                 vm.get_mac_address(0))
             session.cmd_status_output("ethtool -L %s combined %s" %
                                       (ethname, queues))
         else:
@@ -401,52 +405,55 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     client_path = "/tmp/netperf-%s/src/netperf" % netperf_version
     server_path = "/tmp/netperf-%s/src/netserver" % netperf_version
     get_status_flag = params.get("get_status_in_guest", "no") == "yes"
+    global _netserver_started
     # Start netserver
-    error.context("Start Netserver on guest", logging.info)
-    if params.get("os_type") == "windows":
-        timeout = float(params.get("timeout", "240"))
-        cdrom_drv = utils_misc.get_winutils_vol(server_ctl)
-        if params.get("use_cygwin") == "yes":
-            netserv_start_cmd = params.get("netserv_start_cmd")
-            netperf_src = params.get("netperf_src") % cdrom_drv
-            cygwin_root = params.get("cygwin_root")
-            netserver_path = params.get("netserver_path")
-            netperf_install_cmd = params.get("netperf_install_cmd")
-            start_session = server_cyg
-            logging.info("Start netserver with cygwin, cmd is: %s" %
-                         netserv_start_cmd)
-            if "netserver" not in server_ctl.cmd_output("tasklist"):
-                netperf_pack = "netperf-%s" % params.get("netperf_version")
-                s_check_cmd = "dir %s" % netserver_path
-                p_check_cmd = "dir %s" % cygwin_root
-                if not ("netserver.exe" in server_ctl.cmd(s_check_cmd) and
-                        netperf_pack in server_ctl.cmd(p_check_cmd)):
-                    error.context("Install netserver in Windows guest cygwin",
-                                  logging.info)
-                    cmd = "xcopy %s %s /S /I /Y" % (netperf_src, cygwin_root)
-                    server_ctl.cmd(cmd)
-                    server_cyg.cmd_output(netperf_install_cmd, timeout=timeout)
-                    if "netserver.exe" not in server_ctl.cmd(s_check_cmd):
-                        err_msg = "Install netserver cygwin failed"
-                        raise error.TestNAError(err_msg)
-                    logging.info("Install netserver in cygwin successfully")
+    if _netserver_started:
+        logging.debug("Netserver already started.")
+    else:
+        error.context("Start Netserver on guest", logging.info)
+        if params.get("os_type") == "windows":
+            timeout = float(params.get("timeout", "240"))
+            cdrom_drv = utils_misc.get_winutils_vol(server_ctl)
+            if params.get("use_cygwin") == "yes":
+                netserv_start_cmd = params.get("netserv_start_cmd")
+                netperf_src = params.get("netperf_src") % cdrom_drv
+                cygwin_root = params.get("cygwin_root")
+                netserver_path = params.get("netserver_path")
+                netperf_install_cmd = params.get("netperf_install_cmd")
+                start_session = server_cyg
+                logging.info("Start netserver with cygwin, cmd is: %s" %
+                             netserv_start_cmd)
+                if "netserver" not in server_ctl.cmd_output("tasklist"):
+                    netperf_pack = "netperf-%s" % params.get("netperf_version")
+                    s_check_cmd = "dir %s" % netserver_path
+                    p_check_cmd = "dir %s" % cygwin_root
+                    if not ("netserver.exe" in server_ctl.cmd(s_check_cmd) and
+                            netperf_pack in server_ctl.cmd(p_check_cmd)):
+                        error.context("Install netserver in Windows guest cygwin",
+                                      logging.info)
+                        cmd = "xcopy %s %s /S /I /Y" % (netperf_src, cygwin_root)
+                        server_ctl.cmd(cmd)
+                        server_cyg.cmd_output(netperf_install_cmd, timeout=timeout)
+                        if "netserver.exe" not in server_ctl.cmd(s_check_cmd):
+                            err_msg = "Install netserver cygwin failed"
+                            raise error.TestNAError(err_msg)
+                        logging.info("Install netserver in cygwin successfully")
+            else:
+                start_session = server_ctl
+                netserv_start_cmd = params.get("netserv_start_cmd") % cdrom_drv
+                logging.info("Start netserver without cygwin, cmd is: %s" %
+                             netserv_start_cmd)
+
+            error.context("Start netserver on windows guest", logging.info)
+            start_netserver_win(start_session, netserv_start_cmd)
 
         else:
-            start_session = server_ctl
-            netserv_start_cmd = params.get("netserv_start_cmd") % cdrom_drv
-            logging.info("Start netserver without cygwin, cmd is: %s" %
-                         netserv_start_cmd)
+            logging.info("Netserver start cmd is '%s'" % server_path)
+            ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
+            ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
+            ncpu = re.findall(r"\d+", ncpu)[-1]
 
-        error.context("Start netserver on windows guest", logging.info)
-        start_netserver_win(start_session, netserv_start_cmd)
-
-    else:
-        logging.info("Netserver start cmd is '%s'" % server_path)
-        ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
-        ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
-        ncpu = re.findall(r"\d+", ncpu)[-1]
-
-    logging.info("Netserver start successfully")
+        logging.info("Netserver start successfully")
 
     def count_interrupt(name):
         """

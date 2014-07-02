@@ -113,15 +113,65 @@ def package_check(dict_test, verbose=False):
 
     return True
 
+
+def create_host_kernel_cfg(rootdir, guest_file, host_name, base_cfg):
+    guest_file = open(guest_file, 'w')
+    base_file = 0
+    if base_cfg:
+        try:
+            base_file = open(base_cfg, 'r')
+            cfg = base_file.read()
+        finally:
+            if base_file:
+                base_file.close()
+        if cfg:
+            guest_file.write(cfg)
+
+    full_path = rootdir
+    number_variants = 0
+    for path in host_name.split("."):
+        number_variants += 1
+        guest_file.write("%svariants:\n" % (8 * (number_variants - 1) * " "))
+        tmp_path = os.path.join(full_path, path)
+        if os.path.isdir(tmp_path):
+            full_path = os.path.join(full_path, path)
+        if os.path.isfile("%s.cfg" % tmp_path):
+            base_cfg_path = "%s.cfg" % tmp_path
+            base_file = open(base_cfg_path, 'r')
+            for line in base_file.readlines():
+                txt = "%s%s" % (((8 * (number_variants - 1) + 4) * " "), line)
+                guest_file.write(txt)
+    guest_file.close()
+
+
 update_config()
+parser_host = cartesian_config.Parser()
+host_check_cfg = os.path.join(qemu_test_dir, "cfg/host-kernel",
+                              "host-kernel-check.cfg")
+parser_host.parse_file(host_check_cfg)
+
+host_kernel_dict = parser_host.get_dicts()
+
 parser = cartesian_config.Parser()
+
+for host_dict in host_kernel_dict:
+    verbose = host_dict.get("host_check_verbose", "no") == "yes"
+    host_kernel_ver_str = host_dict.get("host_kernel_ver_str")
+    if host_dict.get("pre_check_cmd"):
+        s, o = commands.getstatusoutput(host_dict.get("pre_check_cmd"))
+        if s != 0:
+            continue
+    if package_check(host_dict, verbose=verbose):
+        host_name = host_kernel_ver_str
+        break
+
+host_kernel_dir = os.path.join(qemu_test_dir, "cfg", "host-kernel")
+host_base_cfg = os.path.join(qemu_test_dir, "cfg", "host-kernel-base.cfg")
+target_cfg = os.path.join(qemu_test_dir, "cfg", "host-kernel.cfg")
+create_host_kernel_cfg(host_kernel_dir, target_cfg, host_name, host_base_cfg)
 
 parser.parse_file(os.path.join(qemu_test_dir, "cfg", "tests-example.cfg"))
 
-host_kernel_ver_str = ""
-host_kernel_ver_file = "/tmp/host_kernel_version"
-if os.path.isfile(host_kernel_ver_file):
-    os.remove(host_kernel_ver_file)
 
 filter_str = ""
 for dict_test in parser.get_dicts():
@@ -129,29 +179,9 @@ for dict_test in parser.get_dicts():
     if (dict_test.get("required_packages") and
         not package_check(dict_test, verbose=verbose)):
         filter_str += "no %s\n" % dict_test['name']
-        logging.warning("Skip case '%s' due to package "
-                        "missing." % dict_test['name'])
-
-    if dict_test.get("requires_kernel") and not host_kernel_ver_str:
-        if dict_test.get("pre_check_cmd"):
-            s, o = commands.getstatusoutput(dict_test.get("pre_check_cmd"))
-            if s != 0:
-                continue
-        if os.path.isfile(host_kernel_ver_file):
-            kervel_version = open(host_kernel_ver_file, "r")
-            host_kernel_ver_str = kervel_version.read()
-            kervel_version.close()
-        else:
-            host_dict = dict_test.copy()
-            host_dict["required_packages"] = "kernel"
-            if package_check(host_dict, verbose=verbose):
-                host_kernel_ver_str = ("only %s\n" %
-                                       host_dict.get("host_kernel_ver_str"))
-                kervel_version = open(host_kernel_ver_file, "w")
-                kervel_version.write(host_kernel_ver_str)
-                kervel_version.close()
-
-filter_str += host_kernel_ver_str
+        msg = "Skip case '%s' due to " % dict_test['name']
+        msg += "package %s missing." % dict_test.get("required_packages")
+        logging.warning(msg)
 
 parser.parse_string(filter_str)
 

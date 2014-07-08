@@ -45,7 +45,7 @@ def run(test, params, env):
         suspend_type = params.get("guest_suspend_type")
         error.context("Run suspend '%s' test under stress" % suspend_type,
                       logging.info)
-        bg_cmd = guest_suspend.run_guest_suspend
+        bg_cmd = guest_suspend.run
         args = (test, params, env)
         bg = utils_test.BackgroundTest(bg_cmd, args)
         bg.start()

@@ -1,7 +1,7 @@
 import logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_netperf, utils_misc, data_dir
+from virttest import utils_netperf, utils_misc, data_dir, utils_net
 
 
 @error.context_aware
@@ -18,17 +18,6 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    def dlink_preprcess(download_link):
-        """
-        Preprocess the download link
-        """
-        if not download_link:
-            raise error.TestNAError("Can not get the netperf download_link")
-        if not utils.is_url(download_link):
-            download_link = utils_misc.get_path(data_dir.get_deps_dir(),
-                                                download_link)
-        return download_link
-
     login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")
@@ -40,52 +29,109 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
     guest_address = vm.get_address()
-
-    download_link = dlink_preprcess(params.get("netperf_download_link"))
+    host_address = utils_net.get_host_ip_address(params)
+    remote_ip = params.get("remote_host", host_address)
+    netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
+                                       params.get("netperf_link"))
     md5sum = params.get("pkg_md5sum")
-    server_download_link = params.get("server_download_link", download_link)
+    netperf_link_win = params.get("netperf_link_win")
+    if netperf_link_win:
+        netperf_link_win = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
+                                               netperf_link_win)
+    netperf_md5sum_win = params.get("netperf_md5sum_win")
+    netperf_server_link = params.get("netperf_server_link", netperf_link)
     server_md5sum = params.get("server_md5sum", md5sum)
-    server_download_link = dlink_preprcess(server_download_link)
-    server_path = params.get("server_path", "/tmp/server.tar.bz2")
-    client_path = params.get("client_path", "/tmp/client.tar.bz2")
+    netperf_server_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
+                                              netperf_server_link)
+    server_path = params.get("server_path", "/var/tmp/")
+    client_path = params.get("client_path", "/var/tmp/")
+    server_path_win = params.get("server_path_win")
+    client_path_win = params.get("client_path_win")
 
     username = params.get("username", "root")
     password = params.get("password", "redhat")
     passwd = params.get("hostpasswd", "redhat")
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
-
-    netperf_client = utils_netperf.NetperfClient("localhost", client_path,
-                                                 md5sum, download_link,
-                                                 password=passwd)
-
-    netperf_server = utils_netperf.NetperfServer(guest_address,
-                                                 server_path,
-                                                 server_md5sum,
-                                                 server_download_link,
-                                                 client, port,
-                                                 username=username,
-                                                 password=password)
-
+    if params.get("os_type") == "linux":
+        session.cmd("iptables -F", ignore_all_errors=True)
+        g_client_link = netperf_link
+        g_server_path = server_path
+        g_client_path = client_path
+        g_client_install = False
+    elif params.get("os_type") == "windows":
+        g_client_link = netperf_link_win
+        g_server_path = server_path_win
+        g_client_path = client_path_win
+        md5sum = netperf_md5sum_win
+        g_client_install = True
+    netperf_client_g = None
+    netperf_client_h = None
+    netperf_server_g = None
+    netperf_server_h = None
     try:
-        if params.get("os_type") == "linux":
-            session.cmd("iptables -F", ignore_all_errors=True)
+        netperf_client_g = utils_netperf.NetperfClient(guest_address,
+                                                       g_client_path,
+                                                       md5sum,
+                                                       g_client_link,
+                                                       client=client,
+                                                       port=port,
+                                                       username=username,
+                                                       password=password,
+                                                       install=g_client_install)
+        netperf_server_h = utils_netperf.NetperfServer(remote_ip,
+                                                       server_path,
+                                                       server_md5sum,
+                                                       netperf_link,
+                                                       password=passwd,
+                                                       install=False)
+        netperf_client_h = utils_netperf.NetperfClient(remote_ip, client_path,
+                                                       md5sum, netperf_link,
+                                                       password=passwd)
+        netperf_server_g = utils_netperf.NetperfServer(guest_address,
+                                                       g_server_path,
+                                                       server_md5sum,
+                                                       netperf_server_link,
+                                                       client=client,
+                                                       port=port,
+                                                       username=username,
+                                                       password=password)
         error.base_context("Run netperf test between host and guest")
         error.context("Start netserver in guest.", logging.info)
-        netperf_server.start()
-        error.context("Start Netperf on host", logging.info)
+        netperf_server_g.start()
+        if netperf_server_h:
+            error.context("Start netserver in host.", logging.info)
+            netperf_server_h.start()
+
+        error.context("Start Netperf in host", logging.info)
         test_option = "-l %s" % netperf_timeout
-        netperf_client.bg_start(guest_address, test_option, client_num)
+        netperf_client_h.bg_start(guest_address, test_option, client_num)
+        if netperf_client_g:
+            error.context("Start Netperf in guest", logging.info)
+            netperf_client_g.bg_start(host_address, test_option, client_num)
 
         m_count = 0
-        while netperf_client.is_test_running():
+        while netperf_client_h.is_netperf_running():
             m_count += 1
             error.context("Start migration iterations: %s " % m_count,
                           logging.info)
             vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
     finally:
-        netperf_server.stop()
-        netperf_server.env_cleanup(True)
-        netperf_client.env_cleanup(True)
+        if netperf_server_g:
+            if netperf_server_g.is_server_running():
+                netperf_server_g.stop()
+            netperf_server_g.package.env_cleanup(True)
+        if netperf_server_h:
+            if netperf_server_h.is_server_running():
+                netperf_server_h.stop()
+            netperf_server_h.package.env_cleanup(True)
+        if netperf_client_h:
+            if netperf_client_h.is_netperf_running():
+                netperf_client_h.stop()
+            netperf_client_h.package.env_cleanup(True)
+        if netperf_client_g:
+            if netperf_client_g.is_netperf_running():
+                netperf_client_g.stop()
+            netperf_client_g.package.env_cleanup(True)
         if session:
             session.close()

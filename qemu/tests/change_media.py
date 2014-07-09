@@ -54,6 +54,11 @@ def run(test, params, env):
         monitor = vm.monitor
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
+    pre_cmd = params.get("pre_cmd")
+    if pre_cmd:
+        session.cmd(pre_cmd, timeout=60)
+        session = vm.reboot()
+
     logging.info("Wait until device is ready")
     time.sleep(10)
 
@@ -112,4 +117,9 @@ def run(test, params, env):
     umount_cmd = params.get("cd_umount_cmd")
     if umount_cmd:
         session.cmd(umount_cmd, timeout=360)
+
+    post_cmd = params.get("post_cmd")
+    if post_cmd:
+        session.cmd(post_cmd, timeout=60)
+
     session.close()

@@ -160,6 +160,13 @@ class BallooningTest(object):
         :return: If test should quit after test
         :rtype: bool
         """
+        def _memory_check_after_sub_test():
+            try:
+                output = self.memory_check("after subtest", ballooned_mem)
+            except error.TestFail:
+                return None
+            return output
+
         if self.test_round < 1:
             self.memory_check("before ballooning test", 0)
 
@@ -196,8 +203,13 @@ class BallooningTest(object):
             elif should_quit == 0:
                 expect_mem = self.ori_mem
 
-            mmem, gmem = self.memory_check("after subtest",
-                                           self.ori_mem - expect_mem)
+            timeout = int(self.params.get("balloon_timeout", 100))
+            ballooned_mem = self.ori_mem - expect_mem
+            msg = "Wait memory balloon back after "
+            msg += params_tag['sub_test_after_balloon']
+            mmem, gmem = utils_misc.wait_for(_memory_check_after_sub_test,
+                                             timeout, 0, 5, msg)
+
             self.current_mmem = mmem
             self.current_gmem = gmem
         return False

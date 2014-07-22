@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# replace 'switch' openvswith bridge name in your system
+switch="switch"
+/sbin/ifconfig $1 0.0.0.0 down
+/usr/bin/ovs-vsctl del-port ${switch} $1

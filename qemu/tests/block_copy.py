@@ -1,8 +1,10 @@
 import os
 import re
+import time
+import random
 import logging
 from autotest.client.shared import error, utils
-from virttest import utils_misc, storage, data_dir
+from virttest import utils_misc, storage, data_dir, qemu_monitor
 
 
 def speed2byte(speed):
@@ -79,9 +81,16 @@ class BlockCopy(object):
         """
         return block job info dict;
         """
-        query_status = lambda: self.vm.get_job_status(self.device)
-        status = utils_misc.wait_for(query_status, timeout=120)
-        return status or {}
+        status = {}
+        count = 0
+        while count < 10:
+            try:
+                status = self.vm.get_job_status(self.device)
+            except qemu_monitor.MonitorLockError as e:
+                logging.warn(e)
+            time.sleep(random.uniform(1, 5))
+            count += 1
+        return status
 
     def do_steps(self, tag=None):
         if not tag:

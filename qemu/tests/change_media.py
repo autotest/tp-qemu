@@ -1,7 +1,8 @@
-import logging
+import re
 import time
+import logging
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc
+from virttest import utils_test, utils_misc, data_dir
 
 
 @error.context_aware
@@ -58,6 +59,7 @@ def run(test, params, env):
     time.sleep(10)
 
     cdrom = params.get("cdrom_cd1")
+    cdrom = utils_misc.get_path(data_dir.get_data_dir(), cdrom)
     device_name = vm.get_block({"file": cdrom})
     if device_name is None:
         msg = "Unable to detect qemu block device for cdrom %s" % cdrom
@@ -75,14 +77,30 @@ def run(test, params, env):
     if check_block_locked(device_name):
         raise error.TestFail("Unused device is locked.")
 
-    error.context("mount cdrom to make status to locked", logging.info)
-    cdrom = utils_test.get_readable_cdroms(params, session)[0]
-    mount_cmd = params.get("cd_mount_cmd") % cdrom
-    (status, output) = session.cmd_status_output(mount_cmd, timeout=360)
-    if status:
-        msg = "Unable to mount cdrom. command: %s\nOutput: %s" % (mount_cmd,
-                                                                  output)
-        raise error.TestError(msg)
+    if params.get("os_type") != "windows":
+        error.context("mount cdrom to make status to locked", logging.info)
+        cdrom = utils_test.get_readable_cdroms(params, session)[0]
+        mount_cmd = params.get("cd_mount_cmd") % cdrom
+        (status, output) = session.cmd_status_output(mount_cmd, timeout=360)
+        if status:
+            msg = "Unable to mount cdrom. "
+            msg += "command: %s\nOutput: %s" % (mount_cmd, output)
+            raise error.TestError(msg)
+
+    else:
+        error.context("lock cdrom in guest", logging.info)
+        tmp_dir = params.get("tmp_dir", "c:\\")
+        eject_tool = utils_misc.get_path(data_dir.get_deps_dir(),
+                                         "cdrom/eject.exe")
+        vm.copy_files_to(eject_tool, tmp_dir)
+        output = session.cmd("wmic cdrom get Drive", timeout=120)
+        cd_vol = re.findall("[d-z]:", output, re.I)[0]
+        lock_cmd = "%s\\eject.exe -i on %s" % (tmp_dir, cd_vol)
+        (status, output) = session.cmd_status_output(lock_cmd)
+        if status:
+            msg = "Unable to lock cdrom. command: %s\n" % lock_cmd
+            msg += "Output: %s" % output
+            raise error.TestError(msg)
 
     if not check_block_locked(device_name):
         raise error.TestFail("device is not locked after mount it in guest.")

@@ -444,7 +444,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         logging.info("Netserver start cmd is '%s'" % server_path)
         ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
         ncpu = ssh_cmd(server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
-        ncpu = re.findall(r"\d+", ncpu)[0]
+        ncpu = re.findall(r"\d+", ncpu)[-1]
 
     logging.info("Netserver start successfully")
 

@@ -97,7 +97,8 @@ def run(test, params, env):
                  return host supported flags if lack_check is false
         """
         flags = []
-        re_flags = re.findall(symbol, extra_flags)
+        re_flags = [_[1:] for _ in extra_flags.split(",")
+                    if _ and symbol == _[0]]
         for flag in re_flags:
             if lack_check:
                 flags.append(flag)
@@ -175,13 +176,13 @@ def run(test, params, env):
         option_flags.append('up')
     option_flags = set(map(utils_misc.Flag, option_flags))
     # add_flags are exposed by +flag
-    add_flags = get_extra_flag(extra_flags, "\+(\w+)")
+    add_flags = get_extra_flag(extra_flags, "+")
     # del_flags are disabled by -flag
-    del_flags = get_extra_flag(extra_flags, "\-(\w+)")
+    del_flags = get_extra_flag(extra_flags, "-", lack_check=True)
     expected_flags = ((model_support_flags | add_flags)
                       - del_flags - out_flags)
     # get all flags for host lack flag checking
-    check_flags = get_extra_flag(extra_flags, "\+(\w+)", lack_check=True)
+    check_flags = get_extra_flag(extra_flags, "+", lack_check=True)
     host_flags = set(map(utils_misc.Flag, host_flags))
     lack_flags = set(expected_flags | check_flags) - host_flags
 
@@ -206,4 +207,5 @@ def run(test, params, env):
                              "more flags than expected:\n %s\n"
                              "expected flags:\n %s\n"
                              "guest flags:\n %s\n"
-                             % (missing_flags, unexpect_flags, expected_flags, guest_flags))
+                             % (missing_flags, unexpect_flags, expected_flags,
+                                guest_flags))

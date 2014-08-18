@@ -5,6 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_misc, utils_test, aexpect
 
 
+@error.context_aware
 def run(test, params, env):
     """
     KVM migration test:
@@ -149,6 +150,8 @@ def run(test, params, env):
 
         try:
             check_command = params.get("migration_bg_check_command", "")
+            error.context("Checking the background command in the guest "
+                          "pre migration", logging.info)
             session2.cmd(check_command, timeout=30)
             session2.close()
 
@@ -192,6 +195,8 @@ def run(test, params, env):
             logging.info("Logged in after migration")
 
             # Make sure the background process is still running
+            error.context("Checking the background command in the guest "
+                          "post migration", logging.info)
             session2.cmd(check_command, timeout=30)
 
             # Get the output of migration_test_command

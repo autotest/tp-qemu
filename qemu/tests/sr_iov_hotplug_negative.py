@@ -50,7 +50,7 @@ def run(test, params, env):
     vm.verify_alive()
     rp_times = int(params.get("repeat_times", 1))
     pci_model = params.get("pci_model", "pci-assign")
-    pci_addr = params.get("pci_addr")
+    pci_invaild_addr = params.get("pci_invaild_addr")
     modprobe_cmd = params.get("modprobe_cmd")
 
     if modprobe_cmd:
@@ -80,9 +80,9 @@ def run(test, params, env):
                                                           "device_add")
     for j in range(rp_times):
         if cmd_type == "pci_add":
-            pci_add_cmd = make_pci_add_cmd(pa_pci_ids[0], pci_addr)
+            pci_add_cmd = make_pci_add_cmd(pa_pci_ids[0], pci_invaild_addr)
         elif cmd_type == "device_add":
-            pci_add_cmd = make_device_add_cmd(pa_pci_ids[0], pci_addr)
+            pci_add_cmd = make_device_add_cmd(pa_pci_ids[0], pci_invaild_addr)
         try:
             msg = "Adding pci device with command '%s'" % pci_add_cmd
             error.context(msg, logging.info)

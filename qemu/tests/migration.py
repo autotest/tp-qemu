@@ -213,9 +213,17 @@ def run(test, params, env):
             # Kill the background process
             if session2 and session2.is_alive():
                 bg_kill_cmd = params.get("migration_bg_kill_command", None)
+                ignore_status = params.get("migration_bg_kill_ignore_status", 1)
                 if bg_kill_cmd is not None:
                     try:
                         session2.cmd(bg_kill_cmd)
+                    except aexpect.ShellCmdError, details:
+                        # If the migration_bg_kill_command rc differs from
+                        # ignore_status, it means the migration_bg_command is
+                        # no longer alive. Let's ignore the failure here if
+                        # that is the case.
+                        if not int(details.status) == int(ignore_status):
+                            raise
                     except aexpect.ShellTimeoutError:
                         logging.debug("Remote session not responsive, "
                                       "shutting down VM %s", vm.name)

@@ -8,7 +8,7 @@ DONEFILE="$(mktemp)"
 PIDFILE="$(mktemp)"
 
 ( "$QEMU" -serial "file:$OUTFILE" \
-  -kernel "$MYDIR/../../cpuid_test_kernel/cpuid_dump_kernel.bin" "$@" &
+  -kernel "$MYDIR/../../src/cpuid_dump_kernel.bin" "$@" &
   echo $! > "$PIDFILE"
   wait
   echo DONE > "$DONEFILE";

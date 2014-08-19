@@ -1,0 +1,19 @@
+[1;256r[256;256H[6n
+Google, Inc.
+Serial Graphics Adapter 07/26/11
+SGABIOS $Id: sgabios.S 8 2010-04-22 00:03:40Z nlaredo $ (mockbuild@hs20-bc2-3.build.redhat.com) Tue Jul 26 15:05:08 UTC 2011
+4 0
+[2J[m[mSeaBIOS (version seabios-0.6.1.2-28.el6)
+
+
+gPXE (http://etherboot.org) - 00:03.0 CA00 PCI2.10 PnP BBS PMM07E0@10 CA00
+Press Ctrl-B to configure gPXE (PCI 00:03.0)...                                                                               
+
+==START TEST==
+CPU:
+   0x00000000 0x00: eax=0x00000000 ebx=0x756e6547 ecx=0x6c65746e edx=0x49656e69
+   0x80000000 0x00: eax=0x00000000 ebx=0x00000000 ecx=0x00000000 edx=0x00000000
+   0xc0000000 0x00: eax=0x00000000 ebx=0x00000000 ecx=0x00000000 edx=0x00000000
+   0x40000000 0x00: eax=0x00000000 ebx=0x4b4d564b ecx=0x564b4d56 edx=0x0000004d
+   0x40000001 0x00: eax=0x0100006b ebx=0x00000000 ecx=0x00000000 edx=0x00000000
+==END TEST==

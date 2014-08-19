@@ -92,6 +92,11 @@ def run(test, params, env):
         dbg("parsing cpuid dump: %r", output)
         cpuid_re = re.compile(
             "^ *(0x[0-9a-f]+) +0x([0-9a-f]+): +eax=0x([0-9a-f]+) ebx=0x([0-9a-f]+) ecx=0x([0-9a-f]+) edx=0x([0-9a-f]+)$")
+        output_match = re.search('(==START TEST==.*==END TEST==)', output, re.M|re.DOTALL)
+        if output_match is None:
+            dbg("cpuid dump doesn't follow expected pattern")
+            return None
+        output = output_match.group(1)
         out_lines = output.splitlines()
         if out_lines[0] != '==START TEST==' or out_lines[-1] != '==END TEST==':
             dbg("cpuid dump doesn't have expected delimiters")

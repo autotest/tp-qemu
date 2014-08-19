@@ -5,6 +5,7 @@ from autotest.client.shared import error
 from virttest import utils_misc, utils_test, aexpect
 
 
+@error.context_aware
 def run(test, params, env):
     """
     KVM migration test:
@@ -149,6 +150,8 @@ def run(test, params, env):
 
         try:
             check_command = params.get("migration_bg_check_command", "")
+            error.context("Checking the background command in the guest "
+                          "pre migration", logging.info)
             session2.cmd(check_command, timeout=30)
             session2.close()
 
@@ -192,6 +195,8 @@ def run(test, params, env):
             logging.info("Logged in after migration")
 
             # Make sure the background process is still running
+            error.context("Checking the background command in the guest "
+                          "post migration", logging.info)
             session2.cmd(check_command, timeout=30)
 
             # Get the output of migration_test_command
@@ -213,9 +218,17 @@ def run(test, params, env):
             # Kill the background process
             if session2 and session2.is_alive():
                 bg_kill_cmd = params.get("migration_bg_kill_command", None)
+                ignore_status = params.get("migration_bg_kill_ignore_status", 1)
                 if bg_kill_cmd is not None:
                     try:
                         session2.cmd(bg_kill_cmd)
+                    except aexpect.ShellCmdError, details:
+                        # If the migration_bg_kill_command rc differs from
+                        # ignore_status, it means the migration_bg_command is
+                        # no longer alive. Let's ignore the failure here if
+                        # that is the case.
+                        if not int(details.status) == int(ignore_status):
+                            raise
                     except aexpect.ShellTimeoutError:
                         logging.debug("Remote session not responsive, "
                                       "shutting down VM %s", vm.name)

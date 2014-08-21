@@ -169,7 +169,17 @@ def run(test, params, env):
         netperf_para_sess = params.get("netperf_para_sessions", "1")
         test_protocol = params.get("test_protocol", "TCP_STREAM")
         netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
+        netperf_output_unit = params.get("netperf_output_unit", " ")
+        netperf_pkg_size = params.get("netperf_pkg_size", "")
         test_option = "-t %s -l %s" % (test_protocol, netperf_test_duration)
+        if params.get("netperf_remote_cpu") == "yes":
+            test_option += " -C"
+        if params.get("netperf_local_cpu") == "yes":
+            test_option += " -c"
+        if netperf_output_unit in "GMKgmk":
+            test_option += " -f %s" % netperf_output_unit
+        if netperf_pkg_size.isdigit():
+            test_option += " -- -m %s" % netperf_pkg_size
         start_time = time.time()
         stop_time = start_time + netperf_test_duration
         num = 0

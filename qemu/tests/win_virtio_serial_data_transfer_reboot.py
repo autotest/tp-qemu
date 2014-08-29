@@ -65,7 +65,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     check_cmd = params.get("check_vioser_status_cmd",
-                            "verifier /querysettings")
+                           "verifier /querysettings")
     output = session.cmd(check_cmd, timeout=360)
     error.context("Make sure vioser.sys verifier enabled in guest.",
                   logging.info)
@@ -87,7 +87,7 @@ def run(test, params, env):
     host_file = get_virtio_port_host_file(vm, port_name)
     data_file = params["data_file"]
     data_file = os.path.join(data_dir.get_deps_dir("win_serial"),
-                             data_file) 
+                             data_file)
     send_script = params.get("host_send_script", "serial-host-send.py")
     send_script = os.path.join(data_dir.get_deps_dir("win_serial"),
                                send_script)

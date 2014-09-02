@@ -31,7 +31,7 @@ def run(test, params, env):
     alive_check_cmd = params.get("alive_check_cmd", "dir")
     image_file = storage.get_image_filename(params, data_dir.get_data_dir())
     image_dir = os.path.dirname(image_file)
-    qemu_img = params.get("qemu_img_binary", "qemu-img")
+    qemu_img = utils_misc.get_qemu_img_binary(params)
     speed = int(params.get("limited_speed", 0))
     wait_timeout = int(params.get("wait_timeout", 3600))
 

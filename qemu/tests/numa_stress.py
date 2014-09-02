@@ -82,8 +82,7 @@ def run(test, params, env):
         os.mkdir(tmpfs_path)
 
     numa_node_malloc = -1
-    most_used_node, memory_used = utils_test.max_mem_map_node(host_numa_node,
-                                                              qemu_pid)
+    most_used_node, memory_used = max_mem_map_node(host_numa_node, qemu_pid)
 
     for test_round in range(test_count):
         if utils_memory.freememtotal() < tmpfs_size:
@@ -110,8 +109,7 @@ def run(test, params, env):
         error.context("Run memory heavy stress in guest", logging.info)
         autotest_control.run(test, params, env)
         error.context("Get the qemu process memory use status", logging.info)
-        node_after, memory_after = utils_test.max_mem_map_node(host_numa_node,
-                                                               qemu_pid)
+        node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
         if node_after == most_used_node and memory_after >= memory_used:
             raise error.TestFail("Memory still stick in "
                                  "node %s" % numa_node_malloc)

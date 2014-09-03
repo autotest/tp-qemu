@@ -249,7 +249,7 @@ def run(test, params, env):
         session.cmd("modprobe %s" % module)
 
     # check monitor type
-    qemu_binary = params.get("qemu_binary", "/usr/libexec/qemu-kvm")
+    qemu_binary = utils_misc.get_qemu_binary(params)
     qemu_binary = utils_misc.get_path(test.bindir, qemu_binary)
     # Probe qemu to verify what is the supported syntax for PCI hotplug
     if vm.monitor.protocol == 'qmp':

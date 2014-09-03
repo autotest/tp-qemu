@@ -2,6 +2,7 @@ import logging
 import time
 import re
 from autotest.client.shared import error
+from autotest.client.shared import utils
 from virttest import aexpect, utils_net
 
 
@@ -20,9 +21,11 @@ def run(test, params, env):
         """
         Kill the vm and check vm is dead
         """
-        vm.destroy(gracefully=False)
+        qemu_pid = vm.get_pid()
+        cmd = "kill -9 %s" % qemu_pid
+        utils.system(cmd)
         if not vm.wait_until_dead(timeout=10):
-            raise error.TestFail("VM is not dead, 10 secure after vm.destroy")
+            raise error.TestFail("VM is not dead, 10s after '%s' sent." % cmd)
         logging.info("Vm is dead as expected")
 
     def guest_ping(session, dst_ip, count=None):

@@ -20,12 +20,13 @@ def run(test, params, env):
 
     # Collect test parameters
     timeout = int(params.get("test_timeout", 300))
+    control_args = params.get("control_args")
     control_path = os.path.join(test.virtdir, "control",
                                 params.get("test_control_file"))
     outputdir = test.outputdir
 
     utils_test.run_autotest(vm, session, control_path, timeout, outputdir,
-                            params)
+                            params, control_args=control_args)
 
 
 def run_autotest_control_background(test, params, env,

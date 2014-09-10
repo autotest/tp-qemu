@@ -30,14 +30,23 @@ def run(test, params, env):
             logging.info("Install valgrind successfully.")
 
     valgring_support_check_cmd = params.get("valgring_support_check_cmd")
+    error.context("Check valgrind installed in host", logging.info)
     try:
         utils.system(valgring_support_check_cmd, timeout=interval)
     except Exception:
         valgrind_intall()
 
+    params['mem'] = 384
     params["start_vm"] = "yes"
+    error.context("Start guest with specific parameters", logging.info)
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
 
     time.sleep(interval)
+    error.context("Verify guest status is running after cont", logging.info)
     vm.verify_status("running")
+
+    error.context("Quit guest and check the process quit normally",
+                  logging.info)
+    vm.destroy(gracefully=False)
+    vm.verify_userspace_crash()

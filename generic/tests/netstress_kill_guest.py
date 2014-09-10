@@ -82,7 +82,7 @@ def run(test, params, env):
                                                      netperf_link)
                 netperf_dir = download_dir
             elif netperf_link:
-                netperf_link = utils_misc.get_path(data_dir.get_deps_dir(),
+                netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
                                                    netperf_link)
             vm.copy_files_to(netperf_link, remote_dir)
             utils.force_copy(netperf_link, remote_dir)

@@ -80,7 +80,9 @@ def run(test, params, env):
             list_cdrom_cmd = "ls /dev/cdrom*"
             filter_cdrom_re = r"/dev/cdrom-\w+|/dev/cdrom\d*"
         output = session.cmd_output(list_cdrom_cmd)
-        return re.findall(filter_cdrom_re, output)
+        cdroms = re.findall(filter_cdrom_re, output)
+        cdroms.sort()
+        return cdroms
 
     def get_cdrom_mount_point(session, drive_letter, params):
         """

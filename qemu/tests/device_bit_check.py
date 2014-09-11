@@ -30,7 +30,7 @@ def run(test, params, env):
     dev_pattern = params.get("dev_pattern", "(dev: %s.*?)dev:" % dev_type)
     pci_id_pattern = params.get("pci_id_pattern")
     convert_dict = {"1": "on", "0": "off"}
-    orig_extra_params = params.get(dev_param_name)
+    orig_extra_params = params.get(dev_param_name, "")
     for properties in test_loop:
         if properties != "default":
             properties = properties.strip().split()

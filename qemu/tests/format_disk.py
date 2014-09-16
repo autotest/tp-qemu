@@ -86,13 +86,20 @@ def run(test, params, env):
 
         error.context("Read in the file to see whether content has changed",
                       logging.info)
+        md5chk_cmd = params.get("md5chk_cmd")
+        if md5chk_cmd:
+            s, o = session.cmd_status_output(md5chk_cmd, timeout=cmd_timeout)
+            if s != 0:
+                raise error.TestFail("Check file md5sum error.")
+
         readfile_cmd = params["readfile_cmd"]
         readfile_cmd = readfile_cmd % testfile_name
         s, o = session.cmd_status_output(readfile_cmd, timeout=cmd_timeout)
         if s != 0:
             raise error.TestFail("Read file error: %s" % o)
         if o.strip() != ranstr:
-            raise error.TestFail("The content written to file has changed")
+            raise error.TestFail("The content written to file has changed, "
+                                 "from: %s, to: %s" % (ranstr, o.strip()))
 
     umount_cmd = params.get("umount_cmd")
     if umount_cmd:

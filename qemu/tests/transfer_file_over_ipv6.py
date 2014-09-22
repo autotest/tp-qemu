@@ -91,12 +91,13 @@ def run(test, params, env):
         src_md5 = (utils.hash_file(host_path, method="md5"))
         # transfer data
         for vm in vms:
-            error.context("Transfer date from host to %s" % vm.name,
+            error.context("Transfer data from host to %s" % vm.name,
                           logging.info)
-            remote.copy_files_to("%s%%%s" % (addresses[vm], host_ifname),
+            remote.copy_files_to(addresses[vm],
                                  client, username, password, port,
                                  host_path, guest_path,
-                                 timeout=file_trans_timeout)
+                                 timeout=file_trans_timeout,
+                                 interface=host_ifname)
             dst_md5 = get_file_md5sum(guest_path, sessions[vm],
                                       timeout=file_md5_check_timeout)
             if dst_md5 != src_md5:
@@ -108,14 +109,14 @@ def run(test, params, env):
                 if vm_src != vm_dst:
                     error.context("Transferring data from %s to %s" %
                                   (vm_src.name, vm_dst.name), logging.info)
-                    remote.scp_between_remotes("%s%%%s" % (addresses[vm_src],
-                                                           host_ifname),
-                                               "%s%%%s" % (addresses[vm_dst],
-                                                           inet_name[vm_src]),
+                    remote.scp_between_remotes(addresses[vm_src],
+                                               addresses[vm_dst],
                                                port, password, password,
                                                username, username,
                                                guest_path, dest_path,
-                                               timeout=file_trans_timeout)
+                                               timeout=file_trans_timeout,
+                                               src_inter=host_ifname,
+                                               dst_inter=inet_name[vm_src])
                     dst_md5 = get_file_md5sum(dest_path, sessions[vm_dst],
                                               timeout=file_md5_check_timeout)
                     if dst_md5 != src_md5:
@@ -123,12 +124,13 @@ def run(test, params, env):
                                              % (vm_src.name, vm_dst.name))
 
         for vm in vms:
-            error.context("Transfer date from %s to host" % vm.name,
+            error.context("Transfer data from %s to host" % vm.name,
                           logging.info)
-            remote.copy_files_from("%s%%%s" % (addresses[vm], host_ifname),
+            remote.copy_files_from(addresses[vm],
                                    client, username, password, port,
                                    dest_path, host_path,
-                                   timeout=file_trans_timeout)
+                                   timeout=file_trans_timeout,
+                                   interface=host_ifname)
             error.context("Check whether the file changed after trans",
                           logging.info)
             dst_md5 = (utils.hash_file(host_path, method="md5"))

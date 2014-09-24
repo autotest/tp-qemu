@@ -82,40 +82,36 @@ def run(test, params, env):
                         ignore_all_errors=True)
             client_ip = client_vm.get_address()
             c_info["ip"] = client_ip
-            c_info["os_type"] = params.get("os_type_%s" % server, os_type)
-            c_info["username"] = params.get("username_%s" % server,
+            c_info["os_type"] = params.get("os_type_%s" % client, os_type)
+            c_info["username"] = params.get("username_%s" % client,
                                             guest_username)
-            c_info["password"] = params.get("password_%s" % server,
+            c_info["password"] = params.get("password_%s" % client,
                                             guest_password)
-            c_info["shell_client"] = params.get("shell_client_%s" % server,
+            c_info["shell_client"] = params.get("shell_client_%s" % client,
                                                 shell_client)
-            c_info["shell_port"] = params.get("shell_port_%s" % server,
+            c_info["shell_port"] = params.get("shell_port_%s" % client,
                                               shell_port)
         else:
             if client == "localhost":
                 c_info["ip"] = host_ip
-                c_info["password"] = params.get("password_%s" % server,
+                c_info["password"] = params.get("password_%s" % client,
                                                 host_password)
             else:
                 c_info["ip"] = client
-                c_info["password"] = params.get("password_%s" % server,
+                c_info["password"] = params.get("password_%s" % client,
                                                 "redhat")
-            c_info["os_type"] = params.get("os_type_%s" % server, "linux")
-            c_info["username"] = params.get("username_%s" % server,
+            c_info["os_type"] = params.get("os_type_%s" % client, "linux")
+            c_info["username"] = params.get("username_%s" % client,
                                             "root")
-            c_info["shell_client"] = params.get("shell_client_%s" % server,
+            c_info["shell_client"] = params.get("shell_client_%s" % client,
                                                 "ssh")
-            c_info["shell_port"] = params.get("shell_port_%s" % server,
+            c_info["shell_port"] = params.get("shell_port_%s" % client,
                                               "23")
         client_infos.append(c_info)
 
     netperf_link = params.get("netperf_link")
     netperf_link = os.path.join(data_dir.get_deps_dir("netperf"), netperf_link)
     md5sum = params.get("pkg_md5sum")
-    netperf_server_link = params.get("netperf_server_link_win", netperf_link)
-    netperf_server_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                       netperf_server_link)
-    server_md5sum = params.get("server_md5sum")
     netperf_client_link = params.get("netperf_client_link_win", netperf_link)
     netperf_client_link = os.path.join(data_dir.get_deps_dir("netperf"),
                                        netperf_client_link)
@@ -171,7 +167,8 @@ def run(test, params, env):
         netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
         netperf_output_unit = params.get("netperf_output_unit", " ")
         netperf_pkg_size = params.get("netperf_pkg_size", "")
-        test_option = "-t %s -l %s" % (test_protocol, netperf_test_duration)
+        test_option = params.get("test_option", "")
+        test_option += " -t %s -l %s" % (test_protocol, netperf_test_duration)
         if params.get("netperf_remote_cpu") == "yes":
             test_option += " -C"
         if params.get("netperf_local_cpu") == "yes":

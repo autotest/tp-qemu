@@ -98,6 +98,8 @@ def run(test, params, env):
     try:
         vm.monitor.send_args_cmd(eject_cmd)
     except Exception, e:
+        if "is not removable" not in str(e):
+            raise error.TestFail(e)
         logging.debug("Catch exception message: %s" % e)
     logging.info("Wait until device is ejected")
     time.sleep(10)

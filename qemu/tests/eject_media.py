@@ -91,6 +91,8 @@ def run(test, params, env):
     if params.get("force_eject", "no") == "yes":
         if not qmp_used:
             eject_cmd = "eject -f %s " % device_name
+        else:
+            eject_cmd = "eject device=%s, force=True" % device_name
     else:
         eject_cmd = "eject device=%s," % device_name
     try:

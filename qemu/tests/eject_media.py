@@ -31,8 +31,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     logging.info("Wait until device is ready")
     time.sleep(10)
-    blocks_info = vm.monitor.info("block")
-    if isinstance(blocks_info, dict):
+    if vm.monitor.protocol == "qmp":
         qmp_used = True
 
     orig_img_name = params.get("cdrom_cd1")

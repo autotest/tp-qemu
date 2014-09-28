@@ -1,7 +1,9 @@
 import logging
 import re
+import time
 from autotest.client.shared import error
 from virttest import utils_net, utils_test, utils_misc
+from virttest import remote
 
 
 @error.context_aware
@@ -55,9 +57,11 @@ def run(test, params, env):
         """
         packet_receive = not tcpdump_is_alive(session)
         if packet_receive == drop_flow:
-            err_msg = "Error, flow %s dropped, tcpdump %s receive the packets"
-            raise error.TestError(err_msg % ((drop_flow and "was" or "wasn't"),
-                                             (packet_receive and "can" or "can not")))
+            err_msg = "Error, flow %s" % (drop_flow and "was" or "wasn't")
+            err_msg += " dropped, tcpdump "
+            err_msg += "%s " % (packet_receive and "can" or "can not")
+            err_msg += "receive the packets"
+            raise error.TestError(err_msg)
         logging.info("Correct, flow %s dropped, tcpdump %s receive the packet"
                      % ((drop_flow and "was" or "was not"),
                          (packet_receive and "can" or "can not")))
@@ -72,6 +76,21 @@ def run(test, params, env):
             arp_clean_cmd = "arp -d %s" % entry
         for session in sessions:
             session.cmd_output_safe(arp_clean_cmd)
+
+    def check_arp_info(session, entry, vm, match_mac=None):
+        arp_info = session.cmd_output("arp -n")
+        arp_entries = [_ for _ in arp_info.splitlines() if re.match(entry, _)]
+
+        match_string = match_mac or "incomplete"
+
+        if not arp_entries:
+            raise error.TestError("Can not find arp entry "
+                                  "in %s: %s" % (vm.name, arp_info))
+
+        if not re.findall(match_string, arp_entries[0], re.I):
+            raise error.TestFail("Can not find the mac address"
+                                 " %s of %s in arp"
+                                 " entry %s" % (mac, vm.name, arp_entries[0]))
 
     def ping_test(session, dst, drop_flow=False):
         """
@@ -97,6 +116,55 @@ def run(test, params, env):
                                  (ping_status and "failed" or "success"),
                                  packets_lost))
 
+    def run_ping_bg(vm, dst):
+        """
+        Run ping in background
+        """
+        ping_cmd = "ping %s" % dst
+        session = vm.wait_for_login()
+        logging.info("Ping %s in background" % dst)
+        session.sendline(ping_cmd)
+        return session
+
+    def check_bg_ping(session):
+        ping_pattern = r"\d+ bytes from \d+.\d+.\d+.\d+:"
+        ping_pattern += r" icmp_seq=\d+ ttl=\d+ time=.*? ms"
+        ping_failed_pattern = r"From .*? icmp_seq=\d+ Destination"
+        ping_failed_pattern += r" Host Unreachable"
+        try:
+            out = session.read_until_output_matches([ping_pattern,
+                                                     ping_failed_pattern])
+            if re.search(ping_failed_pattern, out[1]):
+                return False, out[1]
+            else:
+                return True, out[1]
+        except Exception, msg:
+                return False, msg
+
+    def file_transfer(sessions, addresses):
+        prepare_cmd = "dd if=/dev/urandom of=/tmp/copy_file count=1024 bs=1M"
+        md5_cmd = "md5sum /tmp/copy_file"
+        port = params.get("shell_port")
+        prompt = params.get("shell_prompt")
+        username = params.get("username")
+        password = params.get("password")
+        sessions[0].cmd(prepare_cmd)
+        ori_md5 = sessions[0].cmd_output(md5_cmd)
+        scp_cmd = ("scp -v -o UserKnownHostsFile=/dev/null "
+                   "-o StrictHostKeyChecking=no "
+                   "-o PreferredAuthentications=password -r "
+                   "-P %s /tmp/copy_file %s@\[%s\]:/tmp/copy_file" %
+                   (port, username, addresses[1]))
+        sessions[0].sendline(scp_cmd)
+        remote.handle_prompts(sessions[0], username, password, prompt, 600)
+        new_md5 = sessions[1].cmd_output(md5_cmd)
+        for session in sessions:
+            session.cmd("rm -f /tmp/copy_file")
+        if new_md5 != ori_md5:
+            raise error.TestFail("Md5 value changed after file transfer, "
+                                 "original is %s and the new file"
+                                 " is: %s" % (ori_md5, new_md5))
+
     def nc_connect_test(sessions, addresses, drop_flow=False, nc_port="8899",
                         udp_model=False):
         """
@@ -121,10 +189,11 @@ def run(test, params, env):
                     10, 0, 2, text="Wait '%s' connect" % nc_protocol):
                 nc_connect = True
             if nc_connect == drop_flow:
-                err_msg = "Error, '%s' flow %s dropped, nc connect should '%s'"
-                raise error.TestError(err_msg % (nc_protocol,
-                                                 (drop_flow and "was" or "was not"),
-                                                 (nc_connect and "failed" or "success")))
+                err_msg = "Error, '%s' " % nc_protocol
+                err_msg += "flow %s " % (drop_flow and "was" or "was not")
+                err_msg += "dropped, nc connect should"
+                err_msg += " '%s'" % (nc_connect and "failed" or "success")
+                raise error.TestError(err_msg)
 
             logging.info("Correct, '%s' flow %s dropped, and nc connect %s" %
                          (nc_protocol, (drop_flow and "was" or "was not"),
@@ -135,11 +204,37 @@ def run(test, params, env):
                 session.cmd("%s %s" % (clean_cmd, nc_log),
                             ignore_all_errors=True)
 
+    def acl_rules_check(acl_rules, flow_options):
+        flow_options = re.sub("action=", "actions=", flow_options)
+        if "arp" in flow_options:
+            flow_options = re.sub("nw_src=", "arp_spa=", flow_options)
+            flow_options = re.sub("nw_dst=", "arp_tpa=", flow_options)
+        acl_options = re.split(",", flow_options)
+        for line in acl_rules.splitlines():
+            rule = [_.lower() for _ in re.split("[ ,]", line) if _]
+            item_in_rule = 0
+
+            for acl_item in acl_options:
+                if acl_item.lower() in rule:
+                    item_in_rule += 1
+
+            if item_in_rule == len(acl_options):
+                return True
+        return False
+
+    def remove_plus_items(open_flow_rules):
+        plus_items = ["duration", "n_packets", "n_bytes", "idle_age", "hard_age"]
+        for plus_item in plus_items:
+            open_flow_rules = re.sub("%s=.*?," % plus_item, "",
+                                     open_flow_rules)
+        return open_flow_rules
+
     timeout = int(params.get("login_timeout", '360'))
     clean_cmd = params.get("clean_cmd", "rm -f")
     sessions = []
     addresses = []
     vms = []
+    bg_ping_session = None
 
     error.context("Init boot the vms")
     for vm_name in params.get("vms", "vm1 vm2").split():
@@ -157,6 +252,7 @@ def run(test, params, env):
     for session in sessions:
         session.cmd("service iptables stop; iptables -F",
                     ignore_all_errors=True)
+
     try:
         for drop_flow in [True, False]:
             if drop_flow:
@@ -175,17 +271,42 @@ def run(test, params, env):
             error.base_context("Test prepare")
             error.context("Do %s %s on %s" % (f_command, f_options, br_name))
             utils_net.openflow_manager(br_name, f_command, f_options)
+            acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+            if not acl_rules_check(acl_rules, f_options):
+                raise error.TestFail("Can not find the rules from"
+                                     " ovs-ofctl: %s" % acl_rules)
 
             error.context("Run tcpdump in guest %s" % vms[1].name, logging.info)
             run_tcpdump_bg(sessions[1], addresses, f_protocol)
 
-            error.context("Clean arp cache in both guest", logging.info)
-            arp_entry_clean(addresses[1])
+            if drop_flow or f_protocol is not "arp":
+                error.context("Clean arp cache in both guest", logging.info)
+                arp_entry_clean(addresses[1])
 
             error.base_context("Exec '%s' flow '%s' test" %
                                (f_protocol, drop_flow and "drop" or "normal"))
-            error.context("Ping test form vm1 to vm2", logging.info)
-            ping_test(sessions[0], addresses[1], drop_icmp)
+            if drop_flow:
+                error.context("Ping test form vm1 to vm2", logging.info)
+                ping_test(sessions[0], addresses[1], drop_icmp)
+                if params.get("run_file_transfer") == "yes":
+                    error.context("Transfer file form vm1 to vm2", logging.info)
+                    file_transfer(sessions, addresses)
+            else:
+                error.context("Ping test form vm1 to vm2 in background",
+                              logging.info)
+                bg_ping_session = run_ping_bg(vms[0], addresses[1])
+
+            if f_protocol == 'arp' and drop_flow:
+                error.context("Check arp inside %s" % vms[0].name, logging.info)
+                check_arp_info(sessions[0], addresses[1], vms[0])
+            elif f_protocol == 'arp' or params.get("check_arp") == "yes":
+                time.sleep(2)
+                error.context("Check arp inside guests.", logging.info)
+                for index, address in enumerate(addresses):
+                    sess_index = (index + 1) % 2
+                    mac = vms[index].virtnet.get_mac_address(0)
+                    check_arp_info(sessions[sess_index], address, vms[index],
+                                   mac)
 
             error.context("Run nc connect test via tcp", logging.info)
             nc_connect_test(sessions, addresses, drop_tcp)
@@ -195,8 +316,35 @@ def run(test, params, env):
 
             error.context("Check tcpdump data catch", logging.info)
             tcpdump_catch_packet_test(sessions[1], drop_flow)
-
     finally:
+        openflow_rules_ori = utils_net.openflow_manager(br_name,
+                                                        "dump-flows").stdout
+        openflow_rules_ori = remove_plus_items(openflow_rules_ori)
         utils_net.openflow_manager(br_name, "del-flows", f_protocol)
+        openflow_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+        openflow_rules = remove_plus_items(openflow_rules)
+        removed_rule = list(set(openflow_rules_ori.splitlines())
+                            - set(openflow_rules.splitlines()))
+
+        if f_protocol == "tcp":
+            error.context("Run nc connect test via tcp", logging.info)
+            nc_connect_test(sessions, addresses)
+        elif f_protocol == "udp":
+            error.context("Run nc connect test via udp", logging.info)
+            nc_connect_test(sessions, addresses, udp_model=True)
+
         for session in sessions:
             session.close()
+        failed_msg = []
+        if (not removed_rule
+                or not acl_rules_check(removed_rule[0], f_options)):
+            failed_msg.append("Failed to delete %s" % f_options)
+        if bg_ping_session:
+            bg_ping_ok = check_bg_ping(bg_ping_session)
+            bg_ping_session.close()
+            if not bg_ping_ok[0]:
+                failed_msg.append("There is something wrong happen in "
+                                  "background ping: %s" % bg_ping_ok[1])
+
+        if failed_msg:
+            raise error.TestFail(failed_msg)

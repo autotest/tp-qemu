@@ -62,7 +62,7 @@ def run(test, params, env):
                      % ((drop_flow and "was" or "was not"),
                          (packet_receive and "can" or "can not")))
 
-    def arp_entry_clean(session, entry=None):
+    def arp_entry_clean(entry=None):
         """
         Clean arp catch in guest
         """
@@ -180,7 +180,7 @@ def run(test, params, env):
             run_tcpdump_bg(sessions[1], addresses, f_protocol)
 
             error.context("Clean arp cache in both guest", logging.info)
-            arp_entry_clean(sessions[0], addresses[1])
+            arp_entry_clean(addresses[1])
 
             error.base_context("Exec '%s' flow '%s' test" %
                                (f_protocol, drop_flow and "drop" or "normal"))

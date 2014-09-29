@@ -31,8 +31,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     logging.info("Wait until device is ready")
     time.sleep(10)
-    blocks_info = vm.monitor.info("block")
-    if isinstance(blocks_info, dict):
+    if vm.monitor.protocol == "qmp":
         qmp_used = True
 
     orig_img_name = params.get("cdrom_cd1")
@@ -92,11 +91,15 @@ def run(test, params, env):
     if params.get("force_eject", "no") == "yes":
         if not qmp_used:
             eject_cmd = "eject -f %s " % device_name
+        else:
+            eject_cmd = "eject device=%s, force=True" % device_name
     else:
         eject_cmd = "eject device=%s," % device_name
     try:
         vm.monitor.send_args_cmd(eject_cmd)
     except Exception, e:
+        if "is not removable" not in str(e):
+            raise error.TestFail(e)
         logging.debug("Catch exception message: %s" % e)
     logging.info("Wait until device is ejected")
     time.sleep(10)

@@ -116,7 +116,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
         raise error.TestFail("spice-protocol was not installed properly")
 
     output = vm_root_session.cmd("%s -p spice-gtk" % (vm_script_path),
-                                 timeout=300)
+                                 timeout=600)
     logging.info(output)
     if re.search("Return code", output):
         raise error.TestFail("spice-gtk was not installed properly")

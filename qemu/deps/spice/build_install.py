@@ -19,11 +19,13 @@ git_repo["spice-protocol"] = "git://git.freedesktop.org/git/spice/spice-protocol
 git_repo["spice-gtk"] = "git://anongit.freedesktop.org/spice/spice-gtk"
 git_repo["spice-vd-agent"] = "git://git.freedesktop.org/git/spice/linux/vd_agent"
 git_repo["xf86-video-qxl"] = "git://anongit.freedesktop.org/xorg/driver/xf86-video-qxl"
+git_repo["virt-viewer"] = "https://git.fedorahosted.org/git/virt-viewer.git"
 
 # options to pass
 autogen_options["spice-gtk"] = "--with-gtk=2.0 --disable-gtk-doc --disable-werror --disable-vala --disable-controller"
 autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
 autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\" --disable-kms"
+autogen_options["virt-viewer"] = "--with-gtk=2.0 --with-spice-gtk --disable-update-mimedb"
 prefix_defaults["spice-protocol"] = "/usr/local"
 prefix_defaults["spice-vd-agent"] = "/usr"
 
@@ -39,6 +41,7 @@ usageMsg += "\n\tspice-protocol\t ->\t SPICE protocol "
 usageMsg += "\n\tspice-gtk\t ->\t SPICE GTK "
 usageMsg += "\n\tspice-vd-agent\t ->\t SPICE VD-Agent "
 usageMsg += "\n\txf86-video-qxl\t ->\t QXL device driver"
+usageMsg += "\n\tvirt-viewer\t ->\t Virt-Viewer"
 
 # Getting all parameters
 parser = optparse.OptionParser(usage=usageMsg)

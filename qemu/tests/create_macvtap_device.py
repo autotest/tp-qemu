@@ -64,20 +64,38 @@ def run(test, params, env):
         err = "Fail to create %s mode macvtap on %s" % (macvtap_mode, ifname)
         raise error.TestFail(err)
 
-    txt = "Ping dest host from localhost with the interface %s " % ifname
-    error.context(txt, logging.info)
     if not dest_host:
         dest_host_get_cmd = "ip route | awk '/default/ { print $3 }'"
         dest_host_get_cmd = params.get("dest_host_get_cmd", dest_host_get_cmd)
-        dest_host = utils.system_output(dest_host_get_cmd)
+        dest_host = utils.system_output(dest_host_get_cmd).split()[-1]
+
+    txt = "Ping dest host %s from " % dest_host
+    txt += "localhost with the interface %s" % ifname
+    error.context(txt, logging.info)
     status, output = utils_test.ping(dest_host, 10,
                                      interface=ifname, timeout=20)
     ratio = utils_test.get_loss_ratio(output)
     if macvtap_mode == "passthru":
-        if ratio != 100:
-            err = "%s did not lost network connection after creating " % ifname
-            err += " %s mode macvtap on it." % macvtap_mode
-            raise error.TestFail(err)
+        ifnames = utils_net.get_host_iface()
+        ifnames.remove(ifname)
+        logging.info("ifnames = %s", ifnames)
+        ips = []
+        for name in ifnames:
+            try:
+                _ip = utils_net.get_ip_address_by_interface(name)
+                if _ip != "127.0.0.1":
+                    ips.append(_ip)
+            except Exception:
+                pass
+        logging.info("ips = %s", ips)
+        if not ips:
+            if ratio != 100:
+                err = "%s did not lost network connection after " % ifname
+                err += " creating %s mode macvtap on it." % macvtap_mode
+                raise error.TestFail(err)
+        else:
+            err = "%s is not the only network device in host" % ifname
+            logging.debug(err)
     else:
         if ratio != 0:
             err = "Package lost during ping %s from %s " % (dest_host, ifname)
@@ -97,7 +115,9 @@ def run(test, params, env):
                                                            ifname)
         raise error.TestFail(err)
 
-    txt = "Ping dest host from localhost with the interface %s " % ifname
+    logging.info("dest_host = %s", dest_host)
+    txt = "Ping dest host %s from " % dest_host
+    txt += "localhost with the interface %s" % ifname
     error.context(txt, logging.info)
     status, output = utils_test.ping(dest_host, 10,
                                      interface=ifname, timeout=20)

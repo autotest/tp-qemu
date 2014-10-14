@@ -80,6 +80,52 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
         raise error.TestFail("qxl was not installed properly")
 
 
+def build_install_virtviewer(vm_root_session, vm_script_path, params):
+    """
+    Build and install virt-viewer in the VM
+
+    :param vm_root_session:  VM Session object.
+    :param vm_script_path: path where to find build_install.py script
+    :param params: Dictionary with test parameters.
+    """
+
+    try:
+        output = vm_root_session.cmd("killall remote-viewer")
+        logging.info(output)
+    except ShellCmdError, err:
+        logging.error("Could not kill remote-viewer " + err.output)
+
+    try:
+        output = vm_root_session.cmd("yum -y remove virt-viewer")
+        logging.info(output)
+    except ShellCmdError, err:
+        logging.error("virt-viewer package couldn't be removed! " + err.output)
+
+
+    pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel", 
+                    "spice-glib-devel", "spice-gtk-devel"]
+    install_req_pkgs(pkgsRequired, vm_root_session, params)
+
+    output = vm_root_session.cmd("%s -p virt-viewer" % (vm_script_path),
+                                 timeout=600)
+    logging.info(output)
+    if re.search("Return code", output):
+        raise error.TestFail("virt-viewer was not installed properly")
+
+    # Get version of remote-viewer after install
+    try:
+        output = vm_root_session.cmd("which remote-viewer")
+        logging.info(output)
+    except ShellCmdError, err:
+        raise error.TestFail("Could not find remote-viewer")
+
+    try:
+        output = vm_root_session.cmd("remote-viewer --version")
+        logging.info(output)
+    except ShellCmdError, err:
+        logging.error("Can't get version number!" + err.output)
+
+
 def build_install_spicegtk(vm_root_session, vm_script_path, params):
     """
     Build and install spice-gtk in the VM
@@ -109,7 +155,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     except ShellCmdError:
         logging.error(output)
 
-    # latest spice-protocol is required to build qxl
+    # latest spice-protocol is required to build spice-gtk
     output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
     logging.info(output)
     if re.search("Return code", output):
@@ -218,6 +264,8 @@ def run(test, params, env):
         build_install_vdagent(vm_root_session, vm_script_path, params)
     elif pkgName == "spice-gtk":
         build_install_spicegtk(vm_root_session, vm_script_path, params)
+    elif pkgName == "virt-viewer":
+        build_install_virtviewer(vm_root_session, vm_script_path, params)
     else:
         logging.info("Not supported right now")
         raise error.TestFail("Incorrect Test_Setup")

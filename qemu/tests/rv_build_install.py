@@ -90,13 +90,20 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
     """
 
     try:
+        output = vm_root_session.cmd("killall remote-viewer")
+        logging.info(output)
+    except ShellCmdError, err:
+        logging.error("Could not kill remote-viewer " + err.output)
+
+    try:
         output = vm_root_session.cmd("yum -y remove virt-viewer")
         logging.info(output)
-    except ShellCmdError:
-        logging.error("virt-viewer package couldn't be removed! " + output)
+    except ShellCmdError, err:
+        logging.error("virt-viewer package couldn't be removed! " + err.output)
 
 
-    pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel", "spice-glib-devel", "spice-gtk-devel"]
+    pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel", 
+                    "spice-glib-devel", "spice-gtk-devel"]
     install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     output = vm_root_session.cmd("%s -p virt-viewer" % (vm_script_path),
@@ -109,14 +116,14 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
     try:
         output = vm_root_session.cmd("which remote-viewer")
         logging.info(output)
-    except ShellCmdError:
-        logging.error("remote-viewer doesn't exist!" + output)
+    except ShellCmdError, err:
+        raise error.TestFail("Could not find remote-viewer")
 
     try:
-        output = vm_root_session.cmd(params.get("rv_binary") + " --version")
+        output = vm_root_session.cmd("remote-viewer --version")
         logging.info(output)
-    except ShellCmdError:
-        logging.error("Can't get version number" + params.get(rv_binary) + output)
+    except ShellCmdError, err:
+        logging.error("Can't get version number!" + err.output)
 
 
 def build_install_spicegtk(vm_root_session, vm_script_path, params):

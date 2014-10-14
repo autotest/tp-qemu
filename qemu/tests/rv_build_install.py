@@ -101,7 +101,6 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
     except ShellCmdError, err:
         logging.error("virt-viewer package couldn't be removed! " + err.output)
 
-
     pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel",
                     "spice-glib-devel", "spice-gtk-devel"]
     install_req_pkgs(pkgsRequired, vm_root_session, params)

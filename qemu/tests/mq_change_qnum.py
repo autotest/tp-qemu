@@ -16,8 +16,9 @@ def run(test, params, env):
     1) Boot up VM, and login guest
     2) Check guest pci msi support and reset it as expection
     3) Enable the queues in guest
-    3) Run bg_stress_test(pktgen, netperf or file copy) if needed
-    4) Change queues number repeatly during stress test running
+    4) Run bg_stress_test(pktgen, netperf or file copy) if needed
+    5) Change queues number repeatly during stress test running
+    6) Ping external host (local host, if external host not available)
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -31,7 +32,8 @@ def run(test, params, env):
         if not queues_status:
             queues_status = get_queues_status(session, ifname)
 
-        if q_number != queues_status[1] and q_number <= queues_status[0]:
+        if (q_number != queues_status[1] and q_number <= queues_status[0]
+                and q_number > 0):
             expect_status = 0
         else:
             expect_status = 1
@@ -188,7 +190,9 @@ def run(test, params, env):
             if not ext_host:
                 # Fallback to a hardcode host, eg:
                 ext_host = default_host
-            s_session = vm.wait_for_serial_login(timeout=login_timeout)
+            s_session = vm.wait_for_login(timeout=login_timeout)
+            txt = "ping %s after changing queues in guest."
+            error.context(txt, logging.info)
             ping_test(ext_host, f_ping_time, f_ping_lost_ratio, s_session)
 
         if bg_stress_test:

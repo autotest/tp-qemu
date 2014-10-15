@@ -15,6 +15,7 @@ def run(test, params, env):
 
     1) Boot up VM, and login guest
     2) Check guest pci msi support and reset it as expection
+    3) Enable the queues in guest
     3) Run bg_stress_test(pktgen, netperf or file copy) if needed
     4) Change queues number repeatly during stress test running
 
@@ -67,6 +68,22 @@ def run(test, params, env):
             raise error.TestNAError(err_msg)
         return [int(x) for x in queues_info]
 
+    def enable_multi_queues(vm):
+        session = vm.wait_for_serial_login(timeout=login_timeout)
+        error.context("Enable multi queues in guest.", logging.info)
+        for nic_index, nic in enumerate(vm.virtnet):
+            ifname = utils_net.get_linux_ifname(session, nic.mac)
+            queues = int(nic.queues)
+            change_queues_number(session, ifname, queues)
+
+    def ping_test(dest_ip, ping_time, lost_raito):
+        status, output = utils_test.ping(dest=dest_ip, timeout=ping_time)
+        packets_lost = utils_test.get_loss_ratio(output)
+        if packets_lost > lost_raito:
+            err = " %s%% packages lost during ping. " % packets_lost
+            err += "Ping command log:\n %s" % "\n".join(output.splitlines()[-3:])
+            raise error.TestFail(err)
+
     error.context("Init guest and try to login", logging.info)
     login_timeout = int(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
@@ -78,8 +95,13 @@ def run(test, params, env):
         utils_test.update_boot_option(vm, args_added="pci=nomsi")
         vm.wait_for_login(timeout=login_timeout)
 
+    enable_multi_queues(vm)
+
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
     bg_stress_test = params.get("run_bgstress")
+    bg_ping = params.get("bg_ping")
+    ping_package_lost_ratio = int(params.get("ping_package_lost_ratio", 5))
+    bg_test = None
     try:
 
         ifnames = []
@@ -99,9 +121,17 @@ def run(test, params, env):
                 utils_test.run_virt_sub_test, (test, params, env),
                 {"sub_type": bg_stress_test})
             stress_thread.start()
-            utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
-                                wait_time, 0, 5,
-                                "Wait %s start background" % bg_stress_test)
+            if bg_stress_run_flag:
+                utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
+                                    wait_time, 0, 5,
+                                    "Wait %s start background" % bg_stress_test)
+        if bg_ping == "yes":
+            error.context("Ping guest from host", logging.info)
+            guest_ip = vm.get_address()
+            ping_time = int(params.get("ping_time", 60))
+            args = (guest_ip, ping_time, ping_package_lost_ratio)
+            bg_test = utils.InterruptedThread(ping_test, args) 
+            bg_test.start()
 
         error.context("Change queues number repeatly", logging.info)
         repeat_counts = int(params.get("repeat_counts", 10))
@@ -113,7 +143,7 @@ def run(test, params, env):
                 logging.info("Nic with single queue, skip and continue")
                 continue
             ifname = ifnames[nic_index]
-            default_change_list = xrange(1, int(queues))
+            default_change_list = xrange(1, int(queues + 1))
             change_list = params.get("change_list")
             if change_list:
                 change_list = change_list.split(",")
@@ -144,14 +174,24 @@ def run(test, params, env):
         if bg_stress_test:
             env[bg_stress_run_flag] = False
             if stress_thread:
+                error.context("wait for background test finish", logging.info)
                 try:
                     stress_thread.join()
-                except Exception, e:
+                except Exception, err:
                     err_msg = "Run %s test background error!\n "
                     err_msg += "Error Info: '%s'"
-                    raise error.TestError(err_msg % (bg_stress_test, e))
+                    raise error.TestError(err_msg % (bg_stress_test, err))
 
     finally:
         env[bg_stress_run_flag] = False
         if session_serial:
             session_serial.close()
+        if bg_test:
+            error.context("Wait for background ping test finish.",
+                          logging.info)
+            try:
+                bg_test.join()
+            except Exception, err:
+                txt = "Fail to wait background ping test finish. "
+                txt += "Got error message %s" % err
+                raise error.TestFail(txt) 

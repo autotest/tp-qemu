@@ -69,15 +69,16 @@ def run(test, params, env):
         return [int(x) for x in queues_info]
 
     def enable_multi_queues(vm):
-        session = vm.wait_for_serial_login(timeout=login_timeout)
+        sess = vm.wait_for_serial_login(timeout=login_timeout)
         error.context("Enable multi queues in guest.", logging.info)
         for nic_index, nic in enumerate(vm.virtnet):
-            ifname = utils_net.get_linux_ifname(session, nic.mac)
+            ifname = utils_net.get_linux_ifname(sess, nic.mac)
             queues = int(nic.queues)
-            change_queues_number(session, ifname, queues)
+            change_queues_number(sess, ifname, queues)
 
-    def ping_test(dest_ip, ping_time, lost_raito):
-        status, output = utils_test.ping(dest=dest_ip, timeout=ping_time)
+    def ping_test(dest_ip, ping_time, lost_raito, session=None):
+        status, output = utils_test.ping(dest=dest_ip, timeout=ping_time,
+                                         session=session)
         packets_lost = utils_test.get_loss_ratio(output)
         if packets_lost > lost_raito:
             err = " %s%% packages lost during ping. " % packets_lost
@@ -98,9 +99,14 @@ def run(test, params, env):
     enable_multi_queues(vm)
 
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
+    s_session = None
     bg_stress_test = params.get("run_bgstress")
     bg_ping = params.get("bg_ping")
-    ping_package_lost_ratio = int(params.get("ping_package_lost_ratio", 5))
+    b_ping_lost_ratio = int(params.get("background_ping_package_lost_ratio", 5))
+    f_ping_lost_ratio = int(params.get("final_ping_package_lost_ratio", 5))
+    guest_ip = vm.get_address()
+    b_ping_time = int(params.get("background_ping_time", 60))
+    f_ping_time = int(params.get("final_ping_time", 60))
     bg_test = None
     try:
 
@@ -127,10 +133,8 @@ def run(test, params, env):
                                     "Wait %s start background" % bg_stress_test)
         if bg_ping == "yes":
             error.context("Ping guest from host", logging.info)
-            guest_ip = vm.get_address()
-            ping_time = int(params.get("ping_time", 60))
-            args = (guest_ip, ping_time, ping_package_lost_ratio)
-            bg_test = utils.InterruptedThread(ping_test, args) 
+            args = (guest_ip, b_ping_time, b_ping_lost_ratio)
+            bg_test = utils.InterruptedThread(ping_test, args)
             bg_test.start()
 
         error.context("Change queues number repeatly", logging.info)
@@ -171,6 +175,22 @@ def run(test, params, env):
                                                              int(q_number),
                                                              queues_status)
 
+        if params.get("ping_after_changing_queues", "yes") == "yes":
+            default_host = "www.redhat.com"
+            ext_host_get_cmd = params.get("ext_host_get_cmd", "")
+            try:
+                ext_host = utils.system_output(ext_host_get_cmd)
+            except error.CmdError:
+                logging.warn("Can't get specified host with cmd '%s',"
+                             " Fallback to default host '%s'",
+                             ext_host_get_cmd, default_host)
+                ext_host = default_host
+            if not ext_host:
+                # Fallback to a hardcode host, eg:
+                ext_host = default_host
+            s_session = vm.wait_for_serial_login(timeout=login_timeout)
+            ping_test(ext_host, f_ping_time, f_ping_lost_ratio, s_session)
+
         if bg_stress_test:
             env[bg_stress_run_flag] = False
             if stress_thread:
@@ -186,6 +206,8 @@ def run(test, params, env):
         env[bg_stress_run_flag] = False
         if session_serial:
             session_serial.close()
+        if s_session:
+            s_session.close()
         if bg_test:
             error.context("Wait for background ping test finish.",
                           logging.info)
@@ -194,4 +216,4 @@ def run(test, params, env):
             except Exception, err:
                 txt = "Fail to wait background ping test finish. "
                 txt += "Got error message %s" % err
-                raise error.TestFail(txt) 
+                raise error.TestFail(txt)

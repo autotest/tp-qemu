@@ -2,7 +2,10 @@ import logging
 import re
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_net, utils_test, utils_misc
+from virttest import utils_net
+from virttest import utils_test
+from virttest import utils_misc
+from virttest import aexpect
 
 
 @error.context_aware
@@ -78,6 +81,13 @@ def run(test, params, env):
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
     bg_stress_test = params.get("run_bgstress")
     try:
+
+        ifnames = []
+        for nic_index, nic in enumerate(vm.virtnet):
+            ifname = utils_net.get_linux_ifname(session_serial,
+                                                vm.virtnet[nic_index].mac)
+            ifnames.append(ifname)
+
         if bg_stress_test:
             error.context("Run test %s background" % bg_stress_test,
                           logging.info)
@@ -102,8 +112,7 @@ def run(test, params, env):
             if queues == 1:
                 logging.info("Nic with single queue, skip and continue")
                 continue
-            ifname = utils_net.get_linux_ifname(session_serial,
-                                                vm.virtnet[nic_index].mac)
+            ifname = ifnames[nic_index]
             default_change_list = xrange(1, int(queues))
             change_list = params.get("change_list")
             if change_list:
@@ -114,12 +123,24 @@ def run(test, params, env):
             for repeat_num in xrange(1, repeat_counts + 1):
                 error.context("Change queues number -- %sth" % repeat_num,
                               logging.info)
-                queues_status = get_queues_status(session_serial, ifname)
-                for q_number in change_list:
-                    queues_status = change_queues_number(session_serial,
-                                                         ifname,
-                                                         int(q_number),
-                                                         queues_status)
+                try:
+                    queues_status = get_queues_status(session_serial, ifname)
+                    for q_number in change_list:
+                        queues_status = change_queues_number(session_serial,
+                                                             ifname,
+                                                             int(q_number),
+                                                             queues_status)
+                except aexpect.ShellProcessTerminatedError:
+                    vm = env.get_vm(params["main_vm"])
+                    session = vm.wait_for_serial_login(timeout=login_timeout)
+                    session_serial = session
+                    queues_status = get_queues_status(session_serial, ifname)
+                    for q_number in change_list:
+                        queues_status = change_queues_number(session_serial,
+                                                             ifname,
+                                                             int(q_number),
+                                                             queues_status)
+
         if bg_stress_test:
             env[bg_stress_run_flag] = False
             if stress_thread:

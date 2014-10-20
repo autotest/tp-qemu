@@ -23,10 +23,12 @@ def run(test, params, env):
     control_args = params.get("control_args")
     control_path = os.path.join(test.virtdir, "control",
                                 params.get("test_control_file"))
+    ignore_sess_terminated = params.get("ignore_session_terminated") == "yes"
     outputdir = test.outputdir
 
     utils_test.run_autotest(vm, session, control_path, timeout, outputdir,
-                            params, control_args=control_args)
+                            params, control_args=control_args,
+                            ignore_session_terminated=ignore_sess_terminated)
 
 
 def run_autotest_control_background(test, params, env,

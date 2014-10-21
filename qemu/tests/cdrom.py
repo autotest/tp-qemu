@@ -355,41 +355,52 @@ def run(test, params, env):
             time.sleep(workaround_eject_time)
 
     def check_tray_status_test(vm, qemu_cdrom_device, guest_cdrom_device,
-                               max_times):
+                               max_times, iso_image_new):
         """
         Test cdrom tray status reporting function.
         """
-        error.context("Copy test script to guest")
-        tray_check_src = params.get("tray_check_src")
-        if tray_check_src:
-            tray_check_src = os.path.join(data_dir.get_deps_dir(), "cdrom",
-                                          tray_check_src)
-            vm.copy_files_to(tray_check_src, params["tmp_dir"])
+        error.context("Change cdrom media via monitor", logging.info)
+        iso_image_orig = get_cdrom_file(vm, qemu_cdrom_device)
+        if not iso_image_orig:
+            raise error.TestError("no media in cdrom")
+        vm.change_media(qemu_cdrom_device, iso_image_new)
+        is_opened = is_tray_opened(vm, qemu_cdrom_device)
+        if is_opened:
+            raise error.TestFail("cdrom tray not opened after change media")
+        try:
+            error.context("Copy test script to guest")
+            tray_check_src = params.get("tray_check_src")
+            if tray_check_src:
+                tray_check_src = os.path.join(data_dir.get_deps_dir(), "cdrom",
+                                              tray_check_src)
+                vm.copy_files_to(tray_check_src, params["tmp_dir"])
 
-        if is_tray_opened(vm, qemu_cdrom_device) is None:
-            logging.warn("Tray status reporting is not supported by qemu!")
-            logging.warn("cdrom_test_tray_status test is skipped...")
-            return
+            if is_tray_opened(vm, qemu_cdrom_device) is None:
+                logging.warn("Tray status reporting is not supported by qemu!")
+                logging.warn("cdrom_test_tray_status test is skipped...")
+                return
 
-        error.context("Eject the cdrom in guest %s times" % max_times,
-                      logging.info)
-        session = vm.wait_for_login(timeout=login_timeout)
-        for i in range(1, max_times):
-            session.cmd(params["eject_cdrom_cmd"] % guest_cdrom_device)
-            if not is_tray_opened(vm, qemu_cdrom_device):
-                raise error.TestFail("Monitor reports tray closed"
-                                     " when ejecting (round %s)" % i)
-            if params["os_type"] != "windows":
-                cmd = "dd if=%s of=/dev/null count=1" % guest_cdrom_device
-            else:
-                # windows guest does not support auto close door when reading
-                # cdrom, so close it by eject command;
-                cmd = params["close_cdrom_cmd"] % guest_cdrom_device
-            session.cmd(cmd)
-            if is_tray_opened(vm, qemu_cdrom_device):
-                raise error.TestFail("Monitor reports tray opened when close"
-                                     " cdrom in guest (round %s)" % i)
-            time.sleep(workaround_eject_time)
+            error.context("Eject the cdrom in guest %s times" % max_times,
+                          logging.info)
+            session = vm.wait_for_login(timeout=login_timeout)
+            for i in range(1, max_times):
+                session.cmd(params["eject_cdrom_cmd"] % guest_cdrom_device)
+                if not is_tray_opened(vm, qemu_cdrom_device):
+                    raise error.TestFail("Monitor reports tray closed"
+                                         " when ejecting (round %s)" % i)
+                if params["os_type"] != "windows":
+                    cmd = "dd if=%s of=/dev/null count=1" % guest_cdrom_device
+                else:
+                    # windows guest does not support auto close door when reading
+                    # cdrom, so close it by eject command;
+                    cmd = params["close_cdrom_cmd"] % guest_cdrom_device
+                session.cmd(cmd)
+                if is_tray_opened(vm, qemu_cdrom_device):
+                    raise error.TestFail("Monitor reports tray opened when close"
+                                         " cdrom in guest (round %s)" % i)
+                time.sleep(workaround_eject_time)
+        finally:
+            vm.change_media(qemu_cdrom_device, iso_image_orig)
 
     def check_tray_locked_test(vm, qemu_cdrom_device, guest_cdrom_device):
         """
@@ -560,7 +571,8 @@ def run(test, params, env):
 
             if params.get('cdrom_test_tray_status') == 'yes':
                 check_tray_status_test(vm, qemu_cdrom_device,
-                                       guest_cdrom_device, max_test_times)
+                                       guest_cdrom_device, max_test_times,
+                                       self.iso_image_new)
 
             if params.get('cdrom_test_locked') == 'yes':
                 check_tray_locked_test(vm, qemu_cdrom_device,

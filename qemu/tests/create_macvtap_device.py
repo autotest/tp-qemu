@@ -35,9 +35,10 @@ def run(test, params, env):
     """
 
     ifname = params.get("macvtap_base_interface")
-    macvtap_name = params.get("macvtap_name", "passthru01")
     macvtap_mode = params.get("macvtap_mode", "passthru")
     dest_host = params.get("dest_host")
+    set_mac = params.get("set_mac", "yes") == "yes"
+    macvtaps = []
 
     if not ifname:
         ifname = params.get("netdst")
@@ -49,20 +50,36 @@ def run(test, params, env):
     for device in macvtap_devices:
         utils.system_output("ip link delete %s" % device)
 
-    txt = "Create %s mode macvtap device %s on %s." % (macvtap_mode,
-                                                       macvtap_name,
-                                                       ifname)
-    error.context(txt, logging.info)
-    cmd = " ip link add link %s name %s type macvtap mode %s" % (ifname,
-                                                                 macvtap_name,
-                                                                 macvtap_mode)
-    utils.system(cmd)
+    for mode in macvtap_mode.split():
+        macvtap_name = "%s_01" % mode
+        txt = "Create %s mode macvtap device %s on %s." % (mode,
+                                                           macvtap_name,
+                                                           ifname)
+        error.context(txt, logging.info)
+        cmd = " ip link add link %s name %s type macvtap mode %s" % (ifname,
+                                                                     macvtap_name,
+                                                                     mode)
+        utils.system(cmd, timeout=240)
+        if set_mac:
+            txt = "Determine and configure mac address of %s, " % macvtap_name
+            txt += "Then link up it."
+            error.context(txt, logging.info)
+            mac = utils_net.generate_mac_address_simple()
+            cmd = " ip link set %s address %s up" % (macvtap_name, mac)
+            utils.system(cmd, timeout=240)
 
-    error.context("Check configuraton of macvtap device", logging.info)
-    devices = get_macvtap_device_on_ifname(ifname)
-    if macvtap_name not in devices:
-        err = "Fail to create %s mode macvtap on %s" % (macvtap_mode, ifname)
-        raise error.TestFail(err)
+        error.context("Check configuraton of macvtap device", logging.info)
+        check_cmd = " ip -d link show %s" % macvtap_name
+        try:
+            tap_info = utils.system_output(check_cmd, timeout=240)
+        except error.CmdError:
+            err = "Fail to create %s mode macvtap on %s" % (mode, ifname)
+            raise error.TestFail(err)
+        if set_mac:
+            if mac not in tap_info:
+                err = "Fail to set mac for %s" % macvtap_name
+                raise error.TestFail(err)
+        macvtaps.append(macvtap_name)
 
     if not dest_host:
         dest_host_get_cmd = "ip route | awk '/default/ { print $3 }'"
@@ -75,7 +92,7 @@ def run(test, params, env):
     status, output = utils_test.ping(dest_host, 10,
                                      interface=ifname, timeout=20)
     ratio = utils_test.get_loss_ratio(output)
-    if macvtap_mode == "passthru":
+    if "passthru" in macvtap_mode:
         ifnames = utils_net.get_host_iface()
         ifnames.remove(ifname)
         logging.info("ifnames = %s", ifnames)
@@ -102,18 +119,15 @@ def run(test, params, env):
             err += "after creating %s mode macvtap on it." % macvtap_mode
             raise error.TestFail(err)
 
-    txt = "Delete %s mode macvtap device %s on %s." % (macvtap_mode,
-                                                       macvtap_name,
-                                                       ifname)
-    error.context(txt, logging.info)
-    del_cmd = "ip link delete %s" % macvtap_name
-    utils.system(del_cmd)
-    devices = get_macvtap_device_on_ifname(ifname)
-    if macvtap_name in devices:
-        err = "Fail to delete %s mode macvtap %s on %s" % (macvtap_mode,
-                                                           macvtap_name,
-                                                           ifname)
-        raise error.TestFail(err)
+    for name in macvtaps:
+        txt = "Delete macvtap device %s on %s." % (name, ifname)
+        error.context(txt, logging.info)
+        del_cmd = "ip link delete %s" % name
+        utils.system(del_cmd)
+        devices = get_macvtap_device_on_ifname(ifname)
+        if name in devices:
+            err = "Fail to delete macvtap %s on %s" % (name, ifname)
+            raise error.TestFail(err)
 
     logging.info("dest_host = %s", dest_host)
     txt = "Ping dest host %s from " % dest_host

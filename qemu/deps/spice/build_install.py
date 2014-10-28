@@ -87,6 +87,9 @@ if ret != 0:
 if destDir is None:
     basename = git_repo[pkgName].split("/")[-1]
     destDir = os.path.join("/tmp", basename)
+    if os.path.exists(destDir):
+        print "Deleting previous existing directory"
+        subprocess.check_call(("rm -rf %s" % destDir).split())
 
 # If destination directory doesn't exist, create it
 if not os.path.exists(destDir):
@@ -165,7 +168,6 @@ else:
     env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:/usr/local/share/pkgconfig:" % (prefix,
                                                                                                            prefix)
 
-
 # Running autogen.sh with prefix and any other options
 # Using os.system because subprocess.Popen would not work
 # with autogen.sh properly. --prefix would not get set
@@ -182,7 +184,6 @@ ret = os.system(env_vars + " " + cmd)
 if ret != 0:
     print "Return code: %s! Autogen.sh failed! Exiting!" % ret
     sys.exit(ret)
-
 
 # Running 'make' to build and using os.system again
 cmd = "make"

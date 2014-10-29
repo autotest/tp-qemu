@@ -74,7 +74,8 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
     if re.search("Return code", output):
         raise error.TestFail("spice-protocol was not installed properly")
 
-    output = vm_root_session.cmd("%s -p xf86-video-qxl" % (vm_script_path))
+    output = vm_root_session.cmd("%s -p xf86-video-qxl" % (vm_script_path),
+                                 timeout=600)
     logging.info(output)
     if re.search("Return code", output):
         raise error.TestFail("qxl was not installed properly")
@@ -200,7 +201,8 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
     if re.search("Return code", output):
         raise error.TestFail("spice-protocol was not installed properly")
 
-    output = vm_root_session.cmd("%s -p spice-vd-agent" % (vm_script_path))
+    output = vm_root_session.cmd("%s -p spice-vd-agent" % (vm_script_path),
+                                 timeout=600))
     logging.info(output)
     if re.search("Return code", output):
         raise error.TestFail("spice-vd-agent was not installed properly")

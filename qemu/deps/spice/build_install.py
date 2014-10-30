@@ -87,6 +87,9 @@ if ret != 0:
 if destDir is None:
     basename = git_repo[pkgName].split("/")[-1]
     destDir = os.path.join("/tmp", basename)
+    if os.path.exists(destDir):
+        print "Deleting existing destination directory"
+        subprocess.check_call(("rm -rf %s" % destDir).split())
 
 # If destination directory doesn't exist, create it
 if not os.path.exists(destDir):

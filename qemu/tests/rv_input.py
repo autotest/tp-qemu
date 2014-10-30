@@ -12,7 +12,7 @@ import logging
 import os
 from autotest.client.shared import error
 from virttest.aexpect import ShellCmdError
-from virttest import utils_misc, utils_spice, aexpect
+from virttest import utils_misc, utils_spice, aexpect, data_dir
 
 
 def install_pygtk(guest_session, params):
@@ -44,8 +44,7 @@ def deploy_test_form(test, guest_vm, params):
     """
 
     script = params.get("guest_script")
-    scriptdir = os.path.join("scripts", script)
-    script_path = utils_misc.get_path(test.virtdir, scriptdir)
+    script_path = os.path.join(data_dir.get_deps_dir(), "spice", script)
     guest_vm.copy_files_to(script_path, "/tmp/%s" % params.get("guest_script"),
                            timeout=60)
 
@@ -94,7 +93,7 @@ def test_type_and_func_keys(client_vm, guest_session, params):
     logging.info("Sending typewriter and functional keys to client machine")
     for i in range(1, 69):
         # Avoid Ctrl, RSH, LSH, PtScr, Alt, CpsLk
-        if i not in [29, 42, 54, 55, 56, 58]:
+        if (i not in [29, 42, 54, 55, 56, 58]):
             client_vm.send_key(str(hex(i)))
             utils_spice.wait_timeout(0.3)
 

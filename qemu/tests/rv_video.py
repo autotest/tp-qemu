@@ -9,7 +9,8 @@ Requires: binaries Xorg, totem, gnome-session
 """
 import logging
 import os
-from virttest import utils_misc, remote
+from autotest.client.shared import error
+from virttest import utils_misc, remote, aexpect
 
 
 def launch_totem(guest_session, params):
@@ -19,31 +20,47 @@ def launch_totem(guest_session, params):
     :param guest_vm - vm object
     """
 
-    totem_version = guest_session.cmd('totem --version')
-    logging.info("Totem version: %s", totem_version)
+    totem_version = guest_session.cmd_output("totem --version")
+    logging.info("Totem version: %s" % totem_version)
 
     # repeat parameters for totem
     logging.info("Set up video repeat to '%s' to the Totem.",
                  params.get("repeat_video"))
 
-    if params.get("repeat_video") == "yes":
-        cmd = "gconftool-2 --set /apps/totem/repeat -t bool true"
+    # Check for RHEL6 or RHEL7
+    # RHEL7 uses dconf and RHEL6 uses gconftool-2
+    try:
+        release = guest_session.cmd_output("cat /etc/redhat-release")
+        logging.info("Redhat Release: %s" % release)
+    except:
+        raise error.TestNAError("Test is only currently supported on "
+                                "RHEL and Fedora operating systems")
+
+    if "release 6." in release:
+        cmd = "gconftool-2 --set /apps/totem/repeat -t bool"
+        totem_params = "--display=:0.0 --play"
     else:
-        cmd = "gconftool-2 --set /apps/totem/repeat -t bool false"
+        cmd = "dconf write /org/gnome/Totem/repeat"
+        totem_params = ""
+
+    if params.get("repeat_video", "no") == "yes":
+        cmd += " true"
+    else:
+        cmd += " false"
 
     guest_session.cmd(cmd)
 
     cmd = "export DISPLAY=:0.0"
     guest_session.cmd(cmd)
 
-    # fullscreen parameters for totem
-    if params.get("fullscreen"):
+    # Fullscreen parameters for totem
+    if params.get("fullscreen", "no") == "yes":
         fullscreen = " --fullscreen "
     else:
         fullscreen = ""
 
     cmd = "nohup totem %s %s --display=:0.0 --play &> /dev/null &" \
-        % (fullscreen, params.get("destination_video_file_path"))
+          % (fullscreen, params.get("destination_video_file_path"))
     guest_session.cmd(cmd)
 
 
@@ -74,7 +91,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(

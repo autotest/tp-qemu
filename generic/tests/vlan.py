@@ -76,10 +76,8 @@ def run(test, params, env):
             err_msg = "Unexpected vlan operation command: %s, " % cmd_type
             err_msg += "only support 'ip' and 'vconfig' now"
             raise error.TestError(err_msg)
-
-        send_cmd = "[ -e /proc/net/vlan/%s ] && %s" % (v_iface, rem_vlan_cmd)
         error.context("Remove vlan interface '%s'." % v_iface, logging.info)
-        return session.cmd_status(send_cmd)
+        return session.cmd_status(rem_vlan_cmd)
 
     def nc_transfer(src, dst):
         """
@@ -121,8 +119,10 @@ def run(test, params, env):
         # does not have the other method to interrupt the process in
         # the guest rather than close the session.
         """
-        error.context("Flood ping from %s interface %s to %s" % (vms[src].name,
-                                                                 ifname[src], vlan_ip[dst]), logging.info)
+        txt = "Flood ping from %s interface %s to %s" % (vms[src].name,
+                                                         ifname[src],
+                                                         vlan_ip[dst])
+        error.context(txt, logging.info)
         session_flood = vms[src].wait_for_login(timeout=60)
         utils_test.ping(vlan_ip[dst], flood=True,
                         interface=ifname[src],
@@ -194,7 +194,8 @@ def run(test, params, env):
                     dest = ".".join((subnet, str(vlan2),
                                      ip_unit[(vm_index + 1) % 2]))
                     status, output = utils_test.ping(dest, count=2,
-                                                     interface=interface, session=sessions[vm_index],
+                                                     interface=interface,
+                                                     session=sessions[vm_index],
                                                      timeout=30)
                     if ((vlan == vlan2) ^ (status == 0)):
                         err_msg = "%s ping %s unexpected, " % (interface, dest)
@@ -219,7 +220,10 @@ def run(test, params, env):
         error.base_context("Remove vlan")
         for vm_index, vm in enumerate(vms):
             for vlan in range(1, vlan_num + 1):
-                rem_vlan(sessions[vm_index], vlan, ifname[vm_index], cmd_type)
+                status = rem_vlan(sessions[vm_index], vlan,
+                                  ifname[vm_index], cmd_type)
+                if status:
+                    logging.error("Remove vlan %s failed" % vlan)
 
     # Plumb/unplumb maximal number of vlan interfaces
     if params.get("do_maximal_test", "no") == "yes":
@@ -233,7 +237,7 @@ def run(test, params, env):
                 raise error.TestFail("Maximal interface plumb test failed")
         finally:
             for vlan_index in range(1, vlan_added + 1):
-                if not rem_vlan(sessions[0], vlan_index, ifname[0], cmd_type):
+                if rem_vlan(sessions[0], vlan_index, ifname[0], cmd_type):
                     logging.error("Remove vlan %s failed" % vlan_index)
 
     sessions.extend(session_ctl)

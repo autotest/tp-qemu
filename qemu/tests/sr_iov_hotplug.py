@@ -91,7 +91,7 @@ def run(test, params, env):
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         pci_info[pci_num].append(add_output)
         after_add = vm.monitor.info("pci")
-        if pci_info[pci_num][0] not in after_add:
+        if pci_info[pci_num][0] not in str(after_add):
             logging.debug("Print info pci after add the block: %s" % after_add)
             raise error.TestFail("Add device failed. Monitor command is: %s"
                                  ". Output: %r" % (pci_add_cmd, add_output))

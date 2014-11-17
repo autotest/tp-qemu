@@ -8,6 +8,7 @@ Requires: binaries remote-viewer, Xorg, netstat
 import logging
 import socket
 from virttest.aexpect import ShellStatusError
+from virttest.aexpect import ShellCmdError
 from virttest.aexpect import ShellProcessTerminatedError
 from virttest import utils_net, utils_spice, remote, utils_misc
 from autotest.client.shared import error
@@ -359,9 +360,21 @@ def run(test, params, env):
 
     if params.get("clear_interface", "yes") == "yes":
         for vm in params.get("vms").split():
+            try:
+                session = env.get_vm(vm).wait_for_login(timeout=360)
+                output = session.cmd('cat /etc/redhat-release')
+                logging.info(output)
+            except ShellCmdError:
+                raise error.TestNAError("Test is only currently supported on "
+                                        "RHEL and Fedora operating systems")
+            if "release 6." in output:
+                waittime = 15
+            else:
+                waittime = 60
             utils_spice.clear_interface(env.get_vm(vm),
                                         int(params.get("login_timeout", "360")))
-        utils_spice.wait_timeout(15)
+
+        utils_spice.wait_timeout(waittime)
 
     launch_rv(client_vm, guest_vm, params)
 

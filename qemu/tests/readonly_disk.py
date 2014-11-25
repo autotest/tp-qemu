@@ -1,7 +1,8 @@
 import logging
-import re
 from autotest.client.shared import error
-from virttest import aexpect, env_process
+from virttest import aexpect
+from virttest import utils_misc
+from virttest import env_process
 
 
 @error.context_aware
@@ -23,29 +24,21 @@ def run(test, params, env):
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
-
-    create_partition_cmd = params.get("create_partition_cmd")
-    format_cmd = params.get("format_cmd")
-    copy_cmd = params.get("copy_cmd")
-    src_file = params.get("src_file")
-    disk_letter = params.get("disk_letter")
-
-    # update the cdrom letter for winutils
-    cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"
-    cdrom_chk_cmd += " cmd && diskpart /s cmd"
-
-    vols = re.findall("\s+([A-Z])\s+.*CDFS.*\n",
-                      session.cmd_output(cdrom_chk_cmd))
-    if vols:
-        src_file = re.sub("WIN_UTIL", vols[0], src_file)
-    else:
+    vols = utils_misc.get_winutils_vol(session)
+    if not vols:
         raise error.TestError("Can not find winutils in guest.")
-
     filen = 0
     error.context("Format the disk and copy file to it", logging.info)
-    session.cmd(create_partition_cmd)
-    session.cmd(format_cmd)
-    dst_file = disk_letter + ":\\" + str(filen)
+    os_type = params["os_type"]
+    copy_cmd = params.get("copy_cmd", "copy %s %s")
+    disk_idx = params.get("disk_index", 1)
+    fs_type = params.get("fstype", "ntfs")
+    drive_letter = params.get("drive_letter", "I")
+    disk_size = params.get("partition_size_data", "200M")
+    src_file = params.get("src_file", "").replace("WIN_UTIL", vols)
+    utils_misc.format_guest_disk(session, disk_idx, drive_letter,
+                                 disk_size, fs_type, os_type)
+    dst_file = drive_letter + ":\\" + str(filen)
     session.cmd(copy_cmd % (src_file, dst_file))
     filen += 1
 
@@ -65,7 +58,7 @@ def run(test, params, env):
 
     try:
         error.context("Try to write to the readonly disk", logging.info)
-        dst_file_readonly = disk_letter + ":\\" + str(filen)
+        dst_file_readonly = drive_letter + ":\\" + str(filen)
         session.cmd(copy_cmd % (src_file, dst_file_readonly))
         raise error.TestFail("Write in readonly disk should failed.")
     except aexpect.ShellCmdError:

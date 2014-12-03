@@ -153,10 +153,10 @@ def run(test, params, env):
                                      "Command was: %s" % find_pci_cmd)
 
             # Test the newly added device
-            if not utils_misc.wait_for(_check_ip, 30, 3, 3):
+            if not utils_misc.wait_for(_check_ip, 120, 3, 3):
                 ifconfig = session.cmd_output("ifconfig -a")
                 raise error.TestFail("New hotpluged device could not get ip "
-                                     "after 30s in guest. guest ifconfig "
+                                     "after 120s in guest. guest ifconfig "
                                      "output: \n%s" % ifconfig)
             try:
                 session.cmd(params["pci_test_cmd"] % (pci_num + 1))
@@ -215,7 +215,6 @@ def run(test, params, env):
         devices.append(device)
     device_driver = params.get("device_driver", "pci-assign")
     if vm.pci_assignable is None:
-        logging.info("*** vm.pci_assignable ***")
         vm.pci_assignable = test_setup.PciAssignable(
             driver=params.get("driver"),
             driver_option=params.get("driver_option"),
@@ -244,9 +243,10 @@ def run(test, params, env):
 
     local_functions = locals()
 
-    error.context("Disable the primary link(s) of guest", logging.info)
-    for nic in vm.virtnet:
-        vm.set_link(nic.device_id, up=False)
+    if params.get("enable_set_link" "yes") == "yes":
+        error.context("Disable the primary link(s) of guest", logging.info)
+        for nic in vm.virtnet:
+            vm.set_link(nic.device_id, up=False)
 
     try:
         for j in range(rp_times):
@@ -275,6 +275,8 @@ def run(test, params, env):
                 error.context(msg, logging.info)
                 pci_del(-(pci_num + 1))
     finally:
-        error.context("Re-enabling the primary link(s) of guest", logging.info)
-        for nic in vm.virtnet:
-            vm.set_link(nic.device_id, up=True)
+        if params.get("enable_set_link", "yes") == "yes":
+            error.context("Re-enabling the primary link(s) of guest",
+                          logging.info)
+            for nic in vm.virtnet:
+                vm.set_link(nic.device_id, up=True)

@@ -53,12 +53,6 @@ def run(test, params, env):
     pci_invaild_addr = params.get("pci_invaild_addr")
     modprobe_cmd = params.get("modprobe_cmd")
 
-    if modprobe_cmd:
-        # negative test, both guest and host should still work well.
-        msg = "Try to remove sr-iov module in host."
-        error.context(msg, logging.info)
-        utils.system(modprobe_cmd)
-
     device = {}
     device["type"] = params.get("hotplug_device_type", "vf")
     device['mac'] = utils_net.generate_mac_address_simple()
@@ -89,14 +83,33 @@ def run(test, params, env):
             case_fail = False
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
             case_fail = True
-        except Exception, e:
+        except Exception, err:
             if neg_msg:
                 msg = "Check negative hotplug error message"
                 error.context(msg, logging.info)
-                if neg_msg not in str(e):
-                    msg = "Could not find '%s' in error msg '%s'" % (
-                        neg_msg, e)
+                if neg_msg not in str(err):
+                    msg = "Could not find '%s' in" % neg_msg
+                    msg += " command output '%s'" % add_output
                     raise error.TestFail(msg)
-            logging.debug("Could not boot up vm, %s" % e)
+            logging.debug("Could not boot up vm, %s" % err)
         if case_fail:
-            raise error.TestFail("Did not raise exception during hotpluging")
+            if neg_msg:
+                msg = "Check negative hotplug error message"
+                error.context(msg, logging.info)
+                if neg_msg not in str(add_output):
+                    msg = "Could not find '%s' in" % neg_msg
+                    msg += " command output '%s'" % add_output
+                    raise error.TestFail(msg)
+            logging.debug("Could not boot up vm, %s" % add_output)
+
+    if modprobe_cmd:
+        # negative test, both guest and host should still work well.
+        msg = "Negative test:Try to remove sr-iov module in host."
+        error.context(msg, logging.info)
+        driver = params.get("driver", "igb")
+        modprobe_cmd = modprobe_cmd % driver
+        try:
+            utils.system(modprobe_cmd, timeout=120,
+                         ignore_status=True)
+        except error.CmdError, err:
+            logging.error(err)

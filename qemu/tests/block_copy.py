@@ -1,10 +1,13 @@
-import os
 import re
 import time
 import random
 import logging
-from autotest.client.shared import error, utils
-from virttest import utils_misc, storage, data_dir, qemu_monitor
+from autotest.client.shared import utils
+from autotest.client.shared import error
+from virttest import data_dir
+from virttest import storage
+from virttest import utils_misc
+from virttest import qemu_monitor
 
 
 def speed2byte(speed):
@@ -22,14 +25,20 @@ class BlockCopy(object):
     """
     Base class for block copy test;
     """
-    sessions = []
-    trash = []
+    default_params = {"cancel_timeout": 6,
+                      "wait_timeout": 600,
+                      "login_timeout": 360,
+                      "check_timeout": 3,
+                      "max_speed": 0,
+                      "default_speed": 0}
+    trash_files = []
+    opening_sessions = []
 
     def __init__(self, test, params, env, tag):
-        self.test = test
-        self.env = env
-        self.params = params
         self.tag = tag
+        self.env = env
+        self.test = test
+        self.params = params
         self.vm = self.get_vm()
         self.data_dir = data_dir.get_data_dir()
         self.device = self.get_device()
@@ -40,13 +49,13 @@ class BlockCopy(object):
         parser test args, unify speed unit to B/s and set default values;
         """
         params = self.params.object_params(self.tag)
-        params["cancel_timeout"] = int(params.get("cancel_timeout", 1))
-        params["wait_timeout"] = int(params.get("wait_timeout", 600))
-        params["fsck_timeout"] = int(params.get("fsck_timeout", 300))
-        params["login_timeout"] = int(params.get("login_timeout", 360))
-        params["check_timeout"] = int(params.get("check_timeout", 0))
-        params["max_speed"] = speed2byte(params.get("max_speed", 0))
-        params["default_speed"] = speed2byte(params.get("default_speed", 0))
+        for key, val in self.default_params.items():
+            if not params.get(key):
+                params[key] = val
+            if key.endswith("timeout"):
+                params[key] = float(params[key])
+            if key.endswith("speed"):
+                params[key] = speed2byte(params[key])
         return params
 
     def get_vm(self):
@@ -61,47 +70,45 @@ class BlockCopy(object):
         """
         according configuration get target device ID;
         """
-        root_dir = self.data_dir
-        params = self.parser_test_args()
-        image_file = storage.get_image_filename(params, root_dir)
-        device = self.vm.get_block({"file": image_file})
-        return device
+        image_file = storage.get_image_filename(self.parser_test_args(),
+                                                self.data_dir)
+        logging.info("image filename: %s" % image_file)
+        return self.vm.get_block({"file": image_file})
 
     def get_session(self):
         """
         get a session object;
         """
         params = self.parser_test_args()
-        timeout = params.get("login_timeout")
-        session = self.vm.wait_for_login(timeout=timeout)
-        self.sessions.append(session)
+        session = self.vm.wait_for_login(timeout=params["login_timeout"])
+        self.opening_sessions.append(session)
         return session
 
     def get_status(self):
         """
         return block job info dict;
         """
-        status = {}
         count = 0
         while count < 10:
             try:
-                status = self.vm.get_job_status(self.device)
-            except qemu_monitor.MonitorLockError as e:
+                return self.vm.get_job_status(self.device)
+            except qemu_monitor.MonitorLockError, e:
                 logging.warn(e)
             time.sleep(random.uniform(1, 5))
             count += 1
-        return status
+        return {}
 
     def do_steps(self, tag=None):
-        if not tag:
-            return
         params = self.parser_test_args()
-        for step in params.get(tag, "").split():
-            if step and hasattr(self, step):
-                fun = getattr(self, step)
-                fun()
-            else:
-                error.TestError("undefined step %s" % step)
+        try:
+            for step in params.get(tag, "").split():
+                if step and hasattr(self, step):
+                    fun = getattr(self, step)
+                    fun()
+                else:
+                    error.TestError("undefined step %s" % step)
+        except KeyError:
+            logging.warn("Undefined test phase '%s'" % tag)
 
     @error.context_aware
     def cancel(self):
@@ -137,25 +144,12 @@ class BlockCopy(object):
         error.context("set max speed to %s B/s" % max_speed, logging.info)
         self.vm.set_job_speed(self.device, max_speed)
         status = self.get_status()
+        if not status:
+            raise error.TestFail("Unable to query job status.")
         speed = status["speed"]
         if speed != max_speed:
             msg = "Set speed fail. (expect speed: %s B/s," % max_speed
             msg += "actual speed: %s B/s)" % speed
-            raise error.TestFail(msg)
-
-    @error.context_aware
-    def fsck(self):
-        """
-        check filesystem status in guest;
-        """
-        error.context("check guest filesystem", logging.info)
-        params = self.parser_test_args()
-        session = self.get_session()
-        cmd = params.get("fsck_cmd")
-        timeout = params.get("fsck_timeout")
-        status, output = session.cmd_status_output(cmd, timeout=timeout)
-        if status != 0:
-            msg = "guest filesystem is dirty, filesystem info: %s" % output
             raise error.TestFail(msg)
 
     @error.context_aware
@@ -217,51 +211,49 @@ class BlockCopy(object):
 
     def get_image_file(self):
         """
-        return file associated with $device device
+        return file associated with device
         """
         blocks = self.vm.monitor.info("block")
-        image_file = None
-        if isinstance(blocks, str):
-            image_file = re.findall('%s.*\s+file=(\S*)' % self.device, blocks)
-            if image_file:
+        try:
+            if isinstance(blocks, str):
+                image_regex = '%s.*\s+file=(\S*)' % self.device
+                image_file = re.findall(image_regex, blocks)
                 return image_file[0]
-        else:
+
             for block in blocks:
                 if block['device'] == self.device:
-                    try:
-                        image_file = block['inserted']['file']
-                    except KeyError:
-                        continue
-        return image_file
+                    return block['inserted']['file']
+        except KeyError:
+            logging.warn("Image file not found for device '%s'" % self.device)
+            logging.debug("Blocks info: '%s'" % blocks)
+        return None
 
     def get_backingfile(self, method="monitor"):
         """
         return backingfile of the device, if not return None;
         """
-        backing_file = None
         if method == "monitor":
-            backing_file = self.vm.monitor.get_backingfile(self.device)
-        else:
-            cmd = utils_misc.get_qemu_img_binary(self.params)
-            image_file = self.get_image_file()
-            cmd += " info %s " % image_file
-            info = utils.system_output(cmd)
+            return self.vm.monitor.get_backingfile(self.device)
+
+        qemu_img = utils_misc.get_qemu_img_binary(self.params)
+        cmd = "%s info %s " % (qemu_img, self.get_image_file())
+        info = utils.system_output(cmd)
+        try:
             matched = re.search(r"backing file: +(.*)", info, re.M)
-            if matched:
-                backing_file = matched.group(1)
-        if backing_file:
-            backing_file = os.path.abspath(backing_file)
-        return backing_file
+            return matched.group(1)
+        except AttributeError:
+            logging.warn("No backingfile found, cmd output: %s" % info)
 
     def clean(self):
         """
         close opening connections and clean trash files;
         """
-        while self.sessions:
-            session = self.sessions.pop()
+        while self.opening_sessions:
+            session = self.opening_sessions.pop()
             if session:
                 session.close()
-        if self.vm.is_alive():
+        if self.vm:
             self.vm.destroy()
-        for _tmp in self.trash:
-            utils.system("rm -f %s" % _tmp)
+        while self.trash_files:
+            tmp_file = self.trash_files.pop()
+            utils.system("rm -f %s" % tmp_file)

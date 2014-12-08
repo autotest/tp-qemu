@@ -1,6 +1,7 @@
 import logging
 import time
 import types
+import re
 from autotest.client.shared import error
 from virttest import utils_misc, utils_test, aexpect
 
@@ -111,6 +112,32 @@ def run(test, params, env):
     def mig_set_speed():
         mig_speed = params.get("mig_speed", "1G")
         return vm.monitor.migrate_set_speed(mig_speed)
+
+    def check_dma():
+        dmesg_pattern = params.get("dmesg_pattern",
+                                   "ata.*?configured for PIO")
+        dma_pattern = params.get("dma_pattern", "DMA.*?\(\?\)$")
+        pio_pattern = params.get("pio_pattern", "PIO.*?pio\d+\s+$")
+        hdparm_cmd = params.get("hdparm_cmd",
+                                "i=`ls /dev/[shv]da` ; hdparm -I $i")
+        session_dma = vm.wait_for_login()
+        hdparm_output = session_dma.cmd_output(hdparm_cmd)
+        failed_msg = ""
+        if not re.search(dma_pattern, hdparm_output, re.M):
+            failed_msg += "Failed in DMA check from hdparm output.\n"
+        if not re.search(pio_pattern, hdparm_output, re.M):
+            failed_msg += "Failed in PIO check from hdparm output.\n"
+
+        if failed_msg:
+            failed_msg += "hdparm output is: %s\n" % hdparm_output
+
+        dmesg = session_dma.cmd_output("dmesg")
+        if not re.search(dmesg_pattern, dmesg):
+            failed_msg += "Failed in dmesg check.\n"
+            failed_msg += " dmesg from guest is: %s\n" % dmesg
+
+        if failed_msg:
+            raise error.TestFail(failed_msg)
 
     login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))

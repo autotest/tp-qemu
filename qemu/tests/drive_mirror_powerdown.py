@@ -24,11 +24,9 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
         """
         params = self.parser_test_args()
         vm_name = params['main_vm']
-        self.params["image_name"] = params["target_image"]
-        self.params["image_format"] = params["target_format"]
         logging.info("Target image: %s" % self.target_image)
         error.context("powerup vm with target image", logging.info)
-        env_process.preprocess_vm(self.test, self.params, self.env, vm_name)
+        env_process.preprocess_vm(self.test, params, self.env, vm_name)
         vm = self.env.get_vm(vm_name)
         vm.verify_alive()
         self.vm = vm

@@ -45,8 +45,8 @@ def run(test, params, env):
         if search_opt & re.I == re.I:
             ignore_case = True
 
-        error.context("Finding matched sub-string with regex pattern %s" %
-                      regex_str)
+        error.context("Finding matched sub-string with regex pattern '%s'" %
+                      regex_str, logging.info)
         m = re.findall(regex_str, string, search_opt)
         if not m:
             logging.debug(string)
@@ -54,6 +54,12 @@ def run(test, params, env):
 
         error.context("Verify matched string is same as expected")
         actual_result = m[0]
+        if "removable" in regex_str:
+            if actual_result in ["on", "yes", "true"]:
+                actual_result = "on"
+            if actual_result in ["off", "no", "false"]:
+                actual_result = "off"
+
         fail_log = []
         if isinstance(actual_result, tuple):
             for i, v in enumerate(expect_result):
@@ -115,7 +121,7 @@ def run(test, params, env):
         error.context("Check serial option in guest", logging.info)
         session = _login()
         output = session.cmd("lsusb -v")
-        if "EMPTY_STRING" not in serial or "NO_EQUAL_STRING" not in serial:
+        if serial not in ["EMPTY_STRING", "NO_EQUAL_STRING"]:
             # Verify in guest when serial is set to empty/null is meaningless.
             _verify_string(serial, output, [serial])
         _do_io_test_guest(session)

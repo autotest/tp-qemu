@@ -61,6 +61,10 @@ DUMP_DIR="$2"
 [ -z "$QEMU_MACHINES_TO_DUMP" ] && QEMU_MACHINES_TO_DUMP='
     pc-i440fx-rhel7.0.0
     pc-q35-rhel7.0.0
+    pc-q35-2.3
+    pc-i440fx-2.3
+    pc-q35-2.2
+    pc-i440fx-2.2
     pc-q35-2.1
     pc-q35-2.0
     pc-q35-1.7

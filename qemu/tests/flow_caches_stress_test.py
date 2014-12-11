@@ -78,6 +78,8 @@ def run(test, params, env):
     passwd = params.get("hostpasswd", "123456")
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
+    compile_option_client = params.get("compile_option_client", "")
+    compile_option_server = params.get("compile_option_server", "")
 
     if int(params.get("queues", 1)) > 1 and params.get("os_type") == "linux":
         error.context("Enable multi queues support in guest.", logging.info)
@@ -105,7 +107,7 @@ def run(test, params, env):
                                                  g_md5sum, g_client_link,
                                                  username=username,
                                                  password=password,
-                                                 compile_option="--enable-burst")
+                                                 compile_option=compile_option_client)
 
     netperf_server = utils_netperf.NetperfServer(netperf_server_ip,
                                                  server_path,
@@ -113,7 +115,7 @@ def run(test, params, env):
                                                  netperf_link,
                                                  client, port,
                                                  password=passwd,
-                                                 compile_option="--enable-burst")
+                                                 compile_option=compile_option_server)
     try:
         error.base_context("Run netperf test between host and guest.")
         error.context("Start netserver in host.", logging.info)

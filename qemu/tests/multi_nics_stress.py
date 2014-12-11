@@ -59,6 +59,8 @@ def run(test, params, env):
     os_type = params.get("os_type")
     host_ip = utils_net.get_host_ip_address(params)
     ping_count = int(params.get("ping_count", 10))
+    compile_option_client = params.get("compile_option_client", "")
+    compile_option_server = params.get("compile_option_server", "")
 
     vms = params.get("vms")
     server_infos = []
@@ -169,7 +171,8 @@ def run(test, params, env):
                                                client=c_info["shell_client"],
                                                port=c_info["shell_port"],
                                                username=c_info["username"],
-                                               password=c_info["password"])
+                                               password=c_info["password"],
+                                               compile_option=compile_option_client)
         netperf_clients.append(n_client)
     error.context("Setup netperf server.", logging.info)
     for s_info in server_infos:
@@ -186,7 +189,8 @@ def run(test, params, env):
                                                client=s_info["shell_client"],
                                                port=s_info["shell_port"],
                                                username=s_info["username"],
-                                               password=s_info["password"])
+                                               password=s_info["password"],
+                                               compile_option=compile_option_server)
         netperf_servers.append(n_server)
 
     try:

@@ -63,6 +63,8 @@ def run(test, params, env):
     host_password = params.get("hostpassword")
     client = params.get("shell_client")
     port = params.get("shell_port")
+    compile_option_client = params.get("compile_option_client", "")
+    compile_option_server = params.get("compile_option_server", "")
 
     if dsthost in params.get("vms", "vm1 vm2"):
         server_vm = env.get_vm(dsthost)
@@ -112,7 +114,8 @@ def run(test, params, env):
                                                  c_md5sum, c_link,
                                                  client, port,
                                                  username=guest_username,
-                                                 password=guest_password)
+                                                 password=guest_password,
+                                                 compile_option=compile_option_client)
 
     netperf_server = utils_netperf.NetperfServer(netserver_ip,
                                                  s_path,
@@ -120,7 +123,8 @@ def run(test, params, env):
                                                  s_link,
                                                  s_client, s_port,
                                                  username=s_username,
-                                                 password=s_password)
+                                                 password=s_password,
+                                                 compile_option=compile_option_server)
 
     # Get range of message size.
     message_size = params.get("message_size_range", "580 590 1").split()

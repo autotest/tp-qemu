@@ -359,7 +359,7 @@ def run(test, params, env):
             # Set the qemu harddisk to the overlay file
             logging.info(
                 "Original image_name is: %s", params.get('image_name'))
-            params['image_name'] = pre_name
+            params['image_name'] = '.'.join(overlay_file_name.split('.')[:-1])
             logging.info("Param image_name changed to: %s",
                          params.get('image_name'))
 
@@ -394,6 +394,7 @@ def run(test, params, env):
                 raise error.TestFail("Could not commit the overlay file")
 
             # Start a new VM, using image_name as its harddisk
+            params['image_name'] = pre_name
             vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)

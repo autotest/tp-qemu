@@ -92,7 +92,7 @@ def run(test, params, env):
                                           % nic.nic_name)
                 logging.info("MQ feature of (%s) is enabled" % nic.nic_name)
 
-        taskset_cpu = params.get("netperf_taskset_cpu", [])
+        taskset_cpu = params.get("netperf_taskset_cpu")
         if taskset_cpu:
             taskset_cmd = "taskset -c %s " % " ".join(taskset_cpu)
             params["netperf_cmd_prefix"] = taskset_cmd
@@ -104,7 +104,7 @@ def run(test, params, env):
             set_cpu_affinity(session)
 
         bg_sub_test = params.get("bg_sub_test")
-        n_instance = int(params.get("instance", queues))
+        n_instance = int(params.get("netperf_para_sessions", queues))
         try:
             if bg_sub_test:
                 error.context("Run test %s background" % bg_sub_test,

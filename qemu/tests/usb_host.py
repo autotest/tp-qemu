@@ -53,7 +53,13 @@ def run(test, params, env):
             monitor_add += ",vendorid=%s" % vid
             monitor_add += ",productid=%s" % pid
             reply = vm.monitor.cmd(monitor_add)
-            if params["usb_reply_msg"] not in reply:
+            usb_reply_msg_list = params.get("usb_reply_msg").split(";")
+            negative_flag = False
+            for msg in usb_reply_msg_list:
+                if msg in reply:
+                    negative_flag = True
+                    break
+            if not negative_flag:
                 raise error.TestFail("Could not get expected warning"
                                      " msg in negative test, monitor"
                                      " returns: '%s'" % reply)

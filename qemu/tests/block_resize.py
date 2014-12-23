@@ -33,6 +33,21 @@ def run(test, params, env):
                                   " deivce. The output of command"
                                   " is: %s" % output)
 
+    def compare_block_size(session, block_cmd, block_pattern):
+        """
+        Compare the current block size with the expected size.
+        """
+        global current_size
+        current_size = get_block_size(session,
+                                      block_size_cmd, block_size_pattern)
+        if (current_size <= block_size
+                and current_size >= block_size * (1 - accept_ratio)):
+            logging.info("Block Resizing Finished !!! \n"
+                         "Current size %s is same as the expected %s",
+                         current_size, block_size)
+            return True
+        return
+
     error.context("Check image size in guest", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -103,10 +118,12 @@ def run(test, params, env):
         if block_size > old_block_size and disk_update_cmd:
             session.cmd(disk_update_cmd[index])
 
-        current_size = get_block_size(session, block_size_cmd,
-                                      block_size_pattern)
-        if (current_size > block_size
-                or current_size < block_size * (1 - accept_ratio)):
+        global current_size
+        current_size = 0
+        if not utils_misc.wait_for(lambda: compare_block_size
+                                   (session, block_size_cmd,
+                                    block_size_pattern),
+                                   20, 0, 1, "Block Resizing"):
             raise error.TestFail("Guest reported a wrong disk size:\n"
                                  "    reported: %s\n"
                                  "    expect: %s\n" % (current_size,

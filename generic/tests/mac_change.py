@@ -31,7 +31,8 @@ def run(test, params, env):
     3) Set new mac in guest and regain new IP.
     4) Check guest new mac by qmp command.
     5) Re-log into guest with new MAC. (nettype != macvtap)
-    6) File transfer between host and guest. optional
+    6) Reboot guest and check the the mac address by monitor(optional).
+    7) File transfer between host and guest. optional
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -131,6 +132,18 @@ def run(test, params, env):
             session = vm.wait_for_login(timeout=timeout)
             if not session.is_responsive():
                 raise error.TestFail("The new session is not responsive.")
+            if params.get("reboot_vm_after_mac_changed") == "yes":
+                error.context("Reboot guest and check the the mac address by "
+                              "monitor", logging.info)
+                mac_check = new_mac
+                if os_type == "linux":
+                    nic = vm.virtnet[0]
+                    nic.mac = old_mac
+                    vm.virtnet.update_db()
+                    mac_check = old_mac
+
+                session = vm.reboot(session)
+                check_guest_mac(mac_check, vm)
             if params.get("file_transfer", "no") == "yes":
                 error.context("File transfer between host and guest.",
                               logging.info)

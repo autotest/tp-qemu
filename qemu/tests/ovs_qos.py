@@ -161,6 +161,9 @@ def run(test, params, env):
         client_path_linux = params.get("client_path", "/var/tmp")
         server_path_win = params.get("server_path_win", "c:\\")
         client_path_win = params.get("client_path_win", "c:\\")
+        compile_option_client = params.get("compile_option_client", "")
+        compile_option_server = params.get("compile_option_server", "")
+
         netperf_servers, netperf_clients = [], []
         for idx, (vm, info) in enumerate(__get_vminfo()):
             if idx % 2 == 0:
@@ -177,7 +180,8 @@ def run(test, params, env):
                                                      port=info[-2],
                                                      client=info[-3],
                                                      password=info[-4],
-                                                     username=info[-5])
+                                                     username=info[-5],
+                                                     compile_option=compile_option_server)
                 netperf_servers.append((server, vm))
                 continue
             else:
@@ -194,7 +198,8 @@ def run(test, params, env):
                                                      port=info[-2],
                                                      client=info[-3],
                                                      password=info[-4],
-                                                     username=info[-5])
+                                                     username=info[-5],
+                                                     compile_option=compile_option_client)
                 netperf_clients.append((client, vm))
                 continue
         return netperf_clients, netperf_servers

@@ -30,6 +30,8 @@ def run(test, params, env):
     shell_client = params.get("shell_client")
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
+    compile_option_client = params.get("compile_option_client", "")
+    compile_option_server = params.get("compile_option_server", "")
     host_ip = utils_net.get_host_ip_address(params)
 
     vms = params.get("vms")
@@ -141,7 +143,8 @@ def run(test, params, env):
                                                client=c_info["shell_client"],
                                                port=c_info["shell_port"],
                                                username=c_info["username"],
-                                               password=c_info["password"])
+                                               password=c_info["password"],
+                                               compile_option=compile_option_client)
         netperf_clients.append(n_client)
 
     for s_info in server_infos:
@@ -157,7 +160,8 @@ def run(test, params, env):
                                                client=s_info["shell_client"],
                                                port=s_info["shell_port"],
                                                username=s_info["username"],
-                                               password=s_info["password"])
+                                               password=s_info["password"],
+                                               compile_option=compile_option_server)
         netperf_servers.append(n_server)
 
     # Get range of message size.

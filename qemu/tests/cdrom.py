@@ -11,10 +11,11 @@ import re
 import time
 import os
 import sys
+import tempfile
 from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client.shared.syncdata import SyncData
-from virttest import utils_misc, aexpect
+from virttest import utils_misc, aexpect, gluster
 from virttest import env_process, data_dir, utils_test
 
 
@@ -115,13 +116,36 @@ def run(test, params, env):
         iso_image_dir = os.path.dirname(cdrom_cd)
         if file_size is None:
             file_size = 10
-
-        file_name = utils_misc.get_path(iso_image_dir, "%s.iso" % (name))
+        g_mount_point = tempfile.mkdtemp("gluster")
+        image_params = params.object_params(name)
+        if image_params.get("enable_gluster") == "yes":
+            if params.get("gluster_server"):
+                gluster_server = params.get("gluster_server")
+            else:
+                gluster_server = "localhost"
+            volume_name = params["gluster_volume_name"]
+            g_mount_link = "%s:/%s" % (gluster_server, volume_name)
+            mount_cmd = "mount -t glusterfs %s %s" % (g_mount_link, g_mount_point)
+            utils.system(mount_cmd, timeout=60)
+            file_name = os.path.join(g_mount_point, "%s.iso" % name)
+        else:
+            file_name = utils_misc.get_path(iso_image_dir, "%s.iso" % name)
         if prepare:
             cmd = "dd if=/dev/urandom of=%s bs=1M count=%d"
             utils.run(cmd % (name, file_size))
             utils.run("mkisofs -o %s %s" % (file_name, name))
             utils.run("rm -rf %s" % (name))
+        if image_params.get("enable_gluster") == "yes":
+            gluster_uri = gluster.create_gluster_uri(image_params)
+            file_name = "%s%s.iso" % (gluster_uri, name)
+            try:
+                umount_cmd = "umount %s" % g_mount_point
+                utils.system(umount_cmd, timeout=60)
+                os.rmdir(g_mount_point)
+            except Exception, err:
+                msg = "Fail to clean up %s" % g_mount_point
+                msg += "Error message %s" % err
+                logging.warn(msg)
         return file_name
 
     def cleanup_cdrom(path):
@@ -129,7 +153,28 @@ def run(test, params, env):
         if path:
             error.context("Cleaning up temp iso image '%s'" % path,
                           logging.info)
-            os.remove("%s" % path)
+            if "gluster" in path:
+                g_mount_point = tempfile.mkdtemp("gluster")
+                g_server, v_name, f_name = path.split("/")[-3:]
+                if ":" in g_server:
+                    g_server = g_server.split(":")[0]
+                g_mount_link = "%s:/%s" % (g_server, v_name)
+                mount_cmd = "mount -t glusterfs %s %s" % (g_mount_link,
+                                                          g_mount_point)
+                utils.system(mount_cmd, timeout=60)
+                path = os.path.join(g_mount_point, f_name)
+            try:
+                os.remove("%s" % path)
+            except OSError, err:
+                logging.warn("Fail to delete %s" % path)
+            try:
+                umount_cmd = "umount %s" % g_mount_point
+                utils.system(umount_cmd, timeout=60)
+                os.rmdir(g_mount_point)
+            except Exception, err:
+                msg = "Fail to clean up %s" % g_mount_point
+                msg += "Error message %s" % err
+                logging.warn(msg)
 
     def get_cdrom_file(vm, qemu_cdrom_device):
         """

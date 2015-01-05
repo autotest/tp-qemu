@@ -1,7 +1,7 @@
 import logging
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import remote, utils_misc, utils_test
+from virttest import remote, utils_misc, utils_test, utils_net
 
 
 @error.context_aware
@@ -9,127 +9,79 @@ def run(test, params, env):
     """
     Test Steps:
 
-    1. boot up guest with this option sndbuf=1048576,...
-    2. Transfer file between host and guest (by tcp,udp or both).
-    3. Run netperf_udp with burst, check the guest works well.
+    1. boot up guest with sndbuf=1048576 or other value.
+    2. Transfer file between host and guest.
+    3. Run netperf between host and guest.
+    4. During netperf testing, from an external host ping the host whitch
+       booting the guest.
 
     Params:
         :param test: QEMU test object.
         :param params: Dictionary with the test parameters.
         :param env: Dictionary with test environment.
     """
-    def env_setup(session):
-        """
-        Linux guest env setup, install udt, set env and iptables
-        """
-        cmd = ""
-        if session.cmd_status("which sendfile") or session.cmd_status("which recvfile"):
-            lib_path = "/usr/lib64"
-            if '64' not in params.get("vm_arch_name", 'x86_64') \
-                    or session.get_cmd_status("test -d %s", lib_path):
-                lib_path = "/usr/lib"
-            cmd = r"git clone %s udt-git && " % params.get("udt_url")
-            cmd += r"cd udt-git/udt4 && make && make install && "
-            cmd += r"cp -u src/*.so %s && " % lib_path
-            cmd += r"cp -u app/sendfile app/recvfile /usr/bin/ && "
-        cmd += r"iptables -I INPUT -p udp  -j ACCEPT && "
-        cmd += r"iptables -I OUTPUT -p udp -j ACCEPT "
-        status, output = session.cmd_status_output(cmd)
-        if status:
-            raise error.TestError("Setup udt on guest failed: '%s'" % output)
 
-    timeout = int(params.get("login_timeout", '360'))
-    transfer_timeout = int(params.get("transfer_timeout", '120'))
-    password = params.get("password")
-    username = params.get("username")
-    shell_port = params.get("shell_port")
-    prompt = params.get("shell_prompt", "[\#\$]")
-    client = params.get("shell_client")
-
-    tmp_dir = params.get("tmp_dir", "/tmp/")
-    host_file = (test.tmpdir + "tmp-%s" % utils_misc.generate_random_string(8))
-    src_file = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
-    dst_file = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))
-    data_port = params.get("data_port", "9000")
-    clean_cmd = params.get("clean_cmd", "rm -f")
-    filesize = int(params.get("filesize", '100'))
-    dd_cmd = params.get("dd_cmd", "dd if=/dev/urandom of=%s bs=1M count=%d")
-
-    sessions = []
-    addresses = []
-    vms = []
-
-    error.context("Init boot the vms")
-    for vm_name in params.get("vms", "vm1 vm2 vm3 vm4").split():
-        vms.append(env.get_vm(vm_name))
-    for vm in vms:
-        vm.verify_alive()
-        sessions.append(vm.wait_for_login(timeout=timeout))
-        addresses.append(vm.get_address())
-
-    if params.get("copy_protocol", ""):
-        logging.info("Creating %dMb file on host", filesize)
-        cmd = dd_cmd % (host_file, filesize)
-        utils.run(cmd)
-        orig_md5 = utils.hash_file(host_file, method="md5")
+    dst_ses = None
     try:
-        if "tcp" in params.get("copy_protocol", ""):
-            error.context("Transfer data from host to each guest")
-            for vm in vms:
-                error.context("Transfer data from host to guest %s via tcp" %
-                              vm.name, logging.info)
-                vm.copy_files_to(host_file, src_file, timeout=transfer_timeout)
-            for session in sessions:
-                output = session.cmd_output("md5sum %s" % src_file)
-                if orig_md5 not in output:
-                    msg = "Md5sum mismatch, Md5 for original file:%s" % orig_md5
-                    msg += "Md5sum command output in guest: %s" % output
-                    raise error.TestFail(msg)
+        error.context("Transfer file between host and guest", logging.info)
+        utils_test.run_file_transfer(test, params, env)
 
-            error.context("Transfer data from guest to host by tcp")
-            for vm in vms:
-                error.context("Transfer date from guest %s to host" % vm.name,
-                              logging.info)
-                vm.copy_files_from(src_file, host_file,
-                                   timeout=transfer_timeout)
+        dsthost = params.get("dsthost")
+        login_timeout = int(params.get("login_timeout", 360))
+        if dsthost:
+            params_host = params.object_params("dsthost")
+            dst_ses = remote.wait_for_login(params_host.get("shell_client"),
+                                            dsthost,
+                                            params_host.get("shell_port"),
+                                            params_host.get("username"),
+                                            params_host.get("password"),
+                                            params_host.get("shell_prompt"),
+                                            timeout=login_timeout)
+        else:
+            vm = env.get_vm(params["main_vm"])
+            vm.verify_alive()
+            dst_ses = vm.wait_for_login(timeout=login_timeout)
+            dsthost = vm.get_address()
 
-                current_md5 = utils.hash_file(host_file, method="md5")
-                if current_md5 != orig_md5:
-                    raise error.TestError("Md5sum mismatch, ori:cur - %s:%s" %
-                                          (orig_md5, current_md5))
+        bg_stress_test = params.get("background_stress_test", 'netperf_stress')
+        error.context("Run subtest %s between host and guest." % bg_stress_test,
+                      logging.info)
+        s_thread = ""
+        wait_time = float(params.get("wait_bg_time", 60))
+        bg_stress_run_flag = params.get("bg_stress_run_flag")
+        env[bg_stress_run_flag] = False
+        stress_thread = utils.InterruptedThread(
+            utils_test.run_virt_sub_test, (test, params, env),
+            {"sub_type": bg_stress_test})
+        stress_thread.start()
+        if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
+                                   wait_time, 0, 1,
+                                   "Wait %s test start" % bg_stress_test):
+            err = "Fail to start netperf test between guest and host"
+            raise error.TestError(err)
 
-        if "udp" in params.get("copy_protocol", ""):
-            # transfer data between guest
-            error.context("Transfer data between every guest by udp protocol")
-            if params.get("os_type") == "linux":
-                for session in sessions:
-                    env_setup(session)
+        ping_timeout = int(params.get("ping_timeout", 60))
+        host_ip = utils_net.get_host_ip_address(params)
+        txt = "Ping %s from %s during netperf testing" % (host_ip, dsthost)
+        error.context(txt, logging.info)
+        status, output = utils_test.ping(host_ip, session=dst_ses,
+                                         timeout=ping_timeout)
+        if status != 0:
+            raise error.TestFail("Ping returns non-zero value %s" % output)
 
-            for vm_src in addresses:
-                for vm_dst in addresses:
-                    if vm_src != vm_dst:
-                        error.context("Transferring data %s to %s" %
-                                      (vm_src, vm_dst), logging.info)
-                        remote.udp_copy_between_remotes(vm_src, vm_dst,
-                                                        shell_port,
-                                                        password, password,
-                                                        username, username,
-                                                        src_file, dst_file,
-                                                        client, prompt,
-                                                        data_port,
-                                                        timeout=1200)
-        # do netperf test:
-        sub_test = params.get("sub_test_name", 'netperf_udp')
-        for vm in vms:
-            params["main_vm"] = vm.name
-            error.context("Run subtest %s " % sub_test, logging.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type=sub_test)
-            vm.wait_for_login(timeout=timeout)
+        package_lost = utils_test.get_loss_ratio(output)
+        package_lost_ratio = float(params.get("package_lost_ratio", 5))
+        txt = "%s%% packeage lost when ping %s from %s." % (package_lost,
+                                                            host_ip,
+                                                            dsthost)
+        if package_lost > package_lost_ratio:
+            raise error.TestFail(txt)
+        logging.info(txt)
 
     finally:
-        utils.system("rm -rf %s " % host_file, ignore_status=True)
-        for session in sessions:
-            if session:
-                session.cmd("%s %s %s" % (clean_cmd, src_file, dst_file),
-                            ignore_all_errors=True)
-                session.close()
+        try:
+            stress_thread.join(60)
+        except Exception:
+            pass
+        if dst_ses:
+            dst_ses.close()

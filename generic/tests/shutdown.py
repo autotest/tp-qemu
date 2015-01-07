@@ -23,6 +23,7 @@ def run(test, params, env):
     shutdown_method = params.get("shutdown_method", "shell")
     sleep_time = float(params.get("sleep_before_powerdown", 10))
     shutdown_command = params.get("shutdown_command")
+    check_from_monitor = params.get("check_from_monitor", "no") == "yes"
 
     for i in xrange(shutdown_count):
         vm = env.get_vm(params["main_vm"])
@@ -59,8 +60,25 @@ def run(test, params, env):
             error.context("waiting VM to go down "
                           "(system_powerdown monitor cmd)", logging.info)
 
-        if not utils_misc.wait_for(vm.is_dead, 360, 0, 1):
+        if not vm.wait_for_shutdown(360):
             raise error.TestFail("Guest refuses to go down")
+
+        if check_from_monitor and params.get("disable_shutdown") == "yes":
+            check_failed = False
+            vm_status = vm.monitor.get_status()
+            if vm.monitor.protocol == "qmp":
+                if not vm_status['status'] != "shutdown":
+                    check_failed = True
+            else:
+                if not re.findall("paused\s+\(shutdown\)", vm_status):
+                    check_failed = True
+            if check_failed:
+                raise error.TestFail("Status check from monitor "
+                                     "is: %s" % str(vm_status))
+        if params.get("disable_shutdown") == "yes":
+            # Quit the qemu process
+            vm.destroy(gracefully=False)
+
         if i < shutdown_count - 1:
             session.close()
             env_process.preprocess_vm(test, params, env, params["main_vm"])

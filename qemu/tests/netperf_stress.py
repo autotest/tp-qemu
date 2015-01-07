@@ -171,11 +171,12 @@ def run(test, params, env):
         # Run netperf with message size defined in range.
         netperf_test_duration = int(params.get("netperf_test_duration", 60))
         netperf_para_sess = params.get("netperf_para_sessions", "1")
-        test_protocol = params.get("test_protocol", "TCP_STREAM")
+        test_protocols = params.get("test_protocols", "TCP_STREAM")
         netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
         netperf_output_unit = params.get("netperf_output_unit", " ")
         netperf_package_sizes = params.get("netperf_package_sizes")
-        test_option = "-t %s -l %s" % (test_protocol, netperf_test_duration)
+        test_option = params.get("test_option", "")
+        test_option += " -l %s" % netperf_test_duration
         if params.get("netperf_remote_cpu") == "yes":
             test_option += " -C"
         if params.get("netperf_local_cpu") == "yes":
@@ -186,30 +187,32 @@ def run(test, params, env):
         stop_time = start_time + netperf_test_duration
         num = 0
         s_len = len(server_infos)
-        for n_client in netperf_clients:
-            index = num % s_len
-            server_ip = server_infos[index]["ip"]
-            n_client.bg_start(server_ip, test_option,
-                              netperf_para_sess, netperf_cmd_prefix,
-                              package_sizes=netperf_package_sizes)
-            if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
-                                   "Wait netperf test start"):
-                logging.info("Netperf test start successfully.")
-            else:
-                raise error.TestError("Can not start netperf client.")
-            num += 1
-        # here when set a run flag, when other case call this case as a
-        # subprocess backgroundly, can set this run flag to False to stop
-        # the stress test.
-        env["netperf_run"] = True
-
-        for n_client in netperf_clients:
-            if n_client.is_netperf_running():
-                left_time = stop_time - time.time()
-                utils_misc.wait_for(lambda: not
-                                    n_client.is_netperf_running(),
-                                    left_time, 0, 5,
-                                    "Wait netperf test finish %ss" % left_time)
+        for protocol in test_protocols.split():
+            error.context("Testing %s protocol" % protocol, logging.info)
+            t_option = "%s -t %s" % (test_option, protocol)
+            for n_client in netperf_clients:
+                index = num % s_len
+                server_ip = server_infos[index]["ip"]
+                n_client.bg_start(server_ip, t_option,
+                                  netperf_para_sess, netperf_cmd_prefix,
+                                  package_sizes=netperf_package_sizes)
+                if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
+                                       "Wait netperf test start"):
+                    logging.info("Netperf test start successfully.")
+                else:
+                    raise error.TestError("Can not start netperf client.")
+                num += 1
+            # here when set a run flag, when other case call this case as a
+            # subprocess backgroundly, can set this run flag to False to stop
+            # the stress test.
+            env["netperf_run"] = True
+            for n_client in netperf_clients:
+                if n_client.is_netperf_running():
+                    left_time = stop_time - time.time()
+                    utils_misc.wait_for(lambda: not
+                                        n_client.is_netperf_running(),
+                                        left_time, 0, 5,
+                                        "Wait netperf test finish %ss" % left_time)
     finally:
         for n_server in netperf_servers:
             if n_server:

@@ -6,6 +6,7 @@ import time
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest import utils_misc, data_dir, utils_net
+from virttest import utils_test, env_process
 
 
 @error.context_aware
@@ -71,65 +72,33 @@ def run(test, params, env):
         except Exception:
             logging.warning("Could not stop firewall in guest")
 
-        netperf_links = params["netperf_links"].split()
-        remote_dir = params.get("remote_dir", "/var/tmp")
-        # netperf_links support multi links. In case we need apply patchs to
-        # netperf or need copy other files.
-        for netperf_link in netperf_links:
-            if utils.is_url(netperf_link):
-                download_dir = data_dir.get_download_dir()
-                netperf_link = utils.unmap_url_cache(download_dir,
-                                                     netperf_link)
-                netperf_dir = download_dir
-            elif netperf_link:
-                netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                                   netperf_link)
-            vm.copy_files_to(netperf_link, remote_dir)
-            utils.force_copy(netperf_link, remote_dir)
-
-        guest_ip = vm.get_address(0)
-        server_ip = utils_net.get_correspond_ip(guest_ip)
-
-        error.context("Setup and run netperf server in host and guest",
-                      logging.info)
-        session_serial.cmd(setup_cmd % remote_dir, timeout=200)
-        utils.run(setup_cmd % remote_dir, timeout=200)
-
         try:
-            session_serial.cmd(clean_cmd)
-        except Exception:
-            pass
-        session_serial.cmd(params.get("netserver_cmd") % remote_dir)
-
-        utils.run(clean_cmd, ignore_status=True)
-        utils.run(params.get("netserver_cmd") % remote_dir)
-        p_size = params.get("packet_size", "1500")
-        host_netperf_cmd = params.get("netperf_cmd") % (remote_dir,
-                                                        "TCP_STREAM",
-                                                        guest_ip,
-                                                        p_size)
-        guest_netperf_cmd = params.get("netperf_cmd") % (remote_dir,
-                                                         "TCP_STREAM",
-                                                         server_ip,
-                                                         p_size)
-        try:
-            error.context("Start heavy network load host <=> guest.",
+            bg_stress_test = params.get("background_stress_test", 'netperf_stress')
+            error.context("Run subtest %s between host and guest." % bg_stress_test,
                           logging.info)
-            session_serial.sendline(guest_netperf_cmd)
-            utils.BgJob(host_netperf_cmd)
+            stress_thread = None
+            wait_time = int(params.get("wait_bg_time", 60))
+            bg_stress_run_flag = params.get("bg_stress_run_flag")
+            vm_wait_time = int(params.get("wait_before_kill_vm"))
+            env[bg_stress_run_flag] = False
+            stress_thread = utils.InterruptedThread(
+                utils_test.run_virt_sub_test, (test, params, env),
+                {"sub_type": bg_stress_test})
+            stress_thread.start()
+            if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
+                                       wait_time, 0, 1,
+                                       "Wait %s test start" % bg_stress_test):
+                err = "Fail to start netperf test between guest and host"
+                raise error.TestError(err)
 
-            # Wait for create big network usage.
-            time.sleep(10)
+            logging.info("Sleep %ss before killing the VM", vm_wait_time)
+            time.sleep(vm_wait_time)
             msg = "During netperf running, Check that we can kill VM with signal 0"
             error.context(msg, logging.info)
             kill_and_check(vm)
-
         finally:
-            error.context("Clean up netperf server in host and guest.",
-                          logging.info)
-            utils.run(clean_cmd, ignore_status=True)
             try:
-                session_serial.cmd(clean_cmd)
+                stress_thread.join(60)
             except Exception:
                 pass
 
@@ -166,3 +135,7 @@ def run(test, params, env):
         netdriver_kill_problem(session_serial)
     elif mode == "load":
         netload_kill_problem(session_serial)
+    env_process.preprocess_vm(test, params, env, params["main_vm"])
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
+    vm.wait_for_login(timeout=login_timeout)

@@ -19,18 +19,20 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
-    reboot = params.get("reboot", "no")
+    reboot = params.get("reboot", "no") == "yes"
+    serial_login = params.get("serial_login", "no") == "yes"
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    if params.get("serial_login") == "yes":
+    if serial_login:
         session = vm.wait_for_serial_login(timeout=login_timeout)
     else:
         session = vm.wait_for_login(timeout=login_timeout)
 
-    if reboot == "yes":
+    if reboot:
         logging.debug("Rebooting guest before test ...")
-        session = vm.reboot(session, timeout=login_timeout)
+        session = vm.reboot(session, timeout=login_timeout,
+                            serial=serial_login)
 
     try:
         logging.info("Starting script...")
@@ -75,9 +77,10 @@ def run(test, params, env):
         finally:
             logging.info("------------ End of script output ------------")
 
-        if reboot == "yes":
+        if reboot:
             logging.debug("Rebooting guest after test ...")
-            session = vm.reboot(session, timeout=login_timeout)
+            session = vm.reboot(session, timeout=login_timeout,
+                                serial=serial_login)
 
         logging.debug("guest test PASSED.")
     finally:

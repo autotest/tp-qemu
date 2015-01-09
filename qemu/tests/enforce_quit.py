@@ -21,6 +21,7 @@ def run(test, params, env):
     host_cpumodel = utils_misc.get_host_cpu_models()
     host_flags = utils_misc.get_cpu_flags()
     extra_flags = params.get("cpu_model_flags", " ")
+    no_check_flags = params.get("no_check_flags", " ").split()
 
     lack_flags = []
     flags = re.findall("\+(\w+)", extra_flags)
@@ -29,10 +30,11 @@ def run(test, params, env):
             lack_flags.append(flag)
     force_quit = False
     # force quit if flag is not no host
+    lack_flags = list(set(lack_flags) - set(no_check_flags))
     if lack_flags:
         force_quit = True
     # force quit if 'svm' is added
-    if "svm" in extra_flags:
+    if "+svm" in extra_flags:
         force_quit = True
     # force quit if guest cpu is not included in host cpu cluster
     if guest_cpumodel not in host_cpumodel and guest_cpumodel != "host":

@@ -114,7 +114,7 @@ def run(test, params, env):
     session_list = []
     vms = params["vms"].split()
     timeout = float(params.get("login_timeout", 360))
-    mac_ip_filter = params["mac_ip_filter"]
+    int_mac_ip_filter = params["interface_mac_ip_filter"]
     strict_check = params.get("strick_check", "no")
     host_ip = utils_net.get_ip_address_by_interface(params.get("netdst"))
     host_ip = params.get("srchost", host_ip)
@@ -138,7 +138,7 @@ def run(test, params, env):
                 err_msg = "Can not get ip from guest."
                 err_msg += " Cmd '%s' fail with output: %s" % (cmd, output)
                 logging.error(err_msg)
-            ips = re.findall(mac_ip_filter, output, re.S)
+            ips = re.findall(int_mac_ip_filter, output, re.S)
             if count_nics == len(ips):
                 break
             time.sleep(2)

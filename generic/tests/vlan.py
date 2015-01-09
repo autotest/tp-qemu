@@ -227,10 +227,11 @@ def run(test, params, env):
 
     # Plumb/unplumb maximal number of vlan interfaces
     if params.get("do_maximal_test", "no") == "yes":
+        bound = maximal + 1
         try:
             error.base_context("Vlan scalability test")
             error.context("Testing the plumb of vlan interface", logging.info)
-            for vlan_index in range(1, maximal + 1):
+            for vlan_index in range(1, bound):
                 add_vlan(sessions[0], vlan_index, ifname[0], cmd_type)
                 vlan_added = vlan_index
             if vlan_added != maximal:
@@ -239,6 +240,16 @@ def run(test, params, env):
             for vlan_index in range(1, vlan_added + 1):
                 if rem_vlan(sessions[0], vlan_index, ifname[0], cmd_type):
                     logging.error("Remove vlan %s failed" % vlan_index)
+
+        error.base_context("Vlan negative test")
+        error.context("Create vlan with ID %s in guest" % bound, logging.info)
+        try:
+            add_vlan(sessions[0], bound, ifname[0], cmd_type)
+            raise error.TestFail("Maximal ID allow to vlan is %s" % maximal)
+        except aexpect.ShellCmdError, detail:
+            pattern = params["msg_pattern"]
+            if not re.search(pattern, detail.output, re.M | re.I):
+                raise
 
     sessions.extend(session_ctl)
     for sess in sessions:

@@ -1,4 +1,5 @@
 import logging
+import time
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import remote, aexpect
@@ -154,6 +155,7 @@ def run(test, params, env):
 
         """
         vm.set_link(linkid, up=link_up)
+        time.sleep(1)
         error.context("Check guest interface operstate", logging.info)
         if operstate_always_up:
             if expect_status == "down":

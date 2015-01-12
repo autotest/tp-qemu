@@ -4,7 +4,12 @@ import time
 import os
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import remote, data_dir, utils_net, aexpect
+from virttest import remote
+from virttest import data_dir
+from virttest import utils_net
+from virttest import aexpect
+from virttest import utils_test
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -23,9 +28,13 @@ def run(test, params, env):
 
     login_timeout = float(params.get("login_timeout", 360))
     error.context("Init the VM, and try to login", logging.info)
+    external_host = params.get("external_host")
+    if not external_host:
+        get_host_cmd = "ip route | awk '/default/ {print $3}'"
+        external_host = utils.system_output(get_host_cmd)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login()
+    session = vm.wait_for_login(timeout=login_timeout)
 
     error.context("Pktgen server environment prepare", logging.info)
     # pktgen server only support linux, since pktgen is a linux kernel module
@@ -91,10 +100,24 @@ def run(test, params, env):
 
         # using ping to kill the pktgen stress
         except aexpect.ShellTimeoutError:
-            session.cmd("ping pktgen_ip")
+            session.cmd("ping %s" % pktgen_ip, ignore_all_errors=True)
     finally:
         env["pktgen_run"] = False
 
+    error.context("Verify Host and guest kernel no error and call trace",
+                  logging.info)
+    vm.verify_kernel_crash()
+    utils_misc.verify_host_dmesg()
+
+    error.context("Ping external host after pktgen test", logging.info)
+    status, output = utils_test.ping(dest=external_host, session=session,
+                                     timeout=240, count=20)
+    loss_ratio = utils_test.get_loss_ratio(output)
+    if (loss_ratio > int(params.get("packet_lost_ratio", 5))
+            or loss_ratio == -1):
+        logging.debug("Ping %s output: %s" % (external_host, output))
+        raise error.TestFail("Guest network connction unusable," +
+                             "packet lost ratio is '%%%d'" % loss_ratio)
     if server_session:
         server_session.close()
     if session:

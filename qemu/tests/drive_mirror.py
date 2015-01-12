@@ -133,12 +133,6 @@ class DriveMirror(block_copy.BlockCopy):
             raise error.TestFail("Wait mirroring job ready "
                                  "timeout in %ss" % timeout)
 
-    def action_before_start(self):
-        """
-        run steps before job in steady status;
-        """
-        return self.do_steps("before_start")
-
     def action_before_steady(self):
         """
         run steps before job in steady status;

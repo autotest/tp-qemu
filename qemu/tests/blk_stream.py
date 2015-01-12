@@ -79,12 +79,6 @@ class BlockStream(block_copy.BlockCopy):
             raise error.TestFail("Job not finished in %s seconds" % timeout)
         logging.info("Block stream job done.")
 
-    def action_before_start(self):
-        """
-        run steps before streaming start;
-        """
-        return self.do_steps("before_start")
-
     def action_when_streaming(self):
         """
         run steps when job in steaming;

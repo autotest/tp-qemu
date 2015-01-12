@@ -244,6 +244,18 @@ class BlockCopy(object):
         except AttributeError:
             logging.warn("No backingfile found, cmd output: %s" % info)
 
+    def action_before_start(self):
+        """
+        run steps before job in steady status;
+        """
+        return self.do_steps("before_start")
+
+    def action_before_cleanup(self):
+        """
+        run steps before job in steady status;
+        """
+        return self.do_steps("before_cleanup")
+
     def clean(self):
         """
         close opening connections and clean trash files;

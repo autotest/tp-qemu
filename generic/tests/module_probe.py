@@ -14,12 +14,30 @@ def run(test, params, env):
                                                     'module_probe',
                                                     test, params)
     logging.debug('installer object: %r', installer_object)
+    submodules = []
+    modules_str = " "
+    for module in installer_object.module_list:
+        if " %s " % module in modules_str:
+            continue
+        tmp_list = [module]
+        if utils.module_is_loaded(module):
+            tmp_list += utils.get_submodules(module)
+        modules_str += "%s " % " ".join(tmp_list)
+        if len(tmp_list) > 1:
+            for _ in submodules:
+                if _[0] in tmp_list:
+                    submodules.remove(_)
+                    break
+        submodules.append(tmp_list)
 
-    # unload the modules before starting:
-    installer_object.unload_modules()
+    installer_object.module_list = []
+    for submodule_list in submodules:
+        installer_object.module_list += submodule_list
 
     load_count = int(params.get("load_count", 100))
     try:
+        # unload the modules before starting:
+        installer_object.unload_modules()
         for _ in range(load_count):
             try:
                 installer_object.load_modules()

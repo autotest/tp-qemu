@@ -34,15 +34,15 @@ def run(test, params, env):
     netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
                                        params.get("netperf_link"))
     md5sum = params.get("pkg_md5sum")
-    netperf_link_win = params.get("netperf_link_win")
-    if netperf_link_win:
-        netperf_link_win = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                               netperf_link_win)
-    netperf_md5sum_win = params.get("netperf_md5sum_win")
-    netperf_server_link = params.get("netperf_server_link", netperf_link)
-    server_md5sum = params.get("server_md5sum", md5sum)
-    netperf_server_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                              netperf_server_link)
+    netperf_server_link = params.get("netperf_server_link_win")
+    if netperf_server_link:
+        netperf_server_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
+                                                  netperf_server_link)
+    server_md5sum_win = params.get("server_md5sum")
+    netperf_client_link = params.get("netperf_client_link_win", netperf_link)
+    client_md5sum_win = params.get("client_md5sum", md5sum)
+    netperf_client_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
+                                              netperf_client_link)
     server_path = params.get("server_path", "/var/tmp/")
     client_path = params.get("client_path", "/var/tmp/")
     server_path_win = params.get("server_path_win")
@@ -50,7 +50,7 @@ def run(test, params, env):
 
     username = params.get("username", "root")
     password = params.get("password", "redhat")
-    passwd = params.get("hostpasswd", "redhat")
+    passwd = params.get("hostpassword", "redhat")
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
     compile_option_client_h = params.get("compile_option_client_h", "")
@@ -60,15 +60,19 @@ def run(test, params, env):
     if params.get("os_type") == "linux":
         session.cmd("iptables -F", ignore_all_errors=True)
         g_client_link = netperf_link
+        g_server_link = netperf_link
         g_server_path = server_path
         g_client_path = client_path
         g_client_install = False
+        g_server_md5sum = md5sum
+        g_client_md5sum = md5sum
     elif params.get("os_type") == "windows":
-        g_client_link = netperf_link_win
+        g_client_link = netperf_client_link
+        g_server_link = netperf_server_link
         g_server_path = server_path_win
         g_client_path = client_path_win
-        md5sum = netperf_md5sum_win
-        g_client_install = True
+        g_server_md5sum = server_md5sum_win
+        g_client_md5sum = client_md5sum_win
     netperf_client_g = None
     netperf_client_h = None
     netperf_server_g = None
@@ -76,17 +80,16 @@ def run(test, params, env):
     try:
         netperf_client_g = utils_netperf.NetperfClient(guest_address,
                                                        g_client_path,
-                                                       md5sum,
+                                                       g_client_md5sum,
                                                        g_client_link,
                                                        client=client,
                                                        port=port,
                                                        username=username,
                                                        password=password,
-                                                       install=g_client_install,
                                                        compile_option=compile_option_client_g)
         netperf_server_h = utils_netperf.NetperfServer(remote_ip,
                                                        server_path,
-                                                       server_md5sum,
+                                                       md5sum,
                                                        netperf_link,
                                                        password=passwd,
                                                        install=False,
@@ -97,8 +100,8 @@ def run(test, params, env):
                                                        compile_option=compile_option_client_h)
         netperf_server_g = utils_netperf.NetperfServer(guest_address,
                                                        g_server_path,
-                                                       server_md5sum,
-                                                       netperf_server_link,
+                                                       g_server_md5sum,
+                                                       g_server_link,
                                                        client=client,
                                                        port=port,
                                                        username=username,

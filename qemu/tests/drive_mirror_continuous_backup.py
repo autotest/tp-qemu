@@ -1,6 +1,7 @@
 import logging
 import time
 from autotest.client.shared import error
+from autotest.client.shared import utils
 from virttest import qemu_storage, data_dir
 from qemu.tests import drive_mirror
 
@@ -22,16 +23,21 @@ def run(test, params, env):
     try:
         source_image = mirror_test.get_image_file()
         target_image = mirror_test.get_target_image()
+        error.context("start mirror block device", logging.info)
         mirror_test.start()
+        error.context("Wait mirror job in steady status", logging.info)
         mirror_test.wait_for_steady()
-        error.context("Testing continuous backup")
+        error.context("Testing continuous backup", logging.info)
         session = mirror_test.get_session()
+        error.context("Continuous create file in guest", logging.info)
         session.cmd("cd %s" % tmp_dir)
         for fn in range(0, 128):
             session.cmd(dd_cmd % fn)
-        time.sleep(10)
+        error.context("pause vm and sync host cache", logging.info)
+        time.sleep(3)
         mirror_test.vm.pause()
-        time.sleep(5)
+        utils.system("sync")
+        time.sleep(3)
         error.context("Compare original and backup images", logging.info)
         qemu_img.compare_images(source_image, target_image)
         mirror_test.vm.resume()

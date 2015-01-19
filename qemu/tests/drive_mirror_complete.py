@@ -39,8 +39,9 @@ def run(test, params, env):
             device_id = mirror_test.vm.get_block({"file": target_image})
             if device_id != mirror_test.device:
                 raise error.TestError("Mirrored image not being used by guest")
-        error.context("Compare fully mirrored images", logging.info)
-        qemu_img.compare_images(source_image, target_image)
+        else:
+            error.context("Compare fully mirrored images", logging.info)
+            qemu_img.compare_images(source_image, target_image)
         mirror_test.vm.resume()
         mirror_test.vm.destroy()
         if params.get("boot_target_image", "no") == "yes":

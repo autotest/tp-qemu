@@ -114,7 +114,7 @@ def run(test, params, env):
     session_list = []
     vms = params["vms"].split()
     timeout = float(params.get("login_timeout", 360))
-    int_mac_ip_filter = params["interface_mac_ip_filter"]
+    int_ip_filter = params["interface_ip_filter"]
     strict_check = params.get("strick_check", "no")
     host_ip = utils_net.get_ip_address_by_interface(params.get("netdst"))
     host_ip = params.get("srchost", host_ip)
@@ -138,7 +138,7 @@ def run(test, params, env):
                 err_msg = "Can not get ip from guest."
                 err_msg += " Cmd '%s' fail with output: %s" % (cmd, output)
                 logging.error(err_msg)
-            ips = re.findall(int_mac_ip_filter, output, re.S)
+            ips = re.findall(int_ip_filter, output, re.S)
             if count_nics == len(ips):
                 break
             time.sleep(2)
@@ -154,17 +154,17 @@ def run(test, params, env):
     for src_ip_index in range(ip_list_len):
         error.context("Ping test from guest to host", logging.info)
         src_ip_info = ip_list[src_ip_index]
-        ping(src_ip_info[3], src_ip_info[0], host_ip, strict_check,
+        ping(src_ip_info[2], src_ip_info[0], host_ip, strict_check,
              flood_minutes)
         error.context("File transfer test between guest and host",
                       logging.info)
-        file_transfer(src_ip_info[3], src_ip_info[2], host_ip)
+        file_transfer(src_ip_info[2], src_ip_info[1], host_ip)
         for dst_ip in ip_list[src_ip_index:]:
-            txt = "Ping test between %s and %s" % (src_ip_info[2], dst_ip[2])
+            txt = "Ping test between %s and %s" % (src_ip_info[1], dst_ip[1])
             error.context(txt, logging.info)
-            ping(src_ip_info[3], src_ip_info[0], dst_ip[2], strict_check,
+            ping(src_ip_info[2], src_ip_info[0], dst_ip[1], strict_check,
                  flood_minutes)
-            txt = "File transfer test between %s " % src_ip_info[2]
-            txt += "and %s" % dst_ip[2]
+            txt = "File transfer test between %s " % src_ip_info[1]
+            txt += "and %s" % dst_ip[1]
             error.context(txt, logging.info)
-            file_transfer(src_ip_info[3], src_ip_info[2], dst_ip[2])
+            file_transfer(src_ip_info[2], src_ip_info[1], dst_ip[1])

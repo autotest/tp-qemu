@@ -20,7 +20,7 @@ class EnospcConfig(object):
         self.__dict__ = self.__shared_state
         root_dir = test.bindir
         self.tmpdir = test.tmpdir
-        self.qemu_img_binary = utils_misc.get_qemu_img_binary(self.params)
+        self.qemu_img_binary = utils_misc.get_qemu_img_binary(params)
         self.raw_file_path = os.path.join(self.tmpdir, 'enospc.raw')
         # Here we're trying to choose fairly explanatory names so it's less
         # likely that we run in conflict with other devices in the system

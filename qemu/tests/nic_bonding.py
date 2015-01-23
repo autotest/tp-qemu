@@ -47,7 +47,7 @@ def run(test, params, env):
     except aexpect.ShellCmdError:
         logging.info("it's safe to run dhclient now")
     else:
-        logging.info("dhclient already is running,kill it")
+        logging.info("dhclient is already running, kill it")
         session_serial.cmd_output_safe("killall -9 dhclient")
         time.sleep(1)
 
@@ -73,6 +73,32 @@ def run(test, params, env):
                     time.sleep(random.randint(1, 30))
                     vm.set_link(device_id, up=True)
                     time.sleep(random.randint(1, 30))
+        except Exception:
+            transfer_thread.join(suppress_exception=True)
+            raise
+        else:
+            transfer_thread.join()
+
+        logging.info("Failover test 2 with file transfer")
+        transfer_thread = utils.InterruptedThread(utils_test.run_file_transfer,
+                                                  (test, params, env))
+        transfer_thread.start()
+        try:
+            nic_num = len(vm.virtnet)
+            up_index = 0
+            while transfer_thread.isAlive():
+                up_index = up_index % nic_num
+                for num in xrange(nic_num):
+                    device_id = vm.virtnet[num].device_id
+                    if not device_id:
+                        raise error.TestError("Could not find peer device for"
+                                              " nic device %s" % nic)
+                    if num == up_index:
+                        vm.set_link(device_id, up=True)
+                    else:
+                        vm.set_link(device_id, up=False)
+                time.sleep(random.randint(1, 5))
+                up_index += 1
         except Exception:
             transfer_thread.join(suppress_exception=True)
             raise

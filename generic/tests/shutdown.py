@@ -2,7 +2,7 @@ import time
 import logging
 import re
 from autotest.client.shared import error
-from virttest import utils_misc, env_process
+from virttest import env_process
 
 
 @error.context_aware
@@ -28,7 +28,11 @@ def run(test, params, env):
     for i in xrange(shutdown_count):
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
-        session = vm.wait_for_login(timeout=timeout)
+        if len(vm.virtnet) > 0:
+            session = vm.wait_for_login(timeout=timeout)
+        else:
+            session = vm.wait_for_serial_login(timeout=timeout)
+
         error.base_context("shutting down the VM %s/%s" % (i + 1,
                                                            shutdown_count),
                            logging.info)

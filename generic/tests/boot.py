@@ -18,16 +18,27 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
+    def login(vm, timeout):
+        serial = False
+        if len(vm.virtnet) > 0:
+            session = vm.wait_for_login(timeout=timeout)
+        else:
+            session = vm.wait_for_serial_login(timeout=timeout)
+            serial = True
+        return (session, serial)
+
     timeout = float(params.get("login_timeout", 240))
     vms = env.get_all_vms()
     for vm in vms:
         error.context("Try to log into guest '%s'." % vm.name, logging.info)
-        session = vm.wait_for_login(timeout=timeout)
+        session, serial = login(vm, timeout)
+        if serial:
+            logging.warn("VM login via serial port")
         session.close()
 
     if params.get("rh_perf_envsetup_script"):
         for vm in vms:
-            session = vm.wait_for_login(timeout=timeout)
+            session = login(vm, timeout)[0]
             utils_test.service_setup(vm, session, test.virtdir)
             session.close()
     if params.get("reboot_method"):
@@ -36,10 +47,10 @@ def run(test, params, env):
             if params["reboot_method"] == "system_reset":
                 time.sleep(int(params.get("sleep_before_reset", 10)))
             # Reboot the VM
-            session = vm.wait_for_login(timeout=timeout)
+            session, serial = login(vm, timeout)
             for i in range(int(params.get("reboot_count", 1))):
                 session = vm.reboot(session,
                                     params["reboot_method"],
                                     0,
-                                    timeout)
+                                    timeout, serial=serial)
             session.close()

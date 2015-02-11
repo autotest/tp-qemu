@@ -40,8 +40,8 @@ def run(test, params, env):
         :return: string of ovs port mirror command.
         """
         cmd = ["ovs-vsctl set Bridge %s mirrors=@m " % netdst]
-        fun = lambda x: "-- --id=@%s get Port %s " % (x, x)
-        cmd += map(fun, [mirror_port, target_port])
+        cmd += map(lambda x: "-- --id=@%s get Port %s " % (x, x),
+                   [mirror_port, target_port])
         if direction == "input":
             cmd.append(
                 "-- --id=@m create Mirror name=input_of_%s" %

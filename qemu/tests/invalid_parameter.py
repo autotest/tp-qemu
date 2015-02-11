@@ -22,10 +22,12 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.destroy()
-        raise error.TestFail("Guest start normally, didn't quit as expect.")
     except Exception, emsg:
         error.context("Check guest exit status.")
         if "(core dumped)" in emsg.reason:
             raise error.TestFail("Guest core dumped with invalid parameters.")
         else:
             logging.info("Guest quit as expect: %s" % emsg.reason)
+            return
+
+    raise error.TestFail("Guest start normally, didn't quit as expect.")

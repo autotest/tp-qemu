@@ -42,7 +42,7 @@ def run(test, params, env):
                     ignore_all_errors=True)
     if params.get("need_reboot", "") == "yes":
         session = vm.reboot()
-    error.context("verify ballon device driver", logging.info)
+    error.context("verify balloon device driver", logging.info)
     driver_verifier_cmd = params.get("driver_verifier_cmd")
     output = session.cmd_output(driver_verifier_cmd, timeout=timeout)
     driver_name = params["driver_name"]
@@ -73,13 +73,13 @@ def run(test, params, env):
     step = start
     while repeat_times:
         for memory in xrange(start, end, step):
-            logging.debug("ballon vm mem to: %s B" % memory)
+            logging.debug("balloon vm mem to: %s B" % memory)
             vm.monitor.send_args_cmd("balloon value=%s" % memory)
-            vm.monitor.query("ballon")
-            logging.debug("ballon vm mem to: %s B" % memory)
+            vm.monitor.query("balloon")
+            logging.debug("balloon vm mem to: %s B" % memory)
             memory = end - memory
             vm.monitor.send_args_cmd("balloon value=%s" % memory)
-            vm.monitor.query("ballon")
+            vm.monitor.query("balloon")
         repeat_times -= 1
     error.context("verify guest still alive", logging.info)
     session.cmd(params["stop_player_cmd"])

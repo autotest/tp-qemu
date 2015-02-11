@@ -105,12 +105,12 @@ def test(path):
     print vio.read()
 
 if __name__ == "__main__":
-    ## ************************************************************************
+    # ************************************************************************
     # This scripts only used for transferring file from host to guest.
     # You need to run python serial-host-send.py in host.
     # The scripts need to use device name.
     # eg -device virtserialport,chardev=xxx,name=vport1,id=port2 in command,
     # then you need run python VirtIoChannel_guest_recieve.py vport1.
-    ## ************************************************************************
+    # ************************************************************************
 
     test(sys.argv[1])

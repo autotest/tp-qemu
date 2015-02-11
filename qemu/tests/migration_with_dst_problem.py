@@ -546,9 +546,8 @@ def run(test, params, env):
             if params.get("kill_vm") == "yes":
                 if self.vm_guest.is_alive():
                     self.vm_guest.destroy()
-                    finished = lambda: self.vm_guest.is_dead()
-                    utils_misc.wait_for(finished, 30, 2, 2,
-                                        "Waiting for dying of guest.")
+                    utils_misc.wait_for(lambda: self.vm_guest.is_dead(), 30,
+                                        2, 2, "Waiting for dying of guest.")
                 qemu_img = qemu_storage.QemuImg(self.image2_vm_guest_params,
                                                 mount_path,
                                                 None)

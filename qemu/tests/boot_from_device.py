@@ -77,9 +77,9 @@ def run(test, params, env):
 
         logging.info("Wait for display and check boot info.")
         infos = boot_fail_info.split(';')
-        f = lambda: re.search(infos[0],
-                              vm.serial_console.get_stripped_output())
-        utils_misc.wait_for(f, timeout, 1)
+        serial_output = vm.serial_console.get_stripped_output()
+        utils_misc.wait_for(lambda: re.search(infos[0],
+                                              serial_output), timeout, 1)
 
         logging.info("Try to boot from '%s'" % device_name)
         try:
@@ -125,9 +125,10 @@ def run(test, params, env):
     boot_device = params.get("boot_device")
 
     if boot_device:
-        f = lambda: re.search(boot_menu_hint,
-                              vm.serial_console.get_stripped_output())
-        if not utils_misc.wait_for(f, timeout, 1):
+        serial_output = vm.serial_console.get_stripped_output()
+        if not utils_misc.wait_for(lambda:
+                                   re.search(boot_menu_hint, serial_output),
+                                   timeout, 1):
             cleanup(dev_name)
             raise error.TestFail("Could not get boot menu message. "
                                  "Excepted Result: '%s'" % boot_menu_hint)

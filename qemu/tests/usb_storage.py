@@ -33,9 +33,16 @@ def run(test, params, env):
         :param search_opt: Search option for re module.
         """
         def _compare_str(act, exp, ignore_case):
-            str_func = lambda x: x
+            def str_func_1(x):
+                return x
+
+            def str_func_2(x):
+                return x.lower()
+
+            str_func = str_func_1
             if ignore_case:
-                str_func = lambda x: x.lower()
+                str_func = str_func_2
+
             if str_func(act) != str_func(exp):
                 return ("Expected: '%s', Actual: '%s'" %
                         (str_func(exp), str_func(act)))

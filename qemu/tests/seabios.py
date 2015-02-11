@@ -41,10 +41,15 @@ def run(test, params, env):
 
     seabios_session = vm.logsessions['seabios']
 
+    def boot_menu():
+        return re.search(boot_menu_hint, get_output(seabios_session))
+
     if sgabios_info:
         error.context("Display and check the SGABIOS info", logging.info)
-        info_check = lambda: re.search(sgabios_info,
-                                       get_output(vm.serial_console))
+
+        def info_check():
+            return re.search(sgabios_info,
+                             get_output(vm.serial_console))
 
         if not utils_misc.wait_for(info_check, timeout, 1):
             err_msg = "Cound not get sgabios message. The output"
@@ -53,8 +58,7 @@ def run(test, params, env):
 
     if restart_key:
         error.context("Restart vm and check it's ok", logging.info)
-        boot_menu = lambda: re.search(boot_menu_hint,
-                                      get_output(seabios_session))
+
         if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
             raise error.TestFail("Could not get boot menu message.")
 
@@ -63,22 +67,24 @@ def run(test, params, env):
         headline_count = seabios_text.count(headline)
 
         vm.send_key(restart_key)
-        reboot_check = lambda: (get_output(seabios_session).count(headline)
-                                > headline_count)
+
+        def reboot_check():
+            return get_output(seabios_session).count(headline) > headline_count
 
         if not utils_misc.wait_for(reboot_check, timeout, 1):
             raise error.TestFail("Could not restart the vm")
 
     error.context("Display and check the boot menu order", logging.info)
-    boot_menu = lambda: re.search(boot_menu_hint, get_output(seabios_session))
+
     if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
         raise error.TestFail("Could not get boot menu message.")
 
     # Send boot menu key in monitor.
     vm.send_key(boot_menu_key)
 
-    get_list = lambda: re.findall("^\d+\. (.*)\s",
-                                  get_output(seabios_session), re.M)
+    def get_list():
+        return re.findall("^\d+\. (.*)\s", get_output(seabios_session), re.M)
+
     boot_list = utils_misc.wait_for(get_list, timeout, 1)
 
     if not boot_list:

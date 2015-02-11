@@ -139,8 +139,10 @@ def run(test, params, env):
         vm.resume()
 
         timeout = float(params.get("login_timeout", 240))
-        f = lambda: re.search("==END TEST==", vm.serial_console.get_output())
-        if not utils_misc.wait_for(f, timeout, 1):
+        if not utils_misc.wait_for(lambda:
+                                   re.search("==END TEST==",
+                                             vm.serial_console.get_output()),
+                                   timeout, 1):
             raise error.TestFail("Could not get test complete message.")
 
         test_output = parse_cpuid_dump(vm.serial_console.get_output())

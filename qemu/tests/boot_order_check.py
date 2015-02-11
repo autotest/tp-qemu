@@ -78,10 +78,9 @@ def run(test, params, env):
         output = vm.serial_console.get_stripped_output()
         session_serial.close()
     else:
-        f = lambda: re.search("No bootable device.",
-                              vm.serial_console.get_stripped_output())
-        utils_misc.wait_for(f, timeout, 1)
-
+        output = vm.serial_console.get_stripped_output()
+        utils_misc.wait_for(lambda: re.search("No bootable device.", output),
+                            timeout, 1)
         output = vm.serial_console.get_stripped_output()
 
     # find and replace some ascii characters to non-ascii char,

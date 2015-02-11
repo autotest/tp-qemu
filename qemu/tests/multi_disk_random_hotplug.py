@@ -327,13 +327,17 @@ def run(test, params, env):
             thread.join()
         logging.debug("All threads finished.")
 
+    def verify_qtree_unsupported(params, info_qtree, info_block, proc_scsi,
+                                 qdev):
+        return logging.warn("info qtree not supported. Can't verify qtree vs. "
+                            "guest disks.")
+
     vm = env.get_vm(params['main_vm'])
     qdev = vm.devices
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
     if "unknown command" in str(out):
-        msg = "info qtree not supported. Can't verify qtree vs. guest disks."
-        verify_qtree = lambda _1, _2, _3: logging.warn(msg)
+        verify_qtree = verify_qtree_unsupported
 
     stg_image_name = params['stg_image_name']
     if not stg_image_name[0] == "/":

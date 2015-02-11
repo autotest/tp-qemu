@@ -602,11 +602,11 @@ def run(test, params, env):
             self.session.get_command_output("umount %s" % guest_cdrom_device)
             if params.get('cdrom_test_autounlock') == 'yes':
                 error.context("Trying to unlock the cdrom", logging.info)
-                _f = lambda: not vm.check_block_locked(qemu_cdrom_device)
-                if not utils_misc.wait_for(_f, 300):
+                if not utils_misc.wait_for(lambda: not
+                                           vm.check_block_locked(qemu_cdrom_device),
+                                           300):
                     raise error.TestFail("Device %s could not be"
                                          " unlocked" % (qemu_cdrom_device))
-                del _f
 
             max_test_times = int(params.get("cdrom_max_test_times", 100))
             if params.get("cdrom_test_eject") == "yes":

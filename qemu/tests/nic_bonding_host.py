@@ -33,13 +33,17 @@ def run(test, params, env):
     remote_host = params.get("dsthost")
     ping_timeout = int(params.get("ping_timeout", 240))
     bonding_timeout = int(params.get("bonding_timeout", 1))
+    bonding_mode = params.get("bonding_mode")
+    if not bonding_mode:
+        bonding_mode = "1"
     params['netdst'] = bond_br_name
+    host_bridges = utils_net.Bridge()
 
     error.context("Load bonding module with mode 802.3ad", logging.info)
     if not utils.system("lsmod|grep bonding", ignore_status=True):
         utils.system("modprobe -r bonding")
 
-    utils.system("modprobe bonding mode=802.3ad")
+    utils.system("modprobe bonding mode=%s" % bonding_mode)
 
     error.context("Bring up %s" % bond_iface, logging.info)
     host_ifaces = utils_net.get_host_iface()
@@ -56,12 +60,16 @@ def run(test, params, env):
 
     host_ph_ifaces = [_ for _ in host_ifaces if re.match(host_ph_iface_pre, _)]
 
-    if len(host_ph_ifaces) < 2 or len(host_ph_ifaces) < host_iface_bonding:
+    ifaces_in_use = host_bridges.list_iface()
+    host_ph_ifaces_un = list(set(host_ph_ifaces) - set(ifaces_in_use))
+
+    if (len(host_ph_ifaces_un) < 2 or
+            len(host_ph_ifaces_un) < host_iface_bonding):
         raise error.TestErrorNA("Host need %s nics"
                                 " at least." % host_iface_bonding)
 
     error.context("Add nics to %s" % bond_iface.name, logging.info)
-    host_ifaces_bonding = host_ph_ifaces[:host_iface_bonding]
+    host_ifaces_bonding = host_ph_ifaces_un[:host_iface_bonding]
     ifenslave_cmd = "ifenslave %s" % bond_iface.name
     op_ifaces = []
     for host_iface_bonding in host_ifaces_bonding:
@@ -71,10 +79,9 @@ def run(test, params, env):
 
     error.context("Add a new bridge and add %s to it." % bond_iface.name,
                   logging.info)
-    bonding_bridge = utils_net.Bridge()
-    if bond_br_name not in bonding_bridge.list_br():
-        bonding_bridge.add_bridge(bond_br_name)
-    bonding_bridge.add_port(bond_br_name, bond_iface.name)
+    if bond_br_name not in host_bridges.list_br():
+        host_bridges.add_bridge(bond_br_name)
+    host_bridges.add_port(bond_br_name, bond_iface.name)
 
     error.context("Get ip address for bridge", logging.info)
     utils.system("pkill dhclient; dhclient %s" % bond_br_name)

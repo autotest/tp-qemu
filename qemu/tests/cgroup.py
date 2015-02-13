@@ -482,6 +482,8 @@ def run(test, params, env):
             # bash needs some time...
             time.sleep(1)
             for i in range(no_vms):
+                logging.debug("Setting unlimited speed")
+                assign_vm_into_cgroup(vms[i], blkio, -1)
                 sessions[i * 2 + 1].sendline(kill_cmd)
 
             # Verification
@@ -593,6 +595,7 @@ def run(test, params, env):
                                        "%s:%s %s" % (dev[0], dev[1], speed),
                                        i * no_speeds + j, check="%s:%s\t%s"
                                        % (dev[0], dev[1], speed))
+        blkio.mk_cgroup()   # last one is unlimited
 
         # ; true is necessarily when there is no dd present at the time
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
@@ -605,7 +608,7 @@ def run(test, params, env):
             err += _test("read", blkio)
             # verify sessions between tests
             for session in sessions:
-                session.cmd("true")
+                session.cmd("true", timeout=360)
             error.context("Write test")
             err += _test("write", blkio)
 
@@ -623,7 +626,7 @@ def run(test, params, env):
 
             for session in sessions:
                 # try whether all sessions are clean
-                session.cmd("true")
+                session.cmd("true", timeout=360)
                 session.close()
 
             for i in range(len(vms)):

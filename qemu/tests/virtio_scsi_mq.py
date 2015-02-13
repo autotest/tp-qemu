@@ -102,6 +102,8 @@ def run(test, params, env):
     for numa_node_id in host_numa_nodes.nodes:
         numa_node = host_numa_nodes.nodes[numa_node_id]
         for _ in range(len(numa_node.cpus)):
+            if vcpu_num >= len(vm.vcpu_threads):
+                break
             vcpu_tid = vm.vcpu_threads[vcpu_num]
             logging.debug("pin vcpu thread(%s) to cpu"
                           "(%s)" % (vcpu_tid,

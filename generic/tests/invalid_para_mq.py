@@ -33,8 +33,8 @@ def run(test, params, env):
         message = str(exp)
         # clean up tap device when qemu coredump to ensure,
         # to ensure next test has clean network envrioment
-        if (hasattr(exp, 'ifname') and exp.ifname
-                and exp.ifname in utils_net.get_host_iface()):
+        if (hasattr(exp, 'ifname') and exp.ifname and
+                exp.ifname in utils_net.get_host_iface()):
             try:
                 bridge = params.get("netdst", "switch")
                 utils_net.del_from_bridge(exp.ifname, bridge)

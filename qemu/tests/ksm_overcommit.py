@@ -434,9 +434,9 @@ def run(test, params, env):
     if (host_reserve == -1):
         # default host_reserve = MemAvailable + one_minimal_guest(128MB)
         # later we add 64MB per additional guest
-        host_reserve = ((utils_memory.memtotal()
-                         - utils_memory.read_from_meminfo("MemFree"))
-                        / 1024 + 128)
+        host_reserve = ((utils_memory.memtotal() -
+                         utils_memory.read_from_meminfo("MemFree")) /
+                        1024 + 128)
         # using default reserve
         _host_reserve = True
     else:

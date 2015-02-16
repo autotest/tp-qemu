@@ -37,8 +37,8 @@ def run(test, params, env):
         else:
             raise error.TestFail("device_del command is not supported")
 
-        if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1)
-                and not ignore_failure):
+        if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1) and
+                not ignore_failure):
             raise error.TestFail("Failed to hot remove PCI device: %s. "
                                  "Monitor command: %s" %
                                  (pci_model, cmd))
@@ -63,8 +63,8 @@ def run(test, params, env):
         session.cmd("modprobe %s" % module)
 
     # check monitor type
-    is_qmp_monitor = (utils_misc.qemu_has_option("qmp")
-                      and params.get("monitor_type") == "qmp")
+    is_qmp_monitor = (utils_misc.qemu_has_option("qmp") and
+                      params.get("monitor_type") == "qmp")
     # Probe qemu to verify what is the supported syntax for PCI hotplug
     if is_qmp_monitor:
         cmd_o = vm.monitor.info("commands")

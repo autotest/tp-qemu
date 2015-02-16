@@ -123,8 +123,8 @@ def run(test, params, env):
         if qdev.qtree["type"] == dev_type:
             for pci_bus in qdev.get_children():
                 for pcic in pci_bus.get_children():
-                    if (pcic.qtree["class_name"] == "SCSI controller"
-                            and pcic.qtree["num_queues"] != num_queues):
+                    if (pcic.qtree["class_name"] == "SCSI controller" and
+                            pcic.qtree["num_queues"] != num_queues):
                         error_msg = error_msg % (num_queues,
                                                  pcic.qtree["num_queues"])
                         raise error.TestFail(error_msg)

@@ -32,8 +32,8 @@ def run(test, params, env):
         if not queues_status:
             queues_status = get_queues_status(session, ifname)
 
-        if (q_number != queues_status[1] and q_number <= queues_status[0]
-                and q_number > 0):
+        if (q_number != queues_status[1] and q_number <= queues_status[0] and
+                q_number > 0):
             expect_status = 0
         else:
             expect_status = 1

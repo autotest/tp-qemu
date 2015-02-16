@@ -67,8 +67,8 @@ def run(test, params, env):
             qtree_check_value = params['qtree_check_value']
             qtree_check_option = params['qtree_check_option']
             for qdev in qtree.get_nodes():
-                if (keyword in qdev.qtree
-                        and qdev.qtree[keyword] == qtree_check_value):
+                if (keyword in qdev.qtree and
+                        qdev.qtree[keyword] == qtree_check_value):
                     qtree_value = qdev.qtree.get(qtree_check_option)
                     if re.match('".*"$', qtree_value):
                         qtree_value = re.findall('"(.*)"$', qtree_value)[0]

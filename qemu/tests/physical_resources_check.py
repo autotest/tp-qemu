@@ -245,8 +245,8 @@ def run(test, params, env):
     cpu_threads_num = get_cpu_number("threads", chk_timeout)
     cpu_sockets_num = get_cpu_number("sockets", chk_timeout)
 
-    if ((params.get("os_type") == 'windows') and cpu_cores_num > 0
-            and cpu_lp_num > 0 and cpu_sockets_num > 0):
+    if ((params.get("os_type") == 'windows') and cpu_cores_num > 0 and
+            cpu_lp_num > 0 and cpu_sockets_num > 0):
         actual_cpu_nr = cpu_lp_num * cpu_sockets_num
         cpu_threads_num = cpu_lp_num / cpu_cores_num
 

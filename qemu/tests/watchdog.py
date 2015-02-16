@@ -92,8 +92,8 @@ def run(test, params, env):
         # when action is poweroff or shutdown(without no-shutdown option), the vm
         # will dead, and qemu exit.
         # The others the vm monitor still responsive, can report the vm status.
-        if (watchdog_action == "poweroff" or (watchdog_action == "shutdown"
-                                              and params.get("disable_shutdown") != "yes")):
+        if (watchdog_action == "poweroff" or (watchdog_action == "shutdown" and
+                                              params.get("disable_shutdown") != "yes")):
             if not utils_misc.wait_for(lambda: vm.is_dead(),
                                        response_timeout, 0, 1):
                 raise error.TestFail(

@@ -113,8 +113,8 @@ def run(test, params, env):
     status, output = utils_test.ping(dest=external_host, session=session,
                                      timeout=240, count=20)
     loss_ratio = utils_test.get_loss_ratio(output)
-    if (loss_ratio > int(params.get("packet_lost_ratio", 5))
-            or loss_ratio == -1):
+    if (loss_ratio > int(params.get("packet_lost_ratio", 5)) or
+            loss_ratio == -1):
         logging.debug("Ping %s output: %s" % (external_host, output))
         raise error.TestFail("Guest network connction unusable," +
                              "packet lost ratio is '%%%d'" % loss_ratio)

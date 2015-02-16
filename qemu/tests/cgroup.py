@@ -260,7 +260,8 @@ def run(test, params, env):
             """
             out = []
             # Initiate dd loop on all VMs (2 sessions per VM)
-            dd_cmd = get_dd_cmd(direction, blocksize="100K")
+            # can't set bs for scsi_debug, default is 512b
+            dd_cmd = get_dd_cmd(direction, count=3)
             for i in range(no_vms):
                 sessions[i * 2].sendline(dd_cmd)
             time.sleep(test_time)
@@ -446,7 +447,8 @@ def run(test, params, env):
             :return: "" on success or err message when fails
             """
             # Test
-            dd_cmd = get_dd_cmd(direction)
+            # can't set bs for scsi_debug, default is 512b
+            dd_cmd = get_dd_cmd(direction, count=3)
             limit = float(params.get('cgroup_limit_%s' % direction,
                                      params.get('cgroup_limit', 0.1)))
             # every scenario have list of results [[][][]]

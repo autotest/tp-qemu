@@ -205,6 +205,8 @@ def run(test, params, env):
             params['image_format_%s' % disk_name] = "raw"
             params['remove_image_%s' % disk_name] = "no"
             params['image_raw_device_%s' % disk_name] = "yes"
+            params['drive_cache_%s' % disk_name] = params.get('drive_cache',
+                                                              'none')
 
     def param_add_file_disks(size, prefix="hd2-"):
         """
@@ -224,6 +226,8 @@ def run(test, params, env):
             params['image_format_%s' % disk_name] = "raw"
             params['create_with_dd_%s' % disk_name] = "yes"
             params['remove_image_%s' % disk_name] = "yes"
+            params['drive_cache_%s' % disk_name] = params.get('drive_cache',
+                                                              'none')
 
     def param_add_vms(no_vms):
         """

@@ -256,8 +256,8 @@ def run(test, params, env):
                 error.context("Deleting SCSI controller.", logging.info)
                 vm.monitor.send_args_cmd(controller_del_cmd, convert=False)
 
-        if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1)
-                and not ignore_failure):
+        if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1) and
+                not ignore_failure):
             raise error.TestFail("Failed to hot remove PCI device: %s. "
                                  "Monitor command: %s" %
                                  (pci_info[pci_num][3], cmd))

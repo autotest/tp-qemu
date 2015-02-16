@@ -40,8 +40,8 @@ def run(test, params, env):
         global current_size
         current_size = get_block_size(session,
                                       block_size_cmd, block_size_pattern)
-        if (current_size <= block_size
-                and current_size >= block_size * (1 - accept_ratio)):
+        if (current_size <= block_size and
+                current_size >= block_size * (1 - accept_ratio)):
             logging.info("Block Resizing Finished !!! \n"
                          "Current size %s is same as the expected %s",
                          current_size, block_size)
@@ -69,8 +69,8 @@ def run(test, params, env):
     accept_ratio = float(params.get("accept_ratio", 0))
 
     block_size = get_block_size(session, block_size_cmd, block_size_pattern)
-    if (block_size > data_image_size
-            or block_size < data_image_size * (1 - accept_ratio)):
+    if (block_size > data_image_size or
+            block_size < data_image_size * (1 - accept_ratio)):
         raise error.TestError("Please check your system and image size check"
                               " command. The command output is not compatible"
                               " with the image size.")

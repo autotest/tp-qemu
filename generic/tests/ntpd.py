@@ -215,8 +215,8 @@ class NTPTest(object):
             cmd_name = "ntpq -p | grep '^*%s'" % self.server_hostname
         result_ntpq_ip = utils.run(cmd_ip, ignore_status=True)
         result_ntpq_name = utils.run(cmd_name, ignore_status=True)
-        if (not result_ntpq_ip.stdout.strip()
-                and not result_ntpq_name.stdout.strip()):
+        if (not result_ntpq_ip.stdout.strip() and
+                not result_ntpq_name.stdout.strip()):
             raise error.TestFail("ntpd setting failed of %s host !!"
                                  % self.vm_name)
         # Test on guest

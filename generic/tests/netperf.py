@@ -141,8 +141,8 @@ def run(test, params, env):
     server_ip = vm.wait_for_get_address(0, timeout=5)
     server_ctl = vm.wait_for_login(timeout=login_timeout)
     server_ctl_ip = server_ip
-    if (params.get("os_type") == "windows"
-            and params.get("use_cygwin") == "yes"):
+    if (params.get("os_type") == "windows" and
+            params.get("use_cygwin") == "yes"):
         cygwin_prompt = params.get("cygwin_prompt", r"\$\s+$")
         cygwin_start = params.get("cygwin_start")
         server_cyg = vm.wait_for_login(timeout=login_timeout)
@@ -620,8 +620,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             logging.warn(msg)
         else:
             for i in range(len(end_state) / 2):
-                ret[end_state[i * 2]] = (end_state[i * 2 + 1]
-                                         - start_state[i * 2 + 1])
+                ret[end_state[i * 2]] = (end_state[i * 2 + 1] -
+                                         start_state[i * 2 + 1])
 
     client_thread.join()
 

@@ -179,8 +179,8 @@ def run(test, params, env):
     add_flags = get_extra_flag(extra_flags, "+")
     # del_flags are disabled by -flag
     del_flags = get_extra_flag(extra_flags, "-", lack_check=True)
-    expected_flags = ((model_support_flags | add_flags)
-                      - del_flags - out_flags)
+    expected_flags = ((model_support_flags | add_flags) -
+                      del_flags - out_flags)
     # get all flags for host lack flag checking
     check_flags = get_extra_flag(extra_flags, "+", lack_check=True)
     host_flags = set(map(utils_misc.Flag, host_flags))
@@ -200,8 +200,8 @@ def run(test, params, env):
     error.context("Compare guest flags with expected flags", logging.info)
     all_support_flags = get_all_support_flags()
     missing_flags = expected_flags - guest_flags
-    unexpect_flags = (guest_flags - expected_flags
-                      - all_support_flags - option_flags)
+    unexpect_flags = (guest_flags - expected_flags -
+                      all_support_flags - option_flags)
     if missing_flags or unexpect_flags:
         raise error.TestFail("missing flags:\n %s\n"
                              "more flags than expected:\n %s\n"

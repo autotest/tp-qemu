@@ -246,8 +246,8 @@ def run(test, params, env):
                                      params.get('cgroup_limit', 0.1)))
             # if any of norm_output doesn't ~ match norm_weights, log it.
             for i in range(len(out)):
-                if (out[i][2] > (out[i][1] + limit)
-                        or out[i][2] < (out[i][1] - limit)):
+                if (out[i][2] > (out[i][1] + limit) or
+                        out[i][2] < (out[i][1] - limit)):
                     out[i][0] = 'FAIL'
                     err += "%d, " % i
 

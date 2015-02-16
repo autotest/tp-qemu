@@ -301,9 +301,9 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                 if jump_flag:
                     continue
                 file_dir_norpt = re.sub("\.repeat\d+", "", files[0])
-                if (repeatn in files[0]
-                    and category_key in file_dir_norpt
-                        and case_type in files[0]):
+                if (repeatn in files[0] and
+                        category_key in file_dir_norpt and
+                        case_type in files[0]):
                     for i, pattern in enumerate(file_list):
                         if re.findall(pattern, file):
                             prefix = re.findall("%s\.[\d\w_\.]+" % case_type,
@@ -348,8 +348,8 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
             category = "-".join(case_infos)
         if refresh_order_list:
             order_list = []
-        if (category not in results_matrix.keys()
-                and category not in no_table_list):
+        if (category not in results_matrix.keys() and
+                category not in no_table_list):
             results_matrix[category] = {}
         if threads:
             if threads not in results_matrix[category].keys():

@@ -323,8 +323,8 @@ def run(test, params, env):
         utils_net.openflow_manager(br_name, "del-flows", f_protocol)
         openflow_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
         openflow_rules = remove_plus_items(openflow_rules)
-        removed_rule = list(set(openflow_rules_ori.splitlines())
-                            - set(openflow_rules.splitlines()))
+        removed_rule = list(set(openflow_rules_ori.splitlines()) -
+                            set(openflow_rules.splitlines()))
 
         if f_protocol == "tcp":
             error.context("Run nc connect test via tcp", logging.info)
@@ -336,8 +336,8 @@ def run(test, params, env):
         for session in sessions:
             session.close()
         failed_msg = []
-        if (not removed_rule
-                or not acl_rules_check(removed_rule[0], f_options)):
+        if (not removed_rule or
+                not acl_rules_check(removed_rule[0], f_options)):
             failed_msg.append("Failed to delete %s" % f_options)
         if bg_ping_session:
             bg_ping_ok = check_bg_ping(bg_ping_session)

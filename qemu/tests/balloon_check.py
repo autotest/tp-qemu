@@ -65,8 +65,8 @@ class BallooningTest(object):
         error.context("Check memory status %s" % step, logging.info)
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
-        if (abs(mmem - self.ori_mem) != ballooned_mem
-                or (abs(gmem - self.ori_gmem) < self.ratio * ballooned_mem)):
+        if (abs(mmem - self.ori_mem) != ballooned_mem or
+                (abs(gmem - self.ori_gmem) < self.ratio * ballooned_mem)):
             self.error_report(step, self.ori_mem - ballooned_mem, mmem, gmem)
             raise error.TestFail("Balloon test failed %s" % step)
         return (mmem, gmem)
@@ -87,8 +87,8 @@ class BallooningTest(object):
         # This should be replaced by proper monitor method call
         self.vm.monitor.send_args_cmd("balloon value=%s" % new_mem)
         balloon_timeout = float(self.params.get("balloon_timeout", 100))
-        status = utils_misc.wait_for((lambda: compare_mem
-                                      == self.get_ballooned_memory()),
+        status = utils_misc.wait_for((lambda: compare_mem ==
+                                      self.get_ballooned_memory()),
                                      balloon_timeout)
         if status is None:
             raise error.TestFail("Failed to balloon memory to expect"
@@ -193,8 +193,8 @@ class BallooningTest(object):
                                        self.ori_mem - expect_mem)
         self.current_mmem = mmem
         self.current_gmem = gmem
-        if (params_tag.get("run_sub_test_after_balloon", "no") == "yes"
-                and params_tag.get('sub_test_after_balloon')):
+        if (params_tag.get("run_sub_test_after_balloon", "no") == "yes" and
+                params_tag.get('sub_test_after_balloon')):
             should_quit = self.run_balloon_sub_test(self.test, params_tag,
                                                     self.env,
                                                     params_tag['sub_test_after_balloon'])
@@ -259,11 +259,11 @@ class BallooningTestWin(BallooningTest):
                             None
         """
         logging.error("Memory size mismatch %s:\n" % step)
-        error_msg = "Wanted to be changed: %s\n" % (self.ori_mem
-                                                    - expect_value)
+        error_msg = "Wanted to be changed: %s\n" % (self.ori_mem -
+                                                    expect_value)
         if monitor_value:
-            error_msg += "Changed in monitor: %s\n" % (self.ori_mem
-                                                       - monitor_value)
+            error_msg += "Changed in monitor: %s\n" % (self.ori_mem -
+                                                       monitor_value)
         error_msg += "Changed in guest: %s\n" % (guest_value - self.ori_gmem)
         logging.error(error_msg)
 

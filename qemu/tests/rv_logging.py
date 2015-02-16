@@ -111,5 +111,5 @@ def run(test, params, env):
         guest_session.close()
         guest_root_session.close()
         raise error.TestFail("Couldn't find the right test to run,"
-                             + " check cfg files.")
+                             " check cfg files.")
     guest_session.close()

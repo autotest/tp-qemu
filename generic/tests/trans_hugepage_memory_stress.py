@@ -41,8 +41,8 @@ def run(test, params, env):
         # Allocated free memory to hugetlbfs
         mem_free = int(utils_memory.read_from_meminfo('MemFree')) / 1024
         mem_swap = int(utils_memory.read_from_meminfo('SwapFree')) / 1024
-        hugepage_size = (int(utils_memory.read_from_meminfo('Hugepagesize'))
-                         / 1024)
+        hugepage_size = (int(utils_memory.read_from_meminfo('Hugepagesize')) /
+                         1024)
         nr_hugetlbfs = (mem_free + mem_swap - mem - qemu_mem) / hugepage_size
         fd = open(hugetlbfs_path, "w")
         fd.write(str(nr_hugetlbfs))

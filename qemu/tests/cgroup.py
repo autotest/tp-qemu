@@ -456,7 +456,6 @@ def run(test, params, env):
             # every VM have one output []
             for i in range(no_vms):
                 out.append([])
-                sessions[i * 2].sendline(dd_cmd)
             for j in range(no_speeds):
                 _ = ""
                 for i in range(no_vms):
@@ -465,6 +464,9 @@ def run(test, params, env):
                     _ += "vm%d:%d, " % (i, speeds[i][j])
                 logging.debug("blkio_throttle_%s: Current speeds: %s",
                               direction, _[:-2])
+                # Restart all transfers (on 1st sessions)
+                for i in range(no_vms):
+                    sessions[i * 2].sendline(dd_cmd)
                 time.sleep(test_time)
                 # Read stats
                 for i in range(no_vms):
@@ -481,9 +483,6 @@ def run(test, params, env):
                     out[i][-1] = (out[i][-1] +
                                   sessions[i * 2].read_up_to_prompt(
                                       timeout=120 + test_time))
-                # Restart all transfers (on 1st sessions)
-                for i in range(no_vms):
-                    sessions[i * 2].sendline(dd_cmd)
 
             # bash needs some time...
             time.sleep(1)

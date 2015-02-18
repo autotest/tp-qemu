@@ -735,7 +735,7 @@ def run(test, params, env):
         # test_time is 1s stabilization, 1s first meass., 9s second and the
         # rest of cgroup_test_time as 3rd meassurement.
         test_time = max(1, int(params.get('cgroup_test_time', 60)) - 11)
-        err = ""
+        err = []
         try:
             error.context("Test")
             for session in sessions:
@@ -771,16 +771,10 @@ def run(test, params, env):
             limit = 1 - float(params.get("cgroup_limit", 0.05))
             for i in range(1, len(stats)):
                 # Utilisation should be 100% - allowed treshold (limit)
-                if stats[i] < (100 - limit):
+                if stats[i] < limit:
                     logging.debug("%d: guest time is not >%s%% %s" % (i, limit,
                                                                       stats[i]))
-
-            if err:
-                err = "Guest time is not >%s%% %s" % (limit, stats[1:])
-                logging.error(err)
-                logging.info("Guest times are over %s%%: %s", limit, stats[1:])
-            else:
-                logging.info("CFS utilisation was over %s", limit)
+                    err.append(i)
 
         finally:
             error.context("Cleanup")
@@ -800,6 +794,8 @@ def run(test, params, env):
 
         error.context("Results")
         if err:
+            err = ("The host vs. guest CPU time ratio is over %s in %s cases"
+                   % (limit, err))
             raise error.TestFail(err)
         else:
             return "Guest times are over %s%%: %s" % (limit, stats[1:])

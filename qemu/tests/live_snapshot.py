@@ -73,7 +73,7 @@ def run(test, params, env):
 
     def reboot_test():
         try:
-            reboot_timeout = int(params.get("reboot_timeout"))
+            reboot_timeout = int(params.get("reboot_timeout", 900))
             bg = utils_test.BackgroundTest(vm.reboot, (session, "shell", 0,
                                                        reboot_timeout, False,))
             logging.info("Rebooting guest ...")

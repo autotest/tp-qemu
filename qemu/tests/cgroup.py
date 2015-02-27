@@ -30,6 +30,60 @@ except ImportError:
     from autotest.client.shared import utils_memory
 
 
+class SparseRange(list):
+
+    """
+    Turns kernel-like sparse array into list of values
+    """
+
+    def __init__(self, value):
+        """
+        :param value: sparse array string (eg.: "0-1,16-17")
+        """
+        super(SparseRange, self).__init__()
+        try:
+            for section in value.split(','):
+                vals = section.split('-')
+                if len(vals) == 1:  # single value
+                    self.append(int(vals[0]))
+                else:               # range
+                    self.extend(xrange(int(vals[0]), int(vals[1]) + 1))
+        except ValueError, details:
+            raise ValueError("Can't parse SparseRange from %s: %s"
+                             % (value, details))
+
+    def str_slice(self, start=0, stop=None, step=1):
+        """
+        :param start: slice start
+        :param stop: slice stop
+        :param step: slice step
+        :return: kernel-like sparce array string from existing values
+        """
+        def append_section(out, sect_start, sect_stop):
+            if sect_start == sect_stop:
+                out.append(str(sect_start))
+            else:
+                out.append("%d-%d" % (sect_start, sect_stop))
+        if stop is None:
+            stop = len(self)
+        out = []
+        items = iter(self[start:stop:step])
+        try:
+            sect_start = items.next()
+            sect_stop = sect_start
+        except StopIteration:
+            return ""
+        for cur in items:
+            if sect_stop == cur - 1:
+                sect_stop = cur
+            else:
+                append_section(out, sect_start, sect_stop)
+                sect_start = cur
+                sect_stop = cur
+        append_section(out, sect_start, sect_stop)
+        return ",".join(out)
+
+
 @error.context_aware
 def run(test, params, env):
     """
@@ -151,6 +205,8 @@ def run(test, params, env):
             params['image_format_%s' % disk_name] = "raw"
             params['remove_image_%s' % disk_name] = "no"
             params['image_raw_device_%s' % disk_name] = "yes"
+            params['drive_cache_%s' % disk_name] = params.get('drive_cache',
+                                                              'none')
 
     def param_add_file_disks(size, prefix="hd2-"):
         """
@@ -170,6 +226,8 @@ def run(test, params, env):
             params['image_format_%s' % disk_name] = "raw"
             params['create_with_dd_%s' % disk_name] = "yes"
             params['remove_image_%s' % disk_name] = "yes"
+            params['drive_cache_%s' % disk_name] = params.get('drive_cache',
+                                                              'none')
 
     def param_add_vms(no_vms):
         """
@@ -202,7 +260,8 @@ def run(test, params, env):
             """
             out = []
             # Initiate dd loop on all VMs (2 sessions per VM)
-            dd_cmd = get_dd_cmd(direction, blocksize="100K")
+            # can't set bs for scsi_debug, default is 512b
+            dd_cmd = get_dd_cmd(direction, count=3)
             for i in range(no_vms):
                 sessions[i * 2].sendline(dd_cmd)
             time.sleep(test_time)
@@ -388,7 +447,8 @@ def run(test, params, env):
             :return: "" on success or err message when fails
             """
             # Test
-            dd_cmd = get_dd_cmd(direction)
+            # can't set bs for scsi_debug, default is 512b
+            dd_cmd = get_dd_cmd(direction, count=3)
             limit = float(params.get('cgroup_limit_%s' % direction,
                                      params.get('cgroup_limit', 0.1)))
             # every scenario have list of results [[][][]]
@@ -396,7 +456,6 @@ def run(test, params, env):
             # every VM have one output []
             for i in range(no_vms):
                 out.append([])
-                sessions[i * 2].sendline(dd_cmd)
             for j in range(no_speeds):
                 _ = ""
                 for i in range(no_vms):
@@ -405,6 +464,9 @@ def run(test, params, env):
                     _ += "vm%d:%d, " % (i, speeds[i][j])
                 logging.debug("blkio_throttle_%s: Current speeds: %s",
                               direction, _[:-2])
+                # Restart all transfers (on 1st sessions)
+                for i in range(no_vms):
+                    sessions[i * 2].sendline(dd_cmd)
                 time.sleep(test_time)
                 # Read stats
                 for i in range(no_vms):
@@ -421,13 +483,12 @@ def run(test, params, env):
                     out[i][-1] = (out[i][-1] +
                                   sessions[i * 2].read_up_to_prompt(
                                       timeout=120 + test_time))
-                # Restart all transfers (on 1st sessions)
-                for i in range(no_vms):
-                    sessions[i * 2].sendline(dd_cmd)
 
             # bash needs some time...
             time.sleep(1)
             for i in range(no_vms):
+                logging.debug("Setting unlimited speed")
+                assign_vm_into_cgroup(vms[i], blkio, -1)
                 sessions[i * 2 + 1].sendline(kill_cmd)
 
             # Verification
@@ -539,6 +600,7 @@ def run(test, params, env):
                                        "%s:%s %s" % (dev[0], dev[1], speed),
                                        i * no_speeds + j, check="%s:%s\t%s"
                                        % (dev[0], dev[1], speed))
+        blkio.mk_cgroup()   # last one is unlimited
 
         # ; true is necessarily when there is no dd present at the time
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
@@ -551,7 +613,7 @@ def run(test, params, env):
             err += _test("read", blkio)
             # verify sessions between tests
             for session in sessions:
-                session.cmd("true")
+                session.cmd("true", timeout=360)
             error.context("Write test")
             err += _test("write", blkio)
 
@@ -569,7 +631,7 @@ def run(test, params, env):
 
             for session in sessions:
                 # try whether all sessions are clean
-                session.cmd("true")
+                session.cmd("true", timeout=360)
                 session.close()
 
             for i in range(len(vms)):
@@ -673,7 +735,7 @@ def run(test, params, env):
         # test_time is 1s stabilization, 1s first meass., 9s second and the
         # rest of cgroup_test_time as 3rd meassurement.
         test_time = max(1, int(params.get('cgroup_test_time', 60)) - 11)
-        err = ""
+        err = []
         try:
             error.context("Test")
             for session in sessions:
@@ -709,16 +771,10 @@ def run(test, params, env):
             limit = 1 - float(params.get("cgroup_limit", 0.05))
             for i in range(1, len(stats)):
                 # Utilisation should be 100% - allowed treshold (limit)
-                if stats[i] < (100 - limit):
+                if stats[i] < limit:
                     logging.debug("%d: guest time is not >%s%% %s" % (i, limit,
                                                                       stats[i]))
-
-            if err:
-                err = "Guest time is not >%s%% %s" % (limit, stats[1:])
-                logging.error(err)
-                logging.info("Guest times are over %s%%: %s", limit, stats[1:])
-            else:
-                logging.info("CFS utilisation was over %s", limit)
+                    err.append(i)
 
         finally:
             error.context("Cleanup")
@@ -738,6 +794,8 @@ def run(test, params, env):
 
         error.context("Results")
         if err:
+            err = ("The host vs. guest CPU time ratio is over %s in %s cases"
+                   % (limit, err))
             raise error.TestFail(err)
         else:
             return "Guest times are over %s%%: %s" % (limit, stats[1:])
@@ -964,62 +1022,49 @@ def run(test, params, env):
                      'by default it assumes each used CPU will be 100%
                      utilised'
         """
-        def _generate_cpusets(vm_cpus, no_cpus):
+        def _generate_cpusets(vm_cpus, cpus):
             """
             Generates 5 cpusets scenerios
             :param vm_cpus: number of virtual CPUs
-            :param no_cpus: number of physical CPUs
+            :param cpus: Physical CPU layout
             """
             cpusets = []
             # OO__
-            if no_cpus > vm_cpus:
-                cpuset = '0-%d' % (vm_cpus - 1)
+            if len(cpus) > vm_cpus:
+                cpuset = cpus.str_slice(0, vm_cpus)
                 # all cpus + main_thread
-                cpusets.append([cpuset for _ in range(no_cpus + 1)])
+                cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
             # __OO
-            if no_cpus > vm_cpus:
-                cpuset = '%d-%d' % (no_cpus - vm_cpus - 1, no_cpus - 1)
-                cpusets.append([cpuset for _ in range(no_cpus + 1)])
+            if len(cpus) > vm_cpus:
+                cpuset = cpus.str_slice(len(cpus) - vm_cpus)
+                cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
             # O___
-            cpusets.append(['0' for _ in range(no_cpus + 1)])
+            cpusets.append([str(cpus[0]) for _ in xrange(len(cpus) + 1)])
             # _OO_
-            if no_cpus == 2:
-                cpuset = '1'
-            else:
-                cpuset = '1-%d' % min(no_cpus, vm_cpus - 1)
-            cpusets.append([cpuset for _ in range(no_cpus + 1)])
+            cpuset = cpus.str_slice(1, 1 + vm_cpus)
+            cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
             # O_O_
-            cpuset = '0'
-            for i in range(1, min(vm_cpus, (no_cpus / 2))):
-                cpuset += ',%d' % (i * 2)
-            cpusets.append([cpuset for i in range(no_cpus + 1)])
+            cpuset = cpus.str_slice(0, min(vm_cpus * 2, len(cpus)), 2)
+            cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
             return cpusets
 
-        def _generate_verification(cpusets, no_cpus):
+        def _generate_verification(cpusets, cpus):
             """
             Calculates verification data.
             @warning: Inaccurate method, every pinned CPU have to have 100%
                       utilisation!
             :param cpusets: cpusets scenarios
-            :param no_cpus: number of physical CPUs
+            :param cpus: Physical CPU layout
             """
             verify = []
             # For every scenerio
             for cpuset in cpusets:
-                verify.append([0 for _ in range(no_cpus)])
+                verify.append([0 for _ in xrange(len(cpus))])
                 # For every vcpu (skip main_thread, it doesn't consume much)
                 for vcpu in cpuset[1:]:
-                    vcpu.split(',')
-                    # Get all usable CPUs for this vcpu
-                    for vcpu_pin in vcpu.split(','):
-                        _ = vcpu_pin.split('-')
-                        if len(_) == 2:
-                            # Range of CPUs
-                            for cpu in range(int(_[0]), int(_[1]) + 1):
-                                verify[-1][cpu] = 100
-                        else:
-                            # Single CPU
-                            verify[-1][int(_[0])] = 100
+                    vcpu = SparseRange(vcpu)
+                    for vcpu_pin in vcpu:
+                        verify[-1][cpus.index(vcpu_pin)] = 100
             return verify
 
         error.context("Init")
@@ -1055,21 +1100,15 @@ def run(test, params, env):
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
 
-        all_cpus = cgroup.get_property("cpuset.cpus")[0]
-        all_mems = cgroup.get_property("cpuset.mems")[0]
+        cpus = SparseRange(cgroup.get_property("cpuset.cpus")[0])
+        mems = SparseRange(cgroup.get_property("cpuset.mems")[0])
 
-        # parse all available host_cpus from cgroups
-        try:
-            no_cpus = int(all_cpus.split('-')[1]) + 1
-        except (ValueError, IndexError):
-            raise error.TestFail("Failed to get #CPU from root cgroup. (%s)",
-                                 all_cpus)
         vm_cpus = int(params.get("smp", 1))
         # If cpuset specified, set smp accordingly
         if cpusets:
-            if no_cpus < (len(cpusets[0]) - 1):
+            if len(cpus) < (len(cpusets[0]) - 1):
                 err = ("Not enough host CPUs to run this test with selected "
-                       "cpusets (cpus=%s, cpusets=%s)" % (no_cpus, cpusets))
+                       "cpusets (cpus=%s, cpusets=%s)" % (len(cpus), cpusets))
                 logging.error(err)
                 raise error.TestNAError(err)
             vm_cpus = len(cpusets[0]) - 1   # Don't count main_thread to vcpus
@@ -1082,8 +1121,8 @@ def run(test, params, env):
                     raise error.TestError(err)
         # if cgroup_use_half_smp, set smp accordingly
         elif params.get("cgroup_use_half_smp") == "yes":
-            vm_cpus = no_cpus / 2
-            if no_cpus == 2:
+            vm_cpus = len(cpus) / 2
+            if len(cpus) == 2:
                 logging.warn("Host have only 2 CPUs, using 'smp = all cpus'")
                 vm_cpus = 2
 
@@ -1106,17 +1145,11 @@ def run(test, params, env):
 
         if not cpusets:
             error.context("Generating cpusets scenerios")
-            cpusets = _generate_cpusets(vm_cpus, no_cpus)
-
-        # None == all_cpus
-        for i in range(len(cpusets)):
-            for j in range(len(cpusets[i])):
-                if cpusets[i][j] is None:
-                    cpusets[i][j] = all_cpus
+            cpusets = _generate_cpusets(vm_cpus, cpus)
 
         if verify:  # Verify exists, check if it's correct
             for _ in verify:
-                if len(_) != no_cpus:
+                if len(_) != len(cpus):
                     err = ("Incorrect cgroup_verify. Each verify sublist have "
                            "to have length = no_host_cpus")
                     logging.error(err)
@@ -1124,17 +1157,17 @@ def run(test, params, env):
         else:   # Generate one
             error.context("Generating cpusets expected results")
             try:
-                verify = _generate_verification(cpusets, no_cpus)
+                verify = _generate_verification(cpusets, cpus)
             except IndexError:
                 raise error.TestError("IndexError occurred while generatin "
                                       "verification data. Probably missmatched"
                                       " no_host_cpus and cgroup_cpuset cpus")
 
         error.context("Prepare")
-        for i in range(no_cpus + 1):
+        for i in xrange(len(cpus) + 1):
             cgroup.mk_cgroup()
-            cgroup.set_property('cpuset.cpus', all_cpus, i)
-            cgroup.set_property('cpuset.mems', all_mems, i)
+            cgroup.set_property('cpuset.cpus', cpus.str_slice(), i)
+            cgroup.set_property('cpuset.mems', mems.str_slice(), i)
             if i == 0:
                 assign_vm_into_cgroup(vm, cgroup, 0)
             elif i <= vm_cpus:
@@ -1146,14 +1179,14 @@ def run(test, params, env):
         serial = vm.wait_for_serial_login(timeout=timeout)
         cmd = "renice -n 10 $$; "   # new ssh login should pass
         cmd += "while [ -e /tmp/cgroup-cpu-lock ]; do :; done"
-        for i in range(vm_cpus):
+        for i in xrange(vm_cpus * 2):
             sessions.append(vm.wait_for_login(timeout=timeout))
             sessions[-1].cmd("touch /tmp/cgroup-cpu-lock")
             sessions[-1].sendline(cmd)
 
         try:
             error.context("Test")
-            for i in range(len(cpusets)):
+            for i in xrange(len(cpusets)):
                 cpuset = cpusets[i]
                 logging.debug("testing: %s", cpuset)
                 # setup scenario
@@ -1175,9 +1208,9 @@ def run(test, params, env):
             # Check
             # header and matrix variables are only for "beautiful" log
             header = ['scen']
-            header.extend([' cpu%d' % i for i in range(no_cpus)])
+            header.extend([' cpu%d' % i for i in cpus])
             matrix = []
-            for i in range(len(stats)):
+            for i in xrange(len(stats)):
                 matrix.append(['%d' % i])
                 for j in range(len(stats[i])):
                     if ((stats[i][j] < (verify[i][j] - limit)) or
@@ -1233,29 +1266,19 @@ def run(test, params, env):
         vm = env.get_all_vms()[0]
         serial = vm.wait_for_serial_login(timeout=timeout)
         vm_cpus = int(params.get('smp', 1))
-        all_cpus = cgroup.get_property("cpuset.cpus")[0]
-        if all_cpus == "0":
+        cpus = SparseRange(cgroup.get_property("cpuset.cpus")[0])
+        if len(cpus) < 2:
             raise error.TestFail("This test needs at least 2 CPUs on "
-                                 "host, cpuset=%s" % all_cpus)
-        try:
-            last_cpu = int(all_cpus.split('-')[1])
-        except Exception:
-            raise error.TestFail("Failed to get #CPU from root cgroup.")
-
-        if last_cpu == 1:
-            second2last_cpu = "1"
-        else:
-            second2last_cpu = "1-%s" % last_cpu
-
+                                 "host, cpuset=%s" % cpus)
         # Comments are for vm_cpus=2, no_cpus=4, _SC_CLK_TCK=100
         cgroup.mk_cgroup()  # oooo
-        cgroup.set_property('cpuset.cpus', all_cpus, 0)
+        cgroup.set_property('cpuset.cpus', cpus.str_slice(), 0)
         cgroup.set_property('cpuset.mems', 0, 0)
         cgroup.mk_cgroup()  # O___
-        cgroup.set_property('cpuset.cpus', 0, 1)
+        cgroup.set_property('cpuset.cpus', 0, cpus[0])
         cgroup.set_property('cpuset.mems', 0, 1)
         cgroup.mk_cgroup()  # _OO_
-        cgroup.set_property('cpuset.cpus', second2last_cpu, 2)
+        cgroup.set_property('cpuset.cpus', cpus.str_slice(1), 2)
         cgroup.set_property('cpuset.mems', 0, 2)
         assign_vm_into_cgroup(vm, cgroup, 0)
 
@@ -1331,18 +1354,15 @@ def run(test, params, env):
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
 
-        mems = cgroup.get_property("cpuset.mems")[0]
-        mems = mems.split('-')
-        no_mems = len(mems)
-        if no_mems < 2:
+        mems = SparseRange(cgroup.get_property("cpuset.mems")[0])
+        if len(mems) < 2:
             raise error.TestNAError("This test needs at least 2 memory nodes, "
-                                    "detected only %s" % mems)
+                                    "detected mems %s" % mems)
         # Create cgroups
         all_cpus = cgroup.get_property("cpuset.cpus")[0]
-        mems = range(int(mems[0]), int(mems[1]) + 1)
-        for i in range(no_mems):
+        for mem in mems:
             cgroup.mk_cgroup()
-            cgroup.set_property('cpuset.mems', mems[i], -1)
+            cgroup.set_property('cpuset.mems', mem, -1)
             cgroup.set_property('cpuset.cpus', all_cpus, -1)
             cgroup.set_property('cpuset.memory_migrate', 1)
 
@@ -1369,7 +1389,7 @@ def run(test, params, env):
             t_stop = time.time() + test_time
             while time.time() < t_stop:
                 i += 1
-                assign_vm_into_cgroup(vm, cgroup, i % no_mems)
+                assign_vm_into_cgroup(vm, cgroup, i % len(mems))
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(

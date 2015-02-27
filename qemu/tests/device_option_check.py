@@ -72,7 +72,8 @@ def run(test, params, env):
                     qtree_value = qdev.qtree.get(qtree_check_option)
                     if re.match('".*"$', qtree_value):
                         qtree_value = re.findall('"(.*)"$', qtree_value)[0]
-                    if qtree_value != parameter_value_raw:
+                    if (qtree_value != parameter_value_raw and
+                            parameter_value_raw not in qtree_value):
                         raise error.TestFail("Value from info qtree is not "
                                              "match with the value from "
                                              "command line: %s vs "

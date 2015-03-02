@@ -96,13 +96,18 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
         logging.error("Could not kill remote-viewer " + err.output)
 
     try:
-        output = vm_root_session.cmd("yum -y remove virt-viewer")
+        output = vm_root_session.cmd("yum -y remove virt-viewer", timeout=120)
         logging.info(output)
     except ShellCmdError, err:
         logging.error("virt-viewer package couldn't be removed! " + err.output)
 
-    pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel",
-                    "spice-glib-devel", "spice-gtk-devel"]
+    if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
+        pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel",
+                        "spice-glib-devel", "spice-gtk3-devel"]
+    else:
+        pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel",
+                        "spice-glib-devel", "spice-gtk-devel"]
+
     install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     output = vm_root_session.cmd("%s -p virt-viewer" % (vm_script_path),
@@ -142,7 +147,12 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     except ShellCmdError:
         logging.error(output)
 
-    pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel"]
+    if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
+        pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel",
+                        "source-highlight", "gtk-doc"]
+    else:
+        pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel"]
+
     install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     utils_spice.deploy_epel_repo(vm_root_session, params)

@@ -6,6 +6,7 @@ Script to build and install packages from git in VMs
 
 import os
 import sys
+import re
 import optparse
 import subprocess
 
@@ -82,8 +83,8 @@ f = open("/etc/redhat-release", "r")
 rhelVersion = f.read()
 print "OS: %s" % rhelVersion
 if re.findall("release 6", rhelVersion):
-   if pkgName in ("spice-gtk", "virt-viewer"):
-      autogen_options[pkgName] += " --with-gtk=2.0"
+    if pkgName in ("spice-gtk", "virt-viewer"):
+        autogen_options[pkgName] += " --with-gtk=2.0"
 
 ret = os.system("which git")
 if ret != 0:

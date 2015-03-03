@@ -2,7 +2,7 @@ import re
 import time
 import logging
 from autotest.client.shared import error
-from autotest.client.shared import utils
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -58,8 +58,8 @@ def run(test, params, env):
     # need to wait for wmplayer loading remote video
     time.sleep(float(params.get("loading_timeout", 60)))
     check_playing_cmd = params["check_playing_cmd"]
-    running = utils.wait_for(lambda: session.cmd_status(check_playing_cmd) == 0,
-                             first=5.0, timeout=600)
+    running = utils_misc.wait_for(lambda: session.cmd_status(
+        check_playing_cmd) == 0, first=5.0, timeout=600)
     if not running:
         raise error.TestError("Video do not playing")
 

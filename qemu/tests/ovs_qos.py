@@ -84,7 +84,7 @@ def run(test, params, env):
         try:
             throughout = float(re.search(regex, output, re.M).groups()[0])
             return throughout * 1000
-        except IndexError:
+        except Exception:
             logging.debug("netperf client output: %s" % output)
             raise error.TestError("Invaild output format of netperf client!")
         finally:
@@ -219,6 +219,7 @@ def run(test, params, env):
             netperf_server, server_vm = netperf_servers[idx]
             for rate, burst in rate_brust_pairs:
                 set_port_qos(client_vm, rate, burst)
+                time.sleep(3)
                 throughout = get_throughout(netperf_server,
                                             server_vm,
                                             netperf_client,

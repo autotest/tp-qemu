@@ -1,7 +1,10 @@
 import logging
 import time
 from autotest.client.shared import error
-from virttest import qemu_storage, data_dir, env_process
+from autotest.client.shared import utils
+from virttest import data_dir
+from virttest import env_process
+from virttest import qemu_storage
 from qemu.tests import drive_mirror
 
 
@@ -26,6 +29,9 @@ def run(test, params, env):
         target_image = mirror_test.get_target_image()
         mirror_test.start()
         mirror_test.wait_for_steady()
+        error.context("Flush host pagecache", logging.info)
+        # really useless when drive_cache = 'none'
+        utils.system("sync")
         mirror_test.vm.pause()
         time.sleep(5)
         if params.get("open_target_image", "no") == "yes":
@@ -33,18 +39,15 @@ def run(test, params, env):
             device_id = mirror_test.vm.get_block({"file": target_image})
             if device_id != mirror_test.device:
                 raise error.TestError("Mirrored image not being used by guest")
-        error.context("Compare fully mirrored images", logging.info)
-        qemu_img.compare_images(source_image, target_image)
+        else:
+            error.context("Compare fully mirrored images", logging.info)
+            qemu_img.compare_images(source_image, target_image)
         mirror_test.vm.resume()
         mirror_test.vm.destroy()
         if params.get("boot_target_image", "no") == "yes":
             params = params.object_params(tag)
-            if params.get("target_image_type") == "iscsi":
-                params["image_name"] = mirror_test.target_image
+            if params.get("image_type") == "iscsi":
                 params["image_raw_device"] = "yes"
-            else:
-                params["image_name"] = params["target_image"]
-                params["image_format"] = params["target_format"]
             env_process.preprocess_vm(test, params, env, params["main_vm"])
             vm = env.get_vm(params["main_vm"])
             timeout = int(params.get("login_timeout", 600))

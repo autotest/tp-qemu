@@ -1,7 +1,9 @@
+import re
 import logging
 import time
 import random
 from autotest.client.shared import error
+from autotest.client.shared import utils
 from qemu.tests import drive_mirror
 
 
@@ -18,6 +20,18 @@ class DriveMirrorSimple(drive_mirror.DriveMirror):
         error.context("query job status", logging.info)
         if not self.get_status():
             raise error.TestFail("No active job")
+
+    @error.context_aware
+    def readonly_target(self):
+        error.context("Set readonly bit on target image", logging.info)
+        cmd = "chattr +i %s" % self.target_image
+        return utils.system(cmd)
+
+    @error.context_aware
+    def clear_readonly_bit(self):
+        error.context("Clear readonly bit on target image", logging.info)
+        cmd = "chattr -i %s" % self.target_image
+        return utils.system(cmd)
 
 
 def run(test, params, env):
@@ -39,9 +53,19 @@ def run(test, params, env):
         for i in range(repeats):
             v_max, v_min = int(params.get("login_timeout", 360)) / 4, 0
             time.sleep(random.randint(v_min, v_max))
-            simple_test.start()
+            simple_test.action_before_start()
+            try:
+                simple_test.start()
+            except error.TestFail, detail:
+                if params.get("negative_test") == "yes":
+                    if not re.search(r"No active.*job", str(detail), re.I):
+                        raise error.TestFail("Block job not cancelled in"
+                                             "negative testing")
+                    break
+                raise
             simple_test.action_before_steady()
             if simple_test.get_status():
                 simple_test.cancel()
     finally:
+        simple_test.action_before_cleanup()
         simple_test.clean()

@@ -172,9 +172,11 @@ create_host_kernel_cfg(host_kernel_dir, target_cfg, host_name, host_base_cfg)
 
 parser.parse_file(os.path.join(qemu_test_dir, "cfg", "tests-example.cfg"))
 
-
 filter_str = ""
+dryrun = False
 for dict_test in parser.get_dicts():
+    if dict_test.get("dryrun") == "yes":
+        dryrun = True
     verbose = dict_test.get("host_check_verbose", "no") == "yes"
     if (dict_test.get("required_packages") and
         not package_check(dict_test, verbose=verbose)):
@@ -185,4 +187,8 @@ for dict_test in parser.get_dicts():
 
 parser.parse_string(filter_str)
 
-utils_misc.run_tests(parser, job)
+if dryrun:
+    for count, dic in enumerate(parser.get_dicts()):
+        print "dict %4d:  %s" % (count + 1, dic["shortname"])
+else:
+    utils_misc.run_tests(parser, job)

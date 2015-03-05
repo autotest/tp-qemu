@@ -9,6 +9,9 @@ Requires: binaries Xorg, totem, gnome-session
 """
 import logging
 import os
+import time
+import re
+from autotest.client.shared import error
 from virttest import utils_misc, remote
 
 
@@ -19,32 +22,71 @@ def launch_totem(guest_session, params):
     :param guest_vm - vm object
     """
 
-    totem_version = guest_session.cmd('totem --version')
-    logging.info("Totem version: %s", totem_version)
+    totem_version = guest_session.cmd_output("totem --version")
+    logging.info("Totem version: %s" % totem_version)
 
     # repeat parameters for totem
     logging.info("Set up video repeat to '%s' to the Totem.",
                  params.get("repeat_video"))
 
-    if params.get("repeat_video") == "yes":
-        cmd = "gconftool-2 --set /apps/totem/repeat -t bool true"
-    else:
-        cmd = "gconftool-2 --set /apps/totem/repeat -t bool false"
-
-    guest_session.cmd(cmd)
+    # Check for RHEL6 or RHEL7
+    # RHEL7 uses gsettings and RHEL6 uses gconftool-2
+    try:
+        release = guest_session.cmd("cat /etc/redhat-release")
+        logging.info("Redhat Release: %s" % release)
+    except:
+        raise error.TestNAError("Test is only currently supported on "
+                                "RHEL and Fedora operating systems")
 
     cmd = "export DISPLAY=:0.0"
     guest_session.cmd(cmd)
 
-    # fullscreen parameters for totem
-    if params.get("fullscreen"):
+    if "release 6." in release:
+        cmd = "gconftool-2 --set /apps/totem/repeat -t bool"
+        totem_params = "--display=:0.0 --play"
+    else:
+        cmd = "gsettings set org.gnome.totem repeat"
+        totem_params = ""
+
+    if params.get("repeat_video", "no") == "yes":
+        cmd += " true"
+    else:
+        cmd += " false"
+
+    guest_session.cmd(cmd)
+
+    cmd = "gsettings get org.gnome.totem repeat"
+    logging.info(guest_session.cmd(cmd))
+
+    cmd = "export DISPLAY=:0.0"
+    guest_session.cmd(cmd)
+
+    # Fullscreen parameters for totem
+    if params.get("fullscreen", "no") == "yes":
         fullscreen = " --fullscreen "
     else:
         fullscreen = ""
 
-    cmd = "nohup totem %s %s --display=:0.0 --play &> /dev/null &" \
-        % (fullscreen, params.get("destination_video_file_path"))
+    cmd = "nohup totem %s %s &> /dev/null &" \
+          % (fullscreen, params.get("destination_video_file_path"))
     guest_session.cmd(cmd)
+
+    time.sleep(10)
+
+    cmd = "pgrep totem"
+    pid = guest_session.cmd_output(cmd)
+    if pid:
+        logging.info("PID: %s" % pid)
+
+        if not re.search("^(\d+)", pid):
+            logging.info("Could not find Totem running! Try starting again!")
+            # Sometimes totem doesn't start properly; try again
+            cmd = "nohup totem %s %s &> /dev/null &" \
+                  % (fullscreen, params.get("destination_video_file_path"))
+            guest_session.cmd(cmd)
+            cmd = "pgrep totem"
+            pid = guest_session.cmd_output(cmd)
+            logging.info("PID: %s" % pid)
 
 
 def deploy_video_file(test, vm_obj, params):
@@ -74,7 +116,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(

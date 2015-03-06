@@ -89,6 +89,8 @@ def run(test, params, env):
 
     error.context("Init guest and try to login", logging.info)
     login_timeout = int(params.get("login_timeout", 360))
+    bg_stress_test = params.get("run_bgstress")
+    bg_stress_run_flag = params.get("bg_stress_run_flag")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login(timeout=login_timeout)
@@ -102,7 +104,6 @@ def run(test, params, env):
 
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
     s_session = None
-    bg_stress_test = params.get("run_bgstress")
     bg_ping = params.get("bg_ping")
     b_ping_lost_ratio = int(params.get("background_ping_package_lost_ratio", 5))
     f_ping_lost_ratio = int(params.get("final_ping_package_lost_ratio", 5))
@@ -123,7 +124,6 @@ def run(test, params, env):
                           logging.info)
             stress_thread = ""
             wait_time = float(params.get("wait_bg_time", 60))
-            bg_stress_run_flag = params.get("bg_stress_run_flag")
             env[bg_stress_run_flag] = False
             stress_thread = utils.InterruptedThread(
                 utils_test.run_virt_sub_test, (test, params, env),
@@ -207,7 +207,8 @@ def run(test, params, env):
                     raise error.TestError(err_msg % (bg_stress_test, err))
 
     finally:
-        env[bg_stress_run_flag] = False
+        if bg_stress_test:
+            env[bg_stress_run_flag] = False
         if session_serial:
             session_serial.close()
         if s_session:

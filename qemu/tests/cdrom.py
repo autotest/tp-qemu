@@ -873,7 +873,7 @@ def run(test, params, env):
                     else:
                         cmd = "ps -p %s" % pid
                     return session.cmd_status(cmd) != 0
-                if utils.wait_for(is_copy_done, timeout=copy_timeout) is None:
+                if utils_misc.wait_for(is_copy_done, timeout=copy_timeout) is None:
                     raise error.TestFail("Wait for file copy finish timeout")
 
                 error.context("Compare file on disk and on cdrom")

@@ -118,7 +118,8 @@ def run(test, params, env):
             raise error.TestError("heavyload process is not started")
 
         error.context("Verify vm is alive", logging.info)
-        utils.wait_for(vm.verify_alive, timeout=test_timeout, step=steping)
+        utils_misc.wait_for(vm.verify_alive,
+                            timeout=test_timeout, step=steping)
     finally:
         error.context("Stop load and clean tmp files", logging.info)
         if not installed and download_url:

@@ -1,7 +1,7 @@
 import logging
 import random
 from autotest.client.shared import error, utils
-from virttest import utils_test, utils_net, virt_vm
+from virttest import utils_test, utils_net, virt_vm, utils_misc
 
 
 @error.context_aware
@@ -58,7 +58,7 @@ def run(test, params, env):
                 renew_ip_address(session, nic["mac"], is_linux_guest)
             return
 
-        nic_ip = utils.wait_for(__get_address, timeout=360)
+        nic_ip = utils_misc.wait_for(__get_address, timeout=360)
         if nic_ip:
             return nic_ip
         cached_ip = vm.address_cache.get(nic["mac"])

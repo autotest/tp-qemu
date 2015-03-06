@@ -6,6 +6,7 @@ Script to build and install packages from git in VMs
 
 import os
 import sys
+import re
 import optparse
 import subprocess
 
@@ -22,10 +23,10 @@ git_repo["xf86-video-qxl"] = "git://anongit.freedesktop.org/xorg/driver/xf86-vid
 git_repo["virt-viewer"] = "https://git.fedorahosted.org/git/virt-viewer.git"
 
 # options to pass
-autogen_options["spice-gtk"] = "--with-gtk=2.0 --disable-gtk-doc --disable-werror --disable-vala --disable-controller"
+autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala --disable-controller"
 autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
 autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\" --disable-kms"
-autogen_options["virt-viewer"] = "--with-gtk=2.0 --with-spice-gtk --disable-update-mimedb"
+autogen_options["virt-viewer"] = "--with-spice-gtk --disable-update-mimedb"
 prefix_defaults["spice-protocol"] = "/usr/local"
 prefix_defaults["spice-vd-agent"] = "/usr"
 
@@ -77,6 +78,13 @@ if options.buildOptions:
     autogen_options[pkgName] = options.buildOptions
 if options.gitRepo:
     git_repo[pkgName] = options.gitRepo
+
+f = open("/etc/redhat-release", "r")
+rhelVersion = f.read()
+print "OS: %s" % rhelVersion
+if re.findall("release 6", rhelVersion):
+    if pkgName in ("spice-gtk", "virt-viewer"):
+        autogen_options[pkgName] += " --with-gtk=2.0"
 
 ret = os.system("which git")
 if ret != 0:

@@ -101,6 +101,27 @@ def run(test, params, env):
             session.cmd_status_output(cmd)
         session.close()
 
+    def _get_disk_index(session, image_size, disk_indexs):
+        list_disk_cmd = "echo list disk > disk && "
+        list_disk_cmd += "echo exit >> disk && diskpart /s disk"
+        disks = session.cmd_output(list_disk_cmd)
+        size_type = image_size[-1] + "B"
+        disk_size = ""
+
+        if size_type == "MB":
+            disk_size = image_size[:-1] + " MB"
+        elif size_type == "GB" and int(image_size[:-1]) < 8:
+            disk_size = str(int(image_size[:-1])*1024) + " MB"
+        else:
+            disk_size = image_size[:-1] + " GB"
+
+        regex_str = 'Disk (\d+).*?%s.*?%s' % (disk_size, disk_size)
+        for disk in disks.splitlines():
+            if disk.startswith("  Disk"):
+                o = re.findall(regex_str, disk, re.I | re.M)
+                if o:
+                    disk_indexs.append(o[0])
+
     error.context("Parsing test configuration", logging.info)
     stg_image_num = 0
     stg_params = params.get("stg_params", "")
@@ -203,6 +224,9 @@ def run(test, params, env):
     cmd_timeout = float(params.get("cmd_timeout", 360))
     re_str = params["re_str"]
     black_list = params["black_list"].split()
+    os_type = params["os_type"]
+    stg_image_size = params.get("stg_image_size")
+    disk_indexs = []
 
     have_qtree = True
     out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
@@ -234,13 +258,17 @@ def run(test, params, env):
         if cmd:
             session.cmd_status_output(cmd)
 
-        cmd = params.get("pre_cmd")
-        if cmd:
+        if params.get("os_type") == "windows":
             error.context("Create partition on those disks", logging.info)
-            s, output = session.cmd_status_output(cmd, timeout=cmd_timeout)
-            if s != 0:
-                raise error.TestFail("Create partition on disks failed.\n"
-                                     "Output is: %s\n" % output)
+            # Get the disk index
+            _get_disk_index(session, stg_image_size, disk_indexs)
+
+            # Random select one file system from file_system
+            index = random.randint(0, (len(file_system) - 1))
+            fs_type = file_system[index].strip()
+            for i in xrange(stg_image_num):
+                utils_misc.format_windows_disk(session, disk_indexs[i], None,
+                                               None, fs_type)
 
         error.context("Get disks dev filenames in guest", logging.info)
         cmd = params["list_volume_command"]

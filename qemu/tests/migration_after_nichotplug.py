@@ -104,3 +104,11 @@ def run(test, params, env):
 
     error.context("Re-enabling the primary link", logging.info)
     set_link(nic_name, up=True)
+
+    error.context("Reboot guest and verify new nic works", logging.info)
+    host_ip = utils_net.get_ip_address_by_interface(netdst)
+    session = vm.reboot(session=session)
+    status, output = utils_test.ping(dest=host_ip, count=100,
+                                     timeout=240, session=session)
+    if status != 0:
+        raise error.TestFail("Fail to ping host form guest")

@@ -164,17 +164,19 @@ def run(test, params, env):
                 utils.system(mount_cmd, timeout=60)
                 path = os.path.join(g_mount_point, f_name)
             try:
+                logging.debug("Remove the file with os.remove().")
                 os.remove("%s" % path)
             except OSError, err:
                 logging.warn("Fail to delete %s" % path)
-            try:
-                umount_cmd = "umount %s" % g_mount_point
-                utils.system(umount_cmd, timeout=60)
-                os.rmdir(g_mount_point)
-            except Exception, err:
-                msg = "Fail to clean up %s" % g_mount_point
-                msg += "Error message %s" % err
-                logging.warn(msg)
+            if "gluster" in path:
+                try:
+                    umount_cmd = "umount %s" % g_mount_point
+                    utils.system(umount_cmd, timeout=60)
+                    os.rmdir(g_mount_point)
+                except Exception, err:
+                    msg = "Fail to clean up %s" % g_mount_point
+                    msg += "Error message %s" % err
+                    logging.warn(msg)
 
     def get_cdrom_file(vm, qemu_cdrom_device):
         """

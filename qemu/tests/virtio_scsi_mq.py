@@ -102,6 +102,8 @@ def run(test, params, env):
     for numa_node_id in host_numa_nodes.nodes:
         numa_node = host_numa_nodes.nodes[numa_node_id]
         for _ in range(len(numa_node.cpus)):
+            if vcpu_num >= len(vm.vcpu_threads):
+                break
             vcpu_tid = vm.vcpu_threads[vcpu_num]
             logging.debug("pin vcpu thread(%s) to cpu"
                           "(%s)" % (vcpu_tid,
@@ -115,19 +117,20 @@ def run(test, params, env):
     except AttributeError:
         raise error.TestNAError("Monitor deson't supoort qtree "
                                 "skip this test")
-
     error_msg = "Number of queues mismatch: expect %s"
-    error_msg += " report from monitor: %s"
+    error_msg += " report from monitor: %s(%s)"
     scsi_bus_addr = ""
     for qdev in qtree.get_qtree().get_children():
         if qdev.qtree["type"] == dev_type:
             for pci_bus in qdev.get_children():
                 for pcic in pci_bus.get_children():
-                    if (pcic.qtree["class_name"] == "SCSI controller" and
-                            pcic.qtree["num_queues"] != num_queues):
-                        error_msg = error_msg % (num_queues,
-                                                 pcic.qtree["num_queues"])
-                        raise error.TestFail(error_msg)
+                    if pcic.qtree["class_name"] == "SCSI controller":
+                        qtree_queues = pcic.qtree["num_queues"].split("(")[0]
+                        if qtree_queues.strip() != num_queues.strip():
+                            error_msg = error_msg % (num_queues,
+                                                     qtree_queues,
+                                                     pcic.qtree["num_queues"])
+                            raise error.TestFail(error_msg)
                     if pcic.qtree["class_name"] == "SCSI controller":
                         scsi_bus_addr = pcic.qtree['addr']
                         break

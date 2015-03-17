@@ -9,8 +9,10 @@ Requires: binaries Xorg, totem, gnome-session
 """
 import logging
 import os
+import time
+import re
 from autotest.client.shared import error
-from virttest import utils_misc, remote, aexpect
+from virttest import utils_misc, remote
 
 
 def launch_totem(guest_session, params):
@@ -28,19 +30,22 @@ def launch_totem(guest_session, params):
                  params.get("repeat_video"))
 
     # Check for RHEL6 or RHEL7
-    # RHEL7 uses dconf and RHEL6 uses gconftool-2
+    # RHEL7 uses gsettings and RHEL6 uses gconftool-2
     try:
-        release = guest_session.cmd_output("cat /etc/redhat-release")
+        release = guest_session.cmd("cat /etc/redhat-release")
         logging.info("Redhat Release: %s" % release)
     except:
         raise error.TestNAError("Test is only currently supported on "
                                 "RHEL and Fedora operating systems")
 
+    cmd = "export DISPLAY=:0.0"
+    guest_session.cmd(cmd)
+
     if "release 6." in release:
         cmd = "gconftool-2 --set /apps/totem/repeat -t bool"
         totem_params = "--display=:0.0 --play"
     else:
-        cmd = "dconf write /org/gnome/Totem/repeat"
+        cmd = "gsettings set org.gnome.totem repeat"
         totem_params = ""
 
     if params.get("repeat_video", "no") == "yes":
@@ -49,6 +54,9 @@ def launch_totem(guest_session, params):
         cmd += " false"
 
     guest_session.cmd(cmd)
+
+    cmd = "gsettings get org.gnome.totem repeat"
+    logging.info(guest_session.cmd(cmd))
 
     cmd = "export DISPLAY=:0.0"
     guest_session.cmd(cmd)
@@ -59,9 +67,26 @@ def launch_totem(guest_session, params):
     else:
         fullscreen = ""
 
-    cmd = "nohup totem %s %s --display=:0.0 --play &> /dev/null &" \
+    cmd = "nohup totem %s %s &> /dev/null &" \
           % (fullscreen, params.get("destination_video_file_path"))
     guest_session.cmd(cmd)
+
+    time.sleep(10)
+
+    cmd = "pgrep totem"
+    pid = guest_session.cmd_output(cmd)
+    if pid:
+        logging.info("PID: %s" % pid)
+
+        if not re.search("^(\d+)", pid):
+            logging.info("Could not find Totem running! Try starting again!")
+            # Sometimes totem doesn't start properly; try again
+            cmd = "nohup totem %s %s &> /dev/null &" \
+                  % (fullscreen, params.get("destination_video_file_path"))
+            guest_session.cmd(cmd)
+            cmd = "pgrep totem"
+            pid = guest_session.cmd_output(cmd)
+            logging.info("PID: %s" % pid)
 
 
 def deploy_video_file(test, vm_obj, params):

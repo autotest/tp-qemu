@@ -30,6 +30,10 @@ except ImportError:
     from autotest.client.shared import utils_memory
 
 
+# Serial ID of the attached disk
+RANDOM_DISK_NAME = "RANDOM46464634164145"
+
+
 class SparseRange(list):
 
     """
@@ -122,7 +126,7 @@ def run(test, params, env):
         """
         return abs(float(actual - reference) / reference)
 
-    def get_dd_cmd(direction, dev=None, count=None, blocksize=None):
+    def get_dd_cmd(direction, count=None, blocksize=None):
         """
         Generates dd_cmd string
         :param direction: {read,write,bi} dd direction
@@ -131,11 +135,6 @@ def run(test, params, env):
         :param blocksize: blocksize parameter of dd
         :return: dd command string
         """
-        if dev is None:
-            if get_device_driver() == "virtio":
-                dev = 'vd?'
-            else:
-                dev = '[sh]d?'
         if direction == "read":
             params = "if=$FILE of=/dev/null iflag=direct"
         elif direction == "write":
@@ -146,9 +145,9 @@ def run(test, params, env):
             params += " bs=%s" % (blocksize)
         if count:
             params += " count=%s" % (count)
-        return ("export FILE=$(ls /dev/%s | tail -n 1); touch /tmp/cgroup_lock"
+        return ("export FILE=$(ls /dev/disk/by-id/*%s | tail -n 1); touch /tmp/cgroup_lock"
                 " ; while [ -e /tmp/cgroup_lock ]; do dd %s ; done"
-                % (dev, params))
+                % (RANDOM_DISK_NAME, params))
 
     def get_device_driver():
         """
@@ -182,7 +181,7 @@ def run(test, params, env):
         if params.get('cgroup_rmmod_scsi_debug', "no") == "yes":
             utils.system("rmmod scsi_debug")
 
-    def param_add_scsi_disks(prefix="scsi-debug-"):
+    def param_add_scsi_disks():
         """
         Adds scsi_debug disk to every VM in params['vms']
         :param prefix: adds prefix to drive name
@@ -190,7 +189,7 @@ def run(test, params, env):
         if utils.system("lsmod | grep scsi_debug", ignore_status=True):
             utils.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
         for name in params['vms'].split(' '):
-            disk_name = prefix + name
+            disk_name = "scsi-debug-" + name
             utils.system("echo 1 >/sys/bus/pseudo/drivers/scsi_debug/add_host")
             time.sleep(1)   # Wait for device init
             dev = utils.system_output("ls /dev/sd* | tail -n 1")
@@ -207,6 +206,7 @@ def run(test, params, env):
             params['image_raw_device_%s' % disk_name] = "yes"
             params['drive_cache_%s' % disk_name] = params.get('drive_cache',
                                                               'none')
+            params['drive_serial_%s' % disk_name] = RANDOM_DISK_NAME
 
     def param_add_file_disks(size, prefix="hd2-"):
         """
@@ -228,6 +228,7 @@ def run(test, params, env):
             params['remove_image_%s' % disk_name] = "yes"
             params['drive_cache_%s' % disk_name] = params.get('drive_cache',
                                                               'none')
+            params['drive_serial_%s' % disk_name] = RANDOM_DISK_NAME
 
     def param_add_vms(no_vms):
         """

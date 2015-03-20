@@ -58,7 +58,8 @@ def run(test, params, env):
     host_ph_iface_pre = params.get("host_ph_iface_prefix", "en")
     host_iface_bonding = int(params.get("host_iface_bonding", 2))
 
-    host_ph_ifaces = [_ for _ in host_ifaces if re.match(host_ph_iface_pre, _)]
+    ph_ifaces = [_ for _ in host_ifaces if re.match(host_ph_iface_pre, _)]
+    host_ph_ifaces = [_ for _ in ph_ifaces if utils_net.Interface(_).is_up()]
 
     ifaces_in_use = host_bridges.list_iface()
     host_ph_ifaces_un = list(set(host_ph_ifaces) - set(ifaces_in_use))

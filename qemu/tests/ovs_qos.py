@@ -80,12 +80,12 @@ def run(test, params, env):
                       logging.info)
         server_ip = server_vm.get_address()
         output = netperf_client.start(server_ip, client_options)
+        logging.debug("netperf client output: %s" % output)
         regex = r"\d+\s+\d+\s+\d+\s+[\d.]+\s+([\d.]+)"
         try:
             throughout = float(re.search(regex, output, re.M).groups()[0])
             return throughout * 1000
         except Exception:
-            logging.debug("netperf client output: %s" % output)
             raise error.TestError("Invaild output format of netperf client!")
         finally:
             netperf_client.stop()
@@ -106,7 +106,7 @@ def run(test, params, env):
             msg = "OVS Qos test failed, "
             for tap, throughout, rate, burst in fails:
                 msg += "netperf throughout(%s) on '%s' " % (throughout, tap)
-                msg += "should be near ingress_policing_rate(%s), " % rate
+                msg += "should be near ingress_policing_rate(%s) +/- " % rate
                 msg += "ingress_policing_burst(%s) \n" % burst
             raise error.TestFail(msg)
 

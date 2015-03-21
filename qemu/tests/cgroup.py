@@ -614,7 +614,7 @@ def run(test, params, env):
             err += _test("read", blkio)
             # verify sessions between tests
             for session in sessions:
-                session.cmd("true", timeout=360)
+                session.cmd("true", timeout=600)
             error.context("Write test")
             err += _test("write", blkio)
 
@@ -632,7 +632,7 @@ def run(test, params, env):
 
             for session in sessions:
                 # try whether all sessions are clean
-                session.cmd("true", timeout=360)
+                session.cmd("true", timeout=600)
                 session.close()
 
             for i in range(len(vms)):

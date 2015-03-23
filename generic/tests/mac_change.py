@@ -15,7 +15,7 @@ def check_guest_mac(mac, vm, device_id=None):
         err += "query-network command output: %s" % str(network_info)
         raise error.TestFail(err)
     for info in str(network_info).splitlines():
-        if device_id in info and mac not in info:
+        if re.match(device_id, info.strip(), re.I) and mac not in info:
             err = "Cold not get correct mac from qmp command!"
             err += "query-network command output: %s" % str(network_info)
             raise error.TestFail(err)

@@ -56,13 +56,13 @@ def run(test, params, env):
             simple_test.action_before_start()
             try:
                 simple_test.start()
-            except error.TestFail, detail:
+            except Exception, detail:
                 if params.get("negative_test") == "yes":
-                    if not re.search(r"No active.*job", str(detail), re.I):
-                        raise error.TestFail("Block job not cancelled in"
-                                             "negative testing")
-                    break
-                raise
+                    keywords = params.get("error_key_words", "Could not open")
+                    if simple_test.get_status():
+                        raise error.TestFail("Block job not cancel as expect")
+                    if keywords not in str(detail):
+                        raise
             simple_test.action_before_steady()
             if simple_test.get_status():
                 simple_test.cancel()

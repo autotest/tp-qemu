@@ -1,4 +1,5 @@
 import logging
+import os
 from autotest.client import utils
 from autotest.client.shared import error
 from virttest import utils_misc, utils_net, utils_conn
@@ -65,6 +66,7 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
     vmcore_path = vm.params.get("vmcore_path", "/var/crash")
     kdump_method = vm.params.get("kdump_method", "basic")
     kdump_propagate_cmd = vm.params.get("kdump_propagate_cmd")
+    kdump_enable_timeout = int(vm.params.get("kdump_enable_timeout", 360))
 
     error.context("Try to log into guest '%s'." % vm_name, logging.info)
     session = vm.wait_for_login(timeout=timeout)
@@ -116,7 +118,7 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
 
     error.context("Enabling kdump service...", logging.info)
     # the initrd may be rebuilt here so we need to wait a little more
-    session.cmd(kdump_enable_cmd, timeout=120)
+    session.cmd(kdump_enable_cmd, timeout=kdump_enable_timeout)
 
     return session
 
@@ -136,6 +138,8 @@ def crash_test(vm, vcpu, crash_cmd, timeout):
     vmcore_rm_cmd = vmcore_rm_cmd % vmcore_path
     kdump_restart_cmd = vm.params.get("kdump_restart_cmd",
                                       "service kdump restart")
+    kdump_status_cmd = vm.params.get("kdump_status_cmd",
+                                     "systemctl status kdump.service")
 
     session = vm.wait_for_login(timeout=timeout)
 
@@ -146,6 +150,11 @@ def crash_test(vm, vcpu, crash_cmd, timeout):
         session.cmd_output(vmcore_rm_cmd)
 
     session.cmd(kdump_restart_cmd, timeout=120)
+
+    debug_msg = "Kdump service status before our testing:\n"
+    debug_msg += session.cmd(kdump_status_cmd)
+
+    logging.debug(debug_msg)
 
     try:
         if crash_cmd == "nmi":
@@ -216,6 +225,7 @@ def run(test, params, env):
     def_crash_kernel_prob_cmd = "grep -q 1 /sys/kernel/kexec_crash_loaded"
     crash_kernel_prob_cmd = params.get("crash_kernel_prob_cmd",
                                        def_crash_kernel_prob_cmd)
+    kdump_cfg_path = params.get("kdump_cfg_path", "/etc/kdump.cfg")
 
     vms = params.get("vms", "vm1 vm2").split()
     vm_list = []
@@ -228,6 +238,9 @@ def run(test, params, env):
             vm_list.append(vm)
 
             preprocess_kdump(vm, timeout)
+            vm.copy_files_from(kdump_cfg_path,
+                               os.path.join(test.debugdir,
+                                            "kdump.cfg-%s" % vm_name))
 
             session = kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
                                    kernel_param_cmd, kdump_enable_cmd, timeout)
@@ -240,6 +253,9 @@ def run(test, params, env):
             crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
 
             session = vm.wait_for_login(timeout=timeout)
+            vm.copy_files_from(kdump_cfg_path,
+                               os.path.join(test.debugdir,
+                                            "kdump.cfg-%s-test" % vm.name))
             if crash_cmd == "nmi":
                 crash_test(vm, None, crash_cmd, timeout)
             else:

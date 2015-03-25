@@ -58,33 +58,51 @@ def run(test, params, env):
         guest_root_session.cmd("grep -i qxl " + qxl_logfile)
     # Logging test for spice-vdagent
     elif(log_test == 'spice-vdagent'):
+
+        # Check for RHEL6 or RHEL7
+        # RHEL7 uses gsettings and RHEL6 uses gconftool-2
+        try:
+            release = guest_session.cmd("cat /etc/redhat-release")
+            logging.info("Redhat Release: %s" % release)
+        except:
+            raise error.TestNAError("Test is only currently supported on "
+                                    "RHEL and Fedora operating systems")
+
+        if "release 7." in release:
+            spice_vdagent_loginfo_cmd = "journalctl" \
+                                        " SYSLOG_IDENTIFIER=spice-vdagent" \
+                                        " SYSLOG_IDENTIFIER=spice-vdagentd"
+        else:
+            spice_vdagent_loginfo_cmd = "tail -n 10 " + spicevdagent_logfile
+
+        cmd = ("echo \"SPICE_VDAGENTD_EXTRA_ARGS=-dd\">"
+               "/etc/sysconfig/spice-vdagentd")
+        guest_root_session.cmd(cmd)
+
         logging.info("Running the logging test for spice-vdagent daemon")
         utils_spice.start_vdagent(guest_root_session, test_timeout=15)
 
         # Testing the log after stopping spice-vdagentd
         utils_spice.stop_vdagent(guest_root_session, test_timeout=15)
-        output = guest_root_session.cmd("tail -n 3 " + spicevdagent_logfile +
-                                        " | grep 'vdagentd quiting'")
+        cmd = spice_vdagent_loginfo_cmd + " | tail -n 3 | grep \"vdagentd quiting\""
+        output = guest_root_session.cmd(cmd)
+        logging.debug(output)
 
         # Testing the log after starting spice-vdagentd
         utils_spice.start_vdagent(guest_root_session, test_timeout=15)
-        output = guest_root_session.cmd("tail -n 2 " + spicevdagent_logfile +
-                                        " | grep 'opening vdagent virtio channel'")
+        cmd = spice_vdagent_loginfo_cmd + "| tail -n 6 | grep \"opening vdagent virtio channel\""
+        output = guest_root_session.cmd(cmd)
+        logging.debug(output)
 
         # Testing the log after restart spice-vdagentd
         utils_spice.restart_vdagent(guest_root_session, test_timeout=10)
-        output = guest_root_session.cmd("tail -n 2 " + spicevdagent_logfile +
-                                        " | grep 'opening vdagent virtio channel'")
-
-        cmd = ("echo \"SPICE_VDAGENTD_EXTRA_ARGS=-dd\">"
-               "/etc/sysconfig/spice-vdagentd")
-        guest_root_session.cmd(cmd)
-        utils_spice.restart_vdagent(guest_root_session, test_timeout=10)
+        cmd = spice_vdagent_loginfo_cmd + "| tail -n 6 | grep 'opening vdagent virtio channel'"
+        output = guest_root_session.cmd(cmd)
+        logging.debug(output)
 
         # Finally test copying text within the guest
         cmd = "%s %s %s %s" % (interpreter, script_call,
                                script_params, testing_text)
-
         logging.info("This command here: " + cmd)
 
         try:
@@ -103,7 +121,7 @@ def run(test, params, env):
         logging.debug("------------ End of script output of the Copying"
                       " Session ------------")
 
-        output = guest_root_session.cmd("tail -n 3 " + spicevdagent_logfile +
+        output = guest_root_session.cmd(spice_vdagent_loginfo_cmd + "| tail -n 2" +
                                         " | grep 'clipboard grab'")
 
     else:

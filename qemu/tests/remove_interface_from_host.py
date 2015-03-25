@@ -96,10 +96,12 @@ def run(test, params, env):
 
     # Step 7, shutdown guest, and restart a guest
     error.context("Shutdown the VM.", logging.info)
-    vm.monitor.cmd("system_powerdown")
+    session = vm.wait_for_serial_login()
+    shutdown_cmd = params.get("shutdown_command", "shutdown")
+    logging .debug("Shutdown guest with command %s" % shutdown_cmd)
+    session.sendline(shutdown_cmd)
 
-    error.context("Waiting VM to go down "
-                  "(system_powerdown monitor cmd)", logging.info)
+    error.context("Waiting VM to go down", logging.info)
 
     if not utils_misc.wait_for(vm.is_dead, 360, 0, 1):
         raise error.TestFail("Guest refuses to go down")

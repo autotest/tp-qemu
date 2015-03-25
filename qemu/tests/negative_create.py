@@ -1,5 +1,6 @@
 import logging
 from virttest import virt_vm, utils_misc, utils_net
+from virttest import env_process
 
 
 class VMCreateSuccess(Exception):
@@ -21,12 +22,11 @@ def run(test, params, env):
     E.g. -spice port=-1 or -spice port=hello
     """
 
-    main_vm = env.get_vm(params["main_vm"])
     try:
-        main_vm.create(params["main_vm"])
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params["main_vm"])
     except (virt_vm.VMError, utils_net.NetError), err:
         logging.debug("VM Failed to create. This was expected. Reason:\n%s",
                       str(err))
     else:
-        main_vm.destroy()
         raise VMCreateSuccess()

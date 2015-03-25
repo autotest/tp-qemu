@@ -82,6 +82,8 @@ def run(test, params, env):
     if disk_update_cmd:
         disk_update_cmd = disk_update_cmd.split("::")
 
+    disk_rescan_cmd = params.get("disk_rescan_cmd")
+
     block_size = data_image_size
     disk_change_ratio = params["disk_change_ratio"]
     for index, ratio in enumerate(disk_change_ratio.strip().split()):
@@ -111,9 +113,14 @@ def run(test, params, env):
         # We need shrink the disk in guest first, than in monitor
         if block_size < old_block_size and disk_update_cmd:
             session.cmd(disk_update_cmd[index])
-        tmp = vm.monitor.block_resize(data_image_dev, block_size)
+
+        vm.monitor.block_resize(data_image_dev, block_size)
+
         if need_reboot:
             session = vm.reboot(session=session)
+        elif disk_rescan_cmd:
+            session.cmd(disk_rescan_cmd)
+
         # We need expand disk in monitor first than extend it in guest
         if block_size > old_block_size and disk_update_cmd:
             session.cmd(disk_update_cmd[index])

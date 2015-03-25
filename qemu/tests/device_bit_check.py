@@ -29,7 +29,7 @@ def run(test, params, env):
     dev_param_name = params.get("dev_param_name", "blk_extra_params")
     dev_pattern = params.get("dev_pattern", "(dev: %s.*?)dev:" % dev_type)
     pci_id_pattern = params.get("pci_id_pattern")
-    convert_dict = {"1": "on", "0": "off"}
+    convert_dict = {"1": ["on", "true"], "0": ["off", "false"]}
     orig_extra_params = params.get(dev_param_name, "")
     for properties in test_loop:
         if properties != "default":
@@ -58,11 +58,16 @@ def run(test, params, env):
             raise error.TestError("Can't get device info from qtree result.")
 
         for index, option in enumerate(options):
-            option_value = re.findall("%s\s+=\s+(\w+)" % option, dev_info[0])
+            option_regex = "%s\s+=\s+(\w+)" % option
+            option_value = re.findall(option_regex, dev_info[0], re.M)
             if not option_value:
+                logging.debug("dev info in qtree: %s" % dev_info[0])
                 raise error.TestError("Can't get the property info from qtree"
                                       " result")
-            if option_value[0] != convert_dict[properties[index]]:
+            if option_value[0] not in convert_dict[properties[index]]:
+                msg = "'%s' value get '%s', " % (option, option_value)
+                msg += "expect value '%s'" % convert_dict[properties[index]]
+                logging.debug(msg)
                 raise error.TestFail("Properity bit for %s is wrong." % option)
 
             logging.info("Properity bit in qtree is right for %s." % option)
@@ -77,6 +82,9 @@ def run(test, params, env):
                 bitstr = re.findall("[01]+", bitstr)[-1]
 
                 if bitstr[int(options_offset[index])] != properties[index]:
+                    msg = "bit string in guest: %s" % bitstr
+                    msg += "expect bit string: %s" % properties[index]
+                    logging.debug(msg)
                     raise error.TestFail("Properity bit for %s is wrong"
                                          " inside guest." % option)
             logging.info("Properity bit in qtree is right for %s"

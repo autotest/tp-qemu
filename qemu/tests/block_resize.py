@@ -78,6 +78,12 @@ def run(test, params, env):
     if params.get("guest_prepare_cmd"):
         session.cmd(params.get("guest_prepare_cmd"))
 
+    if params.get("os_type") == "windows":
+        utils_misc.mount_windows_disk(session,
+                                      params.get("image_did_stg"),
+                                      params.get("image_size_stg"),
+                                      params.get("image_fstype_stg"))
+
     disk_update_cmd = params.get("disk_update_cmd")
     if disk_update_cmd:
         disk_update_cmd = disk_update_cmd.split("::")

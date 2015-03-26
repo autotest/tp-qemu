@@ -43,7 +43,7 @@ def run(test, params, env):
             if o:
                 wdt_pci_info = re.findall(".*6300ESB Watchdog Timer", o)
                 if not wdt_pci_info:
-                    raise error.TestFail("Can find watchdog pci")
+                    raise error.TestFail("Can not find watchdog pci")
             logging.info("Found watchdog pci device : %s" % wdt_pci_info)
 
         # checking watchdog init info using dmesg
@@ -78,16 +78,16 @@ def run(test, params, env):
         # when watchdog action is pause, shutdown, reset, poweroff
         # the vm session will lost responsive
         response_timeout = int(params.get("response_timeout", '240'))
-        error.context("Check whether or not watchdog action '%s' take effect"
+        error.context("Check whether or not watchdog action '%s' took effect"
                       % watchdog_action, logging.info)
         if not utils_misc.wait_for(lambda: not session.is_responsive(),
                                    response_timeout, 0, 1):
             if watchdog_action == "none" or watchdog_action == "debug":
                 logging.info("OK, the guest session is responsive still")
             else:
-                raise error.TestFail(
-                    "Oops, seems action '%s' take no effect, ",
-                    "guest is responsive" % watchdog_action)
+                txt = "Oops, seems action '%s' took no" % watchdog_action
+                txt += " effect, guest is still responsive."
+                raise error.TestFail(txt)
 
         # when action is poweroff or shutdown(without no-shutdown option), the vm
         # will dead, and qemu exit.
@@ -96,9 +96,9 @@ def run(test, params, env):
                                               params.get("disable_shutdown") != "yes")):
             if not utils_misc.wait_for(lambda: vm.is_dead(),
                                        response_timeout, 0, 1):
-                raise error.TestFail(
-                    "Oops, seems '%s' action take no effect, ",
-                    "guest is alive!" % watchdog_action)
+                txt = "Oops, seems '%s' action took no effect, " % watchdog_action
+                txt += "guest is still alive!"
+                raise error.TestFail(txt)
         else:
             if watchdog_action == "pause":
                 f_param = "paused"
@@ -111,9 +111,9 @@ def run(test, params, env):
                 lambda: vm.monitor.verify_status(f_param),
                     response_timeout, 0, 1):
                 logging.debug("Monitor status is:%s" % vm.monitor.get_status())
-                raise error.TestFail(
-                    "Oops, seems action '%s' take no effect, ",
-                    "Wrong monitor status!" % watchdog_action)
+                txt = "Oops, seems action '%s' took no effect" % watchdog_action
+                txt += " , Wrong monitor status!"
+                raise error.TestFail(txt)
 
         # when the action is reset, need can relogin the guest.
         if watchdog_action == "reset":
@@ -199,9 +199,9 @@ def run(test, params, env):
 
         if utils_misc.wait_for(lambda: not session.is_responsive(),
                                response_timeout, 0, 1):
-            error_msg = "Oops,Watchdog action take effect, magic close FAILED"
+            error_msg = "Oops,Watchdog action took effect, magic close FAILED"
             raise error.TestFail(error_msg)
-        logging.info("Magic close take effect.")
+        logging.info("Magic close took effect.")
 
     def migration_when_wdt_timeout():
         """

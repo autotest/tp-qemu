@@ -46,12 +46,13 @@ def run(test, params, env):
         raise error.TestFail("Ping failed, status: %s, output: %s"
                              % (status, output))
 
-    host_ifname = vm.get_ifname()
-    error.context("Get interface name: %s. " % host_ifname, logging.info)
+    host_ifname_name = vm.get_ifname()
+    error.context("Get interface name: %s. " % host_ifname_name, logging.info)
+    host_ifname = utils_net.Interface(host_ifname_name)
 
     # Step 3,4, disable interface and ping should fail
-    error.context("Set interface %s down." % host_ifname, logging.info)
-    utils_net.ip_link_disable_interface(host_ifname)
+    error.context("Set interface %s down." % host_ifname_name, logging.info)
+    host_ifname.down()
     time.sleep(secs_after_iplink_action)
 
     error.context("After disable the ifname, "
@@ -64,8 +65,8 @@ def run(test, params, env):
                              % (status, output))
 
     # Step 5, enable interface, ping should work
-    error.context("Set interface %s up." % host_ifname, logging.info)
-    utils_net.ip_link_enable_interface(host_ifname)
+    error.context("Set interface %s up." % host_ifname_name, logging.info)
+    host_ifname.up()
     time.sleep(secs_after_iplink_action)
 
     error.context("After enable the ifname, "
@@ -79,9 +80,9 @@ def run(test, params, env):
 
     # Step 6, delete the interface, qemu should not crash,
     # ping should fail
-    error.context("Delete the interface %s." % host_ifname,
+    error.context("Delete the interface %s." % host_ifname_name,
                   logging.info)
-    utils_net.ip_link_delete_interface(host_ifname)
+    host_ifname.dellink()
     time.sleep(secs_after_iplink_action)
 
     error.context("After delete the ifname, "
@@ -96,10 +97,12 @@ def run(test, params, env):
 
     # Step 7, shutdown guest, and restart a guest
     error.context("Shutdown the VM.", logging.info)
-    vm.monitor.cmd("system_powerdown")
+    session = vm.wait_for_serial_login()
+    shutdown_cmd = params.get("shutdown_command", "shutdown")
+    logging .debug("Shutdown guest with command %s" % shutdown_cmd)
+    session.sendline(shutdown_cmd)
 
-    error.context("Waiting VM to go down "
-                  "(system_powerdown monitor cmd)", logging.info)
+    error.context("Waiting VM to go down", logging.info)
 
     if not utils_misc.wait_for(vm.is_dead, 360, 0, 1):
         raise error.TestFail("Guest refuses to go down")

@@ -52,11 +52,7 @@ def launch_totem(guest_session, params):
         cmd += " true"
     else:
         cmd += " false"
-
     guest_session.cmd(cmd)
-
-    cmd = "gsettings get org.gnome.totem repeat"
-    logging.info(guest_session.cmd(cmd))
 
     cmd = "export DISPLAY=:0.0"
     guest_session.cmd(cmd)

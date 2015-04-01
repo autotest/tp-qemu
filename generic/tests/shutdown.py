@@ -72,7 +72,7 @@ def run(test, params, env):
             check_failed = False
             vm_status = vm.monitor.get_status()
             if vm.monitor.protocol == "qmp":
-                if not vm_status['status'] != "shutdown":
+                if vm_status['status'] != "shutdown":
                     check_failed = True
             else:
                 if not re.findall("paused\s+\(shutdown\)", vm_status):

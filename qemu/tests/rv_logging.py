@@ -90,13 +90,13 @@ def run(test, params, env):
 
         # Testing the log after starting spice-vdagentd
         utils_spice.start_vdagent(guest_root_session, test_timeout=15)
-        cmd = spice_vdagent_loginfo_cmd + "| tail -n 6 | grep \"opening vdagent virtio channel\""
+        cmd = spice_vdagent_loginfo_cmd + "| tail -n 7 | grep \"opening vdagent virtio channel\""
         output = guest_root_session.cmd(cmd)
         logging.debug(output)
 
         # Testing the log after restart spice-vdagentd
         utils_spice.restart_vdagent(guest_root_session, test_timeout=10)
-        cmd = spice_vdagent_loginfo_cmd + "| tail -n 6 | grep 'opening vdagent virtio channel'"
+        cmd = spice_vdagent_loginfo_cmd + "| tail -n 7 | grep 'opening vdagent virtio channel'"
         output = guest_root_session.cmd(cmd)
         logging.debug(output)
 

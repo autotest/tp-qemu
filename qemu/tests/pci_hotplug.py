@@ -114,7 +114,7 @@ def run(test, params, env):
                 controller_model = "virtio-scsi-pci"
             verify_supported_device(controller_model)
             controller_id = "controller-" + device_id
-            if params.get("monitor_type") == "human":
+            if vm.monitor.protocol == "human":
                 controller_add_cmd = ("device_add %s,id=%s" %
                                       (controller_model, controller_id))
             else:
@@ -244,7 +244,7 @@ def run(test, params, env):
             cmd = "pci_del pci_addr=%s" % hex(slot_id)
             vm.monitor.send_args_cmd(cmd, convert=False)
         elif cmd_type == "device_add":
-            if params.get("monitor_type") == "human":
+            if vm.monitor.protocol == "human":
                 cmd = "device_del %s" % pci_info[pci_num][1]
             else:
                 cmd = "device_del id=%s" % pci_info[pci_num][1]
@@ -252,7 +252,7 @@ def run(test, params, env):
             pci_model = params.get("pci_model")
             if pci_model == "scsi" or pci_model == "scsi-hd":
                 controller_id = "controller-" + pci_info[pci_num][0]
-                if params.get("monitor_type") == "human":
+                if vm.monitor.protocol == "human":
                     controller_del_cmd = "device_del %s" % controller_id
                 else:
                     controller_del_cmd = "device_del id=%s" % controller_id

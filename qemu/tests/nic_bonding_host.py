@@ -65,7 +65,7 @@ def run(test, params, env):
 
     if (len(host_ph_ifaces_un) < 2 or
             len(host_ph_ifaces_un) < host_iface_bonding):
-        raise error.TestErrorNA("Host need %s nics"
+        raise error.TestNAError("Host need %s nics"
                                 " at least." % host_iface_bonding)
 
     error.context("Add nics to %s" % bond_iface.name, logging.info)

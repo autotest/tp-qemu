@@ -1,9 +1,13 @@
-import logging
-import re
 import os
+import re
+import time
+import logging
 from autotest.client import utils
-from virttest import utils_misc, data_dir, env_process
-from autotest.client.shared import error, iscsi
+from virttest import utils_misc
+from virttest import data_dir
+from virttest import qemu_storage
+from virttest import env_process
+from autotest.client.shared import error
 
 
 @error.context_aware
@@ -48,21 +52,19 @@ def run(test, params, env):
         Prepare remote ISCSI storage for block image, and login session for
         iscsi device.
         """
-
-        iscsidevice = iscsi.Iscsi(params)
-        iscsidevice.login()
-        device_name = iscsidevice.get_device_name()
-        if not device_name:
-            iscsidevice.logout()
-            raise error.TestError("Fail to get iscsi device name")
+        image_name = params.get("images").split()[0]
+        base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+        iscsidevice = qemu_storage.Iscsidev(params, base_dir, image_name)
+        iscsidevice.setup()
 
     def postprocess_remote_storage():
         """
         Logout from target.
         """
-
-        iscsidevice = iscsi.Iscsi(params)
-        iscsidevice.logout()
+        image_name = params.get("images").split()[0]
+        base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+        iscsidevice = qemu_storage.Iscsidev(params, base_dir, image_name)
+        iscsidevice.cleanup()
 
     def cleanup(dev_name):
         if dev_name == "scsi-cd":
@@ -77,10 +79,13 @@ def run(test, params, env):
 
         logging.info("Wait for display and check boot info.")
         infos = boot_fail_info.split(';')
-        serial_output = vm.serial_console.get_stripped_output()
-        utils_misc.wait_for(lambda: re.search(infos[0],
-                                              serial_output), timeout, 1)
-
+        start = time.time()
+        while True:
+            console_str = vm.serial_console.get_stripped_output()
+            match = re.search(infos[0], console_str)
+            if match or time.time() > start + timeout:
+                break
+            time.sleep(1)
         logging.info("Try to boot from '%s'" % device_name)
         try:
             if dev_name == "hard-drive" or (dev_name == "scsi-hd" and not
@@ -101,6 +106,11 @@ def run(test, params, env):
         finally:
             cleanup(device_name)
 
+    timeout = int(params.get("login_timeout", 360))
+    boot_menu_key = params.get("boot_menu_key", 'f12')
+    boot_menu_hint = params.get("boot_menu_hint")
+    boot_fail_info = params.get("boot_fail_info")
+    boot_device = params.get("boot_device")
     dev_name = params.get("dev_name")
     if dev_name == "scsi-cd":
         create_cdroms()
@@ -117,18 +127,16 @@ def run(test, params, env):
     else:
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
-
-    timeout = int(params.get("login_timeout", 360))
-    boot_menu_key = params.get("boot_menu_key", 'f12')
-    boot_menu_hint = params.get("boot_menu_hint")
-    boot_fail_info = params.get("boot_fail_info")
-    boot_device = params.get("boot_device")
-
     if boot_device:
-        serial_output = vm.serial_console.get_stripped_output()
-        if not utils_misc.wait_for(lambda:
-                                   re.search(boot_menu_hint, serial_output),
-                                   timeout, 1):
+        match = False
+        start = time.time()
+        while True:
+            console_str = vm.serial_console.get_stripped_output()
+            match = re.search(boot_menu_hint, console_str)
+            if match or time.time() > start + timeout:
+                break
+            time.sleep(1)
+        if not match:
             cleanup(dev_name)
             raise error.TestFail("Could not get boot menu message. "
                                  "Excepted Result: '%s'" % boot_menu_hint)

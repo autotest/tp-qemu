@@ -1,0 +1,41 @@
+cpuid script is used to compare the difference of cpuinfo between guest and ref file.
+
+1. How does cpuid work
+1). Build kernel
+    Kernel cpuid_dump_kernel.bin will be build under qemu/deps/cpuid/src
+2). Get guest cpuid info
+    Boot up guest with -kernel cpuid_dump_kernel.bin, cpuinfo will be printed in serial log
+3). Get ref dump
+    ref-dump files are put under qemu/deps/cpuid/cpuid_dumps/kvm
+4). Check test result
+    Compare the cpuinfo get from guest with the cpuinfo get from ref-dump file,
+    ignore_cpuid_leaves with format  <in_eax>[,<in_ecx>[,<register>[ ,<bit>]]]
+    is set in qemu_cpu.cfg file, which will be ignore.
+
+2. How to generate new ref-dumps
+e.g New cpu_model: Haswell
+    New machine_type: rhel7.0
+1). Prepare the hardware
+    Make sure the host cpu model is "Haswell" or advance than "Haswell"
+    and support rhel7.0 machine type
+2). Add cpu_model
+    Add cpu model Haswell to file cpuid/cpuid_dumps/scripts/dump-cpus-from-qemu 
+3). Add machine_tpye
+    Add machine type rhel7.0 to file cpuid/cpuid_dumps/scripts/dump-cpus-from-qemu
+    and to file cpuid/cpuid_dumps/scripts/machines-versions
+4). Generate new dump files
+    execute script dump-cpus-from-qemu
+    #./dump-cpus-from-qemu (under cpuid_dumps/scripts/)
+5). Copy dump files
+    #./copy-ref-dumps path_to_put_dump_files (under cpuid_dumps/scripts/)
+
+3. Add new cpu_model machine_type support to qemu_cpu.cfg
+    e.g
+    - cpu.intel:
+        variants:
+            - Haswell:
+                cpu_model = "Haswell"
+
+4. How to check the test pass or fail
+Non-matching is acceptable if there is keyword "whitelisted", otherwise test failed
+e.g Non-matching bit: CPUID[0x80000001,0x0].edx[17]: found 1 instead of 0 (whitelisted)

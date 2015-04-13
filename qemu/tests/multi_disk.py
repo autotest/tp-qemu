@@ -262,6 +262,10 @@ def run(test, params, env):
             error.context("Create partition on those disks", logging.info)
             # Get the disk index
             _get_disk_index(session, stg_image_size, disk_indexs)
+            if len(disk_indexs) < stg_image_num:
+                err_msg = "Set disks num: %d" % stg_image_num
+                err_msg += ", Get disks num in guest: %d" % len(disk_indexs)
+                raise error.TestFail("Fail to list all the volumes, %s" % err_msg)
 
             # Random select one file system from file_system
             index = random.randint(0, (len(file_system) - 1))

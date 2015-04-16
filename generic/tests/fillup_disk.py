@@ -44,17 +44,21 @@ def run(test, params, env):
             number += 1
     finally:
         error.context("Cleaning the temporary files...", logging.info)
-        while number >= 0:
-            cmd = "rm -f /%s/fillup.%d" % (fill_dir, number)
-            logging.debug(cmd)
-            s, o = session2.cmd_status_output(cmd)
-            if s != 0:
-                logging.error(o)
-                raise error.TestFail("Failed to remove file %s: %s;"
-                                     "guest may be unresponsive or "
-                                     "command timeout" % (number, o))
-            number -= 1
-        if session:
-            session.close()
-        if session2:
-            session2.close()
+        try:
+            clean_cmd = params.get("clean_cmd") % fill_dir
+            status, output = session2.cmd_status_output(clean_cmd)
+            if status != 0:
+                raise error.TestWarn("Cleaning the temporary files failed ! \n"
+                                     "Guest may be unresponsive or "
+                                     "command timeout. \n"
+                                     "The error info is: %s \n" % output)
+            else:
+                logging.debug(output)
+        finally:
+            show_fillup_dir_cmd = params.get("show_fillup_dir_cmd") % fill_dir
+            output = session2.cmd_output_safe(show_fillup_dir_cmd)
+            logging.debug("The fill_up dir shows:\n %s", output)
+            if session:
+                session.close()
+            if session2:
+                session2.close()

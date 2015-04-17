@@ -3,6 +3,7 @@ import re
 import logging
 from autotest.client.shared import error
 from virttest import aexpect
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -18,6 +19,22 @@ def check_usb_device_monitor(test, params, env):
     if info_usb_name and (info_usb_name not in o):
         raise error.TestFail("Could not find '%s' device, monitor "
                              "returns: \n%s" % (params.get("product"), o))
+
+
+def check_usb_device_guest(session, item, cmd, timeout):
+    def __check(session, item, cmd):
+        output = session.cmd_output(cmd)
+        devices = re.findall(item, output, re.I | re.M)
+        if not devices:
+            msg = "Could not find item '%s' in guest, " % item
+            msg += "Output('%s') in guest: %s" % (cmd, output)
+            msgbox.append(msg)
+        return devices
+
+    msgbox = []
+    kargs = (session, item, cmd)
+    devices = utils_misc.wait_for(lambda: __check(*kargs), timeout=timeout)
+    return devices, msgbox
 
 
 @error.context_aware
@@ -48,11 +65,12 @@ def check_usb_device(test, params, env):
         pass
 
     error.context("Verify USB device in guest.")
-    o = session.cmd_output(params["chk_usb_info_cmd"])
+    cmd = params["chk_usb_info_cmd"]
     for item in chk_list:
-        if not re.findall(item, o, re.I):
-            raise error.TestFail("Could not find item '%s' in guest, "
-                                 "Output:\n %s" % (item, o))
+        kargs = (session, item, cmd, 5.0)
+        exists, msgbox = check_usb_device_guest(*kargs)
+        if not exists:
+            raise error.TestFail(msgbox[0])
 
     output = ""
     try:

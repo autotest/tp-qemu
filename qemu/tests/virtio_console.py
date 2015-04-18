@@ -1993,6 +1993,7 @@ def run(test, params, env):
             fce = locals()[_fce]
             return fce()
         except Exception, details:
+            EXIT_EVENT.set()    # Avoid hangs
             exc_type, exc_value, exc_traceback = sys.exc_info()
             logging.error("Original traceback:\n" +
                           "".join(traceback.format_exception(

@@ -23,7 +23,7 @@ git_repo["xf86-video-qxl"] = "git://anongit.freedesktop.org/xorg/driver/xf86-vid
 git_repo["virt-viewer"] = "https://git.fedorahosted.org/git/virt-viewer.git"
 
 # options to pass
-autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala --disable-controller"
+autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala --disable-controller --enable-smartcard"
 autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
 autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\" --disable-kms"
 autogen_options["virt-viewer"] = "--with-spice-gtk --disable-update-mimedb"

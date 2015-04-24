@@ -25,6 +25,13 @@ def run(test, params, env):
         """
         return session_obj.get_stripped_output()
 
+    def boot_menu():
+        return re.search(boot_menu_hint, get_output(seabios_session))
+
+    def boot_menu_check():
+        return (len(re.findall(boot_menu_hint,
+                               get_output(seabios_session))) > 1)
+
     error.context("Start guest with sga bios")
     vm = env.get_vm(params["main_vm"])
     # Since the seabios is displayed in the beginning of guest boot,
@@ -40,9 +47,6 @@ def run(test, params, env):
     sgabios_info = params.get("sgabios_info")
 
     seabios_session = vm.logsessions['seabios']
-
-    def boot_menu():
-        return re.search(boot_menu_hint, get_output(seabios_session))
 
     if sgabios_info:
         error.context("Display and check the SGABIOS info", logging.info)
@@ -73,6 +77,8 @@ def run(test, params, env):
 
         if not utils_misc.wait_for(reboot_check, timeout, 1):
             raise error.TestFail("Could not restart the vm")
+
+        utils_misc.wait_for(boot_menu_check, timeout, 1)
 
     error.context("Display and check the boot menu order", logging.info)
 

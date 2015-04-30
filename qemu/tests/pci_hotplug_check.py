@@ -135,7 +135,7 @@ def run(test, params, env):
 
         if pci_model == "scsi":
             pci_model = "scsi-disk"
-            if arch.ARCH == 'ppc64':
+            if arch.ARCH in ('ppc64', 'ppc64le'):
                 controller_model = "spapr-vscsi"
             else:
                 controller_model = "lsi53c895a"

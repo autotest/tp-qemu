@@ -2,7 +2,9 @@ import re
 import time
 import logging
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc, data_dir
+from virttest import utils_misc
+from virttest import utils_test
+from virttest import data_dir
 
 
 @error.context_aware
@@ -54,10 +56,6 @@ def run(test, params, env):
         logging.warn("qemu does not support qmp. Human monitor will be used.")
         monitor = vm.monitor
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
-
-    logging.info("Wait until device is ready")
-    time.sleep(10)
-
     cdrom = params.get("cdrom_cd1")
     cdrom = utils_misc.get_path(data_dir.get_data_dir(), cdrom)
     device_name = vm.get_block({"file": cdrom})
@@ -69,9 +67,10 @@ def run(test, params, env):
                                                         orig_img_name)
     monitor.send_args_cmd(change_insert_cmd)
     logging.info("Wait until device is ready")
-    if not utils_misc.wait_for(lambda:
-                               orig_img_name in str(monitor.info("block")), 10,
-                               first=3):
+    exists = utils_misc.wait_for(lambda: (orig_img_name in
+                                          str(monitor.info("block"))
+                                          ), timeout=10,  first=3)
+    if not exists:
         msg = "Fail to insert device %s to guest" % orig_img_name
         raise error.TestFail(msg)
 
@@ -80,7 +79,12 @@ def run(test, params, env):
 
     if params.get("os_type") != "windows":
         error.context("mount cdrom to make status to locked", logging.info)
-        cdrom = utils_test.get_readable_cdroms(params, session)[0]
+        cdroms = utils_misc.wait_for(lambda: (utils_test.get_readable_cdroms(
+                                                  params, session)),
+                                     timeout=10)
+        if not cdroms:
+            raise error.TestFail("Not readable cdrom found in your guest")
+        cdrom = cdroms[0]
         mount_cmd = params.get("cd_mount_cmd") % cdrom
         (status, output) = session.cmd_status_output(mount_cmd, timeout=360)
         if status:

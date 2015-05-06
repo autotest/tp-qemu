@@ -25,7 +25,7 @@ git_repo["virt-viewer"] = "https://git.fedorahosted.org/git/virt-viewer.git"
 # options to pass
 autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala --disable-controller --enable-smartcard"
 autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
-autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\" --disable-kms"
+autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\""
 autogen_options["virt-viewer"] = "--with-spice-gtk --disable-update-mimedb"
 prefix_defaults["spice-protocol"] = "/usr/local"
 prefix_defaults["spice-vd-agent"] = "/usr"
@@ -85,6 +85,8 @@ print "OS: %s" % rhelVersion
 if re.findall("release 6", rhelVersion):
     if pkgName in ("spice-gtk", "virt-viewer"):
         autogen_options[pkgName] += " --with-gtk=2.0"
+    if pkgName in ("xf86-video-qxl"):
+        autogen_options[pkgName] += " --disable-kms"
 
 ret = os.system("which git")
 if ret != 0:

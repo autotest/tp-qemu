@@ -1,200 +1,152 @@
-"""
-Check_coredump
-This is a kind of post check case in a test loop.
-"""
 import os
 import glob
+import shutil
 import logging
-import time
 
 from autotest.client import os_dep
 from autotest.client.shared import error
-
+from autotest.client.shared import utils
 from virttest import data_dir
 from virttest import utils_misc
-import virttest.utils_libguestfs as lgf
+
+corefilemap = {"linux": "/var/crash",
+               "windows": "win:c:\windows\dump"}
 
 
-def get_images():
+def thrice_run_cmd(cmd, ignore_status=True):
+    count = 1
+    while count < 4:
+        results = utils.run(cmd, ignore_status=ignore_status)
+        if results.exit_status == 0:
+            return results
+        count += 1
+    return results
+
+
+def get_ostype(filename, resultsdir):
     """
-    Find the image names under the image directory
-
-    :return: image names
+    Get guest OS type via image file
     """
-    return glob.glob(utils_misc.get_path(data_dir.get_data_dir(),
-                                         "images/*.*"))
+    logging.info("Inspect os of image file: %s" % filename)
+    cmdprefix = "guestfish -i --ro -a %s " % filename
+    inspectoscmd = "%s inspect-os" % cmdprefix
+    results = thrice_run_cmd(inspectoscmd, ignore_status=True)
+    if results.exit_status != 0:
+        logging.debug("inspect os root with error: %s" % results.stderr)
+        return None
+    inspecttypecmd = "%s inspect-get-type %s" % (cmdprefix, results.stdout)
+    results = thrice_run_cmd(inspecttypecmd, ignore_status=True)
+    if results.exit_status != 0:
+        logging.debug("inspect os type with error: %s" % results.stderr)
+        return None
+    return results.stdout.strip()
 
 
-def coredump_exists(mntpnt, files, out_dir):
+def get_images(imagesdir, resultsdir):
     """
-    Check if there is specified file in the image
-    If hit the files, copy them to output_dir
-    The out_dir is the directory contains debug log
-
-    :param mntpnt: The mountpoint on the host
-    :param files: The files pattern need be checked
-    :param out_dir: If found coredump files, copy them
-                    to the directory
-    :return: Format as Bool, List which contains tuples
-             If the checked file exists,
-             return True, [("checked_file_name", "file_created_time")]
-             If not, return False, []
+    Get image file path from image data dir, skip no OS images
     """
-    file_exists = False
-    msgs_return = []
-
-    for chk_file in files:
-        file_need_check = utils_misc.get_path(mntpnt, chk_file)
-        files_glob = glob.glob(file_need_check)
-        if files_glob:
-            file_exists = True
-            for item in files_glob:
-                file_ctime = time.ctime(os.path.getctime(item))
-                msgs_return.append((os.path.basename(item),
-                                    file_ctime))
-                error.context("copy files %s %s" %
-                              (item, out_dir), logging.info)
-                os.system("cp -rf %s %s" % (item, out_dir))
-
-    return file_exists, msgs_return
+    for root, dirs, files in os.walk(imagesdir):
+        for file in files:
+            path = os.path.join(root, file)
+            ostype = get_ostype(path, resultsdir)
+            if ostype not in corefilemap.keys():
+                continue
+            yield path
 
 
-def check_images_coredump(image, mntpnt, check_files, debugdir):
+def get_dumpfiles(filename, resultsdir):
     """
-    Mount the images and check the coredump files
-
-    :return: Format as Bool, List
-             If the checked file exists
-                 return True, ["checked file name"]
-             If not, return False []
+    Copy out coredump file from guest image to host autotest
+    result data dir.
     """
-
-    found_coredump = False
-    msgs_return = []
-
-    try:
-        error.context("Mount the guest image %s to host mount point" %
-                      image,
-                      logging.info)
-        status = lgf.guestmount(image, mntpnt,
-                                True, True, debug=True, is_disk=True)
-        if status.exit_status:
-            msgs_return.append("Could not mount guest image %s." % image)
-            error.context(msgs_return[0], logging.error)
-        else:
-            found_coredump, msgs_return = coredump_exists(mntpnt,
-                                                          check_files,
-                                                          debugdir)
-    finally:
-        if os.path.ismount(mntpnt):
-            error.context("guestunmount host mount point")
-            lgf.lgf_command("guestunmount %s" % mntpnt)
-
-    return found_coredump, msgs_return
+    basename = os.path.basename(filename)
+    ostype = get_ostype(filename, resultsdir)
+    srcdir = corefilemap[ostype]
+    dstdir = os.path.join(resultsdir, basename)
+    copycmd = ("guestfish -i --ro -a %s copy-out %s %s" %
+               (filename, srcdir, dstdir))
+    results = thrice_run_cmd(copycmd, ignore_status=True)
+    if results.exit_status == 0:
+        dumpfiles = glob.glob("%s/*" % dstdir)
+        if dumpfiles:
+            return dumpfiles
+        shutil.rmtree(dstdir)
+    return []
 
 
-def format_report(results):
+def get_corefiles(resultsdir):
     """
-    Format the report as below table.
-     Header
-     +-------------------------------------+
-     |image name (line)                    |
-     +-------------------------------------+
-     |  |crash file(subline) | timestamp   |
-     +--+--------------------+-------------+
-     |  |...                 | ...         |
-     +--+--------------------+-------------+
-
-    :return: the table messages formatted as above
-    :results: the parameter transfered into
-              image, msg_list
+    Recursive scan results dir to find core file
     """
+    for root, dirs, files in os.walk(resultsdir):
+        for cfile in files:
+            if cfile == "core":
+                filename = os.path.join(root, cfile)
+                yield filename
+        for sdir in dirs:
+            sdir = os.path.join(root, sdir)
+            get_corefiles(sdir)
 
-    line_break = "\n"
-    table_header = "Coredump file exists in the images:"
-    lines = []
-    sublines = []
 
-    for image, chk_msg in results:
-        lines += [image]
+def scan_images_dir(imagesdir, resultsdir):
+    """
+    Scan image files under image dir and mount image to look
+    kernel dump files in each image.
+    """
+    dumpinfos = []
+    os_dep.command("guestfish")
+    for image in get_images(imagesdir, resultsdir):
+        dumpfiles = get_dumpfiles(image, resultsdir)
+        if dumpfiles:
+            dumpinfos.append((image, dumpfiles))
+    return dumpinfos
 
-        if isinstance(chk_msg, list):
-            for fname, ftime in chk_msg:
-                sublines += [fname + ", " + ftime]
 
-        lines += ["\t" + subline for subline in sublines]
-
-    all_lines = [""] + [table_header] + lines + [""]
-
-    return line_break.join(all_lines)
+def scan_results_dir(resultsdir):
+    """
+    Scan each test results directory to find coredump file
+    """
+    coreinfos = []
+    for corefile in get_corefiles(resultsdir):
+        dirname = os.path.dirname(os.path.dirname(corefile))
+        shortname = os.path.basename(dirname)
+        corefile = os.path.basename(corefile)
+        coreinfos.append((shortname, corefile))
+    return coreinfos
 
 
 @error.context_aware
 def run(test, params, env):
     """
-    We find out that sometimes the guest crashed between two
-    cases in a loop.  For example:
-    1. case A executed the steps and finished with good.
-    2. the post process do some check, pause or shutdown
-       operates.
-    3. guest crashed and reboot or just quit(But the case
-       already finished with good).
-    4. case B start and also didn't get the guest crashed
-       status.
-
-    Check if there is any core dump file in guest image .
-
-    1) Check all the existing guest images in the image directory.
-    2) Mount guest image on the host.
-    3) Check "C:\windows\dump" for Windows and core file for Linux.
-    4) If yes, copy them to working directory.
+    Post test, this case will scan results directory to detect
+    core dump file. And check each image file under image
+    directory to obtain guest kernel dumps. In the end, will go
+    through host dmesg log to report host error.
     """
-
-    # Preliminary
-    # yum install libguestfs libguestfs-tools libguestfs-winsupport
+    infos = ""
+    error.context("Scan results dirs to find core file", logging.info)
+    resultsdir = "/".join(test.resultsdir.split('/')[:-2])
+    coreinfos = [(shortname, corefiles) for shortname, corefiles in
+                 scan_results_dir(resultsdir)]
+    error.context("Scan image files to obtain guest dumpfile", logging.info)
+    imagesdir = os.path.join(data_dir.get_data_dir(), "images")
+    dumpinfos = [(imagefile, dumpfile) for imagefile, dumpfile in
+                 scan_images_dir(imagesdir, test.resultsdir)]
+    error.context("Check host dmesg", logging.info)
     try:
-        os_dep.command("guestmount")
-    except:
-        warn_msg = "Need packages: libguestfs libguestfs-tools" + \
-                   " libguestfs-winsupport"
-        raise error.TestWarn(warn_msg)
-
-    # define the file name need to be checked
-    file_check_win_default = "Windows/dump"
-    file_check_linux_default = "var/crash/*"
-    host_mountpoint_default = "mnt/mountpoint"
-
-    host_mountpoint = params.get("host_mountpoint", host_mountpoint_default)
-    host_mountpoint = utils_misc.get_path(test.debugdir, host_mountpoint)
-    file_chk_for_win = params.get("coredump_check_win", file_check_win_default)
-    file_chk_for_linux = params.get("coredump_check_linux",
-                                    file_check_linux_default)
-
-    # check if the host_mountpoint exists.
-    if not (os.path.isdir(host_mountpoint) and
-            os.path.exists(host_mountpoint)):
-        os.makedirs(host_mountpoint)
-
-    coredump_file_exists = False
-    check_files = [file_chk_for_win, file_chk_for_linux]
-    check_results = []
-
-    error.context("Get all the images name", logging.info)
-    images = get_images()
-    error.context("images: %s" % images, logging.info)
-
-    # find all the images
-    # mount per-image to check if the dump file exists
-    error.context("Check coredump file per-image", logging.info)
-    for image in images:
-        status, chk_msgs = check_images_coredump(image,
-                                                 host_mountpoint,
-                                                 check_files, test.debugdir)
-        coredump_file_exists = coredump_file_exists or status
-        if status:
-            check_results.append((image, chk_msgs))
-
-    # if found, report the result
-    if coredump_file_exists:
-        report_msg = format_report(check_results)
-        raise error.TestFail(report_msg)
+        utils_misc.verify_host_dmesg()
+    except Exception, details:
+        infos += "\n%s" % details.message
+    if coreinfos:
+        infos += "\nTotally %d core files found, details:" % len(coreinfos)
+        for casename, corefiles in coreinfos:
+            infos += ("\n%s%d core files found in test %s" %
+                      (len(corefiles), casename))
+    if dumpinfos:
+        infos += "\nTotally %d dump file found, details:" % len(dumpinfos)
+        for imagefile, dumpfiles in dumpinfos:
+            infos += ("\n%d dump files found in image file %s" %
+                      (len(dumpfiles), imagefile))
+    if infos:
+        raise error.TestFail(infos)

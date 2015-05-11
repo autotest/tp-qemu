@@ -196,6 +196,11 @@ if ret != 0:
     print "Return code: %s! Autogen.sh failed! Exiting!" % ret
     sys.exit(ret)
 
+# Temporary workaround for building spice-vdagent
+if pkgName == "spice-vd-agent":
+    os.system("sed -i '/^src_spice_vdagent_CFLAGS/ s/$/  -fno-strict-aliasing/g' Makefile.am")
+    os.system("sed -i '/(PCIACCESS_CFLAGS)/ s/$/  -fno-strict-aliasing/g' Makefile.am")
+
 
 # Running 'make' to build and using os.system again
 cmd = "make"

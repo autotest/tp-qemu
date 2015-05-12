@@ -855,7 +855,7 @@ def run(test, params, env):
             threads[1].port = ports[1]
             threads[0].migrate_event.set()  # Wake up sender thread immediately
             threads[1].migrate_event.set()
-            guest_worker.reconnect(vm, 30)
+            guest_worker.reconnect(vm, 360)
             logging.debug("S4: watch 1s for initial data loss stabilization.")
             for _ in xrange(10):
                 time.sleep(0.1)

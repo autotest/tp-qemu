@@ -85,7 +85,7 @@ def run(test, params, env):
     host_bridges.add_port(bond_br_name, bond_iface.name)
 
     error.context("Get ip address for bridge", logging.info)
-    utils.system("pkill dhclient; dhclient %s" % bond_br_name)
+    utils.system("dhclient -r; dhclient %s" % bond_br_name)
 
     error.context("Boot up guest with bridge %s" % bond_br_name, logging.info)
     params["start_vm"] = "yes"

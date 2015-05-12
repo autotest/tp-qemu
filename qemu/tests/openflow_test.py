@@ -141,14 +141,14 @@ def run(test, params, env):
         except Exception, msg:
                 return False, msg
 
-    def file_transfer(sessions, addresses):
-        prepare_cmd = "dd if=/dev/urandom of=/tmp/copy_file count=1024 bs=1M"
+    def file_transfer(sessions, addresses, timeout):
+        prepare_cmd = "dd if=/dev/zero of=/tmp/copy_file count=1024 bs=1M"
         md5_cmd = "md5sum /tmp/copy_file"
         port = params.get("shell_port")
         prompt = params.get("shell_prompt")
         username = params.get("username")
         password = params.get("password")
-        sessions[0].cmd(prepare_cmd)
+        sessions[0].cmd(prepare_cmd, timeout=timeout)
         ori_md5 = sessions[0].cmd_output(md5_cmd)
         scp_cmd = ("scp -v -o UserKnownHostsFile=/dev/null "
                    "-o StrictHostKeyChecking=no "
@@ -230,6 +230,7 @@ def run(test, params, env):
         return open_flow_rules
 
     timeout = int(params.get("login_timeout", '360'))
+    prepare_timeout = int(params.get("prepare_timeout", '360'))
     clean_cmd = params.get("clean_cmd", "rm -f")
     sessions = []
     addresses = []
@@ -290,7 +291,7 @@ def run(test, params, env):
                 ping_test(sessions[0], addresses[1], drop_icmp)
                 if params.get("run_file_transfer") == "yes":
                     error.context("Transfer file form vm1 to vm2", logging.info)
-                    file_transfer(sessions, addresses)
+                    file_transfer(sessions, addresses, prepare_timeout)
             else:
                 error.context("Ping test form vm1 to vm2 in background",
                               logging.info)

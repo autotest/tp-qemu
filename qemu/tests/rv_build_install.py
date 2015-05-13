@@ -47,12 +47,27 @@ def install_req_pkgs(pkgsRequired, vm_root_session, params):
             vm_root_session.cmd("rpm -q %s" % pkgName)
         except ShellCmdError:
             rpm = params.get(re.sub("-", "_", pkgName) + "_url")
-            logging.info("Installing %s" % pkgName)
+            logging.info("Installing %s from %s" % (pkgName, rpm))
             try:
                 vm_root_session.cmd("yum -y localinstall %s" % rpm,
                                     timeout=300)
             except ShellCmdError:
                 logging.info("Could not install %s" % pkgName)
+
+
+def build_install_spiceprotocol(vm_root_session, vm_script_path, params):
+    """
+    Build and install spice-protocol in the VM
+
+    :param vm_root_session:  VM Session object.
+    :param vm_script_path: path where to find build_install.py script
+    :param params: Dictionary with test parameters.
+    """
+
+    output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
+    logging.info(output)
+    if re.search("Return code", output):
+        raise error.TestFail("spice-protocol was not installed properly")
 
 
 def build_install_qxl(vm_root_session, vm_script_path, params):
@@ -68,12 +83,6 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
     pkgsRequired = ["libpciaccess-devel", "xorg-x11-util-macros",
                     "xorg-x11-server-devel"]
     install_req_pkgs(pkgsRequired, vm_root_session, params)
-
-    # latest spice-protocol is required to build qxl
-    output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
-    logging.info(output)
-    if re.search("Return code", output):
-        raise error.TestFail("spice-protocol was not installed properly")
 
     output = vm_root_session.cmd("%s -p xf86-video-qxl" % (vm_script_path),
                                  timeout=600)
@@ -126,7 +135,7 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
         raise error.TestFail("Could not find remote-viewer")
 
     try:
-        output = vm_root_session.cmd("remote-viewer --version")
+        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --version")
         logging.info(output)
     except ShellCmdError, err:
         logging.error("Can't get version number!" + err.output)
@@ -166,12 +175,6 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     except ShellCmdError:
         logging.error(output)
 
-    # latest spice-protocol is required to build spice-gtk
-    output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
-    logging.info(output)
-    if re.search("Return code", output):
-        raise error.TestFail("spice-protocol was not installed properly")
-
     output = vm_root_session.cmd("%s -p spice-gtk" % (vm_script_path),
                                  timeout=600)
     logging.info(output)
@@ -205,12 +208,6 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
 
     pkgsRequired = ["libpciaccess-devel"]
     install_req_pkgs(pkgsRequired, vm_root_session, params)
-
-    # latest spice-protocol is required to build vdagent
-    output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
-    logging.info(output)
-    if re.search("Return code", output):
-        raise error.TestFail("spice-protocol was not installed properly")
 
     output = vm_root_session.cmd("%s -p spice-vd-agent" % (vm_script_path),
                                  timeout=600)
@@ -268,6 +265,9 @@ def run(test, params, env):
 
     vm.copy_files_to(host_script_path, vm_script_path, timeout=60)
     time.sleep(5)
+
+    # All packages require spice-protocol
+    build_install_spiceprotocol(vm_root_session, vm_script_path, params)
 
     # Run build_install.py script
     if pkgName == "xf86-video-qxl":

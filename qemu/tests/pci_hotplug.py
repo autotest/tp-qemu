@@ -239,16 +239,19 @@ def run(test, params, env):
             return after_del != before_del
 
         before_del = vm.monitor.info("pci")
+        blk_removed = []
         if cmd_type == "pci_add":
             slot_id = int(pci_info[pci_num][2].split(",")[2].split()[1])
             cmd = "pci_del pci_addr=%s" % hex(slot_id)
             vm.monitor.send_args_cmd(cmd, convert=False)
+            blk_removed.append(pci_info[pci_num][1])
         elif cmd_type == "device_add":
             if vm.monitor.protocol == "human":
                 cmd = "device_del %s" % pci_info[pci_num][1]
             else:
                 cmd = "device_del id=%s" % pci_info[pci_num][1]
             vm.monitor.send_args_cmd(cmd, convert=False)
+            blk_removed.append(pci_info[pci_num][1])
             pci_model = params.get("pci_model")
             if pci_model == "scsi" or pci_model == "scsi-hd":
                 controller_id = "controller-" + pci_info[pci_num][0]
@@ -258,12 +261,18 @@ def run(test, params, env):
                     controller_del_cmd = "device_del id=%s" % controller_id
                 error.context("Deleting SCSI controller.", logging.info)
                 vm.monitor.send_args_cmd(controller_del_cmd, convert=False)
+                blk_removed.append(controller_id)
 
         if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1) and
                 not ignore_failure):
             raise error.TestFail("Failed to hot remove PCI device: %s. "
                                  "Monitor command: %s" %
                                  (pci_info[pci_num][3], cmd))
+        # Remove the device from vm device container
+        for device in vm.devices:
+            if device.str_short() in blk_removed:
+                vm.devices.remove(device)
+        env.register_vm(vm.name, vm)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

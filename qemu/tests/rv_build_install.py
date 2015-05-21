@@ -169,8 +169,13 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     utils_spice.deploy_epel_repo(vm_root_session, params)
 
     try:
-        output = vm_root_session.cmd("yum -y install perl-Text-CSV pyparsing",
-                                     timeout=300)
+        cmd = "yum --disablerepo=\"*\" " + \
+              "--enablerepo=\"epel\" -y install perl-Text-CSV"
+        # In RHEL6, pyparsing is in EPEL but in RHEL7, it's part of
+        # the main product repo
+        if "release 6" in vm_root_session.cmd("cat /etc/redhat-release"):
+            cmd += " pyparsing"
+        output = vm_root_session.cmd(cmd, timeout=300)
         logging.info(output)
     except ShellCmdError:
         logging.error(output)

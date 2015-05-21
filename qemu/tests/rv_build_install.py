@@ -175,7 +175,10 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
         # the main product repo
         if "release 6" in vm_root_session.cmd("cat /etc/redhat-release"):
             cmd += " pyparsing"
+<<<<<<< HEAD
         output = vm_root_session.cmd(cmd, timeout=300)
+=======
+>>>>>>> 0a41e1b906df437f0efa84002b5fdefd94eb0d34
         logging.info(output)
     except ShellCmdError:
         logging.error(output)

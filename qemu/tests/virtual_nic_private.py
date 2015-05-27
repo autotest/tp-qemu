@@ -60,23 +60,36 @@ def run(test, params, env):
         # Before transfer, run tcpdump to try to catche data
         error_msg = "In guest3, try to capture the packets(guest1 <-> guest2)"
         error.context(error_msg, logging.info)
-        interface_name = utils_net.get_linux_ifname(sessions[2],
-                                                    vm.get_mac_address())
+        if params.get("os_type") == "linux":
+            if_func = utils_net.get_linux_ifname
+            args = (sessions[2], vm.get_mac_address())
+        else:
+            if_func = utils_net.get_windows_nic_attribute
+            args = (sessions[2], "macaddress", vm.get_mac_address(),
+                    "netconnectionid")
+
+        interface_name = if_func(*args)
 
         tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
                                      interface_name)
-        t = utils.InterruptedThread(data_mon, (sessions[2], tcpdump_cmd,
-                                               mon_process_timeout))
+        dthread = utils.InterruptedThread(data_mon, (sessions[2], tcpdump_cmd,
+                                                     mon_process_timeout))
 
         logging.info("Tcpdump mon start ...")
         logging.info("Creating %dMB file on guest1", filesize)
         sessions[0].cmd(dd_cmd % (src_file, filesize), timeout=timeout)
-        t.start()
+        dthread.start()
 
         error.context("Transferring file guest1 -> guest2", logging.info)
-        remote.scp_between_remotes(addresses[0], addresses[1],
-                                   shell_port, password, password,
-                                   username, username, src_file, dst_file)
+        if params.get("os_type") == "windows":
+            cp_cmd = params["copy_cmd"]
+            cp_cmd = cp_cmd % (addresses[1], params['file_transfer_port'],
+                               src_file, dst_file)
+            sessions[0].cmd_output(cp_cmd)
+        else:
+            remote.scp_between_remotes(addresses[0], addresses[1],
+                                       shell_port, password, password,
+                                       username, username, src_file, dst_file)
 
         error.context("Check the src and dst file is same", logging.info)
         src_md5 = sessions[0].cmd_output(md5_check % src_file).split()[0]
@@ -89,12 +102,15 @@ def run(test, params, env):
         logging.info("Files md5sum match, file md5 is '%s'" % src_md5)
 
         error.context("Checking network private", logging.info)
-        tcpdump_reg = "tcpdump.*%s.*%s" % (addresses[1], addresses[0])
-        s = mon_session.cmd_status("pgrep -f '%s'" % tcpdump_reg)
-        if s:
+        tcpdump_check_cmd = params["tcpdump_check_cmd"]
+        tcpdump_kill_cmd = params["tcpdump_kill_cmd"]
+        tcpdump_check_cmd = re.sub("ADDR0", addresses[0], tcpdump_check_cmd)
+        tcpdump_check_cmd = re.sub("ADDR1", addresses[1], tcpdump_check_cmd)
+        status = mon_session.cmd_status(tcpdump_check_cmd)
+        if status:
             raise error.TestError("Tcpdump process terminate exceptly")
-        mon_session.cmd("killall -9 tcpdump")
-        t.join()
+        mon_session.cmd(tcpdump_kill_cmd)
+        dthread.join()
 
     finally:
         sessions[0].cmd(" %s %s " % (clean_cmd, src_file))

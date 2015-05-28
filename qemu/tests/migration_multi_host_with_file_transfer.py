@@ -52,6 +52,8 @@ def run(test, params, env):
         base_class = utils_test.qemu.MultihostMigrationFd
     if mig_protocol == "exec":
         base_class = utils_test.qemu.MultihostMigrationExec
+    if "rdma" in mig_protocol:
+        base_class = utils_test.qemu.MultihostMigrationRdma
 
     guest_root = params.get("guest_root", "root")
     guest_pass = params.get("password", "123456")

@@ -681,6 +681,8 @@ def run(test, params, env):
                 self.mig_type = utils_test.qemu.MultihostMigrationFd
             if mig_protocol == "exec":
                 self.mig_type = utils_test.qemu.MultihostMigrationExec
+            if "rdma" in mig_protocol:
+                self.mig_type = utils_test.qemu.MultihostMigrationRdma
 
             self.vms = params.get("vms").split(" ")
             self.srchost = params.get("hosts")[0]

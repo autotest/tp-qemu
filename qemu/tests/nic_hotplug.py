@@ -85,6 +85,12 @@ def run(test, params, env):
         return status, output
 
     login_timeout = int(params.get("login_timeout", 360))
+    mig_timeout = float(params.get("mig_timeout", "3600"))
+    mig_protocol = params.get("migration_protocol", "tcp")
+    if params.get("mig_cancel") == "yes":
+        mig_cancel_delay = 2
+    else:
+        mig_cancel_delay = 0
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     primary_nic = [nic for nic in vm.virtnet]
@@ -142,6 +148,12 @@ def run(test, params, env):
                 err_msg = "New nic failed ping test, error info: '%s'"
                 raise error.TestFail(err_msg % output)
 
+            if params.get("migration_after_hotplug") == "yes":
+                vm.params['nics'] += " %s" % nic_name
+                vm.params['nic_model_%s' % nic_name] = hotplug_nic['nic_model']
+                error.context("Migrate from source VM to Destination VM", logging.info)
+                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
+
             error.context("Reboot vm after hotplug nic", logging.info)
             # reboot vm via serial port since some guest can't auto up
             # hotplug nic and next step will check is hotplug nic works.
@@ -189,14 +201,15 @@ def run(test, params, env):
                 vm.verify_alive()
             s_session.close()
     finally:
-        for nic in nic_hotplugged:
-            vm.hotunplug_nic(nic.nic_name)
-        error.context("Re-enabling the primary link(s)", logging.info)
-        for nic in primary_nic:
-            vm.set_link(nic.device_id, up=True)
-        error.context("Reboot vm to verify it alive after hotunplug nic(s)",
-                      logging.info)
-        serial = len(vm.virtnet) > 0 and False or True
-        session = vm.reboot(serial=serial)
-        vm.verify_alive()
-        session.close()
+        if params.get("migration_after_hotplug") != "yes":
+            for nic in nic_hotplugged:
+                vm.hotunplug_nic(nic.nic_name)
+            error.context("Re-enabling the primary link(s)", logging.info)
+            for nic in primary_nic:
+                vm.set_link(nic.device_id, up=True)
+            error.context("Reboot vm to verify it alive after hotunplug nic(s)",
+                          logging.info)
+            serial = len(vm.virtnet) > 0 and False or True
+            session = vm.reboot(serial=serial)
+            vm.verify_alive()
+            session.close()

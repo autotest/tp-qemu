@@ -139,7 +139,8 @@ def run(test, params, env):
         if not match:
             cleanup(dev_name)
             raise error.TestFail("Could not get boot menu message. "
-                                 "Excepted Result: '%s'" % boot_menu_hint)
+                                 "Excepted Result: '%s', Actual result: '%s'"
+                                 % (boot_menu_hint, console_str))
 
         # Send boot menu key in monitor.
         vm.send_key(boot_menu_key)

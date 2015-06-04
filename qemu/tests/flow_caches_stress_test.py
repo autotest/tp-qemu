@@ -68,7 +68,7 @@ def run(test, params, env):
     client_path = params.get("client_path", "/var/tmp/")
     win_netperf_path = params.get("win_netperf_path", "c:\\")
     client_num = params.get("netperf_client_num", 520)
-    netperf_timeout = params.get("netperf_timeout", 600)
+    netperf_timeout = int(params.get("netperf_timeout", 600))
     netperf_client_ip = vm.get_address()
     host_ip = utils_net.get_host_ip_address(params)
     netperf_server_ip = params.get("netperf_server_ip", host_ip)

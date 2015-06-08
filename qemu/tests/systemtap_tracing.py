@@ -55,9 +55,9 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-
-    if params.get("cmds_exec"):
-        for cmd in params.get("cmds_exec").split(","):
+    _params = params.object_params(vm.monitor.protocol)
+    if _params.get("cmds_exec"):
+        for cmd in _params.get("cmds_exec").split(","):
             if re.findall(":", cmd):
                 cmd_type = cmd.split(":")[0]
                 exec_cmds = cmd.split(":")[1]
@@ -65,8 +65,8 @@ def run(test, params, env):
                 cmd_type = "bash"
                 exec_cmds = cmd
             for cmd_exec in exec_cmds.split(";"):
-                error.context("Execute %s cmd '%s'" %
-                              (cmd_type, cmd_exec), logging.info)
+                msg = "Execute %s cmd '%s'" % (cmd_type, cmd_exec)
+                error.context(msg, logging.info)
                 if cmd_type == "monitor":
                     vm.monitor.send_args_cmd(cmd_exec)
                 elif cmd_type == "bash":

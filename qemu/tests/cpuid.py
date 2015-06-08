@@ -121,6 +121,26 @@ def run(test, params, env):
             result[(in_eax, in_ecx)] = out
         return result
 
+    def get_test_kernel_cpuid(self, vm):
+        vm.resume()
+
+        timeout = float(params.get("login_timeout", 240))
+        logging.debug("Will wait for CPUID serial output at %r",
+                      vm.serial_console)
+        if not utils_misc.wait_for(lambda:
+                                   re.search("==END TEST==",
+                                             vm.serial_console.get_output()),
+                                   timeout, 1):
+            raise error.TestFail("Could not get test complete message.")
+
+        test_output = parse_cpuid_dump(vm.serial_console.get_output())
+        logging.debug("Got CPUID serial output: %r", test_output)
+        if test_output is None:
+            raise error.TestFail("Test output signature not found in "
+                                 "output:\n %s", vm.serial_console.get_output())
+        vm.destroy(gracefully=False)
+        return test_output
+
     def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None):
         test_kernel_dir = os.path.join(data_dir.get_deps_dir(), "cpuid", "src")
         os.chdir(test_kernel_dir)
@@ -141,21 +161,7 @@ def run(test, params, env):
         dbg('is dead: %r', vm.is_dead())
         vm.create()
         self.vm = vm
-        vm.resume()
-
-        timeout = float(params.get("login_timeout", 240))
-        if not utils_misc.wait_for(lambda:
-                                   re.search("==END TEST==",
-                                             vm.serial_console.get_output()),
-                                   timeout, 1):
-            raise error.TestFail("Could not get test complete message.")
-
-        test_output = parse_cpuid_dump(vm.serial_console.get_output())
-        if test_output is None:
-            raise error.TestFail("Test output signature not found in "
-                                 "output:\n %s", vm.serial_console.get_output())
-        vm.destroy(gracefully=False)
-        return test_output
+        return get_test_kernel_cpuid(self, vm)
 
     def cpuid_to_vendor(cpuid_dump, idx):
         r = cpuid_dump[idx, 0]

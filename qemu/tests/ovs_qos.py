@@ -94,7 +94,7 @@ def run(test, params, env):
         """
         Check throughout near gress_policing_rate set for tap device.
         """
-        return abs(data[1] - data[2]) <= data[3]
+        return data[1] <= data[2] + data[3]
 
     def report_test_results(datas):
         """
@@ -106,8 +106,8 @@ def run(test, params, env):
             msg = "OVS Qos test failed, "
             for tap, throughout, rate, burst in fails:
                 msg += "netperf throughout(%s) on '%s' " % (throughout, tap)
-                msg += "should be near ingress_policing_rate(%s) +/- " % rate
-                msg += "ingress_policing_burst(%s) \n" % burst
+                msg += "should be near ingress_policing_rate(%s), " % rate
+                msg += "ingress_policing_burst is %s;\n" % burst
             raise error.TestFail(msg)
 
     def clear_qos_setting(iface):
@@ -173,15 +173,16 @@ def run(test, params, env):
                 else:
                     netperf_link = netperf_link
                     server_path = server_path_linux
-                server = utils_netperf.NetperfServer(vm.get_address(),
-                                                     server_path,
-                                                     md5sum,
-                                                     netperf_link,
-                                                     port=info[-2],
-                                                     client=info[-3],
-                                                     password=info[-4],
-                                                     username=info[-5],
-                                                     compile_option=compile_option_server)
+                server = utils_netperf.NetperfServer(
+                    vm.get_address(),
+                    server_path,
+                    md5sum,
+                    netperf_link,
+                    port=info[-2],
+                    client=info[-3],
+                    password=info[-4],
+                    username=info[-5],
+                    compile_option=compile_option_server)
                 netperf_servers.append((server, vm))
                 continue
             else:
@@ -191,15 +192,16 @@ def run(test, params, env):
                 else:
                     netperf_link = netperf_link
                     client_path = client_path_linux
-                client = utils_netperf.NetperfClient(vm.get_address(),
-                                                     client_path,
-                                                     md5sum,
-                                                     netperf_link,
-                                                     port=info[-2],
-                                                     client=info[-3],
-                                                     password=info[-4],
-                                                     username=info[-5],
-                                                     compile_option=compile_option_client)
+                client = utils_netperf.NetperfClient(
+                    vm.get_address(),
+                    client_path,
+                    md5sum,
+                    netperf_link,
+                    port=info[-2],
+                    client=info[-3],
+                    password=info[-4],
+                    username=info[-5],
+                    compile_option=compile_option_client)
                 netperf_clients.append((client, vm))
                 continue
         return netperf_clients, netperf_servers

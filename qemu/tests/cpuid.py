@@ -78,15 +78,14 @@ def run(test, params, env):
 
     def compare_cpuid_output(a, b):
         """
-        Generates a list of (register, bit, va, vb) tuples for
+        Generates a list of (bit, va, vb) tuples for
         each bit that is different between a and b.
         """
-        for reg in ('eax', 'ebx', 'ecx', 'edx'):
-            for bit in range(32):
-                ba = (a[reg] & (1 << bit)) >> bit
-                bb = (b[reg] & (1 << bit)) >> bit
-                if ba != bb:
-                    yield (reg, bit, ba, bb)
+        for bit in range(32):
+            ba = (a & (1 << bit)) >> bit
+            bb = (b & (1 << bit)) >> bit
+            if ba != bb:
+                yield (bit, ba, bb)
 
     def parse_cpuid_dump(output):
         dbg("parsing cpuid dump: %r", output)
@@ -112,13 +111,10 @@ def run(test, params, env):
                 return None
             in_eax = int(m.group(1), 16)
             in_ecx = int(m.group(2), 16)
-            out = {
-                'eax': int(m.group(3), 16),
-                'ebx': int(m.group(4), 16),
-                'ecx': int(m.group(5), 16),
-                'edx': int(m.group(6), 16),
-            }
-            result[(in_eax, in_ecx)] = out
+            result[in_eax, in_ecx, 'eax'] = int(m.group(3), 16)
+            result[in_eax, in_ecx, 'ebx'] = int(m.group(4), 16)
+            result[in_eax, in_ecx, 'ecx'] = int(m.group(5), 16)
+            result[in_eax, in_ecx, 'edx'] = int(m.group(6), 16)
         return result
 
     def get_test_kernel_cpuid(self, vm):
@@ -557,15 +553,15 @@ def run(test, params, env):
         dbg('out: %r', out)
         ok = True
         for k in reference.keys():
-            in_eax, in_ecx = k
+            in_eax, in_ecx, reg = k
             if k not in out:
                 info(
-                    "Missing CPUID data from output: CPUID[0x%x,0x%x]", in_eax, in_ecx)
+                    "Missing CPUID data from output: CPUID[0x%x,0x%x].%s", in_eax, in_ecx, reg)
                 ok = False
                 continue
             diffs = compare_cpuid_output(reference[k], out[k])
             for d in diffs:
-                reg, bit, vreference, vout = d
+                bit, vreference, vout = d
                 whitelisted = (in_eax,) in whitelist \
                     or (in_eax, in_ecx) in whitelist \
                     or (in_eax, in_ecx, reg) in whitelist \

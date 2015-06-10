@@ -12,8 +12,10 @@ DUMP_DIR="$2"
     Conroe
     core2duo
     core2duo,-monitor
+    core2duo,-monitor,-vmx
     coreduo
     coreduo,-monitor
+    coreduo,-monitor,-vmx
     cpu64-rhel5
     cpu64-rhel5,-svm
     cpu64-rhel5,-abm,-sse4a,-svm

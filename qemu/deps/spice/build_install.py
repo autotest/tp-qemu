@@ -211,4 +211,3 @@ ret = os.system("%s %s" % (env_vars, cmd))
 if ret != 0:
     print "Return code: %s! make install failed! Exiting!" % ret
     sys.exit(ret)
-

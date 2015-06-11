@@ -10,6 +10,14 @@ import re
 import optparse
 import subprocess
 
+def run_subprocess_cmd(args):
+    output = subprocess.Popen(args, shell=False,
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              close_fds=True).stdout.read().strip()
+    return output
+
 git_repo = {}
 configure_options = {}
 autogen_options = {}
@@ -133,38 +141,25 @@ if commit is not None:
 else:
     print "Specific commit not specified"
 
-
 # Adding remote origin
 print "Adding remote origin"
 args = ("git remote add origin %s" % git_repo[pkgName]).split()
-output = subprocess.Popen(args, shell=False,
-                          stdin=subprocess.PIPE,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE,
-                          close_fds=True).stdout.read().strip()
+output = run_subprocess_cmd(args)
 
 # Get the commit and tag which repo is at
 args = 'git log --pretty=format:%H -1'.split()
 print "Running 'git log --pretty=format:%H -1' to get top commit"
-top_commit = subprocess.Popen(args, shell=False,
-                              stdin=subprocess.PIPE,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              close_fds=True).stdout.read().strip()
+top_commit = run_subprocess_cmd(args)
 
 args = 'git describe'.split()
 print "Running 'git describe' to get top tag"
-top_tag = subprocess.Popen(args, shell=False,
-                           stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           close_fds=True).stdout.read().strip()
+top_tag = run_subprocess_cmd(args)
+
 if top_tag is None:
     top_tag_desc = 'no tag found'
 else:
     top_tag_desc = 'tag %s' % top_tag
 print "git commit ID is %s (%s)" % (top_commit, top_tag_desc)
-
 
 # If prefix to be passed to autogen.sh is in the defaults, use that
 if pkgName in prefix_defaults.keys() and options.prefix is None:
@@ -176,8 +171,6 @@ if prefix is None:
     env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:/usr/local/lib:"
 else:
     env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:/usr/local/share/pkgconfig:" % (prefix,
-                                                                                                           prefix)
-
 
 # Running autogen.sh with prefix and any other options
 # Using os.system because subprocess.Popen would not work
@@ -200,7 +193,6 @@ if ret != 0:
 if pkgName == "spice-vd-agent":
     os.system("sed -i '/^src_spice_vdagent_CFLAGS/ s/$/  -fno-strict-aliasing/g' Makefile.am")
     os.system("sed -i '/(PCIACCESS_CFLAGS)/ s/$/  -fno-strict-aliasing/g' Makefile.am")
-
 
 # Running 'make' to build and using os.system again
 cmd = "make"

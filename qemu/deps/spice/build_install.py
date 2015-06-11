@@ -10,6 +10,7 @@ import re
 import optparse
 import subprocess
 
+
 def run_subprocess_cmd(args):
     output = subprocess.Popen(args, shell=False,
                               stdin=subprocess.PIPE,
@@ -171,6 +172,7 @@ if prefix is None:
     env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:/usr/local/lib:"
 else:
     env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:/usr/local/share/pkgconfig:" % (prefix,
+                                                                                                           prefix)
 
 # Running autogen.sh with prefix and any other options
 # Using os.system because subprocess.Popen would not work
@@ -209,3 +211,4 @@ ret = os.system("%s %s" % (env_vars, cmd))
 if ret != 0:
     print "Return code: %s! make install failed! Exiting!" % ret
     sys.exit(ret)
+

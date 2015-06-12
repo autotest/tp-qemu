@@ -2,8 +2,15 @@ import re
 import os
 import logging
 import commands
-from autotest.client.shared import utils, error
-from virttest import utils_misc, env_process, storage, data_dir, gluster
+import shutil
+import tempfile
+from autotest.client.shared import error
+from autotest.client.shared import utils
+from virttest import utils_misc
+from virttest import env_process
+from virttest import storage
+from virttest import data_dir
+from virttest import gluster
 
 
 @error.context_aware
@@ -523,12 +530,41 @@ def run(test, params, env):
                       logging.info)
         try:
             session.sendline(params.get("shutdown_command"))
-            if not utils_misc.wait_for(vm.is_dead, login_timeout):
+            vm.pause()
+            if not vm.wait_until_dead(login_timeout):
+                vm.destroy(gracefully=True)
+                image_filename = _get_image_filename(img_name,
+                                                     enable_gluster,
+                                                     img_fmt)
+                backup_img_chain(image_filename)
                 raise error.TestFail("Can not shutdown guest")
 
             logging.info("Guest is down")
         finally:
             session.close()
+
+    def backup_img_chain(image_file):
+        """
+        Backup whole image in a image chain;
+        """
+        mount_point = tempfile.mkdtemp(dir=test.resultsdir)
+        qemu_img = utils_misc.get_qemu_img_binary(params)
+        if enable_gluster:
+            g_uri = gluster.create_gluster_uri(params)
+            gluster.glusterfs_mount(g_uri, mount_point)
+            image_name = os.path.basename(image_file)
+            image_file = os.path.join(mount_point, image_name)
+        logging.warn("backup %s to %s" % (image_file, test.resultsdir))
+        shutil.copy(image_file, test.resultsdir)
+        backing_file = _info(qemu_img, image_file, "backing file", None)
+        if backing_file:
+            backup_img_chain(backing_file)
+        elif enable_gluster:
+            utils_misc.umount(g_uri, mount_point,
+                              "glusterfs", False,
+                              "fuse.glusterfs")
+            shutil.rmtree(mount_point)
+        return None
 
     # Here starts test
     subcommand = params["subcommand"]

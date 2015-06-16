@@ -32,7 +32,7 @@ git_repo["xf86-video-qxl"] = "git://anongit.freedesktop.org/xorg/driver/xf86-vid
 git_repo["virt-viewer"] = "https://git.fedorahosted.org/git/virt-viewer.git"
 
 # options to pass
-autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala --disable-controller --enable-smartcard"
+autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala  --enable-smartcard"
 autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
 autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\""
 autogen_options["virt-viewer"] = "--with-spice-gtk --disable-update-mimedb"
@@ -69,6 +69,8 @@ parser.add_option("-l", "--prefix", dest="prefix",
                   help="Location to store built binaries/libraries")
 parser.add_option("-o", "--buildOptions", dest="buildOptions",
                   help="Options to pass to autogen.sh while building")
+parser.add_option("--tarball", dest="tarballLocation",
+                  help="Option to build from tarball. Pass tarball location")
 
 
 (options, args) = parser.parse_args()
@@ -83,6 +85,8 @@ branch = options.branch
 destDir = options.destDir
 commit = options.commit
 prefix = options.prefix
+tarballLocation = options.tarballLocation
+
 if options.buildOptions:
     autogen_options[pkgName] = options.buildOptions
 if options.gitRepo:
@@ -97,70 +101,88 @@ if re.findall("release 6", rhelVersion):
     if pkgName in ("xf86-video-qxl"):
         autogen_options[pkgName] += " --disable-kms"
 
-ret = os.system("which git")
-if ret != 0:
-    print "Missing git command!"
-    sys.exit(1)
+if not tarballLocation:
 
-# Create destination directory
-if destDir is None:
-    basename = git_repo[pkgName].split("/")[-1]
-    destDir = os.path.join("/tmp", basename)
-    if os.path.exists(destDir):
-        print "Deleting existing destination directory"
-        subprocess.check_call(("rm -rf %s" % destDir).split())
+    # If spice-gtk & not tarball, then disable spice controller
+    if pkgName == "spice-gtk":
+        autogen_options[pkgName] += " --disable-controller"
 
-# If destination directory doesn't exist, create it
-if not os.path.exists(destDir):
-    print "Creating directory %s for git repo %s" % (destDir, git_repo[pkgName])
-    os.makedirs(destDir)
+    ret = os.system("which git")
+    if ret != 0:
+        print "Missing git command!"
+        sys.exit(1)
 
-# Switch to the directory
-os.chdir(destDir)
+    # Create destination directory
+    if destDir is None:
+        basename = git_repo[pkgName].split("/")[-1]
+        destDir = os.path.join("/tmp", basename)
+        if os.path.exists(destDir):
+            print "Deleting existing destination directory"
+            subprocess.check_call(("rm -rf %s" % destDir).split())
 
-# If git repo already exists, reset. If not, initialize
-if os.path.exists('.git'):
-    print "Resetting previously existing git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName])
-    subprocess.check_call("git reset --hard".split())
+    # If destination directory doesn't exist, create it
+    if not os.path.exists(destDir):
+        print "Creating directory %s for git repo %s" % (destDir, git_repo[pkgName])
+        os.makedirs(destDir)
+
+    # Switch to the directory
+    os.chdir(destDir)
+
+    # If git repo already exists, reset. If not, initialize
+    if os.path.exists('.git'):
+        print "Resetting previously existing git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName])
+        subprocess.check_call("git reset --hard".split())
+    else:
+        print "Initializing new git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName])
+        subprocess.check_call("git init".split())
+
+    # Fetch the contents of the repo
+    print "Fetching git [REP '%s' BRANCH '%s'] -> %s" % (git_repo[pkgName], branch, destDir)
+    subprocess.check_call(("git fetch -q -f -u -t %s %s:%s" %
+                           (git_repo[pkgName], branch, branch)).split())
+
+    # checkout the branch specified, master by default
+    print "Checking out branch %s" % branch
+    subprocess.check_call(("git checkout %s" % branch).split())
+
+    # If a certain commit is specified, checkout that commit
+    if commit is not None:
+        print "Checking out commit %s" % commit
+        subprocess.check_call(("git checkout %s" % commit).split())
+    else:
+        print "Specific commit not specified"
+ 
+    # Adding remote origin
+    print "Adding remote origin"
+    args = ("git remote add origin %s" % git_repo[pkgName]).split()
+    output = run_subprocess_cmd(args)
+
+    # Get the commit and tag which repo is at
+    args = 'git log --pretty=format:%H -1'.split()
+    print "Running 'git log --pretty=format:%H -1' to get top commit"
+    top_commit = run_subprocess_cmd(args)
+
+    args = 'git describe'.split()
+    print "Running 'git describe' to get top tag"
+    top_tag = run_subprocess_cmd(args)
+    if top_tag is None:
+        top_tag_desc = 'no tag found'
+    else:
+        top_tag_desc = 'tag %s' % top_tag
+    print "git commit ID is %s (%s)" % (top_commit, top_tag_desc)
+
+# If tarball is not specified
 else:
-    print "Initializing new git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName])
-    subprocess.check_call("git init".split())
+    tarballName = tarballLocation.split("/")[-1]
+    args = ('wget -O /tmp/%s %s' % (tarballName, tarballLocation)).split()
+    output = run_subprocess_cmd(args)
 
-# Fetch the contents of the repo
-print "Fetching git [REP '%s' BRANCH '%s'] -> %s" % (git_repo[pkgName], branch, destDir)
-subprocess.check_call(("git fetch -q -f -u -t %s %s:%s" %
-                       (git_repo[pkgName], branch, branch)).split())
+    args = ('tar xf /tmp/%s -C /tmp' % tarballName).split()
+    output = run_subprocess_cmd(args) 
 
-# checkout the branch specified, master by default
-print "Checking out branch %s" % branch
-subprocess.check_call(("git checkout %s" % branch).split())
-
-# If a certain commit is specified, checkout that commit
-if commit is not None:
-    print "Checking out commit %s" % commit
-    subprocess.check_call(("git checkout %s" % commit).split())
-else:
-    print "Specific commit not specified"
-
-# Adding remote origin
-print "Adding remote origin"
-args = ("git remote add origin %s" % git_repo[pkgName]).split()
-output = run_subprocess_cmd(args)
-
-# Get the commit and tag which repo is at
-args = 'git log --pretty=format:%H -1'.split()
-print "Running 'git log --pretty=format:%H -1' to get top commit"
-top_commit = run_subprocess_cmd(args)
-
-args = 'git describe'.split()
-print "Running 'git describe' to get top tag"
-top_tag = run_subprocess_cmd(args)
-
-if top_tag is None:
-    top_tag_desc = 'no tag found'
-else:
-    top_tag_desc = 'tag %s' % top_tag
-print "git commit ID is %s (%s)" % (top_commit, top_tag_desc)
+    tarballName = re.sub(".tar.bz2", "", tarballName)
+    destDir = "/tmp/%s" % tarballName
+    os.chdir(destDir)
 
 # If prefix to be passed to autogen.sh is in the defaults, use that
 if pkgName in prefix_defaults.keys() and options.prefix is None:
@@ -169,10 +191,12 @@ if pkgName in prefix_defaults.keys() and options.prefix is None:
 # if no prefix is set, the use default PKG_CONFIG_PATH. If not, set to
 # prefix's PKG_CONFIG_PATH
 if prefix is None:
-    env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:/usr/local/lib:"
+    env_vars = ("PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:"
+               "/usr/local/lib:/usr/local/lib/pkgconfig:/usr/local/lib/pkg-config:")
 else:
-    env_vars = "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:/usr/local/share/pkgconfig:" % (prefix,
-                                                                                                           prefix)
+    env_vars = ("PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:"
+               "/usr/local/share/pkgconfig:%s/lib/pkgconfig:%s/lib/pkg-config:" 
+                % (prefix, prefix, prefix, prefix))
 
 # Running autogen.sh with prefix and any other options
 # Using os.system because subprocess.Popen would not work
@@ -180,6 +204,12 @@ else:
 # properly with it
 
 cmd = destDir + "/autogen.sh"
+if not os.path.exists(cmd):
+   cmd = destDir + "/configure"
+   if not os.path.exists(cmd):
+       print "%s doesn't exist! Something's wrong!" % cmd
+       sys.exit(1)
+
 if prefix is not None:
     cmd += " --prefix=\"" + prefix + "\""
 if pkgName in autogen_options.keys():

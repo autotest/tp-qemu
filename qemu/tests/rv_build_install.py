@@ -100,6 +100,9 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
     :param params: Dictionary with test parameters.
     """
 
+    # Building spice-gtk from tarball before building virt-viewer
+    build_install_spicegtk(vm_root_session, vm_script_path, params)
+
     try:
         output = vm_root_session.cmd("killall remote-viewer")
         logging.info(output)
@@ -113,11 +116,10 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
         logging.error("virt-viewer package couldn't be removed! " + err.output)
 
     if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
-        pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel",
+        pkgsRequired = ["libogg-devel", "celt051-devel",
                         "spice-glib-devel", "spice-gtk3-devel"]
     else:
-        pkgsRequired = ["spice-protocol", "libogg-devel", "celt051-devel",
-                        "spice-glib-devel", "spice-gtk-devel"]
+        pkgsRequired = ["libogg-devel", "celt051-devel"]
 
     install_req_pkgs(pkgsRequired, vm_root_session, params)
 
@@ -180,11 +182,24 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     except ShellCmdError:
         logging.error(output)
 
-    output = vm_root_session.cmd("%s -p spice-gtk" % (vm_script_path),
-                                 timeout=600)
-    logging.info(output)
-    if re.search("Return code", output):
-        raise error.TestFail("spice-gtk was not installed properly")
+    # spice-gtk needs to built from tarball before building virt-viewer on RHEL6
+    pkgName = params.get("build_install_pkg")
+    if pkgName != "spice-gtk":
+        tarballLocation = "http://www.spice-space.org/download/gtk/spice-gtk-0.28.tar.bz2"
+        cmd = "%s -p spice-gtk --tarball %s" % (vm_script_path, tarballLocation)
+        output = vm_root_session.cmd(cmd, timeout=600)
+        logging.info(output)
+        if re.search("Return code", output):
+            raise error.TestFail("spice-gtk was not installed properly")
+        else:
+            logging.info("spice-gtk was installed")
+
+    else:
+        output = vm_root_session.cmd("%s -p spice-gtk" % (vm_script_path),
+                                     timeout=600)
+        logging.info(output)
+        if re.search("Return code", output):
+            raise error.TestFail("spice-gtk was not installed properly")
 
     # Get version of spice-gtk after install
     try:

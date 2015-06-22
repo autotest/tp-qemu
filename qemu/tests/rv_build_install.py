@@ -185,7 +185,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
     # spice-gtk needs to built from tarball before building virt-viewer on RHEL6
     pkgName = params.get("build_install_pkg")
     if pkgName != "spice-gtk":
-        tarballLocation = "http://www.spice-space.org/download/gtk/spice-gtk-0.28.tar.bz2"
+        tarballLocation = "http://www.spice-space.org/download/gtk/spice-gtk-0.29.tar.bz2"
         cmd = "%s -p spice-gtk --tarball %s" % (vm_script_path, tarballLocation)
         output = vm_root_session.cmd(cmd, timeout=600)
         logging.info(output)

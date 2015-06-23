@@ -1,7 +1,7 @@
-import logging
+import os
 import re
 import time
-import os
+import logging
 from autotest.client.shared import error, utils
 from virttest import utils_misc, env_process
 
@@ -224,9 +224,11 @@ def run(test, params, env):
 
         error.context("Do migration(protocol:%s),Watchdog have been triggered."
                       % mig_protocol, logging.info)
-        vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay)
-
+        args = (mig_timeout, mig_protocol, mig_cancel_delay)
+        migrate_thread = utils.InterruptedThread(vm.migrate, args)
+        migrate_thread.start()
         _action_check(session, watchdog_action)
+        migrate_thread.join(timeout=mig_timeout)
 
     def hotplug_unplug_watchdog_device():
         """

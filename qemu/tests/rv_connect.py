@@ -229,7 +229,7 @@ def launch_rv(client_vm, guest_vm, params):
         else:
             print_rv_version(client_session, rv_binary)
 
-    except ShellStatusError, ShellProcessTerminatedError:
+    except (ShellStatusError, ShellProcessTerminatedError):
         # Sometimes It fails with Status error, ingore it and continue.
         # It's not that important to have printed versions in the log.
         logging.debug("Ignoring a Status Exception that occurs from calling "

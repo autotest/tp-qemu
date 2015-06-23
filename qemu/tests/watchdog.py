@@ -209,7 +209,7 @@ def run(test, params, env):
         Test Step:
         1. Boot guest with watchdog device
         2. Check watchdog device have been initialized successfully in guest
-        3. Start VM with watchdog device, action reset|poweroff|pause
+        3. Start VM with watchdog device, action reset|pause
         4. Inside RHEL guest, trigger watchdog
         5. Before WDT timeout, do vm migration
         6. After migration, check the watchdog action take effect

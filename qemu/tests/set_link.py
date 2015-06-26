@@ -66,7 +66,7 @@ def run(test, params, env):
         """
         try:
             vm.reboot(method=reboot_method, timeout=120)
-        except remote.LoginError, virt_vm.VMAddressError:
+        except (remote.LoginError, virt_vm.VMAddressError):
             if not link_up:
                 logging.info("Login error is expected when net link is down")
 

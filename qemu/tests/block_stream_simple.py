@@ -21,7 +21,9 @@ class BlockStreamSimple(blk_stream.BlockStream):
 def run(test, params, env):
     """
     block_stream_simple test:
-    1). launch block streaming job w/o set max speed
+    1). launch block streaming job w/ max speed in param "default_speed"
+        if defined by users or w/o max speed limit by default,
+        to be noted, default_speed=0 means no limit in qemu side.
     2). reset max job speed before steady status(optional)
     3). cancel active job on the device(optional)
 

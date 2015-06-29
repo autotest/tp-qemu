@@ -32,3 +32,5 @@ rhel6.4.0 RHEL-6.4
 rhel6.5.0 RHEL-6.5
 pc-i440fx-rhel7.0.0 RHEL-7.0
 pc-q35-rhel7.0.0 RHEL-7.0
+pc-i440fx-rhel7.1.0 RHEL-7.1
+pc-q35-rhel7.1.0 RHEL-7.1

@@ -22,7 +22,10 @@ DUMP_DIR="$2"
     cpu64-rhel6
     cpu64-rhel6,-s
     cpu64-rhel6,-abm,-sse4a,-svm
+    Broadwell
+    Broadwell-noTSX
     Haswell
+    Haswell-noTSX
     kvm32
     kvm64
     n270

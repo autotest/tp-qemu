@@ -63,7 +63,7 @@ def launch_totem(guest_session, params):
     else:
         fullscreen = ""
 
-    cmd = "nohup totem %s %s &> /dev/null &" \
+    cmd = "nohup totem %s %s --display=:0.0 &> /dev/null &" \
           % (fullscreen, params.get("destination_video_file_path"))
     guest_session.cmd(cmd)
 
@@ -77,7 +77,7 @@ def launch_totem(guest_session, params):
         if not re.search("^(\d+)", pid):
             logging.info("Could not find Totem running! Try starting again!")
             # Sometimes totem doesn't start properly; try again
-            cmd = "nohup totem %s %s &> /dev/null &" \
+            cmd = "nohup totem %s %s --display=:0.0 &> /dev/null &" \
                   % (fullscreen, params.get("destination_video_file_path"))
             guest_session.cmd(cmd)
             cmd = "pgrep totem"

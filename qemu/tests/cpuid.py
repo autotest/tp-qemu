@@ -78,20 +78,27 @@ def run(test, params, env):
 
     def compare_cpuid_output(a, b):
         """
-        Generates a list of (register, bit, va, vb) tuples for
+        Generates a list of (bit, va, vb) tuples for
         each bit that is different between a and b.
         """
-        for reg in ('eax', 'ebx', 'ecx', 'edx'):
-            for bit in range(32):
-                ba = (a[reg] & (1 << bit)) >> bit
-                bb = (b[reg] & (1 << bit)) >> bit
-                if ba != bb:
-                    yield (reg, bit, ba, bb)
+        for bit in range(32):
+            ba = (a & (1 << bit)) >> bit
+            if b is not None:
+                bb = (b & (1 << bit)) >> bit
+            else:
+                bb = None
+            if ba != bb:
+                yield (bit, ba, bb)
 
     def parse_cpuid_dump(output):
         dbg("parsing cpuid dump: %r", output)
         cpuid_re = re.compile(
             "^ *(0x[0-9a-f]+) +0x([0-9a-f]+): +eax=0x([0-9a-f]+) ebx=0x([0-9a-f]+) ecx=0x([0-9a-f]+) edx=0x([0-9a-f]+)$")
+        output_match = re.search('(==START TEST==.*==END TEST==)', output, re.M|re.DOTALL)
+        if output_match is None:
+            dbg("cpuid dump doesn't follow expected pattern")
+            return None
+        output = output_match.group(1)
         out_lines = output.splitlines()
         if out_lines[0] != '==START TEST==' or out_lines[-1] != '==END TEST==':
             dbg("cpuid dump doesn't have expected delimiters")
@@ -107,24 +114,67 @@ def run(test, params, env):
                 return None
             in_eax = int(m.group(1), 16)
             in_ecx = int(m.group(2), 16)
-            out = {
-                'eax': int(m.group(3), 16),
-                'ebx': int(m.group(4), 16),
-                'ecx': int(m.group(5), 16),
-                'edx': int(m.group(6), 16),
-            }
-            result[(in_eax, in_ecx)] = out
+            result[in_eax, in_ecx, 'eax'] = int(m.group(3), 16)
+            result[in_eax, in_ecx, 'ebx'] = int(m.group(4), 16)
+            result[in_eax, in_ecx, 'ecx'] = int(m.group(5), 16)
+            result[in_eax, in_ecx, 'edx'] = int(m.group(6), 16)
         return result
 
-    def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None):
-        test_kernel_dir = os.path.join(data_dir.get_deps_dir(), "cpuid", "src")
-        os.chdir(test_kernel_dir)
-        utils.make("cpuid_dump_kernel.bin")
+    def get_test_kernel_cpuid(self, vm):
+        vm.resume()
+
+        timeout = float(params.get("login_timeout", 240))
+        logging.debug("Will wait for CPUID serial output at %r",
+                      vm.serial_console)
+        if not utils_misc.wait_for(lambda:
+                                   re.search("==END TEST==",
+                                             vm.serial_console.get_output()),
+                                   timeout, 1):
+            raise error.TestFail("Could not get test complete message.")
+
+        test_output = parse_cpuid_dump(vm.serial_console.get_output())
+        logging.debug("Got CPUID serial output: %r", test_output)
+        if test_output is None:
+            raise error.TestFail("Test output signature not found in "
+                                 "output:\n %s", vm.serial_console.get_output())
+        vm.destroy(gracefully=False)
+        return test_output
+
+    def find_cpu_obj(vm):
+        """Find path of a valid VCPU object"""
+        roots = ['/machine/icc-bridge/icc', '/machine/unattached/device']
+        for root in roots:
+            for child in vm.monitor.cmd('qom-list', dict(path=root)):
+                logging.debug('child: %r', child)
+                if child['type'].rstrip('>').endswith('-cpu'):
+                    return root + '/' + child['name']
+
+    def get_qom_cpuid(self, vm):
+        assert vm.monitor.protocol == "qmp"
+        cpu_path = find_cpu_obj(vm)
+        logging.debug('cpu path: %r', cpu_path)
+        r = {}
+        for prop in 'feature-words', 'filtered-features':
+            words = vm.monitor.cmd('qom-get', dict(path=cpu_path, property=prop))
+            logging.debug('%s property: %r', prop, words)
+            for w in words:
+                reg = w['cpuid-register'].lower()
+                key = (w['cpuid-input-eax'], w.get('cpuid-input-ecx', 0), reg)
+                r.setdefault(key, 0)
+                r[key] |= w['features']
+        return r
+
+    def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None, qom_mode=False):
+        if not qom_mode:
+            test_kernel_dir = os.path.join(data_dir.get_deps_dir(), "cpuid", "src")
+            os.chdir(test_kernel_dir)
+            utils.make("cpuid_dump_kernel.bin")
 
         vm_name = params['main_vm']
         params_b = params.copy()
-        params_b["kernel"] = os.path.join(
-            test_kernel_dir, "cpuid_dump_kernel.bin")
+        if not qom_mode:
+            params_b["kernel"] = os.path.join(
+                test_kernel_dir, "cpuid_dump_kernel.bin")
         params_b["cpu_model"] = cpu_model
         params_b["cpu_model_flags"] = feature
         del params_b["images"]
@@ -136,21 +186,10 @@ def run(test, params, env):
         dbg('is dead: %r', vm.is_dead())
         vm.create()
         self.vm = vm
-        vm.resume()
-
-        timeout = float(params.get("login_timeout", 240))
-        if not utils_misc.wait_for(lambda:
-                                   re.search("==END TEST==",
-                                             vm.serial_console.get_output()),
-                                   timeout, 1):
-            raise error.TestFail("Could not get test complete message.")
-
-        test_output = parse_cpuid_dump(vm.serial_console.get_output())
-        if test_output is None:
-            raise error.TestFail("Test output signature not found in "
-                                 "output:\n %s", vm.serial_console.get_output())
-        vm.destroy(gracefully=False)
-        return test_output
+        if qom_mode:
+            return get_qom_cpuid(self, vm)
+        else:
+            return get_test_kernel_cpuid(self, vm)
 
     def cpuid_to_vendor(cpuid_dump, idx):
         r = cpuid_dump[idx, 0]
@@ -527,10 +566,15 @@ def run(test, params, env):
         if reference is None:
             raise error.TestNAError(
                 "couldn't parse reference cpuid dump from file; %s" % (ref_file))
+        qom_mode = params.get('qom_mode', "no").lower() == 'yes'
+        if not qom_mode:
+            cpu_model_flags += ',enforce'
         try:
+
             out = get_guest_cpuid(
-                self, cpu_model, cpu_model_flags + ',enforce',
-                extra_params=dict(machine_type=machine_type, smp=1))
+                self, cpu_model, cpu_model_flags,
+                extra_params=dict(machine_type=machine_type, smp=1),
+                qom_mode=qom_mode)
         except virt_vm.VMStartError, e:
             if "host doesn't support requested feature:" in e.reason \
                 or ("host cpuid" in e.reason and
@@ -546,23 +590,26 @@ def run(test, params, env):
         dbg('out: %r', out)
         ok = True
         for k in reference.keys():
-            in_eax, in_ecx = k
-            if k not in out:
-                info(
-                    "Missing CPUID data from output: CPUID[0x%x,0x%x]", in_eax, in_ecx)
-                ok = False
-                continue
-            diffs = compare_cpuid_output(reference[k], out[k])
+            in_eax, in_ecx, reg = k
+            diffs = compare_cpuid_output(reference[k], out.get(k))
             for d in diffs:
-                reg, bit, vreference, vout = d
+                bit, vreference, vout = d
                 whitelisted = (in_eax,) in whitelist \
                     or (in_eax, in_ecx) in whitelist \
                     or (in_eax, in_ecx, reg) in whitelist \
                     or (in_eax, in_ecx, reg, bit) in whitelist
-                info(
-                    "Non-matching bit: CPUID[0x%x,0x%x].%s[%d]: found %s instead of %s%s",
-                    in_eax, in_ecx, reg, bit, vout, vreference,
-                    whitelisted and " (whitelisted)" or "")
+                silent = False
+
+                if vout is None and params.get('ok_missing', 'no') == 'yes':
+                    whitelisted = True
+                    silent = True
+
+                if not silent:
+                    info(
+                        "Non-matching bit: CPUID[0x%x,0x%x].%s[%d]: found %s instead of %s%s",
+                        in_eax, in_ecx, reg, bit, vout, vreference,
+                        whitelisted and " (whitelisted)" or "")
+
                 if not whitelisted:
                     ok = False
         if not ok:

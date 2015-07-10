@@ -223,7 +223,7 @@ def run(test, params, env):
                 if params.get("pci_test_cmd"):
                     test_cmd = re.sub("PCI_NUM", "%s" % (pci_num + 1),
                                       params.get("pci_test_cmd"))
-                    session.cmd(test_cmd)
+                    session.cmd(test_cmd, timeout=disk_op_timeout)
             except aexpect.ShellError, e:
                 raise error.TestFail("Check for %s device failed after PCI "
                                      "hotplug. Output: %r" % (pci_type, e.output))
@@ -251,6 +251,10 @@ def run(test, params, env):
             else:
                 cmd = "device_del id=%s" % pci_info[pci_num][1]
             vm.monitor.send_args_cmd(cmd, convert=False)
+            if params.get("cmd_after_unplug_dev"):
+                cmd = re.sub("PCI_NUM", "%s" % (pci_num + 1),
+                             params.get("cmd_after_unplug_dev"))
+                session.cmd(cmd, timeout=disk_op_timeout)
             blk_removed.append(pci_info[pci_num][1])
             pci_model = params.get("pci_model")
             if pci_model == "scsi" or pci_model == "scsi-hd":
@@ -280,6 +284,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     test_timeout = int(params.get("hotplug_timeout", 360))
+    disk_op_timeout = int(params.get("disk_op_timeout", 360))
     reference_cmd = params["reference_cmd"]
     # Test if it is nic or block
     pci_type = params["pci_type"]

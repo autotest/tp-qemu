@@ -142,7 +142,7 @@ def run(test, params, env):
                     vm.virtnet.update_db()
                     mac_check = old_mac
 
-                session = vm.reboot(session)
+                session_serial = vm.reboot(session_serial, serial=True)
                 check_guest_mac(mac_check, vm)
             if params.get("file_transfer", "no") == "yes":
                 error.context("File transfer between host and guest.",

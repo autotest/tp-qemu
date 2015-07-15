@@ -117,7 +117,7 @@ def run(test, params, env):
             loss_ratio == -1):
         logging.debug("Ping %s output: %s" % (external_host, output))
         raise error.TestFail("Guest network connction unusable," +
-                             "packet lost ratio is '%%%d'" % loss_ratio)
+                             "packet lost ratio is '%d%%'" % loss_ratio)
     if server_session:
         server_session.close()
     if session:

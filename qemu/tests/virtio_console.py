@@ -317,6 +317,8 @@ def run(test, params, env):
         if port.is_open():
             port.close()
 
+        # Read out the previous signals
+        guest_worker._cmd("virt.get_sigio_poll_return('%s')" % (port.name), 1)
         # Enable sigio on specific port
         guest_worker.cmd("virt.async('%s', True, 0)" % (port.name), 10)
         guest_worker.cmd("virt.get_sigio_poll_return('%s')" % (port.name), 10)

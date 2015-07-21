@@ -21,17 +21,21 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+    preprocess_env = params.get("preprocess_env", "yes") == "yes"
     mig_protocol = params.get("mig_protocol", "tcp")
     mig_type = utils_test.qemu.MultihostMigration
     if mig_protocol == "fd":
         mig_type = utils_test.qemu.MultihostMigrationFd
     if mig_protocol == "exec":
         mig_type = utils_test.qemu.MultihostMigrationExec
+    if "rdma" in mig_protocol:
+        mig_type = utils_test.qemu.MultihostMigrationRdma
 
     class TestMultihostMigration(mig_type):
 
         def __init__(self, test, params, env):
-            super(TestMultihostMigration, self).__init__(test, params, env)
+            super(TestMultihostMigration, self).__init__(test, params, env,
+                                                         preprocess_env)
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
             self.is_src = params["hostid"] == self.srchost
@@ -74,7 +78,9 @@ def run(test, params, env):
             def start_worker(mig_data):
                 logging.info("Try to login guest before migration test.")
                 vm = env.get_vm(params["main_vm"])
+
                 session = vm.wait_for_login(timeout=self.login_timeout)
+                logging.debug("Sending command: '%s'" % self.mig_bg_command)
                 session.sendline(self.mig_bg_command)
                 time.sleep(5)
 

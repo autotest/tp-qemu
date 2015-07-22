@@ -612,8 +612,8 @@ def run(test, params, env):
             error.context("Detecting the existence of a cdrom (qemu side)",
                           logging.info)
             qemu_cdrom_device = get_device(vm, iso_image)
-
-            self.session.get_command_output("umount %s" % guest_cdrom_device)
+            if params["os_type"] != "windows":
+                self.session.get_command_output("umount %s" % guest_cdrom_device)
             if params.get('cdrom_test_autounlock') == 'yes':
                 error.context("Trying to unlock the cdrom", logging.info)
                 if not utils_misc.wait_for(lambda: not

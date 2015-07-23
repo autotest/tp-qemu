@@ -343,8 +343,8 @@ def run(test, params, env):
         """
         if params["os_type"] == "windows":
             winutil_drive = utils_misc.get_winutils_vol(session)
-            winutils_drive = "%s:" % winutils_drive
-            cdrom_dev_list.remove(winutils_drive)
+            winutil_drive = "%s:" % winutil_drive
+            cdrom_dev_list.remove(winutil_drive)
         try:
             testing_cdrom_device = cdrom_dev_list[-1]
         except IndexError:

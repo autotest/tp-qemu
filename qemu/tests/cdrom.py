@@ -343,11 +343,12 @@ def run(test, params, env):
         """
         if params["os_type"] == "windows":
             winutil_drive = utils_misc.get_winutils_vol(session)
-            cdrom_dev_list.remove(str(winutil_drive) + ":")
+            winutils_drive = "%s:" % winutils_drive 
+            cdrom_dev_list.remove(winutils_drive)
         try:
             testing_cdrom_device = cdrom_dev_list[-1]
         except IndexError:
-            raise error.TestFail("Could not find a valid testingcdrom device")
+            raise error.TestFail("Could not find the testing cdrom device")
 
         return testing_cdrom_device
 

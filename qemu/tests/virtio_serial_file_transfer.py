@@ -16,11 +16,11 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    port_name = params.get("file_transfer_serial_port")
+    port_names = params.get("file_transfer_serial_port", "").split()
     file_sender = params.get("file_sender", "guest")
     md5_check = params.get("md5_check", "yes") == "yes"
 
     utils_test.run_virtio_serial_file_transfer(test, params, env,
-                                               port_name=port_name,
+                                               port_names=port_names,
                                                sender=file_sender,
                                                md5_check=md5_check)

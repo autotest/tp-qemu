@@ -52,6 +52,7 @@ def run(test, params, env):
         sessions.append(vm.wait_for_login(timeout=timeout))
         addresses.append(vm.get_address())
     mon_session = vms[2].wait_for_login(timeout=timeout)
+    mon_macaddr = vms[2].get_mac_address()
 
     src_file = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
     dst_file = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))
@@ -62,14 +63,11 @@ def run(test, params, env):
         error.context(error_msg, logging.info)
         if params.get("os_type") == "linux":
             if_func = utils_net.get_linux_ifname
-            args = (sessions[2], vm.get_mac_address())
+            args = (mon_session, mon_macaddr)
         else:
             if_func = utils_net.get_windows_nic_attribute
-            args = (sessions[2], "macaddress", vm.get_mac_address(),
-                    "netconnectionid")
-
+            args = (mon_session, "macaddress", mon_macaddr, "netconnectionid")
         interface_name = if_func(*args)
-
         tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
                                      interface_name)
         dthread = utils.InterruptedThread(data_mon, (sessions[2], tcpdump_cmd,

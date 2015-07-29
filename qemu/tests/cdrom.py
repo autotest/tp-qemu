@@ -335,6 +335,23 @@ def run(test, params, env):
                 raise error.TestFail("Could not find a valid cdrom device")
         return device
 
+    def get_testing_cdrom_device(session, cdrom_dev_list):
+        """
+        Get the testing cdrom used for eject
+        :param session: VM session
+        :param cdrom_dev_list: cdrom_dev_list
+        """
+        if params["os_type"] == "windows":
+            winutil_drive = utils_misc.get_winutils_vol(session)
+            winutil_drive = "%s:" % winutil_drive
+            cdrom_dev_list.remove(winutil_drive)
+        try:
+            testing_cdrom_device = cdrom_dev_list[-1]
+        except IndexError:
+            raise error.TestFail("Could not find the testing cdrom device")
+
+        return testing_cdrom_device
+
     def disk_copy(vm, src_path, dst_path, copy_timeout=None, dsize=None):
         """
         Start disk load. Cyclic copy from src_path to dst_path.
@@ -351,7 +368,7 @@ def run(test, params, env):
         copy_file_cmd = (
             "nohup cp %s %s 2> /dev/null &" % (src_path, dst_path))
         get_pid_cmd = "echo $!"
-        if params["os_type"] == "windwos":
+        if params["os_type"] == "windows":
             copy_file_cmd = "start cmd /c copy /y %s %s" % (src_path, dst_path)
             get_pid_cmd = "wmic process where name='cmd.exe' get ProcessID"
         session.cmd(copy_file_cmd, timeout=copy_timeout)
@@ -579,7 +596,7 @@ def run(test, params, env):
                 # XXX: The device got from monitor might not match with the guest
                 # defice if there are multiple cdrom devices.
                 qemu_cdrom_device = get_empty_cdrom_device(vm)
-                guest_cdrom_device = cdrom_dev_list[-1]
+                guest_cdrom_device = get_testing_cdrom_device(self.session, cdrom_dev_list)
                 if vm.check_block_locked(qemu_cdrom_device):
                     raise error.TestFail("Device should not be locked just"
                                          " after booting up")
@@ -592,16 +609,12 @@ def run(test, params, env):
             error.context("Detecting the existence of a cdrom (guest OS side)",
                           logging.info)
             cdrom_dev_list = list_guest_cdroms(self.session)
-            try:
-                guest_cdrom_device = cdrom_dev_list[-1]
-            except IndexError:
-                raise error.TestFail("Could not find a valid cdrom device")
-
+            guest_cdrom_device = get_testing_cdrom_device(self.session, cdrom_dev_list)
             error.context("Detecting the existence of a cdrom (qemu side)",
                           logging.info)
             qemu_cdrom_device = get_device(vm, iso_image)
-
-            self.session.get_command_output("umount %s" % guest_cdrom_device)
+            if params["os_type"] != "windows":
+                self.session.get_command_output("umount %s" % guest_cdrom_device)
             if params.get('cdrom_test_autounlock') == 'yes':
                 error.context("Trying to unlock the cdrom", logging.info)
                 if not utils_misc.wait_for(lambda: not
@@ -720,7 +733,7 @@ def run(test, params, env):
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
                 cdrom_dev_list = list_guest_cdroms(session)
-                guest_cdrom_device = cdrom_dev_list[-1]
+                guest_cdrom_device = get_testing_cdrom_device(session, cdrom_dev_list)
                 logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
                 device = get_device(vm, self.cdrom_orig)
 
@@ -755,7 +768,7 @@ def run(test, params, env):
             error.context("Unlock cdrom from VM.")
             if not self.is_src:  # Starts in dest
                 cdrom_dev_list = list_guest_cdroms(session)
-                guest_cdrom_device = cdrom_dev_list[-1]
+                guest_cdrom_device = get_testing_cdrom_device(session, cdrom_dev_list)
                 session.cmd(params["unlock_cdrom_cmd"] % guest_cdrom_device)
                 locked = check_cdrom_lock(vm, device)
                 if not locked:
@@ -794,7 +807,7 @@ def run(test, params, env):
                 cdrom_dev_list = list_guest_cdroms(session)
                 logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
                 device = get_device(vm, self.cdrom_orig)
-                cdrom = cdrom_dev_list[-1]
+                cdrom = get_testing_cdrom_device(session, cdrom_dev_list)
 
                 error.context("Eject cdrom.")
                 session.cmd(params["eject_cdrom_cmd"] % cdrom)
@@ -841,7 +854,7 @@ def run(test, params, env):
                 session = vm.wait_for_login(timeout=login_timeout)
                 cdrom_dev_list = list_guest_cdroms(session)
                 logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
-                cdrom = cdrom_dev_list[-1]
+                cdrom = get_testing_cdrom_device(session, cdrom_dev_list)
                 mount_point = get_cdrom_mount_point(session, cdrom, params)
                 mount_cmd = params["mount_cdrom_cmd"] % (cdrom, mount_point)
                 src_file = params["src_file"] % (mount_point, filename)

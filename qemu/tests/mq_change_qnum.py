@@ -179,13 +179,11 @@ def run(test, params, env):
 
         if params.get("ping_after_changing_queues", "yes") == "yes":
             default_host = "www.redhat.com"
-            ext_host_get_cmd = params.get("ext_host_get_cmd", "")
             try:
-                ext_host = utils.system_output(ext_host_get_cmd)
+                ext_host = utils_net.get_host_default_gateway()
             except error.CmdError:
-                logging.warn("Can't get specified host with cmd '%s',"
-                             " Fallback to default host '%s'",
-                             ext_host_get_cmd, default_host)
+                logging.warn("Can't get specified host,"
+                             " Fallback to default host '%s'", default_host)
                 ext_host = default_host
             if not ext_host:
                 # Fallback to a hardcode host, eg:

@@ -35,7 +35,6 @@ def run(test, params, env):
     event_cmd_type = params.get("event_cmd_type")
     event_check = params.get("event_check")
     timeout = int(params.get("check_timeout", 360))
-    action_check = params.get("action_check")
     pre_cmd = params.get("pre_cmd")
     post_cmd = params.get("post_cmd")
     post_cmd_type = params.get("post_cmd_type")

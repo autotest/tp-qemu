@@ -7,6 +7,7 @@ the same setup will result in them having the same resolution.
 
 """
 import logging
+from autotest.client.shared import error
 from virttest import utils_spice
 
 
@@ -39,12 +40,18 @@ def run(test, params, env):
         timeout=int(params.get("login_timeout", 360)))
     guest_root_session = guest_vm.wait_for_login(username="root",
                                                  password="123456")
+    client_vm = env.get_vm(params["client_vm"])
+    client_vm.verify_alive()
+    client_session = client_vm.wait_for_login(
+        timeout=int(params.get("login_timeout", 360)))
+    client_root_session = client_vm.wait_for_login(username="root",
+                                                   password="123456")
 
-    logging.debug("Exporting guest display")
-    guest_session.cmd("export DISPLAY=:0.0")
+    logging.debug("Exporting client display")
+    client_session.cmd("export DISPLAY=:0.0")
 
     # Get the min, current, and max resolution on the guest
-    output = guest_session.cmd("xrandr | grep Screen")
+    output = client_session.cmd("xrandr | grep Screen")
     outputlist = output.split()
 
     minimum = "640x480"
@@ -60,22 +67,33 @@ def run(test, params, env):
     logging.info("Minimum: " + minimum + " Current: " + current +
                  " Maximum: " + maximum)
     if(current != minimum):
-        resolution = minimum
+        newClientResolution = minimum
     else:
-        resolution = maximum
+        newClientResolution = maximum
 
     # Changing the guest resolution
-    guest_session.cmd("xrandr -s " + resolution)
-    logging.info("The resolution on the guest has been changed from " +
-                 current + " to: " + resolution)
+    client_session.cmd("xrandr -s " + newClientResolution)
+    logging.info("The resolution on the client has been changed from " +
+                 current + " to: " + newClientResolution)
+
+    logging.debug("Exporting guest display")
+    guest_session.cmd("export DISPLAY=:0.0")
+
+    # Get the min, current, and max resolution on the guest
+    output = guest_session.cmd("xrandr | grep Screen")
+    outputlist = output.split()
+
+    current_index = outputlist.index("current")
+    currentGuestRes = outputlist[current_index + 1]
+    currentGuestRes += outputlist[current_index + 2]
+    currentGuestRes += outputlist[current_index + 3].replace(",", "")
+    logging.info("Current Resolution of Guest: " + currentGuestRes)
+
+    if (newClientResolution == currentGuestRes):
+        raise error.TestFail("Client resolution is same as guest resolution!")
 
     # Start vdagent daemon
     utils_spice.start_vdagent(guest_root_session, test_timeout)
-
-    client_vm = env.get_vm(params["client_vm"])
-    client_vm.verify_alive()
-    client_session = client_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
 
     client_session.close()
     guest_session.close()

@@ -52,7 +52,6 @@ def run(test, params, env):
                 session.close()
 
     error.context("Generating qemu-kvm commandline", logging.info)
-    params["start_vm"] = "yes"
     vm_name = params['main_vm']
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)

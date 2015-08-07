@@ -112,8 +112,7 @@ def run(test, params, env):
             if "The text has been placed into the clipboard." in output:
                 logging.info("Copying of text was successful")
             else:
-                raise error.TestFail("Copying to the clipboard failed ELSE",
-                                     output)
+                raise error.TestFail("Copying to the clipboard failed. %s" % output)
         except:
             raise error.TestFail("Copying to the clipboard failed try" +
                                  " block failed")

@@ -135,8 +135,7 @@ def run(test, params, env):
                           logging.info)
             dst_md5 = (utils.hash_file(host_path, method="md5"))
             if dst_md5 != src_md5:
-                raise error.TestFail("File changed after transfer",
-                                     "Files md5sum mismatch!")
+                raise error.TestFail("File changed after transfer (md5sum mismatch)")
             utils.system_output("rm -rf %s" % host_path, timeout=timeout)
 
     finally:

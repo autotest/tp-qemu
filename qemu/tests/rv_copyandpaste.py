@@ -70,7 +70,7 @@ def place_img_in_clipboard(session_to_copy_from, interpreter, script_call,
         if "The image has been placed into the clipboard." in output:
             logging.info("Copying of the image was successful")
         else:
-            raise error.TestFail("Copying to the clipboard failed", output)
+            raise error.TestFail("Copying to the clipboard failed. %s" % output)
     except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
@@ -100,7 +100,7 @@ def verify_img_paste(session_to_copy_from, interpreter, script_call,
         if "Cb Image stored and saved to:" in output:
             logging.info("Copying of the image was successful")
         else:
-            raise error.TestFail("Copying to the clipboard failed", output)
+            raise error.TestFail("Copying to the clipboard failed. %s" % output)
     except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
@@ -147,7 +147,7 @@ def verify_img_paste_success(session_to_copy_from, interpreter, script_call,
         if "Cb Image stored and saved to:" in output:
             logging.info("Copying of the image was successful")
         else:
-            raise error.TestFail("Copying to the clipboard failed", output)
+            raise error.TestFail("Copying to the clipboard failed. %s" % output)
     finally:
         logging.info("------------ End of script output of the Pasting"
                      " Session ------------")
@@ -225,7 +225,7 @@ def verify_text_copy(session_to_copy_from, interpreter, script_call,
         if "The string has also been placed in the clipboard" in output:
             logging.info("Copying of the large text file was successful")
         else:
-            raise error.TestFail("Copying to the clipboard failed", output)
+            raise error.TestFail("Copying to the clipboard failed. %s" % output)
     except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
@@ -271,7 +271,7 @@ def verify_txt_paste_success(session_to_paste_to, interpreter,
         if "Writing of the clipboard text is complete" in output:
             logging.info("Copying of the large text file was successful")
         else:
-            raise error.TestFail("Copying to the clipboard failed", output)
+            raise error.TestFail("Copying to the clipboard failed. %s" % output)
     finally:
         logging.info("------------ End of script output of the Pasting"
                      " Session ------------")
@@ -315,7 +315,7 @@ def place_text_in_clipboard(session_to_copy_from, interpreter, script_call,
         if "The text has been placed into the clipboard." in output:
             logging.info("Copying of text was successful")
         else:
-            raise error.TestFail("Copying to the clipboard failed", output)
+            raise error.TestFail("Copying to the clipboard failed. %s" % output)
     except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 
@@ -332,7 +332,7 @@ def place_text_in_clipboard(session_to_copy_from, interpreter, script_call,
         if testing_text in output:
             logging.info("Text was successfully copied to the clipboard")
         else:
-            raise error.TestFail("Copying to the clipboard Failed ", output)
+            raise error.TestFail("Copying to the clipboard Failed. %s" % output)
     except aexpect.ShellCmdError:
         raise error.TestFail("Copying to the clipboard failed")
 

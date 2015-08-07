@@ -222,7 +222,7 @@ def run(test, params, env):
             logging.error("%sHotplug status:\nverified %s\nunverified %s\n"
                           "failed %s", prefix, passed, unverif, failed)
             logging.error("qtree:\n%s", monitor.info("qtree", debug=False))
-            raise error.TestFail("%sHotplug of some devices failed.", prefix)
+            raise error.TestFail("%sHotplug of some devices failed." % prefix)
 
     def hotplug_serial(new_devices, monitor):
         _hotplug(new_devices[0], monitor)
@@ -308,7 +308,7 @@ def run(test, params, env):
             logging.error("%sUnplug status:\nverified %s\nunverified %s\n"
                           "failed %s", prefix, passed, unverif, failed)
             logging.error("qtree:\n%s", monitor.info("qtree", debug=False))
-            raise error.TestFail("%sUnplug of some devices failed.", prefix)
+            raise error.TestFail("%sUnplug of some devices failed." % prefix)
 
     def unplug_serial(new_devices, qdev, monitor):
         _unplug(new_devices[0], qdev, monitor)

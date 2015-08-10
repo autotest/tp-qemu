@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from autotest.client.shared import error
-from virttest import env_process, aexpect
+from virttest import env_process, aexpect, data_dir, remote_build
 
 
 def get_re_average(opt, re_str):
@@ -61,13 +61,12 @@ def run(test, params, env):
                 msg = "%s is not displayed in output" % check_string
                 raise error.TestFail(msg)
 
-    pipetest_cmd = params.get("pipetest_cmd")
-    if session.get_command_status("test -x %s" % pipetest_cmd):
-        file_link = os.path.join(test.virtdir, "scripts/pipetest.c")
-        vm.copy_files_to(file_link, "/tmp/pipetest.c")
-        build_pipetest_cmd = params.get("build_pipetest_cmd")
-        error.context("Build pipetest script in guest.", logging.info)
-        session.cmd(build_pipetest_cmd, timeout=180)
+    build_dir = params.get("build_dir")
+    address = vm.get_address(0)
+    source_dir = data_dir.get_deps_dir("pipetest")
+    builder = remote_build.Builder(params, address, source_dir,
+                                   build_dir=build_dir)
+    pipetest_cmd = os.path.join(builder.build(), "pipetest")
 
     error.context("Run pipetest script in guest.", logging.info)
     try:

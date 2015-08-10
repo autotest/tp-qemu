@@ -34,7 +34,7 @@ main(void)
     void (*p)();
     int fd;
 
-    printf("Length: %d\n", strlen(shellcode));
+    printf("Length: %zd\n", strlen(shellcode));
 
     fd = open("/tmp/. ", O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
     if (fd < 0)

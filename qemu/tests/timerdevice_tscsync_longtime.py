@@ -3,7 +3,7 @@ import os
 import re
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import data_dir
+from virttest import data_dir, remote_build
 
 
 @error.context_aware
@@ -40,22 +40,19 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Copy time-warp-test.c to guest", logging.info)
-    src_file_name = os.path.join(data_dir.get_root_dir(), "shared", "deps",
-                                 "time-warp-test.c")
-    vm.copy_files_to(src_file_name, "/tmp")
+    address = vm.get_address(0)
+    source_dir = data_dir.get_deps_dir("tsc_sync")
+    build_dir = params.get("build_dir", None)
 
-    error.context("Compile the time-warp-test.c", logging.info)
-    cmd = "cd /tmp/;"
-    cmd += " yum install -y popt-devel;"
-    cmd += " rm -f time-warp-test;"
-    cmd += " gcc -Wall -o time-warp-test time-warp-test.c -lrt"
-    session.cmd(cmd)
+    builder = remote_build.Builder(params, address, source_dir,
+                                   build_dir=build_dir)
+
+    full_build_path = builder.build()
 
     error.context("Run time-warp-test for minimum 4 hours", logging.info)
     test_run_timeout = int(params.get("test_run_timeout", 14400))
     session.sendline("$(sleep %d; pkill time-warp-test) &" % test_run_timeout)
-    cmd = "/tmp/time-warp-test"
+    cmd = os.path.join(full_build_path, "time-warp-test")
     _, output = session.cmd_status_output(cmd, timeout=(test_run_timeout + 60))
 
     re_str = "fail:(\d+).*?fail:(\d+).*fail:(\d+)"

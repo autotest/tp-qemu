@@ -231,7 +231,7 @@ def run(test, params, env):
         pkgs.append(pkg)
         return pkgs
 
-    def get_latest_pkgs_url(pkg):
+    def get_latest_pkgs_url(pkg, arch):
         """
         Get url of latest packages in brewweb.
 
@@ -244,14 +244,13 @@ def run(test, params, env):
         :rtype: list
         """
         tag = params.get("brew_tag")
-        arch = params.get("vm_arch_name", "x86_64")
         latest_pkg_cmd = params.get("latest_pkg_cmd", "brew latest-pkg")
         latest_pkg_cmd = "%s %s %s" % (latest_pkg_cmd, tag, pkg)
         latest_pkg_cmd = "%s --arch=%s --paths" % (latest_pkg_cmd, arch)
         mnt_paths = utils.system_output(latest_pkg_cmd).splitlines()
         return [get_brew_url(_, download_root) for _ in mnt_paths if _.endswith(".rpm")]
 
-    def upgrade_guest_pkgs(session, pkg, debuginfo=False,
+    def upgrade_guest_pkgs(session, pkg, arch, debuginfo=False,
                            nodeps=True, timeout=600):
         """
         upgrade given packages in guest os.
@@ -264,7 +263,7 @@ def run(test, params, env):
         """
         error.context("Upgrade package '%s' in guest" % pkg, logging.info)
         pkgs = get_guest_pkgs(session, pkg, "%{NAME}")
-        latest_pkgs_url = get_latest_pkgs_url(pkg)
+        latest_pkgs_url = get_latest_pkgs_url(pkg, arch)
         for url in latest_pkgs_url:
             if "debuginfo" in url and not debuginfo:
                 continue
@@ -329,6 +328,13 @@ def run(test, params, env):
             rpm_install_func = install_rpm
             if params.get("install_rpm_from_local") == "yes":
                 rpm_install_func = copy_and_install_rpm
+
+            kernel_deps_pkgs = params.get("kernel_deps_pkgs", "dracut").split()
+            if kernel_deps_pkgs:
+                for pkg in kernel_deps_pkgs:
+                    arch = params.get("arch_%s" % pkg,
+                                      params.get("vm_arch_name"))
+                    upgrade_guest_pkgs(session, pkg, arch)
 
             if firmware_rpm:
                 error.context("Install guest kernel firmware", logging.info)
@@ -438,12 +444,13 @@ def run(test, params, env):
         # upgrade listed packages to latest version.
         for pkg in params.get("upgrade_pkgs", "").split():
             _ = params.object_params(pkg)
+            arch = _.get("vm_arch_name", "x86_64")
             nodeps = _.get("ignore_deps") == "yes"
             install_debuginfo = _.get("install_debuginfo") == "yes"
             timeout = int(_.get("install_pkg_timeout", "600"))
             upgrade_guest_pkgs(
                 session,
-                pkg,
+                pkg, arch,
                 install_debuginfo,
                 nodeps,
                 timeout)

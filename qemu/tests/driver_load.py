@@ -3,6 +3,7 @@ import re
 import time
 from autotest.client.shared import error
 from virttest import utils_test
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -44,15 +45,28 @@ def run(test, params, env):
     driver_id = driver_id[0]
     if params["os_type"] == "windows":
         driver_id = '^&'.join(driver_id.split('&'))
+        devcon = params.get("devcon")
+        devcon_cli = devcon % utils_misc.get_winutils_vol(session)
+        session.cmd(devcon_cli)
     driver_load_cmd = driver_load_cmd.replace("DRIVER_ID", driver_id)
     driver_unload_cmd = driver_unload_cmd.replace("DRIVER_ID", driver_id)
 
     for repeat in range(0, int(params.get("repeats", "1"))):
         error.context("Unload and load the driver. Round %s" % repeat,
                       logging.info)
-        session.cmd(driver_unload_cmd)
+        error.context("unload CLI %s" % driver_unload_cmd,
+                      logging.info)
+        status, output = session.cmd_status_output(driver_unload_cmd)
+        if params["os_type"] == "windows" and not "device(s) disabled" in output:
+            raise error.TestError("failed to unload driver %s" % output)
+        error.context("status %s unload output %s"
+                      % (status, output), logging.info)
         time.sleep(5)
-        session.cmd(driver_load_cmd)
+        status, output = session.cmd_status_output(driver_load_cmd)
+        if params["os_type"] == "windows" and not "device(s) are enabled" in output:
+            raise error.TestError("failed to unload driver %s" % output)
+        error.context("status %s load output %s"
+                      % (status, output), logging.info)
         time.sleep(5)
         if params.get("test_after_load"):
             test_after_load = params.get("test_after_load")

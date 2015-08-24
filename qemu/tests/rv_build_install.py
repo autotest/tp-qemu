@@ -94,7 +94,8 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
 
     # Checking to see if required packages exist and if not, install them
     pkgsRequired = ["libpciaccess-devel", "xorg-x11-util-macros",
-                    "xorg-x11-server-devel"]
+                    "xorg-x11-server-devel", "libfontenc-devel",
+                    "libXfont-devel"]
     install_req_pkgs(pkgsRequired, vm_root_session, params)
 
     output = vm_root_session.cmd("%s -p xf86-video-qxl" % (vm_script_path),

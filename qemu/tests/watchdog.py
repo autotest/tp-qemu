@@ -1,7 +1,7 @@
-import logging
+import os
 import re
 import time
-import os
+import logging
 from autotest.client.shared import error, utils
 from virttest import utils_misc, env_process
 
@@ -209,7 +209,7 @@ def run(test, params, env):
         Test Step:
         1. Boot guest with watchdog device
         2. Check watchdog device have been initialized successfully in guest
-        3. Start VM with watchdog device, action reset|poweroff|pause
+        3. Start VM with watchdog device, action reset|pause
         4. Inside RHEL guest, trigger watchdog
         5. Before WDT timeout, do vm migration
         6. After migration, check the watchdog action take effect
@@ -224,9 +224,11 @@ def run(test, params, env):
 
         error.context("Do migration(protocol:%s),Watchdog have been triggered."
                       % mig_protocol, logging.info)
-        vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay)
-
+        args = (mig_timeout, mig_protocol, mig_cancel_delay)
+        migrate_thread = utils.InterruptedThread(vm.migrate, args)
+        migrate_thread.start()
         _action_check(session, watchdog_action)
+        migrate_thread.join(timeout=mig_timeout)
 
     def hotplug_unplug_watchdog_device():
         """

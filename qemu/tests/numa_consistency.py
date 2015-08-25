@@ -2,6 +2,7 @@ import logging
 from autotest.client.shared import error
 
 from virttest import env_process, utils_misc, utils_test
+from autotest.client.shared import utils
 
 try:
     from virttest.staging import utils_memory
@@ -94,9 +95,15 @@ def run(test, params, env):
         memory_allocated = (memory_used_after - memory_used_before) * 4 / 1024
 
         if 1 - float(memory_allocated) / float(dd_size) > 0.05:
-            raise error.TestFail("Expect malloc %sM memory in node %s, but "
-                                 "only malloc %sM" % (dd_size, node_used_host,
-                                                      memory_allocated))
+            numa_hardware_cmd = params.get("numa_hardware_cmd")
+            if numa_hardware_cmd:
+                numa_info = utils.system_output(numa_hardware_cmd,
+                                                ignore_status=True)
+            msg = "Expect malloc %sM memory in node %s," % (dd_size,
+                                                            node_used_host)
+            msg += "but only malloc %sM \n" % memory_allocated
+            msg += "Please check more details of the numa node: %s" % numa_info
+            raise error.TestFail(msg)
     session.close()
 
     if drop == len(vcpu_threads):

@@ -36,6 +36,17 @@ def run(test, params, env):
                 break
         return vols
 
+    def virtio_driver_install(session, cmd, driver):
+        driver_install_timeout = int(params.get('driver_install_timeout', 720))
+        fail_flag = False
+        fail_logs = ""
+        try:
+            session.cmd(cmd, timeout=driver_install_timeout)
+        except Exception, msg:
+            fail_flag = True
+            fail_logs += "driver %s install failed,msg %s" % (driver, msg)
+            error.context("Install drivers %s failed " % driver, logging.info)
+        return (fail_flag, fail_logs)
     if params.get("case_type") == "driver_install":
         error.context("Update the device type to default.", logging.info)
         default_drive_format = params.get("default_drive_format", "ide")
@@ -196,12 +207,10 @@ def run(test, params, env):
         if install_cmds:
             cmd = re.sub("WIN_UTILS", vol_utils, install_cmds[driver])
             cmd = re.sub("WIN_VIRTIO", vol_virtio, cmd)
-            try:
-                session.cmd(cmd, timeout=driver_install_timeout)
-            except Exception, msg:
+            f_flag_tmp, log_tmp = virtio_driver_install(session, cmd, driver)
+            if f_flag_tmp:
                 fail_flag = True
-                fail_logs += "driver %s install failed,msg %s" % (driver, msg)
-                error.context("Install drivers %s failed " % driver, logging.info)
+                fail_logs += log_tmp
             session = vm.reboot(nic_index=nic_index)
     driver_debug_file = params_driver.get("driver_debug_file").split(',')
     error.context("Get Driver installation log", logging.info)

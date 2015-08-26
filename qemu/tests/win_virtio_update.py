@@ -210,7 +210,7 @@ def run(test, params, env):
             f_flag_tmp, log_tmp = virtio_driver_install(session, cmd, driver)
             if f_flag_tmp:
                 fail_flag = True
-                fail_logs += log_tmp
+                fail_log += log_tmp
             session = vm.reboot(nic_index=nic_index)
     driver_debug_file = params_driver.get("driver_debug_file").split(',')
     error.context("Get Driver installation log", logging.info)

@@ -74,7 +74,8 @@ def run(test, params, env):
                                                            qemu_pid)
         node_used_host = get_vcpu_used_node(host_numa_node,
                                             vcpu_threads[cpuid])
-        memory_used_before = memory_status[node_used_host]
+        node_used_host_index = node_list.index(node_used_host)
+        memory_used_before = memory_status[node_used_host_index]
         error.context("Allocate memory in guest", logging.info)
         session.cmd(mount_cmd)
         binded_dd_cmd = "taskset %s" % str(2 ** int(cpuid))
@@ -90,7 +91,7 @@ def run(test, params, env):
             continue
         memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            qemu_pid)
-        memory_used_after = memory_status[node_used_host]
+        memory_used_after = memory_status[node_used_host_index]
 
         memory_allocated = (memory_used_after - memory_used_before) * 4 / 1024
 

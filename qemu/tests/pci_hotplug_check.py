@@ -299,7 +299,7 @@ def run(test, params, env):
 
     cmd_type = utils_misc.find_substring(str(cmd_output), "device_add",
                                          "pci_add")
-    if not cmd_output:
+    if not cmd_type:
         raise error.TestError("Could find a suitable method for hotplugging"
                               " device in this version of qemu")
 

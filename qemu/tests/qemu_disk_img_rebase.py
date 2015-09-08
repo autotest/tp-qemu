@@ -32,15 +32,21 @@ class RebaseTest(qemu_disk_img.QemuImgTest):
             msg = "Fail to get image('%s') info" % self.image_filename
             raise error.TestFail(msg)
         backingfile = re.search(r'backing file: +(.*)', out, re.M)
-        if backingfile:
-            if not (self.base_image_filename in backingfile.group(0)):
-                msg = "Expected backing file: %s" % self.base_image_filename
+        if self.base_tag == "null":
+            if backingfile:
+                msg = "Expected backing file is null!"
                 msg += " Actual backing file: %s" % backingfile
                 raise error.TestFail(msg)
         else:
-            msg = ("Could not find backing file for image '%s'" %
-                   self.image_filename)
-            raise error.TestFail(msg)
+            if backingfile:
+                if not (self.base_image_filename in backingfile.group(0)):
+                    msg = "Expected backing file: %s" % self.base_image_filename
+                    msg += " Actual backing file: %s" % backingfile
+                    raise error.TestFail(msg)
+            else:
+                msg = ("Could not find backing file for image '%s'" %
+                       self.image_filename)
+                raise error.TestFail(msg)
 
     def clean(self):
         params = self.params

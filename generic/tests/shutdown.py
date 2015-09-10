@@ -3,7 +3,7 @@ import logging
 import re
 
 from autotest.client.shared import error
-from virttest import utils_misc
+from virttest import utils_test
 from virttest import env_process
 
 
@@ -36,23 +36,7 @@ def run(test, params, env):
                            logging.info)
         if params.get("setup_runlevel") == "yes":
             error.context("Setup the runlevel for guest", logging.info)
-            expect_runlevel = params.get("expect_runlevel", "3")
-            cmd = "runlevel"
-
-            if utils_misc.wait_for(lambda: session.cmd_status(cmd) == 0, 15):
-                ori_runlevel = session.cmd(cmd)
-            else:
-                ori_runlevel = "0"
-
-            ori_runlevel = re.findall("\d+", ori_runlevel)[-1]
-            if ori_runlevel == expect_runlevel:
-                logging.info("Guest runlevel is the same as expect.")
-            else:
-                session.cmd("init %s" % expect_runlevel)
-                tmp_runlevel = session.cmd(cmd)
-                tmp_runlevel = re.findall("\d+", tmp_runlevel)[-1]
-                if tmp_runlevel != expect_runlevel:
-                    logging.warn("Failed to setup runlevel for guest")
+            utils_test.qemu.setup_runlevel(params, session)
 
         if shutdown_method == "shell":
             # Send a shutdown command to the guest's shell

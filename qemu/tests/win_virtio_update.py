@@ -44,7 +44,7 @@ def run(test, params, env):
             session.cmd(cmd, timeout=driver_install_timeout)
         except Exception, msg:
             fail_flag = True
-            fail_logs += "driver %s install failed,msg %s" % (driver, msg)
+            fail_logs += "driver %s install failed. Msg %s" % (driver, msg)
             error.context("Install drivers %s failed " % driver, logging.info)
         return (fail_flag, fail_logs)
     if params.get("case_type") == "driver_install":
@@ -218,10 +218,10 @@ def run(test, params, env):
         s, o = session.cmd_status_output("dir %s" % _file)
         if not s:
             output = session.cmd("type %s" % _file)
-            _file_host = _file.split("\\")[-1].strip()
-            _debug_log = open("%s/%s" % (test.resultsdir, _file_host), "w")
-            _debug_log.write("%s\n" % output)
-            _debug_log.close()
+            g_file_host = _file.split("\\")[-1].strip()
+            g_debug_log = open("%s/%s" % (test.resultsdir, g_file_host), "w")
+            g_debug_log.write("%s\n" % output)
+            g_debug_log.close()
 
     if params.get("check_info") == "yes":
         fail_log += "Details check failed in guest."

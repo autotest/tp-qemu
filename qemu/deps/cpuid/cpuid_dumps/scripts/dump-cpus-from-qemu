@@ -1,6 +1,7 @@
 #!/bin/bash
+set -e
+set -x
 
-set
 QEMU_BIN="$1"
 DUMP_DIR="$2"
 
@@ -8,8 +9,6 @@ DUMP_DIR="$2"
 
 [ -z "$QEMU_MACHINES_TO_DUMP" ] && QEMU_MACHINES_TO_DUMP="pc-i440fx-rhel7.0.0 pc-q35-rhel7.0.0 pc-q35-2.1 pc-q35-2.0 pc-q35-1.7 pc-i440fx-2.1 pc-i440fx-2.0 pc-i440fx-1.7 pc-q35-1.6 pc-i440fx-1.6 pc-q35-1.5 pc-i440fx-1.5 pc-q35-1.4 pc-i440fx-1.4 pc-1.3 pc-1.2 pc-1.1 pc-1.0 pc-0.15 pc-0.14 pc-0.13 pc-0.12 pc-0.11 pc-0.10 rhel6.0.0 rhel6.1.0 rhel6.2.0 rhel6.3.0 rhel6.4.0 rhel6.5.0"
 
-set -e
-set -x
 
 for machine in $QEMU_MACHINES_TO_DUMP;do
     for cpu in $QEMU_CPUS_TO_DUMP;do

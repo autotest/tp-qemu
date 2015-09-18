@@ -1,8 +1,12 @@
 import logging
 import os
 import re
+
+import aexpect
+
 from autotest.client.shared import error
-from virttest import env_process, aexpect
+
+from virttest import env_process
 
 
 def get_re_average(opt, re_str):

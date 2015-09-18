@@ -1,7 +1,9 @@
 import re
 import logging
+
+import aexpect
+
 from autotest.client.shared import error
-from virttest import aexpect
 
 
 @error.context_aware

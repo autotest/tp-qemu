@@ -1,8 +1,12 @@
 import logging
 import time
 import random
-from virttest import utils_test, aexpect, utils_net
+
+import aexpect
+
 from autotest.client.shared import error, utils
+
+from virttest import utils_test, utils_net
 
 
 def run(test, params, env):

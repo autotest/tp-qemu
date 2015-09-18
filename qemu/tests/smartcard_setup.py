@@ -9,8 +9,10 @@ to be generated.
 
 """
 import logging
-from virttest import utils_misc, utils_spice, aexpect
+
 from autotest.client.shared import error
+
+from virttest import utils_misc, utils_spice
 
 
 def run(test, params, env):

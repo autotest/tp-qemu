@@ -1,10 +1,12 @@
 import re
 import logging
+
+import aexpect
+
 from autotest.client.shared import error
 from autotest.client.shared import data_dir
 from autotest.client import utils
 from virttest import utils_misc
-from virttest import aexpect
 
 
 @error.context_aware

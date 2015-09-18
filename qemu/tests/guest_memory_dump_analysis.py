@@ -9,12 +9,14 @@ Related RHBZ: https://bugzilla.redhat.com/show_bug.cgi?id=990118
 """
 
 import logging
-from virttest.aexpect import ShellCmdError
-from autotest.client.shared import error
 import string
 import os
 import gzip
 import threading
+
+from aexpect import ShellCmdError
+
+from autotest.client.shared import error
 
 REQ_GUEST_MEM = 4096        # exact size of guest RAM required
 REQ_GUEST_ARCH = "x86_64"    # the only supported guest arch

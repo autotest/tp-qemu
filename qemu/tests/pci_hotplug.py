@@ -1,8 +1,12 @@
 import re
 import logging
 import string
+
+import aexpect
+
 from autotest.client.shared import error
-from virttest import utils_misc, aexpect, storage, utils_test, data_dir, arch
+
+from virttest import utils_misc, storage, utils_test, data_dir, arch
 
 
 @error.context_aware

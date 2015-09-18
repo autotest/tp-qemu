@@ -1,7 +1,10 @@
 import logging
 import time
 import os
-from virttest import utils_misc, aexpect, utils_net, openvswitch, ovs_utils
+
+import aexpect
+
+from virttest import utils_misc, utils_net, openvswitch, ovs_utils
 from virttest import versionable_class, data_dir
 from autotest.client.shared import error
 

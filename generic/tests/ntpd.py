@@ -1,7 +1,11 @@
 import logging
 import time
+
+import aexpect
+
 from autotest.client.shared import utils, error
-from virttest import remote, utils_test, aexpect
+
+from virttest import remote, utils_test
 from virttest.staging import service
 
 

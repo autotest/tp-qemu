@@ -2,12 +2,15 @@ import logging
 import re
 import time
 import os
+
+import aexpect
+
 from autotest.client import utils
 from autotest.client.shared import error
+
 from virttest import remote
 from virttest import data_dir
 from virttest import utils_net
-from virttest import aexpect
 from virttest import utils_test
 from virttest import utils_misc
 

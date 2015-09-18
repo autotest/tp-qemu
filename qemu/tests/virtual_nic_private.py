@@ -1,9 +1,12 @@
 import logging
 import re
+
+from aexpect import ShellCmdError
+
 from autotest.client import utils
 from autotest.client.shared import error
+
 from virttest import remote, utils_misc, utils_net
-from virttest.aexpect import ShellCmdError
 
 
 @error.context_aware

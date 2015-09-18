@@ -1,6 +1,9 @@
 import logging
+
+import aexpect
+
 from autotest.client.shared import error
-from virttest import aexpect
+
 from virttest import utils_misc
 from virttest import env_process
 

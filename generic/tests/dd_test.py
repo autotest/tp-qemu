@@ -4,8 +4,10 @@ Configurable on-guest dd test.
 :copyright: 2012 Red Hat, Inc.
 """
 import logging
+
+import aexpect
+
 from autotest.client.shared import error
-from virttest import aexpect
 
 
 @error.context_aware

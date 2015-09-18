@@ -13,10 +13,13 @@ import os
 import sys
 import tempfile
 import random
+
+import aexpect
+
 from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client.shared.syncdata import SyncData
-from virttest import utils_misc, aexpect, gluster
+from virttest import utils_misc, gluster
 from virttest import env_process, data_dir, utils_test
 
 

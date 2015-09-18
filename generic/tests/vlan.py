@@ -1,8 +1,12 @@
 import logging
 import time
 import re
+
+import aexpect
+
 from autotest.client.shared import error
-from virttest import utils_misc, utils_test, aexpect, utils_net
+
+from virttest import utils_misc, utils_test, utils_net
 
 
 @error.context_aware

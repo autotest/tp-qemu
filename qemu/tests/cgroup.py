@@ -7,13 +7,15 @@ import logging
 import os
 import re
 import time
+
+from aexpect import ExpectTimeoutError
+from aexpect import ExpectProcessTerminatedError
+from aexpect import ShellTimeoutError
+
 from autotest.client.shared import error
 from autotest.client import utils
 from virttest.env_process import preprocess
 from virttest import qemu_monitor
-from virttest.aexpect import ExpectTimeoutError
-from virttest.aexpect import ExpectProcessTerminatedError
-from virttest.aexpect import ShellTimeoutError
 try:
     from virttest.staging.utils_cgroup import Cgroup
     from virttest.staging.utils_cgroup import CgroupModules

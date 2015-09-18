@@ -1,11 +1,14 @@
 import logging
 import re
+
+import aexpect
+
 from autotest.client import utils
 from autotest.client.shared import error
+
 from virttest import utils_net
 from virttest import utils_test
 from virttest import utils_misc
-from virttest import aexpect
 
 
 @error.context_aware

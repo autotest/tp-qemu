@@ -7,9 +7,13 @@ import pickle
 import sys
 import traceback
 from xml.parsers import expat
-from autotest.client.shared import error, utils
+
+import aexpect
+
 from virttest import qemu_vm, virt_vm, data_dir
-from virttest import utils_misc, utils_test, aexpect
+from virttest import utils_misc, utils_test
+
+from autotest.client.shared import error, utils
 from autotest.client.shared.syncdata import SyncData
 
 

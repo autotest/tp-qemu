@@ -1,11 +1,14 @@
 import logging
 import time
 import os
+
+import aexpect
+
 from autotest.client.shared import error
 from autotest.client import utils
+
 from virttest import guest_agent
 from virttest import utils_misc
-from virttest import aexpect
 
 
 class BaseVirtTest(object):

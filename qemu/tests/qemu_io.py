@@ -2,9 +2,13 @@ import os
 import re
 import logging
 import time
+
+import aexpect
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import aexpect, utils_misc, data_dir
+
+from virttest import utils_misc, data_dir
 
 
 class QemuIOConfig(object):

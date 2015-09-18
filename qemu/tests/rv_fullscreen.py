@@ -8,8 +8,10 @@ Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
 import logging
+
+from aexpect import ShellCmdError
+
 from autotest.client.shared import error
-from virttest.aexpect import ShellCmdError
 
 
 def run(test, params, env):

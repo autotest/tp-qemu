@@ -7,11 +7,14 @@ Requires: binaries remote-viewer, Xorg, netstat
 """
 import logging
 import socket
-from virttest.aexpect import ShellStatusError
-from virttest.aexpect import ShellCmdError
-from virttest.aexpect import ShellProcessTerminatedError
-from virttest import utils_net, utils_spice, remote, utils_misc
+
+from aexpect import ShellStatusError
+from aexpect import ShellCmdError
+from aexpect import ShellProcessTerminatedError
+
 from autotest.client.shared import error
+
+from virttest import utils_net, utils_spice, remote, utils_misc
 
 
 def str_input(client_vm, ticket):

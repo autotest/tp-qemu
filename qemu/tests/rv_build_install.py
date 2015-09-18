@@ -9,8 +9,11 @@ import logging
 import os
 import time
 import re
+
+from aexpect import ShellCmdError
+
 from autotest.client.shared import error
-from virttest.aexpect import ShellCmdError
+
 from virttest import utils_misc, utils_spice, data_dir
 
 

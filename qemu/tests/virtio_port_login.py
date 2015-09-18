@@ -4,8 +4,12 @@ Collection of virtio_console and virtio_serialport tests.
 :copyright: 2010-2012 Red Hat Inc.
 """
 import logging
+
+import aexpect
+
 from autotest.client.shared import error
-from virttest import aexpect, utils_misc, remote
+
+from virttest import utils_misc, remote
 from virttest import utils_virtio_port
 
 

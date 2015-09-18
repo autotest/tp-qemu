@@ -3,10 +3,13 @@ import time
 import random
 import math
 import os
-from autotest.client.shared import error
-from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
 
+import aexpect
+
+from autotest.client.shared import error
 from autotest.client.shared import utils
+
+from virttest import utils_misc, utils_test, env_process, data_dir
 
 try:
     from virttest.staging import utils_memory

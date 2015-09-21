@@ -1,8 +1,11 @@
 import re
 import logging
 import os.path
-from virttest import utils_misc, data_dir
+
 from autotest.client.shared import utils, error
+
+from virttest import utils_misc
+from virttest import data_dir
 
 
 @error.context_aware

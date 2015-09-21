@@ -8,8 +8,12 @@ import os
 import time
 import shutil
 import logging
+
 from autotest.client.shared import error
-from virttest import utils_misc, ppm_utils, qemu_monitor
+
+from virttest import utils_misc
+from virttest import ppm_utils
+from virttest import qemu_monitor
 
 try:
     import PIL.Image

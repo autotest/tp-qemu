@@ -1,7 +1,11 @@
 import logging
+
 from autotest.client import utils
-from virttest import utils_misc, storage, data_dir
 from autotest.client.shared import error
+
+from virttest import utils_misc
+from virttest import storage
+from virttest import data_dir
 
 
 @error.context_aware

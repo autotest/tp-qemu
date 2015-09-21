@@ -1,7 +1,10 @@
 import logging
 import os
 import re
-from virttest import utils_misc, env_process
+
+from virttest import utils_misc
+from virttest import env_process
+
 from autotest.client.shared import error
 
 

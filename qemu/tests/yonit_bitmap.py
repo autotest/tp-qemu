@@ -1,7 +1,10 @@
 import logging
 import signal
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
+
 from generic.tests import guest_test
 
 

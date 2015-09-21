@@ -3,8 +3,14 @@ import re
 import time
 import random
 import logging
-from autotest.client.shared import error, utils
-from virttest import test_setup, utils_net, utils_misc, env_process
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import test_setup
+from virttest import utils_net
+from virttest import utils_misc
+from virttest import env_process
 
 
 def check_network_interface_ip(interface, ipv6="no"):

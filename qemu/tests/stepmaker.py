@@ -7,15 +7,20 @@ Step file creator/editor.
 @version: "20090401"
 """
 
-import pygtk
-import gtk
-import gobject
 import time
 import os
 import commands
 import logging
-from virttest import utils_misc, ppm_utils, step_editor
+
+import pygtk
+import gtk
+import gobject
+
+from virttest import utils_misc
+from virttest import ppm_utils
+from virttest import step_editor
 from virttest import qemu_monitor
+
 pygtk.require('2.0')
 
 

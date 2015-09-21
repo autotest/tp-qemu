@@ -9,7 +9,8 @@ import aexpect
 
 from autotest.client.shared import error
 
-from virttest import utils_misc, remote
+from virttest import utils_misc
+from virttest import remote
 from virttest import utils_virtio_port
 
 

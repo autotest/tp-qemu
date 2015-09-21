@@ -9,8 +9,7 @@ import aexpect
 
 from autotest.client.shared import error
 
-from virttest import utils_test, utils_misc, data_dir
-
+from virttest import utils_misc, data_dir
 
 TMPFS_OVERHEAD = 0.0022
 

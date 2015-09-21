@@ -5,7 +5,10 @@ import re
 import aexpect
 
 from autotest.client.shared import error
-from virttest import utils_misc, remote, rss_client
+
+from virttest import utils_misc
+from virttest import remote
+from virttest import rss_client
 
 
 def run(test, params, env):

@@ -1,7 +1,13 @@
 import os
 import logging
+
 from autotest.client.shared import error, utils
-from virttest import utils_misc, storage, qemu_storage, nfs
+
+from virttest import utils_misc
+from virttest import storage
+from virttest import qemu_storage
+from virttest import nfs
+
 from qemu.tests import block_copy
 
 

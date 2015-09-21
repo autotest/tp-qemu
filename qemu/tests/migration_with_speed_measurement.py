@@ -2,8 +2,10 @@ import os
 import re
 import logging
 import time
-from virttest import utils_misc
-from autotest.client.shared import error, utils
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
 from provider import cpuflags
 
 

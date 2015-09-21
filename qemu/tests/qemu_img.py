@@ -4,8 +4,10 @@ import logging
 import commands
 import shutil
 import tempfile
+
 from autotest.client.shared import error
 from autotest.client.shared import utils
+
 from virttest import utils_misc
 from virttest import env_process
 from virttest import storage

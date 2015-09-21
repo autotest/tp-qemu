@@ -1,10 +1,11 @@
 import time
-import sys
 import re
 import logging
 import os
 
-from autotest.client.shared import error, utils
+from autotest.client.shared import error
+from autotest.client.shaed import utils
+
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import data_dir

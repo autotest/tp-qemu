@@ -7,7 +7,7 @@ import aexpect
 from autotest.client.shared import error
 from autotest.client.shared import utils
 
-from virttest import utils_net, utils_test, utils_misc
+from virttest import utils_net
 from virttest import remote
 from virttest import data_dir
 

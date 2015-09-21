@@ -1,6 +1,5 @@
-import logging
-import os
 from autotest.client.shared import error, utils
+
 from virttest import utils_misc
 
 

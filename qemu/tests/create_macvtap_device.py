@@ -1,8 +1,11 @@
 import re
 import logging
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_net, utils_test
+
+from virttest import utils_net
+from virttest import utils_test
 
 
 def get_macvtap_device_on_ifname(ifname):

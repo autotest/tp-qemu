@@ -1,14 +1,16 @@
 import logging
 import os
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, funcatexit, utils_test, data_dir
-from generic.tests import autotest_control
 
-try:
-    from virttest.staging import utils_memory
-except ImportError:
-    from autotest.client.shared import utils_memory
+from virttest import utils_misc
+from virttest import funcatexit
+from virttest import utils_test
+from virttest import data_dir
+from virttest.staging import utils_memory
+
+from generic.tests import autotest_control
 
 
 def max_mem_map_node(host_numa_node, qemu_pid):

@@ -1,10 +1,12 @@
 import sys
 import traceback
 import logging
-from virttest import openvswitch
-from virttest import versionable_class
+
 from autotest.client.shared import error
 from autotest.client.shared import utils
+
+from virttest import openvswitch
+from virttest import versionable_class
 
 
 @error.context_aware

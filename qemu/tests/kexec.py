@@ -1,7 +1,6 @@
 import logging
-import os
+
 from autotest.client.shared import error
-from virttest import data_dir
 
 
 @error.context_aware

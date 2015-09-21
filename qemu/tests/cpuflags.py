@@ -10,11 +10,14 @@ from xml.parsers import expat
 
 import aexpect
 
-from virttest import qemu_vm, virt_vm, data_dir
-from virttest import utils_misc, utils_test
-
 from autotest.client.shared import error, utils
 from autotest.client.shared.syncdata import SyncData
+
+from virttest import qemu_vm
+from virttest import virt_vm
+from virttest import data_dir
+from virttest import utils_misc
+from virttest import utils_test
 
 
 def run(test, params, env):

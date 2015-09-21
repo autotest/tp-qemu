@@ -2,6 +2,7 @@
 Shared code for tests that make use of cpuflags
 """
 import os
+
 from virttest import data_dir
 
 

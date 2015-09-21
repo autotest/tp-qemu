@@ -1,8 +1,12 @@
 import logging
 import re
 import time
+
 from autotest.client.shared import error
-from virttest import utils_net, utils_test, utils_misc
+
+from virttest import utils_net
+from virttest import utils_test
+from virttest import utils_misc
 from virttest import remote
 
 

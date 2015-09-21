@@ -3,7 +3,10 @@ import os
 import time
 import re
 import shutil
-from autotest.client.shared import error, utils
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
 from virttest import utils_test
 
 

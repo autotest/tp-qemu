@@ -1,14 +1,10 @@
 import logging
-import time
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
-
-try:
-    from virttest.staging import utils_memory
-except ImportError:
-    from autotest.client.shared import utils_memory
-
 from virttest import env_process
+from virttest.staging import utils_memory
 
 
 @error.context_aware

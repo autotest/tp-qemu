@@ -2,7 +2,9 @@ import re
 import os
 import logging
 import shutil
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
 
 

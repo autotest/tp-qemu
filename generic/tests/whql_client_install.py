@@ -1,9 +1,14 @@
 import logging
 import time
 import os
+
 from autotest.client.shared import error
-from virttest import utils_misc, utils_test, remote
-from virttest import rss_client, data_dir
+
+from virttest import utils_misc
+from virttest import utils_test
+from virttest import remote
+from virttest import rss_client
+from virttest import data_dir
 
 
 def run(test, params, env):

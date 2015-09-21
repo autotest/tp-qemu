@@ -2,8 +2,12 @@ import logging
 import time
 import tempfile
 import os
+
 from autotest.client.shared import error
-from virttest import qemu_storage, data_dir, utils_misc
+
+from virttest import qemu_storage
+from virttest import data_dir
+from virttest import utils_misc
 
 
 def run(test, params, env):

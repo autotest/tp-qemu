@@ -1,8 +1,10 @@
 import logging
 import re
+
 from autotest.client import utils
-from virttest import utils_misc
 from autotest.client.shared import error
+
+from virttest import utils_misc
 
 
 @error.context_aware

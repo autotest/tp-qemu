@@ -5,13 +5,15 @@ This is a autotest/virt-test test for testing PCI devices in various PCI setups
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2013 Red Hat, Inc.
 """
-from autotest.client.shared import error
-from virttest import env_process
-from virttest import qemu_qtree
 import logging
 import random
 import re
 import time
+
+from autotest.client.shared import error
+
+from virttest import env_process
+from virttest import qemu_qtree
 
 
 class PCIBusInfo:

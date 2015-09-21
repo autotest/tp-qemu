@@ -1,7 +1,7 @@
-from autotest.client.shared import error
-from virttest import qemu_vm
-
 import logging
+
+from autotest.client.shared import error
+
 logger = logging.getLogger(__name__)
 dbg = logger.debug
 

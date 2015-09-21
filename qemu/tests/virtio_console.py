@@ -15,12 +15,16 @@ import threading
 import traceback
 import time
 from subprocess import Popen
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import qemu_virtio_port, env_process, utils_test, utils_misc
+
+from virttest import qemu_virtio_port
+from virttest import env_process
+from virttest import utils_test
+from virttest import utils_misc
 from virttest import funcatexit
 from virttest.qemu_devices import qdevices
-
 
 EXIT_EVENT = threading.Event()
 

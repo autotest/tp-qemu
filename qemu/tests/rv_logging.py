@@ -8,8 +8,11 @@ Requires: connected binaries remote-viewer, Xorg, gnome session
 """
 import logging
 import os
+
 from autotest.client.shared import error
-from virttest import utils_misc, utils_spice
+
+from virttest import utils_misc
+from virttest import utils_spice
 
 
 def run(test, params, env):

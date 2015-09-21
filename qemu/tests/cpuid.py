@@ -2,14 +2,18 @@
 Group of cpuid tests for X86 CPU
 """
 import re
-import sys
 import os
 import string
-from autotest.client.shared import error, utils
-from autotest.client.shared import test as test_module
-from virttest import utils_misc, env_process, virt_vm, data_dir
-
 import logging
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import utils_misc
+from virttest import env_process
+from virttest import virt_vm
+from virttest import data_dir
+
 logger = logging.getLogger(__name__)
 dbg = logger.debug
 info = logger.info

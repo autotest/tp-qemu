@@ -1,7 +1,10 @@
 import logging
 import os
-from autotest.client.shared import utils, error
+
+from autotest.client.shared import utils
+from autotest.client.shared import error
 from autotest.client import utils as client_utils
+
 from virttest import utils_misc
 
 

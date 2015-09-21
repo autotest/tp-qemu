@@ -2,8 +2,15 @@ import re
 import string
 import logging
 import random
-from autotest.client.shared import error, utils
-from virttest import qemu_monitor, storage, utils_misc, env_process, data_dir
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import qemu_monitor
+from virttest import storage
+from virttest import utils_misc
+from virttest import env_process
+from virttest import data_dir
 from virttest import qemu_qtree
 
 

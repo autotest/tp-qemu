@@ -2,7 +2,10 @@ import os
 import re
 import time
 import logging
-from autotest.client.shared import error, utils
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
 from virttest import utils_misc
 
 

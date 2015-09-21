@@ -10,11 +10,7 @@ from autotest.client.shared import error
 from autotest.client.shared import utils
 
 from virttest import utils_misc, utils_test, env_process, data_dir
-
-try:
-    from virttest.staging import utils_memory
-except ImportError:
-    from autotest.client.shared import utils_memory
+from virttest.staging import utils_memory
 
 
 def run(test, params, env):

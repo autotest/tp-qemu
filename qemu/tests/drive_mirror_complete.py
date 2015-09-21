@@ -1,10 +1,13 @@
 import logging
 import time
+
 from autotest.client.shared import error
 from autotest.client.shared import utils
+
 from virttest import data_dir
 from virttest import env_process
 from virttest import qemu_storage
+
 from qemu.tests import drive_mirror
 
 

@@ -2,12 +2,14 @@ import time
 import os
 import re
 import logging
+
 from autotest.client.shared import error
+from autotest.client import utils
+
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import env_process
 from virttest import data_dir
-from autotest.client import utils
 
 
 @error.context_aware

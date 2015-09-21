@@ -6,7 +6,9 @@ import aexpect
 from autotest.client.shared import error
 from autotest.client import utils
 
-from virttest import utils_net, utils_misc, remote
+from virttest import utils_net
+from virttest import utils_misc
+from virttest import remote
 
 
 @error.context_aware

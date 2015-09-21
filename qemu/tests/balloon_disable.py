@@ -1,7 +1,5 @@
-import logging
-import time
-import string
 from autotest.client.shared import error
+
 from virttest import qemu_monitor
 
 

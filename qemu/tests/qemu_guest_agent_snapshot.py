@@ -1,6 +1,9 @@
 import logging
+
 from autotest.client.shared import error
-from virttest import storage, data_dir
+
+from virttest import storage
+from virttest import data_dir
 
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheck
 

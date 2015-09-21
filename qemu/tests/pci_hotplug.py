@@ -6,7 +6,11 @@ import aexpect
 
 from autotest.client.shared import error
 
-from virttest import utils_misc, storage, utils_test, data_dir, arch
+from virttest import utils_misc
+from virttest import storage
+from virttest import utils_test
+from virttest import data_dir
+from virttest import arch
 
 
 @error.context_aware

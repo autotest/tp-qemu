@@ -1,6 +1,9 @@
 import logging
-from virttest import utils_misc
+
 from autotest.client.shared import error
+
+from virttest import utils_misc
+
 from qemu.tests import block_copy
 
 

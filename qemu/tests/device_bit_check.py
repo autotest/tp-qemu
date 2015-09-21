@@ -1,6 +1,8 @@
 import logging
 import re
+
 from autotest.client.shared import error
+
 from virttest import env_process
 
 

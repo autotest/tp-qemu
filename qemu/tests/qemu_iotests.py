@@ -1,6 +1,9 @@
 import os
-from autotest.client.shared import git, error
+
+from autotest.client.shared import git
+from autotest.client.shared import error
 from autotest.client import utils
+
 from virttest import utils_misc
 
 

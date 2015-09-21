@@ -1,11 +1,12 @@
 import re
 import os
-import time
 import signal
 import logging
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc
+
+from virttest import utils_misc
 
 
 @error.context_aware

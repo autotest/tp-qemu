@@ -4,9 +4,14 @@ import os
 
 import aexpect
 
-from virttest import utils_misc, utils_net, openvswitch, ovs_utils
-from virttest import versionable_class, data_dir
 from autotest.client.shared import error
+
+from virttest import utils_misc
+from virttest import utils_net
+from virttest import openvswitch
+from virttest import ovs_utils
+from virttest import versionable_class
+from virttest import data_dir
 
 
 def allow_iperf_firewall(machine):

@@ -13,7 +13,9 @@ import aexpect
 
 from autotest.client.shared import error
 
-from virttest import utils_misc, utils_spice, data_dir
+from virttest import utils_misc
+from virttest import utils_spice
+from virttest import data_dir
 
 
 def wait_timeout(timeout=10):

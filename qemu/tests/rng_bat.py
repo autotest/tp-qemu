@@ -1,7 +1,9 @@
 import re
 import logging
+
 from autotest.client.shared import error
 from autotest.client.shared import utils
+
 from virttest import utils_misc
 
 

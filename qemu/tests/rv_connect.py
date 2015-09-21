@@ -14,7 +14,10 @@ from aexpect import ShellProcessTerminatedError
 
 from autotest.client.shared import error
 
-from virttest import utils_net, utils_spice, remote, utils_misc
+from virttest import utils_net
+from virttest import utils_spice
+from virttest import remote
+from virttest import utils_misc
 
 
 def str_input(client_vm, ticket):

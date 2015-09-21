@@ -4,9 +4,11 @@ import random
 
 import aexpect
 
-from autotest.client.shared import error, utils
+from autotest.client.shared import error
+from autotest.client.shared import utils
 
-from virttest import utils_test, utils_net
+from virttest import utils_test
+from virttest import utils_net
 
 
 def run(test, params, env):

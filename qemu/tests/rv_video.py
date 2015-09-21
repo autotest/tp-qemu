@@ -11,8 +11,10 @@ import logging
 import os
 import time
 import re
+
 from autotest.client.shared import error
-from virttest import utils_misc, remote
+from virttest import utils_misc
+from virttest import remote
 
 
 def launch_totem(guest_session, params):

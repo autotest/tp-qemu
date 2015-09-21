@@ -1,9 +1,14 @@
 import logging
-import time
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_netperf, utils_net, env_process, utils_misc
-from virttest import data_dir, utils_test
+
+from virttest import utils_netperf
+from virttest import utils_net
+from virttest import env_process
+from virttest import utils_misc
+from virttest import data_dir
+from virttest import utils_test
 
 
 # This decorator makes the test function aware of context strings

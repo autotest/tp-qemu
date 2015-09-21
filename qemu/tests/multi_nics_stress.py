@@ -1,9 +1,14 @@
-import re
 import os
 import logging
 import time
+
 from autotest.client.shared import error
-from virttest import utils_net, utils_netperf, utils_misc, data_dir, utils_test
+
+from virttest import utils_net
+from virttest import utils_netperf
+from virttest import utils_misc
+from virttest import data_dir
+from virttest import utils_test
 
 
 def launch_netperf_client(server_ips, netperf_clients, test_option,

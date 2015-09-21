@@ -5,7 +5,10 @@ import aexpect
 
 from autotest.client.shared import error
 
-from virttest import utils_misc, utils_test, utils_net, test_setup
+from virttest import utils_misc
+from virttest import utils_test
+from virttest import utils_net
+from virttest import test_setup
 
 
 @error.context_aware

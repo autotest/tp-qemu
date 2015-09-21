@@ -3,8 +3,9 @@ Remove tap/interface in host while guest is using it.
 """
 import logging
 import time
+
 from autotest.client.shared import error
-from autotest.client.shared import utils
+
 from virttest import utils_net
 from virttest import utils_misc
 from virttest import utils_test

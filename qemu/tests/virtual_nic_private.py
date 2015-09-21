@@ -6,7 +6,9 @@ from aexpect import ShellCmdError
 from autotest.client import utils
 from autotest.client.shared import error
 
-from virttest import remote, utils_misc, utils_net
+from virttest import remote
+from virttest import utils_misc
+from virttest import utils_net
 
 
 @error.context_aware

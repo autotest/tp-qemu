@@ -1,6 +1,7 @@
 import os
 import tempfile
 import string
+
 from virttest import utils_test
 
 

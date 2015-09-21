@@ -1,9 +1,15 @@
 import logging
 import os
 import time
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, remote, virt_vm, utils_misc, qemu_monitor
+
+from virttest import utils_test
+from virttest import virt_vm
+from virttest import utils_misc
+from virttest import qemu_monitor
+
 from provider import cpuflags
 
 

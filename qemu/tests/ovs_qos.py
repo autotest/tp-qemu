@@ -4,9 +4,13 @@ import time
 import glob
 import shutil
 import logging
+
 from autotest.client import os_dep
-from autotest.client.shared import error, utils
-from virttest import utils_netperf, data_dir
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import utils_netperf
+from virttest import data_dir
 
 
 @error.context_aware

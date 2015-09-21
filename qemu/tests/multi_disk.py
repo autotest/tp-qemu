@@ -7,8 +7,13 @@ import logging
 import re
 import random
 import string
-from autotest.client.shared import error, utils
-from virttest import qemu_qtree, env_process, utils_misc
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import qemu_qtree
+from virttest import env_process
+from virttest import utils_misc
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')

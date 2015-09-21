@@ -8,28 +8,20 @@ import os
 import re
 import time
 
+from autotest.client.shared import error
+from autotest.client import utils
+
 from aexpect import ExpectTimeoutError
 from aexpect import ExpectProcessTerminatedError
 from aexpect import ShellTimeoutError
 
-from autotest.client.shared import error
-from autotest.client import utils
 from virttest.env_process import preprocess
 from virttest import qemu_monitor
-try:
-    from virttest.staging.utils_cgroup import Cgroup
-    from virttest.staging.utils_cgroup import CgroupModules
-    from virttest.staging.utils_cgroup import get_load_per_cpu
-except ImportError:
-    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from autotest.client.shared.utils_cgroup import Cgroup
-    from autotest.client.shared.utils_cgroup import CgroupModules
-    from autotest.client.shared.utils_cgroup import get_load_per_cpu
 
-try:
-    from virttest.staging import utils_memory
-except ImportError:
-    from autotest.client.shared import utils_memory
+from virttest.staging import utils_memory
+from virttest.staging.utils_cgroup import Cgroup
+from virttest.staging.utils_cgroup import CgroupModules
+from virttest.staging.utils_cgroup import get_load_per_cpu
 
 
 # Serial ID of the attached disk
@@ -1883,7 +1875,7 @@ def run(test, params, env):
                 except ExpectTimeoutError:
                     # 0.1s passed, lets begin the next round
                     pass
-                except ShellTimeoutError, detail:
+                except ShellTimeoutError, details:
                     if memsw and not vm.is_alive():
                         # VM was killed, finish the test
                         break

@@ -10,7 +10,9 @@ from autotest.client import utils
 from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData
 
-from virttest import data_dir, env_process, utils_test
+from virttest import data_dir
+from virttest import env_process
+from virttest import utils_test
 
 
 @error.context_aware

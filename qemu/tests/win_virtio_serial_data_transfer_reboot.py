@@ -1,9 +1,11 @@
 import os
-import time
 import logging
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import data_dir, qemu_virtio_port
+
+from virttest import data_dir
+from virttest import qemu_virtio_port
 
 
 # This decorator makes the test function aware of context strings

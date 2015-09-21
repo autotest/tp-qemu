@@ -8,7 +8,9 @@ import aexpect
 
 from autotest.client.shared import utils, error
 
-from virttest import env_process, utils_misc, qemu_storage
+from virttest import env_process
+from virttest import utils_misc
+from virttest import qemu_storage
 
 
 @error.context_aware

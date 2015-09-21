@@ -1,11 +1,14 @@
 import re
 import logging
 import ConfigParser
+
 from autotest.client.shared import error
-from virttest import qemu_io, data_dir
+from autotest.client import utils
+
+from virttest import qemu_io
+from virttest import data_dir
 from virttest import utils_misc
 from virttest.qemu_storage import QemuImg
-from autotest.client import utils
 
 
 @error.context_aware

@@ -6,8 +6,11 @@ import aexpect
 
 from autotest.client.shared import error
 
-from virttest import qemu_vm, virt_vm
-from virttest import data_dir, storage, qemu_storage
+from virttest import data_dir
+from virttest import qemu_storage
+from virttest import qemu_vm
+from virttest import storage
+from virttest import virt_vm
 
 
 def run(test, params, env):

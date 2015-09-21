@@ -3,8 +3,10 @@ import os
 import logging
 import commands
 import re
+
 from autotest.client.shared import error
 from autotest.client import local_host
+
 from virttest import data_dir
 
 

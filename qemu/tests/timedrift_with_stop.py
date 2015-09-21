@@ -2,7 +2,9 @@ import logging
 import time
 import os
 import signal
+
 from autotest.client.shared import error
+
 from virttest import utils_test
 
 

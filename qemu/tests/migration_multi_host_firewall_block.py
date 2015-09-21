@@ -1,9 +1,15 @@
 import logging
 import os
 import time
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, remote, virt_vm, utils_misc, qemu_monitor
+
+from virttest import utils_test
+from virttest import virt_vm
+from virttest import utils_misc
+from virttest import qemu_monitor
+
 from provider import cpuflags
 
 
@@ -204,7 +210,7 @@ def run(test, params, env):
                 test, params, env)
 
         def migrate_vms_src(self, mig_data):
-            super(TestMultihostMigrationLongWait,
+            super(TestMultihostMigrationShortInterrupt,
                   self).migrate_vms_src(mig_data)
             self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
                                 self.mig_timeout)
@@ -250,7 +256,7 @@ def run(test, params, env):
 
             :param mig_data: object with migration data.
             """
-            super(TestMultihostMigrationLongWait, self).check_vms_dst(mig_data)
+            super(TestMultihostMigrationShortInterrupt, self).check_vms_dst(mig_data)
 
         def check_vms_src(self, mig_data):
             """
@@ -258,7 +264,7 @@ def run(test, params, env):
 
             :param mig_data: object with migration data.
             """
-            super(TestMultihostMigrationLongWait, self).check_vms_src(mig_data)
+            super(TestMultihostMigrationShortInterrupt, self).check_vms_src(mig_data)
 
     mig = None
     if sub_type == "long_wait":

@@ -6,8 +6,10 @@ import os
 import glob
 import logging
 import time
+
 from autotest.client import os_dep
 from autotest.client.shared import error
+
 from virttest import data_dir
 from virttest import utils_misc
 import virttest.utils_libguestfs as lgf

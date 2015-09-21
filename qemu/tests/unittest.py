@@ -3,8 +3,11 @@ import os
 import shutil
 import glob
 import ConfigParser
+
 from autotest.client.shared import error
-from virttest import utils_misc, env_process
+
+from virttest import utils_misc
+from virttest import env_process
 
 
 def run(test, params, env):

@@ -1,7 +1,11 @@
 import logging
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, utils_misc
+
+from virttest import utils_test
+from virttest import utils_misc
+
 from generic.tests import kdump
 
 

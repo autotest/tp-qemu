@@ -1,5 +1,7 @@
 import time
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
 
 

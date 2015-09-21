@@ -1,7 +1,11 @@
 import logging
 import time
+
 from autotest.client.shared import error
-from virttest import utils_test, virt_vm, utils_net
+
+from virttest import utils_test
+from virttest import virt_vm
+from virttest import utils_net
 
 
 @error.context_aware

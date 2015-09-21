@@ -1,10 +1,7 @@
 import re
 import time
+
 from autotest.client.shared import error
-from virttest import utils_test
-from virttest import remote
-from virttest import virt_vm
-from virttest import utils_misc
 
 
 class MiniSubtest(object):

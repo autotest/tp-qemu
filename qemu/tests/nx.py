@@ -1,6 +1,8 @@
 import os
 import logging
+
 from autotest.client.shared import error
+
 from virttest import data_dir
 
 

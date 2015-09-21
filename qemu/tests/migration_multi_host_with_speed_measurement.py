@@ -3,10 +3,14 @@ import re
 import logging
 import time
 import socket
+
 from autotest.client.shared import error, utils
 from autotest.client.shared.barrier import listen_server
 from autotest.client.shared.syncdata import SyncData
-from virttest import utils_test, utils_misc
+
+from virttest import utils_test
+from virttest import utils_misc
+
 from provider import cpuflags
 
 

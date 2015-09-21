@@ -1,6 +1,9 @@
 import logging
+
 from autotest.client.shared import error
+
 from virttest import guest_agent
+
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 from qemu.tests.qemu_guest_agent import QemuGuestAgentTest
 

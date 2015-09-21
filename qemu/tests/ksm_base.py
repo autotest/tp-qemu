@@ -4,9 +4,12 @@ import random
 import os
 import commands
 import re
-from autotest.client.shared import error
-from virttest import aexpect, utils_test, utils_misc, data_dir
 
+import aexpect
+
+from autotest.client.shared import error
+
+from virttest import utils_misc, data_dir
 
 TMPFS_OVERHEAD = 0.0022
 

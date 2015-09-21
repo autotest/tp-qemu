@@ -7,7 +7,9 @@ the same setup will result in them having the same resolution.
 
 """
 import logging
+
 from autotest.client.shared import error
+
 from virttest import utils_spice
 
 

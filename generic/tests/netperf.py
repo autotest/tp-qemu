@@ -4,9 +4,15 @@ import commands
 import threading
 import re
 import time
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_test, utils_misc, utils_net, remote, data_dir
+
+from virttest import utils_test
+from virttest import utils_misc
+from virttest import utils_net
+from virttest import remote
+from virttest import data_dir
 
 
 _netserver_started = False

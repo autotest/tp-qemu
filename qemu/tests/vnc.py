@@ -3,7 +3,9 @@ import time
 import socket
 import struct
 import random
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
 from virttest.RFBDes import Des
 

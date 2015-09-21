@@ -7,9 +7,14 @@ import logging
 import random
 import time
 import threading
+
 from autotest.client.shared import error
-from virttest import funcatexit, data_dir
-from virttest import qemu_qtree, utils_test, env_process
+
+from virttest import funcatexit
+from virttest import data_dir
+from virttest import qemu_qtree
+from virttest import utils_test
+from virttest import env_process
 from virttest.qemu_devices import utils
 from virttest.remote import LoginTimeoutError
 

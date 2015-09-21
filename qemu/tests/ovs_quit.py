@@ -1,6 +1,11 @@
 from autotest.client import os_dep
-from autotest.client.shared import error, utils
-from virttest import data_dir, env_process, virt_vm, utils_misc
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import data_dir
+from virttest import env_process
+from virttest import virt_vm
+from virttest import utils_misc
 
 
 @error.context_aware

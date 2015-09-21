@@ -6,6 +6,7 @@ Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
 from autotest.client.shared import error
+
 from virttest import utils_spice
 
 

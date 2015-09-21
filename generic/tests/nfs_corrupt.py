@@ -1,9 +1,11 @@
 import os
 import re
 import logging
+
 from autotest.client.shared import error
 from autotest.client import utils
 from autotest.client import os_dep
+
 from virttest import utils_misc
 from virttest import utils_net
 from virttest import env_process

@@ -1,7 +1,12 @@
 import logging
 import re
+
 from autotest.client.shared import error
-from virttest import data_dir, storage, utils_disk, env_process
+
+from virttest import data_dir
+from virttest import storage
+from virttest import utils_disk
+from virttest import env_process
 
 
 @error.context_aware

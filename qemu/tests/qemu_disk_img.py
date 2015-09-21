@@ -1,10 +1,14 @@
 import os
 import re
 import logging
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import data_dir, env_process
-from virttest import storage, qemu_storage
+
+from virttest import data_dir
+from virttest import env_process
+from virttest import storage
+from virttest import qemu_storage
 
 
 class QemuImgTest(qemu_storage.QemuImg):

@@ -1,5 +1,7 @@
 import logging
-from virttest import virt_vm, utils_misc, utils_net
+
+from virttest import virt_vm
+from virttest import utils_net
 from virttest import env_process
 
 

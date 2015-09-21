@@ -3,10 +3,15 @@ import os
 import glob
 import re
 import commands
+
+import aexpect
+
 from autotest.client.shared import error
 from autotest.client.shared import utils
-from virttest import utils_misc, utils_test, remote
-from virttest import aexpect
+
+from virttest import utils_misc
+from virttest import utils_test
+from virttest import remote
 
 _receiver_ready = False
 

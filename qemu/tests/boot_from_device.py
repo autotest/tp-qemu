@@ -2,12 +2,14 @@ import os
 import re
 import time
 import logging
+
 from autotest.client import utils
+from autotest.client.shared import error
+
 from virttest import utils_misc
 from virttest import data_dir
 from virttest import qemu_storage
 from virttest import env_process
-from autotest.client.shared import error
 
 
 @error.context_aware

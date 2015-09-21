@@ -3,10 +3,13 @@ import logging
 import time
 import random
 import string
+
+import aexpect
+
 from autotest.client.shared import error
+
 from virttest import data_dir
 from virttest import utils_misc
-from virttest import aexpect
 from virttest import storage
 from virttest import arch
 from virttest import env_process

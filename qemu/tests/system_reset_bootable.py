@@ -1,7 +1,9 @@
 import logging
 import time
 import random
+
 from autotest.client.shared import error
+
 from virttest import env_process
 
 

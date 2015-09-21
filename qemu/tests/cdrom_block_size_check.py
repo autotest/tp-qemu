@@ -1,10 +1,13 @@
 import re
 import logging
-import time
-import os.path
+import os
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import env_process, utils_disk, utils_misc, data_dir
+
+from virttest import env_process
+from virttest import utils_misc
+from virttest import data_dir
 
 
 # This decorator makes the test function aware of context strings

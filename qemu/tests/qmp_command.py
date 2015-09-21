@@ -1,7 +1,11 @@
 import logging
 import re
-from autotest.client.shared import utils, error
-from virttest import utils_misc, qemu_monitor
+
+from autotest.client.shared import utils
+from autotest.client.shared import error
+
+from virttest import utils_misc
+from virttest import qemu_monitor
 
 
 @error.context_aware

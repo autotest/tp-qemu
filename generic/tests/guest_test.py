@@ -1,7 +1,9 @@
 import os
 import logging
 import sys
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
 
 

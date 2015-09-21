@@ -1,5 +1,4 @@
 from autotest.client.shared import error
-from virttest import qemu_monitor
 
 
 def run(test, params, env):

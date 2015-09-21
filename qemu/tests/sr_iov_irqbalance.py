@@ -1,8 +1,13 @@
 import re
 import time
 import logging
-from autotest.client.shared import error, utils
-from virttest import utils_test, utils_net
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import utils_test
+from virttest import utils_net
+
 # The backports module will take care of using the builtin if available
 from virttest.staging.backports import bin
 

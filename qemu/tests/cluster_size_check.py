@@ -2,7 +2,9 @@ import re
 import logging
 
 from autotest.client.shared import error
-from virttest import qemu_storage, data_dir
+
+from virttest import qemu_storage
+from virttest import data_dir
 
 
 @error.context_aware

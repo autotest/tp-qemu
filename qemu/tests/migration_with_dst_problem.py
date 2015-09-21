@@ -3,9 +3,14 @@ import os
 import time
 import re
 import sys
+
+import aexpect
+
 from autotest.client.shared import utils, error
-from autotest.client import utils as client_utils
-from virttest import aexpect, env_process, utils_misc, qemu_storage
+
+from virttest import env_process
+from virttest import utils_misc
+from virttest import qemu_storage
 
 
 @error.context_aware

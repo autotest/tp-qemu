@@ -1,9 +1,15 @@
 import logging
 import re
 import time
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import data_dir, storage, utils_disk, utils_test, env_process
+
+from virttest import data_dir
+from virttest import storage
+from virttest import utils_disk
+from virttest import utils_test
+from virttest import env_process
 from virttest import funcatexit
 
 

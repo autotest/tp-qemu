@@ -1,9 +1,14 @@
 import os
 import time
 import logging
-from autotest.client.shared import error, utils
-from virttest import utils_test, utils_misc
-from virttest import qemu_monitor, env_process
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import utils_test
+from virttest import utils_misc
+from virttest import qemu_monitor
+from virttest import env_process
 
 
 @error.context_aware

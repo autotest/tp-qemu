@@ -1,7 +1,9 @@
 import logging
 import re
 import time
+
 from autotest.client.shared import error
+
 from virttest import utils_test
 
 

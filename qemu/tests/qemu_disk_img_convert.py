@@ -1,7 +1,10 @@
 import logging
+
 from autotest.client import utils
 from autotest.client.shared import error
+
 from virttest import storage
+
 from qemu.tests import qemu_disk_img
 
 

@@ -1,8 +1,10 @@
 import logging
 import time
+
 from autotest.client.shared import error, utils
-from virttest import utils_test
 from autotest.client.shared.syncdata import SyncData
+
+from virttest import utils_test
 
 
 @error.context_aware

@@ -1,7 +1,9 @@
 import logging
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import base_installer, utils_misc
+
+from virttest import base_installer
 
 
 def run(test, params, env):

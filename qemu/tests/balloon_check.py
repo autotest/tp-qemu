@@ -1,8 +1,12 @@
 import re
 import logging
 import random
+
 from autotest.client.shared import error
-from virttest import qemu_monitor, utils_test, utils_misc
+
+from virttest import qemu_monitor
+from virttest import utils_test
+from virttest import utils_misc
 
 
 class BallooningTest(object):

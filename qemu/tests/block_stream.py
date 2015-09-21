@@ -1,7 +1,10 @@
 import re
 import logging
+
 from autotest.client.shared import error, utils
+
 from virttest import env_process, utils_misc
+
 from qemu.tests import blk_stream
 
 

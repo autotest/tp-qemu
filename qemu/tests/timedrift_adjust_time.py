@@ -1,10 +1,13 @@
 import re
 import time
 import logging
+
 from autotest.client.shared import error
 from autotest.client.shared import utils
+
 from virttest import env_process
 from virttest import test_setup
+
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 
 

@@ -1,12 +1,13 @@
 import logging
 import os
-import signal
-import re
 import time
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_misc, data_dir, utils_net
-from virttest import utils_test, env_process
+
+from virttest import utils_misc
+from virttest import utils_test
+from virttest import env_process
 
 
 @error.context_aware

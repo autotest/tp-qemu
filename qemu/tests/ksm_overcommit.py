@@ -3,15 +3,14 @@ import time
 import random
 import math
 import os
-from autotest.client.shared import error
-from virttest import utils_misc, utils_test, aexpect, env_process, data_dir
 
+import aexpect
+
+from autotest.client.shared import error
 from autotest.client.shared import utils
 
-try:
-    from virttest.staging import utils_memory
-except ImportError:
-    from autotest.client.shared import utils_memory
+from virttest import utils_misc, utils_test, env_process, data_dir
+from virttest.staging import utils_memory
 
 
 def run(test, params, env):

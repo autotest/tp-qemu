@@ -1,12 +1,9 @@
 import logging
-import os
-from autotest.client.shared import error
-from virttest import utils_test, utils_misc, env_process
 
-try:
-    from virttest.staging import utils_memory
-except ImportError:
-    from autotest.client.shared import utils_memory
+from autotest.client.shared import error
+
+from virttest import utils_test, env_process
+from virttest.staging import utils_memory
 
 
 def run(test, params, env):

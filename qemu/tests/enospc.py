@@ -2,9 +2,14 @@ import logging
 import time
 import re
 import os
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import virt_vm, utils_misc, qemu_storage, data_dir
+
+from virttest import virt_vm
+from virttest import utils_misc
+from virttest import qemu_storage
+from virttest import data_dir
 
 
 class EnospcConfig(object):

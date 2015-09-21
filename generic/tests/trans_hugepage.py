@@ -1,9 +1,11 @@
 import logging
 import os
 import re
+
 from autotest.client.shared import error
 from autotest.client.shared import utils
-from virttest import utils_test, funcatexit
+
+from virttest import funcatexit
 
 
 def cleanup(debugfs_path, session):

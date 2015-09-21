@@ -10,9 +10,13 @@ Requires: Two VMs - client and guest and remote-viewer session
 
 import logging
 import os
+
+from aexpect import ShellCmdError
+
 from autotest.client.shared import error
-from virttest.aexpect import ShellCmdError
-from virttest import utils_misc, utils_spice, aexpect, data_dir
+
+from virttest import utils_spice
+from virttest import data_dir
 
 
 def install_pygtk(guest_session, params):
@@ -283,7 +287,7 @@ def run(test, params, env):
     # Verify that gnome is now running on the guest
     try:
         guest_session.cmd("ps aux | grep -v grep | grep gnome-session")
-    except aexpect.ShellCmdError:
+    except ShellCmdError:
         raise error.TestWarn("gnome-session was probably not corretly started")
 
     guest_session.cmd("export DISPLAY=:0.0")

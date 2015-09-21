@@ -1,6 +1,9 @@
 import logging
-from virttest import env_process
+
 from autotest.client.shared import error
+
+from virttest import env_process
+
 from qemu.tests import drive_mirror_stress
 
 

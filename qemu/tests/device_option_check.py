@@ -1,6 +1,8 @@
 import logging
 import re
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
 from virttest import env_process
 from virttest import qemu_qtree

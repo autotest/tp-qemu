@@ -1,7 +1,13 @@
 import logging
 import random
-from autotest.client.shared import error, utils
-from virttest import utils_test, utils_net, virt_vm, utils_misc
+
+from autotest.client.shared import error
+from autotest.client.shared import utils
+
+from virttest import utils_test
+from virttest import utils_net
+from virttest import virt_vm
+from virttest import utils_misc
 
 
 @error.context_aware

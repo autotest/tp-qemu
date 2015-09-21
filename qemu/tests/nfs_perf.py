@@ -1,8 +1,10 @@
 import logging
 import re
 import os
+
 from autotest.client.shared import error
 from autotest.client import utils
+
 from virttest import utils_misc
 
 STEP_1, STEP_2, STEP_3, STEP_4, STEP_5, STEP_6 = range(6)

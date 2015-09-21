@@ -1,14 +1,17 @@
 import os
 import re
 import commands
-import glob
 import shutil
 import shelve
 import threading
 from Queue import Queue
+
 from autotest.client.shared import error
 from autotest.client import utils
-from virttest import utils_test, utils_misc, data_dir
+
+from virttest import utils_test
+from virttest import utils_misc
+from virttest import data_dir
 
 
 def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):

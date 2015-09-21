@@ -1,9 +1,12 @@
 import logging
 import os
 import re
-from autotest.client import utils
+
 from autotest.client.shared import error
-from virttest import utils_net, utils_netperf, utils_misc, data_dir
+
+from virttest import utils_net
+from virttest import utils_netperf
+from virttest import data_dir
 
 
 @error.context_aware

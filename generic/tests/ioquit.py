@@ -1,6 +1,7 @@
 import logging
 import time
 import random
+
 from autotest.client.shared import error
 
 

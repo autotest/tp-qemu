@@ -1,9 +1,12 @@
 import logging
 import os
+
 from autotest.client.shared import error
+
 from virttest import remote
 from virttest import utils_test
 from virttest import virt_vm
+
 from provider import cpuflags
 
 

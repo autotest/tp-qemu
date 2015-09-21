@@ -1,9 +1,13 @@
 import logging
 import time
-import random
+
+import aexpect
+
 from autotest.client import utils
 from autotest.client.shared import error
-from virttest import utils_net, env_process, aexpect
+
+from virttest import utils_net
+from virttest import env_process
 
 
 def guest_ping(session, dst_ip, count=None, os_type="linux",

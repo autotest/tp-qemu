@@ -1,10 +1,11 @@
 import re
 import logging
-import time
+
 from autotest.client.shared import error
-from virttest import qemu_io, data_dir
-from virttest.qemu_storage import QemuImg
 from autotest.client import utils
+
+from virttest import data_dir
+from virttest.qemu_storage import QemuImg
 
 
 @error.context_aware

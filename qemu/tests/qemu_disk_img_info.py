@@ -1,10 +1,11 @@
 import re
-import copy
-import logging
+
 from autotest.client import utils
 from autotest.client.shared import error
-from qemu.tests import qemu_disk_img
+
 from virttest import storage
+
+from qemu.tests import qemu_disk_img
 
 
 class InfoTest(qemu_disk_img.QemuImgTest):

@@ -1,9 +1,14 @@
 import logging
 import threading
+
 from autotest.client import utils as client_utils
-from autotest.client.shared import utils, error
+from autotest.client.shared import utils
+from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData
-from virttest import env_process, utils_test, remote
+
+from virttest import env_process
+from virttest import utils_test
+from virttest import remote
 from virttest import utils_misc
 
 

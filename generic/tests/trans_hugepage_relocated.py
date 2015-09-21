@@ -3,13 +3,11 @@ import time
 import commands
 import os
 import re
-from autotest.client.shared import error
-from virttest import utils_test
 
-try:
-    from virttest.staging import utils_memory
-except ImportError:
-    from autotest.client.shared import utils_memory
+from autotest.client.shared import error
+
+from virttest import utils_test
+from virttest.staging import utils_memory
 
 
 def run(test, params, env):

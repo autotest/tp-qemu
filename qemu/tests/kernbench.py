@@ -2,8 +2,10 @@ import logging
 import commands
 import os
 import re
-from autotest.client import test, utils, job
+
+from autotest.client import utils
 from autotest.client.shared import error
+
 from virttest import env_process
 
 

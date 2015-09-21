@@ -1,7 +1,8 @@
 import re
-import time
 import logging
+
 from autotest.client.shared import error
+
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import data_dir
@@ -69,7 +70,7 @@ def run(test, params, env):
     logging.info("Wait until device is ready")
     exists = utils_misc.wait_for(lambda: (orig_img_name in
                                           str(monitor.info("block"))
-                                          ), timeout=10,  first=3)
+                                          ), timeout=10, first=3)
     if not exists:
         msg = "Fail to insert device %s to guest" % orig_img_name
         raise error.TestFail(msg)
@@ -80,8 +81,8 @@ def run(test, params, env):
     if params.get("os_type") != "windows":
         error.context("mount cdrom to make status to locked", logging.info)
         cdroms = utils_misc.wait_for(lambda: (utils_test.get_readable_cdroms(
-                                                  params, session)),
-                                     timeout=10)
+            params, session)),
+            timeout=10)
         if not cdroms:
             raise error.TestFail("Not readable cdrom found in your guest")
         cdrom = cdroms[0]

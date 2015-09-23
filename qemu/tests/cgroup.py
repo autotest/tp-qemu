@@ -1270,10 +1270,10 @@ def run(test, params, env):
         cgroup.set_property('cpuset.cpus', cpus.str_slice(), 0)
         cgroup.set_property('cpuset.mems', 0, 0)
         cgroup.mk_cgroup()  # O___
-        cgroup.set_property('cpuset.cpus', 0, cpus[0])
+        cgroup.set_property('cpuset.cpus', cpus[0], 1)
         cgroup.set_property('cpuset.mems', 0, 1)
         cgroup.mk_cgroup()  # _OO_
-        cgroup.set_property('cpuset.cpus', cpus.str_slice(1), 2)
+        cgroup.set_property('cpuset.cpus', cpus.str_slice(1, 3), 2)
         cgroup.set_property('cpuset.mems', 0, 2)
         assign_vm_into_cgroup(vm, cgroup, 0)
 

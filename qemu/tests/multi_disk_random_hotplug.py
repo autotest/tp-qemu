@@ -17,7 +17,7 @@ from virttest import utils_test
 from virttest import env_process
 from virttest.qemu_devices import utils
 from virttest.remote import LoginTimeoutError
-
+import virttest.qemu_devices
 
 # qdev is not thread safe so in case of dangerous ops lock this thread
 LOCK = None
@@ -59,7 +59,7 @@ def convert_params(params, args):
                'readonly': 'image_readonly', 'scsiid': 'drive_scsiid',
                'lun': 'drive_lun', 'aio': 'image_aio',
                'imgfmt': 'image_format', 'pci_addr': 'drive_pci_addr',
-               'x_data_plane': 'x-data-plane',
+               'x_data_plane': 'x-data-plane', "iothread": "iothread",
                'scsi': 'virtio-blk-pci_scsi'}
     name = args.pop('name')
     params['images'] += " %s" % name
@@ -169,6 +169,11 @@ def run(test, params, env):
             for key, value in param_matrix.iteritems():
                 args[key] = random.choice(value)
 
+            if vm.iothread_id >=0:
+                args['iothread_id'] = vm.iothread_id
+                args['x_data_plane'] = 'on'
+                vm.iothread_id += 1
+
             try:
                 devs = qdev.images_define_by_variables(**args)
                 # parallel test adds devices in mixed order, force bus/addrs
@@ -204,6 +209,8 @@ def run(test, params, env):
         hotplug_sleep = float(params.get('wait_between_hotplugs', 0))
         for device in new_devices:      # Hotplug all devices
             time.sleep(hotplug_sleep)
+            if vm.iothread_id >= 0 and isinstance(device, virttest.qemu_devices.qdevices.QDevice):
+                device.iothread_object_add(monitor)
             hotplug_outputs.append(device.hotplug(monitor))
         time.sleep(hotplug_sleep)
         failed = []
@@ -275,6 +282,8 @@ def run(test, params, env):
                 time.sleep(unplug_sleep)
                 unplug_devs.append(device)
                 unplug_outs.append(device.unplug(monitor))
+                if vm.iothread_id >= 0 and isinstance(device, virttest.qemu_devices.qdevices.QDevice):
+                    device.iothread_object_del(monitor)
                 # Remove from qdev even when unplug failed because further in
                 # this test we compare VM with qdev, which should be without
                 # these devices. We can do this because we already set the VM
@@ -338,6 +347,10 @@ def run(test, params, env):
                             "guest disks.")
 
     vm = env.get_vm(params['main_vm'])
+    iothread_id = -1
+    if vm.iothread_id >=0:
+        vm.iothread_id += 1
+        iothread_id = vm.iothread_id
     qdev = vm.devices
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     out = vm.monitor.human_monitor_cmd("info qtree", debug=False)

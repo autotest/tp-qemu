@@ -49,13 +49,13 @@ def install_req_pkgs(pkgsRequired, vm_root_session, params):
         logging.info("Checking to see if %s is installed" % pkgName)
         try:
             vm_root_session.cmd("rpm -q %s" % pkgName)
-        except ShellCmdError:
+        except:
             rpm = params.get(re.sub("-", "_", pkgName) + "_url")
             logging.info("Installing %s from %s" % (pkgName, rpm))
             try:
                 vm_root_session.cmd("yum -y localinstall %s" % rpm,
                                     timeout=300)
-            except ShellCmdError:
+            except:
                 logging.info("Could not install %s" % pkgName)
 
 
@@ -78,7 +78,7 @@ def build_install_spiceprotocol(vm_root_session, vm_script_path, params):
                   "--enablerepo=\"epel\" -y install pyparsing"
             output = vm_root_session.cmd(cmd, timeout=300)
             logging.info(output)
-        except ShellCmdError:
+        except:
             logging.error("Not able to install pyparsing!")
 
     output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
@@ -175,7 +175,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
         output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib"
                                      " remote-viewer --spice-gtk-version")
         logging.info(output)
-    except ShellCmdError:
+    except:
         logging.error(output)
 
     if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
@@ -191,7 +191,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
               "--enablerepo=\"epel\" -y install perl-Text-CSV"
         output = vm_root_session.cmd(cmd, timeout=300)
         logging.info(output)
-    except ShellCmdError:
+    except:
         logging.error(output)
 
     # spice-gtk needs to built from tarball before building virt-viewer on RHEL6
@@ -218,7 +218,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
         output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib"
                                      " remote-viewer --spice-gtk-version")
         logging.info(output)
-    except ShellCmdError:
+    except:
         logging.error(output)
 
 
@@ -235,7 +235,7 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
     try:
         output = vm_root_session.cmd("spice-vdagent -h")
         logging.info(output)
-    except ShellCmdError:
+    except:
         logging.error(output)
 
     pkgsRequired = ["libpciaccess-devel"]
@@ -253,14 +253,14 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
         logging.info(output)
         if re.search("fail", output, re.IGNORECASE):
             raise error.TestFail("spice-vd-agent was not started properly")
-    except ShellCmdError:
+    except:
         raise error.TestFail("spice-vd-agent was not started properly")
 
     # Get version number of spice-vdagent
     try:
         output = vm_root_session.cmd("spice-vdagent -h")
         logging.info(output)
-    except ShellCmdError:
+    except:
         logging.error(output)
 
 

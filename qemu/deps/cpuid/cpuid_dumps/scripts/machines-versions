@@ -24,6 +24,8 @@ pc-i440fx-2.2 v2.2.0
 pc-q35-2.2 v2.2.0
 pc-i440fx-2.3 v2.3.0
 pc-q35-2.3 v2.3.0
+pc-i440fx-2.4 v2.4.0
+pc-q35-2.4 v2.4.0
 rhel6.0.0 RHEL-6.0
 rhel6.1.0 RHEL-6.1
 rhel6.2.0 RHEL-6.2

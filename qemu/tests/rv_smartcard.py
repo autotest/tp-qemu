@@ -64,7 +64,7 @@ def run(test, params, env):
         # pkcs11_listcerts not installed until Smart Card Support is installed
         try:
             output = guest_session.cmd_output("pkcs11_listcerts")
-        except aexpect.ShellTimeoutError:
+        except:
             # Expected to get a shell timeout error,
             # listing certs prompts for PIN
             try:
@@ -90,7 +90,7 @@ def run(test, params, env):
         # Smart Card Support is installed
         try:
             certsinfo_output = guest_session.cmd("pklogin_finder debug")
-        except aexpect.ShellTimeoutError:
+        except:
             # Expected to get a shell timeout error,
             # listing certs prompts for PIN
             try:
@@ -159,7 +159,7 @@ def run(test, params, env):
         cmd += "-D -n '" + cert + "' -d " + cert_db
         try:
             output = client_session.cmd(cmd)
-        except aexpect.ShellCmdError:
+        except:
             logging.warning(
                 "Deleting of %s certificate from the client failed",
                 cert)

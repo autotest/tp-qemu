@@ -400,7 +400,7 @@ def run(test, params, env):
                               " guest output: '%s'", o)
 
             error.context("Update initrd file", logging.info)
-            s, o = session.cmd_status_output(mkinitrd_cmd, timeout=200)
+            s, o = session.cmd_status_output(mkinitrd_cmd, timeout=360)
             if s != 0:
                 msg = "Failed to install virtio driver, guest output '%s'" % o
                 logging.error(msg)

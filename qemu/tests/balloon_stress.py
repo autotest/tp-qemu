@@ -4,6 +4,7 @@ import logging
 
 from autotest.client.shared import error
 from virttest import utils_misc
+from virttest import utils_test
 
 
 @error.context_aware
@@ -35,23 +36,13 @@ def run(test, params, env):
     if params.get("pre_cmd"):
         session.cmd(params.get("pre_cmd"))
 
-    error.context("enable driver verifier in guest", logging.info)
-    enable_driver_verifier_cmd = params.get("enable_driver_verifier_cmd")
-    if enable_driver_verifier_cmd:
-        session.cmd(enable_driver_verifier_cmd,
-                    timeout=timeout,
-                    ignore_all_errors=True)
-    if params.get("need_reboot", "") == "yes":
-        session = vm.reboot()
-    error.context("verify balloon device driver", logging.info)
-    driver_verifier_cmd = params.get("driver_verifier_cmd")
-    output = session.cmd_output(driver_verifier_cmd, timeout=timeout)
     driver_name = params["driver_name"]
-    if not re.search(r"%s" % driver_name, output, re.M):
-        msg = "Verify device driver failed, "
-        msg += "guest report driver is %s, " % output
-        msg += "expect is '%s'" % driver_name
-        raise error.TestFail(msg)
+    if (params.get("need_enable_verifier"), "yes") == "yes":
+        error.context("Enable %s driver verifier in guest" % driver_name,
+                      logging.info)
+        session = utils_test.qemu.setup_win_driver_verifier(session,
+                                                            driver_name,
+                                                            vm, timeout)
 
     error.context("Play video in guest", logging.info)
     play_video_cmd = params["play_video_cmd"]
@@ -64,6 +55,7 @@ def run(test, params, env):
     if not running:
         raise error.TestError("Video do not playing")
 
+    env["balloon_test"] = 0
     error.context("balloon vm memory in loop", logging.info)
     repeat_times = int(params.get("repeat_times", 10))
     logging.info("repeat times: %d" % repeat_times)
@@ -80,10 +72,17 @@ def run(test, params, env):
             logging.debug("balloon vm mem to: %s B" % memory)
             memory = end - memory
             vm.monitor.send_args_cmd("balloon value=%s" % memory)
-            vm.monitor.query("balloon")
+            current_mem = vm.monitor.query("balloon")
+            if current_mem != memory:
+                env["balloon_test"] = 1
         repeat_times -= 1
     error.context("verify guest still alive", logging.info)
     session.cmd(params["stop_player_cmd"])
     vm.verify_alive()
+
+    if (params.get("need_clear_verifier"), "yes") == "yes":
+        error.context("Clear %s driver verifier in guest" % driver_name,
+                      logging.info)
+        session = utils_test.qemu.clear_win_driver_verifier(session, vm, timeout)
     if session:
         session.close()

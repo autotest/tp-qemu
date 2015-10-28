@@ -35,7 +35,6 @@ def guest_ping(session, dst_ip, count=None, os_type="linux",
 def wait_guest_network_up(session, dst_ip, timeout=180):
     txt = "Check whether guest network up by ping %s " % dst_ip
     error.context(txt, logging.info)
-    start_time = time.time()
     end_time = time.time() + timeout
     while time.time() < end_time:
         try:

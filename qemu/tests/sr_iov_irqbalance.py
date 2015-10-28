@@ -53,7 +53,6 @@ def get_guest_service_status(session, service):
     """
     cmd = "service %s status" % service
     output = session.cmd_output(cmd)
-    service_status_filter = "running|active"
     if re.search("running|active", output, re.I):
         status = "active"
     elif re.search("stopped|inactive", output, re.I):

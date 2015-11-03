@@ -44,7 +44,7 @@ def run(test, params, env):
     logging.info("Wait for %d seconds before reset" % wait_time)
     time.sleep(wait_time)
 
-    for i in range(reset_times):
+    for i in range(1, reset_times + 1):
         error.context("Reset guest system for %s times" % i, logging.info)
 
         vm.monitor.cmd("system_reset")

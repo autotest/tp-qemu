@@ -146,6 +146,10 @@ def run(test, params, env):
 
     def find_cpu_obj(vm):
         """Find path of a valid VCPU object"""
+        cpus = vm.monitor.cmd('query-cpus')
+        if len(cpus) > 0 and cpus[0].has_key('qom_path'):
+            return cpus[0]['qom_path']
+        # if there's no qom_path on query-cpus
         roots = ['/machine/icc-bridge/icc', '/machine/unattached/device']
         for root in roots:
             try:

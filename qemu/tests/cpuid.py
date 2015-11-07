@@ -148,7 +148,12 @@ def run(test, params, env):
         """Find path of a valid VCPU object"""
         roots = ['/machine/icc-bridge/icc', '/machine/unattached/device']
         for root in roots:
-            for child in vm.monitor.cmd('qom-list', dict(path=root)):
+            try:
+                children = vm.monitor.cmd('qom-list', dict(path=root))
+            except:
+                dbg("can't run qom-list on path=%s", root)
+                continue
+            for child in children:
                 logging.debug('child: %r', child)
                 if child['type'].rstrip('>').endswith('-cpu'):
                     return root + '/' + child['name']
@@ -156,6 +161,8 @@ def run(test, params, env):
     def get_qom_cpuid(self, vm):
         assert vm.monitor.protocol == "qmp"
         cpu_path = find_cpu_obj(vm)
+        if cpu_path is None:
+            raise error.TestNAError("Can't find QOM path for CPU object")
         logging.debug('cpu path: %r', cpu_path)
         r = {}
         for prop in 'feature-words', 'filtered-features':

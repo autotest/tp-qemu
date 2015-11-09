@@ -7,6 +7,7 @@ from autotest.client.shared import utils
 
 from virttest import utils_test
 from virttest import utils_net
+from virttest import utils_misc
 
 # The backports module will take care of using the builtin if available
 from virttest.staging.backports import bin
@@ -36,32 +37,6 @@ def get_first_network_devname(session, nic_interface_filter):
         msg += "ifconfig output in guest: %s" % output
         raise error.TestError(msg)
     return devnames[0]
-
-
-@error.context_aware
-def get_guest_service_status(session, service):
-    """
-    Get service's status in guest. It will return 'active' for 'running' and
-    'active'. Return 'inactive' for 'stopped' and 'inactive'.
-
-    :param session: An Expect or ShellSession instance to operate on
-    :type devices: Expect or ShellSession class
-    :param service: Service name that we want to check status.
-    :type service: String
-    :return: service's status in guest.  'active' or 'inactive'
-    :rtype: String
-    """
-    cmd = "service %s status" % service
-    output = session.cmd_output(cmd)
-    if re.search("running|active", output, re.I):
-        status = "active"
-    elif re.search("stopped|inactive", output, re.I):
-        status = "inactive"
-    else:
-        msg = "Fail to get '%s' service status. " % service
-        msg += " Command output in guest: %s" % output
-        raise error.TestError(msg)
-    return status
 
 
 @error.context_aware
@@ -237,7 +212,8 @@ def run(test, params, env):
     msg = "Update irqbalance service status in guest if not match request."
     error.context(msg, logging.info)
     irqbalance_status = params.get("irqbalance_status", "active")
-    status = get_guest_service_status(session=session, service="irqbalance")
+    status = utils_misc.get_guest_service_status(session=session,
+                                                 service="irqbalance")
     service_cmd = ""
     if status == "active" and irqbalance_status == "inactive":
         service_cmd = "service irqbalance stop"

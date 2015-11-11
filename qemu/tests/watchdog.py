@@ -6,6 +6,7 @@ from autotest.client.shared import error
 from autotest.client.shared import utils
 from virttest import utils_misc
 from virttest import env_process
+from virttest import utils_test
 
 
 @error.context_aware
@@ -288,6 +289,10 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login(timeout=timeout)
+
+    if params.get("setup_runlevel") == "yes":
+        error.context("Setup the runlevel for guest", logging.info)
+        utils_test.qemu.setup_runlevel(params, session)
 
     if (test_type in locals()):
         test_running = locals()[test_type]

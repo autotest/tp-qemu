@@ -77,7 +77,20 @@ def run(test, params, env):
             else:
                 len_o = len(qmp_o)
             if len(res) != len_o:
-                raise error.TestFail(msg)
+                if res[0].startswith(' '):
+                    raise error.TestFail("Human command starts with ' ', "
+                                         "there is probably some garbage in "
+                                         "the output.\n" + msg)
+                res_tmp = []
+                #(qemu)info block in RHEL7 divided into 3 lines
+                for line in res:
+                    if not line.startswith(' '):
+                        res_tmp.append(line)
+                    else:
+                        res_tmp[-1] += line
+                res = res_tmp
+                if len(res) != len_o:
+                    raise error.TestFail(msg)
             re_str = r'([^ \t\n\r\f\v=]*)=([^ \t\n\r\f\v=]*)'
             for i in range(len(res)):
                 if qmp_cmd == "query-version":

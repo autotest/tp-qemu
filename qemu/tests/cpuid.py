@@ -457,11 +457,10 @@ def run(test, params, env):
             raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_regs_to_string(cpuid_dump, leaf, idx, regs):
-        r = cpuid_dump[leaf, idx]
         signature = ""
         for i in regs:
             for shift in range(0, 4):
-                c = chr((r[i] >> (shift * 8)) & 0xFF)
+                c = chr((cpuid_dump[leaf, idx, i] >> (shift * 8)) & 0xFF)
                 if c in string.printable:
                     signature = signature + c
                 else:
@@ -506,7 +505,7 @@ def run(test, params, env):
         bits = params["bits"].split()
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
-            r = out[leaf, idx][reg]
+            r = out[leaf, idx, reg]
             logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
             for i in bits:
                 if (r & (1 << int(i))) == 0:

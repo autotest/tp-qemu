@@ -149,13 +149,9 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
 
     # Get version of remote-viewer after install
     try:
-        output = vm_root_session.cmd("which remote-viewer")
-        logging.info(output)
-    except ShellCmdError, err:
-        raise error.TestFail("Could not find remote-viewer")
-
-    try:
-        output = vm_root_session.cmd("LD_LIBRARY_PATH=/usr/local/lib remote-viewer --version")
+        output = vm_root_session.cmd("which remote-viewer;"
+                                     "LD_LIBRARY_PATH=/usr/local/lib"
+                                     " remote-viewer --version")
         logging.info(output)
     except ShellCmdError, err:
         logging.error("Can't get version number!" + err.output)

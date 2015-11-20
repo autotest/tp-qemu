@@ -26,15 +26,16 @@ class QemuImgTest(qemu_storage.QemuImg):
         super(QemuImgTest, self).__init__(t_params, self.data_dir, tag)
 
     @error.context_aware
-    def create_snapshot(self, t_params={}):
+    def create_snapshot(self, t_params=None):
         """
         create snapshot image file
         """
         error.context("create snapshot image")
         params = self.params.object_params(self.tag)
-        params.update(t_params)
+        if t_params:
+            params.update(t_params)
         if len(params.get("image_chain", "").split()) < 2:
-            return dict()
+            return {}
         snapshot = storage.get_image_filename(params, self.data_dir)
         if os.path.exists(snapshot):
             utils.run("rm -f %s" % snapshot)
@@ -43,13 +44,14 @@ class QemuImgTest(qemu_storage.QemuImg):
         return params
 
     @error.context_aware
-    def start_vm(self, t_params={}):
+    def start_vm(self, t_params=None):
         """
         Start a vm and wait for it bootup;
         """
         error.context("start vm", logging.info)
         params = self.params.object_params(self.tag)
-        params.update(t_params)
+        if t_params:
+            params.update(t_params)
         base_image = params.get("images", "image1").split()[0]
         params["start_vm"] = "yes"
         try:
@@ -78,16 +80,16 @@ class QemuImgTest(qemu_storage.QemuImg):
         self.trash.append(src)
         return True
 
-    def __md5sum(self, cmd):
+    def __md5sum(self, dst):
         if not self.vm:
             return False
         login_timeout = int(self.params.get("login_timeout", 360))
         session = self.vm.wait_for_login(timeout=login_timeout)
-        md5bin = self.params["md5sum_bin"]
-        cmd = "%s %s" % (md5bin, cmd)
+        md5bin = self.params.get("md5sum_bin", "md5sum")
+        cmd = "%s %s" % (md5bin, dst)
         status, output = session.cmd_status_output(cmd)
         if status != 0:
-            logging.info("Execute '%s' with failures('%s') " % (cmd, output))
+            logging.error("Execute '%s' with failures('%s') " % (cmd, output))
             return None
         md5 = re.findall("\w{32}", output)[0]
         return md5
@@ -96,20 +98,18 @@ class QemuImgTest(qemu_storage.QemuImg):
     def save_file(self, dst):
         error.context("save file('%s') md5sum in guest" % dst, logging.info)
         self.__create_file(dst)
-        cmd = dst
-        return self.__md5sum(cmd)
+        return self.__md5sum(dst)
 
     @error.context_aware
     def check_file(self, dst, md5):
         error.context("check file('%s') md5sum in guest" % dst, logging.info)
-        cmd = " %s" % dst
-        if md5 == self.__md5sum(cmd):
-            return True
-        else:
-            err = "Md5 value does not match. Expected value: %s" % md5
-            err += "Actual value: %s" % self.__md5sum(cmd)
+        if md5 != self.__md5sum(dst):
+            err = ("Md5 value does not match. "
+                   "Expected value: %s Actual value: %s" %
+                   (md5, self.__md5sum(dst)))
             logging.error(err)
             return False
+        return True
 
     @error.context_aware
     def destroy_vm(self):
@@ -119,9 +119,10 @@ class QemuImgTest(qemu_storage.QemuImg):
         self.vm = None
 
     @error.context_aware
-    def check_image(self, t_params={}):
+    def check_image(self, t_params=None):
         error.context("check image file ('%s')" % self.image_filename,
                       logging.info)
+        t_params = t_params or {}
         return super(QemuImgTest, self).check_image(t_params, self.data_dir)
 
     @error.context_aware
@@ -133,8 +134,8 @@ class QemuImgTest(qemu_storage.QemuImg):
     def clean(self):
         error.context("clean up useless images")
         self.destroy_vm()
-        for _file in self.trash:
-            utils.run("rm -f %s" % _file)
+        for temp in self.trash:
+            utils.run("rm -f %s" % temp)
 
 
 def run(test, params, env):

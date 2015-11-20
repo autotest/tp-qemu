@@ -64,7 +64,7 @@ def run(test, params, env):
         time.sleep(5)
         status, output = session.cmd_status_output(driver_load_cmd)
         if params["os_type"] == "windows" and "device(s) are enabled" not in output:
-            raise error.TestError("failed to unload driver %s" % output)
+            raise error.TestError("failed to load driver %s" % output)
         logging.info("status %s load output %s"
                      % (status, output))
         time.sleep(5)

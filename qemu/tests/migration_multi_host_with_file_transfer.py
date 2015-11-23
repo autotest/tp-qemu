@@ -206,7 +206,7 @@ def run(test, params, env):
 
             if (self.hostid == self.master_id()):
                 try:
-                    utils.run("dd if=/dev/urandom of=%s bs=1M"
+                    utils.run("dd if=/dev/zero of=%s bs=1M"
                               " count=%s" % (host_path, file_size))
 
                     self.vm_addr = self._prepare_vm(self.vm).get_address()
@@ -217,8 +217,8 @@ def run(test, params, env):
 
                     self._hosts_barrier(self.hosts, self.id, "befor_mig", 120)
                     sync.sync(address_cache, timeout=120)
-                    error.context("ping-pong between host and guest while"
-                                  " migrating", logging.info)
+                    error.context("ping-pong migration during file transfer "
+                                  "between host and guest.", logging.info)
                     self._run_and_migrate(bg, end_event, sync, migrate_count)
 
                     # Check if guest lives.

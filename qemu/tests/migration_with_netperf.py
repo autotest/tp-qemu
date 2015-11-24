@@ -67,7 +67,6 @@ def run(test, params, env):
         g_server_link = netperf_link
         g_server_path = server_path
         g_client_path = client_path
-        g_client_install = False
         g_server_md5sum = md5sum
         g_client_md5sum = md5sum
     elif params.get("os_type") == "windows":

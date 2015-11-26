@@ -9,6 +9,7 @@ from virttest import data_dir
 from virttest import env_process
 from virttest import storage
 from virttest import qemu_storage
+from virttest import utils_misc
 
 
 class QemuImgTest(qemu_storage.QemuImg):
@@ -83,7 +84,8 @@ class QemuImgTest(qemu_storage.QemuImg):
             return False
         login_timeout = int(self.params.get("login_timeout", 360))
         session = self.vm.wait_for_login(timeout=login_timeout)
-        md5bin = self.params["md5sum_bin"]
+        winutil_drive = utils_misc.get_winutils_vol(session)
+        md5bin = "%s:\coreutils\md5sum.exe" % (winutil_drive)
         cmd = "%s %s" % (md5bin, cmd)
         status, output = session.cmd_status_output(cmd)
         if status != 0:

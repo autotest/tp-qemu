@@ -16,13 +16,14 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         super(ConvertTest, self).__init__(test, t_params, env, self.tag)
 
     @error.context_aware
-    def convert(self, t_params={}):
+    def convert(self, t_params=None):
         """
         create image file from one format to another format
         """
         error.context("convert image file", logging.info)
         params = self.params.object_params(self.tag)
-        params.update(t_params)
+        if t_params:
+            params.update(t_params)
         cache_mode = params.get("cache_mode")
         super(ConvertTest, self).convert(params, self.data_dir, cache_mode)
         params["image_name"] = params["convert_name"]

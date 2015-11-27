@@ -11,13 +11,14 @@ class CommitTest(qemu_disk_img.QemuImgTest):
         super(CommitTest, self).__init__(test, t_params, env, self.tag)
 
     @error.context_aware
-    def commit(self, t_params={}):
+    def commit(self, t_params=None):
         """
         commit snapshot to backing file;
         """
         error.context("commit snapshot to backingfile", logging.info)
         params = self.params.object_params(self.tag)
-        params.update(t_params)
+        if t_params:
+            params.update(t_params)
         cache_mode = params.get("cache_mode")
         return super(CommitTest, self).commit(params, cache_mode)
 

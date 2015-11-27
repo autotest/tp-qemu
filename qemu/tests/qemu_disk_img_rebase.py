@@ -18,13 +18,14 @@ class RebaseTest(qemu_disk_img.QemuImgTest):
         super(RebaseTest, self).__init__(test, t_params, env, tag)
 
     @error.context_aware
-    def rebase(self, t_params={}):
+    def rebase(self, t_params=None):
         """
         Rebase snapshot, AKA changes backing file to new image;
         """
         error.context("rebase snapshot to backingfile", logging.info)
         params = self.params.object_params(self.tag)
-        params.update(t_params)
+        if t_params:
+            params.update(t_params)
         cache_mode = params.get("cache_mode")
         super(RebaseTest, self).rebase(params, cache_mode)
         return params

@@ -40,6 +40,7 @@ using virt test, and commit your changes.
 
 ::
 
+    inspekt indent
     inspekt lint
     inspekt style
 6) Fix any problems

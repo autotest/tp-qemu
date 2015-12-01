@@ -143,7 +143,7 @@ def run(test, params, env):
             else:
                 return True, out[1]
         except Exception, msg:
-                return False, msg
+            return False, msg
 
     def file_transfer(sessions, addresses, timeout):
         prepare_cmd = "dd if=/dev/zero of=/tmp/copy_file count=1024 bs=1M"

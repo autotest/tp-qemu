@@ -60,13 +60,11 @@ def run(test, params, env):
     vm.verify_alive()
     vm_pid = vm.get_pid()
     session = vm.wait_for_login(timeout=timeout)
-    session_cmds = []
     session_cmds_key = ["read_rng_cmd",
                         "enable_verifier_cmd",
                         "driver_verifier_cmd"]
-    for key in session_cmds_key:
-        cmd = set_winutils_letter(params.get(key), session, params)
-        session_cmds.append(cmd)
+    session_cmds = (set_winutils_letter(params.get(key), session, params)
+                    for key in session_cmds_key)
     read_rng_cmd, enable_verifier_cmd, driver_verifier_cmd = session_cmds
 
     if dev_file:

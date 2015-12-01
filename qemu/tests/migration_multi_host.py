@@ -1,8 +1,7 @@
 import logging
 import time
-
+import random
 from autotest.client.shared import error
-
 from virttest import utils_test
 
 
@@ -83,19 +82,27 @@ def run(test, params, env):
 
                 session = vm.wait_for_login(timeout=self.login_timeout)
                 logging.debug("Sending command: '%s'" % self.mig_bg_command)
-                session.sendline(self.mig_bg_command)
+                s, o = session.cmd_status_output(self.mig_bg_command)
+                if s != 0:
+                    raise error.TestError("Failed to run bg cmd in guest,"
+                                          " Output is '%s'." % o)
                 time.sleep(5)
 
             def check_worker(mig_data):
                 if not self.is_src:
                     logging.info("Try to login guest after migration test.")
                     vm = env.get_vm(params["main_vm"])
-                    session = vm.wait_for_login(timeout=self.login_timeout)
+                    serial_login = params.get("serial_login")
+                    if serial_login == "yes":
+                        session = vm.wait_for_serial_login(timeout=self.login_timeout)
+                    else:
+                        session = vm.wait_for_login(timeout=self.login_timeout)
+
                     logging.info("Check the background command in the guest.")
                     s, o = session.cmd_status_output(self.mig_bg_check_command)
                     if s:
                         raise error.TestFail("Background command not found,"
-                                             " Migration failed.")
+                                             " Output is '%s'." % o)
 
                     logging.info("Kill the background command in the guest.")
                     session.sendline(self.mig_bg_kill_command)
@@ -103,6 +110,14 @@ def run(test, params, env):
 
             if params.get("check_vm_before_migration", "yes") == "no":
                 params["check_vm_needs_restart"] = "no"
+
+            if params.get("start_migration_timeout") == "random":
+                min_t = int(params.get("min_random_timeout"))
+                max_t = int(params.get("max_random_timeout"))
+                random_timeout = random.randint(min_t, max_t)
+                params["start_migration_timeout"] = random_timeout
+                error.context("Wait for %d seconds, then do migration."
+                              % random_timeout, logging.info)
 
             self.run_pre_sub_test()
 

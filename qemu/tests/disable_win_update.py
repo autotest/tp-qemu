@@ -1,5 +1,4 @@
 import logging
-from autotest.client.shared import error
 
 
 def run(test, params, env):

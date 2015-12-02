@@ -5,7 +5,6 @@ import logging
 from autotest.client.shared import error
 from autotest.client import utils
 
-from virttest import data_dir
 from virttest import env_process
 from virttest import storage
 from virttest import qemu_storage

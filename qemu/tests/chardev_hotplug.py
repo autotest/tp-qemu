@@ -1,6 +1,5 @@
 import logging
 import os
-import fcntl
 from autotest.client.shared import error
 from autotest.client import utils
 

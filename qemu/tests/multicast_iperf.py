@@ -1,6 +1,5 @@
 import logging
 import os
-import subprocess
 import re
 from autotest.client import utils
 from autotest.client.shared import error

@@ -46,4 +46,4 @@ using virt test, and commit your changes.
 7) Push your changes and submit a pull request
 8) That's it.
 
-[1] You can always create your own test provider, if you have special purposes, or just want to develop your work indepentently.
+[1] You can always create your own test provider, if you have special purposes, or just want to develop your work independently.

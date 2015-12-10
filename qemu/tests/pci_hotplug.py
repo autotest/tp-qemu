@@ -2,15 +2,15 @@ import re
 import logging
 import string
 
-import aexpect
-
 from autotest.client.shared import error
 
+from virttest import aexpect
 from virttest import utils_misc
 from virttest import storage
 from virttest import utils_test
 from virttest import data_dir
 from virttest import arch
+from virttest import qemu_monitor
 
 
 @error.context_aware
@@ -59,18 +59,27 @@ def run(test, params, env):
                                  (pci_add_cmd, add_output))
         return vm.monitor.info("pci")
 
+    def is_supported_command(cmd1, cmd2):
+        try:
+            vm.monitor.verify_supported_cmd(cmd1)
+            return cmd1
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            try:
+                vm.monitor.verify_supported_cmd(cmd2)
+                return cmd2
+            except qemu_monitor.MonitorNotSupportedCmdError:
+                pass
+        return None
+
     def is_supported_device(dev):
         # Probe qemu to verify what is the supported syntax for PCI hotplug
-        cmd_output = vm.monitor.human_monitor_cmd("?")
-        if len(re.findall("\ndevice_add", cmd_output)) > 0:
-            cmd_type = "device_add"
-        elif len(re.findall("\npci_add", cmd_output)) > 0:
-            cmd_type = "pci_add"
-        else:
+        cmd_type = is_supported_command("device_add", "pci_add")
+        if not cmd_type:
             raise error.TestError("Unknow version of qemu")
 
         # Probe qemu for a list of supported devices
-        probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)
+        probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type,
+                                                    debug=False)
         devices_supported = [j.strip('"') for j in
                              re.findall('\"[a-z|0-9|\-|\_|\,|\.]*\"',
                                         probe_output, re.MULTILINE)]
@@ -307,22 +316,15 @@ def run(test, params, env):
     qemu_binary = utils_misc.get_qemu_binary(params)
     qemu_binary = utils_misc.get_path(test.bindir, qemu_binary)
     # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if vm.monitor.protocol == 'qmp':
-        cmd_output = vm.monitor.info("commands")
-    else:
-        cmd_output = vm.monitor.human_monitor_cmd("help", debug=False)
-
-    cmd_type = utils_misc.find_substring(str(cmd_output), "device_add",
-                                         "pci_add")
-    if not cmd_output:
+    cmd_type = is_supported_command("device_add", "pci_add")
+    if not cmd_type:
         raise error.TestError("Could find a suitable method for hotplugging"
                               " device in this version of qemu")
 
     # Determine syntax of drive hotplug
     # __com.redhat_drive_add == qemu-kvm-0.12 on RHEL 6
     # drive_add == qemu-kvm-0.13 onwards
-    drive_cmd_type = utils_misc.find_substring(str(cmd_output),
-                                               "__com.redhat_drive_add", "drive_add")
+    drive_cmd_type = is_supported_command("drive_add", "__com.redhat_drive_add")
     if not drive_cmd_type:
         raise error.TestError("Could find a suitable method for hotplugging"
                               " drive in this version of qemu")

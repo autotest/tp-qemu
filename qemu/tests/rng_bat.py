@@ -51,7 +51,6 @@ def run(test, params, env):
     rng_data_rex = params.get("rng_data_rex", r".*")
     dev_file = params.get("filename_passthrough")
     timeout = float(params.get("login_timeout", 360))
-    rng_dll_register_cmd = params.get("rng_dll_register_cmd")
     read_rng_timeout = float(params.get("read_rng_timeout", "360"))
     cmd_timeout = float(params.get("session_cmd_timeout", "360"))
 
@@ -90,9 +89,6 @@ def run(test, params, env):
         raise error.TestFail(msg)
 
     error.context("Read virtio-rng device to get random number", logging.info)
-    if rng_dll_register_cmd:
-        logging.info("register 'viorngum.dll' into system")
-        session.cmd(rng_dll_register_cmd, timeout=120)
     output = session.cmd_output(read_rng_cmd, timeout=read_rng_timeout)
     if len(re.findall(rng_data_rex, output, re.M)) < 2:
         logging.debug("rng output: %s" % output)

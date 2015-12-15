@@ -75,8 +75,8 @@ def run(test, params, env):
     cdrom_prepare_timeout = int(params.get("cdrom_preapre_timeout", 360))
 
     def generate_serial_num():
-        length = int(params.get("length", "20"))
-        id_leng = random.randint(0, length)
+        length = int(params.get("length", "10"))
+        id_leng = random.randint(6, length)
         ignore_str = ",!\"#$%&\'()*+./:;<=>?@[\\]^`{|}~"
         return utils_misc.generate_random_string(id_leng, ignore_str)
 
@@ -369,9 +369,11 @@ def run(test, params, env):
                     serial_cdrom = line.split(" ")[-1].split("/")[-1]
                     break
             if not serial_cdrom:
+                qtree_info = vm.monitor.info("qtree")
                 raise error.TestFail("Could not find the device whose "
                                      "serial number %s is same in Qemu"
-                                     " CML." % serial_num)
+                                     " CML.\n Qtree info: %s" %
+                                     (qtree_info, serial_num))
 
         show_cdrom_cmd = "ls -l /dev/cdrom*"
         dev_cdrom_output = session.cmd_output(show_cdrom_cmd)

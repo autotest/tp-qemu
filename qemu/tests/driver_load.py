@@ -1,10 +1,9 @@
 import logging
 import re
 import time
-
 from autotest.client.shared import error
-
 from virttest import utils_test
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -22,6 +21,41 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
+    def load_driver(session, cmd, driver_id):
+        if params["os_type"] == "windows":
+            cmd = cmd.replace("DRIVER_ID", driver_id)
+
+        status, output = session.cmd_status_output(cmd)
+
+        if status != 0:
+            raise error.TestFail("failed to load driver, %s" % output)
+        if params["os_type"] == "windows":
+            if "device(s) are enabled" not in output:
+                raise error.TestFail("failed to load driver, %s" % output)
+
+    def unload_driver(session, cmd, driver_id):
+        if params["os_type"] == "windows":
+            cmd = cmd.replace("DRIVER_ID", driver_id)
+        status, output = session.cmd_status_output(cmd)
+
+        if status != 0:
+            raise error.TestFail("failed to unload driver, %s" % output)
+        if params["os_type"] == "windows":
+            if "device(s) disabled" not in output:
+                raise error.TestFail("failed to unload driver, %s" % output)
+
+    def check_driver(session, cmd, pattern):
+        output = session.cmd_output(cmd)
+        driver_id = re.findall(pattern, output)
+        if not driver_id:
+            raise error.TestFail("Didn't find driver info from guest %s"
+                                 % output)
+
+        driver_id = driver_id[0]
+        if params["os_type"] == "windows":
+            driver_id = '^&'.join(driver_id.split('&'))
+        return driver_id
+
     error.context("Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -36,27 +70,28 @@ def run(test, params, env):
     driver_load_cmd = params["driver_load_cmd"]
     driver_unload_cmd = params["driver_unload_cmd"]
 
-    error.context("Get the driver module infor from guest.", logging.info)
-    output = session.cmd_output(driver_id_cmd)
-    driver_id = re.findall(driver_id_pattern, output)
-    if not driver_id:
-        raise error.TestError("Can not find driver module info from guest:"
-                              "%s" % output)
+    devcon = params.get("devcon")
+    if devcon:
+        error.context("Copy devcon.exe from winutils.iso to C:\\")
+        copy_devcon_cmd = params.get("devcon") % \
+            utils_misc.get_winutils_vol(session)
+        session.cmd(copy_devcon_cmd)
 
-    driver_id = driver_id[0]
-    if params["os_type"] == "windows":
-        driver_id = '^&'.join(driver_id.split('&'))
-    driver_load_cmd = driver_load_cmd.replace("DRIVER_ID", driver_id)
-    driver_unload_cmd = driver_unload_cmd.replace("DRIVER_ID", driver_id)
-
-    for repeat in range(0, int(params.get("repeats", "1"))):
+    for repeat in range(0, int(params.get("repeats", 1))):
         error.context("Unload and load the driver. Round %s" % repeat,
                       logging.info)
-        session.cmd(driver_unload_cmd)
+        error.context("Get driver info from guest", logging.info)
+        driver_id = check_driver(session, driver_id_cmd, driver_id_pattern)
+
+        error.context("Unload the driver", logging.info)
+        unload_driver(session, driver_unload_cmd, driver_id)
         time.sleep(5)
-        session.cmd(driver_load_cmd)
+
+        error.context("Load the driver", logging.info)
+        load_driver(session, driver_load_cmd, driver_id)
         time.sleep(5)
-        if params.get("test_after_load"):
-            test_after_load = params.get("test_after_load")
-            utils_test.run_virt_sub_test(test, params, env,
-                                         sub_type=test_after_load)
+
+    if params.get("test_after_load"):
+        test_after_load = params.get("test_after_load")
+        utils_test.run_virt_sub_test(test, params, env,
+                                     sub_type=test_after_load)

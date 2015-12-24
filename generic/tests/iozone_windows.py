@@ -26,10 +26,13 @@ def run(test, params, env):
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
     analysisdir = os.path.join(test.resultsdir, 'analysis_%s' % test.iteration)
+    device_key = params.get("device_key", "VolumeName")
+    device_value = params.get("device_value", "System")
 
     # Run IOzone and record its results
     drive_letter = utils_misc.get_winutils_vol(session)
-    c = params["iozone_cmd"] % drive_letter
+    disk_letter = utils_misc.get_win_disk_vol(session, device_key, device_value)
+    c = params["iozone_cmd"] % (drive_letter, disk_letter)
     t = int(params.get("iozone_timeout"))
     logging.info("Running IOzone command on guest, timeout %ss", t)
     results = session.cmd_output(cmd=c, timeout=t)

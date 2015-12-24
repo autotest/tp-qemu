@@ -37,6 +37,17 @@ def run(test, params, env):
                 break
         return vols
 
+    def virtio_driver_install(session, cmd, driver):
+        driver_install_timeout = int(params.get('driver_install_timeout', 720))
+        fail_flag = False
+        fail_logs = ""
+        try:
+            session.cmd(cmd, timeout=driver_install_timeout)
+        except Exception, msg:
+            fail_flag = True
+            fail_logs += "driver %s install failed. Msg %s" % (driver, msg)
+            error.context("Install drivers %s failed " % driver, logging.info)
+        return (fail_flag, fail_logs)
     if params.get("case_type") == "driver_install":
         error.context("Update the device type to default.", logging.info)
         default_drive_format = params.get("default_drive_format", "ide")
@@ -181,8 +192,11 @@ def run(test, params, env):
             vol_virtio = vol_info[0][0]
     else:
         vol_utils = vol_info[0][0]
-
+    fail_flag = False
+    fail_log = ''
+    nic_index = 0
     error.context("Install drivers", logging.info)
+    vm.set_link(vm.virtnet[1].netdev_id, False)
     for driver in drivers_install:
         error.context("Install drivers %s" % driver, logging.info)
         if params.get("kill_rundll", "no") == "yes":
@@ -194,21 +208,32 @@ def run(test, params, env):
         if install_cmds:
             cmd = re.sub("WIN_UTILS", vol_utils, install_cmds[driver])
             cmd = re.sub("WIN_VIRTIO", vol_virtio, cmd)
-            session.cmd(cmd, timeout=driver_install_timeout)
-            session = vm.reboot(session)
+            f_flag_tmp, log_tmp = virtio_driver_install(session, cmd, driver)
+            if f_flag_tmp:
+                fail_flag = True
+                fail_log += log_tmp
+            session = vm.reboot(nic_index=nic_index)
+    driver_debug_file = params_driver.get("driver_debug_file").split(',')
+    error.context("Get Driver installation log", logging.info)
+    for _file in driver_debug_file:
+        s, o = session.cmd_status_output("dir %s" % _file)
+        if not s:
+            output = session.cmd("type %s" % _file)
+            g_file_host = _file.split("\\")[-1].strip()
+            g_debug_log = open("%s/%s" % (test.resultsdir, g_file_host), "w")
+            g_debug_log.write("%s\n" % output)
+            g_debug_log.close()
 
     if params.get("check_info") == "yes":
-        fail_log = "Details check failed in guest."
+        fail_log += "Details check failed in guest."
         fail_log += " Please check the error_log. "
     else:
-        fail_log = "Failed to install:"
+        fail_log += "Failed to install:"
     error_log = open("%s/error_log" % test.resultsdir, "w")
-    fail_flag = False
     error.context("Check driver available in guest", logging.info)
     if setup_ps:
         setup_cmd = params.get("python_scripts")
         session.cmd(setup_cmd)
-
     for driver in drivers_install:
         error_log.write("For driver %s:\n" % driver)
         if isinstance(check_str[driver], dict):
@@ -223,10 +248,10 @@ def run(test, params, env):
         else:
             output = session.cmd(check_cmds[driver])
             if not re.findall(check_str[driver], output, re.I):
-                fail_falg = True
+                fail_flag = True
                 fail_log += " %s" % driver
                 error_log.write("Check command output: %s\n" % output)
-
+    error_log.close()
     if fail_flag:
         raise error.TestFail(fail_log)
 
@@ -238,3 +263,4 @@ def run(test, params, env):
                 continue
             for cmd in op_cmds[driver]:
                 session.cmd(cmd)
+    vm.set_link(vm.virtnet[1].netdev_id, True)

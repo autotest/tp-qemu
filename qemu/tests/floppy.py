@@ -45,7 +45,7 @@ def run(test, params, env):
 
         :return: path to new floppy file.
         """
-        error.context("creating test floppy")
+        error.context("creating test floppy", logging.info)
         floppy = params["floppy_name"]
         if not os.path.isabs(floppy):
             floppy = os.path.join(data_dir.get_data_dir(), floppy)
@@ -55,7 +55,7 @@ def run(test, params, env):
 
     def cleanup_floppy(path):
         """ Removes created floppy """
-        error.context("cleaning up temp floppy images")
+        error.context("cleaning up temp floppy images", logging.info)
         os.remove("%s" % path)
 
     def lazy_copy(vm, dst_path, check_path, copy_timeout=None, dsize=None):
@@ -138,8 +138,7 @@ def run(test, params, env):
             error.context("Copying file to the floppy")
             md5_cmd = params.get("md5_cmd")
             if md5_cmd:
-                md5_source = self.session.cmd("%s %s" % (params["md5_cmd"],
-                                                         source_file))
+                md5_source = self.session.cmd("%s %s" % (md5_cmd, source_file))
                 try:
                     md5_source = md5_source.split(" ")[0]
                 except IndexError:
@@ -155,8 +154,7 @@ def run(test, params, env):
 
             error.context("Checking if the file is unchanged after copy")
             if md5_cmd:
-                md5_dest = self.session.cmd("%s %s" % (params["md5_cmd"],
-                                                       dest_file))
+                md5_dest = self.session.cmd("%s %s" % (md5_cmd, dest_file))
                 try:
                     md5_dest = md5_dest.split(" ")[0]
                 except IndexError:
@@ -179,7 +177,7 @@ def run(test, params, env):
     class Multihost(MiniSubtest):
 
         def test(self):
-            error.context("Preparing migration env and floppies.")
+            error.context("Preparing migration env and floppies.", logging.info)
             mig_protocol = params.get("mig_protocol", "tcp")
             self.mig_type = utils_test.qemu.MultihostMigration
             if mig_protocol == "fd":
@@ -196,6 +194,8 @@ def run(test, params, env):
             self.mig = self.mig_type(test, params, env, False, )
 
             if self.is_src:
+                vm = env.get_vm(self.vms[0])
+                vm.destroy()
                 self.floppy = create_floppy(params)
                 self.floppy_dir = os.path.dirname(self.floppy)
                 params["start_vm"] = "yes"
@@ -217,6 +217,7 @@ def run(test, params, env):
 
         def test(self):
             super(test_multihost_write, self).test()
+
             copy_timeout = int(params.get("copy_timeout", 480))
             self.mount_dir = params["mount_dir"]
             format_floppy_cmd = params["format_floppy_cmd"]
@@ -227,19 +228,19 @@ def run(test, params, env):
                        'dst': self.dsthost,
                        "type": "file_trasfer"}
             filename = "orig"
+            src_file = os.path.join(self.mount_dir, filename)
 
             if self.is_src:  # Starts in source
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
 
                 if self.mount_dir:
-                    session.cmd("rm -f %s" % (os.path.join(self.mount_dir,
-                                                           filename)))
+                    session.cmd("rm -f %s" % (src_file))
                     session.cmd("rm -f %s" % (check_copy_path))
                 # If mount_dir specified, treat guest as a Linux OS
                 # Some Linux distribution does not load floppy at boot
                 # and Windows needs time to load and init floppy driver
-                error.context("Prepare floppy for writing.")
+                error.context("Prepare floppy for writing.", logging.info)
                 if self.mount_dir:
                     lsmod = session.cmd("lsmod")
                     if 'floppy' not in lsmod:
@@ -249,16 +250,15 @@ def run(test, params, env):
 
                 session.cmd(format_floppy_cmd)
 
-                error.context("Mount and copy data")
+                error.context("Mount and copy data.", logging.info)
                 if self.mount_dir:
                     session.cmd("mount %s %s" % (guest_floppy_path,
                                                  self.mount_dir),
                                 timeout=30)
 
-                error.context("File copying test")
+                error.context("File copying test.", logging.info)
 
-                pid = lazy_copy(vm, os.path.join(self.mount_dir, filename),
-                                check_copy_path, copy_timeout)
+                pid = lazy_copy(vm, src_file, check_copy_path, copy_timeout)
 
             sync = SyncData(self.mig.master_id(), self.mig.hostid,
                             self.mig.hosts, sync_id, self.mig.sync_server)
@@ -270,39 +270,36 @@ def run(test, params, env):
             if not self.is_src:  # Starts in destination
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
-                error.context("Wait for copy finishing.")
-                status = int(session.cmd_status("kill %s" % pid,
-                                                timeout=copy_timeout))
-                if status not in [0]:
+                error.context("Wait for copy finishing.", logging.info)
+                status = session.cmd_status("kill %s" % pid,
+                                            timeout=copy_timeout)
+                if status != 0:
                     raise error.TestFail("Copy process was terminatted with"
                                          " error code %s" % (status))
 
                 session.cmd_status("kill -s SIGINT %s" % (pid),
                                    timeout=copy_timeout)
 
-                error.context("Check floppy file checksum.")
-                md5_cmd = params.get("md5_cmd")
+                error.context("Check floppy file checksum.", logging.info)
+                md5_cmd = params.get("md5_cmd", "md5sum")
                 if md5_cmd:
-                    md5_floppy = session.cmd("%s %s" % (params.get("md5_cmd"),
-                                                        os.path.join(self.mount_dir, filename)))
+                    md5_floppy = session.cmd("%s %s" % (md5_cmd, src_file))
                     try:
                         md5_floppy = md5_floppy.split(" ")[0]
                     except IndexError:
                         error.TestError("Failed to get md5 from source file,"
                                         " output: '%s'" % md5_floppy)
-                    md5_check = session.cmd("%s %s" % (params.get("md5_cmd"),
-                                                       check_copy_path))
+                    md5_check = session.cmd("%s %s" % (md5_cmd, check_copy_path))
                     try:
                         md5_check = md5_check.split(" ")[0]
                     except IndexError:
-                        error.TestError("Failed to get md5 from source file,"
+                        error.TestError("Failed to get md5 from dst file,"
                                         " output: '%s'" % md5_floppy)
                     if md5_check != md5_floppy:
-                        raise error.TestFail("There is mistake in copying,"
-                                             " it is possible to check file on vm.")
+                        raise error.TestFail("There is mistake in copying, "
+                                             "it is possible to check file on vm.")
 
-                session.cmd("rm -f %s" % (os.path.join(self.mount_dir,
-                                                       filename)))
+                session.cmd("rm -f %s" % (src_file))
                 session.cmd("rm -f %s" % (check_copy_path))
 
             self.mig._hosts_barrier(self.mig.hosts, self.mig.hosts,
@@ -315,6 +312,7 @@ def run(test, params, env):
 
         def test(self):
             super(test_multihost_eject, self).test()
+
             self.mount_dir = params.get("mount_dir", None)
             format_floppy_cmd = params["format_floppy_cmd"]
             floppy = params["floppy_name"]
@@ -332,18 +330,18 @@ def run(test, params, env):
                        'dst': self.dsthost,
                        "type": "file_trasfer"}
             filename = "orig"
+            src_file = os.path.join(self.mount_dir, filename)
 
             if self.is_src:  # Starts in source
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
 
                 if self.mount_dir:   # If linux
-                    session.cmd("rm -f %s" % (os.path.join(self.mount_dir,
-                                                           filename)))
+                    session.cmd("rm -f %s" % (src_file))
                 # If mount_dir specified, treat guest as a Linux OS
                 # Some Linux distribution does not load floppy at boot
                 # and Windows needs time to load and init floppy driver
-                error.context("Prepare floppy for writing.")
+                error.context("Prepare floppy for writing.", logging.info)
                 if self.mount_dir:   # If linux
                     lsmod = session.cmd("lsmod")
                     if 'floppy' not in lsmod:

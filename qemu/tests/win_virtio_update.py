@@ -24,6 +24,19 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
+    def reboot(vm, session=None):
+        nic_idx = len(vm.virtnet) - 1
+        while nic_idx >= 0:
+            try:
+                return vm.reboot(session, nic_index=nic_idx)
+            except Exception:
+                nic_idx -= 1
+                if nic_idx < 0:
+                    raise
+                logging.warn("Unable to login guest, "
+                             "try to login via nic %d" % nic_idx)
+
     def check_cdrom(timeout):
         cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"
         cdrom_chk_cmd += " cmd && diskpart /s cmd"
@@ -195,7 +208,7 @@ def run(test, params, env):
             cmd = re.sub("WIN_UTILS", vol_utils, install_cmds[driver])
             cmd = re.sub("WIN_VIRTIO", vol_virtio, cmd)
             session.cmd(cmd, timeout=driver_install_timeout)
-            session = vm.reboot(session)
+            session = reboot(vm, session)
 
     if params.get("check_info") == "yes":
         fail_log = "Details check failed in guest."

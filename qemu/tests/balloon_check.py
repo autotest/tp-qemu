@@ -168,7 +168,7 @@ class BallooningTest(object):
             try:
                 output = self.memory_check("after subtest", ballooned_mem)
             except error.TestFail:
-                return None
+                return tuple()
             return output
 
         if self.test_round < 1:
@@ -211,11 +211,13 @@ class BallooningTest(object):
             ballooned_mem = self.ori_mem - expect_mem
             msg = "Wait memory balloon back after "
             msg += params_tag['sub_test_after_balloon']
-            mmem, gmem = utils_misc.wait_for(_memory_check_after_sub_test,
-                                             timeout, 0, 5, msg)
-
-            self.current_mmem = mmem
-            self.current_gmem = gmem
+            ret = utils_misc.wait_for(_memory_check_after_sub_test,
+                                      timeout, 0, 5, msg)
+            if ret is None:
+                raise error.TestFail("% timeout in 5s" % msg)
+            if not ret and isinstance(ret, tuple):
+                raise
+            self.current_mmem, self.current_gmem = ret
         return False
 
     def reset_memory(self):

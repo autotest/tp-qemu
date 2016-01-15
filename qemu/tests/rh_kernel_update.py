@@ -20,16 +20,16 @@ def run(test, params, env):
     2) Get latest kernel package link from brew
     3) Verify the version of guest kernel
     4) Compare guest kernel version and brew latest kernel version
-    5) Backup grub.cfg file
+    5) Backup boot cfg file
     6) Install guest kernel firmware (Optional)
     7) Install guest kernel
     8) Install guest kernel debuginfo (Optional)
-    9) Backup grub.cfg after installing new kernel
+    9) Backup boot cfg file after installing new kernel
     10) Installing virtio driver (Optional)
     11) Backup initrd file
     12) Update initrd file
     13) Make the new installed kernel as default
-    14) Backup grup.cfg after setting new kernel as default
+    14) Backup boot cfg file after setting new kernel as default
     15) Update the guest kernel cmdline (Optional)
     16) Reboot guest after updating kernel
     17) Verifying the virtio drivers (Optional)
@@ -296,19 +296,17 @@ def run(test, params, env):
     logging.info("Kernel rpm    :  %s" % kernel_rpm)
     logging.info("Firmware rpm  :  %s" % firmware_rpm)
 
-    grub_cfg_path = params.get("grub_cfg_path", "/boot/grub/grub.conf")
-    cp_grubcf_cmd = "/bin/cp %s %s-bk" % (grub_cfg_path, grub_cfg_path)
-    cp_grubcf_cmd = params.get("cp_grubcf_cmd", cp_grubcf_cmd)
-    restore_grubcf_cmd = "/bin/cp %s-bk %s" % (grub_cfg_path, grub_cfg_path)
-    restore_grubcf_cmd = params.get("restore_grubcf_cmd", restore_grubcf_cmd)
+    boot_cfg_path = params.get("boot_cfg_path", "/boot/grub/grub.conf")
+    bootcfg_backup_cmd = "/bin/cp {0} {0}-bk".format(boot_cfg_path)
+    bootcfg_restore_cmd = "/bin/cp {0}-bk {0}".format(boot_cfg_path)
     count = 0
 
     try:
-        error.context("Backup grub.cfg file")
-        s, o = session.cmd_status_output(cp_grubcf_cmd)
+        error.context("Backup '%s'" % boot_cfg_path)
+        s, o = session.cmd_status_output(bootcfg_backup_cmd)
         if s != 0:
-            logging.error(o)
-            raise error.TestError("Fail to backup the grub.cfg")
+            raise error.TestError("Failed to backup '%s', guest output: '%s'"
+                                  % (boot_cfg_path, o))
         count = 1
 
         # judge if need to install a new kernel
@@ -347,12 +345,12 @@ def run(test, params, env):
             if status:
                 count = 2
 
-            error.context("Backup grub.cfg after installing new kernel",
-                          logging.info)
-            s, o = session.cmd_status_output(cp_grubcf_cmd)
+            error.context("Backup '%s' after installing new kernel"
+                          % boot_cfg_path, logging.info)
+            s, o = session.cmd_status_output(bootcfg_backup_cmd)
             if s != 0:
-                msg = ("Fail to backup the grub.cfg after updating kernel,"
-                       " guest output: '%s'" % o)
+                msg = ("Fail to backup '%s' after updating kernel,"
+                       " guest output: '%s'" % (boot_cfg_path, o))
                 logging.error(msg)
                 raise error.TestError(msg)
 
@@ -422,10 +420,12 @@ def run(test, params, env):
 
             count = 4
             error.context(
-                "Backup grup.cfg after setting new kernel as default")
-            s, o = session.cmd_status_output(cp_grubcf_cmd)
+                "Backup '%s' after setting new kernel as default"
+                % boot_cfg_path)
+            s, o = session.cmd_status_output(bootcfg_backup_cmd)
             if s != 0:
-                msg = ("Fail to backup the grub.cfg, guest output: '%s'" % o)
+                msg = ("Fail to backup '%s', guest output: '%s'"
+                       % (boot_cfg_path, o))
                 logging.error(msg)
                 raise error.TestError(msg)
 
@@ -477,11 +477,11 @@ def run(test, params, env):
                                      " virtio drivers")
     except Exception:
         if count in [4, 3, 1]:
-            # restore grub.cfg
-            s, o = session.cmd_status_output(restore_grubcf_cmd, timeout=100)
+            # restore boot cfg
+            s, o = session.cmd_status_output(bootcfg_restore_cmd, timeout=100)
             if s != 0:
                 logging.error("Failed to execute cmd '%s' in guest,"
-                              " guest output: '%s'", restore_grubcf_cmd, o)
+                              " guest output: '%s'", bootcfg_restore_cmd, o)
         elif count == 2 and restore_initrd_cmd:
             # restore initrd file
             s, o = session.cmd_status_output(restore_initrd_cmd, timeout=200)

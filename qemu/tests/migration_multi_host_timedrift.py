@@ -34,6 +34,7 @@ def run(test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
+            self.is_src = params["hostid"] == self.srchost
             self.vms = params["vms"].split()
             self.migrate_count = int(params.get("migrate_count", "1"))
             self.migration_timeout = int(params.get("migrate_timeout", "240"))
@@ -55,12 +56,32 @@ def run(test, params, env):
             self.sync = SyncData(self.master_id(), self.hostid, self.hosts,
                                  self.id, self.sync_server)
 
+        @error.context_aware
         def check_diff(self, mig_data):
             logging.debug("Sleep 10s")
             time.sleep(10)
             time_drifted = False
             for vm in mig_data.vms:
                 session = vm.wait_for_login()
+
+                if self.is_src:
+                    error.context("Check the clocksource in guest.",
+                                  logging.info)
+                    check_clocksource_cmd = params.get("check_clocksource_cmd")
+                    clocksource = params.get("clocksource", "kvm-clock")
+                    current_clocksource = session.cmd(check_clocksource_cmd)
+                    logging.info("current_clocksource in guest is: '%s'" %
+                                 current_clocksource)
+                    if clocksource == "kvm-clock":
+                        s = current_clocksource == "kvm-clock"
+                    else:
+                        s = current_clocksource != "kvm-clock"
+                    if not s:
+                        raise error.TestFail("Guest didn't use '%s' "
+                                             "clocksource" % clocksource)
+
+                error.context("Check the system time on guest and host.",
+                              logging.info)
                 (ht, gt) = utils_test.get_time(session, self.time_command,
                                                self.time_filter_re,
                                                self.time_format)
@@ -103,8 +124,6 @@ def run(test, params, env):
 
         def ping_pong_migrate(self):
             for _ in range(self.migrate_count):
-                logging.info("File transfer not ended, starting"
-                             " a round of migration...")
                 self.sync.sync(True, timeout=self.migration_timeout)
                 self.migrate_wait(self.vms, self.srchost, self.dsthost,
                                   start_work=self.check_diff,
@@ -120,6 +139,7 @@ def run(test, params, env):
 
             self.ping_pong_migrate()
 
+    error.context("Sync host time with ntp server.", logging.info)
     sync_cmd = params.get("host_sync_time_cmd", "ntpdate -b pool.ntp.org")
     utils.run(sync_cmd, 20)
 

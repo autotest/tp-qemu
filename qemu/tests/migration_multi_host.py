@@ -111,9 +111,9 @@ def run(test, params, env):
             if params.get("check_vm_before_migration", "yes") == "no":
                 params["check_vm_needs_restart"] = "no"
 
-            if params.get("start_migration_timeout") == "random":
-                min_t = int(params.get("min_random_timeout"))
-                max_t = int(params.get("max_random_timeout"))
+            if params.get("enable_random_timeout") == "yes":
+                min_t = int(params.get("min_random_timeout", 1))
+                max_t = int(params.get("max_random_timeout", 5))
                 random_timeout = random.randint(min_t, max_t)
                 params["start_migration_timeout"] = random_timeout
                 error.context("Wait for %d seconds, then do migration."

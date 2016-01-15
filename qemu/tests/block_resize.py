@@ -67,7 +67,14 @@ def run(test, params, env):
                                                      data_dir.get_data_dir())
     data_image_dev = vm.get_block({'file': data_image_filename})
 
-    block_size_cmd = params["block_size_cmd"]
+    drive_path = ""
+    if params.get("os_type") == 'linux':
+        drive_id = params["blk_extra_params_%s" % data_image].split("=")[1]
+        drive_path = utils_misc.get_linux_drive_path(session, drive_id)
+        if not drive_path:
+            raise error.TestError("Failed to get '%s' drive path" % data_image)
+
+    block_size_cmd = params["block_size_cmd"].format(drive_path)
     block_size_pattern = params.get("block_size_pattern")
     need_reboot = params.get("need_reboot", "no") == "yes"
     accept_ratio = float(params.get("accept_ratio", 0))

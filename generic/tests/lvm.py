@@ -2,6 +2,7 @@ import os
 import logging
 
 from autotest.client.shared import error
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -43,9 +44,15 @@ def run(test, params, env):
     lv_path = "/dev/%s/%s" % (vg_name, lv_name)
     clean = params.get("clean", "yes")
     timeout = params.get("lvm_timeout", "600")
-    output = session.cmd_output("ls /dev/[hvs]da")
-    disk_prefix = output.strip()[:len('/dev/hd')]
-    disks = "%sb %sc" % (disk_prefix, disk_prefix)
+
+    disk_list = []
+    for disk in params.objects("images")[-2:]:
+        d_id = params["blk_extra_params_%s" % disk].split("=")[1]
+        d_path = utils_misc.get_linux_drive_path(session, d_id)
+        if not d_path:
+            raise error.TestError("Failed to get '%s' drive path" % d_id)
+        disk_list.append(d_path)
+    disks = " ".join(disk_list)
 
     try:
         error.context("adding physical volumes %s" % disks, logging.info)

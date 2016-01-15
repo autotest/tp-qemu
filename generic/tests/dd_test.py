@@ -8,6 +8,7 @@ import logging
 import aexpect
 
 from autotest.client.shared import error
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -30,6 +31,12 @@ def run(test, params, env):
             return "/dev/random"
         elif filename == "URANDOM":
             return "/dev/urandom"
+        elif filename in params.objects("images"):
+            drive_id = params["blk_extra_params_%s" % filename].split("=")[1]
+            drive_path = utils_misc.get_linux_drive_path(session, drive_id)
+            if drive_path:
+                return drive_path
+            raise error.TestError("Failed to get '%s' drive path" % filename)
         else:
             # get all matching filenames
             try:

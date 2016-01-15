@@ -33,6 +33,17 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     cmd_timeout = int(params.get("cmd_timeout", 360))
 
+    drive_path = ""
+    if params.get("os_type") == 'linux':
+        drive_name = params.objects("images")[-1]
+        drive_id = params["blk_extra_params_%s" % drive_name].split("=")[1]
+        drive_path = utils_misc.get_linux_drive_path(session, drive_id)
+        if not drive_path:
+            raise error.TestError("Failed to get '%s' drive path" % drive_name)
+
+    show_dev_cmd = params["show_dev_cmd"].format(drive_path)
+    show_mount_cmd = params["show_mount_cmd"].format(drive_path)
+
     # Create a partition on disk
     create_partition_cmd = params.get("create_partition_cmd")
     if create_partition_cmd:
@@ -58,7 +69,7 @@ def run(test, params, env):
             raise error.TestFail(
                 "Failed to create partition with error: %s" % output)
 
-    format_cmd = params.get("format_cmd")
+    format_cmd = params.get("format_cmd").format(drive_path)
     if format_cmd:
         error.context("Format the disk with cmd '%s'" % format_cmd,
                       logging.info)
@@ -67,12 +78,11 @@ def run(test, params, env):
         if status != 0:
             raise error.TestFail("Failed to format with error: %s" % output)
 
-    mount_cmd = params.get("mount_cmd")
+    mount_cmd = params.get("mount_cmd").format(drive_path)
     if mount_cmd:
         error.context("Mount the disk with cmd '%s'" % mount_cmd, logging.info)
         status, output = session.cmd_status_output(mount_cmd, timeout=cmd_timeout)
         if status != 0:
-            show_dev_cmd = params["show_dev_cmd"]
             device_list = session.cmd_output_safe(show_dev_cmd)
             logging.debug("The devices which will be mounted are: %s" % device_list)
             raise error.TestFail("Failed to mount with error: %s" % output)
@@ -105,12 +115,11 @@ def run(test, params, env):
             raise error.TestFail("The content written to file has changed, "
                                  "from: %s, to: %s" % (ranstr, output.strip()))
 
-    umount_cmd = params.get("umount_cmd")
+    umount_cmd = params.get("umount_cmd").format(drive_path)
     if umount_cmd:
         error.context("Unmounting disk(s) after file write/read operation")
         status, output = session.cmd_status_output(umount_cmd, timeout=cmd_timeout)
         if status != 0:
-            show_mount_cmd = params["show_mount_cmd"]
             mount_list = session.cmd_output_safe(show_mount_cmd)
             logging.debug("The mounted devices are: %s" % mount_list)
             raise error.TestFail("Failed to umount with error: %s" % output)

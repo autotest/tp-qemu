@@ -531,19 +531,16 @@ def run(test, params, env):
         error.context("Shutdown command is sent, guest is going down...",
                       logging.info)
         try:
-            session.sendline(params.get("shutdown_command"))
-            vm.pause()
-            if not vm.wait_until_dead(login_timeout):
-                vm.destroy(gracefully=True)
-                image_filename = _get_image_filename(img_name,
-                                                     enable_gluster,
-                                                     img_fmt)
-                backup_img_chain(image_filename)
-                raise error.TestFail("Can not shutdown guest")
-
-            logging.info("Guest is down")
+            vm.graceful_shutdown(timeout=login_timeout)
+        except Exception:
+            image_filename = _get_image_filename(img_name,
+                                                 enable_gluster,
+                                                 img_fmt)
+            backup_img_chain(image_filename)
+            raise
         finally:
-            session.close()
+            vm.destroy(gracefully=True)
+            utils.system("sync")
 
     def backup_img_chain(image_file):
         """

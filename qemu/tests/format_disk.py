@@ -41,9 +41,6 @@ def run(test, params, env):
         if not drive_path:
             raise error.TestError("Failed to get '%s' drive path" % drive_name)
 
-    show_dev_cmd = params["show_dev_cmd"].format(drive_path)
-    show_mount_cmd = params["show_mount_cmd"].format(drive_path)
-
     # Create a partition on disk
     create_partition_cmd = params.get("create_partition_cmd")
     if create_partition_cmd:
@@ -69,7 +66,7 @@ def run(test, params, env):
             raise error.TestFail(
                 "Failed to create partition with error: %s" % output)
 
-    format_cmd = params.get("format_cmd").format(drive_path)
+    format_cmd = params.get("format_cmd", "").format(drive_path)
     if format_cmd:
         error.context("Format the disk with cmd '%s'" % format_cmd,
                       logging.info)
@@ -78,13 +75,16 @@ def run(test, params, env):
         if status != 0:
             raise error.TestFail("Failed to format with error: %s" % output)
 
-    mount_cmd = params.get("mount_cmd").format(drive_path)
+    mount_cmd = params.get("mount_cmd", "").format(drive_path)
     if mount_cmd:
         error.context("Mount the disk with cmd '%s'" % mount_cmd, logging.info)
-        status, output = session.cmd_status_output(mount_cmd, timeout=cmd_timeout)
+        status, output = session.cmd_status_output(mount_cmd,
+                                                   timeout=cmd_timeout)
         if status != 0:
+            show_dev_cmd = params.get("show_dev_cmd", "").format(drive_path)
             device_list = session.cmd_output_safe(show_dev_cmd)
-            logging.debug("The devices which will be mounted are: %s" % device_list)
+            logging.debug("The devices which will be mounted are: %s"
+                          % device_list)
             raise error.TestFail("Failed to mount with error: %s" % output)
 
     testfile_name = params.get("testfile_name")
@@ -94,7 +94,8 @@ def run(test, params, env):
 
         writefile_cmd = params["writefile_cmd"]
         writefile_cmd = writefile_cmd % (ranstr, testfile_name)
-        status, output = session.cmd_status_output(writefile_cmd, timeout=cmd_timeout)
+        status, output = session.cmd_status_output(writefile_cmd,
+                                                   timeout=cmd_timeout)
         if status != 0:
             raise error.TestFail("Write to file error: %s" % output)
 
@@ -102,24 +103,29 @@ def run(test, params, env):
                       logging.info)
         md5chk_cmd = params.get("md5chk_cmd")
         if md5chk_cmd:
-            status, output = session.cmd_status_output(md5chk_cmd, timeout=cmd_timeout)
+            status, output = session.cmd_status_output(md5chk_cmd,
+                                                       timeout=cmd_timeout)
             if status != 0:
                 raise error.TestFail("Check file md5sum error.")
 
         readfile_cmd = params["readfile_cmd"]
         readfile_cmd = readfile_cmd % testfile_name
-        status, output = session.cmd_status_output(readfile_cmd, timeout=cmd_timeout)
+        status, output = session.cmd_status_output(readfile_cmd,
+                                                   timeout=cmd_timeout)
         if status != 0:
             raise error.TestFail("Read file error: %s" % output)
         if output.strip() != ranstr:
             raise error.TestFail("The content written to file has changed, "
                                  "from: %s, to: %s" % (ranstr, output.strip()))
 
-    umount_cmd = params.get("umount_cmd").format(drive_path)
+    umount_cmd = params.get("umount_cmd", "").format(drive_path)
     if umount_cmd:
         error.context("Unmounting disk(s) after file write/read operation")
-        status, output = session.cmd_status_output(umount_cmd, timeout=cmd_timeout)
+        status, output = session.cmd_status_output(umount_cmd,
+                                                   timeout=cmd_timeout)
         if status != 0:
+            show_mount_cmd = params.get(
+                "show_mount_cmd", "").format(drive_path)
             mount_list = session.cmd_output_safe(show_mount_cmd)
             logging.debug("The mounted devices are: %s" % mount_list)
             raise error.TestFail("Failed to umount with error: %s" % output)

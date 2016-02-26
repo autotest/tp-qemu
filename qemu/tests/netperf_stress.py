@@ -219,6 +219,7 @@ def run(test, params, env):
                                         n_client.is_netperf_running(),
                                         left_time, 0, 5,
                                         "Wait netperf test finish %ss" % left_time)
+            time.sleep(5)
     finally:
         for n_server in netperf_servers:
             if n_server:

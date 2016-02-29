@@ -1,12 +1,18 @@
-import logging
 import os
+import logging
+import re
 
 from autotest.client import utils
 
 from virttest import postprocess_iozone
 from virttest import utils_misc
+from virttest import utils_test
+from virttest import error_context
+from virttest import funcatexit
+from avocado.core import exceptions
 
 
+@error_context.context_aware
 def run(test, params, env):
     """
     Run IOzone for windows on a windows guest:
@@ -19,27 +25,79 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
+
+    def post_result(results_path, analysisdir):
+        """
+        Pick results from an IOzone run, generate a series graphs
+
+        :params results_path: iozone test result path
+        :params analysisdir: output of analysis result
+        """
+        a = postprocess_iozone.IOzoneAnalyzer(list_files=[results_path],
+                                              output_dir=analysisdir)
+        a.analyze()
+        p = postprocess_iozone.IOzonePlotter(results_file=results_path,
+                                             output_dir=analysisdir)
+        p.plot_all()
+
+    def get_driver():
+        """
+        Get driver name
+        """
+        driver_name = params.get("driver_name", "")
+        drive_format = params.get("drive_format")
+        if not driver_name:
+            if "scsi" in drive_format:
+                driver_name = "vioscsi"
+            elif "virtio" in drive_format:
+                driver_name = "viostor"
+            else:
+                driver_name = None
+        return driver_name
+
     timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=timeout)
+    iozone_timeout = int(params.get("iozone_timeout"))
+    disk_letter = params["disk_letter"]
+    disk_index = params.get("disk_index", "2")
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
     analysisdir = os.path.join(test.resultsdir, 'analysis_%s' % test.iteration)
 
-    # Run IOzone and record its results
-    drive_letter = utils_misc.get_winutils_vol(session)
-    c = params["iozone_cmd"] % drive_letter
-    t = int(params.get("iozone_timeout"))
-    logging.info("Running IOzone command on guest, timeout %ss", t)
-    results = session.cmd_output(cmd=c, timeout=t)
+    vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
+    session = vm.wait_for_login(timeout=timeout)
+
+    driver_name = get_driver()
+    if driver_name:
+        if params.get("need_enable_verifier", "no") == "yes":
+            error_context.context("Enable %s driver verifier" % driver_name,
+                                  logging.info)
+            try:
+                session = utils_test.qemu.setup_win_driver_verifier(
+                          session, driver_name, vm, timeout)
+                funcatexit.register(env, params.get("type"),
+                                    utils_test.qemu.clear_win_driver_verifier,
+                                    session, vm, timeout)
+            except Exception, e:
+                raise exceptions.TestFail(e)
+
+    if params.get("format_disk", "no") == "yes":
+        error_context.context("Format disk", logging.info)
+        utils_misc.format_windows_disk(session, disk_index,
+                                       mountpoint=disk_letter)
+    winutils = utils_misc.get_winutils_vol(session)
+    cmd = params["iozone_cmd"]
+    iozone_cmd = re.sub("WIN_UTILS", winutils, cmd)
+    error_context.context("Running IOzone command on guest, timeout %ss"
+                          % iozone_timeout, logging.info)
+
+    status, results = session.cmd_status_output(cmd=iozone_cmd,
+                                                timeout=iozone_timeout)
+    error_context.context("Write results to %s" % results_path, logging.info)
+    if status != 0:
+        raise exceptions.TestFail("iozone test failed: %s" % results)
     utils.open_write_close(results_path, results)
 
-    # Postprocess the results using the IOzone postprocessing module
-    logging.info("Iteration succeed, postprocessing")
-    a = postprocess_iozone.IOzoneAnalyzer(list_files=[results_path],
-                                          output_dir=analysisdir)
-    a.analyze()
-    p = postprocess_iozone.IOzonePlotter(results_file=results_path,
-                                         output_dir=analysisdir)
-    p.plot_all()
+    if params.get("post_result", "no") == "yes":
+        error_context.context("Generate graph of test result", logging.info)
+        post_result(results_path, analysisdir)

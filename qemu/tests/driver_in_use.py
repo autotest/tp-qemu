@@ -44,30 +44,31 @@ def run(test, params, env):
         :return: return the background case thread if it's successful;
                  else raise error.
         """
-        if bg_stress_test:
-            error_context.context("Run test %s background" % bg_stress_test,
-                                  logging.info)
-            stress_thread = None
-            wait_time = float(params.get("wait_bg_time", 60))
-            target_process = params.get("target_process", "")
-            bg_stress_run_flag = params.get("bg_stress_run_flag")
-            env[bg_stress_run_flag] = False
-            stress_thread = utils.InterruptedThread(
-                utils_test.run_virt_sub_test, (test, params, env),
-                {"sub_type": bg_stress_test})
-            stress_thread.start()
-            if not utils_misc.wait_for(lambda: check_bg_running(session,
-                                                                target_process),
-                                       120, 0, 5):
-                raise exceptions.TestFail("Backgroud test %s is not "
-                                          "alive!" % bg_stress_test)
-            env["bg_status"] = 1
-            logging.debug("Wait %s test start" % bg_stress_test)
+        error_context.context("Run test %s background" % bg_stress_test,
+                              logging.info)
+        stress_thread = None
+        wait_time = float(params.get("wait_bg_time", 60))
+        target_process = params.get("target_process", "")
+        bg_stress_run_flag = params.get("bg_stress_run_flag")
+        # Need to set bg_stress_run_flag in some cases to make sure all
+        # necessary steps are active
+        env[bg_stress_run_flag] = False
+        stress_thread = utils.InterruptedThread(
+            utils_test.run_virt_sub_test, (test, params, env),
+            {"sub_type": bg_stress_test})
+        stress_thread.start()
+        if not utils_misc.wait_for(lambda: check_bg_running(session,
+                                   target_process), 120, 0, 5):
+            raise exceptions.TestFail("Backgroud test %s is not "
+                                      "alive!" % bg_stress_test)
+        if params.get("set_bg_stress_flag", "no") == "yes":
+            logging.info("Wait %s test start" % bg_stress_test)
             if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
                                        wait_time, 0, 0.5):
                 err = "Fail to start %s test" % bg_stress_test
                 raise exceptions.TestError(err)
-            return stress_thread
+        env["bg_status"] = 1
+        return stress_thread
 
     def run_subtest(sub_type):
         """
@@ -75,8 +76,7 @@ def run(test, params, env):
 
         :params: sub_type: Sub test.
         """
-        if sub_type:
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
+        utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     driver = params["driver_name"]
     timeout = int(params.get("login_timeout", 360))
@@ -88,12 +88,13 @@ def run(test, params, env):
 
     error_context.context("Enable %s driver verifier in guest" % driver,
                           logging.info)
-    session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm, timeout)
+    session = utils_test.qemu.setup_win_driver_verifier(session,
+                                                        driver, vm, timeout)
 
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")
-    sub_type = params.get("sub_test")
-    bg_stress_test = params.get("run_bgstress")
+    sub_type = params["sub_test"]
+    bg_stress_test = params["run_bgstress"]
     wait_time = float(params.get("wait_bg_time", 60))
     suppress_exception = bool(params.get("suppress_exception", "no"))
 
@@ -108,15 +109,8 @@ def run(test, params, env):
             stop_time = time.time() + wait_time
             while time.time() < stop_time:
                 if env["bg_status"] == 1:
-                    # When case "balloon_stress" as a background case, need
-                    # make sure that:
-                    # 1. balloon is doing in qemu side.
-                    # 2. video is palying in guest side.
-                    if bg_stress_test == "balloon_stress" and env["balloon_test"] == 1:
-                        run_subtest(sub_type)
-                    else:
-                        run_subtest(sub_type)
-                break
+                    run_subtest(sub_type)
+                    break
             if stress_thread:
                 stress_thread.join(timeout=timeout,
                                    suppress_exception=suppress_exception)
@@ -129,6 +123,7 @@ def run(test, params, env):
             vm.create(params=params)
         error_context.context("Clear %s driver verifier in guest" % driver,
                               logging.info)
-        session = utils_test.qemu.clear_win_driver_verifier(session, vm, timeout)
+        session = utils_test.qemu.clear_win_driver_verifier(session,
+                                                            vm, timeout)
         if session:
             session.close()

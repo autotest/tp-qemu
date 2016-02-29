@@ -1,41 +1,33 @@
 import re
 import logging
 import random
-
 from autotest.client.shared import error
-
 from virttest import qemu_monitor
 from virttest import utils_test
 from virttest import utils_misc
+from virttest.utils_test.qemu import MemoryBaseTest
 
 
-class BallooningTest(object):
+class BallooningTest(MemoryBaseTest):
 
     """
     Provide basic functions for memory ballooning test cases
     """
 
     def __init__(self, test, params, env):
-        self.test = test
-        self.params = params
-        self.env = env
-        self.free_mem_cmd = params["free_mem_cmd"]
+        self.test_round = 0
         self.ratio = float(params.get("ratio", 0.5))
+        super(BallooningTest, self).__init__(test, params, env)
 
         self.vm = env.get_vm(params["main_vm"])
-        self.vm.verify_alive()
-        timeout = int(params.get("login_timeout", 360))
-        self.session = self.vm.wait_for_login(timeout=timeout)
-
-        self.ori_mem = int(params['mem'])
+        self.session = self.get_session(self.vm)
+        self.ori_mem = self.get_vm_mem(self.vm)
         self.current_mmem = self.get_ballooned_memory()
         if self.current_mmem != self.ori_mem:
             self.balloon_memory(self.ori_mem)
         self.ori_gmem = self.get_memory_status()
         self.current_gmem = self.ori_gmem
         self.current_mmem = self.ori_mem
-
-        self.test_round = 0
 
     def get_ballooned_memory(self):
         """
@@ -48,8 +40,8 @@ class BallooningTest(object):
             output = self.vm.monitor.info("balloon")
             ballooned_mem = int(re.findall(r"\d+", str(output))[0])
             if self.vm.monitor.protocol == "qmp":
-                ballooned_mem *= 1024 ** -2
-        except qemu_monitor.MonitorError, emsg:
+                ballooned_mem = ballooned_mem / (1024 ** 2)
+        except qemu_monitor.MonitorError as emsg:
             logging.error(emsg)
             return 0
         return ballooned_mem
@@ -86,14 +78,12 @@ class BallooningTest(object):
         """
         error.context("Change VM memory to %s" % new_mem, logging.info)
         compare_mem = new_mem
-        if self.params["monitor_type"] == "qmp":
-            new_mem = new_mem * 1024 * 1024
-        # This should be replaced by proper monitor method call
-        self.vm.monitor.send_args_cmd("balloon value=%s" % new_mem)
+        self.vm.balloon(new_mem)
         balloon_timeout = float(self.params.get("balloon_timeout", 100))
         status = utils_misc.wait_for((lambda: compare_mem ==
                                       self.get_ballooned_memory()),
                                      balloon_timeout)
+        ballooned_mem = self.get_ballooned_memory()
         if status is None:
             raise error.TestFail("Failed to balloon memory to expect"
                                  " value during %ss" % balloon_timeout)
@@ -140,16 +130,17 @@ class BallooningTest(object):
         :rtype: tuple
         """
         max_size = self.ori_mem
+        min_size = self.params.get("minmem", "512M")
+        min_size = int(float(utils_misc.normalize_data_size(min_size)))
         if balloon_type == 'enlarge':
             min_size = self.current_mmem
         else:
             vm_total = self.get_memory_status()
-            status, output = self.session.cmd_status_output(self.free_mem_cmd)
-            if status != 0:
-                raise error.TestError("Can not get guest memory information")
-
-            vm_mem_free = int(re.findall(r'\d+', output)[0]) / 1024
-            min_size = vm_total - vm_mem_free
+            vm_mem_free = self.get_free_mem()
+            # leave 16M buffer to ensure os keep working when do
+            # evict balloon device.
+            used_size = vm_total - vm_mem_free + 16
+            min_size = max(used_size, min_size)
         return min_size, max_size
 
     @error.context_aware
@@ -168,7 +159,7 @@ class BallooningTest(object):
             try:
                 output = self.memory_check("after subtest", ballooned_mem)
             except error.TestFail:
-                return tuple()
+                return None
             return output
 
         if self.test_round < 1:
@@ -183,7 +174,6 @@ class BallooningTest(object):
                                   "should between %s and %s" % (expect_mem,
                                                                 min_size,
                                                                 max_size))
-
         self.balloon_memory(expect_mem)
         self.test_round += 1
         if expect_mem > self.current_mmem:
@@ -192,32 +182,30 @@ class BallooningTest(object):
             balloon_type = "evict"
         else:
             balloon_type = "command test"
-
         mmem, gmem = self.memory_check("after %s memory" % balloon_type,
                                        self.ori_mem - expect_mem)
         self.current_mmem = mmem
         self.current_gmem = gmem
         if (params_tag.get("run_sub_test_after_balloon", "no") == "yes" and
                 params_tag.get('sub_test_after_balloon')):
+            sub_type = params_tag['sub_test_after_balloon']
             should_quit = self.run_balloon_sub_test(self.test, params_tag,
-                                                    self.env,
-                                                    params_tag['sub_test_after_balloon'])
+                                                    self.env, sub_type)
             if should_quit == 1:
                 return True
+
             elif should_quit == 0:
                 expect_mem = self.ori_mem
 
             timeout = int(self.params.get("balloon_timeout", 100))
-            ballooned_mem = self.ori_mem - expect_mem
+            ballooned_mem = abs(self.ori_mem - expect_mem)
             msg = "Wait memory balloon back after "
             msg += params_tag['sub_test_after_balloon']
-            ret = utils_misc.wait_for(_memory_check_after_sub_test,
-                                      timeout, 0, 5, msg)
-            if ret is None:
-                raise error.TestFail("% timeout in 5s" % msg)
-            if not ret and isinstance(ret, tuple):
-                raise
-            self.current_mmem, self.current_gmem = ret
+            mmem, gmem = utils_misc.wait_for(_memory_check_after_sub_test,
+                                             timeout, 0, 5, msg)
+
+            self.current_mmem = mmem
+            self.current_gmem = gmem
         return False
 
     def reset_memory(self):
@@ -226,6 +214,18 @@ class BallooningTest(object):
         """
         if self.vm.is_alive():
             self.balloon_memory(self.ori_mem)
+
+    def get_free_mem(self):
+        """
+        Report free memory detect by OS.
+        """
+        return self.get_guest_free_mem(self.vm)
+
+    def get_total_mem(self):
+        """
+        Report total memory detect by OS.
+        """
+        return self.get_guest_total_mem(self.vm)
 
     def error_report(self, step, expect_value, monitor_value, guest_value):
         """
@@ -265,12 +265,13 @@ class BallooningTestWin(BallooningTest):
                             None
         """
         logging.error("Memory size mismatch %s:\n" % step)
-        error_msg = "Wanted to be changed: %s\n" % (self.ori_mem -
-                                                    expect_value)
+        error_msg = "Wanted to be changed: %s\n" % abs(self.ori_mem -
+                                                       expect_value)
         if monitor_value:
-            error_msg += "Changed in monitor: %s\n" % (self.ori_mem -
-                                                       monitor_value)
-        error_msg += "Changed in guest: %s\n" % (guest_value - self.ori_gmem)
+            error_msg += "Changed in monitor: %s\n" % abs(self.ori_mem -
+                                                          monitor_value)
+        error_msg += "Changed in guest: %s\n" % abs(
+            guest_value - self.ori_gmem)
         logging.error(error_msg)
 
     def get_memory_status(self):
@@ -280,16 +281,7 @@ class BallooningTestWin(BallooningTest):
         :return: the free memory size inside guest.
         :rtype: int
         """
-        free_mem_cmd = self.params['free_mem_cmd']
-        try:
-            # In Windows guest we get the free memory for memory compare
-            memory = self.session.cmd_output(free_mem_cmd)
-            memory = int(re.findall(r"\d+", memory)[0])
-            memory *= 1024 ** -1
-        except Exception, emsg:
-            logging.error(emsg)
-            return 0
-        return memory
+        return int(self.get_free_mem())
 
 
 class BallooningTestLinux(BallooningTest):
@@ -320,16 +312,8 @@ class BallooningTestLinux(BallooningTest):
     def get_memory_status(self):
         """
         Get Memory status inside guest.
-
-        :return: the size of total memory in guest
-        :rtype: int
         """
-        try:
-            memory = self.vm.get_current_memory_size()
-        except Exception, emsg:
-            logging.error(emsg)
-            return 0
-        return memory
+        return int(self.get_total_mem())
 
 
 @error.context_aware

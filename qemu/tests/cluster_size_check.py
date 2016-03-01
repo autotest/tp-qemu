@@ -3,8 +3,7 @@ import logging
 
 from autotest.client.shared import error
 
-from virttest import qemu_storage
-from virttest import data_dir
+from qemu.tests import qemu_disk_img
 
 
 @error.context_aware
@@ -45,29 +44,39 @@ def run(test, params, env):
         cfail = 0
         fail_log = ""
         image_name = params.get("images")
+        status_error = "yes" == params.get("status_error", "no")
         image_params = params.object_params(image_name)
-        image = qemu_storage.QemuImg(image_params, data_dir.get_data_dir(),
-                                     image_name)
+        image = qemu_disk_img.QemuImgTest(test, image_params, env,
+                                          image_name)
 
-        image.create(image_params)
-        output = image.info()
-        error.context("Check the cluster size from output", logging.info)
-        cluster_size = re.findall(parttern, output)
-        if cluster_size:
-            if cluster_size[0] != expect:
-                logging.error("Cluster size mismatch")
-                logging.error("Cluster size report by command: %s"
-                              % cluster_size)
-                logging.error("Cluster size expect: %s" % expect)
+        filename, result = image.create(image_params, ignore_errors=True)
+
+        if status_error:
+            if result.exit_status == 0:
+                logging.error("Return success with invalid Cluster size: %s"
+                              % csize_set)
+                logging.error("%s.\n" % result)
                 cfail += 1
-                fail_log += "Cluster size mismatch when set it to "
-                fail_log += "%s.\n" % csize_set
         else:
-            logging.error("Can not get the cluster size from command: %s"
-                          % output)
-            cfail += 1
-            fail_log += "Can not get the cluster size from command:"
-            fail_log += " %s\n" % output
+            output = image.info()
+            error.context("Check the cluster size from output", logging.info)
+            cluster_size = re.findall(parttern, output)
+            if cluster_size:
+                if cluster_size[0] != expect:
+                    logging.error("Cluster size mismatch")
+                    logging.error("Cluster size report by command: %s"
+                                  % cluster_size)
+                    logging.error("Cluster size expect: %s" % expect)
+                    cfail += 1
+                    fail_log += "Cluster size mismatch when set it to "
+                    fail_log += "%s.\n" % csize_set
+            else:
+                logging.error("Can not get the cluster size from command: %s"
+                              % output)
+                cfail += 1
+                fail_log += "Can not get the cluster size from command:"
+                fail_log += " %s\n" % output
+
         return cfail, fail_log
 
     fail = 0

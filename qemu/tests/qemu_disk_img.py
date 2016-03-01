@@ -5,6 +5,7 @@ import logging
 from autotest.client.shared import error
 from autotest.client import utils
 
+from virttest import data_dir
 from virttest import env_process
 from virttest import storage
 from virttest import qemu_storage
@@ -12,14 +13,13 @@ from virttest import qemu_storage
 
 class QemuImgTest(qemu_storage.QemuImg):
 
-    data_dir = data_dir.get_data_dir()
-
     def __init__(self, test, params, env, tag):
         self.vm = None
         self.test = test
         self.params = params
         self.env = env
         self.tag = tag
+        self.data_dir = data_dir.get_data_dir()
         self.trash = []
         t_params = params.object_params(tag)
         super(QemuImgTest, self).__init__(t_params, self.data_dir, tag)

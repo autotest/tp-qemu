@@ -103,6 +103,8 @@ def run(test, params, env):
     try:
         if run_bg_flag == "before_bg_test":
             run_subtest(sub_type)
+            if vm.is_dead():
+                vm.create(params=params)
             run_subtest(bg_stress_test)
         elif run_bg_flag == "during_bg_test":
             stress_thread = run_bg_stress_test(bg_stress_test)
@@ -116,6 +118,8 @@ def run(test, params, env):
                                    suppress_exception=suppress_exception)
         elif run_bg_flag == "after_bg_test":
             run_subtest(bg_stress_test)
+            if vm.is_dead():
+                vm.create(params=params)
             run_subtest(sub_type)
 
     finally:

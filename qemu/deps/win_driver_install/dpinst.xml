@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+  <dpinst>
+
+<suppressAddRemovePrograms/>
+
+    <!-- The following search and subDirectory elements direct
+         DPInst to search all subdirectories (under the DPInst working directory)
+         to locate driver packages. -->
+    <search>
+      <subDirectory>*</subDirectory>
+    </search>
+
+    <!-- The following language element localizes its child elements
+         for the English (Standard) language. The child elements
+         customize the text that appears on the DPInst wizard pages. -->
+    <language code="0x0409">
+      <dpinstTitle>Device Driver Updater</dpinstTitle>
+      <welcomeTitle>Welcome to the Device Installer!</welcomeTitle>
+      <welcomeIntro>This wizard will walk you through updating the drivers for your device.</welcomeIntro>
+      <installHeaderTitle>Installing the software for your device...</installHeaderTitle>
+      <finishTitle>Congratulations! You finished installing your device drivers.</finishTitle>
+    </language>
+
+    <!-- No driver signature required -->
+    <legacyMode/>
+
+    <!-- Install driver in silent mode -->
+    <quietInstall/>
+
+    <!-- Force driver install even if current is better -->
+    <forceIfDriverIsNotBetter/>
+
+</dpinst>

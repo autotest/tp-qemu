@@ -1,6 +1,7 @@
 import logging
 from autotest.client.shared import error
 from qemu.tests import qemu_disk_img
+from autotest.client import utils
 
 
 class CommitTest(qemu_disk_img.QemuImgTest):
@@ -23,6 +24,7 @@ class CommitTest(qemu_disk_img.QemuImgTest):
         return super(CommitTest, self).commit(params, cache_mode)
 
 
+@error.context_aware
 def run(test, params, env):
     """
     'qemu-img' commit functions test:
@@ -47,6 +49,8 @@ def run(test, params, env):
         raise error.TestError("Fail to save tmp file")
     commit_test.destroy_vm()
     commit_test.commit()
+    error.context("sync host data after commit", logging.info)
+    utils.system("sync")
     commit_test.start_vm(params)
 
     # check md5sum after commit

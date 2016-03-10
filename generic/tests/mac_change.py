@@ -66,7 +66,7 @@ def run(test, params, env):
         if params.get("shutdown_int", "yes") == "yes":
             int_shutdown_cmd = params.get("int_shutdown_cmd",
                                           "ifconfig %s down")
-            session_serial.cmd(int_shutdown_cmd % interface)
+            session_serial.cmd_output_safe(int_shutdown_cmd % interface)
     else:
 
         connection_id = utils_net.get_windows_nic_attribute(session_serial,
@@ -94,7 +94,7 @@ def run(test, params, env):
         change_cmd = change_cmd_pattern % (int(nic_index),
                                            "".join(new_mac.split(":")))
     try:
-        session_serial.cmd(change_cmd)
+        session_serial.cmd_output_safe(change_cmd)
 
         # Verify whether MAC address was changed to the new one
         error.context("Verify the new mac address, and restart the network",
@@ -103,8 +103,8 @@ def run(test, params, env):
             if params.get("shutdown_int", "yes") == "yes":
                 int_activate_cmd = params.get("int_activate_cmd",
                                               "ifconfig %s up")
-                session_serial.cmd(int_activate_cmd % interface)
-            session_serial.cmd("ifconfig | grep -i %s" % new_mac)
+                session_serial.cmd_output_safe(int_activate_cmd % interface)
+            session_serial.cmd_output_safe("ifconfig | grep -i %s" % new_mac)
             logging.info("Mac address change successfully, net restart...")
             dhclient_cmd = "dhclient -r && dhclient %s" % interface
             session_serial.sendline(dhclient_cmd)
@@ -117,7 +117,7 @@ def run(test, params, env):
                                                     connection_id,
                                                     mode=mode)
 
-            o = session_serial.cmd("ipconfig /all")
+            o = session_serial.cmd_output_safe("ipconfig /all")
             if not re.findall("%s" % "-".join(new_mac.split(":")), o, re.I):
                 raise error.TestFail("Guest mac change failed")
             logging.info("Guest mac have been modified successfully")
@@ -158,7 +158,7 @@ def run(test, params, env):
         if os_type == "windows":
             clean_cmd_pattern = params.get("clean_cmd")
             clean_cmd = clean_cmd_pattern % int(nic_index)
-            session_serial.cmd(clean_cmd)
+            session_serial.cmd_output_safe(clean_cmd)
             utils_net.restart_windows_guest_network(session_serial,
                                                     connection_id,
                                                     mode=mode)

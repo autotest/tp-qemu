@@ -30,12 +30,14 @@ git_repo["spice-gtk"] = "git://anongit.freedesktop.org/spice/spice-gtk"
 git_repo["spice-vd-agent"] = "git://git.freedesktop.org/git/spice/linux/vd_agent"
 git_repo["xf86-video-qxl"] = "git://anongit.freedesktop.org/xorg/driver/xf86-video-qxl"
 git_repo["virt-viewer"] = "https://git.fedorahosted.org/git/virt-viewer.git"
+git_repo["spice-server"] = "git://anongit.freedesktop.org/spice/spice"
 
 # options to pass
 autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala  --enable-smartcard"
 autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
 autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\""
 autogen_options["virt-viewer"] = "--with-spice-gtk --disable-update-mimedb"
+autogen_options["spice-server"] = "--enable-smartcard"
 prefix_defaults["spice-protocol"] = "/usr/local"
 prefix_defaults["spice-vd-agent"] = "/usr"
 
@@ -52,6 +54,7 @@ usageMsg += "\n\tspice-gtk\t ->\t SPICE GTK "
 usageMsg += "\n\tspice-vd-agent\t ->\t SPICE VD-Agent "
 usageMsg += "\n\txf86-video-qxl\t ->\t QXL device driver"
 usageMsg += "\n\tvirt-viewer\t ->\t Virt-Viewer"
+usageMsg += "\n\tspice-server\t -> SPICE Server"
 
 # Getting all parameters
 parser = optparse.OptionParser(usage=usageMsg)
@@ -219,7 +222,7 @@ print "Running '%s %s'" % (env_vars, cmd)
 ret = os.system(env_vars + " " + cmd)
 if ret != 0:
     print "Return code: %s! Autogen.sh failed! Exiting!" % ret
-    sys.exit(ret)
+    sys.exit(1)
 
 # Temporary workaround for building spice-vdagent
 if pkgName == "spice-vd-agent":
@@ -232,7 +235,7 @@ print "Running '%s %s'" % (env_vars, cmd)
 ret = os.system("%s %s" % (env_vars, cmd))
 if ret != 0:
     print "Return code: %s! make failed! Exiting!" % ret
-    sys.exit(ret)
+    sys.exit(1)
 
 # Running 'make install' to install the built libraries/binaries
 cmd = "make install"

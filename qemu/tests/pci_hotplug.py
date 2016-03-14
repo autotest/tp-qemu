@@ -336,6 +336,7 @@ def run(test, params, env):
     rp_times = int(params.get("repeat_times"))
     img_list = params.get("images").split()
     context_msg = "Running sub test '%s' %s"
+
     for j in range(rp_times):
         # pci_info is a list of list.
         # each element 'i' has 4 members:
@@ -344,22 +345,37 @@ def run(test, params, env):
         # pci_info[i][2] == output of device add command
         # pci_info[i][3] == device module name.
         pci_info = []
-        for pci_num in xrange(pci_num_range):
-            sub_type = params.get("sub_type_before_plug")
-            if sub_type:
-                error.context(context_msg % (sub_type, "before hotplug"),
-                              logging.info)
-                utils_test.run_virt_sub_test(test, params, env, sub_type)
+        if params.get("need_hotplug") == "no":
+            for pci_num in xrange(pci_num_range):
+                img_id = params.get("images").split()[pci_num+1]
+                pci_info.append([img_id, img_id])
 
-            error.context("Start hot-adding pci device, repeat %d" % j,
-                          logging.info)
-            add_device(pci_num, queues)
+            try:
+                if params.get("pci_test_cmd"):
+                    test_cmd = re.sub("PCI_NUM", "%s" % (pci_num + 1),
+                                      params.get("pci_test_cmd"))
+                    session.cmd(test_cmd, timeout=disk_op_timeout)
+            except aexpect.ShellError, e:
+                raise error.TestFail("Check for %s device failed after PCI "
+                                     "hotplug. Output: %r" % (pci_type, e.output))
+        elif params.get("need_hotplug") == "yes":
+            for pci_num in xrange(pci_num_range):
+                sub_type = params.get("sub_type_before_plug")
+                if sub_type:
+                    error.context(context_msg % (sub_type, "before hotplug"),
+                                  logging.info)
+                    utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-            sub_type = params.get("sub_type_after_plug")
-            if sub_type:
-                error.context(context_msg % (sub_type, "after hotplug"),
+                error.context("Start hot-adding pci device, repeat %d" % j,
                               logging.info)
-                utils_test.run_virt_sub_test(test, params, env, sub_type)
+                add_device(pci_num, queues)
+
+                sub_type = params.get("sub_type_after_plug")
+                if sub_type:
+                    error.context(context_msg % (sub_type, "after hotplug"),
+                                  logging.info)
+                    utils_test.run_virt_sub_test(test, params, env, sub_type)
+
         for pci_num in xrange(pci_num_range):
             sub_type = params.get("sub_type_before_unplug")
             if sub_type:

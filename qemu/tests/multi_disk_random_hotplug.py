@@ -77,10 +77,11 @@ def run(test, params, env):
     1) prepares multiple disks to be hotplugged
     2) hotplugs them
     3) verifies that they are in qtree/guest system/...
-    4) unplugs them
-    5) verifies they are not in qtree/guest system/...
-    6) repeats $repeat_times
-    *) During the whole test stress_cmd might be executed
+    4) stop I/O stress_cmd
+    5) unplugs them
+    6) continue I/O stress_cmd
+    7) verifies they are not in qtree/guest system/...
+    8) repeats $repeat_times
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -448,7 +449,11 @@ def run(test, params, env):
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
         error.context("Unplug and remove the devices", logging.debug)
+        if stress_cmd:
+            session.cmd(params["stress_stop_cmd"])
         unplug(new_devices, qdev, monitor)
+        if stress_cmd:
+            session.cmd(params["stress_cont_cmd"])
         _postprocess_images()
 
         error.context("Verify disks after unplug", logging.debug)

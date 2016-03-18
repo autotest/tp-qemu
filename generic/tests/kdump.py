@@ -229,7 +229,7 @@ def run(test, params, env):
     def_crash_kernel_prob_cmd = "grep -q 1 /sys/kernel/kexec_crash_loaded"
     crash_kernel_prob_cmd = params.get("crash_kernel_prob_cmd",
                                        def_crash_kernel_prob_cmd)
-    kdump_cfg_path = params.get("kdump_cfg_path", "/etc/kdump.cfg")
+    kdump_cfg_path = params.get("kdump_cfg_path", "/etc/kdump.conf")
 
     vms = params.get("vms", "vm1 vm2").split()
     vm_list = []
@@ -244,7 +244,7 @@ def run(test, params, env):
             preprocess_kdump(vm, timeout)
             vm.copy_files_from(kdump_cfg_path,
                                os.path.join(test.debugdir,
-                                            "kdump.cfg-%s" % vm_name))
+                                            "kdump.conf-%s" % vm_name))
 
             session = kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
                                    kernel_param_cmd, kdump_enable_cmd, timeout)
@@ -259,7 +259,7 @@ def run(test, params, env):
             session = vm.wait_for_login(timeout=timeout)
             vm.copy_files_from(kdump_cfg_path,
                                os.path.join(test.debugdir,
-                                            "kdump.cfg-%s-test" % vm.name))
+                                            "kdump.conf-%s-test" % vm.name))
             if crash_cmd == "nmi":
                 crash_test(vm, None, crash_cmd, timeout)
             else:

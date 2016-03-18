@@ -13,6 +13,7 @@ from virttest import utils_misc
 from virttest import utils_net
 from virttest import remote
 from virttest import data_dir
+from virttest import arch
 
 
 _netserver_started = False
@@ -298,7 +299,12 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
 
     record_list = ['size', 'sessions', 'throughput', 'trans.rate', 'CPU',
                    'thr_per_CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
-                   're_pkts', 'irq_inj', 'io_exit', 'rpkt_per_irq', 'tpkt_per_exit']
+                   're_pkts', 'rpkt_per_irq', 'tpkt_per_exit']
+    if arch.ARCH in ('ppc64', 'ppc64le'):
+        record_list.append('exits')
+    else:
+        record_list.extend(['irq_injs', 'io_exits'])
+
     for i in range(int(params.get("queues", 0))):
         record_list.append('rx_intr_%s' % i)
     record_list.append('rx_intr_sum')
@@ -347,12 +353,18 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 thu = float(ret['thu'])
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
                 normal = thu / cpu
-                if ret.get('rx_pkts') and ret.get('irq_inj'):
-                    ret['rpkt_per_irq'] = float(
-                        ret['rx_pkts']) / float(ret['irq_inj'])
-                if ret.get('tx_pkts') and ret.get('io_exit'):
-                    ret['tpkt_per_exit'] = float(
-                        ret['tx_pkts']) / float(ret['io_exit'])
+                if arch.ARCH in ('ppc64', 'ppc64le'):
+                    if ret.get('tx_pkts') and ret.get('exits'):
+                        ret['tpkt_per_exits'] = float(
+                            ret['tx_pkts']) / float(ret['exits'])
+                else:
+                    if ret.get('rx_pkts') and ret.get('irq_injs'):
+                        ret['rpkt_per_irq'] = float(
+                            ret['rx_pkts']) / float(ret['irq_injs'])
+                    if ret.get('tx_pkts') and ret.get('io_exits'):
+                        ret['tpkt_per_exit'] = float(
+                            ret['tx_pkts']) / float(ret['io_exits'])
+
                 ret['size'] = int(i)
                 ret['sessions'] = int(j)
                 if protocol in ("TCP_RR", "TCP_CRR"):
@@ -521,21 +533,27 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             state_list.append('intr')
             state_list.append(ninit)
 
-        io_exit = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/io_exits"))
-        irq_inj = int(
-            ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
-        state_list.append('io_exit')
-        state_list.append(io_exit)
-        state_list.append('irq_inj')
-        state_list.append(irq_inj)
+        if arch.ARCH in ('ppc64', 'ppc64le'):
+            exits = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/exits"))
+            state_list.append('exits')
+            state_list.append(exits)
+        else:
+            io_exits = int(ssh_cmd(host, "cat /sys/kernel/debug/kvm/io_exits"))
+            irq_injs = int(
+                ssh_cmd(host, "cat /sys/kernel/debug/kvm/irq_injections"))
+            state_list.append('io_exits')
+            state_list.append(io_exits)
+            state_list.append('irq_injs')
+            state_list.append(irq_injs)
+
         return state_list
 
     def netperf_thread(i, numa_enable, client_s, timeout):
         cmd = ""
         fname = "/tmp/netperf.%s.nf" % pid
         if numa_enable:
-            output = ssh_cmd(client_s, "numactl --hardware")
-            n = int(re.findall(r"available: (\d+) nodes", output)[0]) - 1
+            output = ssh_cmd(client_s, "numactl --show|grep nodebind")
+            n = int(output.split()[-1])
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
         cmd += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (i,
                                                                     client_path, server, int(l) * 1.5, nf_args)

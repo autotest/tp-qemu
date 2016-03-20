@@ -1,4 +1,6 @@
 import logging
+from virttest import utils_misc
+from avocado.core import exceptions
 
 
 def run(test, params, env):
@@ -14,16 +16,15 @@ def run(test, params, env):
     session = vm.wait_for_login(
         timeout=float(params.get("login_timeout", 240)))
 
+    cmd_timeout = int(params.get("cmd_timeout", 180))
     stop_update_service_cmd = params.get("stop_update_service_cmd")
-    s, o = session.get_command_status_output(stop_update_service_cmd)
-    if s != 0:
-        logging.error("Failed to stop Windows update service: %s" % o)
-    else:
-        logging.info("Stopped Windows updates services")
+    if not utils_misc.wait_for(lambda: session.cmd_status(stop_update_service_cmd,
+                               timeout=cmd_timeout) == 0, 360, 0, 5):
+        raise exceptions.TestFail("Failed to stop Windows update service.")
+    logging.info("Stopped Windows updates services.")
 
     disable_update_service_cmd = params.get("disable_update_service_cmd")
-    s, o = session.get_command_status_output(disable_update_service_cmd)
-    if s != 0:
-        logging.error("Turn off updates service failed: %s" % o)
-    else:
-        logging.info("Turned off windows updates service")
+    if not utils_misc.wait_for(lambda: session.cmd_status(disable_update_service_cmd,
+                               timeout=cmd_timeout) == 0, 360, 0, 5):
+        raise exceptions.TestFail("Turn off updates service failed.")
+    logging.info("Turned off windows updates service")

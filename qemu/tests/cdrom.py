@@ -75,10 +75,14 @@ def run(test, params, env):
     cdrom_prepare_timeout = int(params.get("cdrom_preapre_timeout", 360))
 
     def generate_serial_num():
+        """
+        Generate random wwn or serial number to cdrom device
+        """
         length = int(params.get("length", "10"))
-        id_leng = random.randint(6, length)
-        ignore_str = ",!\"#$%&\'()*+./:;<=>?@[\\]^`{|}~"
-        return utils_misc.generate_random_string(id_leng, ignore_str)
+        id_len = random.randint(6, length)
+        min_val = 1 * 10 ** (id_len - 1)
+        max_val = 1 * 10 ** id_len - 1
+        return hex(random.randint(min_val, max_val))[:length]
 
     def list_guest_cdroms(session):
         """
@@ -95,8 +99,7 @@ def run(test, params, env):
             list_cdrom_cmd = "ls /dev/cdrom*"
             filter_cdrom_re = r"/dev/cdrom-\w+|/dev/cdrom\d*"
         output = session.cmd_output(list_cdrom_cmd)
-        cdroms = re.findall(filter_cdrom_re, output)
-        cdroms.sort()
+        cdroms = sorted(re.findall(filter_cdrom_re, output))
         return cdroms
 
     def get_cdrom_mount_point(session, drive_letter, params):
@@ -139,7 +142,8 @@ def run(test, params, env):
                 gluster_server = "localhost"
             volume_name = params["gluster_volume_name"]
             g_mount_link = "%s:/%s" % (gluster_server, volume_name)
-            mount_cmd = "mount -t glusterfs %s %s" % (g_mount_link, g_mount_point)
+            mount_cmd = "mount -t glusterfs %s %s" % (
+                g_mount_link, g_mount_point)
             utils.system(mount_cmd, timeout=60)
             file_name = os.path.join(g_mount_point, "%s.iso" % name)
         else:
@@ -349,7 +353,7 @@ def run(test, params, env):
                 raise error.TestFail("Could not find a valid cdrom device")
         return device
 
-    def get_match_cdrom(session, serial_num):
+    def get_match_cdrom(vm, session, serial_num):
         """
         Find the cdrom in guest which is corresponding with the CML
         according to the serial number.
@@ -359,33 +363,28 @@ def run(test, params, env):
         :return match_cdrom: the cdrom in guest which is corresponding
                              with the CML according to the serial number.
         """
+        def get_cdrom_by_serial(session, serial_num):
+            """
+            Get match cdrom from disk list, if not found return None.
+
+            :param session: VM session
+            :param serial_num: cdrom serial number
+            """
+            func = utils_misc.get_linux_drive_path
+            cdrom = utils_misc.wait_for(lambda: func(session, serial_num),
+                                        first=1, timeout=90)
+            return cdrom
+
         error.context("Get matching cdrom in guest", logging.info)
-        show_serial_num = "ls -l /dev/disk/by-id"
-        serial_num_output = session.cmd_output(show_serial_num)
-        if serial_num_output:
-            serial_cdrom = ""
-            for line in serial_num_output.splitlines():
-                if utils_misc.find_substring(str(line), str(serial_num)):
-                    serial_cdrom = line.split(" ")[-1].split("/")[-1]
-                    break
-            if not serial_cdrom:
-                qtree_info = vm.monitor.info("qtree")
-                raise error.TestFail("Could not find the device whose "
-                                     "serial number %s is same in Qemu"
-                                     " CML.\n Qtree info: %s" %
-                                     (qtree_info, serial_num))
+        serial_cdrom = get_cdrom_by_serial(session, serial_num)
+        if not serial_cdrom:
+            qtree_info = vm.monitor.info("qtree")
+            raise error.TestFail("Could not find the device whose "
+                                 "serial number %s is same in Qemu"
+                                 " CML.\n Qtree info: %s" %
+                                 (serial_num, qtree_info))
 
-        show_cdrom_cmd = "ls -l /dev/cdrom*"
-        dev_cdrom_output = session.cmd_output(show_cdrom_cmd)
-        if dev_cdrom_output:
-            for line in dev_cdrom_output.splitlines():
-                if utils_misc.find_substring(str(line), str(serial_cdrom)):
-                    match_cdrom = line.split(" ")[-3]
-                    return match_cdrom
-            raise error.TestFail("Could not find the corresponding cdrom"
-                                 "in guest which is same in Qemu CML.")
-
-    def get_testing_cdrom_device(session, cdrom_dev_list, serial_num=None):
+    def get_testing_cdrom_device(vm, session, cdrom_dev_list, serial_num=None):
         """
         Get the testing cdrom used for eject
         :param session: VM session
@@ -398,7 +397,7 @@ def run(test, params, env):
                 cdrom_dev_list.remove(winutil_drive)
                 testing_cdrom_device = cdrom_dev_list[-1]
             else:
-                testing_cdrom_device = get_match_cdrom(session, serial_num)
+                testing_cdrom_device = get_match_cdrom(vm, session, serial_num)
         except IndexError:
             raise error.TestFail("Could not find the testing cdrom device")
 
@@ -633,6 +632,10 @@ def run(test, params, env):
             serial_num = generate_serial_num()
             cdrom = params.get("cdroms", "").split()[-1]
             params["drive_serial_%s" % cdrom] = serial_num
+            cd_format = params.object_params(cdrom).get("cd_format")
+            if cd_format != "virtio_blk":
+                extra_param = "wwn=%s" % serial_num
+                params["blk_extra_params_%s" % cdrom] = extra_param
             env_process.preprocess_vm(test, params, env, params["main_vm"])
             vm = env.get_vm(params["main_vm"])
 
@@ -651,7 +654,8 @@ def run(test, params, env):
                 # XXX: The device got from monitor might not match with the guest
                 # defice if there are multiple cdrom devices.
                 qemu_cdrom_device = get_empty_cdrom_device(vm)
-                guest_cdrom_device = get_testing_cdrom_device(self.session,
+                guest_cdrom_device = get_testing_cdrom_device(vm,
+                                                              self.session,
                                                               cdrom_dev_list,
                                                               serial_num)
                 if vm.check_block_locked(qemu_cdrom_device):
@@ -666,18 +670,22 @@ def run(test, params, env):
             error.context("Detecting the existence of a cdrom (guest OS side)",
                           logging.info)
             cdrom_dev_list = list_guest_cdroms(self.session)
-            guest_cdrom_device = get_testing_cdrom_device(self.session,
+            guest_cdrom_device = get_testing_cdrom_device(vm,
+                                                          self.session,
                                                           cdrom_dev_list,
                                                           serial_num)
             error.context("Detecting the existence of a cdrom (qemu side)",
                           logging.info)
             qemu_cdrom_device = get_device(vm, iso_image)
             if params["os_type"] != "windows":
-                self.session.get_command_output("umount %s" % guest_cdrom_device)
+                self.session.get_command_output(
+                    "umount %s" %
+                    guest_cdrom_device)
             if params.get('cdrom_test_autounlock') == 'yes':
                 error.context("Trying to unlock the cdrom", logging.info)
                 if not utils_misc.wait_for(lambda: not
-                                           vm.check_block_locked(qemu_cdrom_device),
+                                           vm.check_block_locked(
+                                               qemu_cdrom_device),
                                            300):
                     raise error.TestFail("Device %s could not be"
                                          " unlocked" % (qemu_cdrom_device))
@@ -729,7 +737,8 @@ def run(test, params, env):
                                          " in clearup stage" % qemu_cdrom_device)
 
                 vm.change_media(qemu_cdrom_device, self.iso_image_orig)
-                if get_cdrom_file(vm, qemu_cdrom_device) != self.iso_image_orig:
+                if get_cdrom_file(
+                        vm, qemu_cdrom_device) != self.iso_image_orig:
                     raise error.TestFail("It wasn't possible to change"
                                          " cdrom %s" % iso_image)
             post_cmd = params.get("post_cmd")
@@ -770,6 +779,10 @@ def run(test, params, env):
                 serial_num = generate_serial_num()
                 cdrom = params.get("cdroms", "").split()[-1]
                 params["drive_serial_%s" % cdrom] = serial_num
+                cd_format = params.object_params(cdrom).get("cd_format")
+                if cd_format != "virtio_blk":
+                    extra_param = "wwn=%s" % serial_num
+                    params["blk_extra_params_%s" % cdrom] = extra_param
                 params["start_vm"] = "yes"
                 env_process.process(test, params, env,
                                     env_process.preprocess_image,
@@ -795,6 +808,10 @@ def run(test, params, env):
                 serial_num = generate_serial_num()
                 cdrom = params.get("cdroms", "").split()[-1]
                 params["drive_serial_%s" % cdrom] = serial_num
+                cd_format = params.object_params(cdrom).get("cd_format")
+                if cd_format != "virtio_blk":
+                    extra_param = "wwn=%s" % serial_num
+                    params["blk_extra_params_%s" % cdrom] = extra_param
                 params["start_vm"] = "yes"
                 env_process.process(test, params, env,
                                     env_process.preprocess_image,
@@ -802,7 +819,7 @@ def run(test, params, env):
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
                 cdrom_dev_list = list_guest_cdroms(session)
-                guest_cdrom_device = get_testing_cdrom_device(session,
+                guest_cdrom_device = get_testing_cdrom_device(vm, session,
                                                               cdrom_dev_list,
                                                               serial_num)
                 logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
@@ -839,7 +856,7 @@ def run(test, params, env):
             error.context("Unlock cdrom from VM.")
             if not self.is_src:  # Starts in dest
                 cdrom_dev_list = list_guest_cdroms(session)
-                guest_cdrom_device = get_testing_cdrom_device(session,
+                guest_cdrom_device = get_testing_cdrom_device(vm, session,
                                                               cdrom_dev_list,
                                                               serial_num)
                 session.cmd(params["unlock_cdrom_cmd"] % guest_cdrom_device)
@@ -878,6 +895,10 @@ def run(test, params, env):
                 serial_num = generate_serial_num()
                 cdrom = params.get("cdroms", "").split()[-1]
                 params["drive_serial_%s" % cdrom] = serial_num
+                cd_format = params.object_params(cdrom).get("cd_format")
+                if cd_format != "virtio_blk":
+                    extra_param = "wwn=%s" % serial_num
+                    params["blk_extra_params_%s" % cdrom] = extra_param
                 params["start_vm"] = "yes"
                 env_process.process(test, params, env,
                                     env_process.preprocess_image,
@@ -887,7 +908,8 @@ def run(test, params, env):
                 cdrom_dev_list = list_guest_cdroms(session)
                 logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
                 device = get_device(vm, self.cdrom_orig)
-                cdrom = get_testing_cdrom_device(session, cdrom_dev_list,
+                cdrom = get_testing_cdrom_device(vm, session,
+                                                 cdrom_dev_list,
                                                  serial_num)
 
                 error.context("Eject cdrom.")
@@ -933,6 +955,10 @@ def run(test, params, env):
                 serial_num = generate_serial_num()
                 cdrom = params.get("cdroms", "").split()[-1]
                 params["drive_serial_%s" % cdrom] = serial_num
+                cd_format = params.object_params(cdrom).get("cd_format")
+                if cd_format != "virtio_blk":
+                    extra_param = "wwn=%s" % serial_num
+                    params["blk_extra_params_%s" % cdrom] = extra_param
                 params["start_vm"] = "yes"
                 env_process.process(test, params, env,
                                     env_process.preprocess_image,
@@ -942,7 +968,8 @@ def run(test, params, env):
                 session = vm.wait_for_login(timeout=login_timeout)
                 cdrom_dev_list = list_guest_cdroms(session)
                 logging.debug("cdrom_dev_list: %s", cdrom_dev_list)
-                cdrom = get_testing_cdrom_device(session, cdrom_dev_list,
+                cdrom = get_testing_cdrom_device(vm, session,
+                                                 cdrom_dev_list,
                                                  serial_num)
                 mount_point = get_cdrom_mount_point(session, cdrom, params)
                 mount_cmd = params["mount_cdrom_cmd"] % (cdrom, mount_point)
@@ -979,7 +1006,9 @@ def run(test, params, env):
                     else:
                         cmd = "ps -p %s" % pid
                     return session.cmd_status(cmd) != 0
-                if utils_misc.wait_for(is_copy_done, timeout=copy_timeout) is None:
+
+                if utils_misc.wait_for(
+                        is_copy_done, timeout=copy_timeout) is None:
                     raise error.TestFail("Wait for file copy finish timeout")
 
                 error.context("Compare file on disk and on cdrom")

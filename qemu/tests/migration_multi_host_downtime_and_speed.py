@@ -1,24 +1,26 @@
 import logging
-import os
-import time
 
 from autotest.client.shared import error
 from autotest.client.shared import utils
 
-from virttest import utils_test
-from virttest import remote
-from virttest import virt_vm
 from virttest import utils_misc
+from virttest import utils_test
+from virttest import virt_vm
 
-from provider import cpuflags
 
-
+@error.context_aware
 def run(test, params, env):
     """
     KVM multi-host migration test:
 
     Migration execution progress is described in documentation
     for migrate method in class MultihostMigration.
+    steps:
+        1) login vm and load stress
+        2) set downtime before migrate (optional)
+        3) do migration
+        4) set downtime/speed after migrate (optional)
+        5) check downtime/speed value when migrate finished
 
     :param test: kvm test object.
     :param params: Dictionary with test parameters.
@@ -37,14 +39,15 @@ def run(test, params, env):
 
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
-            self.install_path = params.get("cpuflags_install_path", "/tmp")
-            self.vm_mem = int(params.get("mem", "512"))
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
+            self.is_src = params["hostid"] == self.srchost
             self.vms = params["vms"].split()
 
             self.sub_type = self.params.get("sub_type", None)
+            self.mig_downtime = int(self.params.get("mig_downtime", "3"))
             self.max_downtime = int(self.params.get("max_mig_downtime", "10"))
+            self.wait_mig_timeout = int(self.params.get("wait_mig_timeout", "30"))
             self.min_speed = self.params.get("min_migration_speed", "10")
             self.max_speed = self.params.get("max_migration_speed", "1000")
             self.ch_speed = int(self.params.get("change_speed_interval", 1))
@@ -55,7 +58,10 @@ def run(test, params, env):
             self.speed_step = int((self.max_speed - self.min_speed) /
                                   speed_count)
 
-            if self.sub_type == "downtime":
+            if self.sub_type == "before_migrate":
+                self.before_migration = self.before_migration_downtime
+                self.post_migration = self.post_migration_before_downtime
+            if self.sub_type == "after_migrate":
                 self.post_migration = self.post_migration_downtime
             elif self.sub_type == "speed":
                 self.post_migration = self.post_migration_speed
@@ -65,67 +71,86 @@ def run(test, params, env):
                 error.TestFail("Wrong subtest type selected %s" %
                                (self.sub_type))
 
-        def mig_finished(self, vm):
-            ret = True
-            if (vm.params["display"] == "spice" and
-                    vm.get_spice_var("spice_seamless_migration") == "on"):
-                s = vm.monitor.info("spice")
-                if isinstance(s, str):
-                    ret = "migrated: true" in s
-                else:
-                    ret = s.get("migrated") == "true"
-            o = vm.monitor.info("migrate")
-            if isinstance(o, str):
-                return ret and ("status: active" not in o)
-            else:
-                return ret and (o.get("status") != "active")
+        def clean_up(self, vm):
+            kill_bg_stress_cmd = params.get("kill_bg_stress_cmd",
+                                            "killall -9 stress")
 
-        def wait_for_migration(self, vm, timeout):
-            if not utils_misc.wait_for(lambda: self.mig_finished(vm),
-                                       timeout,
-                                       2, 2,
-                                       "Waiting for migration to complete"):
-                raise virt_vm.VMMigrateTimeoutError("Timeout expired while"
-                                                    " waiting for migration"
-                                                    " to finish")
+            logging.info("Kill the background stress test in the guest.")
+            session = vm.wait_for_login(timeout=self.login_timeout)
+            session.sendline(kill_bg_stress_cmd)
+            session.close()
 
+        @error.context_aware
+        def check_mig_downtime(self, vm):
+            logging.info("Check downtime after migration.")
+            actual_downtime = int(vm.monitor.info("migrate").get("downtime"))
+            if actual_downtime > self.mig_downtime * 1000:
+                error = "Migration failed for setting downtime, "
+                error += "Expected: '%d', Actual: '%d'" % (self.mig_downtime,
+                                                           actual_downtime)
+                raise error.TestFail(error)
+
+        @error.context_aware
+        def before_migration_downtime(self, mig_data):
+            if self.is_src:
+                vm = env.get_vm(params["main_vm"])
+                error.context("Set downtime before migration.", logging.info)
+                vm.monitor.migrate_set_downtime(self.mig_downtime)
+
+        @error.context_aware
+        def post_migration_before_downtime(self, vm, cancel_delay, mig_offline,
+                                           dsthost, vm_ports,
+                                           not_wait_for_migration,
+                                           fd, mig_data):
+            try:
+                vm.wait_for_migration(self.mig_timeout)
+            except virt_vm.VMMigrateTimeoutError:
+                raise error.TestFail("Migration failed with setting "
+                                     " downtime to %ds." % self.mig_downtime)
+
+            logging.info("Migration completed with downtime "
+                         "is %s seconds.", self.mig_downtime)
+
+            self.check_mig_downtime(vm)
+            vm.destroy(gracefully=False)
+
+        @error.context_aware
         def post_migration_downtime(self, vm, cancel_delay, mig_offline,
                                     dsthost, vm_ports, not_wait_for_migration,
                                     fd, mig_data):
-
-            super(TestMultihostMigration, self).post_migration(vm,
-                                                               cancel_delay, mig_offline, dsthost,
-                                                               vm_ports, not_wait_for_migration,
-                                                               fd, mig_data)
-
+            logging.info("Set downtime after migration.")
             downtime = 0
-            for downtime in range(1, self.max_downtime):
+            for downtime in xrange(1, self.max_downtime):
                 try:
-                    self.wait_for_migration(vm, 10)
+                    vm.wait_for_migration(self.wait_mig_timeout)
                     break
                 except virt_vm.VMMigrateTimeoutError:
+                    logging.info("Set downtime to %d seconds.", downtime)
                     vm.monitor.migrate_set_downtime(downtime)
-            logging.debug("Migration pass with downtime %s", downtime)
+
+            try:
+                vm.wait_for_migration(self.mig_timeout)
+            except virt_vm.VMMigrateTimeoutError:
+                raise error.TestFail("Migration failed with setting "
+                                     " downtime to %ds." % downtime)
+
+            self.mig_downtime = downtime - 1
+            logging.info("Migration completed with downtime "
+                         "is %s seconds.", self.mig_downtime)
+
+            self.check_mig_downtime(vm)
+            vm.destroy(gracefully=False)
 
         def post_migration_speed(self, vm, cancel_delay, mig_offline, dsthost,
                                  vm_ports, not_wait_for_migration,
                                  fd, mig_data):
-
-            super(TestMultihostMigration, self).post_migration(vm,
-                                                               cancel_delay, mig_offline, dsthost,
-                                                               vm_ports, not_wait_for_migration,
-                                                               fd, mig_data)
-
-            self.min_speed
-            self.max_speed
-            self.ch_speed
             mig_speed = None
 
             for mig_speed in range(self.min_speed,
                                    self.max_speed,
                                    self.speed_step):
                 try:
-                    self.wait_for_migration(vm, 5)
+                    vm.wait_for_migration(self.wait_mig_timeout)
                     break
                 except virt_vm.VMMigrateTimeoutError:
                     vm.monitor.migrate_set_speed("%sB" % (mig_speed))
@@ -133,61 +158,57 @@ def run(test, params, env):
             # Test migration status. If migration is not completed then
             # it kill program which creates guest load.
             try:
-                self.wait_for_migration(vm, 5)
+                vm.wait_for_migration(self.mig_timeout)
             except virt_vm.VMMigrateTimeoutError:
-                try:
-                    session = vm.wait_for_login(timeout=15)
-                    session.sendline("killall -9 cpuflags-test")
-                except remote.LoginTimeoutError:
-                    try:
-                        self.wait_for_migration(vm, 5)
-                    except virt_vm.VMMigrateTimeoutError:
-                        raise error.TestFail("Migration wan't successful"
-                                             " and VM is not accessible.")
-                self.wait_for_migration(vm, self.mig_timeout)
-            logging.debug("Migration pass with mig_speed %sB", mig_speed)
+                raise error.TestFail("Migration failed with setting "
+                                     " mig_speed to %sB." % mig_speed)
+
+            logging.debug("Migration passed with mig_speed %sB", mig_speed)
+            vm.destroy(gracefully=False)
 
         def post_migration_stop(self, vm, cancel_delay, mig_offline, dsthost,
                                 vm_ports, not_wait_for_migration,
                                 fd, mig_data):
-
-            super(TestMultihostMigration, self).post_migration(vm,
-                                                               cancel_delay, mig_offline, dsthost,
-                                                               vm_ports, not_wait_for_migration,
-                                                               fd, mig_data)
-
             wait_before_mig = int(vm.params.get("wait_before_stop", "5"))
 
             try:
-                self.wait_for_migration(vm, wait_before_mig)
+                vm.wait_for_migration(wait_before_mig)
             except virt_vm.VMMigrateTimeoutError:
                 vm.pause()
 
-        def migrate_vms_src(self, mig_data):
-            super_cls = super(TestMultihostMigration, self)
-            super_cls.migrate_vms_src(mig_data)
+            try:
+                vm.wait_for_migration(self.mig_timeout)
+            except virt_vm.VMMigrateTimeoutError:
+                raise error.TestFail("Migration failed when vm is paused.")
 
         def migration_scenario(self, worker=None):
-            def worker_func(mig_data):
-                vm = mig_data.vms[0]
+            @error.context_aware
+            def start_worker(mig_data):
+                error.context("Load stress in guest.", logging.info)
+                vm = env.get_vm(params["main_vm"])
                 session = vm.wait_for_login(timeout=self.login_timeout)
+                bg_stress_test = params.get("bg_stress_test")
+                check_running_cmd = params.get("check_running_cmd")
 
-                cpuflags.install_cpuflags_util_on_vm(test, vm,
-                                                     self.install_path,
-                                                     extra_flags="-msse3 -msse2")
+                bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
+                                             args=(test, params, env,),
+                                             kwargs={"sub_type": bg_stress_test})
+                bg.start()
 
-                cmd = ("nohup %s/cpuflags-test --stressmem %d,%d &" %
-                       (os.path.join(self.install_path, "cpu_flags"),
-                        self.vm_mem * 100, self.vm_mem / 2))
-                logging.debug("Sending command: %s" % (cmd))
-                session.sendline(cmd)
-                time.sleep(3)
+                def is_stress_running():
+                    return session.cmd_status(check_running_cmd) == 0
 
-            if worker is None:
-                worker = worker_func
+                if not utils_misc.wait_for(is_stress_running, timeout=360):
+                    raise error.TestFail("Failed to start %s in guest." %
+                                         bg_stress_test)
+
+            def check_worker(mig_data):
+                if not self.is_src:
+                    vm = env.get_vm(params["main_vm"])
+                    self.clean_up(vm)
 
             self.migrate_wait(self.vms, self.srchost, self.dsthost,
-                              start_work=worker)
+                              start_worker, check_worker)
 
     mig = TestMultihostMigration(test, params, env)
 

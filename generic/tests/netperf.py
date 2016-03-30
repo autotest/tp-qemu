@@ -534,8 +534,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         cmd = ""
         fname = "/tmp/netperf.%s.nf" % pid
         if numa_enable:
-            output = ssh_cmd(client_s, "numactl --hardware")
-            n = int(re.findall(r"available: (\d+) nodes", output)[0]) - 1
+            output = ssh_cmd(client_s, "numactl --show|grep nodebind")
+            n = int(output.split()[-1])
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
         cmd += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (i,
                                                                     client_path, server, int(l) * 1.5, nf_args)

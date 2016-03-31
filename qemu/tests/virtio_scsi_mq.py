@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 
 from autotest.client.shared import error
 from autotest.client import local_host
@@ -66,7 +67,6 @@ def run(test, params, env):
     system_image = params.get("images")
     system_image_drive_format = params.get("system_image_drive_format", "ide")
     params["drive_format_%s" % system_image] = system_image_drive_format
-    dev_type = params.get("dev_type", "i440FX-pcihost")
 
     error.context("Boot up guest with block devcie with num_queues"
                   " is %s and smp is %s" % (num_queues, params['smp']),
@@ -122,21 +122,23 @@ def run(test, params, env):
     error_msg = "Number of queues mismatch: expect %s"
     error_msg += " report from monitor: %s(%s)"
     scsi_bus_addr = ""
-    for qdev in qtree.get_qtree().get_children():
-        if qdev.qtree["type"] == dev_type:
-            for pci_bus in qdev.get_children():
-                for pcic in pci_bus.get_children():
-                    if pcic.qtree["class_name"] == "SCSI controller":
-                        qtree_queues = pcic.qtree["num_queues"].split("(")[0]
-                        if qtree_queues.strip() != num_queues.strip():
-                            error_msg = error_msg % (num_queues,
-                                                     qtree_queues,
-                                                     pcic.qtree["num_queues"])
-                            raise error.TestFail(error_msg)
-                    if pcic.qtree["class_name"] == "SCSI controller":
-                        scsi_bus_addr = pcic.qtree['addr']
-                        break
+    qtree_num_queues_full = ""
+    qtree_num_queues = ""
+    for node in qtree.get_nodes():
+        if isinstance(node, qemu_qtree.QtreeDev) and (
+                node.qtree['type'] == "virtio-scsi-device"):
+            qtree_num_queues_full = node.qtree["num_queues"]
+            qtree_num_queues = re.search(
+                "[0-9]+",
+                qtree_num_queues_full).group()
+        elif isinstance(node, qemu_qtree.QtreeDev) and node.qtree['type'] == "virtio-scsi-pci":
+            scsi_bus_addr = node.qtree['addr']
 
+    if qtree_num_queues != num_queues:
+        error_msg = error_msg % (num_queues,
+                                 qtree_num_queues,
+                                 qtree_num_queues_full)
+        raise error.TestFail(error_msg)
     if not scsi_bus_addr:
         raise error.TestError("Didn't find addr from qtree. Please check "
                               "the log.")
@@ -171,13 +173,20 @@ def run(test, params, env):
             continue
         if not re.findall("[svh]d%s" % system_dev, dev):
             fill_cmd += " dd of=%s if=/dev/urandom bs=1M " % dev
-            fill_cmd += "count=%s &&" % dd_timeout
+            fill_cmd += "count=%s &" % dd_timeout
             count += 1
     if count != images_num:
         raise error.TestError("Disks are not all show up in system. Output "
                               "from the check command: %s" % output)
-    fill_cmd = fill_cmd.rstrip("&&")
+    # As Bug 1177332 exists, mq is not supported completely.
+    # So don't considering performance currently, dd_timeout is longer.
+    dd_timeout = dd_timeout * images_num * 2
     session.cmd(fill_cmd, timeout=dd_timeout)
+
+    dd_thread_num = count
+    while dd_thread_num:
+        time.sleep(5)
+        dd_thread_num = session.cmd_output("pgrep -x dd", timeout=dd_timeout)
 
     error.context("Check the interrupt queues in guest", logging.info)
     output = session.cmd_output(irq_check_cmd)
@@ -189,7 +198,6 @@ def run(test, params, env):
                 if int(count) > 0:
                     irq_bit_map |= 2 ** index
 
-    cpu_count = 0
     error_msg = ""
     cpu_not_used = []
     for index, cpu in enumerate(cpu_list):

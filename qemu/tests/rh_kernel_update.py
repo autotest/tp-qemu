@@ -251,7 +251,8 @@ def run(test, params, env):
         latest_pkg_cmd = "%s %s %s" % (latest_pkg_cmd, tag, pkg)
         latest_pkg_cmd = "%s --arch=%s --paths" % (latest_pkg_cmd, arch)
         mnt_paths = utils.system_output(latest_pkg_cmd).splitlines()
-        return [get_brew_url(_, download_root) for _ in mnt_paths if _.endswith(".rpm")]
+        return [get_brew_url(_, download_root)
+                for _ in mnt_paths if _.endswith(".rpm")]
 
     def upgrade_guest_pkgs(session, pkg, arch, debuginfo=False,
                            nodeps=True, timeout=600):
@@ -297,8 +298,8 @@ def run(test, params, env):
     logging.info("Firmware rpm  :  %s" % firmware_rpm)
 
     boot_cfg_path = params.get("boot_cfg_path", "/boot/grub/grub.conf")
-    bootcfg_backup_cmd = "/bin/cp {0} {0}-bk".format(boot_cfg_path)
-    bootcfg_restore_cmd = "/bin/cp {0}-bk {0}".format(boot_cfg_path)
+    bootcfg_backup_cmd = "\cp -af  {0} {0}-bk".format(boot_cfg_path)
+    bootcfg_restore_cmd = "\cp -af {0}-bk {0}".format(boot_cfg_path)
     count = 0
 
     try:
@@ -387,9 +388,9 @@ def run(test, params, env):
             mkinitrd_cmd = "mkinitrd -f %s " % initrd_path
             mkinitrd_cmd += "".join(driver_list)
             mkinitrd_cmd += " %s" % kernel_version
-            cp_initrd_cmd = "/bin/cp %s %s-bk" % (initrd_path, initrd_path)
-            restore_initrd_cmd = "/bin/cp %s-bk %s" % (initrd_path,
-                                                       initrd_path)
+            cp_initrd_cmd = "\cp -af  %s %s-bk" % (initrd_path, initrd_path)
+            restore_initrd_cmd = "\cp -af  %s-bk %s" % (initrd_path,
+                                                        initrd_path)
 
             error.context("Backup initrd file")
             s, o = session.cmd_status_output(cp_initrd_cmd, timeout=200)

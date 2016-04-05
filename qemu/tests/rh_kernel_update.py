@@ -297,8 +297,8 @@ def run(test, params, env):
     logging.info("Firmware rpm  :  %s" % firmware_rpm)
 
     boot_cfg_path = params.get("boot_cfg_path", "/boot/grub/grub.conf")
-    bootcfg_backup_cmd = "/bin/cp {0} {0}-bk".format(boot_cfg_path)
-    bootcfg_restore_cmd = "/bin/cp {0}-bk {0}".format(boot_cfg_path)
+    bootcfg_backup_cmd = "\cp -af  {0} {0}-bk".format(boot_cfg_path)
+    bootcfg_restore_cmd = "\cp -af {0}-bk {0}".format(boot_cfg_path)
     count = 0
 
     try:
@@ -387,9 +387,9 @@ def run(test, params, env):
             mkinitrd_cmd = "mkinitrd -f %s " % initrd_path
             mkinitrd_cmd += "".join(driver_list)
             mkinitrd_cmd += " %s" % kernel_version
-            cp_initrd_cmd = "/bin/cp %s %s-bk" % (initrd_path, initrd_path)
-            restore_initrd_cmd = "/bin/cp %s-bk %s" % (initrd_path,
-                                                       initrd_path)
+            cp_initrd_cmd = "\cp -af  %s %s-bk" % (initrd_path, initrd_path)
+            restore_initrd_cmd = "\cp -af  %s-bk %s" % (initrd_path,
+                                                        initrd_path)
 
             error.context("Backup initrd file")
             s, o = session.cmd_status_output(cp_initrd_cmd, timeout=200)

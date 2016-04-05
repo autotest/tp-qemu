@@ -251,7 +251,8 @@ def run(test, params, env):
         latest_pkg_cmd = "%s %s %s" % (latest_pkg_cmd, tag, pkg)
         latest_pkg_cmd = "%s --arch=%s --paths" % (latest_pkg_cmd, arch)
         mnt_paths = utils.system_output(latest_pkg_cmd).splitlines()
-        return [get_brew_url(_, download_root) for _ in mnt_paths if _.endswith(".rpm")]
+        return [get_brew_url(_, download_root)
+                for _ in mnt_paths if _.endswith(".rpm")]
 
     def upgrade_guest_pkgs(session, pkg, arch, debuginfo=False,
                            nodeps=True, timeout=600):

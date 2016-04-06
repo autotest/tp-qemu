@@ -19,11 +19,11 @@ def run(test, params, env):
     KVM guest link test:
     1) Boot up guest with one nic
     2) Disable guest link by set_link
-    3) Check guest nic operstate, and ping guest from host
+    3) Check guest nic operstate and ping host from guest,
        will change queues number at the same time, when using mq
     4) Reboot the guest, then check guest nic operstate and do ping test
     5) Re-enable guest link by set_link
-    6) Check guest nic operstate and ping guest from host,
+    6) Check guest nic operstate and ping host from guest,
        will change queues number at the same time, when using mq
     7) Reboot the guest, then check guest nic operstate and do ping test
     8) Call utils_test.run_file_transfer function to test file transfer.
@@ -81,9 +81,7 @@ def run(test, params, env):
         """
         Check whether guest network is connective by ping
         """
-        if link_up:
-            vm.wait_for_login(restart_network=True)
-            guest_ip = vm.get_address()
+        session = vm.wait_for_serial_login(restart_network=link_up)
         if change_queues:
             env["run_change_queues"] = False
             bg_thread = utils.InterruptedThread(change_queues_number_repeatly,
@@ -93,7 +91,8 @@ def run(test, params, env):
             utils_misc.wait_for(lambda: env["run_change_queues"], 30, 0, 2,
                                 "wait queues change start")
 
-        _, output = utils_test.ping(guest_ip, count=10, timeout=20)
+        output = utils_test.ping(host_ip, 10, interface=guest_ifname,
+                                 timeout=20, session=session)[1]
         if not link_up and utils_test.get_loss_ratio(output) != 100:
             err_msg = "guest network still connecting after down the link"
             raise error.TestFail(err_msg)
@@ -106,6 +105,7 @@ def run(test, params, env):
         if change_queues:
             env["run_change_queues"] = False
             bg_thread.join()
+        session.close()
 
     def operstate_check(session, expect_status, guest_ifname=""):
         """
@@ -195,6 +195,7 @@ def run(test, params, env):
     change_queues = False
     guest_ifname = ""
     guest_ip = vm.get_address()
+    host_ip = utils_net.get_host_ip_address(params)
     # Win guest '2' represent 'Connected', '7' represent 'Media disconnected'
     win_media_connected = params.get("win_media_connected", "2")
     win_media_disconnected = params.get("win_media_disconnected", "7")

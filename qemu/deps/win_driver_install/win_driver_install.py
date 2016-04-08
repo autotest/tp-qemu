@@ -84,11 +84,11 @@ def get_inf_files(driver_path, driver_name):
     :param driver_name: Driver name which will be installed.
     :return inf_files: Inf file path.
     """
-    inf_name = "%s.inf" % driver_name
+    inf_name = ("%s.inf" % driver_name).lower()
     inf_files = []
     for root, dirs, files in os.walk(driver_path):
         files_path = map(lambda x: os.path.join(root, x), files)
-        inf_files += filter(lambda x: x.endswith(inf_name), files_path)
+        inf_files += filter(lambda x: x.lower().endswith(inf_name), files_path)
     return inf_files
 
 

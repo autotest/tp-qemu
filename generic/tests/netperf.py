@@ -239,12 +239,12 @@ def run(test, params, env):
 
     if params.get("log_hostinfo_script"):
         src = os.path.join(test.virtdir, params.get("log_hostinfo_script"))
-        path = os.path.join(test.resultsdir, "sysinfo")
+        path = os.path.join(test.resultsdir, "systeminfo")
         utils.system_output("bash %s %s &> %s" % (src, test.resultsdir, path))
 
     if params.get("log_guestinfo_script") and params.get("log_guestinfo_exec"):
         src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
-        path = os.path.join(test.resultsdir, "sysinfo")
+        path = os.path.join(test.resultsdir, "systeminfo")
         destpath = params.get("log_guestinfo_path", "/tmp/log_guestinfo.sh")
         vm.copy_files_to(src, destpath)
         logexec = params.get("log_guestinfo_exec", "bash")
@@ -384,7 +384,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 test.write_test_keyval({'category': category})
                 prefix = '%s--%s--%s' % (protocol, i, j)
                 for key in key_list:
-                    test.write_perf_keyval(
+                    test.write_test_keyval(
                         {'%s--%s' % (prefix, key): ret[key]})
 
                 logging.info(row)

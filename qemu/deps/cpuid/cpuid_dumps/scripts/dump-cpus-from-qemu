@@ -98,6 +98,7 @@ DUMP_DIR="$2"
     rhel6.3.0
     rhel6.4.0
     rhel6.5.0
+    rhel6.6.0
 '
 
 for machine in $QEMU_MACHINES_TO_DUMP;do

@@ -176,7 +176,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
 
     if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
         pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel",
-                        "source-highlight", "gtk-doc"]
+                        "source-highlight", "gtk-doc", "libepoxy-devel"]
     else:
         pkgsRequired = ["libogg-devel", "celt051-devel", "libcacard-devel"]
 

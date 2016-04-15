@@ -117,8 +117,9 @@ def run(test, params, env):
                                                         new_img_name)
     output = change_block(change_insert_cmd)
     if "is locked" not in output:
-        msg += "Device is not locked after 'change' the locked device."
-        raise error.TestFail("Device is not locked")
+        msg = "%s is not locked after execute command '%s'" % (device_name,
+                                                               change_insert_cmd)
+        raise error.TestFail(msg)
 
     blocks_info = monitor.info("block")
     if orig_img_name not in str(blocks_info):

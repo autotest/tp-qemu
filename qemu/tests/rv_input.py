@@ -298,19 +298,12 @@ def run(test, params, env):
 
     # Get test type and perform proper test
     test_type = params.get("config_test")
-    test_mapping = {'type_and_func_keys': test_type_and_func_keys,
-                    'leds_and_esc_keys': test_leds_and_esc_keys,
-                    'nonus_layout': test_nonus_layout,
-                    'leds_migration': test_leds_migration}
-    test_parameters = {
-        'type_and_func_keys': (client_vm, guest_session, params),
-        'leds_and_esc_keys': (client_vm, guest_session, params),
-        'nonus_layout': (client_vm, guest_session, params),
-        'leds_migration': (client_vm, guest_vm, guest_session, params)}
-
+    test_mapping = {'type_and_func_keys': (test_type_and_func_keys, (client_vm, guest_session, params)),
+                    'leds_and_esc_keys': (test_leds_and_esc_keys, (client_vm, guest_session, params)),
+                    'nonus_layout': (test_nonus_layout, (client_vm, guest_session, params)),
+                    'leds_migration': (test_leds_migration, (client_vm, guest_vm, guest_session, params))}
     try:
-        func = test_mapping[test_type]
-        args = test_parameters[test_type]
+        func, args = test_mapping[test_type]
     except:
         raise error.TestFail("Unknown type of test")
 

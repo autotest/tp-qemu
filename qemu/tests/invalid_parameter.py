@@ -25,10 +25,10 @@ def run(test, params, env):
         vm.destroy()
     except Exception, emsg:
         error.context("Check guest exit status.")
-        if "(core dumped)" in emsg.reason:
+        if "(core dumped)" in str(emsg):
             raise error.TestFail("Guest core dumped with invalid parameters.")
         else:
-            logging.info("Guest quit as expect: %s" % emsg.reason)
+            logging.info("Guest quit as expect: %s" % str(emsg))
             return
 
     raise error.TestFail("Guest start normally, didn't quit as expect.")

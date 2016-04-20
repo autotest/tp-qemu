@@ -10,16 +10,7 @@ In general, if you have a question, you should send an email to the Virt Test
 development mailing list and not any specific individual privately.
 
 
-Pull request maintenance - QEMU subtests
-----------------------------------------
-
-M: Jiri Zupka <jzupka@redhat.com>
-M: Lukas Doktor <ldoktor@redhat.com>
-M: Yiqiao Pu <ypu@redhat.com>
-M: Feng Yang <fyang@redhat.com>
-
-Pull request maintenance - openvswitch subtests
-------------------------------------------------
-
-M: Jiri Zupka <jzupka@redhat.com>
-
+L: Avocado-devel <avocado-devel@redhat.com>
+M: Xu Tian <xutian@redhat.com>
+M: Cong Li <coli@redhat.com>
+M: Jiangang Wei <weijg.fnst@cn.fujitsu.com>

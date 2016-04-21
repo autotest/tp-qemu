@@ -1,8 +1,20 @@
+import re
 import logging
 from virttest import utils_misc
-from avocado.core import exceptions
+
+# Make it work under both autotest-framework and avocado-framework
+try:
+    from avocado.core import exceptions
+except ImportError:
+    from autotest.client.shared import error as exceptions
+
+try:
+    from virttest import error_context
+except ImportError:
+    from autotest.client.shared import error as error_context
 
 
+@error_context.context_aware
 def run(test, params, env):
     """
     This simply stop updates services in Windows guests.
@@ -11,20 +23,32 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+    def disable_win_service(session, scname):
+        """
+        :param session: VM session.
+        :param scname: Service name.
+
+        :return: return True if scname has been disabled.
+        """
+        session.sendline("sc config %s start= disabled" % scname)
+        output = session.cmd("sc qc %s" % scname)
+        return re.search("disabled", output, re.M | re.I)
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(
         timeout=float(params.get("login_timeout", 240)))
 
-    cmd_timeout = int(params.get("cmd_timeout", 180))
-    stop_update_service_cmd = params.get("stop_update_service_cmd")
-    if not utils_misc.wait_for(lambda: session.cmd_status(stop_update_service_cmd,
-                               timeout=cmd_timeout) == 0, 360, 0, 5):
-        raise exceptions.TestFail("Failed to stop Windows update service.")
-    logging.info("Stopped Windows updates services.")
+    cmd_timeout = float(params.get("cmd_timeout", 180))
+    scname = params.get("win_update_service", "WuAuServ")
 
-    disable_update_service_cmd = params.get("disable_update_service_cmd")
-    if not utils_misc.wait_for(lambda: session.cmd_status(disable_update_service_cmd,
-                               timeout=cmd_timeout) == 0, 360, 0, 5):
-        raise exceptions.TestFail("Turn off updates service failed.")
-    logging.info("Turned off windows updates service")
+    error_context.context("Turned off windows updates service.",
+                          logging.info)
+    try:
+        status = utils_misc.wait_for(lambda: disable_win_service(session, scname),
+                                     timeout=cmd_timeout)
+        if not status:
+            raise exceptions.TestFail("Turn off updates service failed.")
+        session = vm.reboot(session)
+    finally:
+        session.close()

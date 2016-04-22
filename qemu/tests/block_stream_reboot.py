@@ -1,3 +1,5 @@
+import time
+import random
 from autotest.client.shared import error, utils
 from qemu.tests import blk_stream
 
@@ -30,6 +32,7 @@ class BlockStreamReboot(blk_stream.BlockStream):
                 bg.start()
                 if bg.isAlive():
                     self.process.append(bg)
+            time.sleep(random.randint(25, 100))
 
     def clean(self):
         """

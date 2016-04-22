@@ -1,9 +1,16 @@
 import logging
-
-from autotest.client.shared import error
-from autotest.client import utils
-
 from virttest import base_installer
+
+# Make it work under both autotest-framework and avocado-framework
+try:
+    from avocado.utils import linux_modules
+except ImportError:
+    from autotest.client import base_utils as linux_modules
+
+try:
+    from avocado.core import exceptions
+except ImportError:
+    from autotest.client.shared import error as exceptions
 
 
 def run(test, params, env):
@@ -27,8 +34,8 @@ def run(test, params, env):
         if " %s " % module in modules_str:
             continue
         tmp_list = [module]
-        if utils.module_is_loaded(module):
-            tmp_list += utils.get_submodules(module)
+        if linux_modules.module_is_loaded(module):
+            tmp_list += linux_modules.get_submodules(module)
         modules_str += "%s " % " ".join(tmp_list)
         if len(tmp_list) > 1:
             for _ in submodules:
@@ -52,8 +59,8 @@ def run(test, params, env):
                 logging.error(e)
                 break
             except Exception, e:
-                raise error.TestFail("Failed to load modules [%r]: %s" %
-                                     (installer_object.module_list, e))
+                raise exceptions.TestFail("Failed to load modules [%r]: %s" %
+                                          (installer_object.module_list, e))
             installer_object.unload_modules()
     finally:
         try:

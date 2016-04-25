@@ -74,7 +74,7 @@ def run(test, params, env):
         try:
             if flag:
                 return flag.groups()[0]
-        except Exception, e:
+        except Exception as e:
             logging.error("Failed to get support flag %s" % e)
 
     def get_all_support_flags():
@@ -122,7 +122,7 @@ def run(test, params, env):
         try:
             flags = flags_re.search(out).groups()[0].split()
             return set(map(utils_misc.Flag, flags))
-        except Exception, e:
+        except Exception as e:
             logging.error("Failed to get guest cpu flags %s" % e)
 
     utils_misc.Flag.aliases = utils_misc.kvm_map_flags_aliases
@@ -144,17 +144,14 @@ def run(test, params, env):
     if params.get("start_vm") == "no" and "unknown,check" in extra_flags:
         params["start_vm"] = "yes"
         try:
-            vm.create()
-        except virt_vm.VMCreateError, detail:
-            error.context("qemu process is defunct.%s" % detail, logging.info)
-        finally:
-            if vm.is_alive():
-                process_output = vm.process.get_output()
-            else:
-                process_output = str(detail)
-            if params["qemu_output"] not in process_output:
-                raise error.TestFail("no qemu output: %s" % params["qemu_output"])
+            vm.create(params=params)
+            vm.verify_alive()
+            output = vm.process.get_output()
             vm.destroy()
+        except virt_vm.VMCreateError as detail:
+            output = str(detail)
+        if params["qemu_output"] not in output:
+            raise error.TestFail("no qemu output: %s" % params["qemu_output"])
     else:
         vm.verify_alive()
         timeout = float(params.get("login_timeout", 240))

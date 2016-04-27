@@ -62,7 +62,7 @@ def run(test, params, env):
         Get queues status
         """
         mq_get_cmd = "ethtool -l %s" % ifname
-        nic_mq_info = session.cmd_output(mq_get_cmd, timeout=timeout)
+        nic_mq_info = session.cmd_output_safe(mq_get_cmd, timeout=timeout)
         queues_reg = re.compile(r"Combined:\s+(\d)", re.I)
         queues_info = queues_reg.findall(" ".join(nic_mq_info.splitlines()))
         if len(queues_info) != 2:

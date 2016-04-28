@@ -229,7 +229,6 @@ def run(test, params, env):
     cmd_timeout = float(params.get("cmd_timeout", 360))
     re_str = params["re_str"]
     black_list = params["black_list"].split()
-    os_type = params["os_type"]
     stg_image_size = params.get("stg_image_size")
     disk_indexs = []
 
@@ -375,4 +374,3 @@ def run(test, params, env):
                 logging.warn("Get error when cleanup, '%s'", err)
 
         _do_post_cmd(session)
-        session.close()

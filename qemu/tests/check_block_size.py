@@ -3,6 +3,7 @@ import logging
 from autotest.client.shared import error
 
 from virttest import utils_test
+from virttest import utils_misc
 
 
 @error.context_aware
@@ -41,32 +42,30 @@ def run(test, params, env):
 
     try:
         # Get virtio block devices in guest.
-        cmd = params.get("get_dev_list_cmd", '')
-        dev_list = session.cmd_output(cmd).split()
-        if dev_list:
-            expect_physical = int(params.get("physical_block_size_stg", 0))
-            expect_logical = int(params.get("logical_block_size_stg", 0))
-            # FIXME: seems we don't have a method to check which virtio
-            # device matches device file in guest. So we just check the
-            # last device file in guest. Hope it will work correctly.
-            # Yep, we need improvement here.
-            error.context("Verify physical/Logical block size", logging.info)
-            cmd = params.get("chk_phy_blk_cmd") % dev_list[-1]
-            logging.debug("Physical block size get via '%s'" % cmd)
-            out_physical = int(session.cmd_output(cmd))
-            cmd = params.get("chk_log_blk_cmd") % dev_list[-1]
-            logging.debug("Logical block size get via '%s'" % cmd)
-            out_logical = int(session.cmd_output(cmd))
-            if ((out_physical != expect_physical) or
-                    (out_logical != expect_logical)):
-                msg = "Block size in guest doesn't match with qemu parameter\n"
-                msg += "Physical block size in guest: %s, " % out_physical
-                msg += "expect: %s" % expect_physical
-                msg += "\nLogical block size in guest: %s, " % out_logical
-                msg += "expect: %s" % expect_logical
-                raise error.TestFail(msg)
-        else:
-            raise error.TestError("Could not find any virtio block device.")
+        drive_serial = str(params["drive_serial_stg"])
+        drive_path = utils_misc.get_linux_drive_path(session, drive_serial)
+        if not drive_path:
+            raise error.TestError("Could not find the specified"
+                                  "virtio block device.")
+
+        drive_kname = drive_path.split("/")[-1]
+        expect_physical = int(params.get("physical_block_size_stg", 0))
+        expect_logical = int(params.get("logical_block_size_stg", 0))
+        error.context("Verify physical/Logical block size", logging.info)
+        cmd = params.get("chk_phy_blk_cmd") % drive_kname
+        logging.debug("Physical block size get via '%s'" % cmd)
+        out_physical = int(session.cmd_output(cmd))
+        cmd = params.get("chk_log_blk_cmd") % drive_kname
+        logging.debug("Logical block size get via '%s'" % cmd)
+        out_logical = int(session.cmd_output(cmd))
+        if ((out_physical != expect_physical) or
+                (out_logical != expect_logical)):
+            msg = "Block size in guest doesn't match with qemu parameter\n"
+            msg += "Physical block size in guest: %s, " % out_physical
+            msg += "expect: %s" % expect_physical
+            msg += "\nLogical block size in guest: %s, " % out_logical
+            msg += "expect: %s" % expect_logical
+            raise error.TestFail(msg)
     finally:
         if session:
             session.close()

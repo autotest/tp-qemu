@@ -61,26 +61,38 @@ def run(test, params, env):
         qtree = qemu_qtree.QtreeContainer()
         try:
             qtree.parse_info_qtree(vm.monitor.info('qtree'))
-        except AttributeError:
-            logging.debug("Monitor deson't support info qtree skip this test")
-            qtree = None
-        if qtree:
             keyword = params['qtree_check_keyword']
             qtree_check_value = params['qtree_check_value']
             qtree_check_option = params['qtree_check_option']
+
             for qdev in qtree.get_nodes():
-                if (keyword in qdev.qtree and
-                        qdev.qtree[keyword] == qtree_check_value):
-                    qtree_value = qdev.qtree.get(qtree_check_option)
-                    if re.match('".*"$', qtree_value):
-                        qtree_value = re.findall('"(.*)"$', qtree_value)[0]
-                    if (qtree_value != parameter_value_raw and
-                            parameter_value_raw not in qtree_value):
-                        raise error.TestFail("Value from info qtree is not "
-                                             "match with the value from "
-                                             "command line: %s vs "
-                                             "%s" % (qtree_value,
-                                                     parameter_value_raw))
+                if keyword not in qdev.qtree:
+                    continue
+                if qdev.qtree[keyword] != qtree_check_value:
+                    continue
+
+                qtree_value = None
+                for node in qemu_qtree.traverse(qdev):
+                    if node.qtree.has_key(qtree_check_option):
+                        qtree_value = str(node.qtree.get(qtree_check_option))
+                        break
+
+                if qtree_value is not None:
+                    break
+            else:
+                raise error.TestFail(
+                    "Can not find property '%s' from info qtree where '%s' is "
+                    "'%s'" % (qtree_check_option, keyword, qtree_check_value))
+
+            qtree_value = re.findall('"?(.*)"?$', qtree_value)[0]
+            if (qtree_value != parameter_value_raw and
+                    parameter_value_raw not in qtree_value):
+                raise error.TestFail(
+                    "Value from info qtree is not match with the value from"
+                    "command line: '%s' vs '%s'" % (
+                        qtree_value, parameter_value_raw))
+        except AttributeError:
+            logging.debug("Monitor deson't support info qtree skip this test")
 
     session = vm.wait_for_login(timeout=timeout)
 

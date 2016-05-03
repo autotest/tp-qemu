@@ -5,7 +5,6 @@ from autotest.client.shared import error
 from autotest.client import utils
 
 from virttest import utils_test
-from virttest import utils_misc
 
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 
@@ -120,7 +119,7 @@ def run(test, params, env):
     vm = env.get_vm(vm_name)
     error.context("Check if ntp utils are host in system.", logging.info)
     try:
-        utils_misc.find_command("ntpdate")
+        utils.find_command("ntpdate")
     except ValueError:
         error.context("Install ntp utils `%s`." % (ntputil_install),
                       logging.info)

@@ -96,7 +96,7 @@ def run(test, params, env):
         ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
         download_link = params.get("netperf_download_link")
-        download_dir = data_dir.get_download_dir()
+        download_dir = data_dir.get_tmp_dir()
         md5sum = params.get("pkg_md5sum")
         pkg = utils.unmap_url_cache(download_dir, download_link, md5sum)
         remote.scp_to_remote(ip, shell_port, username, password, pkg, "/tmp")

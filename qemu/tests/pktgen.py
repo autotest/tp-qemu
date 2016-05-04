@@ -85,7 +85,7 @@ def run(test, params, env):
     remote.scp_to_remote(pktgen_ip, s_shell_port, s_username, s_passwd,
                          local_path, remote_path)
 
-    error.context("Run pktgen test")
+    error.context("Run pktgen test", logging.info)
     run_threads = params.get("pktgen_threads", 1)
     pktgen_stress_timeout = float(params.get("pktgen_test_timeout", 600))
     exec_cmd = "%s %s %s %s %s" % (remote_path, vm.get_address(),
@@ -98,7 +98,7 @@ def run(test, params, env):
             # backgroud process, can set run flag to False to stop this case.
             start_time = time.time()
             stop_time = start_time + pktgen_stress_timeout
-            while (env["pktgen_run"] and time.time < stop_time):
+            while (env["pktgen_run"] and time.time() < stop_time):
                 runner(exec_cmd, timeout=pktgen_stress_timeout)
 
         # using ping to kill the pktgen stress

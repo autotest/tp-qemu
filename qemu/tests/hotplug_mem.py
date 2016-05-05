@@ -53,7 +53,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         Return memory object and pc-dimm devices by given name
         """
         dev_ids = map(lambda x: "-".join([x, name]), ["mem", "dimm"])
-        deivces = filter(None, map(vm.devices.get_by_qid, dev_ids))
+        devices = filter(None, map(vm.devices.get_by_qid, dev_ids))
         return [_[0] for _ in devices]
 
     def start_test(self):

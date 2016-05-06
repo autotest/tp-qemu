@@ -149,10 +149,10 @@ def run(test, params, env):
                 logging.info("The host support '%s' type watchdog device" %
                              watchdog_device_type)
             else:
-                raise error.TestFail("Host not support watchdog device type %s "
-                                     % watchdog_device_type)
                 logging.info("The host support watchdog device type is: '%s'"
                              % watchdog_device)
+                raise error.TestFail("Host not support watchdog device type %s "
+                                     % watchdog_device_type)
         else:
             raise error.TestFail("No watchdog device support in the host!")
 

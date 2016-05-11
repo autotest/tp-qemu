@@ -36,7 +36,7 @@ def run(test, params, env):
         session.cmd(params.get("pre_cmd"))
 
     driver_name = params["driver_name"]
-    if (params.get("need_enable_verifier"), "yes") == "yes":
+    if params.get("need_enable_verifier", "yes") == "yes":
         error.context("Enable %s driver verifier in guest" % driver_name,
                       logging.info)
         session = utils_test.qemu.setup_win_driver_verifier(session,

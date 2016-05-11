@@ -133,7 +133,8 @@ def run(test, params, env):
                 stat = []
                 for vm in mig_data.vms:
                     stat.append(vm.monitor.get_status())
-            except qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError:
+            except (qemu_monitor.MonitorProtocolError,
+                    qemu_monitor.QMPCmdError):
                 logging.debug("Guest %s not working" % (vm))
 
         def check_vms_src(self, mig_data):
@@ -247,7 +248,8 @@ def run(test, params, env):
             try:
                 for vm in mig_data.vms:
                     vm.monitor.get_status()
-            except qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError:
+            except (qemu_monitor.MonitorProtocolError,
+                    qemu_monitor.QMPCmdError):
                 logging.debug("Guest %s not working" % (vm))
 
         def check_vms_dst(self, mig_data):

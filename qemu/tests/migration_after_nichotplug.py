@@ -38,7 +38,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_serial_login(timeout=timeout)
+    session_serial = vm.wait_for_serial_login(timeout=timeout)
 
     guest_is_not_windows = (params.get("os_type") != 'windows')
     run_dhclient = params.get("run_dhclient", "no")
@@ -52,9 +52,9 @@ def run(test, params, env):
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
     if guest_is_not_windows and module:
-        session.cmd_output("modprobe %s" % module)
-    if session:
-        session.close()
+        session_serial.cmd("modprobe %s" % module)
+    if session_serial:
+        session_serial.close()
 
     error.context("Add network devices through monitor cmd", logging.info)
     nic_name = 'hotadded'
@@ -71,7 +71,7 @@ def run(test, params, env):
     # Most modern Linux guests run NetworkManager, and thus do not need this.
     if run_dhclient == "yes" and guest_is_not_windows:
         session_serial = vm.wait_for_serial_login(timeout=timeout)
-        ifname = utils_net.get_linux_ifname(session, nic_mac)
+        ifname = utils_net.get_linux_ifname(session_serial, nic_mac)
         utils_net.restart_guest_network(session_serial, ifname)
         # Guest need to take quite a long time to set the ip addr, sleep a
         # while to wait for guest done.
@@ -111,7 +111,7 @@ def run(test, params, env):
 
     error.context("Reboot guest and verify new nic works", logging.info)
     host_ip = utils_net.get_ip_address_by_interface(netdst)
-    session = vm.reboot(session=session)
+    session = vm.reboot()
     status, output = utils_test.ping(dest=host_ip, count=100,
                                      timeout=240, session=session)
     if status != 0:

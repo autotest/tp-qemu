@@ -83,7 +83,6 @@ class BallooningTest(MemoryBaseTest):
         status = utils_misc.wait_for((lambda: compare_mem ==
                                       self.get_ballooned_memory()),
                                      balloon_timeout)
-        ballooned_mem = self.get_ballooned_memory()
         if status is None:
             raise error.TestFail("Failed to balloon memory to expect"
                                  " value during %ss" % balloon_timeout)

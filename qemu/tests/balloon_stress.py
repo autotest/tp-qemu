@@ -79,7 +79,7 @@ def run(test, params, env):
     session.cmd(params["stop_player_cmd"])
     vm.verify_alive()
 
-    if (params.get("need_clear_verifier"), "yes") == "yes":
+    if params.get("need_clear_verifier", "yes") == "yes":
         error.context("Clear %s driver verifier in guest" % driver_name,
                       logging.info)
         session = utils_test.qemu.clear_win_driver_verifier(session, vm, timeout)

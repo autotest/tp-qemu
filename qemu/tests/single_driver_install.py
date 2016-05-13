@@ -83,6 +83,10 @@ def run(test, params, env):
             guest_list = dict([x.split(":") for x in alias_map.split(",")])
             guest_name = guest_list[guest_name]
 
+        # For driver virtio serial, the path name is not same as driver name,
+        # need udpate the path here.
+        if driver_name == "vioser":
+            driver_name = "vioserial"
         driver_path = r"%s:\%s\%s" % (vol_virtio, driver_name, guest_name)
         logging.debug("The driver which would be installed is %s" % driver_path)
 

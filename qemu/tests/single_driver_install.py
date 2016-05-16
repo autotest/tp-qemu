@@ -129,8 +129,8 @@ def run(test, params, env):
         show_file_extentions(session)
         session = reboot(vm, session)
 
-        uninstall_flag = params.get("uninstall", "False")
-        if uninstall_flag == "True":
+        uninstall_flag = params.get("need_uninstall", "no")
+        if uninstall_flag == "yes":
             operation = "uninstall_driver"
             error_context.context("Uninstall driver", logging.info)
             install_driver(session, operation)

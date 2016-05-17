@@ -13,7 +13,7 @@ def run(test, params, env):
     1) Log into a guest
     2) Get the driver device id(Windows) or module name(Linux) from guest
     3) Unload/load the device driver
-    4) Check if the device still works properly(Optinal)
+    4) Check if the device still works properly
     5) Repeat step 3-4 several times
 
     :param test: QEMU test object
@@ -26,7 +26,6 @@ def run(test, params, env):
             cmd = cmd.replace("DRIVER_ID", driver_id)
 
         status, output = session.cmd_status_output(cmd)
-
         if status != 0:
             raise error.TestFail("failed to load driver, %s" % output)
         if params["os_type"] == "windows":
@@ -36,8 +35,8 @@ def run(test, params, env):
     def unload_driver(session, cmd, driver_id):
         if params["os_type"] == "windows":
             cmd = cmd.replace("DRIVER_ID", driver_id)
-        status, output = session.cmd_status_output(cmd)
 
+        status, output = session.cmd_status_output(cmd)
         if status != 0:
             raise error.TestFail("failed to unload driver, %s" % output)
         if params["os_type"] == "windows":
@@ -61,7 +60,6 @@ def run(test, params, env):
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     # Use the last nic for send driver load/unload command
-    nics = vm.virtnet
     nic_index = len(vm.virtnet) - 1
     session = vm.wait_for_login(nic_index=nic_index, timeout=timeout)
 
@@ -91,7 +89,7 @@ def run(test, params, env):
         load_driver(session, driver_load_cmd, driver_id)
         time.sleep(5)
 
-    if params.get("test_after_load"):
-        test_after_load = params.get("test_after_load")
+    test_after_load = params.get("test_after_load")
+    if test_after_load:
         utils_test.run_virt_sub_test(test, params, env,
                                      sub_type=test_after_load)

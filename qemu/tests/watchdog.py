@@ -125,7 +125,6 @@ def run(test, params, env):
         logging.info("Watchdog action '%s' come into effect." %
                      watchdog_action)
 
-    # test case
     def check_watchdog_support():
         """
         check the host qemu-kvm support watchdog device
@@ -151,10 +150,10 @@ def run(test, params, env):
             else:
                 logging.info("The host support watchdog device type is: '%s'"
                              % watchdog_device)
-                raise error.TestFail("Host not support watchdog device type %s "
-                                     % watchdog_device_type)
+                raise error.TestNAError("watdog %s isn't supported!"
+                                        % watchdog_device_type)
         else:
-            raise error.TestFail("No watchdog device support in the host!")
+            raise error.TestNAError("No watchdog device supported by the host!")
 
     def guest_boot_with_watchdog():
         """
@@ -282,6 +281,8 @@ def run(test, params, env):
 
     # main procedure
     test_type = params.get("test_type")
+    check_watchdog_support()
+
     error.context("'%s' test starting ... " % test_type, logging.info)
     error.context("Boot VM with WDT(Device:'%s', Action:'%s'),and try to login"
                   % (watchdog_device_type, watchdog_action), logging.info)

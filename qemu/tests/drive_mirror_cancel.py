@@ -24,7 +24,7 @@ def run_drive_mirror_cancel(test, params, env):
         bg = utils.InterruptedThread(mirror_test.cancel,)
         bg.start()
         job = mirror_test.get_status()
-        if job.get("type","0") != "mirror":
+        if job.get("type", "0") != "mirror":
             raise error.TestFail("Job cancel immediacatly")
         error.context("Cleanup rules in iptables", logging.info)
         utils.run(params["stop_firewall_cmd"])

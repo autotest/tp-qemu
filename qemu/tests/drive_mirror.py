@@ -77,8 +77,10 @@ class DriveMirror(block_copy.BlockCopy):
             dirty_bitmap = info.get("dirty-bitmaps", "0")
             granularity = int(dirty_bitmap[0].get("granularity", "0"))
             if granularity != target_gran:
-                raise error.TestFail("Granularity unmatched. Target is %d,"
-                                 " result is %d" % (target_gran, granularity))
+                raise error.TestFail(
+                    "Granularity unmatched. Target is %d, result is %d" %
+                    (target_gran, granularity))
+
     @error.context_aware
     def check_node_name(self):
         device_id = self.vm.get_block({"file": self.target_image})
@@ -87,8 +89,9 @@ class DriveMirror(block_copy.BlockCopy):
             node_name_exp = self.params["node_name"]
             node_name = info.get("node-name", "")
             if node_name != node_name_exp:
-                raise error.TestFail("node-name is: %s, while set value is: %s" %
-                                    (node_name, node_name_exp))
+                raise error.TestFail(
+                    "node-name is: %s, while set value is: %s" %
+                    (node_name, node_name_exp))
 
     @error.context_aware
     def start(self):

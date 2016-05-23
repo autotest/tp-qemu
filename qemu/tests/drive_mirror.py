@@ -66,6 +66,31 @@ class DriveMirror(block_copy.BlockCopy):
         return self.vm.get_block({"file": image_file})
 
     @error.context_aware
+    def check_granularity(self):
+        """
+        Check granularity value as set.
+        """
+        device_id = self.get_device()
+        info = self.vm.monitor.info_block().get(device_id)
+        if "granularity" in self.params:
+            target_gran = int(self.params["granularity"])
+            dirty_bitmap = info.get("dirty-bitmaps", "0")
+            granularity = int(dirty_bitmap[0].get("granularity", "0"))
+            if granularity != target_gran:
+                raise error.TestFail("Granularity unmatched. Target is %d,"
+                                 " result is %d" % (target_gran, granularity))
+    @error.context_aware
+    def check_node_name(self):
+        device_id = self.vm.get_block({"file": self.target_image})
+        info = self.vm.monitor.info_block().get(device_id)
+        if "node_name" in self.params:
+            node_name_exp = self.params["node_name"]
+            node_name = info.get("node-name", "")
+            if node_name != node_name_exp:
+                raise error.TestFail("node-name is: %s, while set value is: %s" %
+                                    (node_name, node_name_exp))
+
+    @error.context_aware
     def start(self):
         """
         start block device mirroring job;
@@ -77,10 +102,18 @@ class DriveMirror(block_copy.BlockCopy):
         target_format = params["image_format"]
         create_mode = params["create_mode"]
         full_copy = params["full_copy"]
-
+        args = {"mode": create_mode, "speed": default_speed,
+                "format": target_format}
+        if 'granularity' and 'buf_count' in params:
+            granularity = int(params["granularity"])
+            buf_size = granularity * int(params["buf_count"])
+            args.update({"granularity": granularity,
+                         "buf-size": buf_size})
+        if 'node_name' in params:
+            args.update({"node-name": params.get("node_name")})
         error.context("Start to mirror block device", logging.info)
-        self.vm.block_mirror(device, target_image, default_speed,
-                             full_copy, target_format, create_mode)
+        self.vm.block_mirror(device, target_image, full_copy,
+                             **args)
         if not self.get_status():
             raise error.TestFail("No active mirroring job found")
         if params.get("image_type") != "iscsi":

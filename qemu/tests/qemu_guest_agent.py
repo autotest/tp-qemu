@@ -301,6 +301,95 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                          " '%s'", detail)
 
     @error.context_aware
+    def gagent_check_sync_delimited(self, test, params, env):
+        """
+        Execute "guest-sync-delimited" command to guest agent
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        error.context("Check guest agent command 'guest-sync-delimited'",
+                      logging.info)
+        self.gagent.sync("guest-sync-delimited")
+
+    @error.context_aware
+    def _gagent_verify_password(self, vm, new_password):
+        """
+        check if the password  works well for the specific user
+        """
+        vm.wait_for_login(password=new_password)
+
+    @error.context_aware
+    def gagent_check_set_user_password(self, test, params, env):
+        """
+        Execute "guest-set-user-password" command to guest agent
+       :param test: kvm test object
+       :param params: Dictionary with the test parameters
+       :param env: Dictionary with test environment.
+        """
+        old_password = params.get("password", "")
+        new_password = params.get("new_password", "123456")
+        crypted = params.get("crypted", "") == "yes"
+        try:
+            if crypted:
+                ret = self.gagent.set_user_password(new_password, crypted)
+            else:
+                ret = self.gagent.set_user_password(new_password)
+            if ret is False:
+                raise error.TestNAError("the  guest-set-user-password cmd "
+                                        "is not supported")
+            error.context("check if the guest could be login by new password",
+                          logging.info)
+            self._gagent_verify_password(self.vm, new_password)
+
+        except guest_agent.VAgentCmdError:
+            raise error.TestError("Failed to set the new password for guest")
+
+        finally:
+            error.context("reset back the password of guest", logging.info)
+            self.gagent.set_user_password(old_password)
+
+    @error.context_aware
+    def gagent_check_get_vcpus(self, test, params, env):
+        """
+        Execute "guest-set-vcpus" command to guest agent
+       :param test: kvm test object
+       :param params: Dictionary with the test parameters
+       :param env: Dictionary with test environment.
+        """
+        ret = self.gagent.get_vcpus()
+        if ret is False:
+            raise error.TestNAError("The guest-set-vcpus command is not "
+                                    "supported")
+
+    @error.context_aware
+    def gagent_check_set_vcpus(self, test, params, env):
+        """
+        Execute "guest-set-vcpus" command to guest agent
+       :param test: kvm test object
+       :param params: Dictionary with the test parameters
+       :param env: Dictionary with test environment.
+        """
+        error.context("get the cpu number of the testing guest")
+        vcpus_info = self.gagent.get_vcpus()
+        if vcpus_info is False:
+            raise error.TestNAError("the guest-set-vcpus cmd is not supported")
+        vcpus_num = len(vcpus_info)
+        error.context("the vcpu number:%d" % vcpus_num, logging.info)
+        if vcpus_num < 2:
+            raise error.TestNAError("the vpus number of guest should be more"
+                                    " than 1")
+        vcpus_info[vcpus_num - 1]["online"] = False
+        del vcpus_info[vcpus_num - 1]["can-offline"]
+        action = {'vcpus': [vcpus_info[vcpus_num - 1]]}
+        self.gagent.set_vcpus(action)
+        # Check if the result is as expected
+        vcpus_info = self.gagent.get_vcpus()
+        if vcpus_info[vcpus_num - 1]["online"] is not False:
+            raise error.TestFail("the vcpu status is not changed as expected")
+
+    @error.context_aware
     def _action_before_fsfreeze(self, *args):
         session = self._get_session(self.params, None)
         self._open_session_list.append(session)
@@ -424,8 +513,8 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 # can't transfer file if destination exists.
                 self._session_cmd_close(session, gagent_remove_service_cmd)
             else:
-                raise error.TestError("Could not create qemu-ga directory"
-                                      " in VM '%s', detail: '%s'" % (vm.name, o))
+                raise error.TestError("Could not create qemu-ga directory in "
+                                      "VM '%s', detail: '%s'" % (vm.name, o))
         dlls_list = session.cmd("dir %s" % gagent_guest_dir)
         missing_dlls_list = [_ for _ in gagent_dep_dlls_list
                              if os.path.basename(_) not in dlls_list]

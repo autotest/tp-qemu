@@ -66,6 +66,20 @@ class DriveMirror(block_copy.BlockCopy):
         return self.vm.get_block({"file": image_file})
 
     @error.context_aware
+    def check_granularity(self):
+        """
+        Check granularity value as set.
+        """
+        target_size = int(self.params["granularity"])
+        device_id = self.get_device()
+        info = self.vm.monitor.info_block().get(device_id)
+        dirty_bitmap = info.get("dirty-bitmaps", "0")[0]
+        granularity = int(dirty_bitmap.get("granularity", "0"))
+        if granularity != target_size:
+            raise error.TestFail("Granularity unmatched. Target is %d,"
+                                 " result is %d" % (target_size, granularity))
+
+    @error.context_aware
     def start(self):
         """
         start block device mirroring job;
@@ -77,10 +91,16 @@ class DriveMirror(block_copy.BlockCopy):
         target_format = params["image_format"]
         create_mode = params["create_mode"]
         full_copy = params["full_copy"]
-
+        args = {"mode": create_mode, "speed": default_speed,
+                "format": target_format}
+        if 'granularity' and 'buf_count' in params:
+            granularity = int(params["granularity"])
+            buf_size = granularity * int(params["buf_count"])
+            args.update({"granularity": granularity,
+                         "buf-size": buf_size})
         error.context("Start to mirror block device", logging.info)
-        self.vm.block_mirror(device, target_image, default_speed,
-                             full_copy, target_format, create_mode)
+        self.vm.block_mirror(device, target_image, full_copy,
+                             **args)
         if not self.get_status():
             raise error.TestFail("No active mirroring job found")
         if params.get("image_type") != "iscsi":

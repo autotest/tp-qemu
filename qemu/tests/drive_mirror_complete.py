@@ -31,7 +31,7 @@ def run(test, params, env):
         source_image = mirror_test.get_image_file()
         target_image = mirror_test.get_target_image()
         mirror_test.start()
-        mirror_test.wait_for_steady()
+        mirror_test.action_when_steady()
         mirror_test.vm.pause()
         mirror_test.reopen()
         device_id = mirror_test.vm.get_block({"file": target_image})

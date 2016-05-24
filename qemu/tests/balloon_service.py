@@ -32,7 +32,6 @@ def run(test, params, env):
 
         :param session: VM session.
         """
-        volume_name = params["cdrom_virtio"]
         key = "VolumeName like 'virtio-win%'"
         try:
             return utils_misc.get_win_disk_vol(session,

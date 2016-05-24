@@ -96,7 +96,7 @@ def run(test, params, env):
     sub_type = params["sub_test"]
     bg_stress_test = params["run_bgstress"]
     wait_time = float(params.get("wait_bg_time", 60))
-    suppress_exception = bool(params.get("suppress_exception", "no"))
+    suppress_exception = params.get("suppress_exception", "no") == "yes"
 
     error_context.context("Run sub test %s %s" % (sub_type, run_bg_flag),
                           logging.info)

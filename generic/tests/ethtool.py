@@ -38,7 +38,7 @@ def run(test, params, env):
         find a way to get it installed using yum/apt-get/
         whatever
     """
-    def ethtool_get(session, f_type):
+    def ethtool_get(session):
         feature_pattern = {
             'tx': 'tx.*checksumming',
             'rx': 'rx.*checksumming',
@@ -48,53 +48,55 @@ def run(test, params, env):
             'gro': 'generic.*receive.*offload',
             'lro': 'large.*receive.*offload',
         }
-        o = session.cmd("ethtool -k %s" % ethname)
-        try:
-            result = re.findall("%s: (.*)" % feature_pattern.get(f_type), o)[0]
-            logging.debug("(%s) %s: %s", ethname, f_type, result)
-            return result
-        except IndexError:
-            logging.debug("(%s) %s: failed to get status", ethname, f_type)
 
-    def ethtool_set(session, f_type, status):
+        o = session.cmd("ethtool -k %s" % ethname)
+        status = {}
+        for f in feature_pattern.keys():
+            try:
+                status[f] = re.findall(
+                    "%s: (.*)" % feature_pattern.get(f), o)[0]
+            except IndexError:
+                status[f] = None
+                logging.debug("(%s) failed to get status '%s'", ethname, f)
+
+        logging.debug("(%s) offload status: '%s'", ethname, str(status))
+        return status
+
+    def ethtool_set(session, status):
         """
         Set ethernet device offload status
 
-        :param f_type: Offload type name
         :param status: New status will be changed to
         """
-        txt = "Set ethernet device offload status."
-        txt += " (%s) %s: set status %s" % (ethname, f_type, status)
+        txt = "Set offload status for device "
+        txt += "'%s': %s" % (ethname, str(status))
         error.context(txt, logging.info)
-        if status not in ["off", "on"]:
-            return False
 
-        if ethtool_get(session, f_type) == status:
-            return True
-
-        err_msg = "(%s) %s: set status %s failed" % (ethname, f_type, status)
-        cmd = "ethtool -K %s %s %s" % (ethname, f_type, status)
+        cmd = "ethtool -K %s " % ethname
+        cmd += " ".join([o + ' ' + s for o, s in status.items()])
+        err_msg = "Failed to set offload status for device '%s'" % ethname
         try:
             session.cmd_output_safe(cmd)
         except aexpect.ShellCmdError, e:
             logging.error("%s, detail: %s", err_msg, e)
             return False
 
-        if ethtool_get(session, f_type) == status:
-            return True
+        curr_status = dict((k, v) for k, v in ethtool_get(session).items()
+                           if k in status.keys())
+        if curr_status != status:
+            logging.error("%s, got: '%s', expect: '%s'", err_msg,
+                          str(curr_status), str(status))
+            return False
 
-        logging.error(err_msg)
         return True
 
     def ethtool_save_params(session):
         error.context("Saving ethtool configuration", logging.info)
-        for i in supported_features:
-            feature_status[i] = ethtool_get(session, i)
+        pretest_status = ethtool_get(session)
 
     def ethtool_restore_params(session):
         error.context("Restoring ethtool configuration", logging.info)
-        for i in supported_features:
-            ethtool_set(session, i, feature_status[i])
+        ethtool_set(session, pretest_status)
 
     def compare_md5sum(name):
         txt = "Comparing md5sum of the files on guest and host"
@@ -215,7 +217,7 @@ def run(test, params, env):
     error.context("Check whether ethtool installed in guest.")
     session.cmd("ethtool -h")
     mtu = 1514
-    feature_status = {}
+    pretest_status = {}
     filename = "/tmp/ethtool.dd"
     guest_ip = vm.get_address()
     error.context("Try to get ethernet device name in guest.")
@@ -243,17 +245,14 @@ def run(test, params, env):
         for f_type in supported_features:
             callback = test_matrix[f_type][0]
 
-            for i in test_matrix[f_type][2]:
-                if not ethtool_set(session, i, "off"):
-                    e_msg = "Failed to disable %s" % i
-                    logging.error(e_msg)
-                    failed_tests.append(e_msg)
+            offload_stat = {f_type: "on"}
+            offload_stat.update(dict.fromkeys(test_matrix[f_type][1], "on"))
+            offload_stat.update(dict.fromkeys(test_matrix[f_type][2], "off"))
+            if not ethtool_set(session, offload_stat):
+                e_msg = "Failed to set offload status"
+                logging.error(e_msg)
+                failed_tests.append(e_msg)
 
-            for i in [f for f in test_matrix[f_type][1]] + [f_type]:
-                if not ethtool_set(session, i, "on"):
-                    e_msg = "Failed to enable %s" % i
-                    logging.error(e_msg)
-                    failed_tests.append(e_msg)
             txt = "Run callback function %s" % callback.func_name
             error.context(txt, logging.info)
 
@@ -266,7 +265,7 @@ def run(test, params, env):
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
 
-            if not ethtool_set(session, f_type, "off"):
+            if not ethtool_set(session, {f_type: "off"}):
                 e_msg = "Failed to disable %s" % f_type
                 logging.error(e_msg)
                 failed_tests.append(e_msg)

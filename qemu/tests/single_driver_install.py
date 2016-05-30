@@ -1,7 +1,9 @@
 import re
 import logging
+
 from virttest import utils_misc
 from virttest import error_context
+from aexpect import ShellCmdError
 
 
 @error_context.context_aware
@@ -141,12 +143,16 @@ def run(test, params, env):
         install_driver(session, operation)
         session = reboot(vm, session)
 
-        operation = "verify_driver"
-        error_context.context("Verify driver is same as expected", logging.info)
-        install_driver(session, operation)
+        if uninstall_flag == "no":
+            operation = "verify_driver"
+            error_context.context("Verify driver is same as expected", logging.info)
+            install_driver(session, operation)
 
     finally:
-        error_context.context("Get driver installation log", logging.info)
-        get_installation_logs(session)
         if session:
+            error_context.context("Get driver installation log", logging.info)
+            try:
+                get_installation_logs(session)
+            except ShellCmdError:
+                pass
             session.close()

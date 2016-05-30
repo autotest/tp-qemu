@@ -1,6 +1,4 @@
 import logging
-import time
-import re
 
 from autotest.client.shared import error
 
@@ -114,56 +112,41 @@ def run(test, params, env):
         if md5sum1 != md5sum2:
             raise error.TestError("File changed after transfer")
 
-    vm_list = []
-    session_list = []
+    nic_interface_list = []
     vms = params["vms"].split()
     timeout = float(params.get("login_timeout", 360))
-    int_ip_filter = params["interface_ip_filter"]
     strict_check = params.get("strick_check", "no")
     host_ip = utils_net.get_ip_address_by_interface(params.get("netdst"))
     host_ip = params.get("srchost", host_ip)
     flood_minutes = float(params["flood_minutes"])
+    nic_interface = []
     for vm_name in vms:
+        guest_ifname = ""
+        guest_ip = ""
         vm = env.get_vm(vm_name)
-        vm_list.append(vm)
-        session_list.append(vm.wait_for_login(timeout=timeout))
+        session = vm.wait_for_serial_login(timeout=timeout)
+        error.context("Check all the nics available or not", logging.info)
+        for index, nic in enumerate(vm.virtnet):
+            guest_ifname = utils_net.get_linux_ifname(session, nic.mac)
+            guest_ip = vm.get_address(index)
+            if not (guest_ifname and guest_ip):
+                err_log = "vms %s get ip or ifname failed." % vm_name
+                err_log = "ifname: %s, ip: %s." % (guest_ifname, guest_ip)
+                raise error.TestFail(err_log)
+            nic_interface = [guest_ifname, guest_ip, session]
+            nic_interface_list.append(nic_interface)
 
-    ip_list = []
-
-    error.context("Check all the nics available or not", logging.info)
-    count_nics = len(params.get("nics").split())
-    for i in session_list:
-        ips = []
-        cmd = params.get("net_check_cmd")
-        end_time = time.time() + timeout
-        while time.time() < end_time:
-            status, output = i.get_command_status_output(cmd)
-            if status:
-                err_msg = "Can not get ip from guest."
-                err_msg += " Cmd '%s' fail with output: %s" % (cmd, output)
-                logging.error(err_msg)
-            ips = re.findall(int_ip_filter, output, re.S)
-            if count_nics == len(ips):
-                break
-            time.sleep(2)
-        else:
-            err_log = "Not all nics get ip.  Set '%s' nics." % count_nics
-            err_log += " Guest only get '%s' ip(s). " % len(ips)
-            err_log += " Command '%s' output in guest:\n%s" % (cmd, output)
-            raise error.TestFail(err_log)
-        for ip in ips:
-            ip_list.append(ip + (i,))
-    ip_list_len = len(ip_list)
+    nic_interface_list_len = len(nic_interface_list)
     # ping and file transfer test
-    for src_ip_index in range(ip_list_len):
+    for src_ip_index in range(nic_interface_list_len):
         error.context("Ping test from guest to host", logging.info)
-        src_ip_info = ip_list[src_ip_index]
+        src_ip_info = nic_interface_list[src_ip_index]
         ping(src_ip_info[2], src_ip_info[0], host_ip, strict_check,
              flood_minutes)
         error.context("File transfer test between guest and host",
                       logging.info)
         file_transfer(src_ip_info[2], src_ip_info[1], host_ip)
-        for dst_ip in ip_list[src_ip_index:]:
+        for dst_ip in nic_interface_list[src_ip_index:]:
             txt = "Ping test between %s and %s" % (src_ip_info[1], dst_ip[1])
             error.context(txt, logging.info)
             ping(src_ip_info[2], src_ip_info[0], dst_ip[1], strict_check,

@@ -121,6 +121,8 @@ def get_current_driver_ver(device_name):
     get_driver_ver_cmd = ("wmic path win32_pnpsigneddriver where"
                           " Devicename='%s' get driverversion" % device_name)
     driver_version = os.popen(get_driver_ver_cmd).read()
+    if not driver_version.strip():
+        return ""
     return re.findall(key, driver_version, re.M)[-1].strip()
 
 

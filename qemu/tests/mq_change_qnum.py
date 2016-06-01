@@ -41,7 +41,7 @@ def run(test, params, env):
         else:
             expect_status = 1
 
-        status, output = session.cmd_status_output(mq_set_cmd)
+        status, output = session.cmd_status_output(mq_set_cmd, safe=True)
         cur_queues_status = get_queues_status(session, ifname)
         if status != expect_status:
             err_msg = "Change queues number failed, "
@@ -62,7 +62,8 @@ def run(test, params, env):
         Get queues status
         """
         mq_get_cmd = "ethtool -l %s" % ifname
-        nic_mq_info = session.cmd_output(mq_get_cmd, timeout=timeout)
+        nic_mq_info = session.cmd_output(mq_get_cmd, timeout=timeout,
+                                         safe=True)
         queues_reg = re.compile(r"Combined:\s+(\d)", re.I)
         queues_info = queues_reg.findall(" ".join(nic_mq_info.splitlines()))
         if len(queues_info) != 2:

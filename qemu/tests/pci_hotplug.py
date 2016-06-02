@@ -114,6 +114,8 @@ def run(test, params, env):
         if not image_format:
             image_format = params.get("image_format", "qcow2")
         image_filename = find_image(pci_num)
+        data_image = params.get("images").split()[-1]
+        serial_id = params["blk_extra_params_%s" % data_image].split("=")[1]
 
         pci_model = params.get("pci_model")
         controller_model = None
@@ -142,13 +144,13 @@ def run(test, params, env):
 
         verify_supported_device(pci_model)
         if drive_cmd_type == "drive_add":
-            driver_add_cmd = ("%s auto file=%s,if=none,format=%s,id=%s" %
+            driver_add_cmd = ("%s auto file=%s,if=none,format=%s,id=%s,serial=%s" %
                               (drive_cmd_type, image_filename, image_format,
-                               pci_info[pci_num][0]))
+                               pci_info[pci_num][0], serial_id))
         elif drive_cmd_type == "__com.redhat_drive_add":
-            driver_add_cmd = ("%s file=%s,format=%s,id=%s" %
+            driver_add_cmd = ("%s file=%s,format=%s,id=%s,serial=%s" %
                               (drive_cmd_type, image_filename, image_format,
-                               pci_info[pci_num][0]))
+                               pci_info[pci_num][0], serial_id))
         # add block device to vm device container
         image_name = img_list[pci_num + 1]
         image_params = params.object_params(image_name)

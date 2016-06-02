@@ -116,9 +116,11 @@ def run(test, params, env):
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         new_img_name)
     output = change_block(change_insert_cmd)
-    if "is locked" not in output:
-        msg = "%s is not locked after execute command '%s'" % (device_name,
-                                                               change_insert_cmd)
+    if not ("is locked" in output or "is not open" in output):
+        msg = ("%s is not locked or is open "
+               "after execute command %s "
+               "command output: %s " % (
+                   device_name, change_insert_cmd, output))
         raise error.TestFail(msg)
 
     blocks_info = monitor.info("block")

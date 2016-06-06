@@ -236,7 +236,7 @@ def run(test, params, env):
         else:
             output = session.cmd(check_cmds[driver])
             if not re.findall(check_str[driver], output, re.I):
-                fail_falg = True
+                fail_flag = True
                 fail_log += " %s" % driver
                 error_log.write("Check command output: %s\n" % output)
 

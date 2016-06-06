@@ -35,7 +35,7 @@ def run(test, params, env):
         error.context("Round %s : Send monitor cmd system_powerdown."
                       % str(i + 1), logging.info)
         # Send a system_powerdown monitor command
-        vm.monitor.cmd("system_powerdown")
+        vm.monitor.system_powerdown()
         # Wait for the session to become unresponsive and close it
         if not utils_misc.wait_for(lambda: not session.is_responsive(),
                                    timeout, 0, 1):

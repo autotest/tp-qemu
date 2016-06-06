@@ -4,6 +4,7 @@ import ConfigParser
 
 from autotest.client.shared import error
 from autotest.client import utils
+from avocado.utils import process
 
 from virttest import qemu_io
 from virttest import data_dir
@@ -94,8 +95,8 @@ def run(test, params, env):
             try:
                 image_io.snapshot_del(blkdebug_cfg=blkdebug_cfg)
                 output = ""
-            except error.CmdError, err:
-                output = err.result_obj.stderr
+            except process.CmdError, err:
+                output = err.result.stderr
 
         # Remove the snapshot and base image after a round of test
         image_io.remove()

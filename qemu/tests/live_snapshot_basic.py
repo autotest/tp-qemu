@@ -37,7 +37,6 @@ class LiveSnapshotBase(object):
         """
         image_name = self.params.get("image_name")
         self.params['image_name_snapshot'] = image_name + "-snap"
-        image_name_snapshot = self.params['image_name_snapshot']
         snapshot_params = self.params.object_params("snapshot")
         base_dir = self.params.get("images_base_dir", data_dir.get_data_dir())
 
@@ -92,7 +91,7 @@ class LiveSnapshotBase(object):
             if match_string not in snapshot_info:
                 logging.error(snapshot_info)
                 raise exceptions.TestFail("Can not find node name %s of"
-                                          " snapshot in block info %"
+                                          " snapshot in block info %s"
                                           % (self.snapshot_node_name,
                                              snapshot_info))
 

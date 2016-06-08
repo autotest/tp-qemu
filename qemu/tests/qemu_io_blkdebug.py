@@ -26,6 +26,10 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env:    Dictionary with test environment.
     """
+    if params.get("blkdebug_event_name_separator") == 'underscore':
+        blkdebug_event = params.get('err_event')
+        if "." in blkdebug_event:
+            params['err_event'] = blkdebug_event.replace(".", "_")
     tmp_dir = params.get("tmp_dir", "/tmp")
     blkdebug_cfg = utils_misc.get_path(tmp_dir, params.get("blkdebug_cfg",
                                                            "blkdebug.cfg"))

@@ -23,7 +23,6 @@ class QemuIOConfig(object):
 
     def __init__(self, test, params):
         self.__dict__ = self.__shared_state
-        root_dir = test.bindir
         self.tmpdir = test.tmpdir
         self.qemu_img_binary = utils_misc.get_qemu_img_binary(params)
         self.raw_files = ["stg1.raw", "stg2.raw"]
@@ -121,10 +120,12 @@ def run(test, params, env):
         qemu_io_config = QemuIOConfig(test, params)
         qemu_io_config.setup()
 
-    test_script = os.path.join(data_dir.get_root_dir(),
-                               'shared/scripts/qemu_iotests.sh')
-    logging.info("Running script now: %s" % test_script)
-    test_image = params.get("test_image", "/tmp/test.qcow2")
+    test_script = os.path.join(data_dir.get_shared_dir(),
+                               'scripts/qemu_iotests.sh')
+    test_image = params.get("test_image",
+                            os.path.join(test.tmpdir, "test.qcow2"))
+    logging.info("Run script(%s) with image(%s)"
+                 % (test_script, test_image))
     s, test_result = aexpect.run_fg("sh %s %s" % (test_script,
                                                   test_image),
                                     logging.debug, timeout=1800)

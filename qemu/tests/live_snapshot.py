@@ -35,7 +35,7 @@ def run(test, params, env):
             device = "".join(block_info).split(":")[0]
         snapshot_name = params.get("snapshot_name")
         format = params.get("snapshot_format", "qcow2")
-        vm.monitor.live_snapshot(device, snapshot_name, format)
+        vm.monitor.live_snapshot(device, snapshot_name, format=format)
 
         logging.info("Check snapshot is created ...")
         snapshot_info = str(vm.monitor.info("block"))

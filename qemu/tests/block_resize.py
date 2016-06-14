@@ -5,7 +5,6 @@ from autotest.client.shared import error
 
 from virttest import utils_misc
 from virttest import utils_test
-from virttest import funcatexit
 from virttest import storage
 from virttest import data_dir
 
@@ -57,20 +56,12 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
+    driver_name = params.get("driver_name")
+
+    if params.get("os_type") == "windows":
+        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+
     session = vm.wait_for_login(timeout=timeout)
-
-    if params.get("need_enable_verifier", "no") == "yes":
-        error.context("Enable %s driver verifier"
-                      % params["driver_name"], logging.info)
-        try:
-            session = utils_test.qemu.setup_win_driver_verifier(
-                      session, params["driver_name"], vm, timeout)
-            funcatexit.register(env, params.get("type"),
-                                utils_test.qemu.clear_win_driver_verifier,
-                                session, vm, timeout)
-        except Exception, e:
-            raise error.TestFail(e)
-
     data_image = params.get("images").split()[-1]
     data_image_params = params.object_params(data_image)
     data_image_size = data_image_params.get("image_size")

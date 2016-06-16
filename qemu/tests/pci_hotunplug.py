@@ -65,11 +65,8 @@ def run(test, params, env):
         error.context("modprobe the module %s" % module, logging.info)
         session.cmd("modprobe %s" % module)
 
-    # check monitor type
-    is_qmp_monitor = (utils_misc.qemu_has_option("qmp") and
-                      params.get("monitor_type") == "qmp")
     # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if is_qmp_monitor:
+    if vm.monitor.protocol == "qmp":
         cmd_o = vm.monitor.info("commands")
     else:
         cmd_o = vm.monitor.send_args_cmd("help")

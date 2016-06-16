@@ -51,13 +51,14 @@ def run(test, params, env):
         logging.debug("Check balloon service status.")
         output = session.cmd_output(status_balloon_service)
         if re.search(r"running", output.lower(), re.M):
-            if re.search(r"stop", output.lower(), re.M):
-                logging.debug("Run Balloon Service in guest.")
-                try:
-                    run_balloon_service = params["run_balloon_service"] % drive_letter
-                    session.cmd(run_balloon_service)
-                except ShellCmdError:
-                    raise exceptions.TestError("Run balloon service failed !")
+            logging.debug("Balloon service is already running !")
+        elif re.search(r"stop", output.lower(), re.M):
+            logging.debug("Run Balloon Service in guest.")
+            try:
+                run_balloon_service = params["run_balloon_service"] % drive_letter
+                session.cmd(run_balloon_service)
+            except ShellCmdError:
+                raise exceptions.TestError("Run balloon service failed !")
         else:
             logging.debug("Install Balloon Service in guest.")
             try:

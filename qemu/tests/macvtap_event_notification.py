@@ -22,7 +22,8 @@ def run(test, params, env):
     :param env: Dictionary with test environmen.
     """
 
-    if not utils_misc.qemu_has_option("qmp"):
+    qemu_binary = utils_misc.get_qemu_binary(params)
+    if not utils_misc.qemu_has_option("qmp", qemu_binary):
         error.TestNAError("This test case requires a host QEMU with QMP "
                           "monitor support")
     if params.get("nettype", "macvtap") != "macvtap":

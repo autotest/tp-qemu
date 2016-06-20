@@ -24,7 +24,8 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
 
-    if not utils_misc.qemu_has_option("qmp"):
+    qemu_binary = utils_misc.get_qemu_binary(params)
+    if not utils_misc.qemu_has_option("qmp", qemu_binary):
         logging.warn("qemu does not support qmp. Human monitor will be used.")
     qmp_used = False
     vm = env.get_vm(params["main_vm"])

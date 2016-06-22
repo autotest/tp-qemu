@@ -213,5 +213,5 @@ def run(test, params, env):
         if real_speed > mig_speed + ack_speed:
             divergence = (1 - float(mig_speed) / float(real_speed)) * 100
             raise error.TestWarn("Average migration speed (%s MB/s) "
-                                 "is %3.1f %% higher than target (%s MB/s)" %
+                                 "is %3.1f%% higher than target (%s MB/s)" %
                                  (real_speed, divergence, mig_speed))

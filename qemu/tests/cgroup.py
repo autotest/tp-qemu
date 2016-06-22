@@ -762,13 +762,13 @@ def run(test, params, env):
                 except ZeroDivisionError:
                     logging.error("ZeroDivisionError in stats calculation")
                     stats[i] = False
-
             limit = 1 - float(params.get("cgroup_limit", 0.05))
+
             for i in range(1, len(stats)):
                 # Utilisation should be 100% - allowed treshold (limit)
                 if stats[i] < limit:
-                    logging.debug("%d: guest time is not >%s%% %s" % (i, limit,
-                                                                      stats[i]))
+                    logging.debug("%d: the utilisation of guest time is %s, "
+                                  "smaller than limit %s" % (i, stats[i], limit))
                     err.append(i)
 
         finally:

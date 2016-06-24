@@ -42,7 +42,7 @@ def run(test, params, env):
             offset = 0.0
         return offset
 
-    def qemu_guest_cpu_match(vm, vcpu_been_pluged=0, wait_time=60):
+    def qemu_guest_cpu_match(vm, vcpu_been_pluged=0, wait_time=300):
         """
         Check Whether the vcpus are matche
         """
@@ -104,6 +104,8 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     maxcpus = vm.cpuinfo.maxcpus
+    if params.get("max_cpus_need_hotplug", "no") == "yes":
+        vcpu_need_hotplug = vcpu_need_hotplug - vm.cpuinfo.smp
 
     if ntp_sync_cmd:
         error.context("sync guest time via ntp server", logging.info)
@@ -112,7 +114,7 @@ def run(test, params, env):
         logging.info("stop ntp service in guest")
         session.cmd(ntp_service_stop_cmd)
 
-    error.context("Check if cpus in guest matche qemu cmd before hotplug",
+    error.context("Check if cpus in guest match qemu cmd before hotplug",
                   logging.info)
     qemu_guest_cpu_match(vm)
 
@@ -139,7 +141,7 @@ def run(test, params, env):
     for i in range(vcpu_need_hotplug):
         hotplug_vcpu_params = params.object_params("hotplug_vcpu%s" % i)
         plug_cpu_id = len(vm.vcpu_threads)
-        plug_cpu_id = hotplug_vcpu_params.get("id", plug_cpu_id)
+        plug_cpu_id = hotplug_vcpu_params.get("cpuid", plug_cpu_id)
 
         (status, output) = vm.hotplug_vcpu(plug_cpu_id, hotplug_add_cmd)
 

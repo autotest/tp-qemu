@@ -1,6 +1,5 @@
 import time
 import logging
-from avocado.core import exceptions
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 try:
@@ -21,6 +20,7 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
         max_slots = int(self.params.get("slots_mem", 4))
         scalability_test = self.params.get("scalability_test") == "yes"
         repeats = scalability_test and max_slots or self.params["repeats"]
+        original_mem = self.get_guest_total_mem(vm)
         for repeat in xrange(int(repeats)):
             extra_params = (scalability_test and
                             [{'slot_dimm': repeat}] or [None])[0]
@@ -28,6 +28,11 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
                 "Hotplug/unplug loop '%d'" %
                 repeat, logging.info)
             self.turn(vm, target_mem, extra_params)
+            current_mem = self.get_guest_total_mem(vm)
+            if current_mem != original_mem:
+                raise error.TestFailed("Guest memory changed about repeat "
+                                       "hotpug/unplug memory %d times" % repeat)
+            time.sleep(1.5)
         vm.verify_alive()
         vm.reboot()
 
@@ -46,20 +51,15 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
         self.hotplug_memory(vm, target_mem)
         memorys_added = self.get_all_memorys(vm) - memorys
         offline_memorys = self.get_offline_memorys(vm)
-        if not offline_memorys.issubset(memorys_added):
-            unexpected_memorys = offline_memorys - memorys_added
-            exceptions.TestFail(
-                "Unexpected offline memory %s" %
-                unexpected_memorys)
-        for memory in memorys_added:
+        time.sleep(1.5)
+        for memory in offline_memorys:
+            # Online memory to movable zone maybe failed, see details
+            # in redhat Bug 1314306
             self.memory_operate(vm, memory, 'online_movable')
-            time.sleep(1.5)
-        self.check_memory(vm)
         for memory in memorys_added:
             self.memory_operate(vm, memory, 'offline')
-            time.sleep(1.5)
+        time.sleep(1.5)
         self.unplug_memory(vm, target_mem)
-        self.check_memory(vm)
 
 
 @step_engine.context_aware

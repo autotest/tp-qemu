@@ -1,11 +1,17 @@
 import time
 import logging
+
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 try:
-    from virttest import error_context as step_engine
+    from avocado.core import exceptions
 except ImportError:
-    from autotest.client.shared.error import step_engine
+    from autotest.client.shared import error as exceptions
+
+try:
+    from virttest import error_context
+except ImportError:
+    from autotest.client.shared import error as error_context
 
 
 class MemoryHotplugRepeat(MemoryHotplugTest):
@@ -24,14 +30,14 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
         for repeat in xrange(int(repeats)):
             extra_params = (scalability_test and
                             [{'slot_dimm': repeat}] or [None])[0]
-            step_engine.context(
-                "Hotplug/unplug loop '%d'" %
-                repeat, logging.info)
+            error_context.context("Hotplug/unplug loop '%d'" % repeat,
+                                  logging.info)
             self.turn(vm, target_mem, extra_params)
             current_mem = self.get_guest_total_mem(vm)
             if current_mem != original_mem:
-                raise error.TestFailed("Guest memory changed about repeat "
-                                       "hotpug/unplug memory %d times" % repeat)
+                raise exceptions.TestFail("Guest memory changed about repeat"
+                                          " hotpug/unplug memory %d times"
+                                          % repeat)
             time.sleep(1.5)
         vm.verify_alive()
         vm.reboot()
@@ -62,7 +68,7 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
         self.unplug_memory(vm, target_mem)
 
 
-@step_engine.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu memory hotplug test:

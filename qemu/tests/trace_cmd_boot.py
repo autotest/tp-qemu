@@ -71,7 +71,7 @@ def run(test, params, env):
                 error.context(txt, logging.info)
                 os.kill(trace_job.sp.pid, signal.SIGINT)
                 if not utils_misc.wait_for(lambda: not find_trace_cmd(),
-                                           180, 60, 3):
+                                           120, 60, 3):
                     logging.warn("trace-cmd could not finish after 120s.")
                 trace_job = None
                 utils.system(trace_report_cmd)

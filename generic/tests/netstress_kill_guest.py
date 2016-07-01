@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 
 from autotest.client.shared import error
@@ -48,19 +47,12 @@ def run(test, params, env):
         return set(modules)
 
     def kill_and_check(vm):
-        vm_pid = vm.get_pid()
         vm.destroy(gracefully=False)
-        time.sleep(2)
-        try:
-            os.kill(vm_pid, 0)
-            logging.error("VM is not dead")
-            raise error.TestFail("VM is not dead after sending signal 0 to it")
-        except OSError:
-            logging.info("VM is dead as expected")
+        if not vm.wait_until_dead(timeout=60):
+            raise error.TestFail("VM is not dead after destroy operation")
+        logging.info("VM is dead as expected")
 
     def netload_kill_problem(session_serial):
-        setup_cmd = params.get("setup_cmd")
-        clean_cmd = params.get("clean_cmd")
         firewall_flush = params.get("firewall_flush", "service iptables stop")
         error.context("Stop firewall in guest and host.", logging.info)
         try:
@@ -104,21 +96,19 @@ def run(test, params, env):
                 pass
 
     def netdriver_kill_problem(session_serial):
-        r_time = int(params.get("repeat_times", 50))
+        times = int(params.get("repeat_times", 10))
         modules = get_ethernet_driver(session_serial)
         logging.debug("Guest network driver(s): %s" % modules)
-        msg = "Repeatedly load/unload network driver(s) for %s times." % r_time
+        msg = "Repeatedly load/unload network driver(s) for %s times." % times
         error.context(msg, logging.info)
-        for round in range(r_time):
+        for i in range(times):
             for module in modules:
                 error.context("Unload driver %s. Repeat: %s/%s" % (module,
-                                                                   round,
-                                                                   r_time))
+                                                                   i, times))
                 session_serial.cmd_output_safe("rmmod %s" % module)
             for module in modules:
                 error.context("Load driver %s. Repeat: %s/%s" % (module,
-                                                                 round,
-                                                                 r_time))
+                                                                 i, times))
                 session_serial.cmd_output_safe("modprobe %s" % module)
 
         error.context("Check that we can kill VM with signal 0.", logging.info)

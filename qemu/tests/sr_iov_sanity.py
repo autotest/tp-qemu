@@ -76,6 +76,9 @@ def run(test, params, env):
     device_type = params.get("device_type", "vf")
     if device_type == "vf":
         device_num = pci_assignable.get_vfs_count()
+        if device_num == 0:
+            msg = " No VF device found even after running SR-IOV setup"
+            raise error.TestFail(msg)
     elif device_type == "pf":
         device_num = len(pci_assignable.get_pf_vf_info())
     else:

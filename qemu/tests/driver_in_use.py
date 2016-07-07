@@ -128,6 +128,7 @@ def run(test, params, env):
         error_context.context("Clear %s driver verifier in guest" % driver,
                               logging.info)
         session = utils_test.qemu.clear_win_driver_verifier(session,
+                                                            driver,
                                                             vm, timeout)
         if session:
             session.close()

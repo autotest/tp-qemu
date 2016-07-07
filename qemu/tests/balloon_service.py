@@ -169,7 +169,9 @@ def run(test, params, env):
         error_context.context("Clear balloon driver verifier in guest",
                               logging.info)
         if params.get("need_clear_verifier", "yes") == "yes":
-            session = utils_test.qemu.clear_win_driver_verifier(session, vm,
+            session = utils_test.qemu.clear_win_driver_verifier(session,
+                                                                driver_name,
+                                                                vm,
                                                                 timeout)
         if session:
             session.close()

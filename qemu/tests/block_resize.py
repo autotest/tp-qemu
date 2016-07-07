@@ -67,7 +67,7 @@ def run(test, params, env):
                       session, params["driver_name"], vm, timeout)
             funcatexit.register(env, params.get("type"),
                                 utils_test.qemu.clear_win_driver_verifier,
-                                session, vm, timeout)
+                                session, params["driver_name"], vm, timeout)
         except Exception, e:
             raise error.TestFail(e)
 

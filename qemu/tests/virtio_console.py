@@ -1652,7 +1652,7 @@ def run(test, params, env):
         pause = float(params.get("virtio_console_pause", 0.1))
         vm = get_vm_with_ports()
         monitor = vm.monitors[0]
-        idx = 1
+        idx = len(get_virtio_ports(vm)[0])
         err = ""
         booted = False
         error.context("Hotplug while booting", logging.info)

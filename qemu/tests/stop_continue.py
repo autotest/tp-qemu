@@ -62,6 +62,7 @@ def run(test, params, env):
             msg = "Session is still responsive after stop"
             logging.error(msg)
             raise error.TestFail(msg)
+        session.close()
 
         error.base_context("Resume the VM", logging.info)
         vm.resume()
@@ -89,3 +90,4 @@ def run(test, params, env):
             error.context("Do clean operation: '%s'" % clean_op, logging.info)
             op_timeout = float(params.get("clean_op_timeout", 60))
             session.cmd(clean_op, timeout=op_timeout, ignore_all_errors=True)
+        session.close()

@@ -3,14 +3,6 @@ from autotest.client.shared import error
 from qemu.tests import qemu_disk_img
 
 
-class SnapshotTest(qemu_disk_img.QemuImgTest):
-
-    def __init__(self, test, params, env):
-        self.tag = params.get("image_snapshot", "image1")
-        t_params = params.object_params(self.tag)
-        super(SnapshotTest, self).__init__(test, t_params, env, self.tag)
-
-
 @error.context_aware
 def run(test, params, env):
     """
@@ -34,7 +26,7 @@ def run(test, params, env):
         {"image_name_%s" % base_image: params["image_name"],
          "image_format_%s" % base_image: params["image_format"]})
     t_file = params["guest_file_name"]
-    snapshot_test = SnapshotTest(test, params, env)
+    snapshot_test = qemu_disk_img.QemuImgTest(test, params, env, base_image)
 
     error.context("Step1. save file md5sum before create snapshot.", logging.info)
     snapshot_test.start_vm(params)

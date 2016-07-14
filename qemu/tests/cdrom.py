@@ -207,7 +207,7 @@ def run(test, params, env):
                 cdfile = file_list[0]
             else:
                 # try to deal with new qemu
-                tmp_re_str = r'%s: (\S*) \(.*\)' % qemu_cdrom_device
+                tmp_re_str = r'%s \(#.*\): (\S*)' % qemu_cdrom_device
                 file_list = re.findall(tmp_re_str, blocks)
                 if file_list:
                     cdfile = file_list[0]
@@ -651,6 +651,8 @@ def run(test, params, env):
                 # XXX: The device got from monitor might not match with the guest
                 # defice if there are multiple cdrom devices.
                 qemu_cdrom_device = get_empty_cdrom_device(vm)
+                if qemu_cdrom_device.find(' ') > 0:
+                    qemu_cdrom_device = qemu_cdrom_device[0:qemu_cdrom_device.find(' ')]
                 guest_cdrom_device = get_testing_cdrom_device(vm,
                                                               self.session,
                                                               cdrom_dev_list,
@@ -674,6 +676,8 @@ def run(test, params, env):
             error.context("Detecting the existence of a cdrom (qemu side)",
                           logging.info)
             qemu_cdrom_device = get_device(vm, iso_image)
+            if qemu_cdrom_device.find(' ') > 0:
+                qemu_cdrom_device = qemu_cdrom_device[0:qemu_cdrom_device.find(' ')]
             if params["os_type"] != "windows":
                 self.session.get_command_output("umount %s" % guest_cdrom_device)
             if params.get('cdrom_test_autounlock') == 'yes':

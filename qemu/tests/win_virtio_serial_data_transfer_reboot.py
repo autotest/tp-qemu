@@ -32,7 +32,6 @@ def run(test, params, env):
         :param vm: VM object
         :return: All virtserialports
         """
-        ports = []
         for port in vm.virtio_ports:
             if isinstance(port, qemu_virtio_port.VirtioSerial):
                 if port.name == port_name:
@@ -40,7 +39,6 @@ def run(test, params, env):
 
     def receive_data(session, serial_receive_cmd, data_file):
         output = session.cmd_output(serial_receive_cmd, timeout=30)
-        d_file = os.path.join(data_dir.get_deps_dir("win_serial"), data_file)
         ori_data = file(data_file, "r").read()
         if ori_data.strip() != output.strip():
             err = "Data lost during transfer. Origin data is:\n%s" % ori_data

@@ -500,7 +500,7 @@ def run(test, params, env):
                         duration += float(_[1])
                     output.append(['PASS', j, 'vm%d' % i, speeds[i][j],
                                    int(data / duration)])
-                    # Don't meassure unlimited speeds
+                    # Don't measure unlimited speeds
                     if (speeds[i][j] == 0):
                         output[-1][0] = "INF"
                         output[-1][3] = "(inf)"
@@ -508,7 +508,7 @@ def run(test, params, env):
                         err += "vm%d:%d, " % (i, j)
                         output[-1][0] = "FAIL"
 
-            # TODO: Unlimited speed fluctates during test
+            # TODO: Unlimited speed fluctuates during test
             logging.info("blkio_throttle_%s: dd statistics\n%s", direction,
                          utils.matrix_to_string(output, ['result', 'it',
                                                          'vm', 'speed', 'actual']))
@@ -1925,6 +1925,10 @@ def run(test, params, env):
 
         finally:
             error.context("Cleanup")
+
+            session.cmd("true")
+            session.close()
+
             del(cgroup)
             del(modules)
 

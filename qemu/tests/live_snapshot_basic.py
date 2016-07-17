@@ -1,35 +1,38 @@
 import logging
 
-from virttest import utils_test
 from virttest import utils_misc
-from virttest import storage
-from virttest import error_context
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 from avocado.core import exceptions
+from qemu.tests import block_copy
 
 
-class LiveSnapshotBase(object):
+class LiveSnapshot(block_copy.BlockCopy):
 
     """
     Provide basic functions for live snapshot test cases.
     """
 
-    def __init__(self, params, env):
+    def __init__(self, test, params, env, tag):
         """
         Init the default values for live snapshot object.
 
         :param params: A dict containing VM preprocessing parameters.
         :param env: The environment (a dict-like object).
         """
-        self.params = params
-        self.env = env
-        self.vm = env.get_vm(params["main_vm"])
-        self.snapshot_file = params.get("snapshot_file")
-        self.snapshot_format = params.get("snapshot_format", "qcow2")
+        super(LiveSnapshot, self).__init__(test, params, env, tag)
+        self.default_params = {"login_timeout": 360}
+        self.snapshot_file = self.params.get("snapshot_file")
+        self.node_name = self.params.get("node_name")
+        self.snapshot_node_name = self.params.get("snapshot_node_name")
         self.snapshot_mode = params.get("snapshot_mode", "absolute-paths")
-        self.node_name = params.get("node_name")
-        self.snapshot_node_name = params.get("snapshot_node_name")
+        self.snapshot_format = params.get("snapshot_format", "qcow2")
+        self.snapshot_args = {"mode": self.snapshot_mode,
+                              "format": self.snapshot_format}
+        if self.node_name:
+            self.snapshot_args.update({"node-name": self.node_name})
+        if self.snapshot_node_name:
+            self.snapshot_args.update({"snapshot-node-name": self.snapshot_node_name})
 
     def create_image(self):
         """
@@ -44,14 +47,6 @@ class LiveSnapshotBase(object):
         image_name, _ = image_io.create(snapshot_params)
         return image_name
 
-    def get_base_image(self):
-        """
-        Get base image.
-        """
-        base_file = storage.get_image_filename(self.params,
-                                               data_dir.get_data_dir())
-        return self.vm.get_block({"file": base_file})
-
     def get_snapshot_file(self):
         """
         Get path of snapshot file.
@@ -64,19 +59,15 @@ class LiveSnapshotBase(object):
         Create a live disk snapshot.
         """
         if self.snapshot_mode == "existing":
-            error_context.context("Creating an image ...", logging.info)
+            logging.info("Creating an image ...")
             self.snapshot_file = self.create_image()
         else:
             self.snapshot_file = self.get_snapshot_file()
-        device = self.get_base_image()
-        snapshot_args = {"format": self.snapshot_format,
-                         "mode": self.snapshot_mode}
-        if self.node_name:
-            snapshot_args.update({"node-name": self.node_name})
-        if self.snapshot_node_name:
-            snapshot_args.update({"snapshot-node-name": self.snapshot_node_name})
-        self.vm.monitor.live_snapshot(device, self.snapshot_file,
-                                      **snapshot_args)
+        logging.info("Creating snapshot")
+        self.vm.monitor.live_snapshot(self.device, self.snapshot_file,
+                                      **self.snapshot_args)
+        logging.info("Checking snapshot created successfully")
+        self.check_snapshot()
 
     def check_snapshot(self):
         """
@@ -95,25 +86,8 @@ class LiveSnapshotBase(object):
                                           % (self.snapshot_node_name,
                                              snapshot_info))
 
-
-@error_context.context_aware
-def run(test, params, env):
-    vm = env.get_vm(params["main_vm"])
-
-    image_tag = params.get("image_name", "image1")
-    image_params = params.object_params(image_tag)
-    snapshot_test = LiveSnapshotBase(image_params, env)
-
-    error_context.context("Creating snapshot", logging.info)
-    snapshot_test.create_snapshot()
-    error_context.context("Checking snapshot created successfully",
-                          logging.info)
-    snapshot_test.check_snapshot()
-
-    sub_type = params.get("sub_type_after_snapshot")
-    if sub_type:
-        error_context.context("%s after snapshot" % sub_type, logging.info)
-        utils_test.run_virt_sub_test(test, params, env, sub_type)
-
-    if vm.is_alive():
-        vm.destroy()
+    def action_after_finished(self):
+        """
+        Run steps after live snapshot done.
+        """
+        return self.do_steps("after_finished")

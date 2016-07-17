@@ -33,7 +33,7 @@ def run(test, params, env):
             device = block_info[0]["device"]
         else:
             device = "".join(block_info).split(":")[0]
-        snapshot_name = params.get("snapshot_name")
+        snapshot_name = params.get("snapshot_file")
         format = params.get("snapshot_format", "qcow2")
         vm.monitor.live_snapshot(device, snapshot_name, format=format)
 

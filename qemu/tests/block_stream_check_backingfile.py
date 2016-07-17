@@ -65,7 +65,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    tag = params.get("source_images", "image1")
+    tag = params.get("source_image", "image1")
     backingfile_test = BlockStreamCheckBackingfile(test, params, env, tag)
     try:
         backingfile_test.create_snapshots()

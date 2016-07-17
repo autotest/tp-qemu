@@ -31,7 +31,7 @@ def run(test, params, env):
     5) Check for backing file in sn1
     6) Check for the size of the sn1 should not exceeds image.img
     """
-    tag = params.get("source_images", "image1")
+    tag = params.get("source_image", "image1")
     stream_test = BlockStreamTest(test, params, env, tag)
     try:
         image_file = stream_test.get_image_file()

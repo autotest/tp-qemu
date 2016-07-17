@@ -24,7 +24,7 @@ def run(test, params, env):
 
     "qemu-img compare" is used to verify disk is mirrored successfully.
     """
-    tag = params.get("source_images", "image1")
+    tag = params.get("source_image", "image1")
     qemu_img = qemu_storage.QemuImg(params, data_dir.get_data_dir(), tag)
     mirror_test = drive_mirror.DriveMirror(test, params, env, tag)
     try:

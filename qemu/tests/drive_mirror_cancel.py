@@ -15,7 +15,7 @@ def run_drive_mirror_cancel(test, params, env):
     4). flush iptables chain then check job canceled in 10s
 
     """
-    tag = params.get("source_images", "image1")
+    tag = params.get("source_image", "image1")
     mirror_test = drive_mirror.DriveMirror(test, params, env, tag)
     try:
         mirror_test.start()

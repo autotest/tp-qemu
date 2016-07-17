@@ -45,7 +45,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    tag = params.get("source_images", "image1")
+    tag = params.get("source_image", "image1")
     repeats = int(params.get("repeat_times", 3))
     simple_test = DriveMirrorSimple(test, params, env, tag)
     try:

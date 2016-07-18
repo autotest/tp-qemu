@@ -31,7 +31,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    tag = params.get("source_images", "image1")
+    tag = params.get("source_image", "image1")
     simple_test = BlockStreamSimple(test, params, env, tag)
     try:
         simple_test.create_snapshots()

@@ -48,7 +48,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    tag = params.get("source_images", "image1")
+    tag = params.get("source_image", "image1")
     powerdown_test = DriveMirrorPowerdown(test, params, env, tag)
     try:
         powerdown_test.action_before_start()

@@ -49,12 +49,12 @@ def subw_guest_suspend(params, vm, session):
 def subw_guest_pause_resume(params, vm, session):
     vm.monitor.cmd("stop")
     if not vm.monitor.verify_status("paused"):
-        raise error.TestError("VM is not paused Current status: %s",
+        raise error.TestError("VM is not paused Current status: %s" %
                               vm.monitor.get_status())
     time.sleep(float(params.get("wait_timeout", "1800")))
     vm.monitor.cmd("cont")
     if not vm.monitor.verify_status("running"):
-        raise error.TestError("VM is not running. Current status: %s",
+        raise error.TestError("VM is not running. Current status: %s" %
                               vm.monitor.get_status())
 
 

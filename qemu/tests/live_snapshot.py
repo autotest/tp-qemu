@@ -2,6 +2,7 @@ import time
 import logging
 
 from autotest.client.shared import error
+from autotest.client.shared import utils
 
 from virttest import utils_test
 
@@ -43,11 +44,12 @@ def run(test, params, env):
             logging.error(snapshot_info)
             raise error.TestFail("Snapshot doesn't exist")
 
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     dd_timeout = int(params.get("dd_timeout", 900))
-    session = vm.wait_for_login(timeout=timeout)
+    vm = env.get_vm(params["main_vm"])
+    if params.get("need_install", "no") == "no":
+        vm.verify_alive()
+        session = vm.wait_for_login(timeout=timeout)
 
     def runtime_test():
         try:
@@ -102,5 +104,21 @@ def run(test, params, env):
                     raise
         finally:
             session.close()
+
+    def installation_test():
+        args = (test, params, env)
+        bg = utils.InterruptedThread(
+            utils_test.run_virt_sub_test, args,
+            {"sub_type": "unattended_install"})
+        bg.start()
+        if bg.is_alive():
+            sleep_time = int(params.get("sleep_time", 60))
+            time.sleep(sleep_time)
+            create_snapshot(vm)
+            try:
+                bg.join()
+            except Exception:
+                raise
+
     subcommand = params.get("subcommand")
     eval("%s_test()" % subcommand)

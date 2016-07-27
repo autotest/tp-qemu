@@ -1,5 +1,6 @@
-import re
 import os
+import time
+import re
 import logging
 import commands
 import shutil
@@ -177,6 +178,42 @@ def run(test, params, env):
                 cluster_size=params.get("image_cluster_size"))
         remove(img)
 
+    def send_signal(timeout=360):
+        """
+        send signal "SIGUSR1" to qemu-img without the option -p
+        to report progress
+        """
+        logging.info("Send signal to qemu-img")
+        end_time = time.time() + timeout
+        while time.time() < end_time:
+            time.sleep(1)
+            status = utils.system("kill -SIGUSR1 `pidof qemu-img`",
+                                  ignore_status=True)
+            if status == 0:
+                return None
+        logging.info("Fail to get pid of qemu-img")
+
+    def check_command_output(CmdResult):
+        """
+        Check standard error or standard output of command
+        : param CmdResult: a list of CmdResult objects
+        """
+        logging.info("Check result of command")
+        check_output = params.get("check_output", "exit_status")
+        if not hasattr(CmdResult, check_output):
+            raise error.TestError("Unknown check output '%s'" % check_output)
+        output = getattr(CmdResult, check_output)
+        if check_output == "exit_status" and output == 0:
+            return None
+        if check_output == "exit_status" and output != 0:
+            err_msg = "Get nonzero exit status(%d) '%s'"
+            raise error.TestFail(err_msg % (output, CmdResult.command))
+        pattern = params.get("command_result_pattern")
+        if not re.findall(pattern, output):
+            err_msg = "Fail to get expected result!"
+            err_msg += "Output: %s, expected pattern: %s" % (output, pattern)
+            raise error.TestFail(err_msg)
+
     def _convert(cmd, output_fmt, img_name, output_filename,
                  fmt=None, compressed="no", encrypted="no"):
         """
@@ -195,6 +232,9 @@ def run(test, params, env):
             cmd += " -c"
         if encrypted == "yes":
             cmd += " -e"
+        show_progress = params.get("show_progress", "")
+        if show_progress == "on":
+            cmd += " -p"
         if fmt:
             cmd += " -f %s" % fmt
         cmd += " -O %s" % output_fmt
@@ -210,7 +250,10 @@ def run(test, params, env):
         msg = "Converting '%s' from format '%s'" % (img_name, fmt)
         msg += " to '%s'" % output_fmt
         error.context(msg, logging.info)
-        utils.system(cmd)
+        if show_progress == "off":
+            bg = utils.InterruptedThread(send_signal)
+            bg.start()
+        check_command_output(utils.run(cmd, ignore_status=True))
 
     def convert_test(cmd):
         """

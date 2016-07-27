@@ -31,11 +31,11 @@ def run(test, params, env):
                  else return False
         """
         session = vm.wait_for_login()
-        list_cmd = "wmic process where name='%s' list" % target_process
+        list_cmd = "wmic process get name"
         output = session.cmd_output_safe(list_cmd, timeout=60)
-        check_reg = re.compile(r"%s" % target_process, re.I | re.M)
+        process = re.findall(target_process, output, re.M | re.I)
         session.close()
-        return bool(check_reg.findall(output))
+        return bool(process)
 
     def run_bg_stress_test(bg_stress_test):
         """
@@ -59,7 +59,7 @@ def run(test, params, env):
             {"sub_type": bg_stress_test})
         stress_thread.start()
         if not utils_misc.wait_for(lambda: check_bg_running(target_process),
-                                   120, 0, 5):
+                                   120, 0, 1):
             raise exceptions.TestFail("Backgroud test %s is not "
                                       "alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
@@ -97,28 +97,23 @@ def run(test, params, env):
 
     error_context.context("Run sub test %s %s" % (sub_type, run_bg_flag),
                           logging.info)
-    try:
-        if run_bg_flag == "before_bg_test":
-            run_subtest(sub_type)
-            if vm.is_dead():
-                vm.create(params=params)
-            run_subtest(bg_stress_test)
-        elif run_bg_flag == "during_bg_test":
-            stress_thread = run_bg_stress_test(bg_stress_test)
-            stop_time = time.time() + wait_time
-            while time.time() < stop_time:
-                if env["bg_status"] == 1:
-                    run_subtest(sub_type)
-                    break
-            if stress_thread:
-                stress_thread.join(timeout=timeout,
-                                   suppress_exception=suppress_exception)
-        elif run_bg_flag == "after_bg_test":
-            run_subtest(bg_stress_test)
-            if vm.is_dead():
-                vm.create(params=params)
-            run_subtest(sub_type)
-
-    finally:
-        session.close()
-        utils_test.qemu.clear_win_driver_verifier(driver, vm, timeout)
+    if run_bg_flag == "before_bg_test":
+        run_subtest(sub_type)
+        if vm.is_dead():
+            vm.create(params=params)
+        run_subtest(bg_stress_test)
+    elif run_bg_flag == "during_bg_test":
+        stress_thread = run_bg_stress_test(bg_stress_test)
+        stop_time = time.time() + wait_time
+        while time.time() < stop_time:
+            if env["bg_status"] == 1:
+                run_subtest(sub_type)
+                break
+        if stress_thread:
+            stress_thread.join(timeout=timeout,
+                               suppress_exception=suppress_exception)
+    elif run_bg_flag == "after_bg_test":
+        run_subtest(bg_stress_test)
+        if vm.is_dead():
+            vm.create(params=params)
+        run_subtest(sub_type)

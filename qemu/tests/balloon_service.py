@@ -32,7 +32,6 @@ def run(test, params, env):
 
         :param session: VM session.
         """
-        volume_name = params["cdrom_virtio"]
         key = "VolumeName like 'virtio-win%'"
         try:
             return utils_misc.get_win_disk_vol(session,
@@ -47,23 +46,23 @@ def run(test, params, env):
         :param session: VM session.
         :param drive_letter: virtio-win disk volume letter.
         """
-        status_balloon_service = params["status_balloon_service"] % drive_letter
+        status_cmd = params["status_balloon_service"] % drive_letter
         logging.debug("Check balloon service status.")
-        output = session.cmd_output(status_balloon_service)
+        output = session.cmd_output(status_cmd)
         if re.search(r"running", output.lower(), re.M):
             logging.debug("Balloon service is already running !")
         elif re.search(r"stop", output.lower(), re.M):
             logging.debug("Run Balloon Service in guest.")
             try:
-                run_balloon_service = params["run_balloon_service"] % drive_letter
-                session.cmd(run_balloon_service)
+                start_cmd = params["run_balloon_service"] % drive_letter
+                session.cmd(start_cmd)
             except ShellCmdError:
-                raise exceptions.TestError("Run balloon service failed !")
+                raise exceptions.TestError("Start balloon service failed!")
         else:
             logging.debug("Install Balloon Service in guest.")
             try:
-                install_balloon_service = params["install_balloon_service"] % drive_letter
-                session.cmd(install_balloon_service)
+                install_cmd = params["install_balloon_service"] % drive_letter
+                session.cmd(install_cmd)
             except ShellCmdError:
                 raise exceptions.TestError("Install balloon service failed !")
 
@@ -75,25 +74,28 @@ def run(test, params, env):
         :param get_polling_output: output of get polling in qmp.
         :param keyname: key name of the output of the 'qom-get' property.
         """
-        error_context.context("Check whether memory status as expected",
-                              logging.info)
         check_mem_ratio = float(params.get("check_mem_ratio", 0.1))
+
+        error_context.context("Get memory from guest", logging.info)
         mem_base = MemoryBaseTest(test, params, env)
         if keyname == "stat-free-memory":
             guest_mem = mem_base.get_guest_free_mem(vm)
         elif keyname == "stat-total-memory":
             guest_mem = mem_base.get_vm_mem(vm)
 
+        error_context.context("Get memory from qmp", logging.info)
         stat_memory_qmp = get_polling_output['stats'][keyname]
         stat_memory_qmp = "%sB" % stat_memory_qmp
         stat_memory_qmp = int(float(utils_misc.normalize_data_size(
                                    (stat_memory_qmp), order_magnitude="M")))
+
+        error_context.context("Compare memory from guest with qmp",
+                              logging.info)
         if (abs(guest_mem - stat_memory_qmp)) > (guest_mem * check_mem_ratio):
             raise exceptions.TestFail("%s of guest %s is not equal to %s in"
-                                      " qmp, the ratio is %s" % (keyname,
-                                                                 guest_mem,
-                                                                 stat_memory_qmp,
-                                                                 check_mem_ratio))
+                                      " qmp, the acceptable ratio is %s" %
+                                      (keyname, guest_mem, stat_memory_qmp,
+                                       check_mem_ratio))
 
     def balloon_memory(session, device_path):
         """
@@ -114,8 +116,10 @@ def run(test, params, env):
                 min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)
                 expect_mem = int(random.uniform(min_sz, max_sz))
 
-                quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
-                get_polling_output = vm.monitor.qom_get(device_path, get_balloon_property)
+                quit_after_test = balloon_test.run_ballooning_test(expect_mem,
+                                                                   tag)
+                get_polling_output = vm.monitor.qom_get(device_path,
+                                                        get_balloon_property)
                 memory_check(vm, get_polling_output, 'stat-free-memory')
                 if quit_after_test:
                     return
@@ -129,9 +133,8 @@ def run(test, params, env):
     error_context.context("Boot guest with balloon device", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=timeout)
 
-    polling_sleep_time = int(params.get("polling_sleep_time", 20))
+    sleep_time = int(params.get("polling_sleep_time", 20))
     base_path = params.get("base_path", "/machine/peripheral/")
     device = params.get("balloon", "balloon0")
     device_path = os.path.join(base_path, device)
@@ -139,37 +142,27 @@ def run(test, params, env):
                                       "guest-stats-polling-interval")
     get_balloon_property = params.get("get_balloon_property", "guest-stats")
     polling_interval = int(params.get("polling_interval", 2))
-    drive_letter = get_disk_vol(session)
 
     try:
-        error_context.context("Enable %s driver verifier in guest" % driver_name,
-                              logging.info)
-        if params.get("need_enable_verifier", "yes") == "yes":
-            session = utils_test.qemu.setup_win_driver_verifier(session, driver_name,
-                                                                vm, timeout)
+        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
 
         error_context.context("Config balloon service in guest", logging.info)
+        session = vm.wait_for_login(timeout=timeout)
+        drive_letter = get_disk_vol(session)
         config_balloon_service(session, drive_letter)
 
         error_context.context("Enable polling in qemu", logging.info)
         vm.monitor.qom_set(device_path, set_balloon_property, polling_interval)
-        logging.debug("Sleep %ss to wait for the polling work" % polling_sleep_time)
-        time.sleep(polling_sleep_time)
-        get_polling_output = vm.monitor.qom_get(device_path, get_balloon_property)
+        time.sleep(sleep_time)
+        get_polling_output = vm.monitor.qom_get(device_path,
+                                                get_balloon_property)
         memory_check(vm, get_polling_output, 'stat-total-memory')
 
-        error_context.context("balloon vm memory in loop", logging.info)
+        error_context.context("Balloon vm memory in loop", logging.info)
         balloon_memory(session, device_path)
 
     finally:
         error_context.context("Clear balloon service in guest", logging.info)
-        uninstall_balloon_service = params["uninstall_balloon_service"] % drive_letter
-        session.cmd(uninstall_balloon_service, ignore_all_errors=True)
-
-        error_context.context("Clear balloon driver verifier in guest",
-                              logging.info)
-        if params.get("need_clear_verifier", "yes") == "yes":
-            session = utils_test.qemu.clear_win_driver_verifier(session, vm,
-                                                                timeout)
-        if session:
-            session.close()
+        uninstall_cmd = params["uninstall_balloon_service"] % drive_letter
+        session.cmd(uninstall_cmd, ignore_all_errors=True)
+        session.close()

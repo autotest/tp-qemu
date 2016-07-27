@@ -8,7 +8,6 @@ from virttest import postprocess_iozone
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
-from virttest import funcatexit
 from avocado.core import exceptions
 
 
@@ -65,22 +64,12 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=timeout)
 
     driver_name = get_driver()
     if driver_name:
-        if params.get("need_enable_verifier", "no") == "yes":
-            error_context.context("Enable %s driver verifier" % driver_name,
-                                  logging.info)
-            try:
-                session = utils_test.qemu.setup_win_driver_verifier(
-                          session, driver_name, vm, timeout)
-                funcatexit.register(env, params.get("type"),
-                                    utils_test.qemu.clear_win_driver_verifier,
-                                    session, vm, timeout)
-            except Exception, e:
-                raise exceptions.TestFail(e)
+        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
 
+    session = vm.wait_for_login(timeout=timeout)
     if params.get("format_disk", "no") == "yes":
         error_context.context("Format disk", logging.info)
         utils_misc.format_windows_disk(session, disk_index,

@@ -36,12 +36,9 @@ def run(test, params, env):
         session.cmd(params.get("pre_cmd"))
 
     driver_name = params["driver_name"]
-    if params.get("need_enable_verifier", "yes") == "yes":
-        error.context("Enable %s driver verifier in guest" % driver_name,
-                      logging.info)
-        session = utils_test.qemu.setup_win_driver_verifier(session,
-                                                            driver_name,
-                                                            vm, timeout)
+    if params["os_type"] == "windows":
+        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+    session = vm.wait_for_login(timeout=timeout)
 
     error.context("Play video in guest", logging.info)
     play_video_cmd = params["play_video_cmd"]
@@ -78,10 +75,3 @@ def run(test, params, env):
     error.context("verify guest still alive", logging.info)
     session.cmd(params["stop_player_cmd"])
     vm.verify_alive()
-
-    if params.get("need_clear_verifier", "yes") == "yes":
-        error.context("Clear %s driver verifier in guest" % driver_name,
-                      logging.info)
-        session = utils_test.qemu.clear_win_driver_verifier(session, vm, timeout)
-    if session:
-        session.close()

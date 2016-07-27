@@ -22,18 +22,19 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def check_bg_running(session, target_process):
+    def check_bg_running(target_process):
         """
         Check the backgroud test status in guest.
 
-        :param session: VM session.
         :param target_process: Background process running in guest.
         :return: return True if find the driver name;
                  else return False
         """
+        session = vm.wait_for_login()
         list_cmd = "wmic process where name='%s' list" % target_process
         output = session.cmd_output_safe(list_cmd, timeout=60)
         check_reg = re.compile(r"%s" % target_process, re.I | re.M)
+        session.close()
         return bool(check_reg.findall(output))
 
     def run_bg_stress_test(bg_stress_test):
@@ -57,8 +58,8 @@ def run(test, params, env):
             utils_test.run_virt_sub_test, (test, params, env),
             {"sub_type": bg_stress_test})
         stress_thread.start()
-        if not utils_misc.wait_for(lambda: check_bg_running(session,
-                                   target_process), 120, 0, 5):
+        if not utils_misc.wait_for(lambda: check_bg_running(target_process),
+                                   120, 0, 5):
             raise exceptions.TestFail("Backgroud test %s is not "
                                       "alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
@@ -84,12 +85,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     error_context.context("Boot guest with %s device" % driver, logging.info)
-    session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Enable %s driver verifier in guest" % driver,
-                          logging.info)
-    session = utils_test.qemu.setup_win_driver_verifier(session,
-                                                        driver, vm, timeout)
+    utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
 
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")
@@ -123,11 +120,5 @@ def run(test, params, env):
             run_subtest(sub_type)
 
     finally:
-        if vm.is_dead():
-            vm.create(params=params)
-        error_context.context("Clear %s driver verifier in guest" % driver,
-                              logging.info)
-        session = utils_test.qemu.clear_win_driver_verifier(session,
-                                                            vm, timeout)
-        if session:
-            session.close()
+        session.close()
+        utils_test.qemu.clear_win_driver_verifier(driver, vm, timeout)

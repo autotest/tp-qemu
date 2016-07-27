@@ -4,6 +4,7 @@ import logging
 from virttest import utils_misc
 from virttest import error_context
 from aexpect import ShellCmdError
+from aexpect import ShellProcessTerminatedError
 
 
 @error_context.context_aware
@@ -153,6 +154,6 @@ def run(test, params, env):
             error_context.context("Get driver installation log", logging.info)
             try:
                 get_installation_logs(session)
-            except ShellCmdError:
+            except (ShellCmdError, ShellProcessTerminatedError):
                 pass
             session.close()

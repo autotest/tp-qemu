@@ -92,11 +92,11 @@ def run(test, params, env):
 
     def ethtool_save_params(session):
         error.context("Saving ethtool configuration", logging.info)
-        pretest_status = ethtool_get(session)
+        return ethtool_get(session)
 
-    def ethtool_restore_params(session):
+    def ethtool_restore_params(session, status):
         error.context("Restoring ethtool configuration", logging.info)
-        ethtool_set(session, pretest_status)
+        ethtool_set(session, status)
 
     def compare_md5sum(name):
         txt = "Comparing md5sum of the files on guest and host"
@@ -239,7 +239,7 @@ def run(test, params, env):
         "gro": (ro_callback, ("rx",), ("lro",)),
         "lro": (rx_callback, (), ("gro",)),
     }
-    ethtool_save_params(session)
+    pretest_status = ethtool_save_params(session)
     failed_tests = []
     try:
         for f_type in supported_features:
@@ -288,7 +288,7 @@ def run(test, params, env):
 
         try:
             session = vm.wait_for_serial_login(timeout=login_timeout)
-            ethtool_restore_params(session)
+            ethtool_restore_params(session, pretest_status)
         except Exception, detail:
             logging.warn("Could not restore parameter of"
                          " eth card: '%s'", detail)

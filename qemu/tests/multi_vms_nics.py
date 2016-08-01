@@ -1,10 +1,15 @@
 import logging
+import re
 
 from autotest.client.shared import error
 
 from virttest import utils_test
 from virttest import remote
 from virttest import utils_net
+from virttest import utils_misc
+from virttest import env_process
+from avocado.utils import process
+from virttest.staging import utils_memory
 
 
 @error.context_aware
@@ -43,8 +48,8 @@ def run(test, params, env):
         for size in packet_size:
             error.context("Ping with packet size %s" % size, logging.info)
             status, output = utils_test.ping(dst_ip, 10, interface=nic,
-                                             packetsize=size,
-                                             timeout=30, session=session)
+                                             packetsize=size, timeout=30,
+                                             session=session)
             if strict_check:
                 ratio = utils_test.get_loss_ratio(output)
                 if ratio != 0:
@@ -113,18 +118,51 @@ def run(test, params, env):
             raise error.TestError("File changed after transfer")
 
     nic_interface_list = []
+    check_irqbalance_cmd = params.get("check_irqbalance_cmd")
+    stop_irqbalance_cmd = params.get("stop_irqbalance_cmd")
+    start_irqbalance_cmd = params.get("start_irqbalance_cmd")
+    status_irqbalance = params.get("status_irqbalance")
     vms = params["vms"].split()
+    host_mem = utils_memory.memtotal() / (1024 * 1024)
+    host_cpu_count = len(utils_misc.get_cpu_processors())
+    vhost_count = 0
+    if params.get("vhost"):
+        vhost_count = 1
+    if host_cpu_count < (1 + vhost_count) * len(vms):
+        raise error.TestError("The host don't have enough cpus to start guest"
+                              "pcus: %d, minimum of vcpus and vhost: %d" %
+                              (host_cpu_count, (1 + vhost_count) * len(vms)))
+    params['mem'] = host_mem / len(vms) * 1024
+    params['smp'] = host_cpu_count / len(vms) - vhost_count
+    if params['smp'] % 2 != 0:
+        params['vcpu_sockets'] = 1
+    params["start_vm"] = "yes"
+    for vm_name in vms:
+        env_process.preprocess_vm(test, params, env, vm_name)
     timeout = float(params.get("login_timeout", 360))
     strict_check = params.get("strick_check", "no")
     host_ip = utils_net.get_ip_address_by_interface(params.get("netdst"))
     host_ip = params.get("srchost", host_ip)
     flood_minutes = float(params["flood_minutes"])
+    error.context("Check irqbalance service status", logging.info)
+    o = process.system_output(check_irqbalance_cmd, ignore_status=True)
+    check_stop_irqbalance = False
+    if re.findall(status_irqbalance, o):
+        logging.debug("stop irqbalance")
+        process.run(stop_irqbalance_cmd)
+        check_stop_irqbalance = True
+        o = process.system_output(check_irqbalance_cmd, ignore_status=True)
+        if re.findall(status_irqbalance, o):
+            raise error.TestError("Can not stop irqbalance")
+    thread_list = []
     nic_interface = []
     for vm_name in vms:
         guest_ifname = ""
         guest_ip = ""
         vm = env.get_vm(vm_name)
-        session = vm.wait_for_serial_login(timeout=timeout)
+        session = vm.wait_for_login(timeout=timeout)
+        thread_list.extend(vm.vcpu_threads)
+        thread_list.extend(vm.vhost_threads)
         error.context("Check all the nics available or not", logging.info)
         for index, nic in enumerate(vm.virtnet):
             guest_ifname = utils_net.get_linux_ifname(session, nic.mac)
@@ -135,6 +173,18 @@ def run(test, params, env):
                 raise error.TestFail(err_log)
             nic_interface = [guest_ifname, guest_ip, session]
             nic_interface_list.append(nic_interface)
+    error.context("Pin vcpus and vhosts to host cpus", logging.info)
+    host_numa_nodes = utils_misc.NumaInfo()
+    vthread_num = 0
+    for numa_node_id in host_numa_nodes.nodes:
+        numa_node = host_numa_nodes.nodes[numa_node_id]
+        for _ in range(len(numa_node.cpus)):
+            if vthread_num >= len(thread_list):
+                break
+            vcpu_tid = thread_list[vthread_num]
+            logging.debug("pin vcpu/vhost thread(%s) to cpu(%s)" %
+                          (vcpu_tid, numa_node.pin_cpu(vcpu_tid)))
+            vthread_num += 1
 
     nic_interface_list_len = len(nic_interface_list)
     # ping and file transfer test
@@ -155,3 +205,5 @@ def run(test, params, env):
             txt += "and %s" % dst_ip[1]
             error.context(txt, logging.info)
             file_transfer(src_ip_info[2], src_ip_info[1], dst_ip[1])
+    if check_stop_irqbalance:
+        process.run(start_irqbalance_cmd)

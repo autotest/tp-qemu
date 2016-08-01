@@ -95,11 +95,10 @@ def run(test, params, env):
         if vm.is_alive():
             vm.destroy()
 
-        new_params = params.copy()
         for option, value in options.iteritems():
-            new_params[option] = value
+            params[option] = value
         error.context("Restarting VM")
-        vm.create(params=new_params)
+        vm.create(params=params)
         vm.verify_alive()
 
     def _login():
@@ -123,7 +122,7 @@ def run(test, params, env):
     @error.context_aware
     def _check_serial_option(serial, regex_str, expect_str):
         error.context("Set serial option to '%s'" % serial, logging.info)
-        _restart_vm({"drive_serial_stg": serial})
+        _restart_vm({"blk_extra_params_stg": "serial=" + serial})
 
         error.context("Check serial option in monitor", logging.info)
         output = str(vm.monitor.info("qtree"))

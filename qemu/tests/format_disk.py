@@ -37,6 +37,12 @@ def run(test, params, env):
     if params.get("os_type") == 'linux':
         drive_name = params.objects("images")[-1]
         drive_id = params["blk_extra_params_%s" % drive_name].split("=")[1]
+        # If a device option(bool/str) in qemu cmd line doesn't have a value,
+        # qemu assigns the value as "on".
+        if drive_id == "NO_EQUAL_STRING":
+            drive_id = "on"
+        elif drive_id == "EMPTY_STRING":
+            drive_id = ""
         drive_path = utils_misc.get_linux_drive_path(session, drive_id)
         if not drive_path:
             raise error.TestError("Failed to get '%s' drive path" % drive_name)

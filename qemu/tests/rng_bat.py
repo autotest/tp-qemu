@@ -5,7 +5,6 @@ import aexpect
 from virttest import utils_misc
 from virttest import error_context
 from virttest import utils_test
-from virttest import funcatexit
 from avocado.core import exceptions
 from avocado.utils import process
 
@@ -68,14 +67,8 @@ def run(test, params, env):
             raise exceptions.TestFail(msg)
 
     if params["os_type"] == "windows":
-        try:
-            utils_test.qemu.setup_win_driver_verifier(driver_name,
-                                                      vm, timeout)
-            funcatexit.register(env, params.get("type"),
-                                utils_test.qemu.clear_win_driver_verifier,
-                                driver_name, vm, timeout)
-        except Exception, e:
-            raise exceptions.TestFail(e)
+        utils_test.qemu.setup_win_driver_verifier(driver_name,
+                                                  vm, timeout)
     else:
         error_context.context("verify virtio-rng device driver", logging.info)
         session = vm.wait_for_login(timeout=timeout)

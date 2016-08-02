@@ -5,7 +5,7 @@ from autotest.client.shared import error
 
 from virttest import utils_misc
 
-from qemu.tests.live_snapshot_basic import LiveSnapshotBase
+from qemu.tests.live_snapshot_basic import LiveSnapshot
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheck
 
 
@@ -36,7 +36,8 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheck):
         if self.bg.isAlive():
             image_tag = self.params.get("image_name", "image1")
             image_params = self.params.object_params(image_tag)
-            snapshot_test = LiveSnapshotBase(image_params, self.env)
+            snapshot_test = LiveSnapshot(self.test, self.params,
+                                         self.env, image_tag)
             error.context("Creating snapshot", logging.info)
             snapshot_test.create_snapshot()
             error.context("Checking snapshot created successfully",

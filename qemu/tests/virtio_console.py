@@ -331,10 +331,11 @@ def run(test, params, env):
         guest_worker.cmd("virt.set_pool_want_return('%s', select.POLLOUT)" %
                          (port.name), 10)
         port.open()
-        match = guest_worker._cmd("virt.get_sigio_poll_return('%s')" %
-                                  (port.name), 10)[0]
+        match, data = guest_worker._cmd("virt.get_sigio_poll_return('%s')" %
+                                        (port.name), 10)
         if match == 1:
-            raise error.TestFail("Problem with HUP on console port.")
+            raise error.TestFail("Problem with HUP on console port:\n%s"
+                                 % data)
 
         # Test sigio when port receive data
         guest_worker.cmd("virt.set_pool_want_return('%s', select.POLLOUT |"

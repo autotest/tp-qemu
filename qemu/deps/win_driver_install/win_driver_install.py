@@ -202,7 +202,7 @@ if __name__ == "__main__":
     result_file = r"C:\driver_install.log"
     logger = logging.getLogger("driver_install")
     logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler(result_file)
+    fh = logging.FileHandler(result_file, mode="a+")
     fh.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)

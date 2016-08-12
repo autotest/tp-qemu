@@ -14,6 +14,7 @@ from virttest import env_process
 from virttest import storage
 from virttest import data_dir
 from virttest import gluster
+from virttest import lvm
 
 
 @error.context_aware
@@ -483,16 +484,22 @@ def run(test, params, env):
         :param mode: rebase mode: safe mode, unsafe mode
         """
         cmd += " rebase"
+        show_progress = params.get("show_progress", "")
+        cache_mode = params.get("cache_mode", "")
         if mode == "unsafe":
             cmd += " -u"
+        if show_progress == "on":
+            cmd += " -p"
+        if cache_mode:
+            cmd += " -t %s" % cache_mode
         cmd += " -b %s -F %s %s" % (base_img, backing_fmt, img_name)
         msg = "Trying to rebase '%s' to '%s' by command %s" % (img_name,
                                                                base_img, cmd)
         error.context(msg, logging.info)
-        status, output = commands.getstatusoutput(cmd)
-        if status != 0:
-            raise error.TestError("Failed to rebase '%s' to '%s': %s" %
-                                  (img_name, base_img, output))
+        if show_progress == "off":
+            bg = utils.InterruptedThread(send_signal)
+            bg.start()
+        check_command_output(utils.run(cmd))
 
     def rebase_test(cmd):
         """
@@ -509,40 +516,75 @@ def run(test, params, env):
                                                ignore_status=True):
             raise error.TestNAError("Current kvm user space version does not"
                                     " support 'rebase' subcommand")
+        base_fmt = params.get("base_format", "qcow2")
         sn_fmt = params.get("snapshot_format", "qcow2")
-        sn1 = params["image_name_snapshot1"]
-        sn1 = _get_image_filename(sn1, enable_gluster, sn_fmt)
-        base_img = storage.get_image_filename(params, data_dir.get_data_dir())
-        _create(cmd, sn1, sn_fmt, base_img=base_img, base_img_fmt=image_format)
+        skip_boot = params.get("skip_boot", "no")
+        lv_name_list = params.get("lv_name_list", "")
+        vg_name = params.get("vg_name", "")
+        backing_file_snapshot1 = params.get("backing_file_snapshot1", "base_img")
+        backing_file_snapshot2 = params.get("backing_file_snapshot2", "sn1")
+        sn1 = params.get("image_name_snapshot1", "images/sn1")
+        sn2 = params.get("image_name_snapshot2", "images/sn2")
+        if lv_name_list:
+            lv_size = params.get("lv_size", "")
+            params["pv_name"] = params.get("image_name")
+            lvmdevice = lvm.LVM(params)
+            for lv_name in params.objects("lv_name_list"):
+                params["lv_name"] = lv_name
+                lvmdevice.setup()
+        if "base" not in lv_name_list:
+            base_img = storage.get_image_filename(params, data_dir.get_data_dir())
+        if sn1:
+            sn1 = _get_image_filename(sn1, enable_gluster, sn_fmt)
+        if sn2:
+            sn2 = _get_image_filename(sn2, enable_gluster, sn_fmt)
+        for lv_name in params.objects("lv_name_list"):
+            lv = "/dev/%s/%s" % (vg_name, lv_name)
+            if "base" in lv_name:
+                base_img = lv
+                _create(cmd, base_img, base_fmt, lv_size)
+            if "sn1" in lv_name:
+                sn1 = lv
+            if "sn2" in lv_name:
+                sn2 = lv
+        if backing_file_snapshot1 == "":
+            _create(cmd, sn1, sn_fmt, lv_size)
+        else:
+            _create(cmd, sn1, sn_fmt, None, eval(backing_file_snapshot1), base_fmt)
+        if backing_file_snapshot2 == "":
+            _create(cmd, sn2, sn_fmt, lv_size)
+        else:
+            _create(cmd, sn2, sn_fmt, None, eval(backing_file_snapshot2), base_fmt)
 
-        # Create snapshot2 based on snapshot1
-        sn2 = params["image_name_snapshot2"]
-        sn2 = _get_image_filename(sn2, enable_gluster, sn_fmt)
-        _create(cmd, sn2, sn_fmt, base_img=sn1, base_img_fmt=sn_fmt)
-
-        rebase_mode = params.get("rebase_mode")
+        rebase_mode = params.get("rebase_mode", "safe")
         if rebase_mode == "unsafe":
             remove(sn1)
 
         _rebase(cmd, sn2, base_img, image_format, mode=rebase_mode)
-        # Boot snapshot image after rebase
-        img_format = sn2.split('.')[-1]
-        img_name = ".".join(sn2.split('.')[:-1])
-        _boot(img_name, img_format)
 
-        # Check sn2's format and backing_file
-        actual_base_img = _info(cmd, sn2, "backing file")
-        base_img_name = os.path.basename(base_img)
-        if base_img_name not in actual_base_img:
-            raise error.TestFail("After rebase the backing_file of 'sn2' is "
-                                 "'%s' which is not expected as '%s'"
-                                 % (actual_base_img, base_img_name))
-        status, output = _check(cmd, sn2)
-        if not status:
-            raise error.TestFail("Check image '%s' failed after rebase;"
-                                 "got error: %s" % (sn2, output))
-        remove(sn2)
-        remove(sn1)
+        if skip_boot == "no":
+            # Boot snapshot image after rebase
+            img_format = sn2.split('.')[-1]
+            img_name = ".".join(sn2.split('.')[:-1])
+            _boot(img_name, img_format)
+
+            # Check sn2's format and backing_file
+            actual_base_img = _info(cmd, sn2, "backing file")
+            base_img_name = os.path.basename(base_img)
+            if base_img_name not in actual_base_img:
+                raise error.TestFail("After rebase the backing_file of 'sn2' is "
+                                     "'%s' which is not expected as '%s'"
+                                     % (actual_base_img, base_img_name))
+            status, output = _check(cmd, sn2)
+            if not status:
+                raise error.TestFail("Check image '%s' failed after rebase;"
+                                     "got error: %s" % (sn2, output))
+        if lv_name_list:
+            lvmdevice.cleanup()
+        if os.path.isfile("%s" % sn2):
+            remove(sn2)
+        if os.path.isfile("%s" % sn1):
+            remove(sn1)
 
     def _amend(cmd, img_name, img_fmt, options):
         """

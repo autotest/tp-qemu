@@ -35,6 +35,7 @@ class BlockCopy(object):
                       "default_speed": 0}
     trash_files = []
     opening_sessions = []
+    processes = []
 
     def __init__(self, test, params, env, tag):
         self.tag = tag
@@ -252,6 +253,18 @@ class BlockCopy(object):
         """
         return self.do_steps("before_start")
 
+    def action_when_start(self):
+        """
+        start pre-action in new threads;
+        """
+        for test in self.params.get("when_start").split():
+            if hasattr(self, test):
+                fun = getattr(self, test)
+                bg = utils.InterruptedThread(fun)
+                bg.start()
+                if bg.isAlive():
+                    self.processes.append(bg)
+
     def action_before_cleanup(self):
         """
         run steps before job in steady status;
@@ -262,6 +275,8 @@ class BlockCopy(object):
         """
         close opening connections and clean trash files;
         """
+        for bg in self.processes:
+            bg.join()
         while self.opening_sessions:
             session = self.opening_sessions.pop()
             if session:
@@ -270,4 +285,4 @@ class BlockCopy(object):
             self.vm.destroy()
         while self.trash_files:
             tmp_file = self.trash_files.pop()
-            utils.system("rm -f %s" % tmp_file)
+            utils.system("rm -f %s" % tmp_file, ignore_status=True)

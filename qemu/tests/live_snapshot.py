@@ -73,19 +73,6 @@ def run(test, params, env):
         finally:
             session.close()
 
-    def reboot_test():
-        try:
-            reboot_timeout = int(params.get("reboot_timeout", 900))
-            bg = utils_test.BackgroundTest(vm.reboot, (session, "shell", 0,
-                                                       reboot_timeout, False,))
-            logging.info("Rebooting guest ...")
-            bg.start()
-            sleep_time = int(params.get("sleep_time"))
-            time.sleep(sleep_time)
-            create_snapshot(vm)
-        finally:
-            bg.join()
-
     def file_transfer_test():
         try:
             bg_cmd = utils_test.run_file_transfer

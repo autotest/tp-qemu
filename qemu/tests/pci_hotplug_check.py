@@ -103,7 +103,7 @@ def run(test, params, env):
         elif len(re.findall("\npci_add", cmd_output)) > 0:
             cmd_type = "pci_add"
         else:
-            raise error.TestError("Unknow version of qemu")
+            raise error.TestError("Unknown version of qemu")
 
         # Probe qemu for a list of supported devices
         probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)
@@ -313,7 +313,7 @@ def run(test, params, env):
                                                "__com.redhat_drive_add",
                                                "drive_add")
     if not drive_cmd_type:
-        raise error.TestError("Unknow version of qemu")
+        raise error.TestError("Unknown version of qemu")
 
     local_functions = locals()
 

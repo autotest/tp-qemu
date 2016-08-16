@@ -75,7 +75,7 @@ def run(test, params, env):
         # Probe qemu to verify what is the supported syntax for PCI hotplug
         cmd_type = is_supported_command("device_add", "pci_add")
         if not cmd_type:
-            raise error.TestError("Unknow version of qemu")
+            raise error.TestError("Unknown version of qemu")
 
         # Probe qemu for a list of supported devices
         probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type,

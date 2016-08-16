@@ -71,7 +71,7 @@ def run(test, params, env):
     else:
         cmd_o = vm.monitor.send_args_cmd("help")
     if not cmd_o:
-        raise error.TestError("Unknow version of qemu")
+        raise error.TestError("Unknown version of qemu")
 
     cmd_type = utils_misc.find_substring(str(cmd_o), "device_del")
 

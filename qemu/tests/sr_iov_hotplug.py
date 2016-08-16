@@ -246,7 +246,7 @@ def run(test, params, env):
 
     cmd_type = utils_misc.find_substring(str(cmd_o), "device_add", "pci_add")
     if not cmd_o:
-        raise error.TestError("Unknow version of qemu")
+        raise error.TestError("Unknown version of qemu")
 
     local_functions = locals()
 

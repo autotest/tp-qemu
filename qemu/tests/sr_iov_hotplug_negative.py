@@ -70,7 +70,7 @@ def run(test, params, env):
         cmd_output = vm.monitor.send_args_cmd("help")
 
     if not cmd_output:
-        raise error.TestError("Unknow version of qemu")
+        raise error.TestError("Unknown version of qemu")
 
     cmd_type = utils_misc.find_substring(str(cmd_output), "pci_add",
                                                           "device_add")

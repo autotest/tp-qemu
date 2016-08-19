@@ -34,30 +34,33 @@ def run(test, params, env):
                 "monitor_cmd": humam_monitor.send_args_cmd,
                 "qmp_cmd": qmp_monitor.send_args_cmd}
 
-    def send_cmd(cmd, options={}):
+    def send_cmd(cmd, cmd_type, options={}):
         if cmd_type in callback.keys():
             return callback[cmd_type](cmd, **options)
         else:
             raise error.TestError("cmd_type is not supported")
 
+    cmd_type = params["event_cmd_type"]
     pre_event_cmd = params.get("pre_event_cmd", "")
+    pre_event_cmd_type = params.get("pre_event_cmd_type", cmd_type)
     pre_event_cmd_options = eval(
         "dict({0})".format(params.get("pre_event_cmd_options", "")))
     event_cmd = params.get("event_cmd")
     event_cmd_options = eval(
         "dict({0})".format(params.get("event_cmd_options", "")))
     post_event_cmd = params.get("post_event_cmd", "")
+    post_event_cmd_type = params.get("post_event_cmd_type", cmd_type)
     post_event_cmd_options = eval(
         "dict({0})".format(params.get("post_event_cmd_options", "")))
-    cmd_type = params.get("event_cmd_type")
     event_check = params.get("event_check")
     timeout = int(params.get("check_timeout", 360))
     action_check = params.get("action_check")
 
     if pre_event_cmd:
-        send_cmd(pre_event_cmd, pre_event_cmd_options)
+        send_cmd(pre_event_cmd, pre_event_cmd_type,
+                 pre_event_cmd_options)
 
-    send_cmd(event_cmd, event_cmd_options)
+    send_cmd(event_cmd, cmd_type, event_cmd_options)
 
     end_time = time.time() + timeout
     qmp_monitors = vm.get_monitors_by_type("qmp")
@@ -87,6 +90,7 @@ def run(test, params, env):
                              % event_check)
 
     if post_event_cmd:
-        send_cmd(post_event_cmd, post_event_cmd_options)
+        send_cmd(post_event_cmd, post_event_cmd_type,
+                 post_event_cmd_options)
     if session:
         session.close()

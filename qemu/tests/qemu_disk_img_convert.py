@@ -58,6 +58,7 @@ def run(test, params, env):
         raise error.TestError("Fail to save tmp file")
     convert_test.destroy_vm()
     n_params = convert_test.convert()
+    convert_test.verify_info(n_params)
     convert_test.start_vm(n_params)
 
     # check md5sum after conversion

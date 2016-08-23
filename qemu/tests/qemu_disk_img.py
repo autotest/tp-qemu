@@ -9,6 +9,8 @@ from virttest import data_dir
 from virttest import env_process
 from virttest import storage
 from virttest import qemu_storage
+from virttest import utils_test
+from virttest import utils_misc
 
 
 class QemuImgTest(qemu_storage.QemuImg):
@@ -128,6 +130,38 @@ class QemuImgTest(qemu_storage.QemuImg):
     def get_info(self):
         error.context("get image file ('%s')" % self.image_filename)
         return super(QemuImgTest, self).info()
+
+    @error.context_aware
+    def verify_info(self, params=None):
+        """
+        verify option is applied to image file correctly
+        """
+        error.context("verify option of converted image", logging.info)
+        image_filename = storage.get_image_filename(params, self.data_dir)
+        info = utils_test.get_image_info(image_filename)
+        avalue = evalue = ""
+        for option in params.objects("option_verified"):
+            avalue = info.get(option)
+            if option == "format":
+                evalue = params.get("image_format")
+            elif option == "lcounts":
+                if params.get("lazy_refcounts") == "on":
+                    evalue = "true"
+                elif params.get("lazy_refcounts") == "off":
+                    evalue = "false"
+            elif option == "csize":
+                csize = params.get("cluster_size")
+                evalue = int(float(utils_misc.normalize_data_size(csize, "B")))
+            elif option == "sparse_size":
+                if info.get("dsize") < info.get("vsize"):
+                    avalue = info.get("dsize")
+                    evalue = info.get("vsize")
+            else:
+                evalue = params.get(option)
+            if avalue is not None and avalue != evalue:
+                msg = "Get wrong %s from image %s!" % (option, image_filename)
+                msg += "Expect: %s, actual: %s" % (evalue, avalue)
+                raise error.TestFail(msg)
 
     @error.context_aware
     def clean(self):

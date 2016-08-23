@@ -264,6 +264,9 @@ def run(test, params, env):
 
         sub_info += ": (.*)"
         matches = re.findall(sub_info, output)
+        if "virtual size" in sub_info:
+            p = re.compile(r'\.0*(G|K)$')
+            return p.sub(r'\1', matches[0].split()[0])
         if matches:
             return matches[0]
         return None
@@ -497,6 +500,60 @@ def run(test, params, env):
                                  "got error: %s" % (sn2, output))
         remove(sn2)
         remove(sn1)
+
+    def _amend(cmd, img_name, img_fmt, options):
+        """
+        Simple wrapper of 'qemu-img amend'.
+
+        :param cmd: qemu-img base command
+        :param img_name: image name that should be amended
+        :param img_fmt: image format
+        :param options: a comma separated list of format specific options
+        """
+
+        msg = "Amend '%s' with options '%s'" % (img_name, options)
+        cmd += " amend"
+        if img_fmt:
+            cmd += " -f %s" % img_fmt
+        cache = params.get("cache_mode", '')
+        if cache:
+            cmd += " -t %s" % cache
+        if options:
+            cmd += " -o "
+            for option in options:
+                cmd += "%s=%s," % (option, params.get(option))
+            cmd = cmd.rstrip(',')
+        cmd += " %s" % img_name
+        error.context(msg, logging.info)
+        check_command_output(utils.run(cmd, ignore_status=True))
+
+    def amend_test(cmd):
+        """
+        Subcommand 'qemu-img amend' test
+        Amend the image format specific options for the image file
+
+        :param cmd: qemu-img base command.
+        """
+        img_name = params.get("image_name_stg")
+        img_fmt = params.get("image_format_stg", "qcow2")
+        options = params.get("qemu_img_options", "").split()
+        check_output = params.get("check_output", "exit_status")
+        img = _get_image_filename(img_name, img_fmt=img_fmt)
+        _amend(cmd, img, img_fmt, options)
+        if check_output == "exit_status":
+            for option in options:
+                expect = params.get(option)
+                if option == "size":
+                    option = "virtual size"
+                actual = _info(cmd, img, option)
+                if actual is not None and actual != expect:
+                    msg = "Get wrong %s from image %s!" % (option, img_name)
+                    msg += "Expect: %s, actual: %s" % (expect, actual)
+                    raise error.TestFail(msg)
+        status, output = _check(cmd, img)
+        if not status:
+            raise error.TestFail("Check image '%s' failed after rebase;"
+                                 "got error: %s" % (img, output))
 
     def _boot(img_name, img_fmt):
         """

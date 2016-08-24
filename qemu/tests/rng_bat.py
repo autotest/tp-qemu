@@ -30,7 +30,7 @@ def run(test, params, env):
 
         :param dev_file: host random device name.
         :param vm_pid: qemu process ID.
-        :return: False or True.
+        :return: Match objects or None.
         """
         lsof_cmd = "lsof %s" % dev_file
         output = process.system_output(lsof_cmd, ignore_status=True)
@@ -62,7 +62,7 @@ def run(test, params, env):
         error_context.context("Check '%s' used by qemu" % dev_file,
                               logging.info)
         if not is_dev_used_by_qemu(dev_file, vm_pid):
-            msg = "Qemu not using host passthrough "
+            msg = "Qemu (pid=%d) not using host passthrough " % vm_pid
             msg += "device '%s'" % dev_file
             raise exceptions.TestFail(msg)
 

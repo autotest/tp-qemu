@@ -54,10 +54,6 @@ def run(test, params, env):
         error.context("Update the device type to default.", logging.info)
         default_drive_format = params.get("default_drive_format", "ide")
         default_nic_model = params.get("default_nic_model", "rtl8139")
-        images = params.get("images")
-        main_image = re.split("\s+", images)[0]
-        nics = params.get("nics")
-        main_nic = re.split("\s+", nics)[0]
         default_display = params.get("default_display", "vnc")
 
         default_parameters = {"default_drive_format": default_drive_format,
@@ -80,7 +76,6 @@ def run(test, params, env):
         if re.findall("zip$", url_virtio_win):
             utils.system("cd /tmp/virtio_win; unzip *; rm -f *.zip")
 
-        virtio_version = params.get("virtio_version", "unknown")
         virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                          params.get("cdrom_virtio",
                                                     "/tmp/prewhql.iso"))

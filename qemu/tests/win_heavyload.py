@@ -1,7 +1,11 @@
 import re
 import logging
+import time
 
-import aexpect
+try:
+    import aexpect
+except ImportError:
+    from virttest import aexpect
 
 from autotest.client.shared import error
 from autotest.client import utils
@@ -120,16 +124,24 @@ def run(test, params, env):
         if not loop_session_cmd(session, check_running_cmd):
             raise error.TestError("heavyload process is not started")
 
+        sleep_before_migration = int(params.get("sleep_before_migration",
+                                                "0"))
+        time.sleep(sleep_before_migration)
+
         error.context("Verify vm is alive", logging.info)
         utils_misc.wait_for(vm.verify_alive,
                             timeout=test_timeout, step=steping)
     finally:
-        error.context("Stop load and clean tmp files", logging.info)
-        if not installed and download_url:
-            utils.system("rm -f %s/HeavyLoad*.exe" % tmp_dir)
-            session.cmd("del /f /s %sHeavyLoad*.exe" % dst)
-        if loop_session_cmd(session, check_running_cmd):
-            if not loop_session_cmd(session, stop_cmd):
-                raise error.TestFail("Unable to terminate heavyload process")
+        # in migration test, no need to stop heavyload on src host
+        cleanup_in_the_end = params.get("unload_stress_in_the_end", "yes")
+        if cleanup_in_the_end == "yes":
+            error.context("Stop load and clean tmp files", logging.info)
+            if not installed and download_url:
+                utils.system("rm -f %s/HeavyLoad*.exe" % tmp_dir)
+                session.cmd("del /f /s %sHeavyLoad*.exe" % dst)
+            if loop_session_cmd(session, check_running_cmd):
+                if not loop_session_cmd(session, stop_cmd):
+                    raise error.TestFail("Unable to terminate heavyload "
+                                         "process")
         if session:
             session.close()

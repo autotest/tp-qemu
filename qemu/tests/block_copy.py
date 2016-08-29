@@ -136,6 +136,40 @@ class BlockCopy(object):
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
 
+    def is_paused(self):
+        """
+        Return block job paused status.
+        """
+        paused = self.get_status().get("paused")
+        offset_p = self.get_status().get("offset")
+        time.sleep(random.uniform(1, 3))
+        offset_l = self.get_status().get("offset")
+        paused &= offset_p == offset_l
+        return paused
+
+    def pause_job(self):
+        """
+        pause active job;
+        """
+        if self.is_paused():
+            raise error.TestError("Job has been already paused.")
+        logging.info("Pause block job.")
+        self.vm.pause_block_job(self.device)
+        time.sleep(random.uniform(1, 3))
+        if not self.is_paused():
+            raise error.TestFail("Pause block job failed.")
+
+    def resume_job(self):
+        """
+        resume a paused job.
+        """
+        if not self.is_paused():
+            raise error.TestError("Job is not paused, can't be resume.")
+        logging.info("Resume block job.")
+        self.vm.resume_block_job(self.device)
+        if self.is_paused():
+            raise error.TestFail("Resume block job failed.")
+
     @error.context_aware
     def set_speed(self):
         """

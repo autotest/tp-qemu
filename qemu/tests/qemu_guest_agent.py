@@ -1,14 +1,18 @@
 import logging
 import time
 import os
+import re
 
 import aexpect
 
 from autotest.client.shared import error
 from autotest.client import utils
+from avocado.utils import path as avo_path
+from avocado.utils import process
 
 from virttest import guest_agent
 from virttest import utils_misc
+from virttest import env_process
 
 
 class BaseVirtTest(object):
@@ -109,8 +113,8 @@ class QemuGuestAgentTest(BaseVirtTest):
         error.context("Try to install 'qemu-guest-agent' package.",
                       logging.info)
         session = self._get_session(params, vm)
-        s, o = self._session_cmd_close(session, gagent_install_cmd)
-        if bool(s):
+        s, o = session.cmd_status_output(gagent_install_cmd)
+        if s:
             raise error.TestFail("Could not install qemu-guest-agent package"
                                  " in VM '%s', detail: '%s'" % (vm.name, o))
 
@@ -127,7 +131,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         error.context("Try to start 'qemu-guest-agent'.", logging.info)
         session = self._get_session(params, vm)
         s, o = self._session_cmd_close(session, gagent_start_cmd)
-        if bool(s):
+        if s and "already been started" not in o:
             raise error.TestFail("Could not start qemu-guest-agent in VM"
                                  " '%s', detail: '%s'" % (vm.name, o))
 
@@ -177,22 +181,21 @@ class QemuGuestAgentTest(BaseVirtTest):
 
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
-
-        if not self.vm:
+        start_vm = params["start_vm"]
+        if (not self.vm) and (start_vm == "yes"):
             vm = self.env.get_vm(params["main_vm"])
             vm.verify_alive()
             self.vm = vm
-        self.setup_gagent_in_guest(params, self.vm)
+            self.setup_gagent_in_guest(params, self.vm)
 
     def run_once(self, test, params, env):
         BaseVirtTest.run_once(self, test, params, env)
-
-        if not self.vm:
+        start_vm = params["start_vm"]
+        if (not self.vm) and (start_vm == "yes"):
             vm = self.env.get_vm(params["main_vm"])
             vm.verify_alive()
             self.vm = vm
-
-        self.gagent_verify(self.params, self.vm)
+            self.gagent_verify(self.params, self.vm)
 
     def cleanup(self, test, params, env):
         self._cleanup_open_session()
@@ -324,21 +327,18 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     def gagent_check_set_user_password(self, test, params, env):
         """
         Execute "guest-set-user-password" command to guest agent
-       :param test: kvm test object
-       :param params: Dictionary with the test parameters
-       :param env: Dictionary with test environment.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
         """
         old_password = params.get("password", "")
         new_password = params.get("new_password", "123456")
         crypted = params.get("crypted", "") == "yes"
         try:
             if crypted:
-                ret = self.gagent.set_user_password(new_password, crypted)
+                self.gagent.set_user_password(new_password, crypted)
             else:
-                ret = self.gagent.set_user_password(new_password)
-            if ret is False:
-                raise error.TestNAError("the  guest-set-user-password cmd "
-                                        "is not supported")
+                self.gagent.set_user_password(new_password)
             error.context("check if the guest could be login by new password",
                           logging.info)
             self._gagent_verify_password(self.vm, new_password)
@@ -354,27 +354,22 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     def gagent_check_get_vcpus(self, test, params, env):
         """
         Execute "guest-set-vcpus" command to guest agent
-       :param test: kvm test object
-       :param params: Dictionary with the test parameters
-       :param env: Dictionary with test environment.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
         """
-        ret = self.gagent.get_vcpus()
-        if ret is False:
-            raise error.TestNAError("The guest-set-vcpus command is not "
-                                    "supported")
+        self.gagent.get_vcpus()
 
     @error.context_aware
     def gagent_check_set_vcpus(self, test, params, env):
         """
         Execute "guest-set-vcpus" command to guest agent
-       :param test: kvm test object
-       :param params: Dictionary with the test parameters
-       :param env: Dictionary with test environment.
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
         """
         error.context("get the cpu number of the testing guest")
         vcpus_info = self.gagent.get_vcpus()
-        if vcpus_info is False:
-            raise error.TestNAError("the guest-set-vcpus cmd is not supported")
         vcpus_num = len(vcpus_info)
         error.context("the vcpu number:%d" % vcpus_num, logging.info)
         if vcpus_num < 2:
@@ -388,6 +383,259 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         vcpus_info = self.gagent.get_vcpus()
         if vcpus_info[vcpus_num - 1]["online"] is not False:
             raise error.TestFail("the vcpu status is not changed as expected")
+
+    @error.context_aware
+    def gagent_check_get_time(self, test, params, env):
+        """
+        Execute "guest-get-time" command to guest agent
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        timeout = float(params.get("login_timeout", 240))
+        session = self.vm.wait_for_login(timeout=timeout)
+        get_guest_time_cmd = params["get_guest_time_cmd"]
+        error.context("get the time of the guest", logging.info)
+        nanoseconds_time = self.gagent.get_time()
+        error.context("the time get by guest-get-time is '%d' "
+                      % nanoseconds_time, logging.info)
+        guest_time = session.cmd_output(get_guest_time_cmd)
+        if not guest_time:
+            raise error.TestError("can't get the guest time for contrast")
+        error.context("the time get inside guest by shell cmd is '%d' "
+                      % int(guest_time), logging.info)
+        delta = abs(int(guest_time) - nanoseconds_time / 1000000000)
+        if delta > 3:
+            raise error.TestFail("the time get by guest agent is not the same "
+                                 "with that by time check cmd inside guest")
+
+    @error.context_aware
+    def gagent_check_set_time(self, test, params, env):
+        """
+        Execute "guest-set-time" command to guest agent
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        timeout = float(params.get("login_timeout", 240))
+        session = self.vm.wait_for_login(timeout=timeout)
+        get_guest_time_cmd = params["get_guest_time_cmd"]
+        error.context("get the time of the guest", logging.info)
+        guest_time_before = session.cmd_output(get_guest_time_cmd)
+        if not guest_time_before:
+            raise error.TestError("can't get the guest time for contrast")
+        error.context("the time before being moved back into past  is '%d' "
+                      % int(guest_time_before), logging.info)
+        # Need to move the guest time one week into the past
+        target_time = (int(guest_time_before) - 604800) * 1000000000
+        self.gagent.set_time(target_time)
+        guest_time_after = session.cmd_output(get_guest_time_cmd)
+        error.context("the time after being moved back into past  is '%d' "
+                      % int(guest_time_after), logging.info)
+        delta = abs(int(guest_time_after) - target_time / 1000000000)
+        if delta > 3:
+            raise error.TestFail("the time set for guest is not the same "
+                                 "with target")
+        # Set the system time from the hwclock
+        if params["os_type"] != "windows":
+            move_time_cmd = params["move_time_cmd"]
+            session.cmd("hwclock -w")
+            guest_hwclock_after_set = session.cmd_output("date +%s")
+            error.context("hwclock is '%d' " % int(guest_hwclock_after_set),
+                          logging.info)
+            session.cmd(move_time_cmd)
+            time_after_move = session.cmd_output("date +%s")
+            error.context("the time after move back is '%d' "
+                          % int(time_after_move), logging.info)
+            self.gagent.set_time()
+            guest_time_after_reset = session.cmd_output(get_guest_time_cmd)
+            error.context("the time after being reset is '%d' "
+                          % int(guest_time_after_reset), logging.info)
+            guest_hwclock = session.cmd_output("date +%s")
+            error.context("hwclock for compare is '%d' " % int(guest_hwclock),
+                          logging.info)
+            delta = abs(int(guest_time_after_reset) - int(guest_hwclock))
+            if delta > 3:
+                raise error.TestFail("The guest time can't be set from hwclock"
+                                     " on host")
+
+    @error.context_aware
+    def gagent_check_fstrim(self, test, params, env):
+        """
+        Execute "guest-fstrim" command to guest agent
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+
+        """
+        def get_host_scsi_disk():
+            """
+            Get latest scsi disk which enulated by scsi_debug module
+            Return the device name and the id in host
+            """
+            scsi_disk_info = process.system_output(
+                avo_path.find_command('lsscsi'), shell=True).splitlines()
+            scsi_debug = [_ for _ in scsi_disk_info if 'scsi_debug' in _][-1]
+            scsi_debug = scsi_debug.split()
+            host_id = scsi_debug[0][1:-1]
+            device_name = scsi_debug[-1]
+            return (host_id, device_name)
+
+        def get_guest_discard_disk(session):
+            """
+            Get disk without partitions in guest.
+            """
+            list_disk_cmd = "ls /dev/[sh]d*|sed 's/[0-9]//p'|uniq -u"
+            disk = session.cmd_output(list_disk_cmd).splitlines()[0]
+            return disk
+
+        def get_provisioning_mode(device, host_id):
+            """
+            Get disk provisioning mode, value usually is 'writesame_16',
+            depends on params for scsi_debug module.
+            """
+            device_name = os.path.basename(device)
+            path = "/sys/block/%s/device/scsi_disk" % device_name
+            path += "/%s/provisioning_mode" % host_id
+            return utils.read_one_line(path).strip()
+
+        def get_allocation_bitmap():
+            """
+            get block allocation bitmap
+            """
+            path = "/sys/bus/pseudo/drivers/scsi_debug/map"
+            try:
+                return utils.read_one_line(path).strip()
+            except IOError:
+                logging.warn("could not get bitmap info, path '%s' is "
+                             "not exist", path)
+            return ""
+
+        for vm in env.get_all_vms():
+            if vm:
+                vm.destroy()
+                env.unregister_vm(vm.name)
+        host_id, disk_name = get_host_scsi_disk()
+        provisioning_mode = get_provisioning_mode(disk_name, host_id)
+        logging.info("Current provisioning_mode = '%s'", provisioning_mode)
+        bitmap = get_allocation_bitmap()
+        if bitmap:
+            logging.debug("block allocation bitmap: %s" % bitmap)
+            raise error.TestError("block allocation bitmap"
+                                  " not empty before test.")
+        vm_name = params["main_vm"]
+        test_image = "scsi_debug"
+        params["start_vm"] = "yes"
+        params["image_name_%s" % test_image] = disk_name
+        params["image_format_%s" % test_image] = "raw"
+        params["image_raw_device_%s" % test_image] = "yes"
+        params["force_create_image_%s" % test_image] = "no"
+        params["drive_format_%s" % test_image] = "scsi-block"
+        params["drv_extra_params_%s" % test_image] = "discard=on"
+        params["images"] = " ".join([params["images"], test_image])
+
+        error.context("boot guest with disk '%s'" % disk_name, logging.info)
+        env_process.preprocess_vm(test, params, env, vm_name)
+
+        self.vm = env.get_vm(vm_name)
+        self.vm.verify_alive()
+        self.setup_gagent_in_guest(params, self.vm)
+        timeout = float(params.get("login_timeout", 240))
+        session = self.vm.wait_for_login(timeout=timeout)
+        device_name = get_guest_discard_disk(session)
+
+        error.context("format disk '%s' in guest" % device_name, logging.info)
+        format_disk_cmd = params["format_disk_cmd"]
+        format_disk_cmd = format_disk_cmd.replace("DISK", device_name)
+        session.cmd(format_disk_cmd)
+
+        error.context("mount disk with discard options '%s'" % device_name,
+                      logging.info)
+        mount_disk_cmd = params["mount_disk_cmd"]
+        mount_disk_cmd = mount_disk_cmd.replace("DISK", device_name)
+        session.cmd(mount_disk_cmd)
+
+        error.context("write the disk with dd command", logging.info)
+        write_disk_cmd = params["write_disk_cmd"]
+        session.cmd(write_disk_cmd)
+
+        error.context("Delete the file created before on disk", logging.info)
+        delete_file_cmd = params["delete_file_cmd"]
+        session.cmd(delete_file_cmd)
+
+        # check the bitmap before trim
+        bitmap_before_trim = get_allocation_bitmap()
+        if not re.match(r"\d+-\d+", bitmap_before_trim):
+            raise error.TestFail("didn't get the bitmap of the target disk")
+        error.context("the bitmap_before_trim is %s" % bitmap_before_trim,
+                      logging.info)
+        total_block_before_trim = abs(sum([eval(i) for i in
+                                      bitmap_before_trim.split(',')]))
+        error.context("the total_block_before_trim is %d"
+                      % total_block_before_trim, logging.info)
+
+        error.context("execute the guest-fstrim cmd", logging.info)
+        self.gagent.fstrim()
+
+        # check the bitmap after trim
+        bitmap_after_trim = get_allocation_bitmap()
+        if not re.match(r"\d+-\d+", bitmap_after_trim):
+            raise error.TestFail("didn't get the bitmap of the target disk")
+        error.context("the bitmap_after_trim is %s" % bitmap_after_trim,
+                      logging.info)
+        total_block_after_trim = abs(sum([eval(i) for i in
+                                     bitmap_after_trim.split(',')]))
+        error.context("the total_block_after_trim is %d"
+                      % total_block_after_trim, logging.info)
+
+        if total_block_after_trim > total_block_before_trim:
+            raise error.TestFail("the bitmap_after_trim is lager, the command"
+                                 " guest-fstrim may not work")
+        if self.vm:
+            self.vm.destroy()
+
+    @error.context_aware
+    def gagent_check_get_interfaces(self, test, params, env):
+        """
+        Execute "guest-network-get-interfaces" command to guest agent
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def find_interface_by_name(interface_list, target_interface):
+            """
+            find the specific network interface in the interface list return
+            by guest agent. return True if find successfully
+            """
+            for interface in interface_list:
+                if "target_interface" == interface["name"]:
+                    return True
+            return False
+        session = self._get_session(params, None)
+
+        # check if the cmd "guest-network-get-interfaces" work
+        ret = self.gagent.get_network_interface()
+        if not find_interface_by_name(ret, "lo"):
+            error.TestFail("didn't find 'lo' interface in the return value")
+
+        error.context("set down the interface: lo", logging.info)
+        down_interface_cmd = "ip link set lo down"
+        session.cmd(down_interface_cmd)
+
+        interfaces_pre_add = self.gagent.get_network_interface()
+
+        error.context("add the new device bridge in guest", logging.info)
+        add_brige_cmd = "ip link add link lo name lo_brige type bridge"
+        session.cmd(add_brige_cmd)
+
+        interfaces_after_add = self.gagent.get_network_interface()
+
+        bridge_list = [_ for _ in interfaces_after_add if _ not in
+                       interfaces_pre_add]
+        if (len(bridge_list) != 1) or \
+           ("lo_brige" != bridge_list[0]["name"]):
+            error.TestFail("the interface list info after interface was down"
+                           " was not as expected")
 
     @error.context_aware
     def _action_before_fsfreeze(self, *args):
@@ -487,41 +735,43 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
     Qemu guest agent test class for windows guest.
     """
     @error.context_aware
-    def setup_gagent_in_host(self, params, vm):
-        error.context("Install qemu guest agent package on host", logging.info)
-        gagent_host_install_cmd = params["gagent_host_install_cmd"]
-        utils.run(gagent_host_install_cmd,
-                  float(params.get("login_timeout", 360)))
-
-        error.context("Install dependence packages on host", logging.info)
-        gagent_host_dep_install_cmd = params.get("gagent_host_dep_install_cmd",
-                                                 "")
-        utils.run(gagent_host_dep_install_cmd,
-                  float(params.get("login_timeout", 360)))
-
-        error.context("Copy necessary DLLs to guest", logging.info)
-        gagent_guest_dir = params["gagent_guest_dir"]
-        gagent_remove_service_cmd = params["gagent_remove_service_cmd"]
-        gagent_dep_dlls_list = params.get("gagent_dep_dlls", "").split()
-
+    def gagent_install(self, params, vm, *args):
+        """
+        Check if the installation process is finished and successfully
+        params: the test object params
+        vm: the vitual machine for test
+        """
+        super(QemuGuestAgentBasicCheckWin, self).gagent_install(params,
+                                                                vm, *args)
         session = self._get_session(params, vm)
-        s, o = session.cmd_status_output("mkdir %s" % gagent_guest_dir)
-        if bool(s):
-            if str(s) == "1":
-                # The directory exists, try to remove previous copies
-                # of the qemu-ga.exe program, since the rss client
-                # can't transfer file if destination exists.
-                self._session_cmd_close(session, gagent_remove_service_cmd)
-            else:
-                raise error.TestError("Could not create qemu-ga directory in "
-                                      "VM '%s', detail: '%s'" % (vm.name, o))
-        dlls_list = session.cmd("dir %s" % gagent_guest_dir)
-        missing_dlls_list = [_ for _ in gagent_dep_dlls_list
-                             if os.path.basename(_) not in dlls_list]
-        map(lambda f: vm.copy_files_to(f, gagent_guest_dir), missing_dlls_list)
+        timeout = 30
+        endtime = time.time() + timeout
+        while time.time() < endtime:
+            s, o = session.cmd_status_output("sc query qemu-ga")
+            if not bool(s):
+                break
+            time.sleep(3)
+        else:
+            raise error.TestFail("Failed to install qemu-ga in guest")
 
-        error.context("Copy qemu guest agent program to guest", logging.info)
+    @error.context_aware
+    def setup_gagent_in_host(self, params, vm):
+        error.context("download qemu-ga.msi to host", logging.info)
+        gagent_download_cmd = params["gagent_download_cmd"]
+        utils.run(gagent_download_cmd,
+                  float(params.get("login_timeout", 360)))
         gagent_host_path = params["gagent_host_path"]
+        if not os.path.exists(gagent_host_path):
+            raise error.TestFail("qemu-ga install program is not exist, maybe "
+                                 "the program is not successfully downloaded ")
+        session = self._get_session(params, vm)
+        gagent_guest_dir = params["gagent_guest_dir"]
+#        gagent_remove_service_cmd = params["gagent_remove_service_cmd"]
+        s, o = session.cmd_status_output("mkdir %s" % gagent_guest_dir)
+        if bool(s) and str(s) != "1":
+            raise error.TestError("Could not create qemu-ga directory in "
+                                  "VM '%s', detail: '%s'" % (vm.name, o))
+        error.context("Copy qemu guest agent program to guest", logging.info)
         vm.copy_files_to(gagent_host_path, gagent_guest_dir)
 
     def setup(self, test, params, env):

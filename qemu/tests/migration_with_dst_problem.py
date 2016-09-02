@@ -11,6 +11,7 @@ from autotest.client.shared import utils, error
 from virttest import env_process
 from virttest import utils_misc
 from virttest import qemu_storage
+from virttest import data_dir
 
 
 @error.context_aware
@@ -50,7 +51,7 @@ def run(test, params, env):
     while mount_path is None or os.path.exists(mount_path):
         test_rand = utils.generate_random_string(3)
         mount_path = ("%s/ni_mount_%s" %
-                      (test.tmpdir, test_rand))
+                      (data_dir.get_data_dir(), test_rand))
 
     mig_dst = os.path.join(mount_path, "mig_dst")
 
@@ -452,6 +453,7 @@ def run(test, params, env):
 
             self.vm_guest_params = params.copy()
             self.vm_guest_params["images_base_dir_image2_vm1"] = mount_path
+            self.vm_guest_params["image_name_image2_vm1"] = "ni_mount_%s/test" % (test_rand)
             self.vm_guest_params["image_size_image2_vm1"] = self.disk_size
             self.vm_guest_params = self.vm_guest_params.object_params("vm1")
             self.image2_vm_guest_params = (self.vm_guest_params.

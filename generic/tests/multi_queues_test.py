@@ -64,9 +64,11 @@ def run(test, params, env):
         """
         Get guest interrupts statistics
         """
+        online_cpu_number_cmd = r"cat /proc/interrupts | head -n 1 | wc -w"
         cmd = r"cat /proc/interrupts | sed -n '/^\s\+%s:/p'" % irq_number
+        online_cpu_number = int(session.cmd_output_safe(online_cpu_number_cmd))
         irq_statics = session.cmd_output(cmd)
-        irq_statics_list = map(int, irq_statics.split()[1:-2])
+        irq_statics_list = map(int, irq_statics.split()[1:online_cpu_number])
         if irq_statics_list:
             if cpu_id and cpu_id < len(irq_statics_list):
                 return irq_statics_list[cpu_id]

@@ -117,6 +117,7 @@ def run(test, params, env):
         stress_test.create_snapshots()
         stress_test.action_before_start()
         stress_test.start()
+        stress_test.action_when_streaming()
         stress_test.action_after_finished()
     finally:
         stress_test.clean()

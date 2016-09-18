@@ -49,7 +49,7 @@ def run(test, params, env):
                 _debug_log.write("%s\n" % output)
                 _debug_log.close()
 
-    def reboot(vm, session=None):
+    def reboot(vm, session=None, timeout=600):
         """
         Reboot guest.
 
@@ -59,7 +59,7 @@ def run(test, params, env):
         nic_idx = len(vm.virtnet) - 1
         while nic_idx >= 0:
             try:
-                return vm.reboot(nic_index=nic_idx)
+                return vm.reboot(nic_index=nic_idx, timeout=timeout)
             except Exception:
                 nic_idx -= 1
                 if nic_idx < 0:

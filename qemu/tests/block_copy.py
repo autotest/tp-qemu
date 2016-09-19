@@ -177,14 +177,15 @@ class BlockCopy(object):
         """
         params = self.parser_test_args()
         max_speed = params.get("max_speed")
-        error.context("set max speed to %s B/s" % max_speed, logging.info)
-        self.vm.set_job_speed(self.device, max_speed)
+        expected_speed = int(params.get("expected_speed", max_speed))
+        error.context("set speed to %s B/s" % expected_speed, logging.info)
+        self.vm.set_job_speed(self.device, expected_speed)
         status = self.get_status()
         if not status:
             raise error.TestFail("Unable to query job status.")
         speed = status["speed"]
-        if speed != max_speed:
-            msg = "Set speed fail. (expect speed: %s B/s," % max_speed
+        if speed != expected_speed:
+            msg = "Set speed fail. (expected speed: %s B/s," % expected_speed
             msg += "actual speed: %s B/s)" % speed
             raise error.TestFail(msg)
 

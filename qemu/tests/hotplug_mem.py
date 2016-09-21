@@ -68,7 +68,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
            hotplug it, then unplug it
         """
         devs = self.get_mem_by_name(vm, target_mem)
-        if not devs and self.params.get("strict") != "yes":
+        if not devs and self.params.get("strict_check") != "yes":
             self.hotplug_memory(vm, target_mem)
         return super(MemoryHotplugSimple, self).unplug_memory(vm, target_mem)
 
@@ -83,7 +83,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         func = getattr(self, "%s_memory" % operation)
         if not callable(func):
             raise exceptions.TestError(
-                "Unsupport memory operation '%s'" %
+                "Unsupported memory operation '%s'" %
                 operation)
         vm = self.env.get_vm(self.params["main_vm"])
         try:

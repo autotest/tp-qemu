@@ -1,3 +1,4 @@
+import time
 import logging
 
 from autotest.client.shared import error
@@ -63,7 +64,7 @@ def run(test, params, env):
             logging.error(msg)
             raise error.TestFail(msg)
         session.close()
-
+        time.sleep(float(params.get("pause_time", 0)))
         error.base_context("Resume the VM", logging.info)
         vm.resume()
         error.context("Verify the status of VM is 'running'", logging.info)

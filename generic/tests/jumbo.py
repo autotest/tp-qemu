@@ -31,6 +31,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     timeout = int(params.get("login_timeout", 360))
+    mtu_default = 1500
     mtu = params.get("mtu", "1500")
     def_max_icmp_size = int(mtu) - 28
     max_icmp_pkt_size = int(params.get("max_icmp_pkt_size",
@@ -48,6 +49,28 @@ def run(test, params, env):
     guest_ip = vm.get_address(0)
     if guest_ip is None:
         raise error.TestError("Could not get the guest ip address")
+
+    def get_ovs_ports(ovs):
+        '''
+        get the ovs bridge all Interface list.
+
+        :param ovs: Ovs bridge name
+        '''
+        cmd = "ovs-vsctl list-ports %s" % ovs
+        return set(utils.system_output(cmd).splitlines())
+
+    host_mtu_cmd = "ifconfig %s mtu %s"
+    netdst = params.get("netdst", "switch")
+    host_bridges = utils_net.Bridge()
+    br_in_use = host_bridges.list_br()
+    if netdst in br_in_use:
+        ifaces_in_use = host_bridges.list_iface()
+        target_ifaces = set(ifaces_in_use) - set(br_in_use)
+    else:
+        target_ifaces = get_ovs_ports(netdst)
+    error.context("Change all Bridge NICs MTU to %s" % mtu, logging.info)
+    for iface in target_ifaces:
+        utils.run(host_mtu_cmd % (iface, mtu))
 
     try:
         error.context("Changing the MTU of guest", logging.info)
@@ -98,14 +121,14 @@ def run(test, params, env):
         utils.run(arp_add_cmd)
 
         def is_mtu_ok():
-            status, _ = utils_test.ping(guest_ip, 1, interface=ifname,
+            status, _ = utils_test.ping(guest_ip, 1,
                                         packetsize=max_icmp_pkt_size,
                                         hint="do", timeout=2)
             return status == 0
 
         def verify_mtu():
             logging.info("Verify the path MTU")
-            status, output = utils_test.ping(guest_ip, 10, interface=ifname,
+            status, output = utils_test.ping(guest_ip, 10,
                                              packetsize=max_icmp_pkt_size,
                                              hint="do", timeout=15)
             if status != 0:
@@ -118,13 +141,13 @@ def run(test, params, env):
 
         def flood_ping():
             logging.info("Flood with large frames")
-            utils_test.ping(guest_ip, interface=ifname,
+            utils_test.ping(guest_ip,
                             packetsize=max_icmp_pkt_size,
                             flood=True, timeout=float(flood_time))
 
         def large_frame_ping(count=100):
             logging.info("Large frame ping")
-            _, output = utils_test.ping(guest_ip, count, interface=ifname,
+            _, output = utils_test.ping(guest_ip, count,
                                         packetsize=max_icmp_pkt_size,
                                         timeout=float(count) * 2)
             ratio = utils_test.get_loss_ratio(output)
@@ -136,12 +159,11 @@ def run(test, params, env):
             logging.info("Size increase ping")
             for size in range(0, max_icmp_pkt_size + 1, step):
                 logging.info("Ping %s with size %s", guest_ip, size)
-                status, output = utils_test.ping(guest_ip, 1, interface=ifname,
+                status, output = utils_test.ping(guest_ip, 1,
                                                  packetsize=size,
                                                  hint="do", timeout=1)
                 if status != 0:
                     status, output = utils_test.ping(guest_ip, 10,
-                                                     interface=ifname,
                                                      packetsize=size,
                                                      adaptive=True,
                                                      hint="do",
@@ -176,3 +198,7 @@ def run(test, params, env):
         if utils.system("grep '%s.*%s' /proc/net/arp" % (guest_ip, ifname)) == '0':
             utils.run("arp -d %s -i %s" % (guest_ip, ifname))
             logging.info("Removing the temporary ARP entry successfully")
+
+        logging.info("Change back Bridge NICs MTU to %s" % mtu_default)
+        for iface in target_ifaces:
+            utils.run(host_mtu_cmd % (iface, mtu_default))

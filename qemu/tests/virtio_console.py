@@ -25,6 +25,7 @@ from virttest import utils_test
 from virttest import utils_misc
 from virttest import funcatexit
 from virttest.qemu_devices import qdevices
+from virttest.utils_virtio_port import VirtioPortTest
 
 EXIT_EVENT = threading.Event()
 
@@ -56,152 +57,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     :raise error.TestNAError: if function with test_$testname is not present
     """
-    #
-    # General helpers
-    #
-    @error.context_aware
-    def get_vm_with_ports(no_consoles=0, no_serialports=0, spread=None,
-                          quiet=False, strict=False):
-        """
-        Checks whether existing 'main_vm' fits the requirements, modifies
-        it if needed and returns the VM object.
-        :param no_console: Number of desired virtconsoles.
-        :param no_serialport: Number of desired virtserialports.
-        :param spread: Spread consoles across multiple virtio-serial-pcis.
-        :param quiet: Notify user about VM recreation.
-        :param strict: Whether no_consoles have to match or just exceed.
-        :return: vm object matching the requirements.
-        """
-        # check the number of running VM's consoles
-        vm = env.get_vm(params["main_vm"])
-
-        if not vm:
-            _no_serialports = -1
-            _no_consoles = -1
-        else:
-            _no_serialports = 0
-            _no_consoles = 0
-            for port in vm.virtio_ports:
-                if isinstance(port, qemu_virtio_port.VirtioSerial):
-                    _no_serialports += 1
-                else:
-                    _no_consoles += 1
-        _spread = int(params.get('virtio_port_spread', 2))
-        if spread is None:
-            spread = _spread
-        if strict:
-            if (_no_serialports != no_serialports or
-                    _no_consoles != no_consoles):
-                _no_serialports = -1
-                _no_consoles = -1
-        # If not enough ports, modify params and recreate VM
-        if (_no_serialports < no_serialports or _no_consoles < no_consoles or
-                spread != _spread):
-            if not quiet:
-                out = "tests reqirements are different from cfg: "
-                if _no_serialports < no_serialports:
-                    out += "serial_ports(%d), " % no_serialports
-                if _no_consoles < no_consoles:
-                    out += "consoles(%d), " % no_consoles
-                if spread != _spread:
-                    out += "spread(%s), " % spread
-                logging.warning(out[:-2] + ". Modify config to speedup tests.")
-
-            params['virtio_ports'] = ""
-            if spread:
-                params['virtio_port_spread'] = spread
-            else:
-                params['virtio_port_spread'] = 0
-
-            for i in xrange(max(no_consoles, _no_consoles)):
-                name = "console-%d" % i
-                params['virtio_ports'] += " %s" % name
-                params['virtio_port_type_%s' % name] = "console"
-
-            for i in xrange(max(no_serialports, _no_serialports)):
-                name = "serialport-%d" % i
-                params['virtio_ports'] += " %s" % name
-                params['virtio_port_type_%s' % name] = "serialport"
-
-            if quiet:
-                logging.debug("Recreating VM with more virtio ports.")
-            else:
-                logging.warning("Recreating VM with more virtio ports.")
-            env_process.preprocess_vm(test, params, env,
-                                      params["main_vm"])
-            vm = env.get_vm(params["main_vm"])
-
-        vm.verify_kernel_crash()
-        return vm
-
-    @error.context_aware
-    def get_vm_with_worker(no_consoles=0, no_serialports=0, spread=None,
-                           quiet=False):
-        """
-        Checks whether existing 'main_vm' fits the requirements, modifies
-        it if needed and returns the VM object and guest_worker.
-        :param no_console: Number of desired virtconsoles.
-        :param no_serialport: Number of desired virtserialports.
-        :param spread: Spread consoles across multiple virtio-serial-pcis.
-        :param quiet: Notify user about VM recreation.
-        :param strict: Whether no_consoles have to match or just exceed.
-        :return: tuple (vm object matching the requirements,
-                        initialized GuestWorker of the vm)
-        """
-        vm = get_vm_with_ports(no_consoles, no_serialports, spread, quiet)
-        guest_worker = qemu_virtio_port.GuestWorker(vm)
-        return vm, guest_worker
-
-    @error.context_aware
-    def get_vm_with_single_port(port_type='serialport'):
-        """
-        Wrapper which returns vm, guest_worker and virtio_ports with at lest
-        one port of the type specified by fction parameter.
-        :param port_type: type of the desired virtio port.
-        :return: tuple (vm object with at least 1 port of the port_type,
-                        initialized GuestWorker of the vm,
-                        list of virtio_ports of the port_type type)
-        """
-        if port_type == 'serialport':
-            vm, guest_worker = get_vm_with_worker(no_serialports=1)
-            virtio_ports = get_virtio_ports(vm)[1][0]
-        else:
-            vm, guest_worker = get_vm_with_worker(no_consoles=1)
-            virtio_ports = get_virtio_ports(vm)[0][0]
-        return vm, guest_worker, virtio_ports
-
-    @error.context_aware
-    def get_virtio_ports(vm):
-        """
-        Returns separated virtconsoles and virtserialports
-        :param vm: VM object
-        :return: tuple (all virtconsoles, all virtserialports)
-        """
-        consoles = []
-        serialports = []
-        for port in vm.virtio_ports:
-            if isinstance(port, qemu_virtio_port.VirtioSerial):
-                serialports.append(port)
-            else:
-                consoles.append(port)
-        return (consoles, serialports)
-
-    @error.context_aware
-    def cleanup(vm=None, guest_worker=None):
-        """
-        Cleanup function.
-        :param vm: VM whose ports should be cleaned
-        :param guest_worker: guest_worker which should be cleaned/exited
-        """
-        error.context("Cleaning virtio_ports on guest.")
-        if guest_worker:
-            guest_worker.cleanup()
-        error.context("Cleaning virtio_ports on host.")
-        if vm:
-            for port in vm.virtio_ports:
-                port.clean_port()
-                port.close()
-                port.mark_as_clean()
+    virtio_test = VirtioPortTest(test, env, params)
 
     #
     # Smoke tests
@@ -213,11 +69,11 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         guest_worker.cmd("virt.open('%s')" % (port.name))
         port.open()
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_check_zero_sym():
@@ -227,11 +83,11 @@ def run(test, params, env):
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
         if params.get('virtio_console_params') == 'serialport':
-            vm, guest_worker = get_vm_with_worker(no_serialports=1)
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=1)
         else:
-            vm, guest_worker = get_vm_with_worker(no_consoles=1)
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=1)
         guest_worker.cmd("virt.check_zero_sym()", 10)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_multi_open():
@@ -242,7 +98,7 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         guest_worker.cmd("virt.close('%s')" % (port.name), 10)
         guest_worker.cmd("virt.open('%s')" % (port.name), 10)
@@ -257,7 +113,7 @@ def run(test, params, env):
                 raise error.TestFail("Unexpended pass of opening the"
                                      " serialport device for the 2nd time.")
         port.open()
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_close():
@@ -266,11 +122,11 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         guest_worker.cmd("virt.close('%s')" % (port.name), 10)
         port.close()
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_polling():
@@ -279,7 +135,7 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         # Poll (OUT)
         port.open()
@@ -307,7 +163,7 @@ def run(test, params, env):
         # Redefine socket in consoles
         guest_worker.cmd("virt.poll('%s', %s)" % (port.name, select.POLLOUT),
                          2)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_sigio():
@@ -316,7 +172,7 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         if port.is_open():
             port.close()
@@ -363,7 +219,7 @@ def run(test, params, env):
 
         # Disable sigio on specific port
         guest_worker.cmd("virt.async('%s', False, 0)" % (port.name), 10)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_lseek():
@@ -374,10 +230,10 @@ def run(test, params, env):
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
         # The virt.lseek returns PASS when the seek fails
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         guest_worker.cmd("virt.lseek('%s', 0, 0)" % (port.name), 10)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_rw_host_offline():
@@ -386,7 +242,7 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         if port.is_open():
             port.close()
@@ -405,7 +261,7 @@ def run(test, params, env):
             raise error.TestFail("Didn't received data from guest")
         # Now the cmd("virt.send('%s'... command should be finished
         guest_worker.cmd("print('PASS: nothing')", 10)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_rw_host_offline_big_data():
@@ -414,7 +270,7 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         if port.is_open():
             port.close()
@@ -442,7 +298,7 @@ def run(test, params, env):
                 raise error.TestFail("Not all data was received,"
                                      "only %d from %d" % (rlen, 1024 ** 3 * 3))
         guest_worker.cmd("print('PASS: nothing')", 10)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_rw_blocking_mode():
@@ -452,7 +308,7 @@ def run(test, params, env):
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
         # Blocking mode
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         port.open()
         guest_worker.cmd("virt.blocking('%s', True)" % port.name, 10)
@@ -468,7 +324,7 @@ def run(test, params, env):
         port.sock.sendall("1234567890")
         # Now guest received the data end escaped from the recv()
         guest_worker.cmd("print('PASS: nothing')", 10)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_rw_nonblocking_mode():
@@ -478,7 +334,7 @@ def run(test, params, env):
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
         # Non-blocking mode
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
         port.open()
         guest_worker.cmd("virt.blocking('%s', False)" % port.name, 10)
@@ -507,7 +363,7 @@ def run(test, params, env):
                                  % port.name, 10)
             else:
                 raise details
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_basic_loopback():
@@ -517,11 +373,11 @@ def run(test, params, env):
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
         if params.get('virtio_console_params') == 'serialport':
-            vm, guest_worker = get_vm_with_worker(no_serialports=2)
-            send_port, recv_port = get_virtio_ports(vm)[1][:2]
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=2)
+            send_port, recv_port = virtio_test.get_virtio_ports(vm)[1][:2]
         else:
-            vm, guest_worker = get_vm_with_worker(no_consoles=2)
-            send_port, recv_port = get_virtio_ports(vm)[0][:2]
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=2)
+            send_port, recv_port = virtio_test.get_virtio_ports(vm)[0][:2]
 
         data = "Smoke test data"
         send_port.open()
@@ -548,7 +404,7 @@ def run(test, params, env):
             raise error.TestFail("Incorrect data: '%s' != '%s'"
                                  % (data, tmp))
         guest_worker.safe_exit_loopback_threads([send_port], [recv_port])
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     #
     # Loopback tests
@@ -578,10 +434,10 @@ def run(test, params, env):
         for param in test_params.split(';'):
             no_serialports = max(no_serialports, param.count('serialport'))
             no_consoles = max(no_consoles, param.count('console'))
-        vm, guest_worker = get_vm_with_worker(no_consoles, no_serialports)
+        vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles, no_serialports)
         no_errors = 0
 
-        (consoles, serialports) = get_virtio_ports(vm)
+        (consoles, serialports) = virtio_test.get_virtio_ports(vm)
 
         for param in test_params.split(';'):
             if not param:
@@ -727,7 +583,7 @@ def run(test, params, env):
                 raise error.TestFail("VM died, can't continue the test loop. "
                                      "Please check the log for details.")
 
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
         if no_errors:
             msg = ("test_loopback: %d errors occurred while executing test, "
                    "check log for details." % no_errors)
@@ -853,9 +709,9 @@ def run(test, params, env):
                 raise error.TestFail("New virtio_ports were not created with"
                                      "the new VM or the VM failed to start.")
             if is_serialport:
-                ports = get_virtio_ports(vm)[1]
+                ports = virtio_test.get_virtio_ports(vm)[1]
             else:
-                ports = get_virtio_ports(vm)[0]
+                ports = virtio_test.get_virtio_ports(vm)[0]
             threads[0].port = ports[0]
             threads[1].port = ports[1]
             threads[0].migrate_event.set()  # Wake up sender thread immediately
@@ -894,11 +750,11 @@ def run(test, params, env):
         is_serialport = (params.get('virtio_console_params') == 'serialport')
         buflen = int(params.get('virtio_console_buflen', 1))
         if is_serialport:
-            vm, guest_worker = get_vm_with_worker(no_serialports=2)
-            (_, ports) = get_virtio_ports(vm)
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=2)
+            (_, ports) = virtio_test.get_virtio_ports(vm)
         else:
-            vm, guest_worker = get_vm_with_worker(no_consoles=2)
-            (ports, _) = get_virtio_ports(vm)
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=2)
+            (ports, _) = virtio_test.get_virtio_ports(vm)
 
         # Set the interruption function and related variables
         send_resume_ev = None
@@ -1070,9 +926,9 @@ def run(test, params, env):
 
         # Ports might change (in suspend S4)
         if is_serialport:
-            (send_pt, recv_pt) = get_virtio_ports(vm)[1][:2]
+            (send_pt, recv_pt) = virtio_test.get_virtio_ports(vm)[1][:2]
         else:
-            (send_pt, recv_pt) = get_virtio_ports(vm)[0][:2]
+            (send_pt, recv_pt) = virtio_test.get_virtio_ports(vm)[0][:2]
 
         # VM might be recreated se we have to reconnect.
         guest_worker.safe_exit_loopback_threads([send_pt], [recv_pt])
@@ -1087,7 +943,7 @@ def run(test, params, env):
 
         del threads[:]
 
-        cleanup(env.get_vm(params["main_vm"]), guest_worker)
+        virtio_test.cleanup(env.get_vm(params["main_vm"]), guest_worker)
 
         if err:
             raise error.TestFail("%s failed" % err[:-2])
@@ -1127,8 +983,8 @@ def run(test, params, env):
             no_serialports = 1
         if test_params.count('serialport'):
             no_consoles = 1
-        vm, guest_worker = get_vm_with_worker(no_consoles, no_serialports)
-        (consoles, serialports) = get_virtio_ports(vm)
+        vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles, no_serialports)
+        (consoles, serialports) = virtio_test.get_virtio_ports(vm)
         consoles = [consoles, serialports]
         no_errors = 0
 
@@ -1254,7 +1110,7 @@ def run(test, params, env):
                              "%.3f", stats[0], stats[len(stats) / 2],
                              stats[-1])
             except Exception, inst:
-                logging.error("test_perf: Failed with %s, starting cleanup",
+                logging.error("test_perf: Failed with %s, starting virtio_test.cleanup",
                               inst)
                 loads.stop()
                 try:
@@ -1271,7 +1127,7 @@ def run(test, params, env):
                     raise inst
             funcatexit.unregister(env, params.get('type'), __set_exit_event)
             del thread
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
         if no_errors:
             msg = ("test_perf: %d errors occurred while executing test, "
                    "check log for details." % no_errors)
@@ -1294,11 +1150,11 @@ def run(test, params, env):
         """
         # PREPARE
         if use_serialport:
-            vm, guest_worker = get_vm_with_worker(no_serialports=no_ports)
-            ports = get_virtio_ports(vm)[1]
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=no_ports)
+            ports = virtio_test.get_virtio_ports(vm)[1]
         else:
-            vm, guest_worker = get_vm_with_worker(no_consoles=no_ports)
-            ports = get_virtio_ports(vm)[0]
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=no_ports)
+            ports = virtio_test.get_virtio_ports(vm)[0]
 
         # TODO BUG: sendlen = max allowed data to be lost per one migration
         # TODO BUG: using SMP the data loss is up to 4 buffers
@@ -1364,9 +1220,9 @@ def run(test, params, env):
             # Set new ports to Sender and Recver threads
             # TODO: get ports in this function and use the right ports...
             if use_serialport:
-                ports = get_virtio_ports(vm)[1]
+                ports = virtio_test.get_virtio_ports(vm)[1]
             else:
-                ports = get_virtio_ports(vm)[0]
+                ports = virtio_test.get_virtio_ports(vm)[0]
             for i in xrange(len(threads)):
                 threads[i].port = ports[i]
                 threads[i].migrate_event.set()
@@ -1450,7 +1306,7 @@ def run(test, params, env):
         if workaround_unfinished_threads:
             logging.debug("All threads finished at this point.")
         del threads[:]
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     def _test_migrate(offline):
         """
@@ -1555,8 +1411,8 @@ def run(test, params, env):
         pause = int(params.get("virtio_console_pause", 1))
         logging.info("Timeout between hotplug operations t=%fs", pause)
 
-        vm = get_vm_with_ports(1, 1, spread=0, quiet=True, strict=True)
-        consoles = get_virtio_ports(vm)
+        vm = virtio_test.get_vm_with_ports(1, 1, spread=0, quiet=True, strict=True)
+        consoles = virtio_test.get_virtio_ports(vm)
         # send/recv might block for ever, set non-blocking mode
         consoles[0][0].open()
         consoles[1][0].open()
@@ -1635,7 +1491,7 @@ def run(test, params, env):
             _virtio_dev_add(vm, 0, 0, console)
             time.sleep(pause)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
-        cleanup(guest_worker=guest_worker)
+        virtio_test.cleanup(guest_worker=guest_worker)
         # VM is broken (params mismatches actual state)
         vm.destroy()
 
@@ -1649,9 +1505,9 @@ def run(test, params, env):
         # TODO: QMP
         # TODO: check qtree for device presence
         pause = float(params.get("virtio_console_pause", 0.1))
-        vm = get_vm_with_ports()
+        vm = virtio_test.get_vm_with_ports()
         monitor = vm.monitors[0]
-        idx = len(get_virtio_ports(vm)[0])
+        idx = len(virtio_test.get_virtio_ports(vm)[0])
         err = ""
         booted = False
         error.context("Hotplug while booting", logging.info)
@@ -1737,13 +1593,13 @@ def run(test, params, env):
         vm = env.get_vm(params["main_vm"])
         use_serialport = params.get('virtio_console_params') == "serialport"
         if use_serialport:
-            vm = get_vm_with_ports(no_serialports=1, strict=True)
+            vm = virtio_test.get_vm_with_ports(no_serialports=1, strict=True)
         else:
-            vm = get_vm_with_ports(no_consoles=1, strict=True)
+            vm = virtio_test.get_vm_with_ports(no_consoles=1, strict=True)
         if use_serialport:
-            port = get_virtio_ports(vm)[1][0]
+            port = virtio_test.get_virtio_ports(vm)[1][0]
         else:
-            port = get_virtio_ports(vm)[0][0]
+            port = virtio_test.get_virtio_ports(vm)[0][0]
         if not port.is_open():
             port.open()
         else:
@@ -1770,7 +1626,7 @@ def run(test, params, env):
             logging.info("Open and then close port %s", port.name)
             guest_worker = qemu_virtio_port.GuestWorker(vm)
             # Test of live and open and close port again
-            guest_worker.cleanup()
+            guest_worker.virtio_test.cleanup()
             port.sock.settimeout(20.0)
 
             loads.start()
@@ -1790,7 +1646,7 @@ def run(test, params, env):
                 loads.stop()
             port.sock.settimeout(None)
             guest_worker = qemu_virtio_port.GuestWorker(vm)
-            cleanup(vm, guest_worker)
+            virtio_test.cleanup(vm, guest_worker)
             raise inst
         if (sent1 != sent2):
             logging.warning("Inconsistent behavior: First sent %d bytes and "
@@ -1798,7 +1654,7 @@ def run(test, params, env):
 
         port.sock.settimeout(None)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_rmmod():
@@ -1807,9 +1663,9 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = get_vm_with_single_port(
+        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
-        guest_worker.cleanup()
+        guest_worker.virtio_test.cleanup()
         session = vm.wait_for_login()
         if session.cmd_status('lsmod | grep virtio_console'):
             raise error.TestNAError("virtio_console not loaded, probably "
@@ -1818,7 +1674,7 @@ def run(test, params, env):
         session.cmd("modprobe virtio_console")
         guest_worker = qemu_virtio_port.GuestWorker(vm)
         guest_worker.cmd("virt.clean_port('%s'),1024" % port.name, 2)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_max_ports():
@@ -1830,12 +1686,12 @@ def run(test, params, env):
         port_count = 30
         if params.get('virtio_console_params') == "serialport":
             logging.debug("Count of serialports: %d", port_count)
-            vm = get_vm_with_ports(0, port_count, quiet=True)
+            vm = virtio_test.get_vm_with_ports(0, port_count, quiet=True)
         else:
             logging.debug("Count of consoles: %d", port_count)
-            vm = get_vm_with_ports(port_count, 0, quiet=True)
+            vm = virtio_test.get_vm_with_ports(port_count, 0, quiet=True)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_max_serials_and_consoles():
@@ -1845,9 +1701,9 @@ def run(test, params, env):
         """
         port_count = 15
         logging.debug("Count of virtports: %d %d", port_count, port_count)
-        vm = get_vm_with_ports(port_count, port_count, quiet=True)
+        vm = virtio_test.get_vm_with_ports(port_count, port_count, quiet=True)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
-        cleanup(vm, guest_worker)
+        virtio_test.cleanup(vm, guest_worker)
 
     @error.context_aware
     def test_stressed_restart():
@@ -1860,11 +1716,11 @@ def run(test, params, env):
         :param cfg: virtio_console_method - reboot method (shell, system_reset)
         """
         if params.get('virtio_console_params') == 'serialport':
-            vm, guest_worker = get_vm_with_worker(no_serialports=1)
-            _ports, ports = get_virtio_ports(vm)
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=1)
+            _ports, ports = virtio_test.get_virtio_ports(vm)
         else:
-            vm, guest_worker = get_vm_with_worker(no_consoles=1)
-            ports, _ports = get_virtio_ports(vm)
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=1)
+            ports, _ports = virtio_test.get_virtio_ports(vm)
         ports.extend(_ports)
 
         session = vm.wait_for_login()
@@ -1916,10 +1772,10 @@ def run(test, params, env):
         :param cfg: virtio_console_method - reboot method (shell, system_reset)
         """
         if params.get('virtio_console_params') == 'serialport':
-            vm = get_vm_with_ports(no_serialports=1)
+            vm = virtio_test.get_vm_with_ports(no_serialports=1)
         else:
-            vm = get_vm_with_ports(no_consoles=1)
-        ports, _ports = get_virtio_ports(vm)
+            vm = virtio_test.get_vm_with_ports(no_consoles=1)
+        ports, _ports = virtio_test.get_virtio_ports(vm)
         ports.extend(_ports)
 
         # Remove all ports:

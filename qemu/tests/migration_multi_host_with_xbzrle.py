@@ -2,7 +2,7 @@ import logging
 from autotest.client.shared import error
 from virttest import utils_test
 from virttest import virt_vm
-from qemu.tests.MigrationMultiHost import MigrationBase
+from virttest.utils_test.qemu import migration
 
 
 @error.context_aware
@@ -33,15 +33,15 @@ def run(test, params, env):
     """
 
     mig_protocol = params.get("mig_protocol", "tcp")
-    mig_type = utils_test.qemu.MultihostMigration
+    mig_type = migration.MultihostMigration
     if mig_protocol == "fd":
-        mig_type = utils_test.qemu.MultihostMigrationFd
+        mig_type = migration.MultihostMigrationFd
     if mig_protocol == "exec":
-        mig_type = utils_test.qemu.MultihostMigrationExec
+        mig_type = migration.MultihostMigrationExec
     if "rdma" in mig_protocol:
-        mig_type = utils_test.qemu.MultihostMigrationRdma
+        mig_type = migration.MultihostMigrationRdma
 
-    class TestMultihostMigration(mig_type, MigrationBase):
+    class TestMultihostMigration(mig_type, migration.MigrationBase):
 
         """
         multihost migration test

@@ -46,17 +46,42 @@ def run(test, params, env):
             vol = "%s:" % vol
         return cmd.replace("X:", vol)
 
+    def check_driver_status(session, check_cmd, driver_id):
+        """
+        :param session: VM session
+        :param check_cmd: cmd to check driver status
+        :param driver_id: driver id
+        """
+        check_cmd = check_cmd.replace("DRIVER_ID", driver_id)
+        status, output = session.cmd_status_output(check_cmd)
+        if "disabled" in output:
+            raise exceptions.TestFail("Driver is disable")
+
+    def get_driver_id(session, cmd, pattern):
+        """
+        :param session: VM session
+        :param cmd: cmd to get driver id
+        :param pattern: driver id pattern
+        """
+        output = session.cmd_output(cmd)
+        driver_id = re.findall(pattern, output)
+        if not driver_id:
+            raise exceptions.TestFail("Didn't find driver info from guest %s"
+                                      % output)
+        driver_id = driver_id[0]
+        driver_id = '^&'.join(driver_id.split('&'))
+        return driver_id
+
     rng_data_rex = params.get("rng_data_rex", r".*")
     dev_file = params.get("filename_passthrough")
     timeout = float(params.get("login_timeout", 360))
     rng_dll_register_cmd = params.get("rng_dll_register_cmd")
     read_rng_timeout = float(params.get("read_rng_timeout", "360"))
     cmd_timeout = float(params.get("session_cmd_timeout", "360"))
-    error_context.context("Boot guest with virtio-rng device", logging.info)
+    driver_name = params["driver_name"]
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm_pid = vm.get_pid()
-    driver_name = params["driver_name"]
 
     if dev_file:
         error_context.context("Check '%s' used by qemu" % dev_file,
@@ -69,14 +94,21 @@ def run(test, params, env):
     if params["os_type"] == "windows":
         utils_test.qemu.setup_win_driver_verifier(driver_name,
                                                   vm, timeout)
+        error_context.context("Check driver status", logging.info)
+        session = vm.wait_for_login(timeout=timeout)
+        driver_id_cmd = set_winutils_letter(params.get("driver_id_cmd"),
+                                            session, params)
+        driver_id = get_driver_id(session, driver_id_cmd,
+                                  params["driver_id_pattern"])
+        check_driver_status(session, params["driver_check_cmd"], driver_id)
     else:
         error_context.context("verify virtio-rng device driver", logging.info)
         session = vm.wait_for_login(timeout=timeout)
         verify_cmd = params["driver_verifier_cmd"]
         try:
-            output = session.cmd_output(verify_cmd, timeout=cmd_timeout)
+            output = session.cmd_output_safe(verify_cmd, timeout=cmd_timeout)
         except aexpect.ShellTimeoutError:
-            err = "cat cmd timeout, pls check if it's a product bug"
+            err = "%s timeout, pls check if it's a product bug" % verify_cmd
             raise exceptions.TestFail(err)
 
         if not re.search(r"%s" % driver_name, output, re.M):
@@ -87,7 +119,6 @@ def run(test, params, env):
 
     error_context.context("Read virtio-rng device to get random number",
                           logging.info)
-    session = vm.wait_for_login(timeout=timeout)
     read_rng_cmd = set_winutils_letter(params.get("read_rng_cmd"),
                                        session, params)
     if rng_dll_register_cmd:
@@ -98,3 +129,4 @@ def run(test, params, env):
     if len(re.findall(rng_data_rex, output, re.M)) < 2:
         raise exceptions.TestFail("Unable to read random numbers from"
                                   "guest: %s" % output)
+    session.close()

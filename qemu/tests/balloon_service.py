@@ -91,7 +91,7 @@ def run(test, params, env):
 
         error_context.context("Compare memory from guest with qmp",
                               logging.info)
-        if (abs(guest_mem - stat_memory_qmp)) > (guest_mem * check_mem_ratio):
+        if (abs(guest_mem - stat_memory_qmp) / guest_mem) > check_mem_ratio:
             raise exceptions.TestFail("%s of guest %s is not equal to %s in"
                                       " qmp, the acceptable ratio is %s" %
                                       (keyname, guest_mem, stat_memory_qmp,
@@ -107,24 +107,28 @@ def run(test, params, env):
         repeat_times = int(params.get("repeat_times", 5))
         logging.info("repeat times: %d" % repeat_times)
         balloon_test = BallooningTestWin(test, params, env)
-
+        balloon_test = BallooningTestWin(test, params, env)
+        min_sz, max_sz = balloon_test.get_memory_boundary()
         while repeat_times:
             for tag in params.objects('test_tags'):
                 error_context.context("Running %s test" % tag, logging.info)
                 params_tag = params.object_params(tag)
                 balloon_type = params_tag['balloon_type']
-                min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)
-                expect_mem = int(random.uniform(min_sz, max_sz))
+                if balloon_type == 'evict':
+                    expect_mem = int(random.uniform(min_sz, balloon_test.get_ballooned_memory()))
+                else:
+                    expect_mem = int(random.uniform(balloon_test.get_ballooned_memory(), max_sz))
 
                 quit_after_test = balloon_test.run_ballooning_test(expect_mem,
                                                                    tag)
+                time.sleep(20)
                 get_polling_output = vm.monitor.qom_get(device_path,
                                                         get_balloon_property)
+                time.sleep(20)
                 memory_check(vm, get_polling_output, 'stat-free-memory')
                 if quit_after_test:
                     return
 
-            balloon_test.reset_memory()
             repeat_times -= 1
 
     timeout = int(params.get("login_timeout", 360))

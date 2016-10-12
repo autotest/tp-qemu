@@ -113,7 +113,8 @@ def run(test, params, env):
     utils_misc.verify_host_dmesg()
 
     error.context("Ping external host after pktgen test", logging.info)
-    status, output = utils_test.ping(dest=external_host, session=session,
+    session_ping = vm.wait_for_login(timeout=login_timeout)
+    status, output = utils_test.ping(dest=external_host, session=session_ping,
                                      timeout=240, count=20)
     loss_ratio = utils_test.get_loss_ratio(output)
     if (loss_ratio > int(params.get("packet_lost_ratio", 5)) or
@@ -125,3 +126,5 @@ def run(test, params, env):
         server_session.close()
     if session:
         session.close()
+    if session_ping:
+        session_ping.close()

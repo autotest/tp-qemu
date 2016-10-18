@@ -17,7 +17,7 @@ from virttest import qemu_vm
 from virttest import virt_vm
 from virttest import data_dir
 from virttest import utils_misc
-from virttest import utils_test
+from virttest.utils_test.qemu import migration
 
 
 def run(test, params, env):
@@ -924,11 +924,11 @@ def run(test, params, env):
 
             install_path = "/tmp"
 
-            class testMultihostMigration(utils_test.qemu.MultihostMigration):
+            class testMultihostMigration(migration.MultihostMigration):
 
                 def __init__(self, test, params, env):
-                    utils_test.qemu.MultihostMigration.__init__(self, test, params,
-                                                                env)
+                    migration.MultihostMigration.__init__(self, test, params,
+                                                          env)
 
                 def migration_scenario(self):
                     srchost = self.params.get("hosts")[0]
@@ -1026,11 +1026,11 @@ def run(test, params, env):
 
             install_path = "/tmp"
 
-            class testMultihostMigration(utils_test.qemu.MultihostMigration):
+            class testMultihostMigration(migration.MultihostMigration):
 
                 def __init__(self, test, params, env):
-                    utils_test.qemu.MultihostMigration.__init__(self, test, params,
-                                                                env)
+                    migration.MultihostMigration.__init__(self, test, params,
+                                                          env)
                     self.srchost = self.params.get("hosts")[0]
                     self.dsthost = self.params.get("hosts")[1]
                     self.id = {'src': self.srchost,

@@ -25,6 +25,7 @@ from virttest import gluster
 from virttest import env_process
 from virttest import data_dir
 from virttest import utils_test
+from virttest.utils_test.qemu import migration
 
 
 @error.context_aware
@@ -750,13 +751,13 @@ def run(test, params, env):
         def test(self):
             error.context("Preparing migration env and cdroms.", logging.info)
             mig_protocol = params.get("mig_protocol", "tcp")
-            self.mig_type = utils_test.qemu.MultihostMigration
+            self.mig_type = migration.MultihostMigration
             if mig_protocol == "fd":
-                self.mig_type = utils_test.qemu.MultihostMigrationFd
+                self.mig_type = migration.MultihostMigrationFd
             if mig_protocol == "exec":
-                self.mig_type = utils_test.qemu.MultihostMigrationExec
+                self.mig_type = migration.MultihostMigrationExec
             if "rdma" in mig_protocol:
-                self.mig_type = utils_test.qemu.MultihostMigrationRdma
+                self.mig_type = migration.MultihostMigrationRdma
 
             self.vms = params.get("vms").split(" ")
             self.srchost = params.get("hosts")[0]

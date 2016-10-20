@@ -94,7 +94,7 @@ def run_guest_test_background(test, params, env):
     Wrapper of run_guest_test() and make it run in the background through
     fork() and let it run in the child process.
     1) Flush the stdio.
-    2) Build test params which is recevied from arguments and used by
+    2) Build test params which is received from arguments and used by
        run_guest_test()
     3) Fork the process and let the run_guest_test() run in the child process
     4) Catch the exception raise by run_guest_test() and exit the child with

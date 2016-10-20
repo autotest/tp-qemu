@@ -39,12 +39,12 @@ def run_autotest_control_background(test, params, env,
     Wrapper of run() and make it run in the background through
     fork() and let it run in the child process.
     1) Flush the stdio.
-    2) Build test params which is recevied from arguments and used by
+    2) Build test params which is received from arguments and used by
        run()
     3) Fork the process and let the run() run in the child
     4) Catch the exception raise by run() and exit the child with
        non-zero return code.
-    5) If no exception catched, reutrn 0
+    5) If no exception catched, return 0
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters

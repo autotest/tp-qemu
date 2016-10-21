@@ -99,6 +99,15 @@ class QemuImgTest(qemu_storage.QemuImg):
     def save_file(self, dst):
         error.context("save file('%s') md5sum in guest" % dst, logging.info)
         self.__create_file(dst)
+        login_timeout = int(self.params.get("login_timeout", 360))
+        session = self.vm.wait_for_login(timeout=login_timeout)
+        error.context("sync guest data")
+        cmd = "sync"
+        status, output = session.cmd_status_output(cmd)
+        if status != 0:
+            logging.error("Execute '%s' with failures('%s') " % (cmd, output))
+            return None
+        session.close()
         return self.__md5sum(dst)
 
     @error.context_aware

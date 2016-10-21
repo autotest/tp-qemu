@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 
@@ -39,15 +40,24 @@ def run(test, params, env):
         :param session: VM session.
         """
         tmp_debug = r"C:\Windows\DPINST.log, C:\driver_install.log"
-        driver_logs = params.get("driver_debug_file", tmp_debug).split(',')
-        for _file in driver_logs:
-            status = session.cmd_status("dir %s" % _file)
-            if not status:
-                output = session.cmd("type %s" % _file)
-                _file_host = re.split(r'\\', '%r' % _file)[-1]
-                _debug_log = open("%s/%s" % (test.resultsdir, _file_host), "w")
-                _debug_log.write("%s\n" % output)
-                _debug_log.close()
+        driver_logs = params.get("driver_debug_file", tmp_debug)
+
+        def retrieve_log(file_path):
+            """
+            Retrieve logfile from guest to log
+
+            :param file_path: file path in guest.
+            :return file path save to host.
+            """
+            basename = re.split(r'\\', file_path)[-1]
+            logfile = os.path.join(test.resultsdir, basename)
+            if not session.cmd_status("dir %s" % file_path):
+                content = session.cmd_output("type %s" % file_path)
+                with open(logfile, 'w') as fd:
+                    fd.writelines(content)
+            return logfile
+
+        return map(retrieve_log, driver_logs.split(','))
 
     def reboot(vm, session=None, timeout=600):
         """

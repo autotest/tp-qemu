@@ -452,12 +452,19 @@ def run(test, params, env):
             nodeps = _.get("ignore_deps") == "yes"
             install_debuginfo = _.get("install_debuginfo") == "yes"
             timeout = int(_.get("install_pkg_timeout", "600"))
+            ver_before = session.cmd_output("rpm -q %s" % pkg)
             upgrade_guest_pkgs(
                 session,
                 pkg, arch,
                 install_debuginfo,
                 nodeps,
                 timeout)
+            ver_after = session.cmd_output("rpm -q %s" % pkg)
+            if "not installed" in ver_before:
+                mesg = "Install '%s' in guest" % ver_after
+            else:
+                mesg = "Upgrade '%s' from '%s'  to '%s'" % (pkg, ver_before, ver_after)
+            logging.info(mesg)
 
         # reboot guest
         error.context("Reboot guest after updating kernel", logging.info)

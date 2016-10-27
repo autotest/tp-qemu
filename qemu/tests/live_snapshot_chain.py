@@ -25,6 +25,14 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+    def generate_snapshot_chain(snapshot_chain, snapshot_num):
+        for i in range(snapshot_num):
+            snapshot_tag = "sn%s" % i
+            snapshot_chain += " %s" % snapshot_tag
+            params["image_name_%s" % snapshot_tag] = "images/%s" % snapshot_tag
+        params["check_base_image_%s" % snapshot_tag] = "yes"
+        return snapshot_chain
+
     def get_base_image(snapshot_chain, snapshot_file):
         try:
             index = snapshot_chain.index(snapshot_file)
@@ -56,12 +64,14 @@ def run(test, params, env):
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     snapshot_chain = params.get("snapshot_chain")
+    snapshot_num = int(params.get("snapshot_num", 20))
     file_create_cmd = params.get("file_create_cmd")
     file_check_cmd = params.get("file_check_cmd")
     file_dir = params.get("file_dir")
     dir_create_cmd = params.get("dir_create_cmd")
     md5_cmd = params.get("md5_cmd")
 
+    snapshot_chain = generate_snapshot_chain(snapshot_chain, snapshot_num)
     snapshot_chain = re.split("\s+", snapshot_chain)
     session = vm.wait_for_login(timeout=timeout)
 
@@ -108,6 +118,11 @@ def run(test, params, env):
             files_check = session.cmd(file_check_cmd % file_dir)
             files_in_guest[image] = files_check
     session.close()
+
+    error.context("Reboot guest", logging.info)
+    if image_params.get("need_reboot", "no") == "yes":
+        vm.monitor.cmd("system_reset")
+        vm.verify_alive()
 
     error.context("Do base files check", logging.info)
     snapshot_chain_backward = snapshot_chain[:]

@@ -5,6 +5,7 @@ import sys
 import re
 
 import aexpect
+import tempfile
 
 from autotest.client import utils
 from autotest.client.shared import error
@@ -13,6 +14,7 @@ from autotest.client.shared.syncdata import SyncData
 from virttest import data_dir
 from virttest import env_process
 from virttest import utils_test
+from virttest import gluster
 
 
 @error.context_aware
@@ -47,7 +49,20 @@ def run(test, params, env):
         """
         error.context("creating test floppy", logging.info)
         floppy = params["floppy_name"]
-        if not os.path.isabs(floppy):
+        image_params = params.object_params(floppy)
+        if image_params.get("enable_gluster") == "yes":
+            if params.get("gluster_server"):
+                gluster_server = params.get("gluster_server")
+            else:
+                gluster_server = "localhost"
+            g_mount_point = tempfile.mkdtemp("gluster")
+            volume_name = params["gluster_volume_name"]
+            g_mount_link = "%s:/%s" % (gluster_server, volume_name)
+            mount_cmd = "mount %s %s" % (g_mount_link, g_mount_point)
+            utils.system(mount_cmd, timeout=60)
+            floppy = floppy.split("/")[-1]
+            floppy = os.path.join(g_mount_point, "%s" % floppy)
+        else:
             floppy = os.path.join(data_dir.get_data_dir(), floppy)
         if prepare:
             utils.run("dd if=/dev/zero of=%s bs=512 count=2880" % floppy)

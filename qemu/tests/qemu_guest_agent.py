@@ -13,6 +13,7 @@ from avocado.utils import process
 from virttest import guest_agent
 from virttest import utils_misc
 from virttest import env_process
+from virttest import data_dir
 
 
 class BaseVirtTest(object):
@@ -757,7 +758,11 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
     @error.context_aware
     def setup_gagent_in_host(self, params, vm):
         error.context("download qemu-ga.msi to host", logging.info)
+        deps = params["deps"]
         gagent_download_cmd = params["gagent_download_cmd"]
+        if deps == "yes":
+            deps_dir = data_dir.get_deps_dir("windows_ga_install")
+            gagent_download_cmd = gagent_download_cmd % deps_dir
         utils.run(gagent_download_cmd,
                   float(params.get("login_timeout", 360)))
         gagent_host_path = params["gagent_host_path"]

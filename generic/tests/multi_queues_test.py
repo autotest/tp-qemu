@@ -98,10 +98,12 @@ def run(test, params, env):
                                           % nic.nic_name)
                 logging.info("MQ feature of (%s) is enabled" % nic.nic_name)
 
+        n_instance = int(params.get("netperf_para_sessions", 1))
         taskset_cpu = params.get("netperf_taskset_cpu")
         if taskset_cpu:
-            taskset_cmd = "taskset -c %s " % " ".join(taskset_cpu)
-            params["netperf_cmd_prefix"] = taskset_cmd
+            params["netperf_cmd_prefix"] = taskset_cpu
+            netperf_para_sessions = int(params.get("netperf_para_sessions", 1))
+            n_instance = len(taskset_cpu.split(" ")) * netperf_para_sessions
 
         check_cpu_affinity = params.get("check_cpu_affinity", 'no')
         check_vhost = params.get("check_vhost_threads", 'yes')
@@ -110,7 +112,6 @@ def run(test, params, env):
             set_cpu_affinity(session)
 
         bg_sub_test = params.get("bg_sub_test")
-        n_instance = int(params.get("netperf_para_sessions", queues))
         try:
             if bg_sub_test:
                 error.context("Run test %s background" % bg_sub_test,
@@ -171,21 +172,24 @@ def run(test, params, env):
                         else:
                             raise error.TestError("Can not get the cpu")
 
-                    irq_number = cpu_irq_affinity[taskset_cpu]
-                    irq_ori = get_cpu_irq_statistics(session, irq_number)
-                    logging.info("Cpu irq info: %s" % irq_ori)
-                    time.sleep(10)
-                    irq_cur = get_cpu_irq_statistics(session, irq_number)
-                    logging.info("After 10s, cpu irq info: %s" % irq_cur)
+                    taskset_cpu = taskset_cpu.split(" ")
+                    for i in taskset_cpu:
+                        irq_number = cpu_irq_affinity[i]
+                        irq_ori = get_cpu_irq_statistics(session, irq_number)
+                        logging.info("Cpu irq info: %s" % irq_ori)
+                        time.sleep(10)
+                        irq_cur = get_cpu_irq_statistics(session, irq_number)
+                        logging.info("After 10s, cpu irq info: %s" % irq_cur)
 
-                    irq_change_list = map(lambda x: x[0] - x[1],
-                                          zip(irq_cur, irq_ori))
-                    cpu_affinity = irq_change_list.index(max(irq_change_list))
-                    if cpu_affinity != int(taskset_cpu):
-                        err_msg = "Error, taskset on cpu %s, "
-                        err_msg += "but queues use cpu %s"
-                        raise error.TestFail(err_msg % (taskset_cpu,
-                                                        cpu_affinity))
+                        irq_change_list = map(lambda x: x[0] - x[1],
+                                              zip(irq_cur, irq_ori))
+                        cpu_affinity = irq_change_list.index(max(irq_change_list))
+                        if cpu_affinity != int(i):
+                            err_msg = "Error, taskset on cpu %s, "
+                            err_msg += "but queues use cpu %s"
+                            raise error.TestFail(err_msg % (i,
+                                                            cpu_affinity))
+
             if bg_sub_test and stress_thread:
                 env[bg_stress_run_flag] = False
                 try:

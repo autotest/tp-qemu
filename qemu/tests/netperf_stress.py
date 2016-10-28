@@ -199,9 +199,17 @@ def run(test, params, env):
             for n_client in netperf_clients:
                 index = num % s_len
                 server_ip = server_infos[index]["ip"]
-                n_client.bg_start(server_ip, t_option,
-                                  netperf_para_sess, netperf_cmd_prefix,
-                                  package_sizes=netperf_package_sizes)
+                if netperf_cmd_prefix:
+                    netperf_cmd_prefix = netperf_cmd_prefix.split(" ")
+                    logging.debug("netperf_cmd_prefix is %s" % netperf_cmd_prefix)
+                    for i in netperf_cmd_prefix:
+                        n_client.bg_start(server_ip, t_option,
+                                          netperf_para_sess, "taskset -c %s" % i,
+                                          package_sizes=netperf_package_sizes)
+                else:
+                    n_client.bg_start(server_ip, t_option,
+                                      netperf_para_sess, netperf_cmd_prefix,
+                                      package_sizes=netperf_package_sizes)
                 if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
                                        "Wait netperf test start"):
                     logging.info("Netperf test start successfully.")

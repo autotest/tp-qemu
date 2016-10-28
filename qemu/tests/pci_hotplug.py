@@ -225,7 +225,7 @@ def run(test, params, env):
                 raise error.TestFail("No new PCI device shown after executing "
                                      "monitor command: 'info pci'")
 
-            secs = int(params.get("wait_secs_for_hook_up"))
+            secs = int(params.get("wait_secs_for_hook_up", 3))
             if not utils_misc.wait_for(_new_shown, test_timeout, secs, 3):
                 raise error.TestFail("No new device shown in output of command "
                                      "executed inside the guest: %s" %

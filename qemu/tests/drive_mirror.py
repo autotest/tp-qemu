@@ -136,11 +136,14 @@ class DriveMirror(block_copy.BlockCopy):
         timeout = params["reopen_timeout"]
 
         def is_opened():
-            device = self.vm.get_block({"file": self.target_image})
-            ret = (device == self.device)
-            if self.vm.monitor.protocol == "qmp":
-                ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
-            return ret
+            try:
+                device = self.vm.get_block({"file": self.target_image})
+                ret = (device == self.device)
+                if self.vm.monitor.protocol == "qmp":
+                    ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
+                return ret
+            except Exception:
+                return False
 
         error.context("reopen new target image", logging.info)
         if self.vm.monitor.protocol == "qmp":

@@ -30,7 +30,8 @@ def run(test, params, env):
             snapshot_tag = "sn%s" % i
             snapshot_chain += " %s" % snapshot_tag
             params["image_name_%s" % snapshot_tag] = "images/%s" % snapshot_tag
-        params["check_base_image_%s" % snapshot_tag] = "yes"
+        if snapshot_num > 0:
+            params["check_base_image_%s" % snapshot_tag] = "yes"
         return snapshot_chain
 
     def get_base_image(snapshot_chain, snapshot_file):
@@ -64,7 +65,7 @@ def run(test, params, env):
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
     snapshot_chain = params.get("snapshot_chain")
-    snapshot_num = int(params.get("snapshot_num", 20))
+    snapshot_num = int(params.get("snapshot_num", 0))
     file_create_cmd = params.get("file_create_cmd")
     file_check_cmd = params.get("file_check_cmd")
     file_dir = params.get("file_dir")

@@ -9,6 +9,7 @@ from autotest.client.shared import error
 from autotest.client import utils
 from avocado.utils import path as avo_path
 from avocado.utils import process
+from avocado.core import exceptions
 
 from virttest import guest_agent
 from virttest import utils_misc
@@ -458,6 +459,65 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             if delta > 3:
                 raise error.TestFail("The guest time can't be set from hwclock"
                                      " on host")
+
+    @error.context_aware
+    def _get_mem_used(self, session, cmd):
+
+        """
+        get memory usage of the process
+
+        :param session: use for sending cmd
+        :param cmd: get details of the process
+        """
+
+        output = session.cmd_output(cmd)
+        logging.info("The process details: %s" % output)
+        try:
+            memory_usage = int(output.split(" ")[-2].replace(",", ""))
+            return memory_usage
+        except Exception:
+            raise exceptions.TestError("Get invalid memory usage by "
+                                       "cmd '%s' (%s)" % (cmd, output))
+
+    @error.context_aware
+    def gagent_check_memory_leak(self, test, params, env):
+
+        """
+        repeat execute "guest-info" command to guest agent, check memory
+        usage of the qemu-ga
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+
+        timeout = float(params.get("login_timeout", 240))
+        test_command = params.get("test_command", "guest-info")
+        memory_usage_cmd = params.get("memory_usage_cmd",
+                                      "tasklist | findstr /I qemu-ga.exe")
+        session = self.vm.wait_for_login(timeout=timeout)
+        error.context("get the memory usage of qemu-ga before run '%s'" %
+                      test_command, logging.info)
+        memory_usage_before = self._get_mem_used(session, memory_usage_cmd)
+        session.close()
+        repeats = int(params.get("repeats", 1))
+        for i in range(repeats):
+            error.context("execute '%s' %s times" % (test_command, i+1),
+                          logging.info)
+            return_msg = self.gagent.guest_info()
+            logging.info(str(return_msg))
+        self.vm.verify_alive()
+        error.context("get the memory usage of qemu-ga after run '%s'" %
+                      test_command, logging.info)
+        session = self.vm.wait_for_login(timeout=timeout)
+        memory_usage_after = self._get_mem_used(session, memory_usage_cmd)
+        session.close()
+        # less than 500K is acceptable.
+        if memory_usage_after - memory_usage_before > 500:
+            raise error.TestFail("The memory usages are different, "
+                                 "before run command is %skb and after"
+                                 " run command is %skb" % (memory_usage_before,
+                                                           memory_usage_after))
 
     @error.context_aware
     def gagent_check_fstrim(self, test, params, env):

@@ -21,7 +21,7 @@ from autotest.client.shared import error
 
 from virttest import qemu_virtio_port
 from virttest import env_process
-from virttest import utils_test
+from virttest.utils_test.qemu import migration
 from virttest import utils_misc
 from virttest import funcatexit
 from virttest.qemu_devices import qdevices
@@ -1213,7 +1213,7 @@ def run(test, params, env):
         for j in xrange(no_migrations):
             error.context("Performing migration number %s/%s"
                           % (j, no_migrations))
-            vm = utils_test.qemu.migrate(vm, env, 3600, "exec", 0, offline)
+            vm = migration.migrate(vm, env, 3600, "exec", 0, offline)
             if not vm:
                 raise error.TestFail("Migration failed")
 

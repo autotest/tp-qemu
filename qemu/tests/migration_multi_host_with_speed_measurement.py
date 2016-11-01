@@ -3,14 +3,11 @@ import re
 import logging
 import time
 import socket
-
 from autotest.client.shared import error, utils
 from autotest.client.shared.barrier import listen_server
 from autotest.client.shared.syncdata import SyncData
-
-from virttest import utils_test
 from virttest import utils_misc
-
+from virttest.utils_test.qemu import migration
 from provider import cpuflags
 
 
@@ -35,13 +32,13 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.qemu.MultihostMigration
+    base_class = migration.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.qemu.MultihostMigrationFd
+        base_class = migration.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.qemu.MultihostMigrationExec
+        base_class = migration.MultihostMigrationExec
     if "rdma" in mig_protocol:
-        base_class = utils_test.qemu.MultihostMigrationRdma
+        base_class = migration.MultihostMigrationRdma
 
     install_path = params.get("cpuflags_install_path", "/tmp")
 

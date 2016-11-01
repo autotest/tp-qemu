@@ -6,6 +6,7 @@ from autotest.client.shared import utils
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import virt_vm
+from virttest.utils_test.qemu import migration
 
 
 @error.context_aware
@@ -27,13 +28,13 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     mig_protocol = params.get("mig_protocol", "tcp")
-    base_class = utils_test.qemu.MultihostMigration
+    base_class = migration.MultihostMigration
     if mig_protocol == "fd":
-        base_class = utils_test.qemu.MultihostMigrationFd
+        base_class = migration.MultihostMigrationFd
     if mig_protocol == "exec":
-        base_class = utils_test.qemu.MultihostMigrationExec
+        base_class = migration.MultihostMigrationExec
     if "rdma" in mig_protocol:
-        base_class = utils_test.qemu.MultihostMigrationRdma
+        base_class = migration.MultihostMigrationRdma
 
     class TestMultihostMigration(base_class):
 

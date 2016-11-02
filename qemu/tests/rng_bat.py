@@ -100,7 +100,10 @@ def run(test, params, env):
                                             session, params)
         driver_id = get_driver_id(session, driver_id_cmd,
                                   params["driver_id_pattern"])
-        check_driver_status(session, params["driver_check_cmd"], driver_id)
+        if params.get("driver_check_cmd"):
+            driver_check_cmd = set_winutils_letter(
+                params.get("driver_check_cmd"), session, params)
+            check_driver_status(session, driver_check_cmd, driver_id)
     else:
         error_context.context("verify virtio-rng device driver", logging.info)
         session = vm.wait_for_login(timeout=timeout)

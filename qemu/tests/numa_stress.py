@@ -79,6 +79,11 @@ def run(test, params, env):
     memory_file = utils_misc.get_path(tmpfs_path, "test")
     dd_cmd = "dd if=/dev/urandom of=%s bs=1k count=%s" % (memory_file,
                                                           tmpfs_size)
+    utils_memory.drop_caches()
+
+    if utils_memory.freememtotal() < tmpfs_size:
+        raise error.TestNAError("Host does not have enough free memory to run the test, "
+                                "skipping test...")
 
     if not os.path.isdir(tmpfs_path):
         os.mkdir(tmpfs_path)
@@ -87,6 +92,9 @@ def run(test, params, env):
     most_used_node, memory_used = max_mem_map_node(host_numa_node, qemu_pid)
 
     for test_round in range(test_count):
+        if os.path.exists(memory_file):
+            os.remove(memory_file)
+        utils_memory.drop_caches()
         if utils_memory.freememtotal() < tmpfs_size:
             raise error.TestError("Don't have enough memory to execute this "
                                   "test after %s round" % test_round)

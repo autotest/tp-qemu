@@ -135,6 +135,7 @@ def run(test, params, env):
         """
         dev_idx = 0
         _new_devs_fmt = ""
+        pci_bus = {'aobject': 'pci.0'}
         _formats = param_matrix.pop('fmt', [params.get('drive_format')])
         formats = _formats[:]
         if len(new_devices) == 1:
@@ -153,7 +154,7 @@ def run(test, params, env):
                              _formats, i)
                 break
             name = 'stg%d' % i
-            args = {'name': name, 'filename': stg_image_name % i}
+            args = {'name': name, 'filename': stg_image_name % i, 'pci_bus': pci_bus}
             fmt = random.choice(formats)
             if fmt == 'virtio_scsi':
                 args['fmt'] = 'scsi-hd'

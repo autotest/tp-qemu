@@ -483,16 +483,19 @@ def run(test, params, env):
         :param mode: rebase mode: safe mode, unsafe mode
         """
         cmd += " rebase"
+        show_progress = params.get("show_progress", "")
         if mode == "unsafe":
             cmd += " -u"
+        if show_progress == "on":
+            cmd += " -p"
         cmd += " -b %s -F %s %s" % (base_img, backing_fmt, img_name)
         msg = "Trying to rebase '%s' to '%s' by command %s" % (img_name,
                                                                base_img, cmd)
         error.context(msg, logging.info)
-        status, output = commands.getstatusoutput(cmd)
-        if status != 0:
-            raise error.TestError("Failed to rebase '%s' to '%s': %s" %
-                                  (img_name, base_img, output))
+        if show_progress == "off":
+            bg = utils.InterruptedThread(send_signal)
+            bg.start()
+        check_command_output(utils.run(cmd))
 
     def rebase_test(cmd):
         """
@@ -520,7 +523,7 @@ def run(test, params, env):
         sn2 = _get_image_filename(sn2, enable_gluster, sn_fmt)
         _create(cmd, sn2, sn_fmt, base_img=sn1, base_img_fmt=sn_fmt)
 
-        rebase_mode = params.get("rebase_mode")
+        rebase_mode = params.get("rebase_mode", "safe")
         if rebase_mode == "unsafe":
             remove(sn1)
 

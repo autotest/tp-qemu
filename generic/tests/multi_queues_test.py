@@ -157,7 +157,7 @@ def run(test, params, env):
                 error.context("Check cpu affinity", logging.info)
                 vectors = params.get("vectors", None)
                 enable_msix_vectors = params.get("enable_msix_vectors")
-                expect_vectors = 2 * int(queues) + 1
+                expect_vectors = 2 * int(queues) + 2
                 if (not vectors) and (enable_msix_vectors == "yes"):
                     vectors = expect_vectors
                 if vectors and (vectors >= expect_vectors) and taskset_cpu:

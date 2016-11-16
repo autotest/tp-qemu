@@ -91,7 +91,7 @@ def run(test, params, env):
 
         error_context.context("Compare memory from guest with qmp",
                               logging.info)
-        if (abs(guest_mem - stat_memory_qmp)) > (guest_mem * check_mem_ratio):
+        if abs(float(guest_mem - stat_memory_qmp)) / guest_mem > check_mem_ratio:
             raise exceptions.TestFail("%s of guest %s is not equal to %s in"
                                       " qmp, the acceptable ratio is %s" %
                                       (keyname, guest_mem, stat_memory_qmp,
@@ -118,8 +118,10 @@ def run(test, params, env):
 
                 quit_after_test = balloon_test.run_ballooning_test(expect_mem,
                                                                    tag)
+                time.sleep(20)
                 get_polling_output = vm.monitor.qom_get(device_path,
                                                         get_balloon_property)
+                time.sleep(20)
                 memory_check(vm, get_polling_output, 'stat-free-memory')
                 if quit_after_test:
                     return

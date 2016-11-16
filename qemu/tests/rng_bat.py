@@ -36,16 +36,6 @@ def run(test, params, env):
         output = process.system_output(lsof_cmd, ignore_status=True)
         return re.search(r"\s+%s\s+" % vm_pid, output, re.M)
 
-    def set_winutils_letter(cmd, session, params):
-        """
-        Replace 'X:' in command to real cdrom drive letter.
-        """
-        vol = "X:"
-        if params["os_type"] != "linux":
-            vol = utils_misc.get_winutils_vol(session)
-            vol = "%s:" % vol
-        return cmd.replace("X:", vol)
-
     def check_driver_status(session, check_cmd, driver_id):
         """
         :param session: VM session
@@ -96,13 +86,13 @@ def run(test, params, env):
                                                   vm, timeout)
         error_context.context("Check driver status", logging.info)
         session = vm.wait_for_login(timeout=timeout)
-        driver_id_cmd = set_winutils_letter(params.get("driver_id_cmd"),
-                                            session, params)
+        driver_id_cmd = utils_misc.set_winutils_letter(
+            session, params["driver_id_cmd"])
         driver_id = get_driver_id(session, driver_id_cmd,
                                   params["driver_id_pattern"])
         if params.get("driver_check_cmd"):
-            driver_check_cmd = set_winutils_letter(
-                params.get("driver_check_cmd"), session, params)
+            driver_check_cmd = utils_misc.set_winutils_letter(
+                session, params.get("driver_check_cmd"))
             check_driver_status(session, driver_check_cmd, driver_id)
     else:
         error_context.context("verify virtio-rng device driver", logging.info)
@@ -122,8 +112,9 @@ def run(test, params, env):
 
     error_context.context("Read virtio-rng device to get random number",
                           logging.info)
-    read_rng_cmd = set_winutils_letter(params.get("read_rng_cmd"),
-                                       session, params)
+    read_rng_cmd = utils_misc.set_winutils_letter(
+        session, params["read_rng_cmd"])
+
     if rng_dll_register_cmd:
         logging.info("register 'viorngum.dll' into system")
         session.cmd(rng_dll_register_cmd, timeout=120)

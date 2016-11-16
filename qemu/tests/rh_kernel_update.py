@@ -6,6 +6,8 @@ import logging
 from autotest.client.shared import error
 from autotest.client.shared import utils
 
+from virttest import storage
+from virttest import data_dir
 from virttest import utils_misc
 
 
@@ -20,19 +22,15 @@ def run(test, params, env):
     2) Get latest kernel package link from brew
     3) Verify the version of guest kernel
     4) Compare guest kernel version and brew latest kernel version
-    5) Backup boot cfg file
-    6) Install guest kernel firmware (Optional)
-    7) Install guest kernel
-    8) Install guest kernel debuginfo (Optional)
-    9) Backup boot cfg file after installing new kernel
-    10) Installing virtio driver (Optional)
-    11) Backup initrd file
-    12) Update initrd file
-    13) Make the new installed kernel as default
-    14) Backup boot cfg file after setting new kernel as default
-    15) Update the guest kernel cmdline (Optional)
-    16) Reboot guest after updating kernel
-    17) Verifying the virtio drivers (Optional)
+    5) Install guest kernel firmware (Optional)
+    6) Install guest kernel
+    7) Install guest kernel debuginfo (Optional)
+    8) Installing virtio driver (Optional)
+    9) Update initrd file
+    10) Make the new installed kernel as default
+    11) Update the guest kernel cmdline (Optional)
+    12) Reboot guest after updating kernel
+    13) Verifying the virtio drivers (Optional)
 
     @param test: QEMU test object
     @param params: Dictionary with the test parameters
@@ -297,204 +295,145 @@ def run(test, params, env):
     logging.info("Kernel rpm    :  %s" % kernel_rpm)
     logging.info("Firmware rpm  :  %s" % firmware_rpm)
 
-    boot_cfg_path = params.get("boot_cfg_path", "/boot/grub/grub.conf")
-    bootcfg_backup_cmd = "\cp -af  {0} {0}-bk".format(boot_cfg_path)
-    bootcfg_restore_cmd = "\cp -af {0}-bk {0}".format(boot_cfg_path)
-    count = 0
+    # judge if need to install a new kernel
+    ifupdatekernel = True
+    guest_version = get_guest_kernel_version()
+    if compare_kernel_version(kernel_version, guest_version):
+        ifupdatekernel = False
+        # set kernel_version to current version for later step to use
+        kernel_version = guest_version
 
-    try:
-        error.context("Backup '%s'" % boot_cfg_path)
-        s, o = session.cmd_status_output(bootcfg_backup_cmd)
+        if is_kernel_debuginfo_installed():
+            install_knl_debuginfo = "no"
+
+        if is_virtio_driver_installed():
+            install_virtio = "no"
+    else:
+        logging.info("The guest kerenl is %s but expected is %s" %
+                     (guest_version, kernel_version))
+
+        rpm_install_func = install_rpm
+        if params.get("install_rpm_from_local") == "yes":
+            rpm_install_func = copy_and_install_rpm
+
+        kernel_deps_pkgs = params.get("kernel_deps_pkgs", "dracut").split()
+        if kernel_deps_pkgs:
+            for pkg in kernel_deps_pkgs:
+                arch = params.get("arch_%s" % pkg,
+                                  params.get("vm_arch_name"))
+                upgrade_guest_pkgs(session, pkg, arch)
+
+        if firmware_rpm:
+            error.context("Install guest kernel firmware", logging.info)
+            rpm_install_func(session, firmware_rpm, upgrade=True)
+        error.context("Install guest kernel", logging.info)
+        rpm_install_func(session, kernel_rpm)
+
+    kernel_path = "/boot/vmlinuz-%s" % kernel_version
+
+    if install_knl_debuginfo == "yes":
+        error.context("Installing kernel-debuginfo packages", logging.info)
+        links = ""
+        for r in knl_dbginfo_rpm:
+            links += " %s" % r
+        install_rpm(session, links)
+
+    if install_virtio == "yes":
+        error.context("Installing virtio driver", logging.info)
+
+        initrd_prob_cmd = "grubby --info=%s" % kernel_path
+        s, o = session.cmd_status_output(initrd_prob_cmd)
         if s != 0:
-            raise error.TestError("Failed to backup '%s', guest output: '%s'"
-                                  % (boot_cfg_path, o))
-        count = 1
-
-        # judge if need to install a new kernel
-        ifupdatekernel = True
-        guest_version = get_guest_kernel_version()
-        if compare_kernel_version(kernel_version, guest_version):
-            ifupdatekernel = False
-            # set kernel_version to current version for later step to use
-            kernel_version = guest_version
-
-            if is_kernel_debuginfo_installed():
-                install_knl_debuginfo = "no"
-
-            if is_virtio_driver_installed():
-                install_virtio = "no"
-        else:
-            logging.info("The guest kerenl is %s but expected is %s" %
-                         (guest_version, kernel_version))
-
-            rpm_install_func = install_rpm
-            if params.get("install_rpm_from_local") == "yes":
-                rpm_install_func = copy_and_install_rpm
-
-            kernel_deps_pkgs = params.get("kernel_deps_pkgs", "dracut").split()
-            if kernel_deps_pkgs:
-                for pkg in kernel_deps_pkgs:
-                    arch = params.get("arch_%s" % pkg,
-                                      params.get("vm_arch_name"))
-                    upgrade_guest_pkgs(session, pkg, arch)
-
-            if firmware_rpm:
-                error.context("Install guest kernel firmware", logging.info)
-                rpm_install_func(session, firmware_rpm, upgrade=True)
-            error.context("Install guest kernel", logging.info)
-            status = rpm_install_func(session, kernel_rpm)
-            if status:
-                count = 2
-
-            error.context("Backup '%s' after installing new kernel"
-                          % boot_cfg_path, logging.info)
-            s, o = session.cmd_status_output(bootcfg_backup_cmd)
-            if s != 0:
-                msg = ("Fail to backup '%s' after updating kernel,"
-                       " guest output: '%s'" % (boot_cfg_path, o))
-                logging.error(msg)
-                raise error.TestError(msg)
-
-        kernel_path = "/boot/vmlinuz-%s" % kernel_version
-
-        if install_knl_debuginfo == "yes":
-            error.context("Installing kernel-debuginfo packages", logging.info)
-
-            links = ""
-
-            for r in knl_dbginfo_rpm:
-                links += " %s" % r
-
-            install_rpm(session, links)
-
-        if install_virtio == "yes":
-            error.context("Installing virtio driver", logging.info)
-
-            initrd_prob_cmd = "grubby --info=%s" % kernel_path
-            s, o = session.cmd_status_output(initrd_prob_cmd)
-            if s != 0:
-                msg = ("Could not get guest kernel information,"
-                       " guest output: '%s'" % o)
-                logging.error(msg)
-                raise error.TestError(msg)
-
-            try:
-                initrd_path = re.findall("initrd=(.*)", o)[0]
-            except IndexError:
-                raise error.TestError("Could not get initrd path from guest,"
-                                      " guest output: '%s'" % o)
-
-            driver_list = ["--with=%s " % drv for drv in virtio_drivers]
-            mkinitrd_cmd = "mkinitrd -f %s " % initrd_path
-            mkinitrd_cmd += "".join(driver_list)
-            mkinitrd_cmd += " %s" % kernel_version
-            cp_initrd_cmd = "\cp -af  %s %s-bk" % (initrd_path, initrd_path)
-            restore_initrd_cmd = "\cp -af  %s-bk %s" % (initrd_path,
-                                                        initrd_path)
-
-            error.context("Backup initrd file")
-            s, o = session.cmd_status_output(cp_initrd_cmd, timeout=200)
-            if s != 0:
-                logging.error("Failed to backup guest initrd,"
-                              " guest output: '%s'", o)
-
-            error.context("Update initrd file", logging.info)
-            s, o = session.cmd_status_output(mkinitrd_cmd, timeout=360)
-            if s != 0:
-                msg = "Failed to install virtio driver, guest output '%s'" % o
-                logging.error(msg)
-                raise error.TestFail(msg)
-
-            count = 3
-
-        # make sure the newly installed kernel as default
-        if ifupdatekernel:
-            error.context("Make the new installed kernel as default",
-                          logging.info)
-            make_def_cmd = "grubby --set-default=%s " % kernel_path
-            s, o = session.cmd_status_output(make_def_cmd)
-            if s != 0:
-                msg = ("Fail to set %s as default kernel,"
-                       " guest output: '%s'" % (kernel_path, o))
-                logging.error(msg)
-                raise error.TestError(msg)
-
-            count = 4
-            error.context(
-                "Backup '%s' after setting new kernel as default"
-                % boot_cfg_path)
-            s, o = session.cmd_status_output(bootcfg_backup_cmd)
-            if s != 0:
-                msg = ("Fail to backup '%s', guest output: '%s'"
-                       % (boot_cfg_path, o))
-                logging.error(msg)
-                raise error.TestError(msg)
-
-        # remove or add the required arguments
-
-        error.context("Update the guest kernel cmdline", logging.info)
-        remove_args_list = ["--remove-args=%s " % arg for arg in args_removed]
-        update_kernel_cmd = "grubby --update-kernel=%s " % kernel_path
-        update_kernel_cmd += "".join(remove_args_list)
-        update_kernel_cmd += '--args="%s"' % " ".join(args_added)
-        s, o = session.cmd_status_output(update_kernel_cmd)
-        if s != 0:
-            msg = "Fail to modify the kernel cmdline, guest output: '%s'" % o
+            msg = ("Could not get guest kernel information,"
+                   " guest output: '%s'" % o)
             logging.error(msg)
             raise error.TestError(msg)
 
-        count = 5
+        try:
+            initrd_path = re.findall("initrd=(.*)", o)[0]
+        except IndexError:
+            raise error.TestError("Could not get initrd path from guest,"
+                                  " guest output: '%s'" % o)
 
-        # upgrade listed packages to latest version.
-        for pkg in params.get("upgrade_pkgs", "").split():
-            _ = params.object_params(pkg)
-            arch = _.get("vm_arch_name", "x86_64")
-            nodeps = _.get("ignore_deps") == "yes"
-            install_debuginfo = _.get("install_debuginfo") == "yes"
-            timeout = int(_.get("install_pkg_timeout", "600"))
-            ver_before = session.cmd_output("rpm -q %s" % pkg)
-            upgrade_guest_pkgs(
-                session,
-                pkg, arch,
-                install_debuginfo,
-                nodeps,
-                timeout)
-            ver_after = session.cmd_output("rpm -q %s" % pkg)
-            if "not installed" in ver_before:
-                mesg = "Install '%s' in guest" % ver_after
-            else:
-                mesg = "Upgrade '%s' from '%s'  to '%s'" % (pkg, ver_before, ver_after)
-            logging.info(mesg)
+        driver_list = ["--with=%s " % drv for drv in virtio_drivers]
+        mkinitrd_cmd = "mkinitrd -f %s " % initrd_path
+        mkinitrd_cmd += "".join(driver_list)
+        mkinitrd_cmd += " %s" % kernel_version
 
-        # reboot guest
-        error.context("Reboot guest after updating kernel", logging.info)
-        time.sleep(int(params.get("sleep_before_reset", 10)))
-        session = vm.reboot(session, 'shell', timeout=login_timeout)
-        # check if the guest can bootup normally after kernel update
-        guest_version = get_guest_kernel_version()
-        if guest_version != kernel_version:
-            raise error.TestFail("Fail to verify the guest kernel, \n"
-                                 "Expceted version %s \n"
-                                 "In fact version %s \n" %
-                                 (kernel_version, guest_version))
+        error.context("Update initrd file", logging.info)
+        s, o = session.cmd_status_output(mkinitrd_cmd, timeout=360)
+        if s != 0:
+            msg = "Failed to install virtio driver, guest output '%s'" % o
+            logging.error(msg)
+            raise error.TestFail(msg)
 
-        if verify_virtio == "yes":
-            error.context("Verifying the virtio drivers", logging.info)
-            if not is_virtio_driver_installed():
-                raise error.TestFail("Fail to verify the installation of"
-                                     " virtio drivers")
-    except Exception:
-        if count in [4, 3, 1]:
-            # restore boot cfg
-            s, o = session.cmd_status_output(bootcfg_restore_cmd, timeout=100)
-            if s != 0:
-                logging.error("Failed to execute cmd '%s' in guest,"
-                              " guest output: '%s'", bootcfg_restore_cmd, o)
-        elif count == 2 and restore_initrd_cmd:
-            # restore initrd file
-            s, o = session.cmd_status_output(restore_initrd_cmd, timeout=200)
-            if s != 0:
-                logging.error("Failed to execute cmd '%s' in guest,"
-                              " guest output: '%s'", restore_initrd_cmd, o)
+    # make sure the newly installed kernel as default
+    if ifupdatekernel:
+        error.context("Make the new installed kernel as default",
+                      logging.info)
+        make_def_cmd = "grubby --set-default=%s " % kernel_path
+        s, o = session.cmd_status_output(make_def_cmd)
+        if s != 0:
+            msg = ("Fail to set %s as default kernel,"
+                   " guest output: '%s'" % (kernel_path, o))
+            logging.error(msg)
+            raise error.TestError(msg)
 
-        raise
+    # remove or add the required arguments
+
+    error.context("Update the guest kernel cmdline", logging.info)
+    remove_args_list = ["--remove-args=%s " % arg for arg in args_removed]
+    update_kernel_cmd = "grubby --update-kernel=%s " % kernel_path
+    update_kernel_cmd += "".join(remove_args_list)
+    update_kernel_cmd += '--args="%s"' % " ".join(args_added)
+    s, o = session.cmd_status_output(update_kernel_cmd)
+    if s != 0:
+        msg = "Fail to modify the kernel cmdline, guest output: '%s'" % o
+        logging.error(msg)
+        raise error.TestError(msg)
+
+    # upgrade listed packages to latest version.
+    for pkg in params.get("upgrade_pkgs", "").split():
+        _ = params.object_params(pkg)
+        arch = _.get("vm_arch_name", "x86_64")
+        nodeps = _.get("ignore_deps") == "yes"
+        install_debuginfo = _.get("install_debuginfo") == "yes"
+        timeout = int(_.get("install_pkg_timeout", "600"))
+        ver_before = session.cmd_output("rpm -q %s" % pkg)
+        upgrade_guest_pkgs(
+            session,
+            pkg, arch,
+            install_debuginfo,
+            nodeps,
+            timeout)
+        ver_after = session.cmd_output("rpm -q %s" % pkg)
+        if "not installed" in ver_before:
+            mesg = "Install '%s' in guest" % ver_after
+        else:
+            mesg = "Upgrade '%s' from '%s'  to '%s'" % (
+                pkg, ver_before, ver_after)
+        logging.info(mesg)
+
+    # reboot guest
+    error.context("Reboot guest after updating kernel", logging.info)
+    time.sleep(int(params.get("sleep_before_reset", 10)))
+    session = vm.reboot(session, 'shell', timeout=login_timeout)
+    # check if the guest can bootup normally after kernel update
+    guest_version = get_guest_kernel_version()
+    if guest_version != kernel_version:
+        raise error.TestFail("Fail to verify the guest kernel, \n"
+                             "Expceted version %s \n"
+                             "In fact version %s \n" %
+                             (kernel_version, guest_version))
+
+    if verify_virtio == "yes":
+        error.context("Verifying the virtio drivers", logging.info)
+        if not is_virtio_driver_installed():
+            raise error.TestFail("Fail to verify the installation of"
+                                 " virtio drivers")
+    error.context("OS updated, commit changes to disk", logging.info)
+    base_dir = params.get("images_base_dir", data_dir.get_data_dir())
+    image_filename = storage.get_image_filename(params, base_dir)
+    logging.info("image file name: %s" % image_filename)
+    block = vm.get_block({"backing_file": image_filename})
+    vm.monitor.send_args_cmd("commit %s" % block)

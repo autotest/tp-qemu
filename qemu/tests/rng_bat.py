@@ -54,6 +54,7 @@ def run(test, params, env):
         """
         check_cmd = check_cmd.replace("DRIVER_ID", driver_id)
         status, output = session.cmd_status_output(check_cmd)
+        print output
         if "disabled" in output:
             raise exceptions.TestFail("Driver is disable")
 

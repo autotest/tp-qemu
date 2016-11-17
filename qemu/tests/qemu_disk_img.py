@@ -106,9 +106,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         self.__create_file(dst)
         session = self.vm.wait_for_login(timeout=login_timeout)
         logging.info("sync guest data")
-        if "X:" in cmd:
-            vol = utils_misc.get_winutils_vol(session)
-            cmd = cmd.replace("X:", "%s:" % vol)
+        cmd = utils_misc.set_winutils_letter(session, cmd, label="WIN_UTILS")
         status, output = session.cmd_status_output(cmd)
         if status != 0:
             logging.error("Execute '%s' with failures('%s') " % (cmd, output))
@@ -179,25 +177,37 @@ class QemuImgTest(qemu_storage.QemuImg):
                 raise error.TestFail(msg)
 
     @error_context.context_aware
-    def check_backingfile(self):
-        error_context.context("check image('%s') backing file" %
+    def get_backingfile(self):
+        """
+        get image backingfile
+
+        :return: Value of backing file, string or None;
+        """
+        error_context.context("get image('%s') backing file" %
                               self.image_filename, logging.info)
         out = self.get_info()
         try:
             backingfile = re.search(r'backing file: +(.*)', out, re.M).group(1)
-            if not self.base_tag or self.base_tag == "null":
-                msg = ("Expected backing file is null")
-                msg += " Actual backing file: %s" % backingfile
-                raise exceptions.TestFail(msg)
-            elif backingfile != self.base_image_filename:
-                msg = ("Expected backing file: %s" % self.base_image_filename)
-                msg += " Actual backing file: %s" % backingfile
-                raise exceptions.TestFail(msg)
+            return backingfile
         except AttributeError:
-            if self.base_tag and self.base_tag != "null":
-                msg = ("Could not find backing file for image '%s'" %
-                       self.image_filename)
-                raise exceptions.TestFail(msg)
+            return None
+
+    @error_context.context_aware
+    def check_backingfile(self):
+        """
+        check image backingfile
+        """
+        error_context.context("check image('%s') backing file" %
+                              self.image_filename, logging.info)
+        if not hasattr(self, "base_image_filename"):
+            expect = None
+        else:
+            expect = self.base_image_filename.strip("'")
+        actual = self.get_backingfile()
+        if actual != expect:
+            msg = "Expected backing file: %s" % expect
+            msg += " Actual backing file: %s" % actual
+            raise exceptions.TestFail(msg)
 
     @error.context_aware
     def clean(self):

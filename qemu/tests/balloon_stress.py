@@ -27,7 +27,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    default_memory = int(params.get("default_memory", 8192))
+    default_memory = int(params.get("default_memory", params['mem']))
     unit = vm.monitor.protocol == "qmp" and 1048576 or 1
     timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
@@ -51,27 +51,17 @@ def run(test, params, env):
     if not running:
         raise error.TestError("Video do not playing")
 
+    #for case:balloon_in_use to call
     env["balloon_test"] = 0
     error.context("balloon vm memory in loop", logging.info)
     repeat_times = int(params.get("repeat_times", 10))
     logging.info("repeat times: %d" % repeat_times)
-    magnification = int(params.get("magnification", 512))
-    logging.info("memory decrease magnification: %d" % magnification)
-    start = magnification * unit
-    end = default_memory * unit
-    step = start
+    min_sz, max_sz = balloon_test.get_memory_boundary()
     while repeat_times:
-        for memory in xrange(start, end, step):
-            logging.debug("balloon vm mem to: %s B" % memory)
-            vm.monitor.send_args_cmd("balloon value=%s" % memory)
-            vm.monitor.query("balloon")
-            logging.debug("balloon vm mem to: %s B" % memory)
-            memory = end - memory
-            vm.monitor.send_args_cmd("balloon value=%s" % memory)
-            current_mem = vm.monitor.query("balloon")
-            if current_mem != memory:
-                env["balloon_test"] = 1
+        balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
+        env["balloon_test"] = 1
         repeat_times -= 1
+
     error.context("verify guest still alive", logging.info)
     session.cmd(params["stop_player_cmd"])
     vm.verify_alive()

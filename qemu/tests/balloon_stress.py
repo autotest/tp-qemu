@@ -38,7 +38,6 @@ def run(test, params, env):
     driver_name = params["driver_name"]
     if params["os_type"] == "windows":
         utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-    session = vm.wait_for_login(timeout=timeout)
 
     error.context("Play video in guest", logging.info)
     play_video_cmd = params["play_video_cmd"]
@@ -46,10 +45,10 @@ def run(test, params, env):
     # need to wait for wmplayer loading remote video
     time.sleep(float(params.get("loading_timeout", 60)))
     check_playing_cmd = params["check_playing_cmd"]
-    running = utils_misc.wait_for(lambda: session.cmd_status(
-        check_playing_cmd) == 0, first=5.0, timeout=600)
+    running = utils_misc.wait_for(lambda: utils_misc.get_guest_cmd_status_output(
+        vm, check_playing_cmd)[0] == 0, first=5.0, timeout=600)
     if not running:
-        raise error.TestError("Video do not playing")
+        raise error.TestError("Video is not playing")
 
     #for case:balloon_in_use to call
     env["balloon_test"] = 0
@@ -65,3 +64,5 @@ def run(test, params, env):
     error.context("verify guest still alive", logging.info)
     session.cmd(params["stop_player_cmd"])
     vm.verify_alive()
+    if session:
+        session.close()

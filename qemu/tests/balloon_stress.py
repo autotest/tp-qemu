@@ -1,9 +1,11 @@
 import time
 import logging
+import random
 
 from autotest.client.shared import error
 from virttest import utils_misc
 from virttest import utils_test
+from qemu.tests.balloon_check import BallooningTestWin
 
 
 @error.context_aware
@@ -38,6 +40,7 @@ def run(test, params, env):
     driver_name = params["driver_name"]
     if params["os_type"] == "windows":
         utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+        balloon_test = BallooningTestWin(test, params, env)
 
     error.context("Play video in guest", logging.info)
     play_video_cmd = params["play_video_cmd"]

@@ -66,7 +66,7 @@ def run(test, params, env):
         info_test.destroy_vm()
 
         # get the disk image information
-        out = info_test.info()
+        out = info_test.info(params)
         info_test.check_backingfile(out)
         info_test.start_vm(n_params)
 

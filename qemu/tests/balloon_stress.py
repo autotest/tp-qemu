@@ -37,9 +37,8 @@ def run(test, params, env):
         session.cmd(params.get("pre_cmd"))
 
     driver_name = params["driver_name"]
-    if params["os_type"] == "windows":
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-        balloon_test = BallooningTestWin(test, params, env)
+    utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+    balloon_test = BallooningTestWin(test, params, env)
 
     error.context("Play video in guest", logging.info)
     play_video_cmd = params["play_video_cmd"]

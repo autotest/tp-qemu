@@ -30,7 +30,6 @@ def run(test, params, env):
     vm.verify_alive()
 
     default_memory = int(params.get("default_memory", params['mem']))
-    unit = vm.monitor.protocol == "qmp" and 1048576 or 1
     timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     # for media player configuration

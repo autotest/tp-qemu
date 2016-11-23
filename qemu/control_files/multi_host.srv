@@ -78,7 +78,7 @@ def run(machines):
                  cfg_file)
 
     if not os.path.exists(cfg_file):
-        specific_subdirs = asset.get_test_provider_subdirs("qemu")[0]
+        specific_subdirs = asset.get_test_provider_subdirs("multi_host_migration")[0]
         orig_cfg_file = os.path.join(specific_subdirs, "cfg",
                                      "multi-host-tests.cfg")
         if os.path.exists(orig_cfg_file):

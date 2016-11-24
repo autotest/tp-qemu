@@ -48,13 +48,13 @@ def run(test, params, env):
                                text="Wait for canceling block job") is None:
             raise error.TestFail("Wait job finish timeout in %ss" % timeout)
 
-    def verify_backingfile(except_backingfile):
+    def verify_backingfile(expect_backingfile):
         """
-        Got backingfile from monitor then verfiy it except_backingfile,
+        Got backingfile from monitor then verfiy it expect_backingfile,
         if not raise TestFail exception;
         """
         backing_file = vm.monitor.get_backingfile(device_id)
-        if backing_file != except_backingfile:
+        if backing_file != expect_backingfile:
             raise error.TestFail("Unexpect backingfile(%s)" % backing_file)
 
     def get_openingfiles():

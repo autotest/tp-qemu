@@ -15,7 +15,7 @@ from virttest import utils_misc
 def run(test, params, env):
     """
     Install/upgrade special kernel package via brew tool or link. And we have
-    another case 'kernel_install' can to this too, but this case has addational
+    another case 'kernel_install' can to this too, but this case has additional
     steps. In future, we will merge this to kernel_install case.
 
     1) Boot the vm
@@ -285,7 +285,6 @@ def run(test, params, env):
     verify_virtio = params.get("verify_virtio", "yes")
     args_removed = params.get("args_removed", "").split()
     args_added = params.get("args_added", "").split()
-    restore_initrd_cmd = ""
     virtio_drivers = params.get("virtio_drivers_list", "").split()
     kernel_version, kernel_rpm, firmware_rpm = get_kernel_rpm_link()
     knl_dbginfo_rpm = get_kernel_debuginfo_rpm_link()
@@ -309,7 +308,7 @@ def run(test, params, env):
         if is_virtio_driver_installed():
             install_virtio = "no"
     else:
-        logging.info("The guest kerenl is %s but expected is %s" %
+        logging.info("The guest kernel is %s but expected is %s" %
                      (guest_version, kernel_version))
 
         rpm_install_func = install_rpm
@@ -422,7 +421,7 @@ def run(test, params, env):
     guest_version = get_guest_kernel_version()
     if guest_version != kernel_version:
         raise error.TestFail("Fail to verify the guest kernel, \n"
-                             "Expceted version %s \n"
+                             "Expected version %s \n"
                              "In fact version %s \n" %
                              (kernel_version, guest_version))
 

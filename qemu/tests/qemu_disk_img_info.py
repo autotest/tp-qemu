@@ -1,5 +1,3 @@
-import re
-
 from autotest.client import utils
 from autotest.client.shared import error
 
@@ -14,24 +12,6 @@ class InfoTest(qemu_disk_img.QemuImgTest):
         self.tag = tag
         t_params = params.object_params(self.tag)
         super(InfoTest, self).__init__(test, t_params, env, self.tag)
-
-    def check_backingfile(self, out={}):
-        backingfile = re.search(r'backing file: +(.*)', out, re.M)
-        if self.base_tag:
-            if backingfile:
-                if not (self.base_image_filename in backingfile.group(0)):
-                    msg = "Expected backing file: %s" % self.base_image_filename
-                    msg += " Actual backing file: %s" % backingfile
-                    raise error.TestFail(msg)
-            else:
-                msg = ("Could not find backing file for image '%s'" %
-                       self.image_filename)
-                raise error.TestFail(msg)
-        else:
-            if backingfile:
-                msg = "Expected backing file is null"
-                msg += " Actual backing file: %s" % backingfile
-                raise error.TestFail(msg)
 
     def clean(self):
         params = self.params
@@ -54,26 +34,28 @@ def run(test, params, env):
         {"image_name_%s" % base_image: params["image_name"],
          "image_format_%s" % base_image: params["image_format"]})
     image_chain = params.get("image_chain", "").split()
+    check_files = []
+    md5_dict = {}
     for idx, tag in enumerate(image_chain):
         params["image_chain"] = " ".join(image_chain[:idx + 1])
         info_test = InfoTest(test, params, env, tag)
         n_params = info_test.create_snapshot()
         info_test.start_vm(n_params)
+        # check md5sum
+        for _file in check_files:
+            ret = info_test.check_file(_file, md5_dict[_file])
+            if not ret:
+                raise error.TestError("Check md5sum fail (file:%s)" % _file)
+        #save file in guest
         t_file = params["guest_file_name_%s" % tag]
         md5 = info_test.save_file(t_file)
         if not md5:
             raise error.TestError("Fail to save tmp file")
+        check_files.append(t_file)
+        md5_dict[t_file] = md5
         info_test.destroy_vm()
 
         # get the disk image information
-        out = info_test.info()
-        info_test.check_backingfile(out)
-        info_test.start_vm(n_params)
-
-        # check md5sum after info
-        ret = info_test.check_file(t_file, md5)
-        if not ret:
-            raise error.TestError("Check md5sum fail (file:%s)" % t_file)
-        info_test.destroy_vm()
+        info_test.check_backingfile()
 
     info_test.clean()

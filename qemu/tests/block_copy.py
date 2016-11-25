@@ -392,3 +392,27 @@ class BlockCopy(object):
         while self.trash_files:
             tmp_file = self.trash_files.pop()
             utils.system("rm -f %s" % tmp_file, ignore_status=True)
+
+    def create_file(self, file_name):
+        """
+        Create file and record m5 value of them.
+        :param file_name: the file need to be created
+        """
+        params = self.params
+        session = self.get_session()
+        file_create_cmd = params.get("create_cmd", "touch FILE")
+        test_exists_cmd = params.get("test_exists_cmd", "test -f FILE")
+        if session.cmd_status(test_exists_cmd.replace("FILE", file_name)):
+            session.cmd(file_create_cmd.replace("FILE", file_name))
+        session.cmd("md5sum %s > %s.md5" % (file_name, file_name))
+
+    def verify_md5(self, file_name):
+        """
+        Check if the md5 value match the record, raise TestFail if not.
+        :param file_name: the file need to be verified.
+        """
+        session = self.get_session()
+        status, output = session.cmd_status_output("md5sum -c %s.md5" % file_name)
+        if status != 0:
+            raise error.TestFail("File %s changed, md5sum check output: %s" %
+                                 (file_name, output))

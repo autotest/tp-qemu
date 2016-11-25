@@ -1,3 +1,4 @@
+from autotest.client.shared import utils
 from autotest.client.shared import error
 from qemu.tests import live_snapshot_basic
 
@@ -13,7 +14,23 @@ class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
         Reset guest with system_reset;
         """
         method = self.params.get("reboot_method", "system_reset")
-        return super(LiveSnapshotRuntime, self).reboot(method=method)
+        return super(LiveSnapshotRuntime, self).reboot(method=method, boot_check=False)
+
+    @error.context_aware
+    def action_when_start(self):
+        """
+        start pre-action in new threads;
+        do live snapshot during pre-action.
+        """
+        tag = self.params.get("source_image", "image1")
+        for test in self.params.get("when_start").split():
+            if hasattr(self, test):
+                fun = getattr(self, test)
+                bg = utils.InterruptedThread(fun)
+                bg.start()
+                if bg.isAlive():
+                    self.create_snapshot()
+                    bg.join()
 
 
 def run(test, params, env):
@@ -32,7 +49,6 @@ def run(test, params, env):
     runtime_test = LiveSnapshotRuntime(test, params, env, tag)
     try:
         runtime_test.action_when_start()
-        runtime_test.create_snapshot()
         runtime_test.action_after_finished()
     finally:
         try:

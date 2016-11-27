@@ -4,6 +4,9 @@ from autotest.client import utils
 from autotest.client.shared import error
 
 from virttest import storage
+from virttest import error_context
+
+from avocado.core import exceptions
 
 from qemu.tests import qemu_disk_img
 
@@ -33,6 +36,28 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         self.trash.append(converted)
         return params
 
+    @error_context.context_aware
+    def compare_test(self, t_params):
+        """
+        Compare images.
+
+        :param t_params: Dictionary with the test parameters
+        """
+        for mode in t_params.objects("compare_mode_list"):
+            error_context.context("Compare images in %s mode" % mode,
+                                  logging.info)
+            cmd_result = None
+            is_strict = ("strict" == mode)
+            image1 = self.image_filename
+            image2 = storage.get_image_filename(t_params, self.data_dir)
+            try:
+                cmd_result = self.compare_images(image1, image2, is_strict)
+            except (exceptions.TestFail, exceptions.TestError), detail:
+                if not is_strict:
+                    raise
+            if is_strict and cmd_result:
+                raise error.TestFail("images are identical in strict mode")
+
 
 def run(test, params, env):
     """
@@ -58,6 +83,7 @@ def run(test, params, env):
         raise error.TestError("Fail to save tmp file")
     convert_test.destroy_vm()
     n_params = convert_test.convert()
+    convert_test.compare_test(n_params)
     convert_test.verify_info(n_params)
     convert_test.start_vm(n_params)
 

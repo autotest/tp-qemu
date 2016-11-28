@@ -1,9 +1,11 @@
 import time
 import logging
+import random
 
 from autotest.client.shared import error
 from virttest import utils_misc
 from virttest import utils_test
+from qemu.tests.balloon_check import BallooningTestWin
 
 
 @error.context_aware
@@ -27,8 +29,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    default_memory = int(params.get("default_memory", 8192))
-    unit = vm.monitor.protocol == "qmp" and 1048576 or 1
+    default_memory = int(params.get("default_memory", params['mem']))
     timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     # for media player configuration
@@ -36,9 +37,8 @@ def run(test, params, env):
         session.cmd(params.get("pre_cmd"))
 
     driver_name = params["driver_name"]
-    if params["os_type"] == "windows":
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-    session = vm.wait_for_login(timeout=timeout)
+    utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+    balloon_test = BallooningTestWin(test, params, env)
 
     error.context("Play video in guest", logging.info)
     play_video_cmd = params["play_video_cmd"]
@@ -46,32 +46,24 @@ def run(test, params, env):
     # need to wait for wmplayer loading remote video
     time.sleep(float(params.get("loading_timeout", 60)))
     check_playing_cmd = params["check_playing_cmd"]
-    running = utils_misc.wait_for(lambda: session.cmd_status(
-        check_playing_cmd) == 0, first=5.0, timeout=600)
+    running = utils_misc.wait_for(lambda: utils_misc.get_guest_cmd_status_output(
+        vm, check_playing_cmd)[0] == 0, first=5.0, timeout=600)
     if not running:
-        raise error.TestError("Video do not playing")
+        raise error.TestError("Video is not playing")
 
+    #for case:balloon_in_use to call
     env["balloon_test"] = 0
     error.context("balloon vm memory in loop", logging.info)
     repeat_times = int(params.get("repeat_times", 10))
     logging.info("repeat times: %d" % repeat_times)
-    magnification = int(params.get("magnification", 512))
-    logging.info("memory decrease magnification: %d" % magnification)
-    start = magnification * unit
-    end = default_memory * unit
-    step = start
+    min_sz, max_sz = balloon_test.get_memory_boundary()
     while repeat_times:
-        for memory in xrange(start, end, step):
-            logging.debug("balloon vm mem to: %s B" % memory)
-            vm.monitor.send_args_cmd("balloon value=%s" % memory)
-            vm.monitor.query("balloon")
-            logging.debug("balloon vm mem to: %s B" % memory)
-            memory = end - memory
-            vm.monitor.send_args_cmd("balloon value=%s" % memory)
-            current_mem = vm.monitor.query("balloon")
-            if current_mem != memory:
-                env["balloon_test"] = 1
+        balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
+        env["balloon_test"] = 1
         repeat_times -= 1
+
     error.context("verify guest still alive", logging.info)
     session.cmd(params["stop_player_cmd"])
     vm.verify_alive()
+    if session:
+        session.close()

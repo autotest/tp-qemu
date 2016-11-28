@@ -54,10 +54,16 @@ def run(test, params, env):
         # Need to set bg_stress_run_flag in some cases to make sure all
         # necessary steps are active
         env[bg_stress_run_flag] = False
-        stress_thread = utils.InterruptedThread(
-            utils_test.run_virt_sub_test, (test, params, env),
-            {"sub_type": bg_stress_test})
-        stress_thread.start()
+        if params.get("bg_stress_test_is_cmd", "no") == "yes":
+            session = vm.wait_for_login()
+            bg_stress_test = utils_misc.set_winutils_letter(
+                session, bg_stress_test)
+            session.sendline(bg_stress_test)
+        else:
+            stress_thread = utils.InterruptedThread(
+                utils_test.run_virt_sub_test, (test, params, env),
+                {"sub_type": bg_stress_test})
+            stress_thread.start()
         if not utils_misc.wait_for(lambda: check_bg_running(target_process),
                                    120, 0, 1):
             raise exceptions.TestFail("Backgroud test %s is not "
@@ -95,8 +101,8 @@ def run(test, params, env):
     wait_time = float(params.get("wait_bg_time", 60))
     suppress_exception = params.get("suppress_exception", "no") == "yes"
 
-    error_context.context("Run sub test %s %s" % (sub_type, run_bg_flag),
-                          logging.info)
+    error_context.context("Run %s %s %s" % (sub_type, run_bg_flag,
+                                            bg_stress_test), logging.info)
     if run_bg_flag == "before_bg_test":
         run_subtest(sub_type)
         if vm.is_dead():

@@ -1,12 +1,13 @@
 import logging
 import re
 import time
-from autotest.client.shared import error
+from avocado.core import exceptions
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM driver load test:
@@ -21,72 +22,89 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def load_driver(session, cmd, driver_id):
+    def load_driver(cmd, driver_id):
+        """
+        Load driver
+        :param cmd: Driver load cmd
+        :param driver_id: Driver id in windows guest
+        """
+        nic_index = len(vm.virtnet) - 1
+        session = vm.wait_for_login(nic_index=nic_index)
         if params["os_type"] == "windows":
             cmd = cmd.replace("DRIVER_ID", driver_id)
 
         status, output = session.cmd_status_output(cmd)
+        session.close()
         if status != 0:
-            raise error.TestFail("failed to load driver, %s" % output)
-        if params["os_type"] == "windows":
-            if "device(s) are enabled" not in output:
-                raise error.TestFail("failed to load driver, %s" % output)
+            raise exceptions.TestFail("failed to load driver, %s" % output)
 
-    def unload_driver(session, cmd, driver_id):
+    def unload_driver(cmd, driver_id):
+        """
+        Unload driver
+        :param cmd: Driver unload cmd
+        :param driver_id: Driver id in windows guest
+        """
+        nic_index = len(vm.virtnet) - 1
+        session = vm.wait_for_login(nic_index=nic_index)
         if params["os_type"] == "windows":
             cmd = cmd.replace("DRIVER_ID", driver_id)
 
         status, output = session.cmd_status_output(cmd)
+        session.close()
         if status != 0:
-            raise error.TestFail("failed to unload driver, %s" % output)
-        if params["os_type"] == "windows":
-            if "device(s) disabled" not in output:
-                raise error.TestFail("failed to unload driver, %s" % output)
+            if "reboot" in output:
+                vm.reboot()
+                session.close()
+            else:
+                raise exceptions.TestFail("failed to unload driver, %s" %
+                                          output)
 
-    def check_driver(session, cmd, pattern):
+    def get_driver_id(cmd, pattern):
+        """
+        Get driver id from guest
+        :param cmd: cmd to get driver info
+        :param pattern: pattern to filter driver id
+        """
+        nic_index = len(vm.virtnet) - 1
+        session = vm.wait_for_login(nic_index=nic_index)
         output = session.cmd_output(cmd)
         driver_id = re.findall(pattern, output)
         if not driver_id:
-            raise error.TestFail("Didn't find driver info from guest %s"
-                                 % output)
+            raise exceptions.TestFail("Didn't find driver info from guest %s"
+                                      % output)
 
         driver_id = driver_id[0]
         if params["os_type"] == "windows":
             driver_id = '^&'.join(driver_id.split('&'))
+        session.close()
         return driver_id
 
-    error.context("Try to log into guest.", logging.info)
+    error_context.context("Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
-    # Use the last nic for send driver load/unload command
-    nic_index = len(vm.virtnet) - 1
-    session = vm.wait_for_login(nic_index=nic_index, timeout=timeout)
+    session = vm.wait_for_login(timeout=timeout)
 
-    driver_id_cmd = params["driver_id_cmd"]
     driver_id_pattern = params["driver_id_pattern"]
-    driver_load_cmd = params["driver_load_cmd"]
-    driver_unload_cmd = params["driver_unload_cmd"]
-
-    devcon = params.get("devcon")
-    if devcon:
-        error.context("Copy devcon.exe from winutils.iso to C:\\")
-        copy_devcon_cmd = params.get("devcon") % \
-            utils_misc.get_winutils_vol(session)
-        session.cmd(copy_devcon_cmd)
+    driver_id_cmd = utils_misc.set_winutils_letter(
+        session, params["driver_id_cmd"])
+    driver_load_cmd = utils_misc.set_winutils_letter(
+        session, params["driver_load_cmd"])
+    driver_unload_cmd = utils_misc.set_winutils_letter(
+        session, params["driver_unload_cmd"])
+    session.close()
 
     for repeat in range(0, int(params.get("repeats", 1))):
-        error.context("Unload and load the driver. Round %s" % repeat,
-                      logging.info)
-        error.context("Get driver info from guest", logging.info)
-        driver_id = check_driver(session, driver_id_cmd, driver_id_pattern)
+        error_context.context("Unload and load the driver. Round %s" % repeat,
+                              logging.info)
+        logging.info("Get driver info from guest")
+        driver_id = get_driver_id(driver_id_cmd, driver_id_pattern)
 
-        error.context("Unload the driver", logging.info)
-        unload_driver(session, driver_unload_cmd, driver_id)
+        error_context.context("Unload the driver", logging.info)
+        unload_driver(driver_unload_cmd, driver_id)
         time.sleep(5)
-
-        error.context("Load the driver", logging.info)
-        load_driver(session, driver_load_cmd, driver_id)
+        error_context.context("Load the driver", logging.info)
+        load_driver(driver_load_cmd, driver_id)
         time.sleep(5)
 
     test_after_load = params.get("test_after_load")

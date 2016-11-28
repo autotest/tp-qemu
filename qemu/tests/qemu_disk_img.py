@@ -11,6 +11,8 @@ from virttest import storage
 from virttest import qemu_storage
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import error_context
+from avocado.core import exceptions
 
 
 class QemuImgTest(qemu_storage.QemuImg):
@@ -175,6 +177,27 @@ class QemuImgTest(qemu_storage.QemuImg):
                 msg = "Get wrong %s from image %s!" % (option, image_filename)
                 msg += "Expect: %s, actual: %s" % (evalue, avalue)
                 raise error.TestFail(msg)
+
+    @error_context.context_aware
+    def check_backingfile(self):
+        error_context.context("check image('%s') backing file" %
+                              self.image_filename, logging.info)
+        out = self.get_info()
+        try:
+            backingfile = re.search(r'backing file: +(.*)', out, re.M).group(1)
+            if not self.base_tag or self.base_tag == "null":
+                msg = ("Expected backing file is null")
+                msg += " Actual backing file: %s" % backingfile
+                raise exceptions.TestFail(msg)
+            elif backingfile != self.base_image_filename:
+                msg = ("Expected backing file: %s" % self.base_image_filename)
+                msg += " Actual backing file: %s" % backingfile
+                raise exceptions.TestFail(msg)
+        except AttributeError:
+            if self.base_tag and self.base_tag != "null":
+                msg = ("Could not find backing file for image '%s'" %
+                       self.image_filename)
+                raise exceptions.TestFail(msg)
 
     @error.context_aware
     def clean(self):

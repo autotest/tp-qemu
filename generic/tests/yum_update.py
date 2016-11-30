@@ -43,8 +43,9 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    internal_yum_update(session, "yum update", params.get("shell_prompt"), 600)
-    internal_yum_update(session, "yum update kernel",
+    internal_yum_update(session, "yum update --nogpgcheck",
+                        params.get("shell_prompt"), 600)
+    internal_yum_update(session, "yum update kernel --nogpgcheck",
                         params.get("shell_prompt"), 600)
 
     session.close()

@@ -50,7 +50,7 @@ def run(test, params, env):
 
     def verify_backingfile(expect_backingfile):
         """
-        Got backingfile from monitor then verfiy it expect_backingfile,
+        Got backingfile from monitor then verify it with expect_backingfile,
         if not raise TestFail exception;
         """
         backing_file = vm.monitor.get_backingfile(device_id)

@@ -59,12 +59,11 @@ def run(test, params, env):
 
         return map(retrieve_log, driver_logs.split(','))
 
-    def reboot(vm, session=None, timeout=600):
+    def reboot(vm, timeout=600):
         """
         Reboot guest.
 
         :param vm: VM onject.
-        :param session: VM session.
         """
         nic_idx = len(vm.virtnet) - 1
         while nic_idx >= 0:
@@ -140,19 +139,20 @@ def run(test, params, env):
     try:
         error_context.context("Show file extentions", logging.info)
         show_file_extentions(session)
-        session = reboot(vm, session)
+        session.close()
+        session = reboot(vm)
 
         uninstall_flag = params.get("need_uninstall", "no")
         if uninstall_flag == "yes":
             operation = "uninstall_driver"
             error_context.context("Uninstall driver", logging.info)
             install_driver(session, operation)
-            session = reboot(vm, session)
+            session = reboot(vm)
 
         operation = "install_driver"
         error_context.context("Install driver", logging.info)
         install_driver(session, operation)
-        session = reboot(vm, session)
+        session = reboot(vm)
 
         if uninstall_flag == "no":
             operation = "verify_driver"

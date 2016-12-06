@@ -210,12 +210,13 @@ class BallooningTest(MemoryBaseTest):
             elif should_quit == 0:
                 expect_mem = self.ori_mem
 
-            timeout = int(self.params.get("balloon_timeout", 100))
+            sleep_before_check = int(self.params.get("sleep_before_check", 0))
+            timeout = int(self.params.get("balloon_timeout", 100)) + sleep_before_check
             ballooned_mem = abs(self.ori_mem - expect_mem)
             msg = "Wait memory balloon back after "
             msg += params_tag['sub_test_after_balloon']
             mmem, gmem = utils_misc.wait_for(_memory_check_after_sub_test,
-                                             timeout, 0, 5, msg)
+                                             timeout, sleep_before_check, 5, msg)
 
             self.current_mmem = mmem
             self.current_gmem = gmem

@@ -197,6 +197,8 @@ def run(test, params, env):
                       logging.info)
         file_transfer(src_ip_info[2], src_ip_info[1], host_ip)
         for dst_ip in nic_interface_list[src_ip_index:]:
+            if src_ip_info[1] == dst_ip[1]:
+                continue
             txt = "Ping test between %s and %s" % (src_ip_info[1], dst_ip[1])
             error.context(txt, logging.info)
             ping(src_ip_info[2], src_ip_info[0], dst_ip[1], strict_check,

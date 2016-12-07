@@ -9,6 +9,9 @@ from autotest.client.shared import error
 from virttest import remote
 from virttest import utils_misc
 from virttest import utils_net
+from virttest import env_process
+
+from virttest.staging import utils_memory
 
 
 @error.context_aware
@@ -47,17 +50,23 @@ def run(test, params, env):
     mon_process_timeout = int(params.get("mon_process_timeout", "1200"))
     sessions = []
     addresses = []
-    vms = []
+    vms = params["vms"].split()
+    host_cmd_output = utils.system_output("sync && echo 3 > /proc/sys/vm/drop_caches")
+    host_free_mem = utils_memory.freememtotal() / 1024
+    params['mem'] = int(((host_free_mem * 1.2 / len(vms)) / 64 + 1) * 64)
+    params["start_vm"] = "yes"
 
     error.context("Init boot the vms")
-    for vm_name in params.get("vms", "vm1 vm2 vm3").split():
-        vms.append(env.get_vm(vm_name))
-    for vm in vms:
+    for vm_name in vms:
+        env_process.preprocess_vm(test, params, env, vm_name)
+        vm = env.get_vm(vm_name)
         vm.verify_alive()
         sessions.append(vm.wait_for_login(timeout=timeout))
         addresses.append(vm.get_address())
-    mon_session = vms[2].wait_for_login(timeout=timeout)
-    mon_macaddr = vms[2].get_mac_address()
+
+    vm = env.get_vm(vms[2])
+    mon_session = vm.wait_for_login(timeout=timeout)
+    mon_macaddr = vm.get_mac_address()
 
     src_file = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
     dst_file = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))

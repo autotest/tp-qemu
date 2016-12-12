@@ -27,16 +27,14 @@ def run(test, params, env):
     qemu_binary = utils_misc.get_qemu_binary(params)
     if not utils_misc.qemu_has_option("qmp", qemu_binary):
         logging.warn("qemu does not support qmp. Human monitor will be used.")
-    qmp_used = False
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     logging.info("Wait until device is ready")
     time.sleep(10)
-    if vm.monitor.protocol == "qmp":
-        qmp_used = True
 
+    eject_from_guest = params.get("eject_from_guest", "no")
     orig_img_name = params.get("cdrom_cd1")
     p_dict = {"file": orig_img_name}
     device_name = vm.get_block(p_dict)
@@ -64,7 +62,7 @@ def run(test, params, env):
     blocks_info = vm.monitor.info("block")
     if new_img_name not in str(blocks_info):
         raise error.TestFail("Fail to chang cdrom to %s." % new_img_name)
-    if qmp_used:
+    if eject_from_guest == "no":
         eject_cmd = "eject device=%s, force=True" % device_name
     else:
         eject_cmd = "eject device=%s" % device_name
@@ -92,7 +90,7 @@ def run(test, params, env):
     if device_name is None:
         raise error.TestFail("Could not find non-removable device")
     if params.get("force_eject", "no") == "yes":
-        if not qmp_used:
+        if eject_from_guest == "yes":
             eject_cmd = "eject -f %s " % device_name
         else:
             eject_cmd = "eject device=%s, force=True" % device_name

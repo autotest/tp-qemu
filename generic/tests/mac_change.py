@@ -1,5 +1,6 @@
 import re
 import logging
+import time
 
 from autotest.client.shared import error
 
@@ -113,6 +114,7 @@ def run(test, params, env):
             if os_variant == "winxp":
                 connection_id = pnpdevice_id.split("&")[-1]
                 mode = "devcon"
+            time.sleep(10)
             utils_net.restart_windows_guest_network(session_serial,
                                                     connection_id,
                                                     mode=mode)
@@ -159,6 +161,7 @@ def run(test, params, env):
             clean_cmd_pattern = params.get("clean_cmd")
             clean_cmd = clean_cmd_pattern % int(nic_index)
             session_serial.cmd_output_safe(clean_cmd)
+            time.sleep(10)
             utils_net.restart_windows_guest_network(session_serial,
                                                     connection_id,
                                                     mode=mode)

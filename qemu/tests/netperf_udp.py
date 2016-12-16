@@ -66,6 +66,9 @@ def run(test, params, env):
     host_password = params.get("hostpassword")
     client = params.get("shell_client")
     port = params.get("shell_port")
+    prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
+    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
 
@@ -118,6 +121,9 @@ def run(test, params, env):
                                                  client, port,
                                                  username=guest_username,
                                                  password=guest_password,
+                                                 prompt=prompt,
+                                                 linesep=linesep,
+                                                 status_test_command=status_test_command,
                                                  compile_option=compile_option_client)
 
     netperf_server = utils_netperf.NetperfServer(netserver_ip,
@@ -127,6 +133,9 @@ def run(test, params, env):
                                                  s_client, s_port,
                                                  username=s_username,
                                                  password=s_password,
+                                                 prompt=prompt,
+                                                 linesep=linesep,
+                                                 status_test_command=status_test_command,
                                                  compile_option=compile_option_server)
 
     # Get range of message size.

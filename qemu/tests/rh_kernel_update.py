@@ -88,8 +88,9 @@ def run(test, params, env):
         rh_kernel_hint = "[\d+][^\s]+"
         kernel_re = params.get("kernel_re")
         tag = params.get("brew_tag")
+        kbuild_name = params.get("kernel_build_name", "kernel")
 
-        latest_pkg_cmd = "brew latest-pkg %s kernel" % tag
+        latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
         o = utils.system_output(latest_pkg_cmd, timeout=360)
         build = re.findall("kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %
@@ -131,8 +132,9 @@ def run(test, params, env):
     def get_kernel_debuginfo_rpm_link():
         knl_dbginfo_re = params.get("knl_dbginfo_re")
         tag = params.get("brew_tag")
+        kbuild_name = params.get("kernel_build_name", "kernel")
 
-        latest_pkg_cmd = "brew latest-pkg %s kernel" % tag
+        latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
         o = utils.system_output(latest_pkg_cmd, timeout=360)
         build = re.findall("kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %

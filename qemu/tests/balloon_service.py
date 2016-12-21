@@ -11,24 +11,27 @@ from avocado.core import exceptions
 from aexpect import ShellCmdError
 from virttest.utils_test.qemu import MemoryBaseTest
 from qemu.tests.balloon_check import BallooningTestWin
+from qemu.tests.balloon_check import BallooningTestLinux
 
 
 @error_context.context_aware
 def run(test, params, env):
     """
-    Balloon service test for windows guest.
-    1) boot a windows guest with balloon device.
-    2) enable and check driver verifier in guest.
-    3) install balloon service in guest.
+    Balloon service test, i.e. guest-stats-polling-interval test.
+    1) boot a guest with balloon device.
+    2) enable and check driver verifier in guest(only for windows guest).
+    3) install balloon service in guest(only for windows guest).
     4) enable polling in qmp.
-    5) evict and enlarge balloon.
-    6) get polling value in qmp.
-    7) uninstall balloon service and clear driver verifier.
+    5) evict / enlarge balloon.
+    6) get polling value in qmp, then do memory check if necessary.
+    7) repeat steps 5) and 6) for multi times
+    8) uninstall balloon service and clear driver verifier(only for
+       windows guest).
     """
 
     def get_disk_vol(session):
         """
-        Get virtio-win disk volume letter.
+        Get virtio-win disk volume letter for windows guest.
 
         :param session: VM session.
         """
@@ -41,7 +44,7 @@ def run(test, params, env):
 
     def config_balloon_service(session, drive_letter):
         """
-        Check / Install balloon service.
+        Check / Install balloon service for windows guest.
 
         :param session: VM session.
         :param drive_letter: virtio-win disk volume letter.
@@ -97,17 +100,21 @@ def run(test, params, env):
                                       (keyname, guest_mem, stat_memory_qmp,
                                        check_mem_ratio))
 
-    def balloon_memory(session, device_path):
+    def balloon_memory(vm, device_path, mem_check):
         """
         Doing memory balloon in a loop and check memory status during balloon.
 
-        :param session: VM session.
+        :param vm: VM object.
         :param device_path: balloon polling path.
+        :param mem_check: need to do memory check if param mem_check is 'yes'
         """
         repeat_times = int(params.get("repeat_times", 5))
         logging.info("repeat times: %d" % repeat_times)
-        balloon_test = BallooningTestWin(test, params, env)
-        balloon_test = BallooningTestWin(test, params, env)
+
+        if params['os_type'] == 'windows':
+            balloon_test = BallooningTestWin(test, params, env)
+        else:
+            balloon_test = BallooningTestLinux(test, params, env)
         min_sz, max_sz = balloon_test.get_memory_boundary()
         while repeat_times:
             for tag in params.objects('test_tags'):
@@ -115,9 +122,11 @@ def run(test, params, env):
                 params_tag = params.object_params(tag)
                 balloon_type = params_tag['balloon_type']
                 if balloon_type == 'evict':
-                    expect_mem = int(random.uniform(min_sz, balloon_test.get_ballooned_memory()))
+                    expect_mem = int(random.uniform(min_sz,
+                                     balloon_test.get_ballooned_memory()))
                 else:
-                    expect_mem = int(random.uniform(balloon_test.get_ballooned_memory(), max_sz))
+                    expect_mem = int(random.uniform(
+                        balloon_test.get_ballooned_memory(), max_sz))
 
                 quit_after_test = balloon_test.run_ballooning_test(expect_mem,
                                                                    tag)
@@ -125,14 +134,15 @@ def run(test, params, env):
                 get_polling_output = vm.monitor.qom_get(device_path,
                                                         get_balloon_property)
                 time.sleep(20)
-                memory_check(vm, get_polling_output, 'stat-free-memory')
+                if mem_check == "yes":
+                    memory_check(vm, get_polling_output, 'stat-free-memory')
                 if quit_after_test:
                     return
 
             repeat_times -= 1
 
     timeout = int(params.get("login_timeout", 360))
-    driver_name = params.get("driver_name", "balloon")
+    mem_check = params.get("mem_check", "yes")
 
     error_context.context("Boot guest with balloon device", logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -148,12 +158,15 @@ def run(test, params, env):
     polling_interval = int(params.get("polling_interval", 2))
 
     try:
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-
-        error_context.context("Config balloon service in guest", logging.info)
         session = vm.wait_for_login(timeout=timeout)
-        drive_letter = get_disk_vol(session)
-        config_balloon_service(session, drive_letter)
+        if params['os_type'] == 'windows':
+            driver_name = params.get("driver_name", "balloon")
+            utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+
+            error_context.context("Config balloon service in guest",
+                                  logging.info)
+            drive_letter = get_disk_vol(session)
+            config_balloon_service(session, drive_letter)
 
         error_context.context("Enable polling in qemu", logging.info)
         vm.monitor.qom_set(device_path, set_balloon_property, polling_interval)
@@ -163,10 +176,12 @@ def run(test, params, env):
         memory_check(vm, get_polling_output, 'stat-total-memory')
 
         error_context.context("Balloon vm memory in loop", logging.info)
-        balloon_memory(session, device_path)
+        balloon_memory(vm, device_path, mem_check)
 
     finally:
-        error_context.context("Clear balloon service in guest", logging.info)
-        uninstall_cmd = params["uninstall_balloon_service"] % drive_letter
-        session.cmd(uninstall_cmd, ignore_all_errors=True)
+        if params['os_type'] == 'windows':
+            error_context.context("Clear balloon service in guest",
+                                  logging.info)
+            uninstall_cmd = params["uninstall_balloon_service"] % drive_letter
+            session.cmd(uninstall_cmd, ignore_all_errors=True)
         session.close()

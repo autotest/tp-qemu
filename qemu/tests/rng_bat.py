@@ -1,6 +1,7 @@
 import re
 import logging
 import aexpect
+import time
 
 from virttest import utils_misc
 from virttest import error_context
@@ -119,8 +120,17 @@ def run(test, params, env):
         logging.info("register 'viorngum.dll' into system")
         session.cmd(rng_dll_register_cmd, timeout=120)
 
-    output = session.cmd_output(read_rng_cmd, timeout=read_rng_timeout)
-    if len(re.findall(rng_data_rex, output, re.M)) < 2:
-        raise exceptions.TestFail("Unable to read random numbers from"
-                                  "guest: %s" % output)
+    if params.get("test_duration"):
+        start_time = time.time()
+        while (time.time() - start_time) < float(params.get("test_duration")):
+            output = session.cmd_output(read_rng_cmd,
+                                        timeout=read_rng_timeout)
+            if len(re.findall(rng_data_rex, output, re.M)) < 2:
+                raise exceptions.TestFail("Unable to read random numbers from"
+                                          "guest: %s" % output)
+    else:
+        output = session.cmd_output(read_rng_cmd, timeout=read_rng_timeout)
+        if len(re.findall(rng_data_rex, output, re.M)) < 2:
+            raise exceptions.TestFail("Unable to read random numbers from"
+                                      "guest: %s" % output)
     session.close()

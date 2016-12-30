@@ -1,5 +1,6 @@
-import logging
 import os
+import re
+import logging
 
 from autotest.client.shared import error
 from autotest.client import utils
@@ -33,6 +34,23 @@ def max_mem_map_node(host_numa_node, qemu_pid):
             memory_sz_map_most = memory_status[index]
             node_map_most = node_list[index]
     return (node_map_most, memory_sz_map_most)
+
+
+def get_tmpfs_write_speed():
+    """
+    Get the tmpfs write speed of the host
+    return: The write speed of tmpfs, the unit is kb/s.
+    """
+    utils.run("mkdir /tmp/test_speed && mount -t tmpfs none /tmp/test_speed")
+    output = utils.run("dd if=/dev/urandom of=/tmp/test_speed/test bs=1k count=1024")
+    try:
+        speed = re.search("\s([\w\s\.]+)/s", output.stderr, re.I).group(1)
+        return float(utils_misc.normalize_data_size(speed, 'K', 1024))
+    except Exception:
+        return 3072
+    finally:
+        os.remove("/tmp/test_speed/test")
+        utils.run("umount /tmp/test_speed")
 
 
 @error.context_aware
@@ -73,7 +91,7 @@ def run(test, params, env):
             tmpfs_size = node_mem
     tmpfs_path = params.get("tmpfs_path", "tmpfs_numa_test")
     tmpfs_path = utils_misc.get_path(data_dir.get_tmp_dir(), tmpfs_path)
-    tmpfs_write_speed = int(params.get("tmpfs_write_speed", 10240))
+    tmpfs_write_speed = get_tmpfs_write_speed()
     dd_timeout = tmpfs_size / tmpfs_write_speed * 1.5
     mount_fs_size = "size=%dK" % tmpfs_size
     memory_file = utils_misc.get_path(tmpfs_path, "test")

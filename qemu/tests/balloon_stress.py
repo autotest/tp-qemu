@@ -1,14 +1,14 @@
-import time
 import logging
 import random
 
-from autotest.client.shared import error
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import error_context
+from avocado.core import exceptions
 from qemu.tests.balloon_check import BallooningTestWin
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu balloon device stress test:
@@ -25,35 +25,32 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    error.context("Boot guest with balloon device", logging.info)
+    error_context.context("Boot guest with balloon device", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    default_memory = int(params.get("default_memory", params['mem']))
     timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
-    # for media player configuration
-    if params.get("pre_cmd"):
-        session.cmd(params.get("pre_cmd"))
 
     driver_name = params["driver_name"]
     utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
     balloon_test = BallooningTestWin(test, params, env)
 
-    error.context("Play video in guest", logging.info)
-    play_video_cmd = params["play_video_cmd"]
-    session.sendline(play_video_cmd)
-    # need to wait for wmplayer loading remote video
-    time.sleep(float(params.get("loading_timeout", 60)))
+    video_play = utils_misc.InterruptedThread(
+        utils_test.run_virt_sub_test, (test, params, env),
+        {"sub_type": params.get("sub_test")})
+    video_play.start()
+    error_context.context("Run video background", logging.info)
     check_playing_cmd = params["check_playing_cmd"]
-    running = utils_misc.wait_for(lambda: utils_misc.get_guest_cmd_status_output(
-        vm, check_playing_cmd)[0] == 0, first=5.0, timeout=600)
+    running = utils_misc.wait_for(
+        lambda: utils_misc.get_guest_cmd_status_output(
+            vm, check_playing_cmd)[0] == 0, first=60, timeout=600)
     if not running:
-        raise error.TestError("Video is not playing")
+        raise exceptions.TestError("Video is not playing")
 
-    #for case:balloon_in_use to call
+    # for case:balloon_in_use to call
     env["balloon_test"] = 0
-    error.context("balloon vm memory in loop", logging.info)
+    error_context.context("balloon vm memory in loop", logging.info)
     repeat_times = int(params.get("repeat_times", 10))
     logging.info("repeat times: %d" % repeat_times)
     min_sz, max_sz = balloon_test.get_memory_boundary()
@@ -62,8 +59,7 @@ def run(test, params, env):
         env["balloon_test"] = 1
         repeat_times -= 1
 
-    error.context("verify guest still alive", logging.info)
-    session.cmd(params["stop_player_cmd"])
+    error_context.context("verify guest still alive", logging.info)
     vm.verify_alive()
     if session:
         session.close()

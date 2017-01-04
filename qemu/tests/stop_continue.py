@@ -92,3 +92,5 @@ def run(test, params, env):
             op_timeout = float(params.get("clean_op_timeout", 60))
             session.cmd(clean_op, timeout=op_timeout, ignore_all_errors=True)
         session.close()
+        if session_bg:
+            session_bg.close()

@@ -33,7 +33,7 @@ def run(test, params, env):
         o = storage.get_image_filename(image_params, data_dir.get_data_dir())
         return o
 
-    def find_disk(session, cmd):
+    def find_disk(vm, cmd):
         """
         Find all disks in guest.
         """
@@ -43,8 +43,10 @@ def run(test, params, env):
             pattern = "^\d+"
             cmd = params.get("get_disk_index", "wmic diskdrive get index")
 
+        session = vm.wait_for_login(timeout=timeout)
         output = session.cmd_output_safe(cmd)
         disks = re.findall(pattern, output, re.M)
+        session.close()
         return disks
 
     def get_new_disk(disk1, disk2):
@@ -73,8 +75,6 @@ def run(test, params, env):
         error_context.context("Hotplug block device (iteration %d)" % i,
                               logging.info)
 
-        session = vm.wait_for_login(timeout=timeout)
-
         sub_type = params.get("sub_type_before_plug")
         if sub_type:
             error_context.context(context_msg % (sub_type, "before hotplug"),
@@ -93,7 +93,7 @@ def run(test, params, env):
                         err = "%s is not in qtree after hotplug" % controller_model
                         raise exceptions.TestFail(err)
 
-                disks_before_plug = find_disk(session, get_disk_cmd)
+                disks_before_plug = find_disk(vm, get_disk_cmd)
 
                 drive = qdevices.QRHDrive("block%d" % num)
                 drive.set_param("file", find_image(img_list[num + 1]))
@@ -110,14 +110,14 @@ def run(test, params, env):
                     raise exceptions.TestFail(err)
                 time.sleep(pause)
 
-                disks_after_plug = find_disk(session, get_disk_cmd)
+                disks_after_plug = find_disk(vm, get_disk_cmd)
                 new_disks = get_new_disk(disks_before_plug, disks_after_plug)
             else:
                 if params.get("drive_format") in pci_type:
                     get_disk_cmd += " | egrep -v '^/dev/[hsv]da[0-9]*$'"
 
                 device.set_param("id", img_list[num + 1])
-                new_disks = find_disk(session, get_disk_cmd)
+                new_disks = find_disk(vm, get_disk_cmd)
 
             device_list.append(device)
             if not new_disks:
@@ -136,7 +136,9 @@ def run(test, params, env):
                 else:
                     test_cmd = re.sub("PCI_NUM", "%s" % (num + 1),
                                       params.get("pci_test_cmd"))
+                session = vm.wait_for_login(timeout=timeout)
                 s, o = session.cmd_status_output(test_cmd, timeout=disk_op_timeout)
+                session.close()
                 if s:
                     raise exceptions.TestFail("Check for block device failed "
                                               "after hotplug, Output: %r" % o)

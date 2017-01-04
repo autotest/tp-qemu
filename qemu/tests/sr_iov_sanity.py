@@ -3,13 +3,15 @@ import re
 import time
 import random
 import logging
+from netaddr import *
 
 from autotest.client.shared import error
+from avocado.core import exceptions
 from autotest.client.shared import utils
 
+from virttest import utils_test
 from virttest import test_setup
 from virttest import utils_net
-from virttest import utils_misc
 from virttest import env_process
 
 
@@ -34,14 +36,15 @@ def ifup_down_interface(interface, action="up"):
             if "UP" in status.splitlines()[0]:
                 utils.system("ifdown %s" % interface, timeout=120,
                              ignore_status=True)
-            utils.system("ifup %s" % interface, timeout=120, ignore_status=True)
+            utils.system("ifup %s" % interface,
+                         timeout=120, ignore_status=True)
     elif action == "down":
         if "UP" in status.splitlines()[0]:
             utils.system("ifdown %s" % interface, timeout=120,
                          ignore_status=True)
     else:
         msg = "Unsupport action '%s' on network interface." % action
-        raise error.TestError(msg)
+        raise exceptions.TestError(msg)
 
 
 @error.context_aware
@@ -63,14 +66,20 @@ def run(test, params, env):
 
     device_driver = params.get("device_driver", "pci-assign")
     repeat_time = int(params.get("bind_repeat_time", 1))
+    configure_on_host = int(params.get("configure_on_host", 1))
+    static_ip = int(params.get("static_ip", 1))
+    serial_login = params.get("serial_login", "no")
     pci_assignable = test_setup.PciAssignable(
         driver=params.get("driver"),
         driver_option=params.get("driver_option"),
-        host_set_flag=1,
+        host_set_flag=params.get("host_set_flag", 1),
         kvm_params=params.get("kvm_default"),
         vf_filter_re=params.get("vf_filter_re"),
         pf_filter_re=params.get("pf_filter_re"),
-        device_driver=device_driver)
+        device_driver=device_driver,
+        static_ip=int(params.get("static_ip", 0)),
+        net_mask=params.get("net_mask"),
+        start_addr_PF=params.get("start_addr_PF"))
 
     devices = []
     device_type = params.get("device_type", "vf")
@@ -78,13 +87,13 @@ def run(test, params, env):
         device_num = pci_assignable.get_vfs_count()
         if device_num == 0:
             msg = " No VF device found even after running SR-IOV setup"
-            raise error.TestFail(msg)
+            raise exceptions.TestSkipError(msg)
     elif device_type == "pf":
         device_num = len(pci_assignable.get_pf_vf_info())
     else:
         msg = "Unsupport device type '%s'." % device_type
         msg += " Please set device_type to 'vf' or 'pf'."
-        raise error.TestError(msg)
+        raise exceptions.TestError(msg)
 
     for i in xrange(device_num):
         device = {}
@@ -104,30 +113,34 @@ def run(test, params, env):
     ethname_dict = []
     ips = {}
 
-    msg = "Configure all VFs in host."
-    error.context(msg, logging.info)
-    for pci_id in vf_pci_id:
-        cmd = "ls /sys/bus/pci/devices/%s/net/" % pci_id
-        ethname = utils.system_output(cmd).strip()
-        ethname_dict.append(ethname)
-        network_script = os.path.join("/etc/sysconfig/network-scripts",
-                                      "ifcfg-%s" % ethname)
-        if not os.path.exists(network_script):
-            error.context("Create %s file." % network_script, logging.info)
-            txt = "DEVICE=%s\nONBOOT=yes\nBOOTPROTO=dhcp\n" % ethname
-            file(network_script, "w").write(txt)
+    # Not all test environments would have a dhcp server to serve IP for
+    # all mac addresses. So configure_on_host param has been
+    # introduced to choose whether configure VFs on host or not
+    if (configure_on_host):
+        msg = "Configure all VFs in host."
+        error.context(msg, logging.info)
+        for pci_id in vf_pci_id:
+            cmd = "ls /sys/bus/pci/devices/%s/net/" % pci_id['vf_id']
+            ethname = utils.system_output(cmd).strip()
+            ethname_dict.append(ethname)
+            network_script = os.path.join("/etc/sysconfig/network-scripts",
+                                          "ifcfg-%s" % ethname)
+            if not os.path.exists(network_script):
+                error.context("Create %s file." % network_script, logging.info)
+                txt = "DEVICE=%s\nONBOOT=yes\nBOOTPROTO=dhcp\n" % ethname
+                file(network_script, "w").write(txt)
 
-    msg = "Check whether VFs could get ip in host."
-    error.context(msg, logging.info)
-    for ethname in ethname_dict:
-        ifup_down_interface(ethname)
-        _ip = check_network_interface_ip(ethname)
-        if not _ip:
-            msg = "Interface '%s' could not get IP." % ethname
-            logging.error(msg)
-        else:
-            ips[ethname] = _ip
-            logging.info("Interface '%s' get IP '%s'", ethname, _ip)
+        msg = "Check whether VFs could get ip in host."
+        error.context(msg, logging.info)
+        for ethname in ethname_dict:
+            ifup_down_interface(ethname)
+            _ip = check_network_interface_ip(ethname)
+            if not _ip:
+                msg = "Interface '%s' could not get IP." % ethname
+                logging.error(msg)
+            else:
+                ips[ethname] = _ip
+                logging.info("Interface '%s' get IP '%s'", ethname, _ip)
 
     for i in xrange(repeat_time):
         msg = "Bind/unbind device from host. Repeat %s/%s" % (i + 1,
@@ -148,28 +161,68 @@ def run(test, params, env):
             msg = "lspci cannot report the correct PF/VF number."
             msg += " Correct number is '%s'" % device_num
             msg += " lspci report '%s'" % post_device_num
-            raise error.TestFail(msg)
+            raise exceptions.TestFail(msg)
     dmesg = utils.system_output("dmesg")
     file_name = "host_dmesg_after_unbind_device.txt"
     logging.info("Log dmesg after bind/unbing device to '%s'.", file_name)
-    utils_misc.log_line(file_name, dmesg)
-    msg = "Check whether VFs still get ip in host."
-    error.context(msg, logging.info)
-    for ethname in ips:
-        ifup_down_interface(ethname, action="up")
-        _ip = check_network_interface_ip(ethname)
-        if not _ip:
-            msg = "Interface '%s' could not get IP." % ethname
-            msg += "Before bind/unbind it have IP '%s'." % ips[ethname]
-            logging.error(msg)
-        else:
-            logging.info("Interface '%s' get IP '%s'", ethname, _ip)
+    if (configure_on_host):
+        msg = "Check whether VFs still get ip in host."
+        error.context(msg, logging.info)
+        for ethname in ips:
+            ifup_down_interface(ethname, action="up")
+            _ip = check_network_interface_ip(ethname)
+            if not _ip:
+                msg = "Interface '%s' could not get IP." % ethname
+                msg += "Before bind/unbind it have IP '%s'." % ips[ethname]
+                logging.error(msg)
+            else:
+                logging.info("Interface '%s' get IP '%s'", ethname, _ip)
 
     msg = "Try to boot up guest(s) with VF(s)."
     error.context(msg, logging.info)
+    regain_ip_cmd = params.get("regain_ip_cmd", None)
+    timeout = int(params.get("login_timeout", 30))
+
     for vm_name in params["vms"].split(" "):
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
-        vm.verify_alive()
-        vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+        # User can opt for dhcp IP or a static IP configuration for probed
+        # interfaces inside guest. Added option for static IP configuration
+        # below
+        if static_ip:
+            if 'IP_addr_VF' not in locals():
+                IP_addr_VF = IPAddress(params.get("start_addr_VF"))
+                net_mask = params.get("net_mask")
+            if not IP_addr_VF:
+                raise exceptions.TestFail(
+                    "No IP address found, please populate starting IP address in configuration file")
+            session = vm.wait_for_serial_login(
+                timeout=int(params.get("login_timeout", 720)))
+            rc, output = session.cmd_status_output(
+                "ip li| grep -i 'BROADCAST'|awk '{print $2}'| sed 's/://'")
+            if not rc:
+                iface_probed = output.splitlines()
+                logging.info("probed VF Interface(s) in guest: %s",
+                             iface_probed)
+                for iface in iface_probed:
+                    ip_assign = "ifconfig %s %s netmask %s up" % (
+                        iface.strip(), IP_addr_VF, net_mask)
+                    rc, output = session.cmd_status_output(
+                        ip_assign, timeout=60)
+                    if rc:
+                        raise exceptions.TestError(
+                            "Fail to assign IP address for probed VF interface in guest")
+                    rc, output = utils_test.ping(
+                        str(IP_addr_VF), 30, timeout=60)
+                    if rc != 0:
+                        raise exceptions.TestFail(
+                            "New nic failed ping test with output:\n %s" % output)
+                    IP_addr_VF = IP_addr_VF + 1
+            else:
+                raise exceptions.TestFail(
+                    "Fail to locate probed interfaces for VFs, please check on respective drivers in guest image")
+        else:
+            # User has opted for DHCP IP inside guest
+            vm.verify_alive()
+            vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))

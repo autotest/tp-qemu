@@ -35,6 +35,25 @@ def max_mem_map_node(host_numa_node, qemu_pid):
     return (node_map_most, memory_sz_map_most)
 
 
+def get_tmpfs_write_speed():
+    """
+    Get the tmpfs write speed of the host
+    return: The write speed of tmpfs, the unit is kb/s.
+    """
+    utils_misc.mount("none", "/tmp", "tmpfs")
+    dd_cmd = "dd if=/dev/urandom of=/tmp/test_speed bs=1k count=1024"
+    output = utils.run(dd_cmd)
+    os.remove("/tmp/test_speed")
+    utils_misc.umount("none", "/tmp", "tmpfs")
+    output = output.stderr.split()
+    unit = output[-1]
+    speed = float(output[-2])
+    if unit == "MB/s":
+        return 1024 * speed
+    error.context("Get tmpfs write speed failed, use default value", logging)
+    return 3072
+
+
 @error.context_aware
 def run(test, params, env):
     """
@@ -73,7 +92,7 @@ def run(test, params, env):
             tmpfs_size = node_mem
     tmpfs_path = params.get("tmpfs_path", "tmpfs_numa_test")
     tmpfs_path = utils_misc.get_path(data_dir.get_tmp_dir(), tmpfs_path)
-    tmpfs_write_speed = int(params.get("tmpfs_write_speed", 10240))
+    tmpfs_write_speed = get_tmpfs_write_speed()
     dd_timeout = tmpfs_size / tmpfs_write_speed * 1.5
     mount_fs_size = "size=%dK" % tmpfs_size
     memory_file = utils_misc.get_path(tmpfs_path, "test")

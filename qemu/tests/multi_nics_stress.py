@@ -62,6 +62,9 @@ def run(test, params, env):
     shell_client = params.get("shell_client")
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
+    shell_prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
+    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    status_test_command = params.get("status_test_command", "echo $?")
     host_ip = utils_net.get_host_ip_address(params)
     ping_count = int(params.get("ping_count", 10))
     compile_option_client = params.get("compile_option_client", "")
@@ -94,6 +97,12 @@ def run(test, params, env):
                                                 shell_client)
             s_info["shell_port"] = params.get("shell_port_%s" % server,
                                               shell_port)
+            s_info["shell_prompt"] = params.get("shell_prompt_%s" % server,
+                                                shell_prompt)
+            s_info["linesep"] = params.get("linesep_%s" % server,
+                                           linesep)
+            s_info["status_test_command"] = params.get("status_test_command_%s" % server,
+                                                       status_test_command)
         else:
             err = "Only support setup netperf server in guest."
             raise error.TestError(err)
@@ -129,6 +138,12 @@ def run(test, params, env):
                                             shell_client)
         c_info["shell_port"] = params.get("shell_port_%s" % client,
                                           shell_port)
+        c_info["shell_prompt"] = params.get("shell_prompt_%s" % client,
+                                            shell_prompt)
+        c_info["linesep"] = params.get("linesep_%s" % client,
+                                       linesep)
+        c_info["status_test_command"] = params.get("status_test_command_%s" % client,
+                                                   status_test_command)
     else:
         err = "Only support setup netperf client in guest."
         raise error.TestError(err)
@@ -177,6 +192,9 @@ def run(test, params, env):
                                                port=c_info["shell_port"],
                                                username=c_info["username"],
                                                password=c_info["password"],
+                                               prompt=c_info["shell_prompt"],
+                                               linesep=c_info["linesep"],
+                                               status_test_command=c_info["status_test_command"],
                                                compile_option=compile_option_client)
         netperf_clients.append(n_client)
     error.context("Setup netperf server.", logging.info)
@@ -195,6 +213,9 @@ def run(test, params, env):
                                                port=s_info["shell_port"],
                                                username=s_info["username"],
                                                password=s_info["password"],
+                                               prompt=s_info["shell_prompt"],
+                                               linesep=s_info["linesep"],
+                                               status_test_command=s_info["status_test_command"],
                                                compile_option=compile_option_server)
         netperf_servers.append(n_server)
 

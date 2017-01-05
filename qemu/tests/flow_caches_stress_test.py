@@ -83,6 +83,10 @@ def run(test, params, env):
     passwd = params.get("hostpasswd", "123456")
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
+    shell_prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
+    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    status_test_command = params.get("status_test_command", "echo $?")
+
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
 
@@ -112,6 +116,9 @@ def run(test, params, env):
                                                  g_md5sum, g_client_link,
                                                  username=username,
                                                  password=password,
+                                                 prompt=prompt,
+                                                 linesep=linesep,
+                                                 status_test_command=status_test_command,
                                                  compile_option=compile_option_client)
 
     netperf_server = utils_netperf.NetperfServer(netperf_server_ip,
@@ -120,6 +127,9 @@ def run(test, params, env):
                                                  netperf_link,
                                                  client, port,
                                                  password=passwd,
+                                                 prompt=prompt,
+                                                 linesep=linesep,
+                                                 status_test_command=status_test_command,
                                                  compile_option=compile_option_server)
     try:
         error.base_context("Run netperf test between host and guest.")

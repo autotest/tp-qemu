@@ -57,6 +57,9 @@ def run(test, params, env):
     passwd = params.get("hostpassword", "redhat")
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
+    prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
+    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client_h = params.get("compile_option_client_h", "")
     compile_option_server_h = params.get("compile_option_server_h", "")
     compile_option_client_g = params.get("compile_option_client_g", "")
@@ -89,17 +92,26 @@ def run(test, params, env):
                                                        port=port,
                                                        username=username,
                                                        password=password,
+                                                       prompt=prompt,
+                                                       linesep=linesep,
+                                                       status_test_command=status_test_command,
                                                        compile_option=compile_option_client_g)
         netperf_server_h = utils_netperf.NetperfServer(remote_ip,
                                                        server_path,
                                                        md5sum,
                                                        netperf_link,
                                                        password=passwd,
+                                                       prompt=prompt,
+                                                       linesep=linesep,
+                                                       status_test_command=status_test_command,
                                                        install=False,
                                                        compile_option=compile_option_server_h)
         netperf_client_h = utils_netperf.NetperfClient(remote_ip, client_path,
                                                        md5sum, netperf_link,
                                                        password=passwd,
+                                                       prompt=prompt,
+                                                       linesep=linesep,
+                                                       status_test_command=status_test_command,
                                                        compile_option=compile_option_client_h)
         netperf_server_g = utils_netperf.NetperfServer(guest_address,
                                                        g_server_path,
@@ -109,6 +121,9 @@ def run(test, params, env):
                                                        port=port,
                                                        username=username,
                                                        password=password,
+                                                       prompt=prompt,
+                                                       linesep=linesep,
+                                                       status_test_command=status_test_command,
                                                        compile_option=compile_option_server_g)
         error.base_context("Run netperf test between host and guest")
         error.context("Start netserver in guest.", logging.info)

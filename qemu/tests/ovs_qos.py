@@ -131,8 +131,8 @@ def run(test, params, env):
             """
             login_timeout = float(params.get("login_timeout", 360))
             clear_iptables_cmd = "service iptables stop; iptables -F"
-            guest_info = ["username", "password", "shell_client",
-                          "shell_port", "os_type"]
+            guest_info = ["status_test_command", "shell_linesep", "shell_prompt",
+                          "username", "password", "shell_client", "shell_port", "os_type"]
             vms_info = []
             for _ in params.get("vms").split():
                 info = map(
@@ -186,6 +186,9 @@ def run(test, params, env):
                     client=info[-3],
                     password=info[-4],
                     username=info[-5],
+                    prompt=info[-6],
+                    linesep=info[-7].decode('string_escape'),
+                    status_test_command=info[-8],
                     compile_option=compile_option_server)
                 netperf_servers.append((server, vm))
                 continue
@@ -205,6 +208,9 @@ def run(test, params, env):
                     client=info[-3],
                     password=info[-4],
                     username=info[-5],
+                    prompt=info[-6],
+                    linesep=info[-7].decode('string_escape'),
+                    status_test_command=info[-8],
                     compile_option=compile_option_client)
                 netperf_clients.append((client, vm))
                 continue

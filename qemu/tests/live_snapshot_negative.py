@@ -8,7 +8,7 @@ from qemu.tests.live_snapshot_basic import LiveSnapshot
 from avocado.core import exceptions
 
 
-class LiveSnapshotNegativeTest(LiveSnapshot):
+class LiveSnapshotNegative(LiveSnapshot):
 
     """
     Provide basic functions for live snapshot negative test cases.
@@ -66,5 +66,5 @@ def run(test, params, env):
     """
     image_tag = params.get("image_name", "image1")
     image_params = params.object_params(image_tag)
-    snapshot_test = LiveSnapshotNegativeTest(test, image_params, env, image_tag)
+    snapshot_test = LiveSnapshotNegative(test, image_params, env, image_tag)
     snapshot_test.create_snapshot()

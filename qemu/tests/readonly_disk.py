@@ -1,14 +1,13 @@
 import logging
 
-import aexpect
+from avocado.core import exceptions
 
-from autotest.client.shared import error
-
-from virttest import utils_misc
+from virttest import error_context
 from virttest import env_process
+from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM reboot test:
@@ -22,50 +21,55 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    error.context("Try to log into guest.", logging.info)
+    error_context.context(
+        "TEST STEPS 1: Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
-    vols = utils_misc.get_winutils_vol(session)
-    if not vols:
-        raise error.TestError("Can not find winutils in guest.")
-    filen = 0
-    error.context("Format the disk and copy file to it", logging.info)
+
+    error_context.context(
+        "TEST STEPS 2: Format the disk and copy file to it", logging.info)
     os_type = params["os_type"]
     copy_cmd = params.get("copy_cmd", "copy %s %s")
     disk_idx = params.get("disk_index", 1)
     fs_type = params.get("fstype", "ntfs")
-    drive_letter = params.get("drive_letter", "I")
+    drive_letter = params.get("drive_letter", "I:")
     disk_size = params.get("partition_size_data", "200M")
-    src_file = params.get("src_file", "").replace("WIN_UTIL", vols)
+    src_file = utils_misc.set_winutils_letter(
+        session, params["src_file"], label="WIN_UTILS")
     utils_misc.format_guest_disk(session, disk_idx, drive_letter,
                                  disk_size, fs_type, os_type)
-    dst_file = drive_letter + ":\\" + str(filen)
+    dst_file = params["dst_file"]
     session.cmd(copy_cmd % (src_file, dst_file))
-    filen += 1
 
-    msg = "Stop the guest and boot up it again with the data disk"
+    msg = "TEST STEPS 3: Stop the guest and boot up again with the data disk"
     msg += " set to readonly"
-    error.context(msg, logging.info)
+    error_context.context(msg, logging.info)
     session.close()
     vm.destroy()
+
     data_img = params.get("images").split()[-1]
     params["image_readonly_%s" % data_img] = "yes"
     params["force_create_image_%s" % data_img] = "no"
     env_process.preprocess(test, params, env)
-
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
 
-    try:
-        error.context("Try to write to the readonly disk", logging.info)
-        dst_file_readonly = drive_letter + ":\\" + str(filen)
-        session.cmd(copy_cmd % (src_file, dst_file_readonly))
-        raise error.TestFail("Write in readonly disk should failed.")
-    except aexpect.ShellCmdError:
-        error.context("Try to read from the readonly disk", logging.info)
-        session.cmd(copy_cmd % (dst_file, "C:\\"))
+    error_context.context(
+        "TEST STEPS 4: Write to the readonly disk expect:"
+        "The media is write protected", logging.info)
+    dst_file_readonly = params["dst_file_readonly"]
+    o = session.cmd_output(copy_cmd % (src_file, dst_file_readonly))
+    if not o.find("write protect"):
+        raise exceptions.TestFail(
+            "Write in readonly disk should failed\n. {}".format(o))
+
+    error_context.context(
+        "TEST STEPS 5: Try to read from the readonly disk", logging.info)
+    s, o = session.cmd_status_output(copy_cmd % (dst_file, r"C:\\"))
+    if s != 0:
+        raise exceptions.TestFail("Read file failed\n. {}".format(o))
 
     session.close()

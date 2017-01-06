@@ -127,8 +127,7 @@ class BallooningTest(MemoryBaseTest):
             logging.info("Guest shutdown normally after balloon")
             qemu_quit_after_test = 1
         if params.get("session_need_update", "no") == "yes":
-            timeout = int(self.params.get("login_timeout", 360))
-            self.session = self.vm.wait_for_login(timeout=timeout)
+            self.session = self.get_session(self.vm)
         if params.get("qemu_quit_after_sub_case", "no") == "yes":
             self.current_mmem = self.ori_mem
             self.current_gmem = self.ori_gmem
@@ -380,5 +379,7 @@ def run(test, params, env):
         quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
         if quit_after_test:
             return
-
-    balloon_test.reset_memory()
+    try:
+        balloon_test.reset_memory()
+    finally:
+        balloon_test.close_sessions()

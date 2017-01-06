@@ -1,6 +1,10 @@
+import os
 import logging
 
 from autotest.client.shared import error
+from avocado.utils import process
+
+from virttest import env_process
 
 
 class NvdimmTest(object):
@@ -101,6 +105,18 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+    if params["start_vm"] == "no":
+        error.context("Check nvdimm backend in host", logging.info)
+        try:
+            process.system("grep 'memmap=' /proc/cmdline")
+        except process.CmdError:
+            raise error.TestError("Please add kernel param 'memmap' before start test.")
+        if not os.path.exists(params["nv_backend"]):
+            raise error.TestError("Check nv_backend in host failed!")
+        params["start_vm"] = "yes"
+        vm_name = params['main_vm']
+        env_process.preprocess_vm(test, params, env, vm_name)
+
     nvdimm_test = NvdimmTest(params, env)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

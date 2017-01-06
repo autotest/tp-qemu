@@ -75,6 +75,7 @@ class BlockCopy(object):
         """
         image_file = storage.get_image_filename(self.parser_test_args(),
                                                 self.data_dir)
+        image_file = os.path.realpath(image_file)
         logging.info("image filename: %s" % image_file)
         return self.vm.get_block({"file": image_file})
 

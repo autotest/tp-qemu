@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from autotest.client.shared import error, utils
 from autotest.client.shared.syncdata import SyncData
@@ -69,6 +70,8 @@ def run(test, params, env):
                     check_clocksource_cmd = params.get("check_clocksource_cmd")
                     clocksource = params.get("clocksource", "kvm-clock")
                     current_clocksource = session.cmd(check_clocksource_cmd)
+                    current_clocksource = re.findall(clocksource, current_clocksource)
+                    current_clocksource = "".join(current_clocksource)
                     logging.info("current_clocksource in guest is: '%s'" %
                                  current_clocksource)
                     if clocksource == "kvm-clock":

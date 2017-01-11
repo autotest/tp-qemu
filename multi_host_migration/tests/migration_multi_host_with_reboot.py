@@ -76,15 +76,18 @@ def run(test, params, env):
             bg.start()
             time.sleep(self.random_timeout)
 
+        @error.context_aware
         def migration_scenario(self, worker=None):
             if params.get("check_vm_before_migration", "yes") == "no":
                 params["check_vm_needs_restart"] = "no"
 
-            if params.get("start_migration_timeout") == "random":
-                min_t = int(params.get("min_random_timeout"))
-                max_t = int(params.get("max_random_timeout"))
+            if params.get("enable_random_timeout") == "yes":
+                min_t = int(params.get("min_random_timeout", 1))
+                max_t = int(params.get("max_random_timeout", 5))
                 self.random_timeout = random.randint(min_t, max_t)
-                params["start_migration_timeout"] = 0
+                params["start_migration_timeout"] = self.random_timeout
+                error.context("Start migration after %d seconds" %
+                              self.random_timeout, logging.info)
 
             self.migrate_wait([self.vm], self.srchost, self.dsthost)
 

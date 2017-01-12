@@ -17,6 +17,7 @@ from virttest import utils_test
 from virttest import env_process
 from virttest.qemu_devices import utils
 from virttest.remote import LoginTimeoutError
+from virttest.qemu_monitor import MonitorError
 
 
 # qdev is not thread safe so in case of dangerous ops lock this thread
@@ -276,7 +277,20 @@ def run(test, params, env):
             if device in qdev:  # Some devices are removed with previous one
                 time.sleep(unplug_sleep)
                 unplug_devs.append(device)
-                unplug_outs.append(device.unplug(monitor))
+                try:
+                    output = device.unplug(monitor)
+                except MonitorError:
+                    # In new versions of qemu, to unplug a disk, cmd
+                    # '__com.redhat_drive_del' is not necessary; while it's
+                    # necessary in old qemu verisons. Following update is to
+                    # pass the error caused by using the cmd in new
+                    # qemu versions.
+                    if device.get_qid() not in monitor.info("block",
+                                                            debug=False):
+                        pass
+                    else:
+                        raise
+                unplug_outs.append(output)
                 # Remove from qdev even when unplug failed because further in
                 # this test we compare VM with qdev, which should be without
                 # these devices. We can do this because we already set the VM

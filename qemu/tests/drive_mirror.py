@@ -134,65 +134,11 @@ class DriveMirror(block_copy.BlockCopy):
         params = self.parser_test_args()
         target_format = params["image_format"]
         timeout = params["reopen_timeout"]
-
-        def is_opened():
-            try:
-                device = self.vm.get_block({"file": self.target_image})
-                ret = (device == self.device)
-                if self.vm.monitor.protocol == "qmp":
-                    ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
-                return ret
-            except Exception:
-                return False
-
         error.context("reopen new target image", logging.info)
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_COMPLETED")
         self.vm.block_reopen(self.device, self.target_image, target_format)
-        opened = utils_misc.wait_for(is_opened, first=3.0, timeout=timeout)
-        if not opened:
-            msg = "Target image not used,wait timeout in %ss" % timeout
-            raise error.TestFail(msg)
-
-    def is_steady(self):
-        """
-        check block device mirroring job is steady status or not;
-        """
-        params = self.parser_test_args()
-        info = self.get_status()
-        ret = bool(info and info["len"] == info["offset"])
-        if self.vm.monitor.protocol == "qmp":
-            if params.get("check_event", "no") == "yes":
-                ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))
-        return ret
-
-    def wait_for_steady(self):
-        """
-        check block device mirroring status, utils timeout; if still not go
-        into steady status, raise TestFail exception;
-        """
-        params = self.parser_test_args()
-        timeout = params.get("wait_timeout")
-        if self.vm.monitor.protocol == "qmp":
-            self.vm.monitor.clear_event("BLOCK_JOB_READY")
-        steady = utils_misc.wait_for(self.is_steady, first=3.0,
-                                     step=3.0, timeout=timeout)
-        if not steady:
-            raise error.TestFail("Wait mirroring job ready "
-                                 "timeout in %ss" % timeout)
-
-    def action_before_steady(self):
-        """
-        run steps before job in steady status;
-        """
-        return self.do_steps("before_steady")
-
-    def action_when_steady(self):
-        """
-        run steps when job in steady status;
-        """
-        self.wait_for_steady()
-        return self.do_steps("when_steady")
+        self.wait_for_finished()
 
     def action_after_reopen(self):
         """

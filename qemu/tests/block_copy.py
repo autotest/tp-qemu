@@ -300,6 +300,77 @@ class BlockCopy(object):
                 if bg.isAlive():
                     self.processes.append(bg)
 
+    def job_finished(self):
+        """
+        check if block job finished;
+        """
+        if self.get_status():
+            return False
+        if self.vm.monitor.protocol == "qmp":
+            return bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
+        return True
+
+    def wait_for_finished(self):
+        """
+        waiting until block job finished
+        """
+        params = self.parser_test_args()
+        timeout = params.get("wait_timeout")
+        finished = utils_misc.wait_for(self.job_finished, timeout=timeout)
+        if not finished:
+            raise error.TestFail("Job not finished in %s seconds" % timeout)
+        logging.info("Block job done.")
+
+    def action_after_finished(self):
+        """
+        run steps after block job done;
+        """
+        params = self.parser_test_args()
+        # if block job cancelled, no need to wait it;
+        if params["wait_finished"] == "yes":
+            self.wait_for_finished()
+        return self.do_steps("after_finished")
+
+    def is_steady(self):
+        """
+        check block job is steady status or not;
+        """
+        params = self.parser_test_args()
+        info = self.get_status()
+        ret = bool(info and info["len"] == info["offset"])
+        if self.vm.monitor.protocol == "qmp":
+            if params.get("check_event", "no") == "yes":
+                ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))
+        return ret
+
+    def wait_for_steady(self):
+        """
+        check block job status, utils timeout; if still not go
+        into steady status, raise TestFail exception;
+        """
+        params = self.parser_test_args()
+        timeout = params.get("wait_timeout")
+        if self.vm.monitor.protocol == "qmp":
+            self.vm.monitor.clear_event("BLOCK_JOB_READY")
+        steady = utils_misc.wait_for(self.is_steady, first=3.0,
+                                     step=3.0, timeout=timeout)
+        if not steady:
+            raise error.TestFail("Wait mirroring job ready "
+                                 "timeout in %ss" % timeout)
+
+    def action_before_steady(self):
+        """
+        run steps before job in steady status;
+        """
+        return self.do_steps("before_steady")
+
+    def action_when_steady(self):
+        """
+        run steps when job in steady status;
+        """
+        self.wait_for_steady()
+        return self.do_steps("when_steady")
+
     def action_before_cleanup(self):
         """
         run steps before job in steady status;

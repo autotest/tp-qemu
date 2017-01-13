@@ -41,7 +41,7 @@ def get_tmpfs_write_speed():
     Get the tmpfs write speed of the host
     return: The write speed of tmpfs, the unit is kb/s.
     """
-    utils.run("mkdir /tmp/test_speed && mount -t tmpfs none /tmp/test_speed")
+    utils.run("mkdir -p /tmp/test_speed && mount -t tmpfs none /tmp/test_speed")
     output = utils.run("dd if=/dev/urandom of=/tmp/test_speed/test bs=1k count=1024")
     try:
         speed = re.search("\s([\w\s\.]+)/s", output.stderr, re.I).group(1)
@@ -49,8 +49,8 @@ def get_tmpfs_write_speed():
     except Exception:
         return 3072
     finally:
-        os.remove("/tmp/test_speed/test")
         utils.run("umount /tmp/test_speed")
+        os.removedirs("/tmp/test_speed")
 
 
 @error.context_aware

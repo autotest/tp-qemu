@@ -106,9 +106,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         self.__create_file(dst)
         session = self.vm.wait_for_login(timeout=login_timeout)
         logging.info("sync guest data")
-        if "X:" in cmd:
-            vol = utils_misc.get_winutils_vol(session)
-            cmd = cmd.replace("X:", "%s:" % vol)
+        cmd = utils_misc.set_winutils_letter(session, cmd)
         status, output = session.cmd_status_output(cmd)
         if status != 0:
             logging.error("Execute '%s' with failures('%s') " % (cmd, output))

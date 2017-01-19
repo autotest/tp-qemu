@@ -26,7 +26,7 @@ def run(test, params, env):
     log_file = params.get("log_file")
     fio_cmd = params.get("fio_cmd")
     timeout = float(params.get("login_timeout", 360))
-    test_timeout = int(params.get("test_timeout", "360"))
+    cmd_timeout = int(params.get("cmd_timeout", "360"))
     check_installed_cmd = 'dir "%s"|findstr /I fio' % install_path
     check_installed_cmd = params.get("check_installed_cmd",
                                      check_installed_cmd)
@@ -49,12 +49,15 @@ def run(test, params, env):
                 session.cmd(config_cmd)
 
         error_context.context("Start fio in guest.", logging.info)
-        s, o = session.cmd_status_output(fio_cmd, timeout=(test_timeout+60))
+        s, o = session.cmd_status_output(fio_cmd, timeout=(cmd_timeout+60))
         if s:
-            raise exceptions.TestError("Failed to run fio, output: %s") % o
+            raise exceptions.TestError("Failed to run fio, output: %s" % o)
 
     finally:
         error_context.context("Copy fio log from guest to host.", logging.info)
-        vm.copy_files_from(log_file, test.resultsdir)
+        try:
+            vm.copy_files_from(log_file, test.resultsdir)
+        except Exception, err:
+            logging.warn("Log file copy failed: %s" % err)
         if session:
             session.close()

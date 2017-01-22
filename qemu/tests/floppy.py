@@ -4,7 +4,10 @@ import os
 import sys
 import re
 
-import aexpect
+try:
+    import aexpect
+except ImportError:
+    from virttest import aexpect
 
 from autotest.client import utils
 from autotest.client.shared import error

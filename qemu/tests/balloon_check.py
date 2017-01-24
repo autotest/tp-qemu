@@ -78,11 +78,11 @@ class BallooningTest(MemoryBaseTest):
         :param new_mem: New desired memory.
         :type new_mem: int
         """
-        env["balloon_test"] = 0
+        self.env["balloon_test"] = 0
         error.context("Change VM memory to %s" % new_mem, logging.info)
         try:
             self.vm.balloon(new_mem)
-            env["balloon_test"] = 1
+            self.env["balloon_test"] = 1
         except Exception, e:
             if self.params.get('illegal_value_check', 'no') == 'no' and new_mem != self.get_ballooned_memory():
                 raise error.TestFail("Balloon memory fail with error message: %s" % e)

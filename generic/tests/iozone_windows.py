@@ -1,6 +1,5 @@
 import os
 import logging
-import re
 
 from autotest.client import utils
 
@@ -56,7 +55,7 @@ def run(test, params, env):
 
     timeout = int(params.get("login_timeout", 360))
     iozone_timeout = int(params.get("iozone_timeout"))
-    disk_letter = params["disk_letter"]
+    disk_letter = params.get("disk_letter", 'C')
     disk_index = params.get("disk_index", "2")
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
@@ -74,9 +73,8 @@ def run(test, params, env):
         error_context.context("Format disk", logging.info)
         utils_misc.format_windows_disk(session, disk_index,
                                        mountpoint=disk_letter)
-    winutils = utils_misc.get_winutils_vol(session)
     cmd = params["iozone_cmd"]
-    iozone_cmd = re.sub("WIN_UTILS", winutils, cmd)
+    iozone_cmd = utils_misc.set_winutils_letter(session, cmd)
     error_context.context("Running IOzone command on guest, timeout %ss"
                           % iozone_timeout, logging.info)
 

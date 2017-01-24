@@ -48,15 +48,12 @@ def run(test, params, env):
     if not running:
         raise exceptions.TestError("Video is not playing")
 
-    # for case:balloon_in_use to call
-    env["balloon_test"] = 0
     error_context.context("balloon vm memory in loop", logging.info)
     repeat_times = int(params.get("repeat_times", 10))
     logging.info("repeat times: %d" % repeat_times)
     min_sz, max_sz = balloon_test.get_memory_boundary()
     while repeat_times:
         balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
-        env["balloon_test"] = 1
         repeat_times -= 1
 
     error_context.context("verify guest still alive", logging.info)

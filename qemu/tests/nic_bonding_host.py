@@ -35,9 +35,8 @@ def run(test, params, env):
     remote_host = params.get("dsthost")
     ping_timeout = int(params.get("ping_timeout", 240))
     bonding_timeout = int(params.get("bonding_timeout", 1))
-    bonding_mode = params.get("bonding_mode")
-    if not bonding_mode:
-        bonding_mode = "1"
+    bonding_mode = params.get("bonding_mode", "1")
+    bonding_miimon = params.get("bonding_miimon", "100")
     params['netdst'] = bond_br_name
     host_bridges = utils_net.Bridge()
 
@@ -45,7 +44,9 @@ def run(test, params, env):
     if not utils.system("lsmod|grep bonding", ignore_status=True):
         utils.system("modprobe -r bonding")
 
-    utils.system("modprobe bonding mode=%s" % bonding_mode)
+    utils.system(
+        "modprobe bonding mode=%s miimon=%s" %
+        (bonding_mode, bonding_miimon))
 
     error.context("Bring up %s" % bond_iface, logging.info)
     host_ifaces = utils_net.get_host_iface()

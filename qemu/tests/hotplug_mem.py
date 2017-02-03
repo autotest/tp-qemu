@@ -3,6 +3,7 @@ import logging
 from virttest.utils_test import BackgroundTest
 from virttest.utils_test import run_virt_sub_test
 from virttest.utils_test.qemu import MemoryHotplugTest
+from avocado.core import exceptions
 
 # Make it work under both autotest-framework and avocado-framework
 try:

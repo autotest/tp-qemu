@@ -87,7 +87,7 @@ def run(test, params, env):
     error_context.context("Play video", logging.info)
     try:
         session.cmd(play_video_cmd, timeout=240)
-        time.sleep(params.get("time_for_video", 240))
+        time.sleep(float(params.get("time_for_video", 240)))
     except Exception, details:
         raise exceptions.TestFail(details)
     finally:

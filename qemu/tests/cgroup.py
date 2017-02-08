@@ -1926,8 +1926,10 @@ def run(test, params, env):
 
         finally:
             error.context("Cleanup")
-
-            session.cmd("true")
+            
+            if vm.is_alive():
+                session.cmd("true")
+            
             session.close()
 
             del(cgroup)

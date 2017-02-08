@@ -1907,7 +1907,8 @@ def run(test, params, env):
                     out = ("VM terminated as expected. Used rss+swap: %d, "
                            "limit %s" % (max_rssswap, mem_limit))
                     logging.info(out)
-            else:   # only RSS limit
+            else:   # only RSS limit    
+    
                 exit_nr = session.cmd_output("echo $?")[:-1]
                 if max_rss > mem_limit:
                     err = ("The limit was broken: max_rss=%s, limit=%s" %

@@ -36,10 +36,14 @@ def run(test, params, env):
     fs_type = params.get("fstype", "ntfs")
     drive_letter = params.get("drive_letter", "I:")
     disk_size = params.get("partition_size_data", "200M")
+    all_disks_did = {}
+    if os_type == 'linux':
+        all_disks_did = utils_misc.get_all_disks_did(session)
     src_file = utils_misc.set_winutils_letter(
         session, params["src_file"], label="WIN_UTILS")
-    utils_misc.format_guest_disk(session, disk_idx, drive_letter,
-                                 disk_size, fs_type, os_type)
+    utils_misc.format_guest_disk(session, disk_idx, all_disks_did,
+                                 os_type, mountpoint=drive_letter,
+                                 size=disk_size, fstype=fs_type)
     dst_file = params["dst_file"]
     session.cmd(copy_cmd % (src_file, dst_file))
 

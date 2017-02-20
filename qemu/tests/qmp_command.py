@@ -187,14 +187,14 @@ def run(test, params, env):
                 if current is None:
                     raise error.TestFail("'current' key is missing in QMP "
                                          "output '%s'" % out)
-                elif cpu < last_cpu:
+                elif cpu < last_cpu and cpu > 0:
                     if current is False:
                         pass
                     else:
                         raise error.TestFail("Attribute 'current' should be "
                                              "'False', but is '%s' instead.\n"
                                              "'%s'" % (current, out))
-                elif cpu == last_cpu:
+                elif cpu == 0:
                     if current is True:
                         pass
                     else:

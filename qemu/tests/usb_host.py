@@ -17,7 +17,7 @@ def run(test, params, env):
         error.context("Plugin usb device", logging.info)
         session.cmd_status("dmesg -c")
         vm.monitor.cmd(monitor_add)
-        session.cmd_status("sleep 1")
+        session.cmd_status("sleep 2")
         session.cmd_status("udevadm settle")
         messages_add = session.cmd("dmesg -c")
         for line in messages_add.splitlines():
@@ -34,7 +34,7 @@ def run(test, params, env):
     def usb_dev_unplug():
         error.context("Unplug usb device", logging.info)
         vm.monitor.cmd(monitor_del)
-        session.cmd_status("sleep 1")
+        session.cmd_status("sleep 2")
         messages_del = session.cmd("dmesg -c")
         for line in messages_del.splitlines():
             logging.debug("[dmesg del] %s" % line)
@@ -72,8 +72,8 @@ def run(test, params, env):
     # compose strings
     lsusb_cmd = "lsusb -v -d %s" % device
     monitor_add = "device_add usb-host,bus=usbtest.0,id=usbhostdev"
-    monitor_add += ",vendorid=%s" % vendorid
-    monitor_add += ",productid=%s" % productid
+    monitor_add += ",vendorid=0x%s" % vendorid
+    monitor_add += ",productid=0x%s" % productid
     monitor_del = "device_del usbhostdev"
     match_add = "New USB device found, "
     match_add += "idVendor=%s, idProduct=%s" % (vendorid, productid)
@@ -98,8 +98,8 @@ def run(test, params, env):
             # The value of isobufs could only be in '4, 8, 16'
             isobufs = (2 << (i % 3 + 1))
             monitor_add = "device_add usb-host,bus=usbtest.0,id=usbhostdev"
-            monitor_add += ",vendorid=%s" % vendorid
-            monitor_add += ",productid=%s" % productid
+            monitor_add += ",vendorid=0x%s" % vendorid
+            monitor_add += ",productid=0x%s" % productid
             monitor_add += ",isobufs=%d" % isobufs
             error.context("Hotplug (iteration %i), with 'isobufs' option"
                           " set to %d" % ((i + 1), isobufs), logging.info)

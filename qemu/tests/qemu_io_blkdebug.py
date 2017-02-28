@@ -1,9 +1,9 @@
+import os
 import re
 import logging
 import ConfigParser
 
 from autotest.client.shared import error
-from autotest.client import utils
 from avocado.utils import process
 
 from virttest import qemu_io
@@ -19,7 +19,7 @@ def run(test, params, env):
     1. Create image with given parameters
     2. Write the blkdebug config file
     3. Try to do operate in image with qemu-io and get the error message
-    4. Get the error message from perror by error number set in config file
+    4. Get the error message from os.strerror by error number set in config file
     5. Compare the error message
 
     :param test:   QEMU test object
@@ -36,7 +36,6 @@ def run(test, params, env):
     err_command = params["err_command"]
     err_event = params["err_event"]
     errn_list = re.split("\s+", params["errn_list"].strip())
-    re_std_msg = params["re_std_msg"]
     test_timeout = int(params.get("test_timeout", "60"))
     pre_err_commands = params.get("pre_err_commands")
     image = params.get("images")
@@ -110,26 +109,19 @@ def run(test, params, env):
                 params_sn, data_dir.get_data_dir(), image_sn)
             image_snapshot.remove()
 
-        error.context("Get error message from command perror", logging.info)
-        perror_cmd = "perror %s" % errn
-        std_msg = utils.system_output(perror_cmd)
-        std_msg = re.findall(re_std_msg, std_msg)
-        if std_msg:
-            std_msg = std_msg[0]
-        else:
-            std_msg = ""
-            logging.warning("Can not find error message from perror")
+        error.context("Get error message", logging.info)
+        try:
+            std_msg = os.strerror(int(errn))
+        except ValueError:
+            raise error.TestError("Can not find error message:\n"
+                                  "    error code is %s" % errn)
 
         session.close()
         error.context("Compare the error message", logging.info)
-        if std_msg:
-            if std_msg in output:
-                logging.info("Error message is correct in qemu-io")
-            else:
-                fail_log = "The error message is mismatch:"
-                fail_log += "qemu-io reports: '%s'," % output
-                fail_log += "perror reports: '%s'" % std_msg
-                raise error.TestFail(fail_log)
+        if std_msg in output:
+            logging.info("Error message is correct in qemu-io")
         else:
-            logging.warning("Can not find error message from perror."
-                            " The output from qemu-io is %s" % output)
+            fail_log = "The error message is mismatch:\n"
+            fail_log += "    qemu-io reports: '%s',\n" % output
+            fail_log += "    os.strerror reports: '%s'" % std_msg
+            raise error.TestFail(fail_log)

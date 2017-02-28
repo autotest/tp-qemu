@@ -61,39 +61,8 @@ class BlockStream(block_copy.BlockCopy):
                 raise error.TestFail("create snapshot '%s' fail" % snapshot)
             self.trash_files.append(snapshot)
 
-    def job_finished(self):
-        """
-        check if streaming job finished;
-        """
-        if self.get_status():
-            return False
-        if self.vm.monitor.protocol == "qmp":
-            return bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
-        return True
-
-    def wait_for_finished(self):
-        """
-        waiting until block stream job finished
-        """
-        params = self.parser_test_args()
-        timeout = params.get("wait_timeout")
-        finished = utils_misc.wait_for(self.job_finished, timeout=timeout)
-        if not finished:
-            raise error.TestFail("Job not finished in %s seconds" % timeout)
-        logging.info("Block stream job done.")
-
     def action_when_streaming(self):
         """
         run steps when job in steaming;
         """
         return self.do_steps("when_streaming")
-
-    def action_after_finished(self):
-        """
-        run steps after streaming done;
-        """
-        params = self.parser_test_args()
-        # if block job cancelled, no need to wait it;
-        if params["wait_finished"] == "yes":
-            self.wait_for_finished()
-        return self.do_steps("after_finished")

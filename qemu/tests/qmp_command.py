@@ -114,8 +114,21 @@ def run(test, params, env):
                             continue
                         if '0x' in val:
                             val = long(val, 16)
-                            if val != qmp_o[i][key]:
-                                msg += "\nValue in human monitor: '%s'" % val
+                            binvalue = bin(val)
+                            binstr = str(binvalue)
+                            l = len(binstr)
+                            f = ""
+                            for p in range(3,l):
+                                if binstr[p] == '1':
+                                    f += '0'
+                                else:
+                                    f += '1'
+                            f = '0b' + f
+                            value = eval(f) + 1
+                            if binstr[2] == '1':
+                                value = -value
+                            if value != qmp_o[i][key]:
+                                msg += "\nValue in human monitor: '%s'" % value
                                 msg += "\nValue in qmp: '%s'" % qmp_o[i][key]
                                 raise error.TestFail(msg)
                         elif qmp_cmd == "query-block":

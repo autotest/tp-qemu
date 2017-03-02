@@ -118,10 +118,13 @@ def run(test, params, env):
 
     build_root = params.get("build_root", "/root/rpmbuild")
     rpmbuild_clean_cmd = params["rpmbuild_clean_cmd"]
+    cmd = "%s -version" % utils_misc.get_qemu_binary(params)
+    output = process.system_output(cmd, shell=True)
     cwd = os.getcwd()
     (qemu_src_dir, spec) = install_test(build_root)
     try:
-        config_test(qemu_src_dir)
+        if "qemu-kvm-rhev" in output:
+            config_test(qemu_src_dir)
         run_test(qemu_src_dir)
     finally:
         try:

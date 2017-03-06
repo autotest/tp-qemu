@@ -1,9 +1,8 @@
 import logging
-from autotest.client.shared import error
 from qemu.tests import qemu_disk_img
+from avocado.core import exceptions
 
 
-@error.context_aware
 def run(test, params, env):
     """
     'qemu-img' snapshot functions test:
@@ -28,35 +27,35 @@ def run(test, params, env):
     t_file = params["guest_file_name"]
     snapshot_test = qemu_disk_img.QemuImgTest(test, params, env, base_image)
 
-    error.context("Step1. save file md5sum before create snapshot.", logging.info)
+    logging.info("Step1. save file md5sum before create snapshot.")
     snapshot_test.start_vm(params)
     md5 = snapshot_test.save_file(t_file)
     if not md5:
-        raise error.TestError("Fail to save tmp file.")
+        raise exceptions.TestError("Fail to save tmp file.")
     snapshot_test.destroy_vm()
 
-    error.context("Step2. create snapshot and check the result.", logging.info)
+    logging.info("Step2. create snapshot and check the result.")
     snapshot_tag = snapshot_test.snapshot_create()
     output = snapshot_test.snapshot_list()
     if snapshot_tag not in output:
-        raise error.TestFail("Snapshot created failed or missed;"
-                             "snapshot list is: \n%s" % output)
+        raise exceptions.TestFail("Snapshot created failed or missed;"
+                                  "snapshot list is: \n%s" % output)
 
-    error.context("Step3. change tmp file before apply snapshot", logging.info)
+    logging.info("Step3. change tmp file before apply snapshot")
     snapshot_test.start_vm(params)
     change_md5 = snapshot_test.save_file(t_file)
-    if not change_md5 and change_md5 == md5:
-        raise error.TestError("Fail to change tmp file.")
+    if not change_md5 or change_md5 == md5:
+        raise exceptions.TestError("Fail to change tmp file.")
     snapshot_test.destroy_vm()
 
-    error.context("Step4. apply snapshot.", logging.info)
+    logging.info("Step4. apply snapshot.")
     snapshot_test.snapshot_apply()
     snapshot_test.snapshot_del()
 
-    error.context("Step5. check md5sum after apply snapshot.", logging.info)
+    logging.info("Step5. check md5sum after apply snapshot.")
     snapshot_test.start_vm(params)
     ret = snapshot_test.check_file(t_file, md5)
     if not ret:
-        raise error.TestError("image content changed after apply snapshot")
+        raise exceptions.TestError("image content changed after apply snapshot")
 
     snapshot_test.clean()

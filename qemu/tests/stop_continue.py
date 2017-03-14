@@ -86,11 +86,22 @@ def run(test, params, env):
                 raise error.TestFail("Something wrong after stop continue, "
                                      "check command report: %s" % o)
     finally:
-        clean_op = params.get("clean_op")
-        if clean_op:
-            error.context("Do clean operation: '%s'" % clean_op, logging.info)
-            op_timeout = float(params.get("clean_op_timeout", 60))
-            session.cmd(clean_op, timeout=op_timeout, ignore_all_errors=True)
-        session.close()
-        if session_bg:
-            session_bg.close()
+        try:
+            clean_op = params.get("clean_op")
+            if clean_op:
+                error.context(
+                    "Do clean operation: '%s'" %
+                    clean_op, logging.info)
+                # session close if exception raised, so get renew a session
+                # to do cleanup step.
+                session = vm.wait_for_login(timeout=login_timeout)
+                op_timeout = float(params.get("clean_op_timeout", 60))
+                session.cmd(clean_op, timeout=op_timeout,
+                            ignore_all_errors=True)
+            session.close()
+            if session_bg:
+                session_bg.close()
+        except Exception as details:
+            logging.warn(
+                "Exception occur when clean test environment: %s" %
+                details)

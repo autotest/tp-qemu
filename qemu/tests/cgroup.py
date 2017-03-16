@@ -8,8 +8,9 @@ import os
 import re
 import time
 
-from autotest.client.shared import error
 from autotest.client import utils
+from avocado.utils import process
+from avocado.core import exceptions
 
 from aexpect import ExpectTimeoutError
 from aexpect import ExpectProcessTerminatedError
@@ -17,6 +18,7 @@ from aexpect import ShellTimeoutError
 
 from virttest.env_process import preprocess
 from virttest import qemu_monitor
+from virttest import error_context
 
 from virttest.staging import utils_memory
 from virttest.staging.utils_cgroup import Cgroup
@@ -82,7 +84,7 @@ class SparseRange(list):
         return ",".join(out)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Tests the cgroup functions on KVM guests.
@@ -97,7 +99,7 @@ def run(test, params, env):
         """
         cgroup.set_cgroup(vm.get_shell_pid(), pwd)
         for i in range(10):
-            for pid in utils.get_children_pids(vm.get_shell_pid()):
+            for pid in process.get_children_pids(vm.get_shell_pid()):
                 try:
                     cgroup.set_cgroup(int(pid), pwd)
                 except Exception, detail:   # Process might not already exist
@@ -108,8 +110,8 @@ def run(test, params, env):
             else:   # All PIDs moved
                 break
         else:
-            raise error.TestFail("Failed to move all VM threads to new cgroup"
-                                 " in %d trials" % i)
+            raise exceptions.TestFail("Failed to move all VM threads to new cgroup"
+                                      " in %d trials" % i)
 
     def distance(actual, reference):
         """
@@ -159,8 +161,8 @@ def run(test, params, env):
             rdev = os.stat(dev).st_rdev
             ret = (os.major(rdev), os.minor(rdev))
         except Exception, details:
-            raise error.TestFail("get_maj_min(%s) failed: %s" %
-                                 (dev, details))
+            raise exceptions.TestFail("get_maj_min(%s) failed: %s" %
+                                      (dev, details))
         return ret
 
     def rm_scsi_disks(no_disks):
@@ -169,27 +171,27 @@ def run(test, params, env):
         :param no_disks: How many disks to remove
         :note: params['cgroup_rmmod_scsi_debug'] == "yes" => rmmod scsi_debug
         """
-        utils.system("echo -%d > /sys/bus/pseudo/drivers/scsi_debug/add_host"
-                     % no_disks)
+        process.system("echo -%d > /sys/bus/pseudo/drivers/scsi_debug/add_host"
+                       % no_disks)
 
         if params.get('cgroup_rmmod_scsi_debug', "no") == "yes":
-            utils.system("rmmod scsi_debug")
+            process.system("rmmod scsi_debug")
 
     def param_add_scsi_disks():
         """
         Adds scsi_debug disk to every VM in params['vms']
         :param prefix: adds prefix to drive name
         """
-        if utils.system("lsmod | grep scsi_debug", ignore_status=True):
-            utils.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
+        if process.system("lsmod | grep scsi_debug", ignore_status=True):
+            process.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
         for name in params['vms'].split(' '):
             disk_name = "scsi-debug-" + name
-            utils.system("echo 1 >/sys/bus/pseudo/drivers/scsi_debug/add_host")
+            process.system("echo 1 >/sys/bus/pseudo/drivers/scsi_debug/add_host")
             time.sleep(1)   # Wait for device init
-            dev = utils.system_output("ls /dev/sd* | tail -n 1")
+            dev = process.system_output("ls /dev/sd* | tail -n 1", shell=True)
             # Enable idling in scsi_debug drive
-            utils.system("echo 1 > /sys/block/%s/queue/rotational"
-                         % (dev.split('/')[-1]))
+            process.system("echo 1 > /sys/block/%s/queue/rotational"
+                           % (dev.split('/')[-1]))
             vm_disks = params.get('images_%s' % name,
                                   params.get('images', 'image1'))
             params['images_%s' % name] = "%s %s" % (vm_disks, disk_name)
@@ -236,7 +238,7 @@ def run(test, params, env):
         params['vms'] = params['vms'][:-1]
 
     # Tests
-    @error.context_aware
+    @error_context.context_aware
     def blkio_bandwidth():
         """
         Sets blkio.weight for each VM and measure the actual distribution
@@ -316,16 +318,16 @@ def run(test, params, env):
                 return err + '\n'
             return ""
 
-        error.context("Init")
+        logging.info("Init")
         try:
             weights = eval(params.get('cgroup_weights', "[100, 1000]"))
             if type(weights) is not list:
                 raise TypeError
         except TypeError:
-            raise error.TestError("Incorrect configuration: param "
-                                  "cgroup_weights have to be list-like string '[1, 2]'")
+            raise exceptions.TestError("Incorrect configuration: param "
+                                       "cgroup_weights have to be list-like string '[1, 2]'")
         test_time = int(params.get("cgroup_test_time", 60))
-        error.context("Prepare VMs")
+        logging.info("Prepare VMs")
         # Prepare enough VMs each with 1 disk for testing
         no_vms = len(weights)
         param_add_vms(no_vms)
@@ -340,10 +342,10 @@ def run(test, params, env):
             sessions.append(vms[-1].wait_for_login(timeout=timeout))
             sessions.append(vms[-1].wait_for_login(timeout=30))
 
-        error.context("Setup test")
+        logging.info("Setup test")
         modules = CgroupModules()
         if (modules.init(['blkio']) != 1):
-            raise error.TestFail("Can't mount blkio cgroup modules")
+            raise exceptions.TestFail("Can't mount blkio cgroup modules")
         blkio = Cgroup('blkio', '')
         blkio.initialize(modules)
         for i in range(no_vms):
@@ -359,12 +361,12 @@ def run(test, params, env):
                  '\d+\.*\d* \w./s')
         err = ""
         try:
-            error.context("Read test")
+            logging.info("Read test")
             err += _test("read")
             # verify sessions between tests
             for session in sessions:
                 session.cmd("true")
-            error.context("Write test")
+            logging.info("Write test")
             err += _test("write")
             if err:
                 logging.error("Results:\n" + err)
@@ -372,7 +374,7 @@ def run(test, params, env):
                 logging.info("Speeds distributed accordingly to blkio.weight.")
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             for i in range(no_vms):
                 # stop all workers
                 sessions[i * 2 + 1].sendline(kill_cmd)
@@ -387,13 +389,13 @@ def run(test, params, env):
             for i in range(len(vms)):
                 vms[i].destroy()
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return "Speeds distributed accordingly to blkio.weight."
 
-    @error.context_aware
+    @error_context.context_aware
     def blkio_throttle():
         """
         Tests the blkio.throttle.{read,write}_bps_device cgroup capability.
@@ -406,20 +408,20 @@ def run(test, params, env):
         :param cfg: cgroup_speeds list of simultaneous speeds
                     [speed1, speed2,..] '[1024]'
         """
-        error.context("Init")
+        logging.info("Init")
         try:
             speeds = eval(params.get('cgroup_speeds', "[1024]"))
             if type(speeds) is not list:
                 raise TypeError
         except TypeError:
-            raise error.TestError("Incorrect configuration: param "
-                                  "cgroup_speeds have to be list of strings"
-                                  "eg. [1024] or [1024,2048,8192].")
+            raise exceptions.TestError("Incorrect configuration: param "
+                                       "cgroup_speeds have to be list of strings"
+                                       "eg. [1024] or [1024,2048,8192].")
 
         # Make param suitable for multitest and execute it.
         return blkio_throttle_multi([[_] for _ in speeds])
 
-    @error.context_aware
+    @error_context.context_aware
     def blkio_throttle_multi(speeds=None):
         """
         Tests the blkio.throttle.{read,write}_bps_device cgroup capability.
@@ -519,7 +521,7 @@ def run(test, params, env):
                 return err + '\n'
             return ""
 
-        error.context("Init")
+        logging.info("Init")
         no_speeds = 0
         if speeds:  # blkio_throttle
             no_speeds = len(speeds[0])
@@ -543,15 +545,15 @@ def run(test, params, env):
                                       "lengths")
                         raise TypeError
             except TypeError:
-                raise error.TestError("Incorrect configuration: param "
-                                      "cgroup_speeds have to be listOfList-"
-                                      "like string with same lengths. "
-                                      "([[1024]] or [[0,1024],[1024,2048]])")
+                raise exceptions.TestError("Incorrect configuration: param "
+                                           "cgroup_speeds have to be listOfList-"
+                                           "like string with same lengths. "
+                                           "([[1024]] or [[0,1024],[1024,2048]])")
         # Minimum testing time is 30s (dd must copy few blocks)
         test_time = max(int(params.get("cgroup_test_time", 60)) / no_speeds,
                         30)
 
-        error.context("Prepare VMs")
+        logging.info("Prepare VMs")
         # create enough of VMs with scsi_debug attached disks
         no_vms = len(speeds)
         param_add_vms(no_vms)
@@ -567,10 +569,10 @@ def run(test, params, env):
             sessions.append(vms[-1].wait_for_login(timeout=timeout))
             sessions.append(vms[-1].wait_for_login(timeout=30))
 
-        error.context("Setup test")
+        logging.info("Setup test")
         modules = CgroupModules()
         if (modules.init(['blkio']) != 1):
-            raise error.TestFail("Can't mount blkio cgroup modules")
+            raise exceptions.TestFail("Can't mount blkio cgroup modules")
         blkio = Cgroup('blkio', '')
         blkio.initialize(modules)
         for i in range(no_vms):
@@ -604,19 +606,19 @@ def run(test, params, env):
                  '\d+\.*\d* \w./s')
         err = ""
         try:
-            error.context("Read test")
+            logging.info("Read test")
             err += _test("read", blkio)
             # verify sessions between tests
             for session in sessions:
                 session.cmd("true", timeout=600)
-            error.context("Write test")
+            logging.info("Write test")
             err += _test("write", blkio)
 
             if err:
                 logging.error("Results\n" + err)
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             for i in range(no_vms):
                 # stop all workers
                 sessions[i * 2 + 1].sendline(kill_cmd)
@@ -634,13 +636,13 @@ def run(test, params, env):
 
             rm_scsi_disks(no_vms)
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return "Throughputs matched the prescriptions."
 
-    @error.context_aware
+    @error_context.context_aware
     def cpu_cfs_util():
         """
         Tests cfs scheduler utilisation when cfs_period_us and cfs_quota_us
@@ -652,10 +654,10 @@ def run(test, params, env):
         :param cfg: cgroup_test_time - test duration '60'
         :param cfg: cgroup_limit - allowed threshold '0.05' (5%)
         """
-        error.context("Setup test")
+        logging.info("Setup test")
         modules = CgroupModules()
         if (modules.init(['cpu']) != 1):
-            raise error.TestFail("Can't mount cpu cgroup modules")
+            raise exceptions.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)
         host_cpus = open('/proc/cpuinfo').read().count('processor')
@@ -665,7 +667,7 @@ def run(test, params, env):
         params['vms'] = "vm0"
         preprocess(test, params, env)
 
-        error.context("Prepare VMs")
+        logging.info("Prepare VMs")
         vms = []
         sessions = []
         serials = []
@@ -732,7 +734,7 @@ def run(test, params, env):
         test_time = max(1, int(params.get('cgroup_test_time', 60)) - 11)
         err = []
         try:
-            error.context("Test")
+            logging.info("Test")
             for session in sessions:
                 session.sendline(cmd)
 
@@ -749,7 +751,7 @@ def run(test, params, env):
 
             # /proc/stat first line is cumulative CPU usage
             # 1-8 are host times, 8-9 are guest times (on older kernels only 8)
-            error.context("Verification")
+            logging.info("Verification")
             # Start of the test (time 0)
             stats[0] = [int(_) for _ in stats[0].split()[1:]]
             stats[0] = [sum(stats[0][0:8]), sum(stats[0][8:])]
@@ -772,7 +774,7 @@ def run(test, params, env):
                     err.append(i)
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             del(cgroup)
             del(modules)
 
@@ -787,15 +789,15 @@ def run(test, params, env):
             for i in range(1, len(vms)):
                 vms[i].destroy()
 
-        error.context("Results")
+        logging.info("Results")
         if err:
             err = ("The host vs. guest CPU time ratio is over %s in %s cases"
                    % (limit, err))
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return "Guest times are over %s%%: %s" % (limit, stats[1:])
 
-    @error.context_aware
+    @error_context.context_aware
     def cpu_share():
         """
         Sets cpu.share shares for different VMs and measure the actual
@@ -819,14 +821,14 @@ def run(test, params, env):
                 stats[i] = sum([int(_) for _ in stats[i]]) - _stats[i]
             return stats
 
-        error.context("Init")
+        logging.info("Init")
         try:
             speeds = eval(params.get('cgroup_speeds', '[10000, 100000]'))
             if type(speeds) is not list:
                 raise TypeError
         except TypeError:
-            raise error.TestError("Incorrect configuration: param "
-                                  "cgroup_speeds have to be list-like string '[1, 2]'")
+            raise exceptions.TestError("Incorrect configuration: param "
+                                       "cgroup_speeds have to be list-like string '[1, 2]'")
 
         host_cpus = open('/proc/cpuinfo').read().count('processor')
         # when smp <= 0 use smp = no_host_cpus
@@ -843,11 +845,11 @@ def run(test, params, env):
         serials = []
         modules = CgroupModules()
         if (modules.init(['cpu']) != 1):
-            raise error.TestFail("Can't mount cpu cgroup modules")
+            raise exceptions.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)
 
-        error.context("Prepare VMs")
+        logging.info("Prepare VMs")
         param_add_vms(no_vms)
         preprocess(test, params, env)
 
@@ -868,7 +870,7 @@ def run(test, params, env):
             sessions[i].cmd("touch /tmp/cgroup-cpu-lock")
             serials.append(vms[i].wait_for_serial_login(timeout=30))
 
-        error.context("Test")
+        logging.info("Test")
         try:
             f_stats = []
             err = []
@@ -969,7 +971,7 @@ def run(test, params, env):
                 logging.info("Cpu utilisation enforced successfully")
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             del(cgroup)
 
             for i in range(len(serials)):
@@ -985,13 +987,13 @@ def run(test, params, env):
 
             del(modules)
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return ("Cpu utilisation enforced successfully")
 
-    @error.context_aware
+    @error_context.context_aware
     def cpuset_cpus():
         """
         Pins main_thread and each vcpu acoordingly to scenario setup
@@ -1062,7 +1064,7 @@ def run(test, params, env):
                         verify[-1][cpus.index(vcpu_pin)] = 100
             return verify
 
-        error.context("Init")
+        logging.info("Init")
         cpusets = None
         verify = None
         try:
@@ -1070,19 +1072,19 @@ def run(test, params, env):
             if not ((type(cpusets) is list) or (cpusets is None)):
                 raise Exception
         except Exception:
-            raise error.TestError("Incorrect configuration: param cgroup_"
-                                  "cpuset have to be list of lists, where "
-                                  "all sublist have the same length and "
-                                  "the length is ('smp' + 1). Or 'None' for "
-                                  "default.\n%s" % cpusets)
+            raise exceptions.TestError("Incorrect configuration: param cgroup_"
+                                       "cpuset have to be list of lists, where "
+                                       "all sublist have the same length and "
+                                       "the length is ('smp' + 1). Or 'None' for "
+                                       "default.\n%s" % cpusets)
         try:
             verify = eval(params.get("cgroup_verify", "None"))
             if not ((type(cpusets) is list) or (cpusets is None)):
                 raise Exception
         except Exception:
-            raise error.TestError("Incorrect configuration: param cgroup_"
-                                  "verify have to be list of lists or 'None' "
-                                  "for default/automatic.\n%s" % verify)
+            raise exceptions.TestError("Incorrect configuration: param cgroup_"
+                                       "verify have to be list of lists or 'None' "
+                                       "for default/automatic.\n%s" % verify)
 
         limit = float(params.get("cgroup_limit", 0.05)) * 100
 
@@ -1091,7 +1093,7 @@ def run(test, params, env):
         vm = env.get_all_vms()[0]
         modules = CgroupModules()
         if (modules.init(['cpuset']) != 1):
-            raise error.TestFail("Can't mount cpu cgroup modules")
+            raise exceptions.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
 
@@ -1105,7 +1107,7 @@ def run(test, params, env):
                 err = ("Not enough host CPUs to run this test with selected "
                        "cpusets (cpus=%s, cpusets=%s)" % (len(cpus), cpusets))
                 logging.error(err)
-                raise error.TestNAError(err)
+                raise exceptions.TestSkipError(err)
             vm_cpus = len(cpusets[0]) - 1   # Don't count main_thread to vcpus
             for i in range(len(cpusets)):
                 # length of each list have to be 'smp' + 1
@@ -1113,7 +1115,7 @@ def run(test, params, env):
                     err = ("cpusets inconsistent. %d sublist have different "
                            " length. (param cgroup_cpusets in cfg)." % i)
                     logging.error(err)
-                    raise error.TestError(err)
+                    raise exceptions.TestError(err)
         # if cgroup_use_half_smp, set smp accordingly
         elif params.get("cgroup_use_half_smp") == "yes":
             vm_cpus = len(cpus) / 2
@@ -1123,7 +1125,7 @@ def run(test, params, env):
 
         if vm_cpus <= 1:
             logging.error("Test requires at least 2 vCPUs.")
-            raise error.TestNAError("Test requires at least 2 vCPUs.")
+            raise exceptions.TestSkipError("Test requires at least 2 vCPUs.")
         # Check whether smp changed and recreate VM if so
         if vm_cpus != params.get("smp", 0):
             logging.info("Expected VM reload.")
@@ -1135,11 +1137,11 @@ def run(test, params, env):
         vcpus = vm.get_vcpu_pids(vcpu_thread_pattern)
 
         if len(vcpus) != vm_cpus:
-            raise error.TestFail("Incorrect number of vcpu PIDs; smp=%s vcpus="
-                                 "%s" % (vm_cpus, vcpus))
+            raise exceptions.TestFail("Incorrect number of vcpu PIDs; smp=%s vcpus="
+                                      "%s" % (vm_cpus, vcpus))
 
         if not cpusets:
-            error.context("Generating cpusets scenerios")
+            logging.info("Generating cpusets scenerios")
             cpusets = _generate_cpusets(vm_cpus, cpus)
 
         if verify:  # Verify exists, check if it's correct
@@ -1148,17 +1150,17 @@ def run(test, params, env):
                     err = ("Incorrect cgroup_verify. Each verify sublist have "
                            "to have length = no_host_cpus")
                     logging.error(err)
-                    raise error.TestError(err)
+                    raise exceptions.TestError(err)
         else:   # Generate one
-            error.context("Generating cpusets expected results")
+            logging.info("Generating cpusets expected results")
             try:
                 verify = _generate_verification(cpusets, cpus)
             except IndexError:
-                raise error.TestError("IndexError occurred while generatin "
-                                      "verification data. Probably missmatched"
-                                      " no_host_cpus and cgroup_cpuset cpus")
+                raise exceptions.TestError("IndexError occurred while generating "
+                                           "verification data. Probably mismatched"
+                                           " no_host_cpus and cgroup_cpuset cpus")
 
-        error.context("Prepare")
+        logging.info("Prepare")
         for i in xrange(len(cpus) + 1):
             cgroup.mk_cgroup()
             cgroup.set_property('cpuset.cpus', cpus.str_slice(), i)
@@ -1180,7 +1182,7 @@ def run(test, params, env):
             sessions[-1].sendline(cmd)
 
         try:
-            error.context("Test")
+            logging.info("Test")
             for i in xrange(len(cpusets)):
                 cpuset = cpusets[i]
                 logging.debug("testing: %s", cpuset)
@@ -1196,7 +1198,7 @@ def run(test, params, env):
             serial.cmd("rm -f /tmp/cgroup-cpu-lock")
             err = ""
 
-            error.context("Verification")
+            logging.info("Verification")
             # Normalize stats
             for i in range(len(stats)):
                 stats[i] = [(_ / test_time) for _ in stats[i]]
@@ -1216,7 +1218,7 @@ def run(test, params, env):
                     else:
                         matrix[-1].append("%3d ~ %d" % (verify[i][j],
                                                         stats[i][j]))
-            logging.info("Results (theoretical ~ actual):\n%s" %
+            logging.info("Results (theoretical ~ actual):\n%s",
                          utils.matrix_to_string(matrix, header))
             if err:
                 err = "Scenerios %s FAILED" % err
@@ -1225,35 +1227,35 @@ def run(test, params, env):
                 logging.info("All utilisations match prescriptions.")
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             serial.cmd("rm -f /tmp/cgroup-cpu-lock")
             del(cgroup)
             del(modules)
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return ("All utilisations match prescriptions.")
 
-    @error.context_aware
+    @error_context.context_aware
     def cpuset_cpus_switching():
         """
         Tests the cpuset.cpus cgroup feature. It stresses all VM's CPUs
         while switching between cgroups with different setting.
         :param cfg: cgroup_test_time - test duration '60'
         """
-        error.context("Init")
+        logging.info("Init")
         try:
             test_time = int(params.get("cgroup_test_time", 60))
         except ValueError:
-            raise error.TestError("Incorrect configuration: param "
-                                  "cgroup_test_time have to be an integer")
+            raise exceptions.TestError("Incorrect configuration: param "
+                                       "cgroup_test_time have to be an integer")
 
-        error.context("Prepare")
+        logging.info("Prepare")
         modules = CgroupModules()
         if (modules.init(['cpuset']) != 1):
-            raise error.TestFail("Can't mount cpuset cgroup modules")
+            raise exceptions.TestFail("Can't mount cpuset cgroup modules")
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
 
@@ -1263,8 +1265,8 @@ def run(test, params, env):
         vm_cpus = int(params.get('smp', 1))
         cpus = SparseRange(cgroup.get_property("cpuset.cpus")[0])
         if len(cpus) < 2:
-            raise error.TestFail("This test needs at least 2 CPUs on "
-                                 "host, cpuset=%s" % cpus)
+            raise exceptions.TestFail("This test needs at least 2 CPUs on "
+                                      "host, cpuset=%s" % cpus)
         # Comments are for vm_cpus=2, no_cpus=4, _SC_CLK_TCK=100
         cgroup.mk_cgroup()  # oooo
         cgroup.set_property('cpuset.cpus', cpus.str_slice(), 0)
@@ -1277,7 +1279,7 @@ def run(test, params, env):
         cgroup.set_property('cpuset.mems', 0, 2)
         assign_vm_into_cgroup(vm, cgroup, 0)
 
-        error.context("Test")
+        logging.info("Test")
         err = ""
         try:
             cmd = "renice -n 10 $$; "   # new ssh login should pass
@@ -1297,7 +1299,7 @@ def run(test, params, env):
                 assign_vm_into_cgroup(vm, cgroup, i % 3)
                 i += 1
 
-            error.context("Verification")
+            logging.info("Verification")
             serial.sendline("rm -f /tmp/cgroup-cpu-lock")
 
             try:
@@ -1312,7 +1314,7 @@ def run(test, params, env):
                 logging.info("VM survived %d cgroup switches", i)
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             del(cgroup)
             del(modules)
 
@@ -1323,13 +1325,13 @@ def run(test, params, env):
                 session.cmd("true")
                 session.close()
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return ("VM survived %d cgroup switches" % i)
 
-    @error.context_aware
+    @error_context.context_aware
     def cpuset_mems_switching():
         """
         Tests the cpuset.mems pinning. It changes cgroups with different
@@ -1338,21 +1340,21 @@ def run(test, params, env):
         :param cfg: cgroup_cpuset_mems_mb - override the size of memory blocks
                     'by default 1/2 of VM memory'
         """
-        error.context("Init")
+        logging.info("Init")
         test_time = int(params.get('cgroup_test_time', 10))
         vm = env.get_all_vms()[0]
 
-        error.context("Prepare")
+        logging.info("Prepare")
         modules = CgroupModules()
         if (modules.init(['cpuset']) != 1):
-            raise error.TestFail("Can't mount cpuset cgroup modules")
+            raise exceptions.TestFail("Can't mount cpuset cgroup modules")
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
 
         mems = SparseRange(cgroup.get_property("cpuset.mems")[0])
         if len(mems) < 2:
-            raise error.TestNAError("This test needs at least 2 memory nodes, "
-                                    "detected mems %s" % mems)
+            raise exceptions.TestSkipError("This test needs at least 2 memory nodes, "
+                                           "detected mems %s" % mems)
         # Create cgroups
         all_cpus = cgroup.get_property("cpuset.cpus")[0]
         for mem in mems:
@@ -1371,7 +1373,7 @@ def run(test, params, env):
         if params.get('cgroup_cpuset_mems_mb') is not None:
             size = min(size, int(params.get('cgroup_cpuset_mems_mb')))
 
-        error.context("Test")
+        logging.info("Test")
         err = ""
         try:
             logging.info("Some harmless IOError messages of non-existing "
@@ -1410,7 +1412,7 @@ def run(test, params, env):
                        "blocks of %dMB each" % (i, test_time, dd_res[3], size))
                 logging.info(out)
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             del(cgroup)
             del(modules)
 
@@ -1419,13 +1421,13 @@ def run(test, params, env):
                 session.cmd("true")
                 session.close()
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return ("VM survived %d cgroup switches" % i)
 
-    @error.context_aware
+    @error_context.context_aware
     def devices_access():
         """
         Tests devices.list capability. It tries hot-adding disk with different
@@ -1470,17 +1472,17 @@ def run(test, params, env):
                                   (disk, readonly_str, name))
                 if "all in use" in out:     # All PCIs used
                     return -1   # restart machine and try again
-                if "%s: " % name not in monitor.cmd("info block"):
+                if name not in monitor.cmd("info block"):
                     return False
             elif monitor_type == "HUMAN DRIVE_ADD":
                 monitor.cmd("drive_add auto file=%s,readonly=%s,if=none,id=%s"
                             % (disk, readonly_str, name))
-                if "%s: " % name not in monitor.cmd("info block"):
+                if name not in monitor.cmd("info block"):
                     return False
             elif monitor_type == "HUMAN RH":
                 monitor.cmd("__com.redhat_drive_add id=%s,file=%s,readonly=%s"
                             % (name, disk, readonly_str))
-                if "%s: " % name not in monitor.cmd("info block"):
+                if name not in monitor.cmd("info block"):
                     return False
             elif monitor_type == "QMP RH":
                 monitor.cmd_obj({"execute": "__com.redhat_drive_add",
@@ -1499,7 +1501,7 @@ def run(test, params, env):
 
             return True
 
-        error.context("Setup test")
+        logging.info("Setup test")
         vm = env.get_all_vms()[0]
         # Try to find suitable monitor
         monitor_type = None
@@ -1526,25 +1528,25 @@ def run(test, params, env):
                     monitor_type = "HUMAN PCI_ADD"
                     break
         if monitor_type is None:
-            raise error.TestNAError("Not detected any suitable monitor cmd. "
-                                    "Supported methods:\nQMP: __com.redhat_"
-                                    "drive_add\nHuman: drive_add, pci_add, "
-                                    "__com.redhat_drive_add")
+            raise exceptions.TestSkipError("Not detected any suitable monitor cmd. "
+                                           "Supported methods:\nQMP: __com.redhat_"
+                                           "drive_add\nHuman: drive_add, pci_add, "
+                                           "__com.redhat_drive_add")
         logging.debug("Using monitor type: %s", monitor_type)
 
         modules = CgroupModules()
         if (modules.init(['devices']) != 1):
-            raise error.TestFail("Can't mount blkio cgroup modules")
+            raise exceptions.TestFail("Can't mount blkio cgroup modules")
         devices = Cgroup('devices', '')
         devices.initialize(modules)
         devices.mk_cgroup()
 
         # Add one scsi_debug disk which will be used in testing
-        if utils.system("lsmod | grep scsi_debug", ignore_status=True):
-            utils.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
-        utils.system("echo 1 > /sys/bus/pseudo/drivers/scsi_debug/add_host")
+        if process.system("lsmod | grep scsi_debug", ignore_status=True):
+            process.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
+        process.system("echo 1 > /sys/bus/pseudo/drivers/scsi_debug/add_host")
         time.sleep(0.1)
-        disk = utils.system_output("ls /dev/sd* | tail -n 1")
+        disk = process.system_output("ls /dev/sd* | tail -n 1", shell=True)
         dev = "%s:%s" % get_maj_min(disk)
         permissions = [
             {'property': 'deny',
@@ -1581,7 +1583,7 @@ def run(test, params, env):
 
         assign_vm_into_cgroup(vm, devices, 0)
 
-        error.context("Test")
+        logging.info("Test")
         err = ""
         name = "idTest%s%d"
         try:
@@ -1633,19 +1635,19 @@ def run(test, params, env):
                 logging.info("All restrictions enforced.")
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             vm.destroy()     # "Safely" remove devices :-)
             rm_scsi_disks(1)
             del(devices)
             del(modules)
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return("All restrictions enforced.")
 
-    @error.context_aware
+    @error_context.context_aware
     def freezer():
         """
         Tests the freezer.state cgroup functionality. (it freezes the guest
@@ -1661,9 +1663,9 @@ def run(test, params, env):
             out = None
             for i in range(10):
                 try:
-                    out = utils.system_output("cat /proc/%s/task/*/stat" %
-                                              pid)
-                except error.CmdError:
+                    out = process.system_output("cat /proc/%s/task/*/stat" %
+                                                pid)
+                except exceptions.CmdError:
                     out = None
                 else:
                     break
@@ -1673,12 +1675,12 @@ def run(test, params, env):
                 ret += sum([int(_) for _ in i.split(' ')[13:17]])
             return ret
 
-        error.context("Init")
+        logging.info("Init")
         try:
             test_time = int(params.get("cgroup_test_time", 60))
         except ValueError:
-            raise error.TestError("Incorrect configuration: param "
-                                  "cgroup_test_time have to be an integer")
+            raise exceptions.TestError("Incorrect configuration: param "
+                                       "cgroup_test_time have to be an integer")
 
         timeout = int(params.get("login_timeout", 360))
         vm = env.get_all_vms()[0]
@@ -1688,16 +1690,16 @@ def run(test, params, env):
         for _ in range(vm_cpus):
             sessions.append(vm.wait_for_login(timeout=timeout))
 
-        error.context("Prepare")
+        logging.info("Prepare")
         modules = CgroupModules()
         if (modules.init(['freezer']) != 1):
-            raise error.TestFail("Can't mount freezer cgroup modules")
+            raise exceptions.TestFail("Can't mount freezer cgroup modules")
         cgroup = Cgroup('freezer', '')
         cgroup.initialize(modules)
         cgroup.mk_cgroup()
         assign_vm_into_cgroup(vm, cgroup, 0)
 
-        error.context("Test")
+        logging.info("Test")
         err = ""
         try:
             for session in sessions:
@@ -1740,7 +1742,7 @@ def run(test, params, env):
                 logging.info("Freezer works fine")
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             del(cgroup)
             serial.sendline("rm -f /tmp/freeze-lock")
 
@@ -1751,11 +1753,11 @@ def run(test, params, env):
             del(modules)
 
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return ("Freezer works fine")
 
-    @error.context_aware
+    @error_context.context_aware
     def memory_limit(memsw=False):
         """
         Tests the memory.limit_in_bytes or memory.memsw.limit_in_bytes cgroup
@@ -1768,18 +1770,18 @@ def run(test, params, env):
                     1.1 * memory_limit memory blocks for testing
                     'by default 1/2 of VM memory'
         """
-        error.context("Init")
+        logging.info("Init")
         try:
             mem_limit = params.get('cgroup_memory_limit_kb', None)
             if mem_limit is not None:
                 mem_limit = int(mem_limit)
         except ValueError:
-            raise error.TestError("Incorrect configuration: param cgroup_"
-                                  "memory_limit_kb have to be an integer")
+            raise exceptions.TestError("Incorrect configuration: param cgroup_"
+                                       "memory_limit_kb have to be an integer")
 
         vm = env.get_all_vms()[0]
 
-        error.context("Prepare")
+        logging.info("Prepare")
         # Don't allow to specify more than 1/2 of the VM's memory
         mem = int(params.get('mem', 1024)) * 512
         if mem_limit:
@@ -1791,16 +1793,16 @@ def run(test, params, env):
             if params.get('setup_hugepages') == 'yes':
                 err = "Hugepages can't be used in this test."
                 logging.error(err)
-                raise error.TestNAError(err)
+                raise exceptions.TestSkipError(err)
             if utils_memory.read_from_meminfo('SwapFree') < (mem * 0.1):
                 err = "Not enough free swap space"
                 logging.error(err)
-                raise error.TestNAError(err)
+                raise exceptions.TestSkipError(err)
         # We want to copy slightely over "mem" limit
         mem *= 1.1
         modules = CgroupModules()
         if (modules.init(['memory']) != 1):
-            raise error.TestFail("Can't mount memory cgroup modules")
+            raise exceptions.TestFail("Can't mount memory cgroup modules")
         cgroup = Cgroup('memory', '')
         cgroup.initialize(modules)
         cgroup.mk_cgroup()
@@ -1809,12 +1811,12 @@ def run(test, params, env):
         if memsw:
             try:
                 cgroup.get_property("memory.memsw.limit_in_bytes", 0)
-            except error.TestError, details:
+            except exceptions.TestError, details:
                 logging.error("Can't get memory.memsw.limit_in_bytes info."
                               "Do you have support for memsw? (try passing"
                               "swapaccount=1 parameter to kernel):%s", details)
-                raise error.TestNAError("System doesn't support memory.memsw.*"
-                                        " or swapaccount is disabled.")
+                raise exceptions.TestSkipError("System doesn't support memory.memsw.*"
+                                               " or swapaccount is disabled.")
             cgroup.set_property_h('memory.memsw.limit_in_bytes',
                                   "%dK" % mem_limit, 0)
 
@@ -1822,8 +1824,8 @@ def run(test, params, env):
         try:
             vm.create()
         except Exception, failure_detail:
-            raise error.TestFail("init: Failed to recreate the VM: %s" %
-                                 failure_detail)
+            raise exceptions.TestFail("init: Failed to recreate the VM: %s" %
+                                      failure_detail)
         assign_vm_into_cgroup(vm, cgroup, 0)
         timeout = int(params.get("login_timeout", 360))
         session = vm.wait_for_login(timeout=timeout)
@@ -1832,11 +1834,11 @@ def run(test, params, env):
         fstats = open('/proc/%s/status' % vm.get_pid(), 'r')
         rss = int(re.search(r'VmRSS:[\t ]*(\d+) kB', fstats.read()).group(1))
         if rss > mem_limit:
-            raise error.TestFail("Init failed to move VM into cgroup, VmRss"
-                                 "=%s, expected=%s" % (rss, mem_limit))
+            raise exceptions.TestFail("Init failed to move VM into cgroup, VmRss"
+                                      "=%s, expected=%s" % (rss, mem_limit))
 
         try:
-            error.context("Test")
+            logging.info("Test")
             """
             Let VM allocate huge block:
             1) memsw: During allocation limit of rss+swap should be exceeded
@@ -1893,7 +1895,7 @@ def run(test, params, env):
                 else:   # dd command finished
                     break
 
-            error.context("Verification")
+            logging.info("Verification")
             if err:
                 logging.error(err)
             elif memsw:
@@ -1924,7 +1926,7 @@ def run(test, params, env):
                     logging.info(out)
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
 
             if vm.is_alive():
                 session.cmd("true")
@@ -1934,9 +1936,9 @@ def run(test, params, env):
             del(cgroup)
             del(modules)
 
-        error.context("Results")
+        logging.info("Results")
         if err:
-            raise error.TestFail(err)
+            raise exceptions.TestFail(err)
         else:
             return out
 
@@ -1958,14 +1960,14 @@ def run(test, params, env):
         :param cfg: cgroup_memory_move_mb - override the size of memory blocks
                     'by default 1/2 of VM memory'
         """
-        error.context("Init")
+        logging.info("Init")
         test_time = int(params.get('cgroup_test_time', 10))
         vm = env.get_all_vms()[0]
 
-        error.context("Prepare")
+        logging.info("Prepare")
         modules = CgroupModules()
         if (modules.init(['memory']) != 1):
-            raise error.TestFail("Can't mount memory cgroup modules")
+            raise exceptions.TestFail("Can't mount memory cgroup modules")
         cgroup = Cgroup('memory', '')
         cgroup.initialize(modules)
         # Two cgroups
@@ -1986,7 +1988,7 @@ def run(test, params, env):
 
         err = ""
         try:
-            error.context("Test")
+            logging.info("Test")
             logging.info("Some harmless IOError messages of non-existing "
                          "processes might occur.")
             sessions[0].sendline('dd if=/dev/zero of=/dev/null bs=%dM '
@@ -2025,7 +2027,7 @@ def run(test, params, env):
                 logging.info(out)
 
         finally:
-            error.context("Cleanup")
+            logging.info("Cleanup")
             sessions[1].cmd('killall dd; true')
             for session in sessions:
                 session.cmd("true")
@@ -2043,11 +2045,11 @@ def run(test, params, env):
     # Executes test specified by cgroup_test variable in cfg
     fce = None
     _fce = params.get('cgroup_test')
-    error.context("Executing test: %s" % _fce)
+    logging.info("Executing test: %s", _fce)
     try:
         fce = locals()[_fce]
     except KeyError:
-        raise error.TestNAError("Test %s doesn't exist. Check 'cgroup_test' "
-                                "variable in subtest.cfg" % _fce)
+        raise exceptions.TestSkipError("Test %s doesn't exist. Check 'cgroup_test' "
+                                       "variable in subtest.cfg" % _fce)
     else:
         return fce()

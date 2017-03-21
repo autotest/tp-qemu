@@ -1,15 +1,16 @@
 import logging
 import re
 
-from autotest.client.shared import error
+from avocado.core import exceptions
 
+from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import storage
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM block resize test:
@@ -34,9 +35,9 @@ def run(test, params, env):
                 return float(utils_misc.normalize_data_size(block_size[0],
                              order_magnitude="B"))
         else:
-            raise error.TestError("Can not find the block size for the"
-                                  " deivce. The output of command"
-                                  " is: %s" % output)
+            raise exceptions.TestError("Can not find the block size for the"
+                                       " deivce. The output of command"
+                                       " is: %s" % output)
 
     def compare_block_size(session, block_cmd, block_pattern):
         """
@@ -69,35 +70,35 @@ def run(test, params, env):
                             order_magnitude="B"))
     data_image_filename = storage.get_image_filename(data_image_params,
                                                      data_dir.get_data_dir())
-    data_image_dev = vm.get_block({'file': data_image_filename})
+    data_image_dev = vm.get_block({'file': data_image_filename}).split(" ")[0]
 
     drive_path = ""
     if params.get("os_type") == 'linux':
         drive_id = params["blk_extra_params_%s" % data_image].split("=")[1]
         drive_path = utils_misc.get_linux_drive_path(session, drive_id)
         if not drive_path:
-            raise error.TestError("Failed to get '%s' drive path"
-                                  % data_image)
+            raise exceptions.TestError("Failed to get '%s' drive path"
+                                       % data_image)
 
     block_size_cmd = params["block_size_cmd"].format(drive_path)
     block_size_pattern = params.get("block_size_pattern")
     need_reboot = params.get("need_reboot", "no") == "yes"
     accept_ratio = float(params.get("accept_ratio", 0))
 
-    error.context("Check image size in guest", logging.info)
+    error_context.context("Check image size in guest", logging.info)
     block_size = get_block_size(session, block_size_cmd, block_size_pattern)
     if (block_size > data_image_size or
             block_size < data_image_size * (1 - accept_ratio)):
-        raise error.TestError("Image size from guest and image not match"
-                              "Block size get from guest: %s \n"
-                              "Image size get from image: %s \n"
-                              % (block_size, data_image_size))
+        raise exceptions.TestError("Image size from guest and image not match"
+                                   "Block size get from guest: %s \n"
+                                   "Image size get from image: %s \n"
+                                   % (block_size, data_image_size))
 
     if params.get("guest_prepare_cmd"):
         session.cmd(params.get("guest_prepare_cmd"))
 
     if params.get("format_disk", "no") == "yes":
-        error.context("Format disk", logging.info)
+        error_context.context("Format disk", logging.info)
         utils_misc.format_windows_disk(session, params["disk_index"],
                                        mountpoint=params["disk_letter"])
 
@@ -134,24 +135,24 @@ def run(test, params, env):
 
         # We need shrink the disk in guest first, than in monitor
         if block_size < old_block_size and disk_update_cmd:
-            error.context("Shrink disk size to %s in guest"
-                          % block_size, logging.info)
+            error_context.context("Shrink disk size to %s in guest"
+                                  % block_size, logging.info)
             session.cmd(disk_update_cmd[index])
 
-        error.context("Change disk size to %s in monitor"
-                      % block_size, logging.info)
+        error_context.context("Change disk size to %s in monitor"
+                              % block_size, logging.info)
         vm.monitor.block_resize(data_image_dev, block_size)
 
         if need_reboot:
             session = vm.reboot(session=session)
         elif disk_rescan_cmd:
-            error.context("Rescan disk", logging.info)
+            error_context.context("Rescan disk", logging.info)
             session.cmd(disk_rescan_cmd)
 
         # We need expand disk in monitor first than extend it in guest
         if block_size > old_block_size and disk_update_cmd:
-            error.context("Extend disk to %s in guest"
-                          % block_size, logging.info)
+            error_context.context("Extend disk to %s in guest"
+                                  % block_size, logging.info)
             session.cmd(disk_update_cmd[index])
 
         global current_size
@@ -160,8 +161,8 @@ def run(test, params, env):
                                    (session, block_size_cmd,
                                     block_size_pattern),
                                    20, 0, 1, "Block Resizing"):
-            raise error.TestFail("Block size get from guest is not"
-                                 "the same as expected \n"
-                                 "Reported: %s\n"
-                                 "Expect: %s\n" % (current_size,
-                                                   block_size))
+            raise exceptions.TestFail("Block size get from guest is not"
+                                      "the same as expected \n"
+                                      "Reported: %s\n"
+                                      "Expect: %s\n" % (current_size,
+                                                        block_size))

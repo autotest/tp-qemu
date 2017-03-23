@@ -254,7 +254,7 @@ class BlockCopy(object):
         blocks = self.vm.monitor.info("block")
         try:
             if isinstance(blocks, str):
-                image_regex = '%s.*\s+file=(\S*)' % self.device
+                image_regex = '%s.*(?:\)\:|file=)\s*(\S*)' % self.device.split(" ")[0]
                 image_file = re.findall(image_regex, blocks)
                 return image_file[0]
 

@@ -42,8 +42,15 @@ def run(test, params, env):
             self.dsthost = self.params.get("hosts")[1]
             self.is_src = params["hostid"] == self.srchost
             self.vms = params["vms"].split()
-            self.login_timeout = int(params.get("login_timeout", 360))
             self.need_cleanup = params.get("need_cleanup", "yes") == "yes"
+            self.driver_load_cmd = params.get("driver_load_cmd")
+            if self.driver_load_cmd:
+                self.nic_index = 1
+                self.login_timeout = 120
+            else:
+                self.nic_index = 0
+                self.login_timeout = int(params.get("login_timeout", 240))
+            self.bg = None
 
         def migration_scenario(self):
             def clean_up(vm):
@@ -51,28 +58,37 @@ def run(test, params, env):
                                                 "killall -9 stress")
 
                 logging.info("Kill the background test in guest.")
-                session = vm.wait_for_login(timeout=self.login_timeout)
-                s = session.cmd_status(kill_bg_stress_cmd)
-                if s:
-                    raise error.TestFail("Failed to kill the background"
-                                         " test in guest.")
+                session = vm.wait_for_login(timeout=self.login_timeout,
+                                            nic_index=self.nic_index)
+                if self.params.get("bg_stress_test") == "driver_load":
+                    if self.bg and self.bg.is_alive():
+                        self.bg.join()
+                    output = session.cmd_output("ipconfig || ifconfig")
+                    logging.info("Guest network status:\n %s" % output)
+                    session.cmd(self.driver_load_cmd)
+                else:
+                    s, o = session.cmd_status_output(kill_bg_stress_cmd)
+                    if s:
+                        raise error.TestFail("Failed to kill the background"
+                                             " test in guest: %s" % o)
                 session.close()
 
             @error.context_aware
             def start_worker(mig_data):
                 logging.info("Try to login guest before migration test.")
                 vm = env.get_vm(params["main_vm"])
-                session = vm.wait_for_login(timeout=self.login_timeout)
+                bg_stress_test = self.params.get("bg_stress_test")
+                session = vm.wait_for_login(timeout=self.login_timeout,
+                                            nic_index=self.nic_index)
 
                 error.context("Do stress test before migration.", logging.info)
-                bg_stress_test = params.get("bg_stress_test")
                 check_running_cmd = params.get("check_running_cmd")
 
-                bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
-                                             args=(test, params, env,),
-                                             kwargs={"sub_type": bg_stress_test})
+                self.bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
+                                                  args=(test, params, env,),
+                                                  kwargs={"sub_type": bg_stress_test})
 
-                bg.start()
+                self.bg.start()
 
                 def check_running():
                     return session.cmd_status(check_running_cmd) == 0

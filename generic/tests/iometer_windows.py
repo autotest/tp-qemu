@@ -70,7 +70,7 @@ def run(test, params, env):
     logging.info("Set Timeout: %ss" % run_timeout)
     run_cmd = run_cmd % (icf_name, res_file)
     logging.info("Execute Command: %s" % run_cmd)
-    s, o = session.cmd_status_output(cmd=run_cmd, timeout=100)
+    s, o = session.cmd_status_output(cmd=run_cmd, timeout=run_timeout)
     error_context.context("Copy result '%s' to host" % res_file, logging.info)
     vm.copy_files_from(res_file, test.resultsdir)
 

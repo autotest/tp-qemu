@@ -642,8 +642,8 @@ def run(test, params, env):
     logging.debug(utils_test.get_memory_info(lvms))
 
     # Copy ksm_overcommit_guest.py into guests
-    shared_dir = os.path.dirname(data_dir.get_data_dir())
-    vksmd_src = os.path.join(shared_dir, "scripts", "ksm_overcommit_guest.py")
+    vksmd_src = os.path.join(data_dir.get_shared_dir(),
+                             "scripts", "ksm_overcommit_guest.py")
     dst_dir = "/tmp"
     for vm in lvms:
         vm.copy_files_to(vksmd_src, dst_dir)

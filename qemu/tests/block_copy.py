@@ -314,12 +314,15 @@ class BlockCopy(object):
         """
         waiting until block job finished
         """
+        time_start = time.time()
         params = self.parser_test_args()
         timeout = params.get("wait_timeout")
         finished = utils_misc.wait_for(self.job_finished, timeout=timeout)
         if not finished:
             raise error.TestFail("Job not finished in %s seconds" % timeout)
+        time_end = time.time()
         logging.info("Block job done.")
+        return time_end - time_start
 
     def action_after_finished(self):
         """

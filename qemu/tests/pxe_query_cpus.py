@@ -57,6 +57,7 @@ def run(test, params, env):
 
     params["start_vm"] = "yes"
     params["kvm_vm"] = "yes"
+    params["paused_after_start_vm"] = "yes"
 
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
@@ -67,6 +68,7 @@ def run(test, params, env):
         bg.start()
         error.context("Query cpus in loop", logging.info)
         vm = env.get_vm(params["main_vm"])
+        vm.resume()
         while True:
             count += 1
             try:

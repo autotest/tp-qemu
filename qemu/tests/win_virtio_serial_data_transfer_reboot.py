@@ -72,7 +72,7 @@ def run(test, params, env):
     if "vioser.sys" not in output:
         verify_cmd = params.get("vioser_verify_cmd",
                                 "verifier.exe /standard /driver vioser.sys")
-        session.cmd(verify_cmd, timeout=360)
+        session.cmd(verify_cmd, timeout=360, ok_status=[0, 2])
         session = vm.reboot(session=session, timeout=timeout)
         output = session.cmd(check_cmd, timeout=360)
         if "vioser.sys" not in output:

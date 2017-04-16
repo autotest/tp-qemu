@@ -108,10 +108,15 @@ def run(test, params, env):
         chk_str = params["mem_chk_re_str"]
         chk_cmd = params.get("cpu_%s_chk_cmd" % chk_type)
 
+        if chk_cmd == "disable":
+            fail_log = "Disable checking type: '%s'" % chk_type
+            logging.error(fail_log)
+            return -1
+
         if chk_cmd is None:
             fail_log = "Unknown cpu number checking type: '%s'" % chk_type
             logging.error(fail_log)
-            return -1
+            return -2
 
         s, output = session.cmd_status_output(chk_cmd, timeout=chk_timeout)
         num = re.findall(chk_str, output)
@@ -119,7 +124,7 @@ def run(test, params, env):
             fail_log = "Failed to get guest %s number, " % chk_type
             fail_log += "guest output: '%s'" % output
             logging.error(fail_log)
-            return -2
+            return -3
 
         logging.info("CPU %s number: %d",
                      string.capitalize(chk_type), int(num[-1]))
@@ -138,14 +143,17 @@ def run(test, params, env):
         f_fail = []
 
         if actual_n == -1:
-            fail_log = "Unknown cpu number checking type: '%s'" % chk_type
-            logging.error(fail_log)
+            fail_log = "Disable checking type: '%s'" % chk_type
             f_fail.append(fail_log)
             return f_fail
 
         if actual_n == -2:
+            fail_log = "Unknown cpu number checking type: '%s'" % chk_type
+            f_fail.append(fail_log)
+            return f_fail
+
+        if actual_n == -3:
             fail_log = "Failed to get guest %s number." % chk_type
-            logging.error(fail_log)
             f_fail.append(fail_log)
             return f_fail
 

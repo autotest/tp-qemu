@@ -282,7 +282,7 @@ def run(test, params, env):
         else:
             remove(output_filename)
 
-    def _info(cmd, img, sub_info=None, fmt=None):
+    def _info(cmd, img, sub_info=None, fmt=None, bk_chain=None):
         """
         Simple wrapper of 'qemu-img info'.
 
@@ -294,6 +294,8 @@ def run(test, params, env):
         cmd += " info"
         if fmt:
             cmd += " -f %s" % fmt
+        if bk_chain:
+            cmd += " --backing-chain"
         cmd += " %s" % img
 
         try:
@@ -320,8 +322,19 @@ def run(test, params, env):
 
         :param cmd: qemu-img base command.
         """
-        img_info = _info(cmd, image_name)
-        logging.info("Info of image '%s':\n%s", image_name, img_info)
+        backing_chain = params.get("backing_chain")
+        if backing_chain:
+            sn_fmt = params.get("sn_format", "qcow2")
+            sn_file = params.get("sn_file", "sn")
+            sn_file = _get_image_filename(sn_file, enable_gluster, sn_fmt)
+            _create(cmd, sn_file, sn_fmt, base_img=image_name)
+            img_info = _info(cmd, sn_file, bk_chain=backing_chain)
+            remove(sn_file)
+            logging.info("Info of image '%s':\n%s", sn_file, img_info)
+        else:
+            img_info = _info(cmd, image_name)
+            logging.info("Info of image '%s':\n%s", image_name, img_info)
+
         if image_format not in img_info:
             raise error.TestFail("Got unexpected format of image '%s'"
                                  " in info test" % image_name)

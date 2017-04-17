@@ -356,6 +356,16 @@ def run(test, params, env):
                                  "snapshot list is: \n%s" % out)
         for i in range(2):
             sn_name = "snapshot%d" % i
+            applycmd = cmd
+            applycmd += " -a %s %s" % (sn_name, image_name)
+            msg = "Apply snapshot '%s' by command %s" % (sn_name, applycmd)
+            error.context(msg, logging.info)
+            status, output = commands.getstatusoutput(applycmd)
+            if status != 0:
+                raise error.TestFail("Apply snapshot '%s' failed: %s" %
+                                     (sn_name, output))
+        for i in range(2):
+            sn_name = "snapshot%d" % i
             delcmd = cmd
             delcmd += " -d %s %s" % (sn_name, image_name)
             msg = "Delete snapshot '%s' by command %s" % (sn_name, delcmd)

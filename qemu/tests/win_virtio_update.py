@@ -210,7 +210,8 @@ def run(test, params, env):
         fail_log += " Please check the error_log. "
     else:
         fail_log = "Failed to install:"
-    error_log = open("%s/error_log" % test.resultsdir, "w")
+    logdir = test.resultsdir or test.logdir
+    error_log = open("%s/error_log" % logdir, "w")
     fail_flag = False
     error.context("Check driver available in guest", logging.info)
     if setup_ps:

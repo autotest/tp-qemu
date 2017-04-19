@@ -148,6 +148,26 @@ class BallooningTest(MemoryBaseTest):
             qemu_quit_after_test = 0
         return qemu_quit_after_test
 
+    def _mem_state(self):
+        """
+        A generator to get guest memory until it does not change
+        """
+        stable = False
+        ori_mem = self.get_memory_status()
+        while True:
+            yield stable
+            cur_mem = self.get_memory_status()
+            stable = abs(cur_mem - ori_mem) < 100
+            ori_mem = cur_mem
+
+    def wait_for_balloon_complete(self, timeout):
+        """
+        Wait until guest memory don't change
+        """
+        logging.info("Wait until guest memory don't change")
+        is_stable = self._mem_state()
+        utils_misc.wait_for(is_stable.next, timeout, step=10.0)
+
     def get_memory_boundary(self, balloon_type=''):
         """
         Get the legal memory boundary for balloon operation.
@@ -163,10 +183,11 @@ class BallooningTest(MemoryBaseTest):
         if self.params.get('os_type') == 'windows':
             logging.info("Get windows miminum balloon value:")
             self.vm.balloon(1)
-            time.sleep(90)
+            balloon_timeout = self.params.get("balloon_timeout", 900)
+            self.wait_for_balloon_complete(balloon_timeout)
             used_size = int(self.get_ballooned_memory() + self.ratio * self.ori_mem)
             self.vm.balloon(max_size)
-            time.sleep(90)
+            self.wait_for_balloon_complete(balloon_timeout)
             self.ori_gmem = self.get_memory_status()
         else:
             vm_total = self.get_memory_status()

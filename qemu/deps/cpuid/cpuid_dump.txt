@@ -1,9 +1,9 @@
 x86       Opteron_G5 AMD Opteron 63xx class CPU
   family 21 model 2 stepping 0 level 13 xlevel 0x80000001a vendor "AuthenticAMD"
   feature_edx (sse2 sse fxsr mmx clflush pse36 pat cmov mca pge mtrr sep apic cx8 mce pae msr tsc pse de fpu)
-  feature_ecx (f16c avx xsave aes popcnt sse4.2|sse4_2 sse4.1|sse4_1 cx16 pma ssse3 pclmulqdq|pclmuldq pni|sse3)
+  feature_ecx (f16c avx xsave aes popcnt sse4.2|sse4_2 sse4.1|sse4_1 cx16 ssse3 pclmulqdq|pclmuldq pni|sse3)
   extfeature_edx (lm|i64 rdtscp  pdpe1gb fxsr mmx nx|xd pse36 pat cmov mca pge mtrr syscall apic cx8 mce pae msr tsc pse de fpu)
-  extfeature_ecx (tbm fma4 xop 3dnowprefetch misalignsse sse4a abm svm lahf_lm)
+  extfeature_ecx (tbm fma4 xop 3dnowprefetch misalignsse sse4a abm cr8_legacy  svm lahf_lm)
 
 x86       Opteron_G4 AMD Opteron 62xx class CPU
   family 21 model 1 stepping 2 level 13 xlevel 0x80000001a vendor "AuthenticAMD"

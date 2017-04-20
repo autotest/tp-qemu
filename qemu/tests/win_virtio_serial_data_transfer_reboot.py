@@ -1,11 +1,14 @@
 import os
 import logging
+import subprocess
 
-from autotest.client import utils
+from avocado.utils import process
+
 from autotest.client.shared import error
 
 from virttest import data_dir
 from virttest import qemu_virtio_port
+from virttest import utils_misc
 
 
 # This decorator makes the test function aware of context strings
@@ -37,73 +40,96 @@ def run(test, params, env):
                 if port.name == port_name:
                     return port.hostfile
 
-    def receive_data(session, serial_receive_cmd, data_file):
-        output = session.cmd_output(serial_receive_cmd, timeout=30)
-        ori_data = file(data_file, "r").read()
-        if ori_data.strip() != output.strip():
-            err = "Data lost during transfer. Origin data is:\n%s" % ori_data
-            err += "Guest receive data:\n%s" % output
-            raise error.TestFail(err)
-
-    def transfer_data(session, receive_cmd, send_cmd, data_file, n_time):
-        txt = "Transfer data betwwen guest and host for %s times" % n_time
-        error.context(txt, logging.info)
+    def transfer_data(session, host_file_path, guest_file_path, n_time,
+                      timeout):
+        host_cmd = ["python", host_script_path, "-s", host_serial_path, "-f",
+                    host_file_path, "-a", "both"]
+        guest_cmd = "python %s -d %s -f %s -a both" % (guest_script_path,
+                                                       port_name,
+                                                       guest_file_path)
         for num in xrange(n_time):
             logging.info("Data transfer repeat %s/%s." % (num + 1, n_time))
-            try:
-                args = (session, receive_cmd, data_file)
-                guest_receive = utils.InterruptedThread(receive_data, args)
-                guest_receive.start()
-                utils.system(send_cmd, timeout=30)
-            finally:
-                if guest_receive:
-                    guest_receive.join(10)
+            logging.debug("Running: %s" % " ".join(host_cmd))
+            host_proc = subprocess.Popen(host_cmd, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
+            if host_proc.poll() != None:
+                h_stdout, h_stderr = host_proc.communicate()
+                h_status = host_proc.returncode
+                err = "Can not run transfer command on host\n"
+                err += ("return code is (%s), stdout:\n%s\n"
+                        "stderr:\n%s" % (h_status, h_stdout, h_stderr))
+                raise error.TestFail(err)
+            g_status, g_output = session.cmd_status_output(guest_cmd,
+                                                           timeout=timeout)
+            if not utils_misc.wait_for(lambda: host_proc.poll() != None,
+                                       timeout, step=1):
+                err = "Can not finish data transfer on host"
+                raise error.TestFail(err)
+            h_stdout, h_stderr = host_proc.communicate()
+            h_status = host_proc.returncode
+            if g_status or h_status:
+                err = "Error occurred during data transfer\n"
+                err += "guest return code is (%s), output:\n%s" % (g_status,
+                                                                   g_output)
+                err += ("host return code is (%s), stdout:\n%s\n"
+                        "stderr:\n%s" % (h_status, h_stdout, h_stderr))
+                raise error.TestFail(err)
+            session.cmd("del %s" % guest_file_path, timeout=timeout)
+
+    dep_dir = data_dir.get_deps_dir("win_serial")
+    timeout = int(params.get("login_timeout", 360))
+    port_name = params["virtio_ports"].split()[-1]
+    check_cmd = params.get("check_vioser_status_cmd",
+                           "verifier /querysettings")
+    verify_cmd = params.get("vioser_verify_cmd",
+                            "verifier.exe /standard /driver vioser.sys")
+    guest_scripts = params["guest_scripts"].split(";")
+    guest_path = params.get("guest_script_folder", "C:\\")
+    guest_script = params.get("guest_script",
+                              "VirtIoChannel_guest_send_receive.py")
+    host_script = params.get("host_script", "serial_host_send_receive.py")
+    n_time = int(params.get("repeat_times", 20))
+    test_timeout = timeout
+
+    guest_script_path = "%s%s" % (guest_path, guest_script)
+    host_script_path = os.path.join(dep_dir, host_script)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    timeout = int(params.get("login_timeout", 360))
+    host_serial_path = get_virtio_port_host_file(vm, port_name)
     session = vm.wait_for_login(timeout=timeout)
 
-    check_cmd = params.get("check_vioser_status_cmd",
-                           "verifier /querysettings")
-    output = session.cmd(check_cmd, timeout=360)
     error.context("Make sure vioser.sys verifier enabled in guest.",
                   logging.info)
+    output = session.cmd(check_cmd, timeout=test_timeout)
     if "vioser.sys" not in output:
-        verify_cmd = params.get("vioser_verify_cmd",
-                                "verifier.exe /standard /driver vioser.sys")
-        session.cmd(verify_cmd, timeout=360)
+        session.cmd(verify_cmd, timeout=test_timeout, ok_status=[0, 2])
         session = vm.reboot(session=session, timeout=timeout)
-        output = session.cmd(check_cmd, timeout=360)
+        output = session.cmd(check_cmd, timeout=test_timeout)
         if "vioser.sys" not in output:
             error.TestError("Fail to veirfy vioser.sys driver.")
-    guest_scripts = params["guest_scripts"]
-    guest_path = params.get("guest_script_folder", "C:\\")
-    error.context("Copy test scripts to guest.", logging.info)
-    for script in guest_scripts.split(";"):
-        link = os.path.join(data_dir.get_deps_dir("win_serial"), script)
-        vm.copy_files_to(link, guest_path, timeout=60)
-    port_name = params["virtio_ports"].split()[0]
-    host_file = get_virtio_port_host_file(vm, port_name)
-    data_file = params["data_file"]
-    data_file = os.path.join(data_dir.get_deps_dir("win_serial"),
-                             data_file)
-    send_script = params.get("host_send_script", "serial-host-send.py")
-    send_script = os.path.join(data_dir.get_deps_dir("win_serial"),
-                               send_script)
-    serial_send_cmd = "python %s %s %s" % (send_script, host_file, data_file)
-    receive_script = params.get("guest_receive_script",
-                                "VirtIoChannel_guest_recieve.py")
-    receive_script = "%s%s" % (guest_path, receive_script)
-    serial_receive_cmd = "python %s %s " % (receive_script, port_name)
-    n_time = int(params.get("repeat_times", 20))
 
-    transfer_data(session, serial_receive_cmd, serial_send_cmd,
-                  data_file, n_time)
+    error.context("Copy test scripts to guest.", logging.info)
+    for script in guest_scripts:
+        src_path = os.path.join(dep_dir, script)
+        vm.copy_files_to(src_path, guest_path, timeout=test_timeout)
+
+    host_file_path = os.path.join(data_dir.get_tmp_dir(), "10M")
+    process.run("dd if=/dev/urandom of=%s bs=1M count=10" % host_file_path,
+                timeout=test_timeout)
+    guest_file_path = "%srecv.dat" % guest_path
+
+    error.context("Transfer data between host and guest.", logging.info)
+    transfer_data(session, host_file_path, guest_file_path, n_time,
+                  test_timeout)
+
     error.context("Reboot guest.", logging.info)
     session = vm.reboot(session=session, timeout=timeout)
-    transfer_data(session, serial_receive_cmd, serial_send_cmd,
-                  data_file, n_time)
+
+    error.context("Transfer data between host and guest.", logging.info)
+    transfer_data(session, host_file_path, guest_file_path, n_time,
+                  test_timeout)
+
     error.context("Reboot guest by system_reset qmp command.", logging.info)
     session = vm.reboot(session=session, method="system_reset",
                         timeout=timeout)

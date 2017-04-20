@@ -81,7 +81,6 @@ def run(test, params, env):
         """
         Check whether guest network is connective by ping
         """
-        session = vm.wait_for_serial_login(restart_network=link_up)
         if change_queues:
             env["run_change_queues"] = False
             bg_thread = utils.InterruptedThread(change_queues_number_repeatly,
@@ -90,22 +89,19 @@ def run(test, params, env):
 
             utils_misc.wait_for(lambda: env["run_change_queues"], 30, 0, 2,
                                 "wait queues change start")
-
-        output = utils_test.ping(host_ip, 10, interface=guest_ifname,
-                                 timeout=20, session=session)[1]
-        if not link_up and utils_test.get_loss_ratio(output) != 100:
+        time.sleep(0.5)
+        output = utils_test.ping(guest_ip, 10, interface=guest_ifname,
+                                 timeout=20, session=None)[1]
+        if not link_up and utils_test.get_loss_ratio(output) < 80:
             err_msg = "guest network still connecting after down the link"
             raise error.TestFail(err_msg)
-        elif link_up and utils_test.get_loss_ratio(output) == 100:
+        elif link_up and utils_test.get_loss_ratio(output) > 20:
             err_msg = "All packets lost during ping guest ip after link up"
             raise error.TestFail(err_msg)
-        else:
-            logging.info("Guest network connecting is exactly as expected")
 
         if change_queues:
             env["run_change_queues"] = False
             bg_thread.join()
-        session.close()
 
     def operstate_check(session, expect_status, guest_ifname=""):
         """
@@ -194,7 +190,7 @@ def run(test, params, env):
 
     change_queues = False
     guest_ifname = ""
-    guest_ip = vm.get_address()
+    guest_ip = vm.wait_for_get_address(nic_index_or_name=0, timeout=240)
     host_ip = utils_net.get_host_ip_address(params)
     # Win guest '2' represent 'Connected', '7' represent 'Media disconnected'
     win_media_connected = params.get("win_media_connected", "2")

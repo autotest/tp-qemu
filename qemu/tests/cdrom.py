@@ -14,7 +14,10 @@ import sys
 import tempfile
 import random
 
-import aexpect
+try:
+    import aexpect
+except ImportError:
+    from virttest import aexpect
 
 from autotest.client.shared import error
 from autotest.client import utils

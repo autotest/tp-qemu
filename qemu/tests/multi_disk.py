@@ -315,21 +315,22 @@ def run(test, params, env):
     try:
         for i in range(n_repeat):
             logging.info("iterations: %s", (i + 1))
-            error.context("Format those disks in guest", logging.info)
-            for disk in disks:
-                disk = disk.strip()
-                error.context("Preparing disk: %s..." % disk)
+            if params.get("os_type") == "linux":
+                error.context("Format those disks in guest", logging.info)
+                for disk in disks:
+                    disk = disk.strip()
+                    error.context("Preparing disk: %s..." % disk)
 
-                # Random select one file system from file_system
-                index = random.randint(0, (len(file_system) - 1))
-                fs = file_system[index].strip()
-                cmd = params["format_command"] % (fs, disk)
-                error.context("formatting test disk")
-                session.cmd(cmd, timeout=cmd_timeout)
-                cmd = params.get("mount_command")
-                if cmd:
-                    cmd = cmd % (disk, disk, disk)
-                    session.cmd(cmd)
+                    # Random select one file system from file_system
+                    index = random.randint(0, (len(file_system) - 1))
+                    fs = file_system[index].strip()
+                    cmd = params["format_command"] % (fs, disk)
+                    error.context("formatting test disk")
+                    session.cmd(cmd, timeout=cmd_timeout)
+                    cmd = params.get("mount_command")
+                    if cmd:
+                        cmd = cmd % (disk, disk, disk)
+                        session.cmd(cmd)
 
             error.context("Cope file into / out of those disks", logging.info)
             for disk in disks:

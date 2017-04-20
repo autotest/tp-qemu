@@ -21,6 +21,7 @@ def run(test, params, env):
     """
     cpu_vendor = utils_misc.get_cpu_vendor()
     host_model = utils_misc.get_host_cpu_models()
+    extra_flags = ""
 
     model_list = params.get("cpu_model")
     if not model_list:
@@ -29,8 +30,11 @@ def run(test, params, env):
         else:
             model_list = params.get("cpu_model_%s" % cpu_vendor,
                                     host_model[-1])
+    if model_list == "host":
+        extra_flags = params.get("%s_extra_flags" % host_model[0], "")
+        params["option_flags"] += params.get("%s_option_flags" % cpu_vendor, "")
 
-    extra_flags = params.get("cpu_model_flags_%s" % cpu_vendor, "")
+    extra_flags += params.get("cpu_model_flags_%s" % cpu_vendor, "")
     if extra_flags:
         cpu_flags = params.get("cpu_model_flags", "") + extra_flags
         params["cpu_model_flags"] = cpu_flags

@@ -140,7 +140,7 @@ def run(test, params, env):
                 gluster_server = "localhost"
             volume_name = params["gluster_volume_name"]
             g_mount_link = "%s:/%s" % (gluster_server, volume_name)
-            mount_cmd = "mount -t glusterfs %s %s" % (g_mount_link, g_mount_point)
+            mount_cmd = "mount %s %s" % (g_mount_link, g_mount_point)
             utils.system(mount_cmd, timeout=60)
             file_name = os.path.join(g_mount_point, "%s.iso" % name)
         else:
@@ -174,8 +174,7 @@ def run(test, params, env):
                 if ":" in g_server:
                     g_server = g_server.split(":")[0]
                 g_mount_link = "%s:/%s" % (g_server, v_name)
-                mount_cmd = "mount -t glusterfs %s %s" % (g_mount_link,
-                                                          g_mount_point)
+                mount_cmd = "mount %s %s" % (g_mount_link, g_mount_point)
                 utils.system(mount_cmd, timeout=60)
                 path = os.path.join(g_mount_point, f_name)
             try:

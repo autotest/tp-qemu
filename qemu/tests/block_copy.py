@@ -425,11 +425,15 @@ class BlockCopy(object):
         """
         params = self.params
         session = self.get_session()
-        file_create_cmd = params.get("create_cmd", "touch FILE")
+        file_create_cmd = params.get("create_command", "touch FILE")
         test_exists_cmd = params.get("test_exists_cmd", "test -f FILE")
         if session.cmd_status(test_exists_cmd.replace("FILE", file_name)):
-            session.cmd(file_create_cmd.replace("FILE", file_name))
-        session.cmd("md5sum %s > %s.md5" % (file_name, file_name))
+            session.cmd(file_create_cmd.replace("FILE", file_name), timeout=200)
+        session.cmd("md5sum %s > %s.md5" % (file_name, file_name), timeout=200)
+        sync_cmd = params.get("sync_cmd", "sync")
+        sync_cmd = utils_misc.set_winutils_letter(session, sync_cmd)
+        session.cmd(sync_cmd)
+        session.close()
 
     def verify_md5(self, file_name):
         """
@@ -437,7 +441,18 @@ class BlockCopy(object):
         :param file_name: the file need to be verified.
         """
         session = self.get_session()
-        status, output = session.cmd_status_output("md5sum -c %s.md5" % file_name)
+        status, output = session.cmd_status_output("md5sum -c %s.md5" % file_name,
+                                                   timeout=200)
         if status != 0:
             raise error.TestFail("File %s changed, md5sum check output: %s" %
                                  (file_name, output))
+
+    def reopen(self, reopen_image):
+        """
+        Closing the vm and reboot it with the backup image.
+        :param reopen_image: the image that vm reopen with.
+        """
+        self.vm.destroy()
+        self.params["image_name_%s" % self.tag] = reopen_image
+        self.vm.create(params=self.params)
+        self.vm.verify_alive()

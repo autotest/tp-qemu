@@ -20,7 +20,7 @@ def run(test, params, env):
        check if they are added
     3) Add multi nic devices through monitor cmd and check if they are added
     4) Check if new interface gets ip address
-    5) Disable primary link of guest
+    5) Disable primary link of guest,if test Hot-plug nic w/ the netdev already used,no need disable,direct hot-plug the device.
     6) Ping guest new ip from host
     7) Delete nic device and netdev if user config "do_random_unhotplug"
     8) Ping guest's new ip address after guest pause/resume
@@ -90,6 +90,15 @@ def run(test, params, env):
             status, output = session.cmd_output_safe(del_route_cmd)
         return status, output
 
+    def device_add_nic(pci_model="virtio", netdev="hostnet1", device_id="net1"):
+        if pci_model == "virtio":
+            pci_model = "virtio-net-pci"
+        pci_add_cmd = "device_add id=%s,driver=%s,netdev=%s" % (device_id,
+                                                                pci_model,
+                                                                netdev)
+        add_output = vm.monitor.send_args_cmd(pci_add_cmd)
+        return add_output
+
     login_timeout = int(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -115,84 +124,96 @@ def run(test, params, env):
             nic_model = nic_params["pci_model"]
             nic_params["nic_model"] = nic_model
             nic_params["nic_name"] = nic_name
+            used_sameid = params.get("used_sameid")
+            if used_sameid == "yes":
+                useddevice_id = primary_nic[0].netdev_id
+                error.context("Hot-plug nic w/ the netdev already used", logging.info)
+                try:
+                    add_output = device_add_nic(nic_model, useddevice_id, nic_name)
+                except Exception, e:
+                    match_error = "it's in use"
+                    if match_error in str(e):
+                        pass
+                    else:
+                        raise error.TestFail("Tested failed, %s can hotplug nic when it's in used" % (useddevice_id))
+            else:
+                error.context("Disable other link(s) of guest", logging.info)
+                disable_nic_list = primary_nic + nic_hotplugged
+                for nic in disable_nic_list:
+                    if guest_is_linux:
+                        ifname = utils_net.get_linux_ifname(s_session, nic["mac"])
+                        s_session.cmd_output_safe("ifconfig %s 0.0.0.0" % ifname)
+                    else:
+                        s_session.cmd_output_safe("ipconfig /release all")
+                    vm.set_link(nic.device_id, up=False)
 
-            error.context("Disable other link(s) of guest", logging.info)
-            disable_nic_list = primary_nic + nic_hotplugged
-            for nic in disable_nic_list:
-                if guest_is_linux:
-                    ifname = utils_net.get_linux_ifname(s_session, nic["mac"])
-                    s_session.cmd_output_safe("ifconfig %s 0.0.0.0" % ifname)
-                else:
-                    s_session.cmd_output_safe("ipconfig /release all")
-                vm.set_link(nic.device_id, up=False)
-
-            error.context("Hotplug %sth '%s' nic named '%s'" % (nic_index,
-                                                                nic_model,
-                                                                nic_name))
-            hotplug_nic = vm.hotplug_nic(**nic_params)
-            error.context("Check if new interface gets ip address",
-                          logging.info)
-            hotnic_ip = get_hotplug_nic_ip(
-                vm,
-                hotplug_nic,
-                s_session,
-                guest_is_linux)
-            if not hotnic_ip:
-                raise error.TestFail("Hotplug nic can get ip address")
-            logging.info("Got the ip address of new nic: %s", hotnic_ip)
-
-            error.context("Ping guest's new ip from host", logging.info)
-            status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
-                                              s_session, guest_is_linux)
-            if status:
-                err_msg = "New nic failed ping test, error info: '%s'"
-                raise error.TestFail(err_msg % output)
-
-            error.context("Reboot vm after hotplug nic", logging.info)
-            # reboot vm via serial port since some guest can't auto up
-            # hotplug nic and next step will check is hotplug nic works.
-            s_session = vm.reboot(session=s_session, serial=True)
-            vm.verify_alive()
-            hotnic_ip = get_hotplug_nic_ip(
-                vm,
-                hotplug_nic,
-                s_session,
-                guest_is_linux)
-            if not hotnic_ip:
-                raise error.TestFail(
-                    "Hotplug nic can't get ip after reboot vm")
-
-            error.context("Ping guest's new ip from host", logging.info)
-            status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
-                                              s_session, guest_is_linux)
-            if status:
-                err_msg = "New nic failed ping test, error info: '%s'"
-                raise error.TestFail(err_msg % output)
-
-            error.context("Pause vm", logging.info)
-            vm.monitor.cmd("stop")
-            vm.verify_status("paused")
-            error.context("Resume vm", logging.info)
-            vm.monitor.cmd("cont")
-            vm.verify_status("running")
-            error.context("Ping guest's new ip after resume", logging.info)
-            status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
-                                              s_session, guest_is_linux)
-            if status:
-                err_msg = "New nic failed ping test after stop/cont, "
-                err_msg += "error info: '%s'" % output
-                raise error.TestFail(err_msg)
-
-            # random hotunplug nic
-            nic_hotplugged.append(hotplug_nic)
-            if random.randint(0, 1) and params.get("do_random_unhotplug"):
-                error.context("Detaching the previously attached nic from vm",
+                error.context("Hotplug %sth '%s' nic named '%s'" % (nic_index,
+                                                                    nic_model,
+                                                                    nic_name))
+                hotplug_nic = vm.hotplug_nic(**nic_params)
+                error.context("Check if new interface gets ip address",
                               logging.info)
-                unplug_nic_index = random.randint(0, len(nic_hotplugged) - 1)
-                vm.hotunplug_nic(nic_hotplugged[unplug_nic_index].nic_name)
-                nic_hotplugged.pop(unplug_nic_index)
+                hotnic_ip = get_hotplug_nic_ip(
+                    vm,
+                    hotplug_nic,
+                    s_session,
+                    guest_is_linux)
+                if not hotnic_ip:
+                    raise error.TestFail("Hotplug nic can get ip address")
+                logging.info("Got the ip address of new nic: %s", hotnic_ip)
+
+                error.context("Ping guest's new ip from host", logging.info)
+                status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
+                                                  s_session, guest_is_linux)
+                if status:
+                    err_msg = "New nic failed ping test, error info: '%s'"
+                    raise error.TestFail(err_msg % output)
+
+                error.context("Reboot vm after hotplug nic", logging.info)
+                # reboot vm via serial port since some guest can't auto up
+                # hotplug nic and next step will check is hotplug nic works.
                 s_session = vm.reboot(session=s_session, serial=True)
                 vm.verify_alive()
+                hotnic_ip = get_hotplug_nic_ip(
+                    vm,
+                    hotplug_nic,
+                    s_session,
+                    guest_is_linux)
+                if not hotnic_ip:
+                    raise error.TestFail(
+                        "Hotplug nic can't get ip after reboot vm")
+
+                error.context("Ping guest's new ip from host", logging.info)
+                status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
+                                                  s_session, guest_is_linux)
+                if status:
+                    err_msg = "New nic failed ping test, error info: '%s'"
+                    raise error.TestFail(err_msg % output)
+
+                error.context("Pause vm", logging.info)
+                vm.monitor.cmd("stop")
+                vm.verify_status("paused")
+                error.context("Resume vm", logging.info)
+                vm.monitor.cmd("cont")
+                vm.verify_status("running")
+                error.context("Ping guest's new ip after resume", logging.info)
+                status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
+                                                  s_session, guest_is_linux)
+                if status:
+                    err_msg = "New nic failed ping test after stop/cont, "
+                    err_msg += "error info: '%s'" % output
+                    raise error.TestFail(err_msg)
+
+                # random hotunplug nic
+                nic_hotplugged.append(hotplug_nic)
+                if random.randint(0, 1) and params.get("do_random_unhotplug"):
+                    error.context("Detaching the previously attached nic from vm",
+                                  logging.info)
+                    unplug_nic_index = random.randint(0, len(nic_hotplugged) - 1)
+                    vm.hotunplug_nic(nic_hotplugged[unplug_nic_index].nic_name)
+                    nic_hotplugged.pop(unplug_nic_index)
+                    s_session = vm.reboot(session=s_session, serial=True)
+                    vm.verify_alive()
             s_session.close()
     finally:
         for nic in nic_hotplugged:

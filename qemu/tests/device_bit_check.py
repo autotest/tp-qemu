@@ -28,7 +28,7 @@ def run(test, params, env):
     test_loop = params.get("test_loop", "default").split(";")
     timeout = float(params.get("login_timeout", 240))
     dev_type = params.get("dev_type", "virtio-blk-pci")
-    dev_param_name = params.get("dev_param_name", "blk_extra_params")
+    dev_param_name = params.get("dev_param_name", "blk_extra_params_image1")
     dev_pattern = params.get("dev_pattern", "(dev: %s.*?)dev:" % dev_type)
     pci_id_pattern = params.get("pci_id_pattern")
     convert_dict = {"1": ["on", "true"], "0": ["off", "false"]}

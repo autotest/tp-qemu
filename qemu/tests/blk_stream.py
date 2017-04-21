@@ -33,7 +33,7 @@ class BlockStream(block_copy.BlockCopy):
         default_speed = params.get("default_speed")
 
         error.context("start to stream block device", logging.info)
-        self.vm.block_stream(self.device, default_speed, base_image)
+        self.vm.block_stream(self.device.split(' ')[0], default_speed, base_image)
         status = self.get_status()
         if not status:
             raise error.TestFail("no active job found")

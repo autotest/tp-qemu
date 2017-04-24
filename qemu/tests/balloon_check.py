@@ -389,10 +389,10 @@ def run(test, params, env):
         elif params_tag.get('expect_memory_ratio'):
             expect_mem = int(balloon_test.ori_mem *
                              float(params_tag.get('expect_memory_ratio')))
+        #set evict illegal value to "0" for both linux and windows
         elif params_tag.get('illegal_value_check', 'no') == 'yes':
             if tag == 'evict':
-                Wmem = int(random.uniform(1, 100))
-                expect_mem = Wmem if params['os_type'] == 'windows' else 0
+                expect_mem = 0
             else:
                 expect_mem = int(balloon_test.ori_mem+random.uniform(1, 1000))
         else:

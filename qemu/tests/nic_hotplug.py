@@ -58,7 +58,14 @@ def run(test, params, env):
     def get_hotplug_nic_ip(vm, nic, session, is_linux_guest=True):
         def __get_address():
             try:
-                return vm.wait_for_get_address(nic["nic_name"], timeout=90)
+                index = [
+                    _idx for _idx, _nic in enumerate(
+                        vm.virtnet) if _nic == nic][0]
+                return vm.wait_for_get_address(index, timeout=90)
+            except IndexError:
+                raise error.TestError(
+                    "Nic '%s' not exists in VM '%s'" %
+                    (nic["nic_name"], vm.name))
             except (virt_vm.VMIPAddressMissingError,
                     virt_vm.VMAddressVerificationError):
                 renew_ip_address(session, nic["mac"], is_linux_guest)

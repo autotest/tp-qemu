@@ -83,8 +83,11 @@ def run(test, params, env):
         infos = boot_fail_info.split(';')
         start = time.time()
         while True:
-            console_str = vm.serial_console.get_stripped_output()
-            match = re.search(infos[0], console_str)
+            try:
+                output = vm.serial_console.get_stripped_output()
+            except ValueError:
+                output = vm.serial_console.get_output()
+            match = re.search(infos[0], output)
             if match or time.time() > start + timeout:
                 break
             time.sleep(1)
@@ -99,7 +102,10 @@ def run(test, params, env):
                 vm.destroy()
                 return
 
-            output = vm.serial_console.get_stripped_output()
+            try:
+                output = vm.serial_console.get_stripped_output()
+            except ValueError:
+                output = vm.serial_console.get_output()
 
             for i in infos:
                 if not re.search(i, output):
@@ -132,9 +138,14 @@ def run(test, params, env):
     if boot_device:
         match = False
         start = time.time()
+        console_str = ""
         while True:
-            console_str = vm.serial_console.get_stripped_output()
-            match = re.search(boot_menu_hint, console_str)
+            try:
+                output = vm.serial_console.get_stripped_output()
+            except ValueError:
+                output = vm.serial_console.get_output()
+            console_str += output
+            match = re.search(boot_menu_hint, output)
             if match or time.time() > start + timeout:
                 break
             time.sleep(1)
@@ -147,7 +158,10 @@ def run(test, params, env):
         # Send boot menu key in monitor.
         vm.send_key(boot_menu_key)
 
-        output = vm.serial_console.get_stripped_output()
+        try:
+            output = vm.serial_console.get_stripped_output()
+        except ValueError:
+            output = vm.serial_console.get_output()
         boot_list = re.findall("^\d+\. (.*)\s", output, re.M)
 
         if not boot_list:

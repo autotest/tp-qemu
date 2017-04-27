@@ -98,7 +98,6 @@ class BallooningTest(MemoryBaseTest):
         except Exception, e:
             if self.params.get('illegal_value_check', 'no') == 'no' and new_mem != self.get_ballooned_memory():
                 raise error.TestFail("Balloon memory fail with error message: %s" % e)
-        time.sleep(60)
         if new_mem > self.ori_mem:
             compare_mem = self.ori_mem
         elif new_mem == 0:
@@ -109,7 +108,7 @@ class BallooningTest(MemoryBaseTest):
         else:
             compare_mem = new_mem
 
-        balloon_timeout = float(self.params.get("balloon_timeout", 100))
+        balloon_timeout = float(self.params.get("balloon_timeout", 240))
         status = utils_misc.wait_for((lambda: compare_mem ==
                                       self.get_ballooned_memory()),
                                      balloon_timeout)

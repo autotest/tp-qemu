@@ -75,7 +75,7 @@ class BallooningTestPause(BallooningTest):
                 raise exceptions.TestFail("Balloon memory fail with error"
                                           " message: %s" % e)
         compare_mem = new_mem
-        balloon_timeout = float(self.params.get("balloon_timeout", 100))
+        balloon_timeout = float(self.params.get("balloon_timeout", 240))
         status = utils_misc.wait_for((lambda: compare_mem ==
                                       self.get_ballooned_memory()),
                                      balloon_timeout)

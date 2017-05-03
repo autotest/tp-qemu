@@ -92,5 +92,5 @@ def run(test, params, env):
         raise exceptions.TestFail(details)
     finally:
         error_context.context("Stop video", logging.info)
-        session.cmd('del /f /s "%s"' % video_player, ignore_all_errors=True)
+        session.cmd('taskkill /IM "%s" /F' % video_player, ignore_all_errors=True)
         session.close()

@@ -45,7 +45,13 @@ def run(test, params, env):
         logging.info("Backing file: %s" % backingfile)
         stream_test.start()
         stream_test.wait_for_finished()
+        logging.debug("Check backing file via monitor")
         backingfile = stream_test.get_backingfile()
+        if backingfile:
+            raise error.TestFail("Backing file is still available in the "
+                                 "backdrive image")
+        logging.debug("Check backing file via qemu-img")
+        backingfile = stream_test.get_backingfile(method="qemu-img")
         if backingfile:
             raise error.TestFail("Backing file is still available in the "
                                  "backdrive image")

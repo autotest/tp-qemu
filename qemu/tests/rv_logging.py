@@ -87,7 +87,7 @@ def run(test, params, env):
 
         # Testing the log after stopping spice-vdagentd
         utils_spice.stop_vdagent(guest_root_session, test_timeout=15)
-        cmd = spice_vdagent_loginfo_cmd + " | tail -n 3 | grep \"vdagentd quiting\""
+        cmd = spice_vdagent_loginfo_cmd + " | tail -n 3 | grep \"vdagentd quitting\""
         output = guest_root_session.cmd(cmd)
         logging.debug(output)
 

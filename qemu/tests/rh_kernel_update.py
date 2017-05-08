@@ -435,6 +435,7 @@ def run(test, params, env):
     error.context("OS updated, commit changes to disk", logging.info)
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
     image_filename = storage.get_image_filename(params, base_dir)
+    image_filename = os.path.realpath(image_filename)
     logging.info("image file name: %s" % image_filename)
     block = vm.get_block({"backing_file": image_filename})
     vm.monitor.send_args_cmd("commit %s" % block)

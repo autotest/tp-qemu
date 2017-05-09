@@ -66,22 +66,6 @@ class DriveMirror(block_copy.BlockCopy):
         return self.vm.get_block({"file": image_file})
 
     @error.context_aware
-    def check_granularity(self):
-        """
-        Check granularity value as set.
-        """
-        device_id = self.get_device()
-        info = self.vm.monitor.info_block().get(device_id)
-        if "granularity" in self.params:
-            target_gran = int(self.params["granularity"])
-            dirty_bitmap = info.get("dirty-bitmaps", "0")
-            granularity = int(dirty_bitmap[0].get("granularity", "0"))
-            if granularity != target_gran:
-                raise error.TestFail(
-                    "Granularity unmatched. Target is %d, result is %d" %
-                    (target_gran, granularity))
-
-    @error.context_aware
     def check_node_name(self):
         """
         Check node name as set, after block job complete.

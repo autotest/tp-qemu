@@ -9,6 +9,8 @@ def run(test, params, env):
     1) Boot up a guest
     2) Pass file descriptors via getfd
     3) Check if qemu process has a copy of the file descriptor
+    4) Close fd in qemu process via closefd
+    5) Check if fd has been closed successfully
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -52,7 +54,6 @@ def run(test, params, env):
         path = os.path.join(fdfiles_dir, name)
         fd = os.open(path, os.O_RDWR | os.O_CREAT)
         response = vm.monitor.getfd(fd, name)
-        os.close(fd)
         # getfd is supposed to generate no output
         if response:
             raise error.TestError("getfd returned error: %s" % response)
@@ -60,6 +61,15 @@ def run(test, params, env):
         if not has_fd(pid, path):
             raise error.TestError("QEMU process does not seem to have a file "
                                   "descriptor pointing to file %s" % path)
+        response = vm.monitor.closefd(fd, name)
+        # closefd is supposed to generate no output
+        if response:
+            raise error.TestError("closefd returned error: %s" % response)
+        # check if fd has been closed
+        if has_fd(pid, path):
+            raise error.TestError("QEMU process still has the file descriptor "
+                                  "pointing to file %s after closefd" % path)
+        os.close(fd)
 
     # clean up files
     for n in range(nofiles):

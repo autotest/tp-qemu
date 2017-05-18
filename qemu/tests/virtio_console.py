@@ -1626,7 +1626,7 @@ def run(test, params, env):
             logging.info("Open and then close port %s", port.name)
             guest_worker = qemu_virtio_port.GuestWorker(vm)
             # Test of live and open and close port again
-            guest_worker.virtio_test.cleanup()
+            guest_worker.cleanup()
             port.sock.settimeout(20.0)
 
             loads.start()
@@ -1665,7 +1665,7 @@ def run(test, params, env):
         """
         (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
             params.get('virtio_console_params'))
-        guest_worker.virtio_test.cleanup()
+        guest_worker.cleanup()
         session = vm.wait_for_login()
         if session.cmd_status('lsmod | grep virtio_console'):
             raise error.TestNAError("virtio_console not loaded, probably "

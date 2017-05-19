@@ -50,8 +50,6 @@ def run(test, params, env):
 
     load_count = int(params.get("load_count", 100))
     try:
-        # unload the modules before starting:
-        installer_object.unload_modules()
         for _ in range(load_count):
             try:
                 installer_object.load_modules()
@@ -61,7 +59,10 @@ def run(test, params, env):
             except Exception, e:
                 raise exceptions.TestFail("Failed to load modules [%r]: %s" %
                                           (installer_object.module_list, e))
-            installer_object.unload_modules()
+            try:
+                installer_object.unload_modules()
+            except RuntimeError, e:
+                logging.warn("Warning: %s" % e)
     finally:
         try:
             installer_object.load_modules()

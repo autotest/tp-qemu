@@ -34,13 +34,13 @@ def run(test, params, env):
 
     driver_name = params["driver_name"]
     utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-    balloon_test = BallooningTestWin(test, params, env)
 
+    error_context.context("Run video in background", logging.info)
     video_play = utils_misc.InterruptedThread(
         utils_test.run_virt_sub_test, (test, params, env),
         {"sub_type": params.get("sub_test")})
     video_play.start()
-    error_context.context("Run video background", logging.info)
+
     check_playing_cmd = params["check_playing_cmd"]
     running = utils_misc.wait_for(
         lambda: utils_misc.get_guest_cmd_status_output(
@@ -51,6 +51,7 @@ def run(test, params, env):
     error_context.context("balloon vm memory in loop", logging.info)
     repeat_times = int(params.get("repeat_times", 10))
     logging.info("repeat times: %d" % repeat_times)
+    balloon_test = BallooningTestWin(test, params, env)
     min_sz, max_sz = balloon_test.get_memory_boundary()
     while repeat_times:
         balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))

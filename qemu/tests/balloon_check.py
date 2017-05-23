@@ -1,4 +1,3 @@
-import time
 import re
 import logging
 import random
@@ -22,15 +21,16 @@ class BallooningTest(MemoryBaseTest):
 
         self.vm = env.get_vm(params["main_vm"])
         self.session = self.get_session(self.vm)
-        logging.info("Waiting 90s for guest's applications up")
-        time.sleep(90)
         self.ori_mem = self.get_vm_mem(self.vm)
         self.current_mmem = self.get_ballooned_memory()
         if self.current_mmem != self.ori_mem:
             self.balloon_memory(self.ori_mem)
+        # got guest's used memory more flexible
+        self.wait_for_balloon_complete(self.get_memory_status, 5)
         self.ori_gmem = self.get_memory_status()
         self.current_gmem = self.ori_gmem
         self.current_mmem = self.ori_mem
+        self.small_size_mmem = self.ori_mem
 
     def get_ballooned_memory(self):
         """
@@ -65,7 +65,8 @@ class BallooningTest(MemoryBaseTest):
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
         # for windows illegal test:set windows guest balloon in (1,100),free memory will less than 50M
-        if ballooned_mem >= self.ori_mem - 100:
+        if ballooned_mem >= self.ori_mem - 100 and "subtest" not in step:
+            self.small_size_mmem = mmem
             timeout = float(self.params.get("login_timeout", 600))
             session = self.vm.wait_for_login(timeout=timeout)
             try:
@@ -103,8 +104,9 @@ class BallooningTest(MemoryBaseTest):
         elif new_mem == 0:
             compare_mem = self.current_mmem
         elif new_mem <= 100:
-            self.current_mmem = self.get_ballooned_memory()
-            compare_mem = self.current_mmem
+            # got monitor ballooned memory more flexible for balloon_small_size test.
+            self.wait_for_balloon_complete(self.get_ballooned_memory, 0)
+            compare_mem = self.get_ballooned_memory()
         else:
             compare_mem = new_mem
 
@@ -147,25 +149,26 @@ class BallooningTest(MemoryBaseTest):
             qemu_quit_after_test = 0
         return qemu_quit_after_test
 
-    def _mem_state(self):
+    def _mem_state(self, get_mem_func, mem_toler_scope):
         """
         A generator to get guest memory until it does not change
         """
         stable = False
-        ori_mem = self.get_memory_status()
+        ori_mem = get_mem_func()
         while True:
             yield stable
-            cur_mem = self.get_memory_status()
-            stable = abs(cur_mem - ori_mem) < 100
+            cur_mem = get_mem_func()
+            stable = abs(cur_mem - ori_mem) <= mem_toler_scope
             ori_mem = cur_mem
 
-    def wait_for_balloon_complete(self, timeout):
+    def wait_for_balloon_complete(self, get_mem_func, mem_toler_scope):
         """
-        Wait until guest memory don't change
+        Wait until balloon memory don't change
         """
-        logging.info("Wait until guest memory don't change")
-        is_stable = self._mem_state()
-        utils_misc.wait_for(is_stable.next, timeout, step=10.0)
+        logging.info("Wait until balloon memory don't change")
+        is_stable = self._mem_state(get_mem_func, mem_toler_scope)
+        # balloon timeout:900s for vms with large memory, ex, 32G
+        utils_misc.wait_for(is_stable.next, timeout=900, step=10.0)
 
     def get_memory_boundary(self, balloon_type=''):
         """
@@ -182,11 +185,11 @@ class BallooningTest(MemoryBaseTest):
         if self.params.get('os_type') == 'windows':
             logging.info("Get windows miminum balloon value:")
             self.vm.balloon(1)
-            balloon_timeout = self.params.get("balloon_timeout", 900)
-            self.wait_for_balloon_complete(balloon_timeout)
-            used_size = int(self.get_ballooned_memory() + self.ratio * self.ori_mem)
+            self.wait_for_balloon_complete(self.get_ballooned_memory, 0)
+            used_size = int(self.get_ballooned_memory())
             self.vm.balloon(max_size)
-            self.wait_for_balloon_complete(balloon_timeout)
+            # For windows flexible used memory,define a tolerance scope "5M" here
+            self.wait_for_balloon_complete(self.get_memory_status, 5)
             self.ori_gmem = self.get_memory_status()
         else:
             vm_total = self.get_memory_status()
@@ -215,7 +218,10 @@ class BallooningTest(MemoryBaseTest):
             try:
                 output = self.memory_check("after subtest", ballooned_mem)
             except error.TestFail:
-                return None
+                if self.small_size_mmem < output[0]:
+                    raise error.TestFail("Small Size Test failed")
+                else:
+                    return None
             return output
 
         if self.test_round < 1:
@@ -409,12 +415,15 @@ def run(test, params, env):
         elif params_tag.get('expect_memory_ratio'):
             expect_mem = int(balloon_test.ori_mem *
                              float(params_tag.get('expect_memory_ratio')))
-        #set evict illegal value to "0" for both linux and windows
+        # set evict illegal value to "0" for both linux and windows
         elif params_tag.get('illegal_value_check', 'no') == 'yes':
             if tag == 'evict':
                 expect_mem = 0
             else:
                 expect_mem = int(balloon_test.ori_mem+random.uniform(1, 1000))
+        # add test case for balloon_small_size test
+        elif params_tag.get('small_size_check', 'no') == 'yes':
+            expect_mem = int(random.uniform(1, 100))
         else:
             balloon_type = params_tag['balloon_type']
             min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)

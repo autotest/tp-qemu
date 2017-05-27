@@ -1,4 +1,5 @@
 import logging
+import re
 
 from autotest.client.shared import error
 
@@ -43,21 +44,34 @@ def run(test, params, env):
     try:
         # Get virtio block devices in guest.
         drive_serial = str(params["drive_serial_stg"])
-        drive_path = utils_misc.get_linux_drive_path(session, drive_serial)
-        if not drive_path:
-            raise error.TestError("Could not find the specified"
-                                  "virtio block device.")
-
-        drive_kname = drive_path.split("/")[-1]
-        expect_physical = int(params.get("physical_block_size_stg", 0))
-        expect_logical = int(params.get("logical_block_size_stg", 0))
+        expect_physical = int(params.get("physical_block_size_stg", 512))
+        expect_logical = int(params.get("logical_block_size_stg", 512))
         error.context("Verify physical/Logical block size", logging.info)
-        cmd = params.get("chk_phy_blk_cmd") % drive_kname
-        logging.debug("Physical block size get via '%s'" % cmd)
-        out_physical = int(session.cmd_output(cmd))
-        cmd = params.get("chk_log_blk_cmd") % drive_kname
-        logging.debug("Logical block size get via '%s'" % cmd)
-        out_logical = int(session.cmd_output(cmd))
+        if params["os_type"] == "linux":
+            drive_path = utils_misc.get_linux_drive_path(session, drive_serial)
+            if not drive_path:
+                raise error.TestError("Could not find the specified"
+                                      "virtio block device.")
+
+            drive_kname = drive_path.split("/")[-1]
+            cmd = params.get("chk_phy_blk_cmd") % drive_kname
+            logging.debug("Physical block size get via '%s'" % cmd)
+            out_physical = int(session.cmd_output(cmd))
+            cmd = params.get("chk_log_blk_cmd") % drive_kname
+            logging.debug("Logical block size get via '%s'" % cmd)
+            out_logical = int(session.cmd_output(cmd))
+        else:
+            cmd = params.get("chk_blks_cmd_windows")
+            logging.debug("Physical/Logical block size get via '%s'" % cmd)
+            out_bs = session.cmd_output(cmd, timeout=240).strip().split("\n\n")
+            for blk_info in out_bs:
+                if blk_info.find(drive_serial) != -1:
+                    target_blk = blk_info
+                    break
+            else:
+                raise error.TestError("Could not find the specified device")
+            out_physical = int(re.search(r'PhysicalSectorSize\s*:\s*(\d+)', target_blk).group(1))
+            out_logical = int(re.search(r'LogicalSectorSize\s*:\s(\d+)', target_blk).group(1))
         if ((out_physical != expect_physical) or
                 (out_logical != expect_logical)):
             msg = "Block size in guest doesn't match with qemu parameter\n"

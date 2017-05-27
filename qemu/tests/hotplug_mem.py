@@ -81,7 +81,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
             stage == 'during' and [
                 self.run_background_test] or [
                 self.run_sub_test])[0]
-        func = getattr(self, "%s_memory" % operation)
+        func = getattr(self, "%s_and_check_memory" % operation)
         if not callable(func):
             raise exceptions.TestError(
                 "Unsupported memory operation '%s'" %
@@ -91,10 +91,8 @@ class MemoryHotplugSimple(MemoryHotplugTest):
             if stage != "after":
                 sub_test = sub_test_runner()
                 func(vm, target_mem)
-                self.check_memory(vm)
             else:
                 func(vm, target_mem)
-                self.check_memory(vm)
                 sub_test = sub_test_runner()
             if stage == "during":
                 sub_test.join(timeout=3600)

@@ -281,7 +281,7 @@ def launch_rv(client_vm, guest_vm, params):
             utils_spice.wait_timeout(5)  # Wait for remote-viewer to launch
             str_input(client_vm, ticket)
 
-        utils_spice.wait_timeout(5)  # Wait for conncetion to establish
+        utils_spice.wait_timeout(15)  # Wait for conncetion to establish
 
     is_rv_connected = True
 

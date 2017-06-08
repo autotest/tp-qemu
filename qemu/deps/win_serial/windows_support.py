@@ -11,17 +11,22 @@ class WinBufferedReadFile(object):
     verbose = False
 
     def __init__(self, filename):
-        self._hfile = win32file.CreateFile(filename,
-                                           win32con.GENERIC_READ | win32con.GENERIC_WRITE,
-                                           win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE,
-                                           win32security.SECURITY_ATTRIBUTES(),
-                                           win32con.OPEN_EXISTING,
-                                           win32con.FILE_FLAG_OVERLAPPED,
-                                           0)
+        try:
+            self._hfile = win32file.CreateFile(filename,
+                                               win32con.GENERIC_READ | win32con.GENERIC_WRITE,
+                                               win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE,
+                                               win32security.SECURITY_ATTRIBUTES(),
+                                               win32con.OPEN_EXISTING,
+                                               win32con.FILE_FLAG_OVERLAPPED,
+                                               0)
+        except pywintypes.error, err:
+            raise OSError(err)
         self._read_ovrlpd = pywintypes.OVERLAPPED()
-        self._read_ovrlpd.hEvent = win32event.CreateEvent(None, True, False, None)
+        self._read_ovrlpd.hEvent = win32event.CreateEvent(None, True,
+                                                          False, None)
         self._write_ovrlpd = pywintypes.OVERLAPPED()
-        self._write_ovrlpd.hEvent = win32event.CreateEvent(None, True, False, None)
+        self._write_ovrlpd.hEvent = win32event.CreateEvent(None, True,
+                                                           False, None)
         self._bufs = []
         self._n = 0
 
@@ -40,36 +45,47 @@ class WinBufferedReadFile(object):
         while True:  # emulate blocking IO
             if self._n >= n:
                 frags = []
-                l = 0
+                frags_length = 0
                 if self.verbose:
-                    print "get %s, | bufs = %s [%s]" % (n, self._n,
-                                                        ','.join(map(lambda x: str(len(x)),
-                                                                     self._bufs)))
-                while l < n:
+                    txt = "get %s, | bufs = %s " % (n, self._n)
+                    txt += "[%s]" % ','.join(map(lambda x: str(len(x)),
+                                                 self._bufs))
+                    print(txt)
+                while frags_length < n:
                     frags.append(self._bufs.pop(0))
-                    l += len(frags[-1])
+                    frags_length += len(frags[-1])
                 self._n -= n
                 whole = ''.join(frags)
-                ret, rest = whole[:n], whole[n:]
+                ret = whole[:n]
+                rest = whole[n:]
                 if len(rest) > 0:
                     self._bufs.append(rest)
                 if self.verbose:
-                    print "return %s(%s), | bufs = %s [%s]" % (len(ret), n, self._n,
-                                                               ','.join(map(lambda x: str(len(x)),
-                                                                            self._bufs)))
+                    txt = "return %s(%s), | bufs = %s " % (len(ret), n,
+                                                           self._n)
+                    txt += "[%s]" % ','.join(map(lambda x: str(len(x)),
+                                                 self._bufs))
+                    print(txt)
                 return ret
             try:
                 # 4096 is the largest result viosdev will return right now.
-                err, b = win32file.ReadFile(self._hfile, 4096, self._read_ovrlpd)
-                nr = win32file.GetOverlappedResult(self._hfile, self._read_ovrlpd, True)
+                err, b = win32file.ReadFile(self._hfile, 4096,
+                                            self._read_ovrlpd)
+                nr = win32file.GetOverlappedResult(self._hfile,
+                                                   self._read_ovrlpd,
+                                                   True)
                 if nr > 0:
                     self._bufs.append(b[:nr])
                     self._n += nr
                 if self.verbose:
-                    print "read %s, err %s | bufs = %s [%s]" % (nr, err, self._n,
-                                                                ','.join(map(lambda x: str(len(x)),
-                                                                             self._bufs)))
-            except:
+                    txt = "read %s, err %s | bufs = %s " % (nr, err, self._n)
+                    txt += "[%s]" % ','.join(map(lambda x: str(len(x)),
+                                                 self._bufs))
+                    print(txt)
+            except Exception:
                 pass
         # Never Reached
         raise Exception("Error in WinBufferedReadFile - should never be reached")
+
+    def close(self):
+        win32api.CloseHandle(self._hfile)

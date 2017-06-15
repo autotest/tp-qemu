@@ -481,7 +481,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         """
         sum = 0
         intr = []
-        stat = ssh_cmd(server_ctl, "cat /proc/interrupts |grep %s" % name)
+        stat = ssh_cmd(server_ctl, "grep %s /proc/interrupts" % name)
         for i in stat.strip().split("\n"):
             for cpu in range(int(ncpu)):
                 sum += int(i.split()[cpu + 1])

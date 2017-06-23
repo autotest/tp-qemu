@@ -141,12 +141,21 @@ class BlockCopy(object):
         """
         Return block job paused status.
         """
-        paused = self.get_status().get("paused")
-        offset_p = self.get_status().get("offset")
-        time.sleep(random.uniform(1, 3))
-        offset_l = self.get_status().get("offset")
-        paused &= offset_p == offset_l
+        paused, offset_p = self.paused_status()
+        if paused:
+            time.sleep(random.uniform(1, 3))
+            paused_l, offset_l = self.paused_status()
+            paused &= offset_p == offset_l and paused_l
         return paused
+
+    def paused_status(self):
+        """
+        Get key value for pause status.
+        """
+        status = self.get_status()
+        paused = status.get("paused") and not status.get("busy")
+        offset = status.get("offset")
+        return paused, offset
 
     def pause_job(self):
         """
@@ -156,7 +165,7 @@ class BlockCopy(object):
             raise error.TestError("Job has been already paused.")
         logging.info("Pause block job.")
         self.vm.pause_block_job(self.device)
-        time.sleep(random.uniform(1, 3))
+        time.sleep(5)
         if not self.is_paused():
             raise error.TestFail("Pause block job failed.")
 

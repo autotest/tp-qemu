@@ -43,7 +43,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error.context("Copy time-warp-test.c to guest", logging.info)
-    src_file_name = os.path.join(data_dir.get_root_dir(), "shared", "deps",
+    src_file_name = os.path.join(data_dir.get_deps_dir(), "tsc_sync",
                                  "time-warp-test.c")
     vm.copy_files_to(src_file_name, "/tmp")
 

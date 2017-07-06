@@ -3,15 +3,14 @@ import logging
 
 import aexpect
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_net
 from virttest import test_setup
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test hotplug of sr-iov devices.
@@ -33,14 +32,26 @@ def run(test, params, env):
     :param env:    Dictionary with test environment.
     """
 
+    def check_interface(iface, nic_filter):
+        cmd = "ifconfig %s" % str(iface)
+        status, output = session.cmd_status_output(cmd)
+        if status:
+            test.error("Guest command '%s' fail with output: %s." % (cmd, output))
+        if re.findall(nic_filter, output, re.MULTILINE | re.DOTALL):
+            return True
+        return False
+
     def get_active_network_device(session, nic_filter):
         devnames = []
         cmd = "ifconfig -a"
+        nic_reg = "\w+(?=: flags)|\w+(?=\s*Link)"
         status, output = session.cmd_status_output(cmd)
         if status:
-            msg = "Guest command '%s' fail with output: %s." % (cmd, output)
-            raise error.TestError(msg)
-        devnames = re.findall(nic_filter, output)
+            test.error("Guest command '%s' fail with output: %s." % (cmd, output))
+        ifaces = re.findall(nic_reg, output)
+        for iface in ifaces:
+            if check_interface(str(iface), nic_filter):
+                devnames.append(iface)
         return devnames
 
     def pci_add_iov(pci_num):
@@ -55,13 +66,12 @@ def run(test, params, env):
         return pci_add(pci_add_cmd)
 
     def pci_add(pci_add_cmd):
-        error.context("Adding pci device with command 'pci_add'")
+        error_context.context("Adding pci device with command 'pci_add'")
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         pci_info.append(['', add_output])
         if "OK domain" not in add_output:
-            raise error.TestFail("Add PCI device failed. "
-                                 "Monitor command is: %s, Output: %r" %
-                                 (pci_add_cmd, add_output))
+            test.fail("Add PCI device failed. Monitor command is: %s, "
+                      "Output: %r" % (pci_add_cmd, add_output))
         return vm.monitor.info("pci")
 
     def check_support_device(dev):
@@ -72,8 +82,7 @@ def run(test, params, env):
         # Check if the device is support in qemu
         is_support = utils_misc.find_substring(devices_supported, dev)
         if not is_support:
-            raise error.TestError("%s doesn't support device: %s" %
-                                  (cmd_type, dev))
+            test.error("%s doesn't support device: %s" % (cmd_type, dev))
 
     def device_add_iov(pci_num):
         device_id = "%s" % pci_model + "-" + utils_misc.generate_random_id()
@@ -91,7 +100,7 @@ def run(test, params, env):
         return device_add(pci_num, pci_add_cmd)
 
     def device_add(pci_num, pci_add_cmd):
-        error.context("Adding pci device with command 'device_add'")
+        error_context.context("Adding pci device with command 'device_add'")
         if vm.monitor.protocol == 'qmp':
             add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         else:
@@ -100,8 +109,8 @@ def run(test, params, env):
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][0] not in str(after_add):
             logging.debug("Print info pci after add the block: %s" % after_add)
-            raise error.TestFail("Add device failed. Monitor command is: %s"
-                                 ". Output: %r" % (pci_add_cmd, add_output))
+            test.fail("Add device failed. Monitor command is: %s"
+                      ". Output: %r" % (pci_add_cmd, add_output))
         return after_add
 
     # Hot add a pci device
@@ -111,13 +120,13 @@ def run(test, params, env):
         info_pci_ref = vm.monitor.info("pci")
         reference = session.cmd_output(reference_cmd)
         active_nics = get_active_network_device(session, nic_filter)
+        logging.debug("Active nics before hotplug - %s", active_nics)
         try:
             # get function for adding device.
             add_fuction = local_functions["%s_iov" % cmd_type]
         except Exception:
-            raise error.TestError(
-                "No function for adding sr-iov dev with '%s'" %
-                cmd_type)
+            test.error("No function for adding sr-iov dev with '%s'" %
+                       cmd_type)
         after_add = None
         if add_fuction:
             # Do add pci device.
@@ -132,6 +141,7 @@ def run(test, params, env):
             # Define a helper function to make sure new nic could get ip.
             def _check_ip():
                 post_nics = get_active_network_device(session, nic_filter)
+                logging.debug("Active nics after hotplug - %s", post_nics)
                 return (len(active_nics) <= len(post_nics) and
                         active_nics != post_nics)
 
@@ -143,33 +153,60 @@ def run(test, params, env):
                 else:
                     return False
 
-            error.context("Start checking new added device")
+            error_context.context("Start checking new added device")
             # Compare the output of 'info pci'
             if after_add == info_pci_ref:
-                raise error.TestFail("No new PCI device shown after executing "
-                                     "monitor command: 'info pci'")
+                test.fail("No new PCI device shown after executing "
+                          "monitor command: 'info pci'")
 
             secs = int(params["wait_secs_for_hook_up"])
             if not utils_misc.wait_for(_new_shown, test_timeout, secs, 3):
-                raise error.TestFail("No new device shown in output of command "
-                                     "executed inside the guest: %s" %
-                                     reference_cmd)
+                test.fail("No new device shown in output of command "
+                          "executed inside the guest: %s" % reference_cmd)
 
             if not utils_misc.wait_for(_find_pci, test_timeout, 3, 3):
-                raise error.TestFail("New add device not found in guest. "
-                                     "Command was: %s" % find_pci_cmd)
+                test.fail("New add device not found in guest. "
+                          "Command was: %s" % find_pci_cmd)
+
+            # Assign static IP to the hotplugged interface
+            if params.get("assign_static_ip", "no") == "yes":
+                cmd = []
+                static_ip = ip_gen.next()
+                net_mask = params.get("static_net_mask", "255.255.255.0")
+                broadcast = params.get("static_broadcast", "10.10.10.255")
+                pci_id = utils_misc.get_pci_id_using_filter(match_string,
+                                                            session)
+                logging.debug("PCIs associated with %s - %s", match_string,
+                              ', '.join(map(str, pci_id)))
+                for each_pci in pci_id:
+                    iface_name = utils_misc.get_interface_from_pci_id(each_pci,
+                                                                      session)
+                    logging.debug("Interface associated with PCI %s - %s",
+                                  each_pci, iface_name)
+                    if not check_interface(str(iface_name), nic_filter):
+                        cmd.append("ifconfig %s %s" % (iface_name, static_ip))
+                        cmd.append("ifconfig %s netmask %s" % (iface_name,
+                                                               net_mask))
+                        cmd.append("ifconfig %s broadcast %s" % (iface_name,
+                                                                 broadcast))
+                        cmd.append("ifconfig %s up" % iface_name)
+                        for each_cmd in cmd:
+                            status, output = session.cmd_status_output(each_cmd)
+                            if status:
+                                test.error("Failed to set static ip in guest: "
+                                           "%s" % output)
 
             # Test the newly added device
             if not utils_misc.wait_for(_check_ip, 120, 3, 3):
                 ifconfig = session.cmd_output("ifconfig -a")
-                raise error.TestFail("New hotpluged device could not get ip "
-                                     "after 120s in guest. guest ifconfig "
-                                     "output: \n%s" % ifconfig)
+                test.fail("New hotpluged device could not get ip "
+                          "after 120s in guest. guest ifconfig "
+                          "output: \n%s" % ifconfig)
             try:
                 session.cmd(params["pci_test_cmd"] % (pci_num + 1))
             except aexpect.ShellError, e:
-                raise error.TestFail("Check device failed after PCI "
-                                     "hotplug. Output: %r" % e.output)
+                test.fail("Check device failed after PCI "
+                          "hotplug. Output: %r" % e.output)
 
         except Exception:
             pci_del(pci_num, ignore_failure=True)
@@ -192,9 +229,8 @@ def run(test, params, env):
 
         if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1) and
                 not ignore_failure):
-            raise error.TestFail("Failed to hot remove PCI device: %s. "
-                                 "Monitor command: %s" %
-                                 (pci_model, cmd))
+            test.fail("Failed to hot remove PCI device: %s. "
+                      "Monitor command: %s" % (pci_model, cmd))
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -235,7 +271,7 @@ def run(test, params, env):
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
     if module:
-        error.context("modprobe the module %s" % module, logging.info)
+        error_context.context("modprobe the module %s" % module, logging.info)
         session.cmd("modprobe %s" % module)
 
     # Probe qemu to verify what is the supported syntax for PCI hotplug
@@ -246,12 +282,12 @@ def run(test, params, env):
 
     cmd_type = utils_misc.find_substring(str(cmd_o), "device_add", "pci_add")
     if not cmd_o:
-        raise error.TestError("Unknown version of qemu")
+        test.error("Unknown version of qemu")
 
     local_functions = locals()
 
     if params.get("enable_set_link" "yes") == "yes":
-        error.context("Disable the primary link(s) of guest", logging.info)
+        error_context.context("Disable the primary link(s) of guest", logging.info)
         for nic in vm.virtnet:
             vm.set_link(nic.device_id, up=False)
 
@@ -262,15 +298,17 @@ def run(test, params, env):
             # pci_info[i][0] == device id, only used for device_add
             # pci_info[i][1] == output of device add command
             pci_info = []
+            if params.get("assign_static_ip", "no") == "yes":
+                ip_gen = utils_net.gen_ipv4_addr(exclude_ips=[])
             for pci_num in xrange(pci_num_range):
                 msg = "Start hot-adding %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
-                error.context(msg, logging.info)
+                error_context.context(msg, logging.info)
                 add_device(pci_num)
             sub_type = params.get("sub_type_after_plug")
             if sub_type:
-                error.context("Running sub test '%s' after hotplug" % sub_type,
-                              logging.info)
+                error_context.context("Running sub test '%s' after hotplug" %
+                                      sub_type, logging.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
                 if "guest_suspend" == sub_type:
                     # Hotpluged device have been released after guest suspend,
@@ -279,11 +317,11 @@ def run(test, params, env):
             for pci_num in xrange(pci_num_range):
                 msg = "start hot-deleting %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
-                error.context(msg, logging.info)
+                error_context.context(msg, logging.info)
                 pci_del(-(pci_num + 1))
     finally:
         if params.get("enable_set_link", "yes") == "yes":
-            error.context("Re-enabling the primary link(s) of guest",
-                          logging.info)
+            error_context.context("Re-enabling the primary link(s) of guest",
+                                  logging.info)
             for nic in vm.virtnet:
                 vm.set_link(nic.device_id, up=True)

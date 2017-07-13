@@ -120,6 +120,20 @@ def run(test, params, env):
         return "sda"
 
     @error.context_aware
+    def _check_and_umount_usb(session):
+        chk_status = session.cmd_status(params["chk_mount_cmd"],
+                                        timeout=login_timeout)
+        if chk_status:
+            return
+        error.context("Unmounting usb disk", logging.info)
+        # choose to umount usb disk instead of ejecting it
+        # because if usb is removable it will not available after ejection
+        status, output = session.cmd_status_output(params["umount_cmd"],
+                                                   timeout=login_timeout)
+        if status != 0:
+            test.error("Failed to umount with error: %s" % output)
+
+    @error.context_aware
     def _check_serial_option(serial, regex_str, expect_str):
         error.context("Set serial option to '%s'" % serial, logging.info)
         _restart_vm({"blk_extra_params_stg": "serial=" + serial})
@@ -134,6 +148,7 @@ def run(test, params, env):
         if serial not in ["EMPTY_STRING", "NO_EQUAL_STRING"]:
             # Verify in guest when serial is set to empty/null is meaningless.
             _verify_string(serial, output, [serial])
+        _check_and_umount_usb(session)
         _do_io_test_guest(session)
 
         session.close()
@@ -153,6 +168,7 @@ def run(test, params, env):
         cmd = "dmesg | grep %s" % _get_usb_disk_name_in_guest(session)
         output = session.cmd(cmd)
         _verify_string(expect_str, output, [expect_str], re.I)
+        _check_and_umount_usb(session)
         _do_io_test_guest(session)
 
         session.close()
@@ -186,6 +202,7 @@ def run(test, params, env):
             expected_min_size = "512"
         _verify_string(
             "(\d+)\n(\d+)", output, [expected_min_size, opt_io_size])
+        _check_and_umount_usb(session)
         _do_io_test_guest(session)
 
         session.close()
@@ -209,6 +226,7 @@ def run(test, params, env):
     _do_io_test_guest(session)
     session.close()
 
+    # this part is linux only
     if params.get("check_serial_option") == "yes":
         error.context("Check usb serial option", logging.info)
         serial = str(uuid.uuid4())
@@ -242,5 +260,5 @@ def run(test, params, env):
         _check_io_size_option("0", "0")
         # Guest can't recognize correct value which we set now,
         # So comment these test temporary.
-        #_check_io_size_option("1024", "1024")
-        #_check_io_size_option("4096", "4096")
+        # _check_io_size_option("1024", "1024")
+        # _check_io_size_option("4096", "4096")

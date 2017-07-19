@@ -209,7 +209,7 @@ def run(test, params, env):
                 if s:
                     raise exceptions.TestFail("Failed to online disk: %s" % o)
     # format disk
-    if format:
+    if format == "True":
         session.cmd(pre_cmd, cmd_timeout)
 
     # get order_list

@@ -3,11 +3,12 @@ import time
 import os
 import signal
 
-from autotest.client.shared import error
-
+from avocado.utils import process
 from virttest import utils_test
+from virttest import error_context
 
 
+@error_context.context_aware
 def run(test, params, env):
     """
     Time drift test with stop/continue the guest:
@@ -24,6 +25,20 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+    def get_hw_time():
+        """
+        Get the hardware clock
+        """
+        get_hw_time_cmd = params.get("get_hw_time_cmd",
+                                     'TZ=UTC date +"%s" -d "`hwclock`"')
+        host_hw_time = process.system_output(get_hw_time_cmd, shell=True)
+        if not host_hw_time:
+            test.fail("Cannot get the correct host hardware time")
+        guest_hw_time = session.cmd(get_hw_time_cmd)
+        if not guest_hw_time:
+            test.fail("Cannot get the correct guest hardware time")
+        return (host_hw_time, guest_hw_time)
+
     login_timeout = int(params.get("login_timeout", 360))
     sleep_time = int(params.get("sleep_time", 30))
     vm = env.get_vm(params["main_vm"])
@@ -66,6 +81,11 @@ def run(test, params, env):
             # Get time before current iteration
             (ht0_, gt0_) = utils_test.get_time(session, time_command,
                                                time_filter_re, time_format)
+            # Get hardware clock time befure current iteration
+            if not stop_with_signal:
+                if params.get("os_type") == "linux" and rtc_clock == "host":
+                    (hhwt0_, ghwt0_) = get_hw_time()
+
             # Run current iteration
             logging.info("Stop %s second: iteration %d of %d...",
                          stop_time, (i + 1), stop_iterations)
@@ -91,12 +111,32 @@ def run(test, params, env):
             host_delta = ht1_ - ht0_
             guest_delta = gt1_ - gt0_
             drift = abs(host_delta - guest_delta)
+
+            # Get hardware time after current iteration
+            if not stop_with_signal:
+                if params.get("os_type") == "linux" and rtc_clock == "host":
+                    (hhwt1_, ghwt1_) = get_hw_time()
+                    host_hw_delta = float(hhwt1_) - float(hhwt0_)
+                    guest_hw_delta = float(ghwt1_) - float(ghwt0_)
+
             # kvm guests CLOCK_MONOTONIC not count when guest is paused,
             # so drift need to subtract stop_time.
             if not stop_with_signal:
                 drift = abs(drift - stop_time)
                 if params.get("os_type") == "windows" and rtc_clock == "host":
                     drift = abs(host_delta - guest_delta)
+                if params.get("os_type") == "linux" and rtc_clock == "host":
+                    error_context.context("Check the hardware time on guest and host")
+                    drift_hw = abs(host_hw_delta - guest_hw_delta)
+                    logging.info("Drift of hardware at iteration %d: %.2f seconds",
+                                 (i + 1), drift_hw)
+                    if drift_hw > drift_threshold_single:
+                        test.fail("Hardware time drift too large at iteration %d:"
+                                  "%.2f seconds" % (i + 1, drift_hw))
+            else:
+                if params.get("os_type") == "windows" and rtc_clock == "host":
+                    drift = abs(drift - stop_time)
+
             logging.info("Host duration (iteration %d): %.2f",
                          (i + 1), host_delta)
             logging.info("Guest duration (iteration %d): %.2f",
@@ -105,8 +145,8 @@ def run(test, params, env):
                          (i + 1), drift)
             # Fail if necessary
             if drift > drift_threshold_single:
-                raise error.TestFail("Time drift too large at iteration %d: "
-                                     "%.2f seconds" % (i + 1, drift))
+                test.fail("Time drift too large at iteration %d: "
+                          "%.2f seconds" % (i + 1, drift))
 
         # Get final time
         (ht1, gt1) = utils_test.get_time(session, time_command,
@@ -128,9 +168,11 @@ def run(test, params, env):
     # kvm guests CLOCK_MONOTONIC not count when guest is paused,
     # so drift need to subtract stop_time.
     if not stop_with_signal:
-        drift = abs(drift - stop_time)
+        drift = abs(drift - stop_time * stop_iterations)
         if params.get("os_type") == "windows" and rtc_clock == "host":
             drift = abs(host_delta - guest_delta)
+    elif params.get("os_type") == "windows" and rtc_clock == "host":
+        drift = abs(drift - stop_time * stop_iterations)
     logging.info("Host duration (%d stops): %.2f",
                  stop_iterations, host_delta)
     logging.info("Guest duration (%d stops): %.2f",
@@ -140,5 +182,5 @@ def run(test, params, env):
 
     # Fail if necessary
     if drift > drift_threshold:
-        raise error.TestFail("Time drift too large after %d stops: "
-                             "%.2f seconds" % (stop_iterations, drift))
+        test.fail("Time drift too large after %d stops: "
+                  "%.2f seconds" % (stop_iterations, drift))

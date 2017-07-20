@@ -93,6 +93,7 @@ def run(test, params, env):
         error.context("Setup env for %s" % ip)
         ssh_cmd(session, "iptables -F", ignore_status=True)
         ssh_cmd(session, "service iptables stop", ignore_status=True)
+        ssh_cmd(session, "systemctl stop firewalld.service", ignore_status=True)
         ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
 
         download_link = params.get("netperf_download_link")

@@ -4,7 +4,6 @@ import logging
 
 from virttest import test_setup
 from virttest import error_context
-from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -24,12 +23,13 @@ def run(test, params, env):
 
     device_driver = params.get("device_driver", "pci-assign")
     serial_login = params.get("serial_login", "no")
+    vf_filter = params.get("vf_filter_re")
     pci_assignable = test_setup.PciAssignable(
         driver=params.get("driver"),
         driver_option=params.get("driver_option"),
         host_set_flag=params.get("host_set_flag", 0),
         kvm_params=params.get("kvm_default"),
-        vf_filter_re=params.get("vf_filter_re"),
+        vf_filter_re=vf_filter,
         pf_filter_re=params.get("pf_filter_re"),
         device_driver=device_driver)
 
@@ -45,7 +45,7 @@ def run(test, params, env):
     else:
         msg = "Unsupport device type '%s'." % device_type
         msg += " Please set device_type to 'vf' or 'pf'."
-        test.error(msg)
+        test.cancel(msg)
 
     msg = "Try to boot up guest(s) with VF(s)."
     error_context.context(msg, logging.info)
@@ -56,53 +56,57 @@ def run(test, params, env):
         vm = env.get_vm(vm_name)
         session = vm.wait_for_serial_login(
             timeout=int(params.get("login_timeout", 720)))
-        rc, output = session.cmd_status_output(
-            "ip li| grep -i 'BROADCAST'|awk '{print $2}'| sed 's/://'")
-        if not rc:
-            iface_probed = output.splitlines()
-            logging.info("probed VF Interface(s) in guest: %s",
-                         iface_probed)
-        adapter_list_before = session.get_command_output("lspci -nn").strip()
-        error_context.base_context("Suspending the VM", logging.info)
-        vm.pause()
-        error_context.context("Verify the status of VM is"
-                              "'paused'", logging.info)
-        vm.verify_status("paused")
+        adapter_list = session.get_command_output(
+            "lspci -nn | grep '%s'" % vf_filter)
+        logging.info("Probed VF adapters in guest are:"
+                     " %s", adapter_list)
 
-        error_context.context("Verify the session has"
-                              "no response", logging.info)
-        if session.is_responsive():
-            msg = "Session is still responsive after suspend"
-            logging.error(msg)
-            test.fail(msg)
-        session.close()
+        if params.get("vm_suspend", "no") == "yes":
+            error_context.base_context("Suspending the VM", logging.info)
+            vm.pause()
+            error_context.context("Verify the status of VM is"
+                                  "'paused'", logging.info)
+            vm.verify_status("paused")
 
-        time.sleep(20)
-        error_context.base_context("Resuming the"
-                                   "VM", logging.info)
-        vm.resume()
-        error_context.context("Verify the status of VM is"
-                              "'running'", logging.info)
-        vm.verify_status("running")
+            error_context.context("Verify the session has"
+                                  " no response", logging.info)
+            if session.is_responsive():
+                msg = "Session is still responsive after suspend"
+                logging.error(msg)
+                test.fail(msg)
+            session.close()
 
-        error_context.context("Re-login the guest", logging.info)
-        session = vm.wait_for_serial_login(
-            timeout=int(params.get("login_timeout", 360)))
+            time.sleep(20)
+            error_context.base_context("Resuming the"
+                                       "VM", logging.info)
+            vm.resume()
+            error_context.context("Verify the status of VM is"
+                                  "'running'", logging.info)
+            vm.verify_status("running")
 
-        error_context.context("Verify Host and guest kernel "
-                              "no error and call trace", logging.info)
-        vm.verify_kernel_crash()
-        utils_misc.verify_host_dmesg()
+            error_context.context("Re-login the guest", logging.info)
+            session = vm.wait_for_serial_login(
+                timeout=int(params.get("login_timeout", 360)))
+            adapter_list_suspend = session.get_command_output(
+                "lspci -nn | grep '%s'" % vf_filter)
+            logging.info("Adapter details after suspend/resume "
+                         "are %s ", adapter_list_suspend)
+            if adapter_list != adapter_list_suspend:
+                test.fail("Mismatch in adapter list, after suspend/resume.")
 
-        error_context.context("Rebooting Guest", logging.info)
-        logging.info("Adapter details before "
-                     "reboot are %s" % adapter_list_before)
-        session.cmd('reboot & exit', timeout=10, ignore_all_errors=True)
-        session = vm.wait_for_serial_login(
-            timeout=int(params.get("login_timeout", 720)))
-        adapter_list_after = session.get_command_output("lspci -nn").strip()
-        logging.info("Adapter details after reboot "
-                     "are %s " % adapter_list_after)
-        if adapter_list_before != adapter_list_after:
-            test.fail("Mismatch in adapter list, after reboot.")
+            error_context.context("Verify Host and guest kernel "
+                                  "no error and call trace", logging.info)
+            vm.verify_kernel_crash()
+
+        if params.get("vm_reboot", "no") == "yes":
+            error_context.context("Rebooting Guest", logging.info)
+            session.cmd('reboot & exit', timeout=10, ignore_all_errors=True)
+            session = vm.wait_for_serial_login(
+                timeout=int(params.get("login_timeout", 720)))
+            adapter_list_after = session.get_command_output(
+                "lspci -nn | grep '%s'" % vf_filter)
+            logging.info("Adapter details after reboot "
+                         "are %s ", adapter_list_after)
+            if adapter_list != adapter_list_after:
+                test.fail("Mismatch in adapter list, after reboot.")
         session.close()

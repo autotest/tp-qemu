@@ -15,6 +15,8 @@ class BlockStream(block_copy.BlockCopy):
 
     def __init__(self, test, params, env, tag):
         super(BlockStream, self).__init__(test, params, env, tag)
+        self.base_image = self.image_file
+        self.ext_args = {}
 
     def parser_test_args(self):
         default_params = {"wait_finished": "yes",
@@ -29,11 +31,10 @@ class BlockStream(block_copy.BlockCopy):
         start block device streaming job;
         """
         params = self.parser_test_args()
-        base_image = params.get("base_image")
         default_speed = params.get("default_speed")
 
         error.context("start to stream block device", logging.info)
-        self.vm.block_stream(self.device, default_speed, base_image)
+        self.vm.block_stream(self.device, default_speed, self.base_image, self.ext_args)
         status = self.get_status()
         if not status:
             raise error.TestFail("no active job found")

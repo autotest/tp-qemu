@@ -26,8 +26,11 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
     def pre_step(self):
         error.context("Config guest and reboot it", logging.info)
         pre_cmd = self.params.get("pre_cmd")
+        clean_cmd = self.params.get("clean_cmd")
         session = self.vm.wait_for_login(timeout=360)
-        session.cmd(pre_cmd, timeout=240)
+        session.cmd_output_safe(clean_cmd, timeout=240)
+        output_cmd = session.cmd_output_safe(pre_cmd, timeout=240)
+        logging.info("Cmd output: %s" % output_cmd)
         session = self.vm.reboot(session=session, timeout=900, serial=False)
         self.__sessions__.append(session)
 

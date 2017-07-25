@@ -401,28 +401,30 @@ def run(test, params, env):
     else:
         balloon_test = BallooningTestLinux(test, params, env)
 
-    for tag in params.objects('test_tags'):
-        error.context("Running %s test" % tag, logging.info)
-        params_tag = params.object_params(tag)
-        if params_tag.get('expect_memory'):
-            expect_mem = int(params_tag.get('expect_memory'))
-        elif params_tag.get('expect_memory_ratio'):
-            expect_mem = int(balloon_test.ori_mem *
-                             float(params_tag.get('expect_memory_ratio')))
-        #set evict illegal value to "0" for both linux and windows
-        elif params_tag.get('illegal_value_check', 'no') == 'yes':
-            if tag == 'evict':
-                expect_mem = 0
+    for repeat in xrange(int(params.get("repeat_times", 1))):
+        error.context("Repeat: %d" % repeat, logging.info)
+        for tag in params.objects('test_tags'):
+            error.context("Running %s test" % tag, logging.info)
+            params_tag = params.object_params(tag)
+            if params_tag.get('expect_memory'):
+                expect_mem = int(params_tag.get('expect_memory'))
+            elif params_tag.get('expect_memory_ratio'):
+                expect_mem = int(balloon_test.ori_mem *
+                                 float(params_tag.get('expect_memory_ratio')))
+            #set evict illegal value to "0" for both linux and windows
+            elif params_tag.get('illegal_value_check', 'no') == 'yes':
+                if tag == 'evict':
+                    expect_mem = 0
+                else:
+                    expect_mem = int(balloon_test.ori_mem+random.uniform(1, 1000))
             else:
-                expect_mem = int(balloon_test.ori_mem+random.uniform(1, 1000))
-        else:
-            balloon_type = params_tag['balloon_type']
-            min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)
-            expect_mem = int(random.uniform(min_sz, max_sz))
+                balloon_type = params_tag['balloon_type']
+                min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)
+                expect_mem = int(random.uniform(min_sz, max_sz))
 
-        quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
-        if quit_after_test:
-            return
+            quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
+            if quit_after_test:
+                return
     try:
         balloon_test.reset_memory()
     finally:

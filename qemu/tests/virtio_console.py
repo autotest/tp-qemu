@@ -14,10 +14,12 @@ import socket
 import threading
 import traceback
 import time
+import re
 from subprocess import Popen
 
 from autotest.client import utils
 from autotest.client.shared import error
+from avocado.utils import process
 
 from virttest import qemu_virtio_port
 from virttest import env_process
@@ -1805,6 +1807,14 @@ def run(test, params, env):
         :param cfg: virtio_console_params - Expected error message.
         """
         exp_error_message = params['virtio_console_params']
+        version_params = params["version_params"]
+        qemu_binary = utils_misc.get_qemu_binary(params)
+        output = str(process.run(qemu_binary + " --version"))
+        re_comp = re.compile(r'\d+.\d+.\d+-\d+..+')
+        output_list = re_comp.findall(output)
+        if not re.search(version_params, output_list[0]):
+            params["extra_params"] = params.get("extra_params_rhev")
+            exp_error_message = params.get("virtio_console_params_rhev")
         env_process.preprocess(test, params, env)
         vm = env.get_vm(params["main_vm"])
         try:

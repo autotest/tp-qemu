@@ -42,7 +42,7 @@ def run(test, params, env):
         logging.debug("Brew URL is %s" % url)
         return url
 
-    def install_rpm(session, url, upgrade=False, nodeps=False, timeout=600):
+    def install_rpm(session, url, upgrade=False, nodeps=False, timeout=3600):
         # install a package from brew
         cmd = "rpm -ivhf %s" % url
         if upgrade:

@@ -499,3 +499,48 @@ class BlockCopy(object):
         file_names = self.params["file_names"].split()
         for name in file_names:
             self.verify_md5(name)
+
+    def mount_disks(self):
+        """
+        Mount added disks inside guest(only for linux).
+        """
+        os_type = self.params["os_type"]
+        if os_type == "linux":
+            session = self.get_session()
+            fs_type = self.params.get("mount_fstype", "ext4")
+            disks = utils_misc.list_linux_guest_disks(session)
+            for disk in disks:
+                if re.search("da", disk):
+                    continue
+                mount_point = "/mnt/%s" % disk.split('/')[2]
+                utils_misc.mount(disk, mount_point, fs_type, session=session)
+
+    def format_disks(self):
+        """
+        Format all guest non-root disks, add file_names each file for each disk.
+        """
+        session = self.get_session()
+        os_type = self.params["os_type"]
+        file_names = self.params["file_names"]
+        fs_type = self.params.get("mount_fstype", "ext4")
+        if os_type == "linux":
+            all_disks_did = utils_misc.get_all_disks_did(session)
+            disks = utils_misc.list_linux_guest_disks(session)
+            for disk in disks:
+                if re.search("da", disk):
+                    continue
+                did = disk.split('/')[2]
+                utils_misc.format_linux_disk(session, did, all_disks_did,
+                                             fstype=fs_type)
+                # format_linux_disk() will mount disk automatically to /mnt/${did}
+                self.params["file_names"] = "%s %s%s/%s" % (
+                    file_names, "/mnt/", did, "block_job_testfile")
+        elif os_type == "windows":
+            disk_num = len(self.params["images"].split())
+            for did in range(1, disk_num - 1):
+                utils_misc.format_windows_disk(session, did)
+            output = session.cmd_output(self.params["get_vol_cmd"])
+            disks = re.findall(r'(\w):', output, re.M)
+            for disk in disks[1:]:
+                self.params["file_names"] = "%s %s:\\block_job_testfile" % (
+                    file_names, disk)

@@ -31,7 +31,10 @@ def run(test, params, env):
                  else return False
         """
         session = vm.wait_for_login()
-        list_cmd = "wmic process get name"
+        if params["os_type"] == "windows":
+            list_cmd = "wmic process get name"
+        else:
+            list_cmd = "ps aux | grep %s | grep Rs" %target_process
         output = session.cmd_output_safe(list_cmd, timeout=60)
         process = re.findall(target_process, output, re.M | re.I)
         session.close()
@@ -65,7 +68,7 @@ def run(test, params, env):
                 {"sub_type": bg_stress_test})
             stress_thread.start()
         if not utils_misc.wait_for(lambda: check_bg_running(target_process),
-                                   120, 0, 1):
+                                   360, 0, 1):
             raise exceptions.TestFail("Backgroud test %s is not "
                                       "alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
@@ -92,7 +95,8 @@ def run(test, params, env):
     vm.verify_alive()
     error_context.context("Boot guest with %s device" % driver, logging.info)
 
-    utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
+    if params["os_type"] == "windows":
+        utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
 
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")

@@ -31,7 +31,7 @@ def run(test, params, env):
                  else return False
         """
         session = vm.wait_for_login()
-        list_cmd = "wmic process get name"
+        list_cmd = params.get("list_cmd", "wmic process get name")
         output = session.cmd_output_safe(list_cmd, timeout=60)
         process = re.findall(target_process, output, re.M | re.I)
         session.close()
@@ -92,7 +92,8 @@ def run(test, params, env):
     vm.verify_alive()
     error_context.context("Boot guest with %s device" % driver, logging.info)
 
-    utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
+    if params["os_type"] == "windows":
+        utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
 
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")

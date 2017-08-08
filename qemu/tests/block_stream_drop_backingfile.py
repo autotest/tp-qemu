@@ -97,7 +97,11 @@ def run(test, params, env):
             raise error.TestFail("%s is opening by qemu" % set([snapshots[0],
                                                                 image_file]))
         error.context("Check backing-file of sn2 by qemu-img", logging.info)
-        cmd = "%s info %s" % (qemu_img, snapshots[1])
+        # '-U' was added into help output by qemu commit a8d16f9
+        if '-U' in utils.system_output("%s --help" % qemu_img):
+            cmd = "%s info -U %s" % (qemu_img, snapshots[1])
+        else:
+            cmd = "%s info %s" % (qemu_img, snapshots[1])
         if re.search("backing file",
                      utils.system_output(cmd, ignore_status=True)):
             raise error.TestFail("should no backing-file in this step")

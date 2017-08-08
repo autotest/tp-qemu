@@ -12,7 +12,11 @@ class BlockStreamTest(blk_stream.BlockStream):
 
     def get_image_size(self, image_file):
         qemu_img = utils_misc.get_qemu_img_binary(self.params)
-        cmd = "%s info %s" % (qemu_img, image_file)
+        # '-U' was added into help output by qemu commit a8d16f9
+        if '-U' in utils.system_output("%s --help" % qemu_img):
+            cmd = "%s info -U %s" % (qemu_img, image_file)
+        else:
+            cmd = "%s info %s" % (qemu_img, image_file)
         info = utils.system_output(cmd)
         size = re.findall("(\d+) bytes", info)
         if size:

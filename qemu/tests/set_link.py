@@ -190,8 +190,7 @@ def run(test, params, env):
 
     change_queues = False
     guest_ifname = ""
-    guest_ip = vm.wait_for_get_address(nic_index_or_name=0, timeout=240)
-    host_ip = utils_net.get_host_ip_address(params)
+    guest_ip = vm.wait_for_get_address(nic_index=0, timeout=240)
     # Win guest '2' represent 'Connected', '7' represent 'Media disconnected'
     win_media_connected = params.get("win_media_connected", "2")
     win_media_disconnected = params.get("win_media_disconnected", "7")

@@ -90,7 +90,7 @@ def run(test, params, env):
             utils_misc.wait_for(lambda: env["run_change_queues"], 30, 0, 2,
                                 "wait queues change start")
         time.sleep(0.5)
-        output = utils_test.ping(guest_ip, 10, interface=guest_ifname,
+        output = utils_test.ping(guest_ip, 10, interface=host_interface,
                                  timeout=20, session=None)[1]
         if not link_up and utils_test.get_loss_ratio(output) < 80:
             err_msg = "guest network still connecting after down the link"
@@ -207,6 +207,9 @@ def run(test, params, env):
 
     netdev_id = vm.virtnet[0].netdev_id
     device_id = vm.virtnet[0].device_id
+    host_interface = None
+    if vm.virtnet[0].netdst:
+        host_interface = vm.virtnet[0].netdst
     expect_down_status = params.get("down-status", "down")
     expect_up_status = params.get("up-status", "up")
     operstate_always_up = params.get("operstate_always_up", "no") == "yes"

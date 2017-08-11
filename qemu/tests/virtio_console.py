@@ -280,7 +280,7 @@ def run(test, params, env):
         guest_worker.cmd("virt.clean_port('%s'),1024" % port.name, 10)
         match, tmp = guest_worker._cmd("virt.send('%s', (1024**3)*3, True, "
                                        "is_static=True)" % port.name, 30)
-        if match is None:
+        if match is not None:
             raise error.TestFail("Write on guest while host disconnected "
                                  "didn't time out.\nOutput:\n%s"
                                  % tmp)

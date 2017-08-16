@@ -41,6 +41,8 @@ int main(void) {
 	fclose(fr);
 #if defined(__powerpc64__)
 	if (!strncmp(clocksource, "timebase", strlen("timebase"))) {
+#elif defined(__aarch64__)
+	if (!strncmp(clocksource, "arch_sys_counter", strlen("arch_sys_counter"))) {
 #else
 	if (!strncmp(clocksource, "kvm-clock", strlen("kvm-clock"))) {
 #endif

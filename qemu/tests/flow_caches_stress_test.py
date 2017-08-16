@@ -49,11 +49,11 @@ def run(test, params, env):
     if "nf_conntrack" in session.cmd_output("lsmod"):
         msg = "Unload nf_conntrack module in guest."
         error.context(msg, logging.info)
-        black_str = "#disable nf_conntrack\nblacklist nf_conntrack\n" \
-                    "blacklist nf_conntrack_ipv6\nblacklist xt_conntrack\n" \
-                    "blacklist nf_conntrack_ftp\nblacklist xt_state\n" \
-                    "blacklist iptable_nat\nblacklist ipt_REDIRECT\n" \
-                    "blacklist nf_nat\nblacklist nf_conntrack_ipv4"
+        black_str = "#disable nf_conntrack\\nblacklist nf_conntrack\\n" \
+                    "blacklist nf_conntrack_ipv6\\nblacklist xt_conntrack\\n" \
+                    "blacklist nf_conntrack_ftp\\nblacklist xt_state\\n" \
+                    "blacklist iptable_nat\\nblacklist ipt_REDIRECT\\n" \
+                    "blacklist nf_nat\\nblacklist nf_conntrack_ipv4"
         cmd = "echo -e '%s' >> /etc/modprobe.d/blacklist.conf" % black_str
         session.cmd(cmd)
         session = vm.reboot(session, timeout=timeout)

@@ -605,10 +605,20 @@ def run(test, params, env):
             # when replugging port from pci to different pci. We should
             # either use symlinks (as in Windows) or replug with the busname
             port = ports[port_idx]
-            vm.monitor.cmd('device_del %s' % port.qemu_id)
+            portdev = vm.devices.get_by_params({"name": port.qemu_id})[0]
+            if not portdev:
+                test.error("No port named %s" % port.qemu_id)
+            chardev = portdev.get_param("chardev")
+            port_rid = portdev.get_param("id")
+            vm.devices.simple_unplug(portdev, vm.monitor)
             time.sleep(intr_time)
-            vm.monitor.cmd('device_add %s,id=%s,chardev=dev%s,name=%s'
-                           % (device, port.qemu_id, port.qemu_id, port.name))
+            if not chardev:
+                test.error("No chardev in guest for port %s" % port.qemu_id)
+            new_portdev = qdevices.QDevice(device)
+            for key, value in {'id': port_rid, 'chardev': chardev, 'name':
+                               port.name}.items():
+                new_portdev.set_param(key, value)
+            vm.devices.simple_hotplug(new_portdev, vm.monitor)
 
         def _serialport_send_replug():
             """ hepler for executing replug of the sender port """
@@ -1328,19 +1338,21 @@ def run(test, params, env):
             port = "console-"
             port_type = "virtconsole"
         port += "%d-%d" % (pci_id, port_id)
-        ret = vm.monitors[0].cmd("device_add %s,"
-                                 "bus=virtio_serial_pci%d.0,"
-                                 "id=%s,"
-                                 "name=%s"
-                                 % (port_type, pci_id, port, port))
+        new_portdev = qdevices.QDevice(port_type)
+        for key, value in {'id': port, 'name': port, 'bus': "virtio_serial_pci"
+                           "%d.0" % pci_id}.items():
+            new_portdev.set_param(key, value)
+        (result, ver_out) = vm.devices.simple_hotplug(new_portdev, vm.monitor)
+
         if console == "no":
             vm.virtio_ports.append(qemu_virtio_port.VirtioSerial(port, port,
                                                                  None))
         else:
             vm.virtio_ports.append(qemu_virtio_port.VirtioConsole(port, port,
                                                                   None))
-        if ret != "":
-            logging.error(ret)
+        if not ver_out:
+            test.error("The virtioserialport isn't hotplugged well, result: %s"
+                       % result)
 
     def _virtio_dev_del(vm, pci_id, port_id):
         """
@@ -1351,10 +1363,12 @@ def run(test, params, env):
         """
         for port in vm.virtio_ports:
             if port.name.endswith("-%d-%d" % (pci_id, port_id)):
-                ret = vm.monitors[0].cmd("device_del %s" % (port.name))
+                portdev = vm.devices.get_by_params({"name": port.qemu_id})[0]
+                (result, ver_out) = vm.devices.simple_unplug(portdev, vm.monitor)
                 vm.virtio_ports.remove(port)
-                if ret != "":
-                    logging.error(ret)
+                if not ver_out:
+                    test.error("The virtioserialport isn't hotunplugged well, "
+                               "result: %s" % result)
                 return
         test.fail("Removing port which is not in vm.virtio_ports"
                   " ...-%d-%d" % (pci_id, port_id))
@@ -1382,19 +1396,21 @@ def run(test, params, env):
         pause = int(params.get("virtio_console_pause", 1))
         logging.info("Timeout between hotplug operations t=%fs", pause)
 
-        vm = virtio_test.get_vm_with_ports(1, 1, spread=0, quiet=True, strict=True)
+        vm = virtio_test.get_vm_with_ports(0, 2, spread=0, quiet=True, strict=True)
         consoles = virtio_test.get_virtio_ports(vm)
         # send/recv might block for ever, set non-blocking mode
-        consoles[0][0].open()
         consoles[1][0].open()
-        consoles[0][0].sock.setblocking(0)
+        consoles[1][1].open()
         consoles[1][0].sock.setblocking(0)
+        consoles[1][1].sock.setblocking(0)
         logging.info("Test correct initialization of hotplug ports")
         for bus_id in range(1, 5):  # count of pci device
-            ret = vm.monitors[0].cmd("device_add %s,id=virtio_serial_pci%d"
-                                     % (get_virtio_serial_name(), bus_id))
-            if ret != "":
-                logging.error(ret)
+            new_pcidev = qdevices.QDevice(get_virtio_serial_name())
+            new_pcidev.set_param('id', 'virtio_serial_pci%d' % bus_id)
+            (result, ver_out) = vm.devices.simple_hotplug(new_pcidev, vm.monitor)
+            if not ver_out:
+                test.error("The virtio serial pci isn't hotplugged well, log: %s"
+                           % result)
             for i in range(bus_id * 5 + 5):     # max ports 30
                 _virtio_dev_add(vm, bus_id, i, console)
                 time.sleep(pause)
@@ -1402,27 +1418,30 @@ def run(test, params, env):
         time.sleep(10)  # Timeout for port initialization
         guest_worker = qemu_virtio_port.GuestWorker(vm)
 
-        logging.info("Delete ports when ports are used")
+        logging.info("Delete ports during ports in use")
         # Delete ports when ports are used.
         guest_worker.cmd("virt.loopback(['%s'], ['%s'], 1024,"
-                         "virt.LOOP_POLL)" % (consoles[0][0].name,
-                                              consoles[1][0].name), 10)
+                         "virt.LOOP_POLL)" % (consoles[1][0].name,
+                                              consoles[1][1].name), 10)
         funcatexit.register(env, params.get('type'), __set_exit_event)
 
-        send = qemu_virtio_port.ThSend(consoles[0][0].sock, "Data", EXIT_EVENT,
+        send = qemu_virtio_port.ThSend(consoles[1][0].sock, "Data", EXIT_EVENT,
                                        quiet=True)
-        recv = qemu_virtio_port.ThRecv(consoles[1][0].sock, EXIT_EVENT,
+        recv = qemu_virtio_port.ThRecv(consoles[1][1].sock, EXIT_EVENT,
                                        quiet=True)
         send.start()
         time.sleep(2)
         recv.start()
 
         # Try to delete ports under load
-        ret = vm.monitors[0].cmd("device_del %s" % consoles[1][0].name)
-        ret += vm.monitors[0].cmd("device_del %s" % consoles[0][0].name)
+        portdev = vm.devices.get_by_params({"name": consoles[1][1].qemu_id})[0]
+        (result, ver_out) = vm.devices.simple_unplug(portdev, vm.monitor)
+        portdev_ = vm.devices.get_by_params({"name": consoles[1][0].qemu_id})[0]
+        (result_, ver_out_) = vm.devices.simple_unplug(portdev_, vm.monitor)
         vm.virtio_ports = vm.virtio_ports[2:]
-        if ret != "":
-            logging.error(ret)
+        if not (ver_out and ver_out_):
+            test.error("The ports aren't hotunplugged well, log: %s\n, %s"
+                       % (result, result_))
 
         EXIT_EVENT.set()
         funcatexit.unregister(env, params.get('type'), __set_exit_event)
@@ -1754,9 +1773,10 @@ def run(test, params, env):
         # Remove all ports:
         while vm.virtio_ports:
             port = vm.virtio_ports.pop()
-            ret = vm.monitor.cmd("device_del %s" % port.qemu_id)
-            if ret != "":
-                test.fail("Can't unplug port %s: %s" % (port, ret))
+            portdev = vm.devices.get_by_params({"name": port.qemu_id})[0]
+            (result, ver_out) = vm.devices.simple_unplug(portdev, vm.monitor)
+            if not ver_out:
+                test.fail("Can't unplug port %s: %s" % (port, result))
         session = vm.wait_for_login()
 
         # Power off the computer

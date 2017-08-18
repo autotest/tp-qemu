@@ -228,7 +228,7 @@ def run(test, params, env):
 
     error.context("Start netperf testing", logging.info)
     start_test(server_ip, server_ctl, host, clients, test.resultsdir,
-               l=int(params.get('l')),
+               test_duration=int(params.get('l')),
                sessions_rr=params.get('sessions_rr'),
                sessions=params.get('sessions'),
                sizes_rr=params.get('sizes_rr'),
@@ -256,12 +256,12 @@ def run(test, params, env):
 
 
 @error.context_aware
-def start_test(server, server_ctl, host, clients, resultsdir, l=60,
+def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                sessions_rr="50 100 250 500", sessions="1 2 4",
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
                protocols="TCP_STREAM TCP_MAERTS TCP_RR TCP_CRR", ver_cmd=None,
-               netserver_port=None, params={}, server_cyg=None, test=None):
+               netserver_port=None, params=None, server_cyg=None, test=None):
     """
     Start to test with different kind of configurations
 
@@ -270,7 +270,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     :param host: localhost ip
     :param clients: netperf clients' ip
     :param resultsdir: directory to restore the results
-    :param l: test duration
+    :param test_duration: test duration
     :param sessions_rr: sessions number list for RR test
     :param sessions: sessions number list
     :param sizes_rr: request/response sizes (TCP_RR, UDP_RR)
@@ -281,6 +281,8 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
     :param params: Dictionary with the test parameters.
     :param server_cyg: shell session for cygwin in windows guest
     """
+    if params is None:
+        params = {}
 
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
@@ -289,14 +291,14 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                             commands.getoutput(ver_cmd).strip()})
     test.write_test_keyval({'guest-kernel-ver': ssh_cmd(server_ctl,
                                                         guest_ver_cmd).strip()})
-    test.write_test_keyval({'session-length': l})
+    test.write_test_keyval({'session-length': test_duration})
 
     fd.write('### kvm-userspace-ver : %s\n' %
              commands.getoutput(ver_cmd).strip())
     fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl,
                                                      guest_ver_cmd).strip())
     fd.write('### kvm_version : %s\n' % os.uname()[2])
-    fd.write('### session-length : %s\n' % l)
+    fd.write('### session-length : %s\n' % test_duration)
 
     record_list = ['size', 'sessions', 'throughput', 'trans.rate', 'CPU',
                    'thr_per_CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
@@ -348,7 +350,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, l=60,
                 else:
                     nf_args = "-C -c -t %s -- -m %s" % (protocol, i)
 
-                ret = launch_client(j, server, server_ctl, host, clients, l,
+                ret = launch_client(j, server, server_ctl, host, clients, test_duration,
                                     nf_args, netserver_port, params, server_cyg)
 
                 thu = float(ret['thu'])

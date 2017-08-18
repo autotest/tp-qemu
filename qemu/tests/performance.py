@@ -228,11 +228,11 @@ def time_ana(results_tuple):
     """
     time_unit = 1.0
     time_data = 0.0
-    l = len(results_tuple)
-    while l > 0:
-        l -= 1
-        if results_tuple[l]:
-            time_data += float(results_tuple[l]) * time_unit
+    results_len = len(results_tuple)
+    while results_len > 0:
+        results_len -= 1
+        if results_tuple[results_len]:
+            time_data += float(results_tuple[results_len]) * time_unit
             time_unit *= 60
     return str(time_data)
 

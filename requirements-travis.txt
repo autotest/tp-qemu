@@ -5,5 +5,5 @@ tox==1.5.0
 virtualenv==1.9.1
 simplejson==3.8.1
 MySQL-python==1.2.5
-inspektor==0.2.0
+inspektor==0.4.5
 autotest==0.16.2

@@ -7,7 +7,6 @@ from virttest.utils_test.qemu import migration
 
 @error.context_aware
 def run(test, params, env):
-
     """
     KVM multi-host migration test:
 
@@ -79,7 +78,6 @@ def run(test, params, env):
                     self.post_migration_set_cache_size
 
         def set_xbzrle(self):
-
             """
             enable/disable xbzrle
             """
@@ -94,7 +92,6 @@ def run(test, params, env):
 
         @error.context_aware
         def get_mig_totaltime_downtime_transferred_ram(self, vm):
-
             """
             get total time, downtime and transferred ram after migration
 
@@ -116,7 +113,6 @@ def run(test, params, env):
 
         @error.context_aware
         def check_mig_totaltime_downtime_transferred_ram(self):
-
             """
             check total time, downtime and transferred ram after migration
             the items in list should be decrease
@@ -156,7 +152,6 @@ def run(test, params, env):
                         transferred_ram_list.pop()
 
         def before_migration_capability(self, mig_data):
-
             """
             get migration capability (xbzrle/cache_size)
             enable/disable xbzrle
@@ -171,7 +166,6 @@ def run(test, params, env):
                     self.set_xbzrle()
 
         def before_migration_cache_size_speed(self, mig_data):
-
             """
             enable xbzrle, set cache size and set speed to max
             before migration
@@ -188,7 +182,6 @@ def run(test, params, env):
                     self.set_migration_speed(self.max_speed)
 
         def before_migration_capability_with_xbzrle_on(self, mig_data):
-
             """
             enable xbzrle and set speed to max before migration
 
@@ -205,7 +198,6 @@ def run(test, params, env):
                                       dsthost, vm_ports,
                                       not_wait_for_migration,
                                       fd, mig_data):
-
             """
             get total time, downtime and transferred ram after migration
 
@@ -235,7 +227,6 @@ def run(test, params, env):
         def post_migration_capability_with_xbzrle_off_on(
                 self, vm, cancel_delay, mig_offline, dsthost,
                 vm_ports, not_wait_for_migration, fd, mig_data):
-
             """
             get total time, downtime and transferred ram after migration
 
@@ -270,7 +261,6 @@ def run(test, params, env):
         def post_migration_set_cache_size(
                 self, vm, cancel_delay, mig_offline, dsthost,
                 vm_ports, not_wait_for_migration, fd, mig_data):
-
             """
             set cache size during migration
             get cache size after migration
@@ -316,7 +306,6 @@ def run(test, params, env):
                           logging.info)
 
             def start_worker(mig_data):
-
                 """
                 enable/disable stress in guest on src host
                 """
@@ -327,7 +316,6 @@ def run(test, params, env):
                     logging.info("No need to start stress test")
 
             def check_worker(mig_data):
-
                 """
                 kill background test in guest on dst host
                 """

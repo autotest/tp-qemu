@@ -40,14 +40,14 @@ class WinBufferedReadFile(object):
         while True:  # emulate blocking IO
             if self._n >= n:
                 frags = []
-                l = 0
+                aux = 0
                 if self.verbose:
                     print "get %s, | bufs = %s [%s]" % (n, self._n,
                                                         ','.join(map(lambda x: str(len(x)),
                                                                      self._bufs)))
-                while l < n:
+                while aux < n:
                     frags.append(self._bufs.pop(0))
-                    l += len(frags[-1])
+                    aux += len(frags[-1])
                 self._n -= n
                 whole = ''.join(frags)
                 ret, rest = whole[:n], whole[n:]

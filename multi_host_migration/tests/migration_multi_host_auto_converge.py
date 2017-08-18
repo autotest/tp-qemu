@@ -10,7 +10,6 @@ from virttest.utils_test.qemu import migration
 
 @error.context_aware
 def run(test, params, env):
-
     """
     KVM multi-host migration test:
 
@@ -88,7 +87,6 @@ def run(test, params, env):
                 self.post_migration = self.post_migration_capability_load_host_io
 
         def set_auto_converge(self):
-
             """
             enable/disable auto-converge
             """
@@ -104,7 +102,6 @@ def run(test, params, env):
 
         @error.context_aware
         def start_stress(self, pre_action=""):
-
             """
             start stress test on src before migration
 
@@ -133,7 +130,6 @@ def run(test, params, env):
 
         @error.context_aware
         def load_host(self):
-
             """
             retrieve or set a process's CPU affinity
             """
@@ -143,7 +139,6 @@ def run(test, params, env):
 
         @error.context_aware
         def analysis_sar_output(self, output):
-
             """
             analyse output of command sar after migration, get "cpu_average",
             "memory_average".
@@ -178,7 +173,6 @@ def run(test, params, env):
 
         @error.context_aware
         def get_sar_output(self):
-
             """
             get output of command sar during migration
 
@@ -199,7 +193,6 @@ def run(test, params, env):
 
         @error.context_aware
         def check_sar_output(self):
-
             """
             Compare the output for (1) default auto-converge setting (off)
             and (2) auto-converge on, the guest performance should not be
@@ -222,7 +215,6 @@ def run(test, params, env):
 
         @error.context_aware
         def get_mig_cpu_throttling_percentage(self, vm):
-
             """
             get cpu throttling percentage during migration
 
@@ -239,7 +231,6 @@ def run(test, params, env):
 
         @error.context_aware
         def check_mig_cpu_throttling_percentage(self):
-
             """
             check if cpu throttling percentage equal to given value
             """
@@ -265,7 +256,6 @@ def run(test, params, env):
                                      (99, max(cpu_throttling_percentage_list)))
 
         def thread_check_mig_cpu_throttling_percentage(self):
-
             """
             function, called by utils.InterruptedThread()
             """
@@ -288,7 +278,6 @@ def run(test, params, env):
             self.check_mig_cpu_throttling_percentage()
 
         def before_migration_capability(self, mig_data):
-
             """
             get migration capability (auto-converge: on/off)
 
@@ -305,7 +294,6 @@ def run(test, params, env):
                     self.get_migration_parameter()
 
         def before_migration_load_host(self, mig_data):
-
             """
             get migration capability (auto-converge: on/off)
             load host: retrieve or set a process's CPU affinity
@@ -325,7 +313,6 @@ def run(test, params, env):
         def post_migration_capability(
                 self, vm, cancel_delay, mig_offline, dsthost,
                 vm_ports, not_wait_for_migration, fd, mig_data):
-
             """
             set auto-converge off/on during migration
             set/get parameter cpu-throttle-initial 30
@@ -375,7 +362,6 @@ def run(test, params, env):
         def post_migration_capability_load_host(
                 self, vm, cancel_delay, mig_offline, dsthost,
                 vm_ports, not_wait_for_migration, fd, mig_data):
-
             """
             set auto-converge off/on during migration
 
@@ -422,7 +408,6 @@ def run(test, params, env):
         def post_migration_capability_load_host_io(
                 self, vm, cancel_delay, mig_offline, dsthost,
                 vm_ports, not_wait_for_migration, fd, mig_data):
-
             """
             set auto-converge off/on during migration
 
@@ -462,7 +447,6 @@ def run(test, params, env):
                           logging.info)
 
             def start_worker(mig_data):
-
                 """
                 enable/disable stress in guest on src host
                 """
@@ -473,7 +457,6 @@ def run(test, params, env):
                     logging.info("No need to start stress test")
 
             def check_worker(mig_data):
-
                 """
                 kill background test in guest on dst host
                 """

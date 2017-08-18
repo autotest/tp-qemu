@@ -123,7 +123,7 @@ def run(test, params, env):
                 balloon_type = params_tag['balloon_type']
                 if balloon_type == 'evict':
                     expect_mem = int(random.uniform(min_sz,
-                                     balloon_test.get_ballooned_memory()))
+                                                    balloon_test.get_ballooned_memory()))
                 else:
                     expect_mem = int(random.uniform(
                         balloon_test.get_ballooned_memory(), max_sz))

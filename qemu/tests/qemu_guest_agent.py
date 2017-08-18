@@ -463,7 +463,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     @error.context_aware
     def _get_mem_used(self, session, cmd):
-
         """
         get memory usage of the process
 
@@ -482,7 +481,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     @error.context_aware
     def gagent_check_memory_leak(self, test, params, env):
-
         """
         repeat execute "guest-info" command to guest agent, check memory
         usage of the qemu-ga
@@ -503,7 +501,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.close()
         repeats = int(params.get("repeats", 1))
         for i in range(repeats):
-            error.context("execute '%s' %s times" % (test_command, i+1),
+            error.context("execute '%s' %s times" % (test_command, i + 1),
                           logging.info)
             return_msg = self.gagent.guest_info()
             logging.info(str(return_msg))
@@ -631,7 +629,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error.context("the bitmap_before_trim is %s" % bitmap_before_trim,
                       logging.info)
         total_block_before_trim = abs(sum([eval(i) for i in
-                                      bitmap_before_trim.split(',')]))
+                                           bitmap_before_trim.split(',')]))
         error.context("the total_block_before_trim is %d"
                       % total_block_before_trim, logging.info)
 
@@ -645,7 +643,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error.context("the bitmap_after_trim is %s" % bitmap_after_trim,
                       logging.info)
         total_block_after_trim = abs(sum([eval(i) for i in
-                                     bitmap_after_trim.split(',')]))
+                                          bitmap_after_trim.split(',')]))
         error.context("the total_block_after_trim is %d"
                       % total_block_after_trim, logging.info)
 

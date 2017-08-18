@@ -53,7 +53,7 @@ def run(test, params, env):
             return ""
 
         ignore_case = False
-        if search_opt & re.I == re.I:
+        if search_opt & re.I == re.I:  # nopep8
             ignore_case = True
 
         error.context("Finding matched sub-string with regex pattern '%s'" %

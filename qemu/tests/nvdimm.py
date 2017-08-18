@@ -11,6 +11,7 @@ class NvdimmTest(object):
     """
     Class for NVDIMM test
     """
+
     def __init__(self, params, env):
         """
         Init the default values of NvdimmTest object.

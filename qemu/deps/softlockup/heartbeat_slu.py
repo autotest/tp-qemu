@@ -148,6 +148,7 @@ Usage:
                      [--interval <heartbeat interval in seconds>]
 """
 
+
 # host information and global data
 hostname = socket.gethostname()
 client_prev_timestamp = {}

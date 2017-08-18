@@ -8,7 +8,6 @@ from generic.tests import kdump
 
 @error.context_aware
 def run(test, params, env):
-
     """
     KVM multi-host migration ping pong test:
 
@@ -77,7 +76,6 @@ def run(test, params, env):
                                      kernel_param_cmd,
                                      kdump_enable_cmd,
                                      nvcpu, crash_cmd):
-
             """
             force the Linux kernel to crash before migration
 
@@ -101,7 +99,6 @@ def run(test, params, env):
 
         @error.context_aware
         def check_worker_kdump(self, mig_data, vmcore_chk_cmd, vmcore_incomplete):
-
             """
             check weather generate vmcore file after migration
 
@@ -146,7 +143,6 @@ def run(test, params, env):
                             self.id, self.sync_server)
 
             def start_worker(mig_data):
-
                 """
                 force the Linux kernel to crash on src before migration
 
@@ -161,7 +157,6 @@ def run(test, params, env):
                                               self.crash_cmd)
 
             def check_worker(mig_data):
-
                 """
                 check weather generate vmcore file on dst after migration
 

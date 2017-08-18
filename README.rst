@@ -40,9 +40,8 @@ using virt test, and commit your changes.
 
 ::
 
-    inspekt indent
-    inspekt lint
-    inspekt style
+    inspekt checkall --disable-style E501,E265,W601,E402,E722,E741 --no-license-check
+
 6) Fix any problems
 7) Push your changes and submit a pull request
 8) That's it.

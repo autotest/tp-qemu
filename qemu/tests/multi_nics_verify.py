@@ -57,12 +57,7 @@ def run(test, params, env):
     ifcfg_path = "/etc/sysconfig/network-scripts/ifcfg-%s"
     for ifname in ifname_list:
         eth_config_path = ifcfg_path % ifname
-
-        eth_config = """DEVICE=%s
-BOOTPROTO=dhcp
-ONBOOT=yes
-""" % ifname
-
+        eth_config = "DEVICE=%s\\nBOOTPROTO=dhcp\\nONBOOT=yes" % ifname
         cmd = "echo '%s' > %s" % (eth_config, eth_config_path)
         s, o = session.get_command_status_output(cmd)
         if s != 0:

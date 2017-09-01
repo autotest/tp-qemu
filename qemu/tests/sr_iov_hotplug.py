@@ -9,6 +9,8 @@ from virttest import utils_net
 from virttest import test_setup
 from virttest import error_context
 
+iface_scripts = []
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -34,6 +36,7 @@ def run(test, params, env):
 
     def check_interface(iface, nic_filter):
         cmd = "ifconfig %s" % str(iface)
+        session = vm.wait_for_serial_login(timeout=timeout)
         status, output = session.cmd_status_output(cmd)
         if status:
             test.error("Guest command '%s' fail with output: %s." % (cmd, output))
@@ -113,24 +116,52 @@ def run(test, params, env):
                       ". Output: %r" % (pci_add_cmd, add_output))
         return after_add
 
+    def clean_network_scripts():
+        logging.debug("Clean up network scripts in guest")
+        session = vm.wait_for_serial_login(timeout=timeout)
+        if "ubuntu" in vm.get_distro().lower():
+            iface_script = "/etc/network/interfaces"
+            cmd = "cat %s.BACKUP" % iface_script
+            if not session.cmd_status(cmd):
+                cmd = "mv %s.BACKUP %s" % (iface_script, iface_script)
+                status, output = session.cmd_status_output(cmd)
+                if status:
+                    test.error("Failed to cleanup network script in guest: "
+                               "%s" % output)
+        else:
+            global iface_scripts
+            for iface_script in iface_scripts:
+                cmd = "rm -f %s" % iface_script
+                status, output = session.cmd_status_output(cmd)
+                if status:
+                    test.error("Failed to delete iface_script")
+                iface_scripts.remove(iface_script)
+
     # Hot add a pci device
     def add_device(pci_num):
+        global iface_scripts
         reference_cmd = params["reference_cmd"]
         find_pci_cmd = params["find_pci_cmd"]
         info_pci_ref = vm.monitor.info("pci")
+        session = vm.wait_for_serial_login(timeout=timeout)
         reference = session.cmd_output(reference_cmd)
         active_nics = get_active_network_device(session, nic_filter)
         logging.debug("Active nics before hotplug - %s", active_nics)
+
+        # Suspend the VM and try hot adding SRIOV dev
+        if params.get("vm_suspend", "no") == "yes":
+            logging.debug("suspend the VM after hotplug")
+            vm.pause()
         try:
             # get function for adding device.
-            add_fuction = local_functions["%s_iov" % cmd_type]
+            add_function = local_functions["%s_iov" % cmd_type]
         except Exception:
             test.error("No function for adding sr-iov dev with '%s'" %
                        cmd_type)
         after_add = None
-        if add_fuction:
+        if add_function:
             # Do add pci device.
-            after_add = add_fuction(pci_num)
+            after_add = add_function(pci_num)
 
         try:
             # Define a helper function to compare the output
@@ -153,6 +184,17 @@ def run(test, params, env):
                 else:
                     return False
 
+            # Resume the VM
+            if params.get("vm_resume", "no") == "yes":
+                logging.debug("resuming the VM after hotplug")
+                vm.resume()
+
+            # Reboot the VM
+            if params.get("vm_reboot", "no") == "yes":
+                logging.debug("Rebooting the VM after hotplug")
+                vm.reboot()
+            session = vm.wait_for_serial_login(timeout=timeout)
+
             error_context.context("Start checking new added device")
             # Compare the output of 'info pci'
             if after_add == info_pci_ref:
@@ -170,7 +212,7 @@ def run(test, params, env):
 
             # Assign static IP to the hotplugged interface
             if params.get("assign_static_ip", "no") == "yes":
-                cmd = []
+                cmd = "service networking restart"
                 static_ip = ip_gen.next()
                 net_mask = params.get("static_net_mask", "255.255.255.0")
                 broadcast = params.get("static_broadcast", "10.10.10.255")
@@ -183,19 +225,23 @@ def run(test, params, env):
                                                                       session)
                     logging.debug("Interface associated with PCI %s - %s",
                                   each_pci, iface_name)
+                    mac = session.cmd_output("ethtool -P %s" % iface_name)
+                    mac = mac.split("Permanent address:")[-1].strip()
+                    logging.debug("mac address of %s: %s", iface_name, mac)
+                    # backup the network script for other distros
+                    if "ubuntu" not in vm.get_distro().lower():
+                        cmd = "service network restart"
+                        iface_scripts.append(utils_net.get_network_cfg_file(iface_name))
                     if not check_interface(str(iface_name), nic_filter):
-                        cmd.append("ifconfig %s %s" % (iface_name, static_ip))
-                        cmd.append("ifconfig %s netmask %s" % (iface_name,
-                                                               net_mask))
-                        cmd.append("ifconfig %s broadcast %s" % (iface_name,
-                                                                 broadcast))
-                        cmd.append("ifconfig %s up" % iface_name)
-                        for each_cmd in cmd:
-                            status, output = session.cmd_status_output(each_cmd)
-                            if status:
-                                test.error("Failed to set static ip in guest: "
-                                           "%s" % output)
-
+                        utils_net.create_network_script(iface_name, mac,
+                                                        boot_proto="static",
+                                                        net_mask=net_mask,
+                                                        vm=vm,
+                                                        ip_addr=static_ip)
+                        status, output = session.cmd_status_output(cmd)
+                        if status:
+                            test.error("Failed to set static ip in guest: "
+                                       "%s" % output)
             # Test the newly added device
             if not utils_misc.wait_for(_check_ip, 120, 3, 3):
                 ifconfig = session.cmd_output("ifconfig -a")
@@ -300,6 +346,18 @@ def run(test, params, env):
             pci_info = []
             if params.get("assign_static_ip", "no") == "yes":
                 ip_gen = utils_net.gen_ipv4_addr(exclude_ips=[])
+                # backup the network script file if it is ubuntu
+                if "ubuntu" in vm.get_distro().lower():
+                    iface_script = "/etc/network/interfaces"
+                    cmd = "cat %s" % iface_script
+                    if not session.cmd_status(cmd):
+                        logging.debug("Backup network script in guest - %s",
+                                      iface_script)
+                        cmd = "cp %s %s.BACKUP" % (iface_script, iface_script)
+                        status, output = session.cmd_status_output(cmd)
+                        if status:
+                            test.error("Failed to backup in guest: %s" %
+                                       output)
             for pci_num in xrange(pci_num_range):
                 msg = "Start hot-adding %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
@@ -319,9 +377,16 @@ def run(test, params, env):
                 msg += " repeat %d" % (j + 1)
                 error_context.context(msg, logging.info)
                 pci_del(-(pci_num + 1))
+
+            # cleanup network script after hot deleting pci device
+            clean_network_scripts()
     finally:
+        # clean network scripts on error
+        clean_network_scripts()
         if params.get("enable_set_link", "yes") == "yes":
             error_context.context("Re-enabling the primary link(s) of guest",
                                   logging.info)
             for nic in vm.virtnet:
                 vm.set_link(nic.device_id, up=True)
+        if session:
+            session.close()

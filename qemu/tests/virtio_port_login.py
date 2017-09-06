@@ -109,9 +109,9 @@ def run(test, params, env):
                 logging.info("sending command: %s" % cmd)
                 output = session.cmd_output(cmd, timeout=240)
                 logging.info("output:%s" % output)
-        clean_cmd = params["clean_cmd"]
-        session.cmd(clean_cmd, timeout=180)
-        session.close()
+            clean_cmd = params["clean_cmd"]
+            session.cmd(clean_cmd, timeout=180)
+            session.close()
     except Exception:
         console_test.cleanup()
         raise

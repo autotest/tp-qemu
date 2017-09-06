@@ -1,6 +1,5 @@
 import logging
 import re
-import time
 
 from virttest import data_dir
 from virttest import storage
@@ -60,7 +59,8 @@ def run(test, params, env):
     img_list = params.get("images").split()
     img_format_type = params.get("img_format_type", "qcow2")
     pci_type = params.get("pci_type", "virtio-blk-pci")
-    pause = float(params.get("virtio_block_pause", 5.0))
+    #sometimes, ppc can't get new plugged disk in 5s, so time to 10s
+    pause = float(params.get("virtio_block_pause", 10.0))
     blk_num = int(params.get("blk_num", 1))
     repeat_times = int(params.get("repeat_times", 3))
     timeout = int(params.get("login_timeout", 360))
@@ -87,16 +87,23 @@ def run(test, params, env):
         for num in xrange(blk_num):
             device = qdevices.QDevice(pci_type)
             if params.get("need_plug") == "yes":
+                disks_before_plug = find_disk(vm, get_disk_cmd)
+
                 if params.get("need_controller", "no") == "yes":
                     controller_model = params.get("controller_model")
                     controller = qdevices.QDevice(controller_model)
+                    bus_extra_param = params.get("bus_extra_params_%s" % img_list[num + 1])
+                    # TODO:Add iothread support for qdevice
+                    if bus_extra_param and "iothread" in bus_extra_param:
+                        match = re.search("iothread=(\w+)", bus_extra_param)
+                        if match:
+                            qdevice_params = {"iothread": match.group(1)}
+                            controller.params.update(qdevice_params)
                     controller.hotplug(vm.monitor)
                     ver_out = controller.verify_hotplug("", vm.monitor)
                     if not ver_out:
                         err = "%s is not in qtree after hotplug" % controller_model
                         test.fail(err)
-
-                disks_before_plug = find_disk(vm, get_disk_cmd)
 
                 drive = qdevices.QRHDrive("block%d" % num)
                 drive.set_param("file", find_image(img_list[num + 1]))
@@ -106,15 +113,23 @@ def run(test, params, env):
 
                 device.set_param("drive", drive_id)
                 device.set_param("id", "block%d" % num)
+                blk_extra_param = params.get("blk_extra_params_%s" % img_list[num + 1])
+                if blk_extra_param and "iothread" in blk_extra_param:
+                    match = re.search("iothread=(\w+)", blk_extra_param)
+                    if match:
+                        device.set_param("iothread", match.group(1))
                 device.hotplug(vm.monitor)
                 ver_out = device.verify_hotplug("", vm.monitor)
                 if not ver_out:
                     err = "%s is not in qtree after hotplug" % pci_type
                     test.fail(err)
-                time.sleep(pause)
-
-                disks_after_plug = find_disk(vm, get_disk_cmd)
-                new_disks = get_new_disk(disks_before_plug, disks_after_plug)
+                plug_status = utils_misc.wait_for(lambda: len(get_new_disk(disks_before_plug,
+                                                  find_disk(vm, get_disk_cmd))) != 0, pause)
+                if plug_status:
+                    disks_after_plug = find_disk(vm, get_disk_cmd)
+                    new_disks = get_new_disk(disks_before_plug, disks_after_plug)
+                else:
+                    test.fail("Can't get new disks")
             else:
                 if params.get("drive_format") in pci_type:
                     get_disk_cmd += " | egrep -v '^/dev/[hsv]da[0-9]*$'"
@@ -173,9 +188,13 @@ def run(test, params, env):
         for num in xrange(blk_num):
             error_context.context("Unplug block device (iteration %d)" % iteration,
                                   logging.info)
+            disks_before_unplug = find_disk(vm, get_disk_cmd)
             device_list[num].unplug(vm.monitor)
             device_list[num].verify_unplug("", vm.monitor)
-            time.sleep(pause)
+            unplug_status = utils_misc.wait_for(lambda: len(get_new_disk(find_disk(vm, get_disk_cmd),
+                                                disks_before_unplug)) != 0, pause)
+            if not unplug_status:
+                test.fail("Failed to unplug disks")
 
         sub_type = params.get("sub_type_after_unplug")
         if sub_type:

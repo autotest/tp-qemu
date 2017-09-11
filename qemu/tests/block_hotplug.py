@@ -5,10 +5,9 @@ import time
 from virttest import data_dir
 from virttest import storage
 from virttest import error_context
+from virttest import utils_misc
 from virttest import utils_test
 from virttest.qemu_devices import qdevices
-
-from avocado.core import exceptions
 
 
 @error_context.context_aware
@@ -39,9 +38,11 @@ def run(test, params, env):
         """
         if params.get("os_type") == "linux":
             pattern = params.get("get_disk_pattern", "^/dev/vd[a-z]*$")
-        else:
+        elif params.get("os_type") == "windows":
             pattern = "^\d+"
             cmd = params.get("get_disk_index", "wmic diskdrive get index")
+        else:
+            test.cancel("Unsupported OS type '%s'" % params.get("os_type"))
 
         session = vm.wait_for_login(timeout=timeout)
         output = session.cmd_output_safe(cmd)
@@ -67,12 +68,14 @@ def run(test, params, env):
     get_disk_cmd = params.get("get_disk_cmd")
     context_msg = "Running sub test '%s' %s"
     device_list = []
+    disk_index = params.objects("disk_index")
+    disk_letter = params.objects("disk_letter")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    for i in xrange(repeat_times):
-        error_context.context("Hotplug block device (iteration %d)" % i,
+    for iteration in xrange(repeat_times):
+        error_context.context("Hotplug block device (iteration %d)" % iteration,
                               logging.info)
 
         sub_type = params.get("sub_type_before_plug")
@@ -91,7 +94,7 @@ def run(test, params, env):
                     ver_out = controller.verify_hotplug("", vm.monitor)
                     if not ver_out:
                         err = "%s is not in qtree after hotplug" % controller_model
-                        raise exceptions.TestFail(err)
+                        test.fail(err)
 
                 disks_before_plug = find_disk(vm, get_disk_cmd)
 
@@ -107,7 +110,7 @@ def run(test, params, env):
                 ver_out = device.verify_hotplug("", vm.monitor)
                 if not ver_out:
                     err = "%s is not in qtree after hotplug" % pci_type
-                    raise exceptions.TestFail(err)
+                    test.fail(err)
                 time.sleep(pause)
 
                 disks_after_plug = find_disk(vm, get_disk_cmd)
@@ -121,33 +124,45 @@ def run(test, params, env):
 
             device_list.append(device)
             if not new_disks:
-                raise exceptions.TestFail("Cannot find new disk after hotplug.")
+                test.fail("Cannot find new disk after hotplug.")
 
             if params.get("need_plug") == "yes":
                 disk = new_disks[0]
             else:
                 disk = new_disks[num]
 
+            session = vm.wait_for_login(timeout=timeout)
+            if params.get("os_type") == "windows":
+                if iteration == 0:
+                    error_context.context("Format disk", logging.info)
+                    utils_misc.format_windows_disk(session, disk_index[num],
+                                                   mountpoint=disk_letter[num])
             error_context.context("Check block device after hotplug.",
                                   logging.info)
-            if params.get("pci_test_cmd"):
+            if params.get("disk_op_cmd"):
                 if params.get("os_type") == "linux":
-                    test_cmd = params.get("pci_test_cmd") % (disk, disk)
+                    test_cmd = params.get("disk_op_cmd") % (disk, disk)
+                elif params.get("os_type") == "windows":
+                    test_cmd = params.get("disk_op_cmd") % (disk_letter[num],
+                                                            disk_letter[num])
+                    test_cmd = utils_misc.set_winutils_letter(session, test_cmd)
                 else:
-                    test_cmd = re.sub("PCI_NUM", "%s" % (num + 1),
-                                      params.get("pci_test_cmd"))
-                session = vm.wait_for_login(timeout=timeout)
-                s, o = session.cmd_status_output(test_cmd, timeout=disk_op_timeout)
-                session.close()
-                if s:
-                    raise exceptions.TestFail("Check for block device failed "
-                                              "after hotplug, Output: %r" % o)
+                    test.cancel("Unsupported OS type '%s'" % params.get("os_type"))
+
+                status, output = session.cmd_status_output(test_cmd,
+                                                           timeout=disk_op_timeout)
+                if status:
+                    test.fail("Check for block device failed "
+                              "after hotplug, Output: %r" % output)
+            session.close()
 
         sub_type = params.get("sub_type_after_plug")
         if sub_type:
             error_context.context(context_msg % (sub_type, "after hotplug"),
                                   logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
+            if vm.is_dead():
+                return
 
         sub_type = params.get("sub_type_before_unplug")
         if sub_type:
@@ -156,7 +171,7 @@ def run(test, params, env):
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
         for num in xrange(blk_num):
-            error_context.context("Unplug block device (iteration %d)" % i,
+            error_context.context("Unplug block device (iteration %d)" % iteration,
                                   logging.info)
             device_list[num].unplug(vm.monitor)
             device_list[num].verify_unplug("", vm.monitor)

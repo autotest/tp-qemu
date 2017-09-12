@@ -1,94 +1,64 @@
 import time
 import logging
 
-from autotest.client.shared import error
-from autotest.client import utils
-
 from virttest import utils_misc
+from virttest import utils_test
+from virttest import error_context
 
 from qemu.tests import drive_mirror
 
 
 class DriveMirrorStress(drive_mirror.DriveMirror):
 
-    def __init__(self, test, params, env, tag):
-        super(DriveMirrorStress, self).__init__(test, params, env, tag)
-
-    @error.context_aware
-    def install_stress_app(self):
-        params = self.parser_test_args()
-        session = self.get_session()
-        if session.cmd_status(params.get("app_check_cmd", "true")) == 0:
-            return True
-        error.context("install stress app in guest", logging.info)
-        link = params.get("download_link")
-        md5sum = params.get("pkg_md5sum")
-        tmp_dir = params.get("tmp_dir")
-        install_cmd = params.get("install_cmd")
-        config_cmd = params.get("config_cmd")
-        logging.info("Fetch package: %s" % link)
-        pkg = utils.unmap_url_cache(self.test.tmpdir, link, md5sum)
-        self.vm.copy_files_to(pkg, tmp_dir)
-        logging.info("Install app: %s" % install_cmd)
-        s, o = session.cmd_status_output(install_cmd, timeout=300)
-        if s != 0:
-            raise error.TestError("Fail to install stress app(%s)" % o)
-        logging.info("Configure app: %s" % config_cmd)
-        s, o = session.cmd_status_output(config_cmd, timeout=300)
-        if s != 0:
-            raise error.TestError("Fail to conifg stress app(%s)" % o)
-
-    @error.context_aware
     def load_stress(self):
         """
         load IO/CPU/Memory stress in guest;
         """
-        params = self.parser_test_args()
-        self.install_stress_app()
-        cmd = params.get("start_cmd")
-        session = self.get_session()
-        error.context("launch stress app in guest", logging.info)
-        session.sendline(cmd)
-        logging.info("Start command: %s" % cmd)
-        running = utils_misc.wait_for(self.app_runing, timeout=150, step=5)
-        if not running:
-            raise error.TestFail("stress app isn't running")
+        error_context.context("launch stress app in guest", logging.info)
+        args = (self.test, self.params, self.env, self.params["stress_test"])
+        bg_test = utils_test.BackgroundTest(utils_test.run_virt_sub_test, args)
+        bg_test.start()
+        if not utils_misc.wait_for(bg_test.is_alive, first=10, step=3, timeout=100):
+            self.test.fail("background test start failed")
+        if not utils_misc.wait_for(self.app_running, timeout=360, step=5):
+            self.test.fail("stress app isn't running")
+        # sleep 10s to ensure heavyload.exe make guest under heayload really;
+        time.sleep(10)
         return None
 
-    @error.context_aware
     def unload_stress(self):
         """
         stop stress app
         """
         def _unload_stress():
-            params = self.parser_test_args()
             session = self.get_session()
-            cmd = params.get("stop_cmd")
+            cmd = self.params.get("stop_cmd")
             session.sendline(cmd)
-            if not self.app_runing():
-                return True
-            return False
+            session.close()
+            return self.app_running()
 
-        error.context("stop stress app in guest", logging.info)
-        utils_misc.wait_for(_unload_stress, first=2.0,
-                            text="wait stress app quit", step=1.0, timeout=120)
+        error_context.context("stop stress app in guest", logging.info)
+        stopped = utils_misc.wait_for(_unload_stress, first=2.0,
+                                      text="wait stress app quit",
+                                      step=1.0, timeout=120)
+        if not stopped:
+            logging.warn("stress app is still running")
 
-    def app_runing(self):
+    def app_running(self):
         """
         check stress app really run in background;
         """
         session = self.get_session()
-        params = self.parser_test_args()
-        cmd = params.get("check_cmd")
+        cmd = self.params.get("check_cmd")
         status = session.cmd_status(cmd, timeout=120)
+        session.close()
         return status == 0
 
-    @error.context_aware
     def verify_steady(self):
         """
         verify offset not decreased, after block mirror job in steady status;
         """
-        error.context("verify offset not decreased", logging.info)
+        error_context.context("verify offset not decreased", logging.info)
         params = self.parser_test_args()
         timeout = int(params.get("hold_on_timeout", 600))
         offset = self.get_status()["offset"]
@@ -98,7 +68,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
             if _offset < offset:
                 msg = "offset decreased, offset last: %s" % offset
                 msg += "offset now: %s" % _offset
-                raise error.TestFail(msg)
+                self.test.fail(msg)
             offset = _offset
 
 

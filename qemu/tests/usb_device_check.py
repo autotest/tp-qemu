@@ -27,10 +27,10 @@ def run(test, params, env):
         else:
             test.fail(output)
 
-    # parse the usb toplogy from cfg
+    # parse the usb topology from cfg
     parsed_devs = parse_usb_topology(params)
 
-    logging.info("starting vm according to the usb toplogy")
+    logging.info("starting vm according to the usb topology")
     env_process.process(test, params, env,
                         env_process.preprocess_image,
                         env_process.preprocess_vm)

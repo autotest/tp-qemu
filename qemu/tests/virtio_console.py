@@ -348,25 +348,22 @@ def run(test, params, env):
                 raise details
         virtio_test.cleanup(vm, guest_worker)
 
-    def test_basic_loopback():
+    def basic_loopback(vm, guest_worker, send_port, recv_port, is_block):
         """
-        Simple loop back test with loop over two ports.
-        :param cfg: virtio_console_params - which type of virtio port to test
-        :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
+        Basic loop back test with loop over two ports
+        :param vm: VM object.
+        :param guest_worker: guest_worker object.
+        :param send_port: ports to send data to guest.
+        :param recv_port: ports to recv data from guest.
+        :param is_block: socket blocking mode, block(True), non-block(False).
         """
-        if params.get('virtio_console_params') == 'serialport':
-            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=2)
-            send_port, recv_port = virtio_test.get_virtio_ports(vm)[1][:2]
-        else:
-            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=2)
-            send_port, recv_port = virtio_test.get_virtio_ports(vm)[0][:2]
-
-        data = "Smoke test data"
-        send_port.open()
-        recv_port.open()
-        # Set nonblocking mode
-        send_port.sock.setblocking(0)
-        recv_port.sock.setblocking(0)
+        data = "Basic test data"
+        if not send_port.is_open():
+            send_port.open()
+        if not recv_port.is_open():
+            recv_port.open()
+        send_port.sock.setblocking(is_block)
+        recv_port.sock.setblocking(is_block)
         guest_worker.cmd("virt.loopback(['%s'], ['%s'], 1024, virt.LOOP_NONE)"
                          % (send_port.name, recv_port.name), 10)
         send_port.sock.sendall(data)
@@ -385,6 +382,23 @@ def run(test, params, env):
         if tmp != data:
             test.fail("Incorrect data: '%s' != '%s'" % (data, tmp))
         guest_worker.safe_exit_loopback_threads([send_port], [recv_port])
+        send_port.close()
+        recv_port.close()
+
+    @error_context.context_aware
+    def test_basic_loopback():
+        """
+        Simple loop back test with loop over two ports.
+        :param cfg: virtio_console_params - which type of virtio port to test
+        """
+        if params.get('virtio_console_params') == 'serialport':
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=2)
+            send_port, recv_port = virtio_test.get_virtio_ports(vm)[1][:2]
+        else:
+            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=2)
+            send_port, recv_port = virtio_test.get_virtio_ports(vm)[0][:2]
+
+        basic_loopback(vm, guest_worker, send_port, recv_port, True)
         virtio_test.cleanup(vm, guest_worker)
 
     #
@@ -1632,23 +1646,48 @@ def run(test, params, env):
         guest_worker = qemu_virtio_port.GuestWorker(vm)
         virtio_test.cleanup(vm, guest_worker)
 
+    @error_context.context_aware
     def test_rmmod():
         """
         Remove and load virtio_console kernel module.
         :param cfg: virtio_console_params - which type of virtio port to test
-        :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        (vm, guest_worker, port) = virtio_test.get_vm_with_single_port(
-            params.get('virtio_console_params'))
-        guest_worker.cleanup()
+        if params.get('virtio_console_params') == 'serialport':
+            vm = virtio_test.get_vm_with_ports(no_serialports=2)
+            _ports, ports = virtio_test.get_virtio_ports(vm)
+            guest_worker = qemu_virtio_port.GuestWorker(vm)
+        else:
+            (vm, guest_worker, ports) = virtio_test.get_vm_with_single_port(
+                params.get('virtio_console_params'))
+            guest_worker.cleanup()
+
         session = vm.wait_for_login()
-        if session.cmd_status('lsmod | grep virtio_console'):
+        mod_check = params.get("mod_check")
+        if not session.cmd_output(mod_check):
             test.cancel("virtio_console not loaded, probably "
-                        " not compiled as module. Can't test it.")
-        session.cmd("rmmod -f virtio_console")
+                        "not compiled as module. Can't test it.")
+
+        if params.get('virtio_console_params') == 'serialport':
+            error_context.context("Test basic data transfer.", logging.info)
+            basic_loopback(vm, guest_worker, ports[0], ports[1], True)
+            ports[0].open()
+            ports[1].open()
+
+        session.cmd("modprobe -r virtio_console")
+
+        out = session.cmd_output(mod_check)
+        if out:
+            test.fail("Fail to remove module virtio_console")
+        logging.info("Disabled kernel module virtio_console.")
+
+        time.sleep(5)
         session.cmd("modprobe virtio_console")
-        guest_worker = qemu_virtio_port.GuestWorker(vm)
-        guest_worker.cmd("virt.clean_port('%s'),1024" % port.name, 2)
+
+        if params.get('virtio_console_params') == 'serialport':
+            basic_loopback(vm, guest_worker, ports[0], ports[1], True)
+        else:
+            guest_worker = qemu_virtio_port.GuestWorker(vm)
+
         virtio_test.cleanup(vm, guest_worker)
 
     def test_max_ports():

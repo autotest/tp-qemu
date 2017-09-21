@@ -56,6 +56,11 @@ def run(test, params, env):
         qemu_binary = utils_misc.get_qemu_binary(params)
         tmp = utils_misc.get_support_machine_type(qemu_binary)
         (support_machine_types, expect_system_versions) = tmp
+        # remove alias machine types to prevent duplication
+        for version in expect_system_versions:
+            if 'alias of' in version:
+                index = expect_system_versions.index(version)
+                del support_machine_types[index]
         machine_type = params.get("machine_type", "")
         if ':' in machine_type:
             prefix = machine_type.split(':', 1)[0]
@@ -90,13 +95,12 @@ def run(test, params, env):
                     smbios_set_para = params.object_params(sm_type).get(key,
                                                                         default_key_para)
                 else:
-                    key_index = support_machine_types.index(m_type)
-                    smbios_set_para = expect_system_versions[key_index]
+                    smbios_set_para = m_type
 
                 if smbios_get_para == notset_output:
                     smbios_get_para = default_key_para
 
-                if (smbios_set_para not in smbios_get_para):
+                if (smbios_get_para not in smbios_set_para):
                     e_msg = ("%s.%s mismatch, Set '%s' but guest is : '%s'"
                              % (sm_type, key, smbios_set_para,
                                 smbios_get_para))

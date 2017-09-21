@@ -266,7 +266,14 @@ def run(test, params, env):
         txt = "Verify that qmp command '%s' works as designed." % qmp_cmd
         logging.info(txt)
         if result_check == "equal" or result_check == "contain":
-            check_result(output, cmd_return_value, exception_list)
+            if qmp_cmd == "query-name":
+                vm_name = params["main_vm"]
+                check_result(output, vm_name, exception_list)
+            elif qmp_cmd == "query-uuid":
+                uuid_input = params["uuid"]
+                check_result(output, uuid_input, exception_list)
+            else:
+                check_result(output, cmd_return_value, exception_list)
         elif result_check == "m_format_q":
             check_result(output, cmd_return_value, exception_list)
         elif 'post' in result_check:

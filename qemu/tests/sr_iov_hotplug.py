@@ -265,7 +265,8 @@ def run(test, params, env):
             kvm_params=params.get("kvm_default"),
             vf_filter_re=params.get("vf_filter_re"),
             pf_filter_re=params.get("pf_filter_re"),
-            device_driver=device_driver)
+            device_driver=device_driver,
+            pa_type=params.get("pci_assignable"))
 
     pa_pci_ids = vm.pci_assignable.request_devs(devices)
     # Modprobe the module if specified in config file

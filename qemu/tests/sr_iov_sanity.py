@@ -70,7 +70,8 @@ def run(test, params, env):
         kvm_params=params.get("kvm_default"),
         vf_filter_re=params.get("vf_filter_re"),
         pf_filter_re=params.get("pf_filter_re"),
-        device_driver=device_driver)
+        device_driver=device_driver,
+        pa_type=params.get("pci_assignable"))
 
     devices = []
     device_type = params.get("device_type", "vf")

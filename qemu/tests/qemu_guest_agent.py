@@ -117,21 +117,44 @@ class QemuGuestAgentTest(BaseVirtTest):
         return s == 0
 
     @error_context.context_aware
-    def gagent_install(self, session, params, vm, *args):
+    def gagent_install(self, session, vm, *args):
         if args and isinstance(args, tuple):
             gagent_install_cmd = args[0]
         else:
-            raise error.TestError("Missing config 'gagent_install_cmd'")
+            self.test.error("Missing config 'gagent_install_cmd'")
 
         if not gagent_install_cmd:
-            return
+            self.test.error("Gagent_install_cmd's value is empty.")
 
         error_context.context("Try to install 'qemu-guest-agent' package.",
                               logging.info)
         s, o = session.cmd_status_output(gagent_install_cmd)
         if s:
-            raise error.TestFail("Could not install qemu-guest-agent package"
-                                 " in VM '%s', detail: '%s'" % (vm.name, o))
+            self.test.fail("Could not install qemu-guest-agent package"
+                           " in VM '%s', detail: '%s'" % (vm.name, o))
+
+    @error_context.context_aware
+    def gagent_uninstall(self, session, vm, *args):
+        """
+        uninstall qemu-ga pkg in guest.
+        :param session: use for sending cmd
+        :param vm: guest object.
+        :param args: Qemu-ga pkg uninstall cmd.
+        """
+        if args and isinstance(args, tuple):
+            gagent_uninstall_cmd = args[0]
+        else:
+            self.test.error("Missing config 'gagent_uninstall_cmd'")
+
+        if not gagent_uninstall_cmd:
+            self.test.error("Gagent_uninstall_cmd's value is empty.")
+
+        error_context.context("Try to uninstall 'qemu-guest-agent' package.",
+                              logging.info)
+        s, o = session.cmd_status_output(gagent_uninstall_cmd)
+        if s:
+            self.test.fail("Could not uninstall qemu-guest-agent package "
+                           "in VM '%s', detail: '%s'" % (vm.name, o))
 
     @error_context.context_aware
     def gagent_start(self, session, vm, *args):
@@ -207,17 +230,17 @@ class QemuGuestAgentTest(BaseVirtTest):
                 logging.info("qemu-ga is already installed.")
             else:
                 logging.info("qemu-ga is not installed.")
-                self.gagent_install(session, params, vm, *[params.get("gagent_install_cmd")])
+                self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
 
             if self._check_ga_service(session, params.get("gagent_status_cmd")):
                 logging.info("qemu-ga service is already running.")
             else:
                 logging.info("qemu-ga service is not running.")
-                self.gagent_start(session, vm, *[params.get("gagent_start_cmd")])
+                self.gagent_start(session, self.vm, *[params.get("gagent_start_cmd")])
 
             session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
-            self.gagent_create(params, vm, *args)
+            self.gagent_create(params, self.vm, *args)
 
     def run_once(self, test, params, env):
         BaseVirtTest.run_once(self, test, params, env)
@@ -241,6 +264,34 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     def gagent_check_install(self, test, params, env):
         pass
+
+    @error_context.context_aware
+    def gagent_check_install_uninstall(self, test, params, env):
+        """
+        Repeat install/uninstall qemu-ga package in guest
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        repeats = int(params.get("repeat_times", 1))
+        logging.info("Repeat install/uninstall qemu-ga pkg for %s times" % repeats)
+
+        if not self.vm:
+            self.vm = self.env.get_vm(params["main_vm"])
+            self.vm.verify_alive()
+
+        session = self._get_session(params, self.vm)
+        for i in xrange(repeats):
+            error_context.context("Install/uninstall qemu-ga pkg for the %sth time" % (i + 1),
+                                  logging.info)
+            if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
+                self.gagent_uninstall(session, self.vm, *[params.get("gagent_uninstall_cmd")])
+                self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
+            else:
+                self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
+                self.gagent_uninstall(session, self.vm, *[params.get("gagent_uninstall_cmd")])
+        session.close()
 
     @error_context.context_aware
     def gagent_check_sync(self, test, params, env):
@@ -820,6 +871,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
     """
     Qemu guest agent test class for windows guest.
     """
+
     @error_context.context_aware
     def setup_gagent_in_host(self, session, params, vm):
         error_context.context("download qemu-ga.msi to host", logging.info)
@@ -858,14 +910,15 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             else:
                 logging.info("qemu-ga is not installed.")
                 self.setup_gagent_in_host(session, params, self.vm)
-                self.gagent_install(session, params, vm, *[params.get("gagent_install_cmd")])
+                self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
 
             if self._check_ga_service(session, params.get("gagent_status_cmd")):
                 logging.info("qemu-ga service is already running.")
             else:
                 logging.info("qemu-ga service is not running.")
-                self.gagent_start(session, vm, *[params.get("gagent_start_cmd")])
+                self.gagent_start(session, self.vm, *[params.get("gagent_start_cmd")])
 
+            session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, vm, *args)
 

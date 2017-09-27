@@ -113,8 +113,7 @@ def run(test, params, env):
             process.system("grep 'memmap=' /proc/cmdline")
         except process.CmdError:
             test.error("Please add kernel param 'memmap' before start test.")
-        nvdimm_dax = params.get("nvdimm_dax", "no") == "yes"
-        if nvdimm_dax:
+        if params.get("nvdimm_dax") == "yes":
             try:
                 process.system(params["ndctl_install_cmd"], shell=True)
             except process.CmdError:
@@ -168,7 +167,7 @@ def run(test, params, env):
         if nvdimm_test.session:
             nvdimm_test.session.close()
         vm.destroy()
-        if nvdimm_dax:
+        if params.get("nvdimm_dax") == "yes":
             try:
                 process.system(params["del_dax_cmd"], timeout=240, shell=True)
             except process.CmdError:

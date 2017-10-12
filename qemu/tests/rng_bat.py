@@ -151,4 +151,7 @@ def run(test, params, env):
         if len(re.findall(rng_data_rex, output, re.M)) < 2:
             test.fail("Unable to read random numbers from guest: %s" % output)
 
+    if host_read_cmd:
+        host_read_process.stop()
+
     session.close()

@@ -6,7 +6,6 @@ import time
 from virttest import utils_misc
 from virttest import error_context
 from virttest import utils_test
-from avocado.core import exceptions
 from avocado.utils import process
 
 
@@ -46,7 +45,7 @@ def run(test, params, env):
         check_cmd = check_cmd.replace("DRIVER_ID", driver_id)
         status, output = session.cmd_status_output(check_cmd)
         if "disabled" in output:
-            raise exceptions.TestFail("Driver is disable")
+            test.fail("Driver is disable")
 
     def get_driver_id(session, cmd, pattern):
         """
@@ -57,11 +56,23 @@ def run(test, params, env):
         output = session.cmd_output(cmd)
         driver_id = re.findall(pattern, output)
         if not driver_id:
-            raise exceptions.TestFail("Didn't find driver info from guest %s"
-                                      % output)
+            test.fail("Didn't find driver info from guest %s" % output)
         driver_id = driver_id[0]
         driver_id = '^&'.join(driver_id.split('&'))
         return driver_id
+
+    def is_host_read_running(target_process):
+        """
+        Check host reading test is alive.
+
+        :param target_process: targeted host reading process
+        :return: return True if host is reading random numbers;
+                 else return False
+        """
+        host_read_check_cmd = params.get("host_read_check_cmd")
+        output = process.system_output(host_read_check_cmd, shell=True)
+        result = re.findall(target_process, output, re.M | re.I)
+        return bool(result)
 
     rng_data_rex = params.get("rng_data_rex", r".*")
     dev_file = params.get("filename_passthrough")
@@ -70,6 +81,7 @@ def run(test, params, env):
     read_rng_timeout = float(params.get("read_rng_timeout", "360"))
     cmd_timeout = float(params.get("session_cmd_timeout", "360"))
     driver_name = params["driver_name"]
+    host_read_cmd = params.get("host_read_cmd")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm_pid = vm.get_pid()
@@ -80,7 +92,7 @@ def run(test, params, env):
         if not is_dev_used_by_qemu(dev_file, vm_pid):
             msg = "Qemu (pid=%d) not using host passthrough " % vm_pid
             msg += "device '%s'" % dev_file
-            raise exceptions.TestFail(msg)
+            test.fail(msg)
 
     if params["os_type"] == "windows":
         utils_test.qemu.setup_win_driver_verifier(driver_name,
@@ -103,13 +115,13 @@ def run(test, params, env):
             output = session.cmd_output_safe(verify_cmd, timeout=cmd_timeout)
         except aexpect.ShellTimeoutError:
             err = "%s timeout, pls check if it's a product bug" % verify_cmd
-            raise exceptions.TestFail(err)
+            test.fail(err)
 
         if not re.search(r"%s" % driver_name, output, re.M):
             msg = "Verify device driver failed, "
             msg += "guest report driver is %s, " % output
             msg += "expect is '%s'" % driver_name
-            raise exceptions.TestFail(msg)
+            test.fail(msg)
 
     error_context.context("Read virtio-rng device to get random number",
                           logging.info)
@@ -126,11 +138,20 @@ def run(test, params, env):
             output = session.cmd_output(read_rng_cmd,
                                         timeout=read_rng_timeout)
             if len(re.findall(rng_data_rex, output, re.M)) < 2:
-                raise exceptions.TestFail("Unable to read random numbers from"
-                                          "guest: %s" % output)
+                test.fail("Unable to read random numbers from guest: %s" % output)
     else:
+        if host_read_cmd:
+            host_read_process = process.SubProcess(host_read_cmd, shell=True)
+            host_read_process.start()
+
+            if not is_host_read_running(host_read_cmd):
+                test.fail("Host reading data is not alive!")
+
         output = session.cmd_output(read_rng_cmd, timeout=read_rng_timeout)
         if len(re.findall(rng_data_rex, output, re.M)) < 2:
-            raise exceptions.TestFail("Unable to read random numbers from"
-                                      "guest: %s" % output)
+            test.fail("Unable to read random numbers from guest: %s" % output)
+
+    if host_read_cmd:
+        host_read_process.stop()
+
     session.close()

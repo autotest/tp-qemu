@@ -1,6 +1,9 @@
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
-from collections import OrderedDict, Counter
+from collections import OrderedDict
 
 from virttest import utils_misc
 
@@ -106,8 +109,9 @@ def verify_usb_device_in_guest(params, session, devs):
             if dev[1] not in output:
                 return False
         # match number of devices
-        counter = Counter(dev[1] for dev in devs)
-        for k, v in counter.items():
+        dev_list = [dev[1] for dev in devs]
+        dev_nums = dict((i, dev_list.count(i)) for i in dev_list)
+        for k, v in dev_nums.items():
             if output.count(k) != v:
                 return False
         return True

@@ -31,11 +31,11 @@ def run(test, params, env):
 
     error.context("Verify the background process is running")
     check_cmd = params.get("check_cmd")
-    session2.cmd(check_cmd, timeout=60)
+    session2.cmd(check_cmd, timeout=360)
 
     error.context("Sleep for a random time", logging.info)
     time.sleep(random.randrange(30, 100))
-    session2.cmd(check_cmd, timeout=60)
+    session2.cmd(check_cmd, timeout=360)
 
     error.context("Kill the VM", logging.info)
     vm.process.close()

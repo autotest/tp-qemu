@@ -79,7 +79,9 @@ def run(test, params, env):
 
     def run_subtest(sub_type):
         """
-        Run sub test. e.g. reboot / system_reset...
+        Run sub test which include main test and background test.
+        main test: e.g. reboot/shutdown/migration/stop/cont ...
+        background test: e.g. rng_bat/balloon_test/netperf ...
 
         :params: sub_type: Sub test.
         """
@@ -97,15 +99,15 @@ def run(test, params, env):
 
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")
-    sub_type = params["sub_test"]
+    main_test = params["sub_test"]
     bg_stress_test = params["run_bgstress"]
     wait_time = float(params.get("wait_bg_time", 60))
     suppress_exception = params.get("suppress_exception", "no") == "yes"
 
-    error_context.context("Run %s %s %s" % (sub_type, run_bg_flag,
+    error_context.context("Run %s %s %s" % (main_test, run_bg_flag,
                                             bg_stress_test), logging.info)
     if run_bg_flag == "before_bg_test":
-        run_subtest(sub_type)
+        run_subtest(main_test)
         if vm.is_dead():
             vm.create(params=params)
         run_subtest(bg_stress_test)
@@ -114,13 +116,15 @@ def run(test, params, env):
         stop_time = time.time() + wait_time
         while time.time() < stop_time:
             if env["bg_status"] == 1:
-                run_subtest(sub_type)
+                run_subtest(main_test)
                 break
         if stress_thread:
             stress_thread.join(timeout=timeout,
                                suppress_exception=suppress_exception)
+        if vm.is_alive():
+            run_subtest(bg_stress_test)
     elif run_bg_flag == "after_bg_test":
         run_subtest(bg_stress_test)
         if vm.is_dead():
             vm.create(params=params)
-        run_subtest(sub_type)
+        run_subtest(main_test)

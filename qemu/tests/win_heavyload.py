@@ -61,20 +61,23 @@ def run(test, params, env):
     tmp_dir = data_dir.get_tmp_dir()
     install_path = params["install_path"].rstrip("\\")
     heavyload_bin = '"%s\heavyload.exe"' % install_path
-    start_cmd = "%s /CPU /MEMORY /FILE " % heavyload_bin
+    start_cmd = "%s /CPU /MEMORY /FILE /TESTFILEPATH" % heavyload_bin
     stop_cmd = "taskkill /T /F /IM heavyload.exe"
     stop_cmd = params.get("stop_cmd", stop_cmd)
     start_cmd = params.get("start_cmd", start_cmd)
     check_running_cmd = "tasklist|findstr /I heavyload"
     check_running_cmd = params.get("check_running_cmd", check_running_cmd)
-    test_installed_cmd = "dir '%s'|findstr /I heavyload" % install_path
+    test_installed_cmd = 'dir "%s" |findstr /I heavyload' % install_path
     test_installed_cmd = params.get("check_installed_cmd", test_installed_cmd)
+    disk_letter = params.get("disk_letter", "I:")
+    disk_index = params.get("disk_index", 1)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     try:
+        error_context.context("Check if heavyload is installed", logging.info)
         installed = session.cmd_status(test_installed_cmd) == 0
         if not installed:
             download_url = params.get("download_url")
@@ -96,15 +99,19 @@ def run(test, params, env):
             if config_cmd:
                 session.cmd(config_cmd)
 
+        error_context.context("Format the data disk", logging.info)
+        utils_misc.format_windows_disk(session, disk_index,
+                                       mountpoint=disk_letter)
         error_context.context("Start heavyload in guest", logging.info)
         # genery heavyload command automaticly
         if params.get("autostress") == "yes":
             free_mem = utils_misc.get_free_mem(session, "windows")
-            free_disk = utils_misc.get_free_disk(session, "C:")
+            free_disk = utils_misc.get_free_disk(session, disk_letter)
             start_cmd = '"%s\heavyload.exe"' % params["install_path"]
             start_cmd = add_option(start_cmd, 'CPU', params["smp"])
             start_cmd = add_option(start_cmd, 'MEMORY', free_mem)
             start_cmd = add_option(start_cmd, 'FILE', free_disk)
+            start_cmd = add_option(start_cmd, 'TESTFILEPATH', disk_letter)
         else:
             start_cmd = params["start_cmd"]
         # reformat command to ensure heavyload started as except
@@ -129,7 +136,7 @@ def run(test, params, env):
 
         error_context.context("Verify vm is alive", logging.info)
         utils_misc.wait_for(vm.verify_alive,
-                            timeout=test_timeout, step=steping)
+                            timeout=test_timeout + 2, step=steping)
     finally:
         # in migration test, no need to stop heavyload on src host
         cleanup_in_the_end = params.get("unload_stress_in_the_end", "yes")

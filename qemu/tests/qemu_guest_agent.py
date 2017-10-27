@@ -415,22 +415,21 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         old_password = params.get("password", "")
         new_password = params.get("new_password", "123456")
+        ga_username = params.get("ga_username", "root")
         crypted = params.get("crypted", "") == "yes"
+        error_context.context("Change guest's password.")
         try:
-            if crypted:
-                self.gagent.set_user_password(new_password, crypted)
-            else:
-                self.gagent.set_user_password(new_password)
-            error_context.context("check if the guest could be login by new password",
+            self.gagent.set_user_password(new_password, crypted, ga_username)
+            error_context.context("Check if the guest could be login by new password",
                                   logging.info)
             self._gagent_verify_password(self.vm, new_password)
 
         except guest_agent.VAgentCmdError:
-            raise error.TestError("Failed to set the new password for guest")
+            test.fail("Failed to set the new password for guest")
 
         finally:
-            error_context.context("reset back the password of guest", logging.info)
-            self.gagent.set_user_password(old_password)
+            error_context.context("Reset back the password of guest", logging.info)
+            self.gagent.set_user_password(old_password, username=ga_username)
 
     @error_context.context_aware
     def gagent_check_get_vcpus(self, test, params, env):

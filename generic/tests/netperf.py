@@ -94,6 +94,7 @@ def run(test, params, env):
         ssh_cmd(session, "service iptables stop", ignore_status=True)
         ssh_cmd(session, "systemctl stop firewalld.service", ignore_status=True)
         ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
+        ssh_cmd(session, "echo 0 > /sys/kernel/mm/ksm/run", ignore_status=True)
 
         download_link = params.get("netperf_download_link")
         download_dir = data_dir.get_tmp_dir()

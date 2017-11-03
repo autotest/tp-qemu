@@ -1,7 +1,6 @@
 import logging
 import re
 import time
-from avocado.core import exceptions
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
@@ -36,7 +35,7 @@ def run(test, params, env):
         status, output = session.cmd_status_output(cmd)
         session.close()
         if status != 0:
-            raise exceptions.TestFail("failed to load driver, %s" % output)
+            test.fail("failed to load driver, %s" % output)
 
     def unload_driver(cmd, driver_id):
         """
@@ -56,8 +55,7 @@ def run(test, params, env):
                 vm.reboot()
                 session.close()
             else:
-                raise exceptions.TestFail("failed to unload driver, %s" %
-                                          output)
+                test.fail("failed to unload driver, %s" % output)
 
     def get_driver_id(cmd, pattern):
         """
@@ -70,8 +68,7 @@ def run(test, params, env):
         output = session.cmd_output(cmd)
         driver_id = re.findall(pattern, output)
         if not driver_id:
-            raise exceptions.TestFail("Didn't find driver info from guest %s"
-                                      % output)
+            test.fail("Didn't find driver info from guest %s" % output)
 
         driver_id = driver_id[0]
         if params["os_type"] == "windows":
@@ -79,11 +76,24 @@ def run(test, params, env):
         session.close()
         return driver_id
 
+    def service_operate(cmd, ignore_error=False):
+        """
+        Stop/Start service
+        :param cmd: cmd to stop/start service
+        :param ignore_error: ignore the cmd error while it's True
+                             else raise the error
+        """
+        session = vm.wait_for_login()
+        session.cmd(cmd, ignore_all_errors=ignore_error)
+        session.close()
+
     error_context.context("Try to log into guest.", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
+    stop_service_cmd = params.get("stop_service_cmd")
+    start_service_cmd = params.get("start_service_cmd")
 
     driver_id_pattern = params["driver_id_pattern"]
     driver_id_cmd = utils_misc.set_winutils_letter(
@@ -94,18 +104,27 @@ def run(test, params, env):
         session, params["driver_unload_cmd"])
     session.close()
 
-    for repeat in range(0, int(params.get("repeats", 1))):
-        error_context.context("Unload and load the driver. Round %s" % repeat,
-                              logging.info)
-        logging.info("Get driver info from guest")
-        driver_id = get_driver_id(driver_id_cmd, driver_id_pattern)
+    if stop_service_cmd:
+        logging.info("Stop service before driver load testing")
+        service_operate(stop_service_cmd)
 
-        error_context.context("Unload the driver", logging.info)
-        unload_driver(driver_unload_cmd, driver_id)
-        time.sleep(5)
-        error_context.context("Load the driver", logging.info)
-        load_driver(driver_load_cmd, driver_id)
-        time.sleep(5)
+    try:
+        for repeat in range(0, int(params.get("repeats", 1))):
+            error_context.context("Unload and load the driver. Round %s" %
+                                  repeat, logging.info)
+            logging.info("Get driver info from guest")
+            driver_id = get_driver_id(driver_id_cmd, driver_id_pattern)
+
+            error_context.context("Unload the driver", logging.info)
+            unload_driver(driver_unload_cmd, driver_id)
+            time.sleep(5)
+            error_context.context("Load the driver", logging.info)
+            load_driver(driver_load_cmd, driver_id)
+            time.sleep(5)
+    finally:
+        if start_service_cmd:
+            logging.info("Restart service after driver load testing")
+            service_operate(start_service_cmd, ignore_error=True)
 
     test_after_load = params.get("test_after_load")
     if test_after_load:

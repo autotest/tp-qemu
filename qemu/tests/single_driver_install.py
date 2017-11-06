@@ -87,11 +87,13 @@ def run(test, params, env):
         """
         guest_name = params["guest_name"]
         alias_map = params.get("guest_alias")
-        vol_virtio_key = "VolumeName like '%virtio-win%'"
+        vol_virtio_key = params.get("vol_virtio_key")
         vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
         logging.debug("vol_virtio is %s" % vol_virtio)
 
         if alias_map:
+            if params.get("run_with_floopy") == "yes":
+                alias_map = params.get("guest_alias_fl")
             guest_list = dict([x.split(":") for x in alias_map.split(",")])
             guest_name = guest_list[guest_name]
 
@@ -99,7 +101,11 @@ def run(test, params, env):
         # need udpate the path here.
         if driver_name == "vioser":
             driver_name = "vioserial"
-        driver_path = r"%s:\%s\%s" % (vol_virtio, driver_name, guest_name)
+        # For driver in virtio iso and floopy, the driver_path is not same
+        if vol_virtio == "A":
+            driver_path = r"%s:\%s" % (vol_virtio, guest_name)
+        else:
+            driver_path = r"%s:\%s\%s" % (vol_virtio, driver_name, guest_name)
         logging.debug("The driver which would be installed is %s" % driver_path)
 
         return driver_path

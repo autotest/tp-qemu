@@ -157,28 +157,35 @@ class QemuGuestAgentTest(BaseVirtTest):
                            "in VM '%s', detail: '%s'" % (vm.name, o))
 
     @error_context.context_aware
-    def gagent_start(self, session, vm, *args):
+    def gagent_start(self, session, vm):
         """
-        Start qemu-guest-agent in guest,if start a running service,for rhel
-        guest return code is zero,for windows guest,return code is not zero.
+        Start qemu-guest-agent in guest.
         :param session: use for sending cmd
-        :param env: Dictionary with test environment.
-        :param args: Start cmd.
+        :param vm: Virtual machine object.
         """
-
-        if args and isinstance(args, tuple):
-            gagent_start_cmd = args[0]
-        else:
-            raise error.TestError("Missing config 'gagent_start_cmd'")
-
-        if not gagent_start_cmd:
-            return
-
-        error_context.context("Try to start 'qemu-guest-agent'.", logging.info)
-        s, o = session.cmd_status_output(gagent_start_cmd)
+        error_context.context("Try to start qemu-ga service.", logging.info)
+        s, o = session.cmd_status_output(self.params["gagent_start_cmd"])
+        # if start a running service, for rhel guest return code is zero,
+        # for windows guest,return code is not zero
         if s and "already been started" not in o:
-            raise error.TestFail("Could not start qemu-guest-agent in VM"
-                                 " '%s', detail: '%s'" % (vm.name, o))
+            self.test.fail("Could not start qemu-ga service in VM '%s',"
+                           "detail: '%s'" % (vm.name, o))
+
+    @error_context.context_aware
+    def gagent_stop(self, session, vm):
+        """
+        Stop qemu-guest-agent in guest.
+        :param session: use for sending cmd
+        :param vm: Virtual machine object.
+        :param args: Stop cmd.
+        """
+        error_context.context("Try to stop qemu-ga service.", logging.info)
+        s, o = session.cmd_status_output(self.params["gagent_stop_cmd"])
+        # if stop a stopped service,for rhel guest return code is zero,
+        # for windows guest,return code is not zero.
+        if s and "is not started" not in o:
+            self.test.fail("Could not stop qemu-ga service in VM '%s', "
+                           "detail: '%s'" % (vm.name, o))
 
     @error_context.context_aware
     def gagent_create(self, params, vm, *args):
@@ -236,7 +243,7 @@ class QemuGuestAgentTest(BaseVirtTest):
                 logging.info("qemu-ga service is already running.")
             else:
                 logging.info("qemu-ga service is not running.")
-                self.gagent_start(session, self.vm, *[params.get("gagent_start_cmd")])
+                self.gagent_start(session, self.vm)
 
             session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
@@ -283,7 +290,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         session = self._get_session(params, self.vm)
         for i in xrange(repeats):
-            error_context.context("Install/uninstall qemu-ga pkg for the %sth time" % (i + 1),
+            error_context.context("Repeat: %s/%s" % (i + 1, repeats),
                                   logging.info)
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 self.gagent_uninstall(session, self.vm, *[params.get("gagent_uninstall_cmd")])
@@ -291,6 +298,32 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             else:
                 self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
                 self.gagent_uninstall(session, self.vm, *[params.get("gagent_uninstall_cmd")])
+        session.close()
+
+    @error_context.context_aware
+    def gagent_check_stop_start(self, test, params, env):
+        """
+        Repeat stop/restart qemu-ga service in guest.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        repeats = int(params.get("repeat_times", 1))
+        logging.info("Repeat stop/restart qemu-ga service for %s times" % repeats)
+
+        if not self.vm:
+            self.vm = self.env.get_vm(params["main_vm"])
+            self.vm.verify_alive()
+        session = self._get_session(params, self.vm)
+        for i in xrange(repeats):
+            error_context.context("Repeat: %s/%s" % (i + 1, repeats),
+                                  logging.info)
+            self.gagent_stop(session, self.vm)
+            time.sleep(1)
+            self.gagent_start(session, self.vm)
+            time.sleep(1)
+            self.gagent_verify(params, self.vm)
         session.close()
 
     @error_context.context_aware
@@ -915,7 +948,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 logging.info("qemu-ga service is already running.")
             else:
                 logging.info("qemu-ga service is not running.")
-                self.gagent_start(session, self.vm, *[params.get("gagent_start_cmd")])
+                self.gagent_start(session, self.vm)
 
             session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]

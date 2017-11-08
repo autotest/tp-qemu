@@ -3,8 +3,8 @@ import time
 
 from virttest.qemu_devices import qdevices
 from virttest import error_context
+
 from qemu.tests import balloon_check
-from avocado.core import exceptions
 
 
 @error_context.context_aware
@@ -14,8 +14,9 @@ def run(test, params, env):
 
     1) Boot up guest w/o balloon device.
     2) Hoplug balloon device and check hotplug successfully or not.
-    3) Do memory balloon.
+    3) Do memory balloon (Do migration if needed).
     4) Unplug balloon device and check unplug successfully or not.
+    5) Do migration if needed.
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -47,6 +48,10 @@ def run(test, params, env):
             err += ("\nDevice is not in qtree %ss after hotplug:\n%s"
                     % (pause, vm.monitor.info("qtree")))
 
+        vm.params["balloon"] = "balloon%d" % idx
+        vm.params["balloon_dev_devid"] = "balloon%d" % idx
+        vm.params["balloon_dev_add_bus"] = "yes"
+
         error_context.context("Check whether balloon device work after hotplug",
                               logging.info)
         balloon_check.run(test, params, env)
@@ -63,8 +68,14 @@ def run(test, params, env):
             err += ("\nDevice is still in qtree %ss after unplug:\n%s"
                     % (pause, vm.monitor.info("qtree")))
 
+        if params.get("migrate_after_unplug", "no") == "yes":
+            del vm.params["balloon"]
+            del vm.params["balloon_dev_devid"]
+            del vm.params["balloon_dev_add_bus"]
+            vm.migrate(float(params.get("mig_timeout", "3600")))
+
         if err:
             logging.error(vm.monitor.info("qtree"))
-            raise exceptions.TestFail("Error occurred while hotpluging "
-                                      "virtio-pci. Iteration %s, monitor "
-                                      "output:%s" % (i, err))
+            test.fail("Error occurred while hotpluging "
+                      "virtio-pci. Iteration %s, monitor "
+                      "output:%s" % (i, err))

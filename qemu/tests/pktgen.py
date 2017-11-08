@@ -110,7 +110,7 @@ def run(test, params, env):
     error.context("Verify Host and guest kernel no error and call trace",
                   logging.info)
     vm.verify_kernel_crash()
-    utils_misc.verify_host_dmesg()
+    utils_misc.verify_dmesg()
 
     error.context("Ping external host after pktgen test", logging.info)
     session_ping = vm.wait_for_login(timeout=login_timeout)

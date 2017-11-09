@@ -296,6 +296,8 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     qdev = vm.make_create_command()    # parse params into qdev
+    if isinstance(qdev, tuple):
+        qdev = qdev[0]
 
     error.context("Getting main PCI bus info")
 

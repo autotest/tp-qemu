@@ -356,8 +356,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
 
     # PCI devices are initialized by firmware, which might require some time
-    # to setup. Wait 10s before getting the qtree.
-    time.sleep(10)
+    # to setup. Wait 5s before getting the qtree.
+    time.sleep(5)
     qtree = qemu_qtree.QtreeContainer()
 
     error.context("Verify qtree vs. qemu devices", logging.info)

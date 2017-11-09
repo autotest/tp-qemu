@@ -324,7 +324,7 @@ def run(test, params, env):
                     out += "->(test_devices)"
                     break
                 idx = names.get(device, 0) + 1
-                name = "pci_%s%d" % (device, idx)
+                name = "test_pci_%s%d" % (device, idx)
                 names[device] = idx
                 params, bus = add_bus(qdev, params, device, name, _lasts[_idx])
                 # we inserted a device, increase the upper bus first idx

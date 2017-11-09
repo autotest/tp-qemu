@@ -43,6 +43,8 @@ int main(void) {
 	if (!strncmp(clocksource, "timebase", strlen("timebase"))) {
 #elif defined(__aarch64__)
 	if (!strncmp(clocksource, "arch_sys_counter", strlen("arch_sys_counter"))) {
+#elif defined(__s390x__)
+    if (!strncmp(clocksource, "tod", strlen("tod"))) {
 #else
 	if (!strncmp(clocksource, "kvm-clock", strlen("kvm-clock"))) {
 #endif

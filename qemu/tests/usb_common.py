@@ -115,7 +115,7 @@ def verify_usb_device_in_guest(params, session, devs):
         # each dev must in the output
         for dev in devs:
             if dev[1] not in output:
-                logging.info("%s does not exist")
+                logging.info("%s does not exist" % dev[1])
                 return False
         # match number of devices
         dev_list = [dev[1] for dev in devs]

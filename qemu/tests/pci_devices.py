@@ -216,7 +216,7 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
     params['usb_type_%s' % name] = device[1]
     if not params.get('reserved_slots_%s' % parent_bus):
         params['reserved_slots_%s' % parent_bus] = ""
-    params['reserved_slots_%s' % parent_bus] += " %02x-00" % addr
+    params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
     logging.debug("Add test device %s %s %s addr:%s", name, device[1],
                   parent_bus, addr)
     return params, name_idxs
@@ -263,7 +263,7 @@ def add_virtio_disk(params, name_idxs, parent_bus, addr):
     params['image_size_%s' % name] = '1M'
     if not params.get('reserved_slots_%s' % parent_bus):
         params['reserved_slots_%s' % parent_bus] = ""
-    params['reserved_slots_%s' % parent_bus] += " %02x-00" % addr
+    params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
     logging.debug("Add test device %s virtio_disk %s addr:%s", name,
                   parent_bus, addr)
     return params, name_idxs

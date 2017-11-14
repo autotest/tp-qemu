@@ -19,6 +19,7 @@ from avocado.utils import process
 from virttest import error_context
 from virttest import qemu_virtio_port
 from virttest import env_process
+from virttest import qemu_qtree
 from virttest.utils_test.qemu import migration
 from virttest import utils_misc
 from virttest import funcatexit
@@ -563,12 +564,97 @@ def run(test, params, env):
             logging.error(msg)
             test.fail(msg)
 
+    def get_bus_of_port(vm, port_device):
+        """
+        Get right virtio-serial-pci name by qtree
+        :param vm: vm object in this test
+        :param port_device: QDevice object of this port
+        """
+        qtree = qemu_qtree.QtreeContainer()
+        qtree_check_port = port_device.get_param('id')
+        try:
+            qtree.parse_info_qtree(vm.monitor.info('qtree'))
+            for qbus in qtree.get_nodes():
+                if isinstance(qbus, qemu_qtree.QtreeBus) and (
+                              qbus.qtree['type'] == "virtio-serial-bus"):
+                    for qdev in qbus.get_children():
+                        if isinstance(qdev, qemu_qtree.QtreeDev) and (
+                                      'id' in qdev.qtree) and (
+                                      qdev.qtree['id'] == qtree_check_port):
+                            return qbus.qtree['id']
+            return None
+        except AttributeError as err:
+            logging.warn("Monitor deson't supoort qtree skip this test, error"
+                         " log: %s " % err)
+
     @error_context.context_aware
     def test_interrupted_transfer():
         """
         This test creates loopback between 2 ports and interrupts transfer
         eg. by stopping the machine or by unplugging of the port.
         """
+        def _replug_loop():
+            """ Replug ports and pci in a loop """
+            def _port_unplug(port_idx):
+                dev = ports[port_idx]
+                portdev = vm.devices.get_by_params({"name": dev.qemu_id})[0]
+                if not portdev:
+                    test.error("No port named %s" % dev.qemu_id)
+                if portdev.get_param("bus") == "None":
+                    bus_info = portdev.get_param("bus")
+                else:
+                    bus_info = get_bus_of_port(vm, portdev)
+                port_property = dict(id=portdev.get_param("id"),
+                                     name=portdev.get_param("name"),
+                                     chardev=portdev.get_param("chardev"),
+                                     bus=bus_info)
+                if not port_property["bus"]:
+                    test.error("Can't find the bus %s for this port" % bus_info)
+                (out, ver_out) = vm.devices.simple_unplug(portdev, vm.monitor)
+                if not ver_out:
+                    test.error("Error occured when unplug %s" % dev.name)
+                time.sleep(intr_time)
+                return port_property
+
+            def _port_plug(device, property):
+                portdev = qdevices.QDevice(device)
+                for key, value in {'id': property['id'],
+                                   'chardev': property['chardev'],
+                                   'name': property['name'],
+                                   'bus': property['bus']}.items():
+                    portdev.set_param(key, value)
+                (out, ver_out) = vm.devices.simple_hotplug(portdev, vm.monitor)
+                if not ver_out:
+                    test.error("Error occured when plug port %s." % property['name'])
+                time.sleep(intr_time)
+
+            def _pci_unplug(bus):
+                device = vm.devices.get_by_params({"id": str(bus).split('.')[0]})[0]
+                if not device:
+                    test.error("No bus %s in vm." % bus)
+                bus_property = dict(id=device.get_param("id"))
+                (out, ver_out) = vm.devices.simple_unplug(device, vm.monitor)
+                if not ver_out:
+                    test.error("Error occured when plug bus. out: %s", out)
+                time.sleep(intr_time)
+                return bus_property
+
+            def _pci_plug(property):
+                bus = qdevices.QDevice("virtio-serial-pci")
+                bus.set_param('id', property['id'])
+                (out, ver_out) = vm.devices.simple_hotplug(bus, vm.monitor)
+                if not ver_out:
+                    test.error("Error occured when plug bus. out: %s", out)
+                time.sleep(intr_time)
+
+            send_prop = _port_unplug(0)
+            recv_prop = _port_unplug(1)
+            bus_prop = _pci_unplug(send_prop['bus'])
+            # replug all devices
+            _pci_plug(bus_prop)
+            _port_plug('virtserialport', send_prop)
+            _port_plug('virtserialport', recv_prop)
+
         def _stop_cont():
             """ Stop and resume VM """
             vm.pause()
@@ -768,6 +854,10 @@ def run(test, params, env):
             else:
                 interruption = _console_random_replug
             acceptable_loss = max(buflen * 10, 1000)
+        elif interruption == 'replug_loop':
+            if is_serialport:
+                interruption = _replug_loop
+            acceptable_loss = max(buflen * 15, 1000)
         elif interruption == 's3':
             interruption = _s3
             acceptable_loss = 2000

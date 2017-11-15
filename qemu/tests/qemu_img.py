@@ -69,7 +69,11 @@ def run(test, params, env):
         :param cmd: qemu-img base command.
         :param img: image to be checked
         """
-        cmd += " check %s" % img
+        # '-U' was added into help output by qemu commit a8d16f9
+        if '-U' in utils.system_output("%s --help" % cmd):
+            cmd += " check -U %s" % img
+        else:
+            cmd += " check %s" % img
         error.context("Checking image '%s' by command '%s'" % (img, cmd),
                       logging.info)
         try:
@@ -291,7 +295,11 @@ def run(test, params, env):
         :param sub_info: sub info, say 'backing file'
         :param fmt: image format
         """
-        cmd += " info"
+        # '-U' was added into help output by qemu commit a8d16f9
+        if '-U' in utils.system_output("%s --help" % cmd):
+            cmd += " info -U"
+        else:
+            cmd += " info"
         if fmt:
             cmd += " -f %s" % fmt
         cmd += " %s" % img

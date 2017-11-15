@@ -283,7 +283,11 @@ class BlockCopy(object):
             return self.vm.monitor.get_backingfile(self.device)
 
         qemu_img = utils_misc.get_qemu_img_binary(self.params)
-        cmd = "%s info %s " % (qemu_img, self.get_image_file())
+        # '-U' was added into help output by qemu commit a8d16f9
+        if '-U' in utils.system_output("%s --help" % qemu_img):
+            cmd = "%s info -U %s " % (qemu_img, self.get_image_file())
+        else:
+            cmd = "%s info %s " % (qemu_img, self.get_image_file())
         info = utils.system_output(cmd)
         try:
             matched = re.search(r"backing file: +(.*)", info, re.M)

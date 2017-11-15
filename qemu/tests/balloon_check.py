@@ -355,6 +355,65 @@ class BallooningTestWin(BallooningTest):
         else:
             self.test.fail("Failed to get windows guest free memory")
 
+    def get_disk_vol(self, session):
+        """
+        Get virtio-win disk volume letter for windows guest.
+
+        :param session: VM session.
+        """
+        key = "VolumeName like 'virtio-win%'"
+        try:
+            return utils_misc.get_win_disk_vol(session,
+                                               condition=key)
+        except Exception:
+            self.test.error("Could not get virtio-win disk vol!")
+
+    @error_context.context_aware
+    def operate_balloon_service(self, session, operation):
+        """
+        Run/check/stop/install/uninstall balloon service in windows guest
+
+        :param session: shell Object
+        :param operation: operation against balloon serive, e.g. run/status/
+                          uninstall/stop
+        :return: cmd execution output
+        """
+        error_context.context("%s Balloon Service in guest." % operation,
+                              logging.info)
+        drive_letter = self.get_disk_vol(session)
+        try:
+            operate_cmd = self.params["%s_balloon_service"
+                                      % operation] % drive_letter
+            if operation == "status":
+                output = session.cmd_output(operate_cmd)
+            else:
+                output = session.cmd(operate_cmd)
+        except Exception as err:
+            self.test.error("%s balloon service failed! Error msg is:\n%s"
+                            % (operation, err))
+        return output
+
+    @error_context.context_aware
+    def configure_balloon_service(self, session):
+        """
+        Check balloon service and install it if it's not running.
+
+        :param session: shell Object
+        :param operation: operation against balloon serive, e.g. run/status/
+                          uninstall/stop
+        """
+        error_context.context("Check Balloon Service status before install"
+                              "service", logging.info)
+        output = self.operate_balloon_service(session, "status")
+        if re.search("running", output.lower(), re.M):
+            logging.info("Balloon service is already running !")
+        elif re.search("stop", output.lower(), re.M):
+            logging.info("Balloon service is stopped,start it now")
+            self.operate_balloon_service(session, "run")
+        else:
+            logging.info("Install Balloon Service in guest.")
+            self.operate_balloon_service(session, "install")
+
 
 class BallooningTestLinux(BallooningTest):
 

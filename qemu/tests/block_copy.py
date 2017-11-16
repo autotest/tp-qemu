@@ -264,9 +264,21 @@ class BlockCopy(object):
         blocks = self.vm.monitor.info("block")
         try:
             if isinstance(blocks, str):
+                # ide0-hd0: removable=1 locked=0 file=/tmp/test.img
                 image_regex = '%s.*\s+file=(\S*)' % self.device
                 image_file = re.findall(image_regex, blocks)
-                return image_file[0]
+                if image_file:
+                    return image_file[0]
+                # ide0-hd0 (#block184): a b c
+                # or
+                # ide0-hd0 (#block184): a b c (raw)
+                image_file = re.findall("%s[^:]+: ([^(]+)\(?" % self.device,
+                                        blocks)
+                if image_file:
+                    if image_file[0][-1] == ' ':
+                        return image_file[0][:-1]
+                    else:
+                        return image_file[0]
 
             for block in blocks:
                 if block['device'] == self.device:

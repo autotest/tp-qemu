@@ -531,8 +531,9 @@ def run(test, params, env):
                     raise error.TestFail("CPU models %s are not in output "
                                          "'%s' of command \n%s" %
                                          (missing, cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError("New qemu use new -cpu ? cmd.")
+            else:
+                raise error.TestNAError("New qemu does not support -cpu "
+                                        "?model. (%s)" % qcver)
 
     # 2) <qemu-kvm-cmd> -cpu ?dump
     class test_qemu_dump(MiniSubtest):
@@ -551,9 +552,9 @@ def run(test, params, env):
                     raise error.TestFail("CPU models %s are not in output "
                                          "'%s' of command \n%s" %
                                          (missing, cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError(
-                    "New qemu does not support -cpu ?dump.")
+            else:
+                raise error.TestNAError("New qemu does not support -cpu "
+                                        "?dump. (%s)" % qcver)
 
     # 3) <qemu-kvm-cmd> -cpu ?cpuid
     class test_qemu_cpuid(MiniSubtest):
@@ -566,8 +567,9 @@ def run(test, params, env):
                     raise error.TestFail("There aren't any cpu Flag in output"
                                          " '%s' of command \n%s" %
                                          (cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError("New qemu use new -cpu ? cmd.")
+            else:
+                raise error.TestNAError("New qemu does not support -cpu "
+                                        "?cpuid. (%s)" % qcver)
 
     # 1) boot with cpu_model
     class test_boot_cpu_model(Test_temp):

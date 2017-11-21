@@ -1140,6 +1140,8 @@ def run(test, params, env):
         else:
             cpu_models = (set(get_cpu_models_supported_by_host()) -
                           set(cpu_model_black_list))
+            if not cpu_models:
+                test.cancel("No cpu_models detected, nothing to test.")
             logging.info("Start test with cpu models %s" % (str(cpu_models)))
             failed = []
             for cpumodel in cpu_models:

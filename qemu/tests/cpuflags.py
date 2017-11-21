@@ -195,6 +195,7 @@ def run(test, params, env):
         """
         p = ParseCpuFlags()
         cpus = p.parse_file(cpuflags_def)
+        flags = []
         for arch in cpus.values():
             if cpumodel in arch.keys():
                 flags = arch[cpumodel]

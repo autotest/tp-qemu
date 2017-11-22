@@ -1668,8 +1668,8 @@ def run(test, params, env):
             for i in range(10):
                 try:
                     out = process.system_output("cat /proc/%s/task/*/stat" %
-                except exceptions.CmdError:
                                                 pid, shell=True)
+                except process.CmdError:
                     out = None
                 else:
                     break

@@ -172,7 +172,7 @@ def run(test, params, env):
         :note: params['cgroup_rmmod_scsi_debug'] == "yes" => rmmod scsi_debug
         """
         process.system("echo -%d > /sys/bus/pseudo/drivers/scsi_debug/add_host"
-                       % no_disks)
+                       % no_disks, shell=True)
 
         if params.get('cgroup_rmmod_scsi_debug', "no") == "yes":
             process.system("rmmod scsi_debug")
@@ -182,16 +182,18 @@ def run(test, params, env):
         Adds scsi_debug disk to every VM in params['vms']
         :param prefix: adds prefix to drive name
         """
-        if process.system("lsmod | grep scsi_debug", ignore_status=True):
+        if process.system("lsmod | grep scsi_debug", ignore_status=True,
+                          shell=True):
             process.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
         for name in params['vms'].split(' '):
             disk_name = "scsi-debug-" + name
-            process.system("echo 1 >/sys/bus/pseudo/drivers/scsi_debug/add_host")
+            process.system("echo 1 > /sys/bus/pseudo/drivers/scsi_debug/"
+                           "add_host", shell=True)
             time.sleep(1)   # Wait for device init
             dev = process.system_output("ls /dev/sd* | tail -n 1", shell=True)
             # Enable idling in scsi_debug drive
             process.system("echo 1 > /sys/block/%s/queue/rotational"
-                           % (dev.split('/')[-1]))
+                           % (dev.split('/')[-1]), shell=True)
             vm_disks = params.get('images_%s' % name,
                                   params.get('images', 'image1'))
             params['images_%s' % name] = "%s %s" % (vm_disks, disk_name)
@@ -285,7 +287,7 @@ def run(test, params, env):
                     out[i] = out[i][1:-1]
                 for _ in re.findall(re_dd, out[i])[1:-1]:
                     data += int(_[0])
-                    duration += float(_[1])
+                    duration += float(_[2])
                 out[i] = int(data / duration)
 
             # normalize each output according to cgroup_weights
@@ -357,8 +359,8 @@ def run(test, params, env):
         # ; true is necessarily when there is no dd present at the time
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
-        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*\) copied, (\d+\.*\d*) s, '
-                 '\d+\.*\d* \w./s')
+        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
+                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")
@@ -499,7 +501,7 @@ def run(test, params, env):
                     data = 0
                     for _ in re.findall(re_dd, out[i][j]):
                         data += int(_[0])
-                        duration += float(_[1])
+                        duration += float(_[2])
                     output.append(['PASS', j, 'vm%d' % i, speeds[i][j],
                                    int(data / duration)])
                     # Don't measure unlimited speeds
@@ -602,8 +604,8 @@ def run(test, params, env):
         # ; true is necessarily when there is no dd present at the time
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
-        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*\) copied, (\d+\.*\d*) s, '
-                 '\d+\.*\d* \w./s')
+        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
+                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")
@@ -1542,9 +1544,11 @@ def run(test, params, env):
         devices.mk_cgroup()
 
         # Add one scsi_debug disk which will be used in testing
-        if process.system("lsmod | grep scsi_debug", ignore_status=True):
+        if process.system("lsmod | grep scsi_debug", ignore_status=True,
+                          shell=True):
             process.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
-        process.system("echo 1 > /sys/bus/pseudo/drivers/scsi_debug/add_host")
+        process.system("echo 1 > /sys/bus/pseudo/drivers/scsi_debug/add_host",
+                       shell=True)
         time.sleep(0.1)
         disk = process.system_output("ls /dev/sd* | tail -n 1", shell=True)
         dev = "%s:%s" % get_maj_min(disk)
@@ -1664,8 +1668,8 @@ def run(test, params, env):
             for i in range(10):
                 try:
                     out = process.system_output("cat /proc/%s/task/*/stat" %
-                                                pid)
                 except exceptions.CmdError:
+                                                pid, shell=True)
                     out = None
                 else:
                     break

@@ -6,14 +6,13 @@ import re
 import time
 
 from autotest.client import utils
-from autotest.client.shared import error
 
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import utils_net
 from virttest import remote
 from virttest import data_dir
-
+from virttest import error_context
 
 _netserver_started = False
 
@@ -63,7 +62,7 @@ def netperf_record(results, filter_list, header=False, base="12", fbase="2"):
     return record, key_list
 
 
-def start_netserver_win(session, start_cmd):
+def start_netserver_win(session, start_cmd, test):
     check_reg = re.compile(r"NETSERVER.*EXE", re.I)
     if not check_reg.findall(session.cmd_output("tasklist")):
         session.sendline(start_cmd)
@@ -71,10 +70,10 @@ def start_netserver_win(session, start_cmd):
                                    session.cmd_output("tasklist")),
                                    30, 5, 1, "Wait netserver start"):
             msg = "Can not start netserver with command %s" % start_cmd
-            raise error.TestError(msg)
+            test.fail(msg)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Network stress test with netperf.
@@ -89,7 +88,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     def env_setup(session, ip, user, port, password):
-        error.context("Setup env for %s" % ip)
+        error_context.context("Setup env for %s" % ip)
         ssh_cmd(session, "iptables -F", ignore_status=True)
         ssh_cmd(session, "service iptables stop", ignore_status=True)
         ssh_cmd(session, "systemctl stop firewalld.service", ignore_status=True)
@@ -107,6 +106,38 @@ def run(test, params, env):
         remote.scp_to_remote(ip, shell_port, username, password,
                              agent_path, "/tmp")
 
+    def mtu_set(mtu):
+        """
+        Set server/client/host's mtu
+
+        :param mtu: mtu value to be set
+        """
+
+        server_mtu_cmd = params.get("server_mtu_cmd")
+        client_mtu_cmd = params.get("client_mtu_cmd")
+        host_mtu_cmd = params.get("host_mtu_cmd")
+        error_context.context("Changing the MTU of guest", logging.info)
+        if params.get("os_type") == "linux":
+            ethname = utils_net.get_linux_ifname(server_ctl, mac)
+            ssh_cmd(server_ctl, server_mtu_cmd % (ethname, mtu))
+        elif params.get("os_type") == "windows":
+            connection_id = utils_net.get_windows_nic_attribute(
+                            server_ctl, "macaddress", mac, "netconnectionid")
+            ssh_cmd(server_ctl, server_mtu_cmd % (connection_id, mtu))
+
+        error_context.context("Changing the MTU of client", logging.info)
+        ssh_cmd(client, client_mtu_cmd % (params.get("client_physical_nic"), mtu))
+
+        netdst = params.get("netdst", "switch")
+        host_bridges = utils_net.Bridge()
+        br_in_use = host_bridges.list_br()
+        if netdst in br_in_use:
+            ifaces_in_use = host_bridges.list_iface()
+            target_ifaces = list(ifaces_in_use + br_in_use)
+        error_context.context("Change all Bridge NICs MTU to %s" % mtu, logging.info)
+        for iface in target_ifaces:
+            utils.run(host_mtu_cmd % (iface, mtu), ignore_status=False)
+
     def _pin_vm_threads(vm, node):
         if node:
             if not isinstance(node, utils_misc.NumaNode):
@@ -120,11 +151,11 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
 
     session = vm.wait_for_login(timeout=login_timeout)
+    mac = vm.get_mac_address(0)
     queues = int(params.get("queues", 1))
     if queues > 1:
         if params.get("os_type") == "linux":
-            ethname = utils_net.get_linux_ifname(session,
-                                                 vm.get_mac_address(0))
+            ethname = utils_net.get_linux_ifname(session, mac)
             session.cmd_status_output("ethtool -L %s combined %s" %
                                       (ethname, queues))
         else:
@@ -138,7 +169,7 @@ def run(test, params, env):
                 s, o = session.cmd_status_output(cmd)
                 if s:
                     msg = "Config command %s failed. Output: %s" % (cmd, o)
-                    raise error.TestError(msg)
+                    test.error(msg)
         if params.get("reboot_after_config", "yes") == "yes":
             session = vm.reboot(session=session, timeout=login_timeout)
 
@@ -212,7 +243,7 @@ def run(test, params, env):
         session2.close()
         _pin_vm_threads(vm2, numa_node)
 
-    error.context("Prepare env of server/client/host", logging.info)
+    error_context.context("Prepare env of server/client/host", logging.info)
     prepare_list = set([server_ctl, client, host])
     tag_dict = {server_ctl: "server", client: "client", host: "host"}
     ip_dict = {server_ctl: server_ctl_ip, client: client_ip, host: host_ip}
@@ -223,10 +254,12 @@ def run(test, params, env):
             password = params_tmp["password"]
             username = params_tmp["username"]
             env_setup(i, ip_dict[i], username, shell_port, password)
+    mtu = int(params.get("mtu", "1500"))
+    mtu_set(mtu)
 
     env.stop_tcpdump()
 
-    error.context("Start netperf testing", logging.info)
+    error_context.context("Start netperf testing", logging.info)
     start_test(server_ip, server_ctl, host, clients, test.resultsdir,
                test_duration=int(params.get('l')),
                sessions_rr=params.get('sessions_rr'),
@@ -254,8 +287,14 @@ def run(test, params, env):
         logfile.write(output)
         logfile.close()
 
+    if mtu != 1500:
+        mtu_default = 1500
+        error_context.context("Change back server, client and host's mtu to %s"
+                              % mtu_default)
+        mtu_set(mtu_default)
 
-@error.context_aware
+
+@error_context.context_aware
 def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                sessions_rr="50 100 250 500", sessions="1 2 4",
                sizes_rr="64 256 512 1024 2048",
@@ -322,7 +361,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
         mpstat_index = 0
 
     for protocol in protocols.split():
-        error.context("Testing %s protocol" % protocol, logging.info)
+        error_context.context("Testing %s protocol" % protocol, logging.info)
         if protocol in ("TCP_RR", "TCP_CRR"):
             sessions_test = sessions_rr.split()
             sizes_test = sizes_rr.split()
@@ -347,7 +386,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                     nf_args = "-C -c -t %s -- -m %s" % (protocol, i)
 
                 ret = launch_client(j, server, server_ctl, host, clients, test_duration,
-                                    nf_args, netserver_port, params, server_cyg)
+                                    nf_args, netserver_port, params, server_cyg, test)
 
                 thu = float(ret['thu'])
                 cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
@@ -405,9 +444,9 @@ def ssh_cmd(session, cmd, timeout=120, ignore_status=False):
     return o
 
 
-@error.context_aware
+@error_context.context_aware
 def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
-                  port, params, server_cyg):
+                  port, params, server_cyg, test):
     """ Launch netperf clients """
 
     netperf_version = params.get("netperf_version", "2.6.0")
@@ -419,7 +458,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
     if _netserver_started:
         logging.debug("Netserver already started.")
     else:
-        error.context("Start Netserver on guest", logging.info)
+        error_context.context("Start Netserver on guest", logging.info)
         if params.get("os_type") == "windows":
             timeout = float(params.get("timeout", "240"))
             cdrom_drv = utils_misc.get_winutils_vol(server_ctl)
@@ -438,14 +477,14 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                     p_check_cmd = "dir %s" % cygwin_root
                     if not ("netserver.exe" in server_ctl.cmd(s_check_cmd) and
                             netperf_pack in server_ctl.cmd(p_check_cmd)):
-                        error.context("Install netserver in Windows guest cygwin",
-                                      logging.info)
+                        error_context.context("Install netserver in Windows guest cygwin",
+                                              logging.info)
                         cmd = "xcopy %s %s /S /I /Y" % (netperf_src, cygwin_root)
                         server_ctl.cmd(cmd)
                         server_cyg.cmd_output(netperf_install_cmd, timeout=timeout)
                         if "netserver.exe" not in server_ctl.cmd(s_check_cmd):
                             err_msg = "Install netserver cygwin failed"
-                            raise error.TestNAError(err_msg)
+                            test.error(err_msg)
                         logging.info("Install netserver in cygwin successfully")
             else:
                 start_session = server_ctl
@@ -453,8 +492,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                 logging.info("Start netserver without cygwin, cmd is: %s" %
                              netserv_start_cmd)
 
-            error.context("Start netserver on windows guest", logging.info)
-            start_netserver_win(start_session, netserv_start_cmd)
+            error_context.context("Start netserver on windows guest", logging.info)
+            start_netserver_win(start_session, netserv_start_cmd, test)
 
         else:
             logging.info("Netserver start cmd is '%s'" % server_path)
@@ -569,8 +608,8 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                 break
         nresult = i - 1
         if nresult < int(sessions):
-            raise error.TestError("We couldn't expect this parallism,"
-                                  "expect %s get %s" % (sessions, nresult))
+            test.error("We couldn't expect this parallism, expect %s get %s"
+                       % (sessions, nresult))
 
         niteration = nresult / sessions
         result = 0.0
@@ -581,7 +620,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         logging.debug("niteration: %s" % niteration)
         return result
 
-    error.context("Start netperf client threads", logging.info)
+    error_context.context("Start netperf client threads", logging.info)
     pid = str(os.getpid())
     fname = "/tmp/netperf.%s.nf" % pid
     ssh_cmd(clients[-1], "rm -f %s" % fname)
@@ -601,7 +640,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                            "Wait until all netperf clients start to work"):
         logging.debug("All netperf clients start to work.")
     else:
-        raise error.TestNAError("Error, not all netperf clients at work")
+        test.fail("Error, not all netperf clients at work")
 
     # real & effective test starts
     if get_status_flag:
@@ -630,7 +669,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
 
     client_thread.join()
 
-    error.context("Testing Results Treatment and Report", logging.info)
+    error_context.context("Testing Results Treatment and Report", logging.info)
     f = open(fname, "w")
     f.write(finished_result)
     f.close()

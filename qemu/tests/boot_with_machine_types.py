@@ -22,7 +22,7 @@ def run(test, params, env):
     machine_types = []
     machine_type_mapping = {"pc": ["i440FX", "RHEL 6"], "q35": ["Q35"], "pseries": ["pSeries"],
                             "arm64-pci:virt": ["ARM"], "arm64-mmio:virt": ["ARM"], "s390-ccw-virtio": ["S390"]}
-    for m_type, s_name in zip(*utils_misc.get_support_machine_type(qemu_binary)):
+    for m_type, s_name in zip(*utils_misc.get_support_machine_type(qemu_binary)[:2]):
         for item in machine_type_mapping[params["machine_type"]]:
             if item in s_name:
                 if "arm64" in params["machine_type"]:

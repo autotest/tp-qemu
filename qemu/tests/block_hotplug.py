@@ -1,5 +1,6 @@
 import logging
 import re
+import random
 
 from virttest import data_dir
 from virttest import storage
@@ -7,6 +8,7 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest.qemu_devices import qdevices
+from virttest import qemu_qtree
 
 
 @error_context.context_aware
@@ -56,6 +58,17 @@ def run(test, params, env):
         disk = list(set(disk2).difference(set(disk1)))
         return disk
 
+    def unplug_device(vm, get_disk_cmd, device):
+        """
+        Unplug device
+        """
+        disks_before_unplug = find_disk(vm, get_disk_cmd)
+        device.unplug(vm.monitor)
+        device.verify_unplug("", vm.monitor)
+        unplug_status = utils_misc.wait_for(lambda: len(get_new_disk(find_disk
+                                            (vm, get_disk_cmd), disks_before_unplug)) != 0, pause)
+        return unplug_status
+
     img_list = params.get("images").split()
     img_format_type = params.get("img_format_type", "qcow2")
     pci_type = params.get("pci_type", "virtio-blk-pci")
@@ -67,7 +80,6 @@ def run(test, params, env):
     disk_op_timeout = int(params.get("disk_op_timeout", 360))
     get_disk_cmd = params.get("get_disk_cmd")
     context_msg = "Running sub test '%s' %s"
-    device_list = []
     disk_index = params.objects("disk_index")
     disk_letter = params.objects("disk_letter")
 
@@ -75,6 +87,9 @@ def run(test, params, env):
     vm.verify_alive()
 
     for iteration in xrange(repeat_times):
+        device_list = []
+        controller_list = []
+        controller_device_dict = {}
         error_context.context("Hotplug block device (iteration %d)" % iteration,
                               logging.info)
 
@@ -91,7 +106,8 @@ def run(test, params, env):
 
                 if params.get("need_controller", "no") == "yes":
                     controller_model = params.get("controller_model")
-                    controller = qdevices.QDevice(controller_model)
+                    controller = qdevices.QDevice(controller_model, params={"id":
+                                                  "hotadded_scsi%s" % num})
                     bus_extra_param = params.get("bus_extra_params_%s" % img_list[num + 1])
                     # TODO:Add iothread support for qdevice
                     if bus_extra_param and "iothread" in bus_extra_param:
@@ -104,6 +120,8 @@ def run(test, params, env):
                     if not ver_out:
                         err = "%s is not in qtree after hotplug" % controller_model
                         test.fail(err)
+                    else:
+                        controller_list.append(controller)
 
                 drive = qdevices.QRHDrive("block%d" % num)
                 drive.set_param("file", find_image(img_list[num + 1]))
@@ -113,6 +131,8 @@ def run(test, params, env):
 
                 device.set_param("drive", drive_id)
                 device.set_param("id", "block%d" % num)
+                if params.get("need_controller", "no") == "yes" and bool(random.randrange(2)):
+                    device.set_param("bus", controller.get_param("id")+'.0')
                 blk_extra_param = params.get("blk_extra_params_%s" % img_list[num + 1])
                 if blk_extra_param and "iothread" in blk_extra_param:
                     match = re.search("iothread=(\w+)", blk_extra_param)
@@ -130,6 +150,20 @@ def run(test, params, env):
                     new_disks = get_new_disk(disks_before_plug, disks_after_plug)
                 else:
                     test.fail("Can't get new disks")
+                if params.get("need_controller", "no") == "yes":
+                    info_qtree = vm.monitor.info('qtree', False)
+                    qtree = qemu_qtree.QtreeContainer()
+                    qtree.parse_info_qtree(info_qtree)
+                    for node in qtree.get_nodes():
+                        if node.qtree.get("id") == device.get_param("id"):
+                            try:
+                                controller_id = node.parent.qtree.get("id").split(".")[0]
+                            except AttributeError:
+                                test.fail("can't get parent of:\n%s" % node)
+                            controller_device_dict.setdefault(controller_id, []).append(device)
+                            break
+                    else:
+                        test.fail("Can't find device '%s' in qtree" % device.get_param("id"))
             else:
                 if params.get("drive_format") in pci_type:
                     get_disk_cmd += " | egrep -v '^/dev/[hsv]da[0-9]*$'"
@@ -185,16 +219,20 @@ def run(test, params, env):
                                   logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        for num in xrange(blk_num):
-            error_context.context("Unplug block device (iteration %d)" % iteration,
-                                  logging.info)
-            disks_before_unplug = find_disk(vm, get_disk_cmd)
-            device_list[num].unplug(vm.monitor)
-            device_list[num].verify_unplug("", vm.monitor)
-            unplug_status = utils_misc.wait_for(lambda: len(get_new_disk(find_disk(vm, get_disk_cmd),
-                                                disks_before_unplug)) != 0, pause)
+        error_context.context("Unplug block device (iteration %d)" % iteration,
+                              logging.info)
+        for controller in controller_list:
+            controller_id = controller.get_param("id")
+            for device in controller_device_dict.get(controller_id, []):
+                unplug_status = unplug_device(vm, get_disk_cmd, device)
+                if not unplug_status:
+                    test.fail("Failed to unplug disks '%s'" % device.get_param("id"))
+                device_list.remove(device)
+            controller.unplug(vm.monitor)
+        for device in device_list:
+            unplug_status = unplug_device(vm, get_disk_cmd, device)
             if not unplug_status:
-                test.fail("Failed to unplug disks")
+                test.fail("Failed to unplug disks '%s'" % device.get_param("id"))
 
         sub_type = params.get("sub_type_after_unplug")
         if sub_type:

@@ -51,5 +51,6 @@ def run(test, params, env):
 
     error.context("Quit guest and check the process quit normally",
                   logging.info)
-    vm.destroy(gracefully=False)
+    vm.monitor.quit()
+    vm.wait_until_dead(5, 0.5, 0.5)
     vm.verify_userspace_crash()

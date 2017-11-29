@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """
 This is a autotest/virt-test test for testing PCI devices in various PCI setups
 
@@ -283,13 +282,13 @@ def add_device_random(params, name_idxs, parent_bus, addr):
 def run(test, params, env):
     """
     PCI Devices test
-    1) print outs the used setup
+    1) prints out the setup to be used
     2) boots the defined VM
-    3) verifies monitor "info qtree" vs. autotest representation
+    3) verifies monitor "info qtree" vs. internal representation
     4) verifies guest "lspci" vs. info qtree (Linux only)
     :note: Only PCI device properties are checked
 
-    :param test: kvm test object
+    :param test: VirtTest instance
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """

@@ -3,13 +3,13 @@ import time
 import re
 import os
 
-from autotest.client.shared import error
-from autotest.client import utils
-
 from virttest import virt_vm
 from virttest import utils_misc
 from virttest import qemu_storage
 from virttest import data_dir
+from virttest import error_context
+
+from avocado.utils import process
 
 
 class EnospcConfig(object):
@@ -41,32 +41,32 @@ class EnospcConfig(object):
         except AttributeError:
             self.loopback = ''
 
-    @error.context_aware
+    @error_context.context_aware
     def setup(self):
         logging.debug("Starting enospc setup")
-        error.context("performing enospc setup")
+        error_context.context("performing enospc setup", logging.info)
         utils_misc.display_attributes(self)
         # Double check if there aren't any leftovers
         self.cleanup()
         try:
-            utils.run("%s create -f raw %s 10G" %
-                      (self.qemu_img_binary, self.raw_file_path))
+            process.run("%s create -f raw %s 10G" %
+                        (self.qemu_img_binary, self.raw_file_path))
             # Associate a loopback device with the raw file.
             # Subject to race conditions, that's why try here to associate
             # it with the raw file as quickly as possible
-            l_result = utils.run("losetup -f")
-            utils.run("losetup -f %s" % self.raw_file_path)
+            l_result = process.run("losetup -f")
+            process.run("losetup -f %s" % self.raw_file_path)
             self.loopback = l_result.stdout.strip()
             # Add the loopback device configured to the list of pvs
             # recognized by LVM
-            utils.run("pvcreate %s" % self.loopback)
-            utils.run("vgcreate %s %s" % (self.vgtest_name, self.loopback))
+            process.run("pvcreate %s" % self.loopback)
+            process.run("vgcreate %s %s" % (self.vgtest_name, self.loopback))
             # Create an lv inside the vg with starting size of 200M
-            utils.run("lvcreate -L 200M -n %s %s" %
-                      (self.lvtest_name, self.vgtest_name))
+            process.run("lvcreate -L 200M -n %s %s" %
+                        (self.lvtest_name, self.vgtest_name))
             # Create a 10GB qcow2 image in the logical volume
-            utils.run("%s create -f qcow2 %s 10G" %
-                      (self.qemu_img_binary, self.lvtest_device))
+            process.run("%s create -f qcow2 %s 10G" %
+                        (self.qemu_img_binary, self.lvtest_device))
             # Let's symlink the logical volume with the image name that autotest
             # expects this device to have
             os.symlink(self.lvtest_device, self.qcow_file_path)
@@ -77,30 +77,30 @@ class EnospcConfig(object):
                 logging.warn(e)
             raise
 
-    @error.context_aware
+    @error_context.context_aware
     def cleanup(self):
-        error.context("performing enospc cleanup")
+        error_context.context("performing enospc cleanup", logging.info)
         if os.path.islink(self.lvtest_device):
-            utils.run("fuser -k %s" % self.lvtest_device, ignore_status=True)
+            process.run("fuser -k %s" % self.lvtest_device, ignore_status=True)
             time.sleep(2)
-        l_result = utils.run("lvdisplay")
+        l_result = process.run("lvdisplay")
         # Let's remove all volumes inside the volume group created
         if self.lvtest_name in l_result.stdout:
-            utils.run("lvremove -f %s" % self.lvtest_device)
+            process.run("lvremove -f %s" % self.lvtest_device)
         # Now, removing the volume group itself
-        v_result = utils.run("vgdisplay")
+        v_result = process.run("vgdisplay")
         if self.vgtest_name in v_result.stdout:
-            utils.run("vgremove -f %s" % self.vgtest_name)
+            process.run("vgremove -f %s" % self.vgtest_name)
         # Now, if we can, let's remove the physical volume from lvm list
         if self.loopback:
-            p_result = utils.run("pvdisplay")
+            p_result = process.run("pvdisplay")
             if self.loopback in p_result.stdout:
-                utils.run("pvremove -f %s" % self.loopback)
-        l_result = utils.run('losetup -a')
+                process.run("pvremove -f %s" % self.loopback)
+        l_result = process.run('losetup -a')
         if self.loopback and (self.loopback in l_result.stdout):
             try:
-                utils.run("losetup -d %s" % self.loopback)
-            except error.CmdError:
+                process.run("losetup -d %s" % self.loopback)
+            except process.CmdError:
                 logging.error("Failed to liberate loopback %s", self.loopback)
         if os.path.islink(self.qcow_file_path):
             os.remove(self.qcow_file_path)
@@ -108,7 +108,7 @@ class EnospcConfig(object):
             os.remove(self.raw_file_path)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     ENOSPC test
@@ -124,11 +124,11 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    error.context("Create a virtual disk on lvm")
+    error_context.context("Create a virtual disk on lvm", logging.info)
     enospc_config = EnospcConfig(test, params)
     enospc_config.setup()
 
-    error.context("Boot up guest with two disks")
+    error_context.context("Boot up guest with two disks", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.create()
     login_timeout = int(params.get("login_timeout", 360))
@@ -144,7 +144,7 @@ def run(test, params, env):
     cmd = params["background_cmd"]
     cmd %= devname
 
-    error.context("Continually write data to second disk")
+    error_context.context("Continually write data to second disk", logging.info)
     logging.info("Sending background cmd '%s'", cmd)
     session_serial.sendline(cmd)
 
@@ -154,27 +154,27 @@ def run(test, params, env):
     while i < iterations:
         if vm.monitor.verify_status("paused"):
             pause_n += 1
-            error.context("Checking all images in use by %s" % vm.name,
-                          logging.info)
+            error_context.context("Checking all images in use by %s" % vm.name,
+                                  logging.info)
             for image_name in vm.params.objects("images"):
                 image_params = vm.params.object_params(image_name)
                 try:
                     image = qemu_storage.QemuImg(image_params,
                                                  data_dir.get_data_dir(), image_name)
-                    image.check_image(image_params, data_dir.get_data_dir())
-                except (virt_vm.VMError, error.TestWarn), e:
+                    image.check_image(image_params, data_dir.get_data_dir(), force_share=True)
+                except virt_vm.VMError, e:
                     logging.error(e)
-            error.context("Guest paused, extending Logical Volume size",
-                          logging.info)
+            error_context.context("Guest paused, extending Logical Volume size",
+                                  logging.info)
             try:
-                utils.run("lvextend -L +200M %s" % logical_volume)
-            except error.CmdError, e:
+                process.run("lvextend -L +200M %s" % logical_volume)
+            except process.CmdError, e:
                 logging.debug(e.result_obj.stdout)
-            error.context("Continue paused guest", logging.info)
+            error_context.context("Continue paused guest", logging.info)
             vm.resume()
         elif not vm.monitor.verify_status("running"):
             status = str(vm.monitor.info("status"))
-            raise error.TestError("Unexpected guest status: %s" % status)
+            test.error("Unexpected guest status: %s" % status)
         time.sleep(10)
         i += 1
 
@@ -187,7 +187,7 @@ def run(test, params, env):
         logging.warn(e)
 
     if pause_n == 0:
-        raise error.TestFail("Guest didn't pause during loop")
+        test.fail("Guest didn't pause during loop")
     else:
         logging.info("Guest paused %s times from %s iterations",
                      pause_n, iterations)

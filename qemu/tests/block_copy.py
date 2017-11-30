@@ -8,6 +8,7 @@ from autotest.client.shared import error
 
 from virttest import data_dir
 from virttest import storage
+from virttest import qemu_storage
 from virttest import utils_misc
 from virttest import qemu_monitor
 
@@ -282,9 +283,9 @@ class BlockCopy(object):
         if method == "monitor":
             return self.vm.monitor.get_backingfile(self.device)
 
-        qemu_img = utils_misc.get_qemu_img_binary(self.params)
-        cmd = "%s info %s " % (qemu_img, self.get_image_file())
-        info = utils.system_output(cmd)
+        qemu_img = qemu_storage.QemuImg(self.params, self.data_dir, self.tag)
+        qemu_img.image_filename = self.get_image_file()
+        info = qemu_img.info(force_share=True)
         try:
             matched = re.search(r"backing file: +(.*)", info, re.M)
             return matched.group(1)

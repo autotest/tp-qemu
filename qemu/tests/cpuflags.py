@@ -195,6 +195,7 @@ def run(test, params, env):
         """
         p = ParseCpuFlags()
         cpus = p.parse_file(cpuflags_def)
+        flags = []
         for arch in cpus.values():
             if cpumodel in arch.keys():
                 flags = arch[cpumodel]
@@ -530,8 +531,9 @@ def run(test, params, env):
                     raise error.TestFail("CPU models %s are not in output "
                                          "'%s' of command \n%s" %
                                          (missing, cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError("New qemu use new -cpu ? cmd.")
+            else:
+                raise error.TestNAError("New qemu does not support -cpu "
+                                        "?model. (%s)" % qcver)
 
     # 2) <qemu-kvm-cmd> -cpu ?dump
     class test_qemu_dump(MiniSubtest):
@@ -550,9 +552,9 @@ def run(test, params, env):
                     raise error.TestFail("CPU models %s are not in output "
                                          "'%s' of command \n%s" %
                                          (missing, cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError(
-                    "New qemu does not support -cpu ?dump.")
+            else:
+                raise error.TestNAError("New qemu does not support -cpu "
+                                        "?dump. (%s)" % qcver)
 
     # 3) <qemu-kvm-cmd> -cpu ?cpuid
     class test_qemu_cpuid(MiniSubtest):
@@ -565,8 +567,9 @@ def run(test, params, env):
                     raise error.TestFail("There aren't any cpu Flag in output"
                                          " '%s' of command \n%s" %
                                          (cmd, result.stdout))
-            elif qcver == "1350":
-                raise error.TestNAError("New qemu use new -cpu ? cmd.")
+            else:
+                raise error.TestNAError("New qemu does not support -cpu "
+                                        "?cpuid. (%s)" % qcver)
 
     # 1) boot with cpu_model
     class test_boot_cpu_model(Test_temp):
@@ -1137,6 +1140,8 @@ def run(test, params, env):
         else:
             cpu_models = (set(get_cpu_models_supported_by_host()) -
                           set(cpu_model_black_list))
+            if not cpu_models:
+                test.cancel("No cpu_models detected, nothing to test.")
             logging.info("Start test with cpu models %s" % (str(cpu_models)))
             failed = []
             for cpumodel in cpu_models:

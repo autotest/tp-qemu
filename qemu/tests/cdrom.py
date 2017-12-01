@@ -366,7 +366,7 @@ def run(test, params, env):
         if serial_num_output:
             serial_cdrom = ""
             for line in serial_num_output.splitlines():
-                if utils_misc.find_substring(str(line), str(serial_num)):
+                if serial_num in line:
                     serial_cdrom = line.split(" ")[-1].split("/")[-1]
                     break
             if not serial_cdrom:

@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 import time
@@ -168,4 +169,7 @@ def run(test, params, env):
             if index != 0:
                 image = qemu_storage.QemuImg(
                     image_params, data_dir.get_data_dir(), image)
+                test.assertTrue(os.path.exists(image.image_filename),
+                                "Produced snapshot is not present in "
+                                "filesystem: %s." % image.image_filename)
                 image.remove()

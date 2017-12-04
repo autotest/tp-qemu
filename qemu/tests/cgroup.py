@@ -8,7 +8,7 @@ import os
 import re
 import time
 
-from autotest.client import utils
+from avocado.utils import astring
 from avocado.utils import process
 from avocado.core import exceptions
 
@@ -310,7 +310,7 @@ def run(test, params, env):
                     err += "%d, " % i
 
             logging.info("blkio_bandwidth_%s: dd statistics\n%s", direction,
-                         utils.matrix_to_string(out, ['status', 'norm_weights',
+                         astring.tabular_output(out, ['status', 'norm_weights',
                                                       'norm_out', 'actual']))
 
             if err:
@@ -514,7 +514,7 @@ def run(test, params, env):
 
             # TODO: Unlimited speed fluctuates during test
             logging.info("blkio_throttle_%s: dd statistics\n%s", direction,
-                         utils.matrix_to_string(output, ['result', 'it',
+                         astring.tabular_output(output, ['result', 'it',
                                                          'vm', 'speed', 'actual']))
             if err:
                 err = ("blkio_throttle_%s: limits [%s] were broken"
@@ -1221,7 +1221,7 @@ def run(test, params, env):
                         matrix[-1].append("%3d ~ %d" % (verify[i][j],
                                                         stats[i][j]))
             logging.info("Results (theoretical ~ actual):\n%s",
-                         utils.matrix_to_string(matrix, header))
+                         astring.tabular_output(matrix, header))
             if err:
                 err = "Scenerios %s FAILED" % err
                 logging.error(err)

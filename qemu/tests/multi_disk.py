@@ -8,8 +8,9 @@ import re
 import random
 import string
 
+from avocado.utils import astring
+
 from autotest.client.shared import error
-from autotest.client.shared import utils
 
 from virttest import qemu_qtree
 from virttest import env_process
@@ -209,7 +210,7 @@ def run(test, params, env):
     if params.get("multi_disk_params_only") == 'yes':
         # Only print the test param_matrix and finish
         logging.info('Newly added disks:\n%s',
-                     utils.matrix_to_string(param_table, param_table_header))
+                     astring.tabular_output(param_table, param_table_header))
         return
 
     # Always recreate VMs and disks

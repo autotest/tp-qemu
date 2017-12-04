@@ -54,7 +54,7 @@ def run(test, params, env):
     curr_time = []
     timedrift = []
     totaldrift = []
-    vmnames = ["virt-tests-vm1"]
+    vmnames = [params["main_vm"]]
 
     # Run some load on the host
     logging.info("Starting load on host.")
@@ -86,8 +86,7 @@ def run(test, params, env):
         while itr <= int(params["max_itrs"]):
             for vmid, se in enumerate(sessions):
                 # Get the respective vm object
-                vmname = "virt-tests-vm%d" % (vmid + 1)
-                vm = env.get_vm(vmname)
+                vm = env.get_vm(vmnames[vmid])
                 # Run current iteration
                 logging.info(
                     "Rebooting:vm%d iteration %d " % ((vmid + 1), itr))

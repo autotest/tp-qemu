@@ -12,8 +12,9 @@ from avocado.utils import astring
 
 from autotest.client.shared import error
 
-from virttest import qemu_qtree
 from virttest import env_process
+from virttest import error_context
+from virttest import qemu_qtree
 from virttest import utils_misc
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
@@ -21,7 +22,7 @@ _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
 _RE_BLANKS = re.compile(r'^([ ]*)')
 
 
-@error.context_aware
+@error_context.context_aware
 def _range(buf, n=None):
     """
     Converts 'range(..)' string to range. It supports 1-4 args. It supports
@@ -75,7 +76,7 @@ def _range(buf, n=None):
     return out
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test multi disk suport of guest, this case will:
@@ -128,7 +129,7 @@ def run(test, params, env):
                 if o:
                     disk_indexs.append(o[0])
 
-    error.context("Parsing test configuration", logging.info)
+    error_context.context("Parsing test configuration", logging.info)
     stg_image_num = 0
     stg_params = params.get("stg_params", "")
     # Compatibility
@@ -214,13 +215,13 @@ def run(test, params, env):
         return
 
     # Always recreate VMs and disks
-    error.context("Start the guest with new disks", logging.info)
+    error_context.context("Start the guest with new disks", logging.info)
     for vm_name in params.objects("vms"):
         vm_params = params.object_params(vm_name)
         env_process.process_images(env_process.preprocess_image, test,
                                    vm_params)
 
-    error.context("Start the guest with those disks", logging.info)
+    error_context.context("Start the guest with those disks", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.create(timeout=max(10, stg_image_num), params=params)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
@@ -239,7 +240,7 @@ def run(test, params, env):
         have_qtree = False
 
     if (params.get("check_guest_proc_scsi") == "yes") and have_qtree:
-        error.context("Verifying qtree vs. test params")
+        error_context.context("Verifying qtree vs. test params")
         err = 0
         qtree = qemu_qtree.QtreeContainer()
         qtree.parse_info_qtree(vm.monitor.info('qtree'))
@@ -264,7 +265,7 @@ def run(test, params, env):
             session.cmd_status_output(cmd)
 
         if params.get("os_type") == "windows":
-            error.context("Create partition on those disks", logging.info)
+            error_context.context("Create partition on those disks", logging.info)
             # Get the disk index
             _get_disk_index(session, stg_image_size, disk_indexs)
             if len(disk_indexs) < stg_image_num:
@@ -279,7 +280,7 @@ def run(test, params, env):
                 utils_misc.format_windows_disk(session, disk_indexs[i], None,
                                                None, fs_type)
 
-        error.context("Get disks dev filenames in guest", logging.info)
+        error_context.context("Get disks dev filenames in guest", logging.info)
         cmd = params["list_volume_command"]
         s, output = session.cmd_status_output(cmd, timeout=cmd_timeout)
         if s != 0:
@@ -316,27 +317,27 @@ def run(test, params, env):
     try:
         for i in range(n_repeat):
             logging.info("iterations: %s", (i + 1))
-            error.context("Format those disks in guest", logging.info)
+            error_context.context("Format those disks in guest", logging.info)
             for disk in disks:
                 disk = disk.strip()
-                error.context("Preparing disk: %s..." % disk)
+                error_context.context("Preparing disk: %s..." % disk)
 
                 # Random select one file system from file_system
                 index = random.randint(0, (len(file_system) - 1))
                 fs = file_system[index].strip()
                 cmd = params["format_command"] % (fs, disk)
-                error.context("formatting test disk")
+                error_context.context("formatting test disk")
                 session.cmd(cmd, timeout=cmd_timeout)
                 cmd = params.get("mount_command")
                 if cmd:
                     cmd = cmd % (disk, disk, disk)
                     session.cmd(cmd)
 
-            error.context("Cope file into / out of those disks", logging.info)
+            error_context.context("Cope file into / out of those disks", logging.info)
             for disk in disks:
                 disk = disk.strip()
 
-                error.context("Performing I/O on disk: %s..." % disk)
+                error_context.context("Performing I/O on disk: %s..." % disk)
                 cmd_list = params["cmd_list"].split()
                 for cmd_l in cmd_list:
                     cmd = params.get(cmd_l)
@@ -357,7 +358,7 @@ def run(test, params, env):
                 disks.sort()
                 for disk in disks:
                     disk = disk.strip()
-                    error.context("Unmounting disk: %s..." % disk)
+                    error_context.context("Unmounting disk: %s..." % disk)
                     cmd = params.get("umount_command") % (disk, disk)
                     session.cmd(cmd)
     finally:
@@ -368,7 +369,7 @@ def run(test, params, env):
                 disks = re.findall(re_str, output)
                 disks.sort()
                 for disk in disks:
-                    error.context("Unmounting disk: %s..." % disk)
+                    error_context.context("Unmounting disk: %s..." % disk)
                     cmd = params["umount_command"] % (disk, disk)
                     session.cmd(cmd)
             except Exception, err:

@@ -287,7 +287,7 @@ def run(test, params, env):
                     out[i] = out[i][1:-1]
                 for _ in re.findall(re_dd, out[i])[1:-1]:
                     data += int(_[0])
-                    duration += float(_[1])
+                    duration += float(_[2])
                 out[i] = int(data / duration)
 
             # normalize each output according to cgroup_weights
@@ -359,8 +359,8 @@ def run(test, params, env):
         # ; true is necessarily when there is no dd present at the time
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
-        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*\) copied, (\d+\.*\d*) s, '
-                 '\d+\.*\d* \w./s')
+        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
+                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")
@@ -501,7 +501,7 @@ def run(test, params, env):
                     data = 0
                     for _ in re.findall(re_dd, out[i][j]):
                         data += int(_[0])
-                        duration += float(_[1])
+                        duration += float(_[2])
                     output.append(['PASS', j, 'vm%d' % i, speeds[i][j],
                                    int(data / duration)])
                     # Don't measure unlimited speeds
@@ -604,8 +604,8 @@ def run(test, params, env):
         # ; true is necessarily when there is no dd present at the time
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
-        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*\) copied, (\d+\.*\d*) s, '
-                 '\d+\.*\d* \w./s')
+        re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
+                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")

@@ -355,6 +355,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.shutdown(shutdown_mode)
 
     def __gagent_check_serial_output(self, pattern):
+        self.vm.create_serial_console()
         start_time = time.time()
         while (time.time() - start_time) < self.vm.REBOOT_TIMEOUT:
             if pattern in self.vm.serial_console.get_output():
@@ -384,11 +385,11 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_REBOOT)
         pattern = params["gagent_guest_reboot_pattern"]
-        error_context.context("Verify serial output has '%s'" % pattern)
+        error_context.context("Verify serial output has '%s'" % pattern, logging.info)
         rebooted = self.__gagent_check_serial_output(pattern)
         if not rebooted:
             raise error.TestFail("Could not reboot VM via guest agent")
-        error_context.context("Try to re-login to guest after reboot")
+        error_context.context("Try to re-login to guest after reboot", logging.info)
         try:
             session = self._get_session(self.params, None)
             session.close()
@@ -407,7 +408,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_HALT)
         pattern = params["gagent_guest_shutdown_pattern"]
-        error_context.context("Verify serial output has '%s'" % pattern)
+        error_context.context("Verify serial output has '%s'" % pattern, logging.info)
         halted = self.__gagent_check_serial_output(pattern)
         if not halted:
             raise error.TestFail("Could not halt VM via guest agent")

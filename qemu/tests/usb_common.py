@@ -129,6 +129,14 @@ def verify_usb_device_in_guest(params, session, devs):
                 return False
         return True
 
+    if params.get("os_type") == "linux":
+        logging.info("checking if there is I/O error in dmesg")
+        output = session.cmd_output("dmesg | grep -i usb",
+                                    float(params["cmd_timeout"]))
+        for line in output.splitlines():
+            if "error" in line or "ERROR" in line:
+                return (False, "error found in guest's dmesg: %s " % line)
+
     res = utils_misc.wait_for(_verify_guest_usb,
                               float(params["cmd_timeout"]),
                               step=5.0,

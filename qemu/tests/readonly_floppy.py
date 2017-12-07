@@ -1,6 +1,8 @@
 import logging
 import time
 import re
+from virttest import data_dir
+from virttest import env_process
 from autotest.client.shared import error
 
 
@@ -24,6 +26,11 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
+    vt_data_dir = data_dir.get_data_dir()
+    if params.get("start_vm") == "no":
+        params["start_vm"] = "yes"
+        params["pre_command"] = params.get("pre_cmd") % (vt_data_dir, vt_data_dir)
+        env_process.preprocess(test, params, env)
     error.context("Boot up guest with floppies", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

@@ -157,17 +157,17 @@ def run(test, params, env):
     get_balloon_property = params.get("get_balloon_property", "guest-stats")
     polling_interval = int(params.get("polling_interval", 2))
 
+    session = vm.wait_for_login(timeout=timeout)
+    if params['os_type'] == 'windows':
+        driver_name = params.get("driver_name", "balloon")
+        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+
+        error_context.context("Config balloon service in guest",
+                              logging.info)
+        drive_letter = get_disk_vol(session)
+        config_balloon_service(session, drive_letter)
+
     try:
-        session = vm.wait_for_login(timeout=timeout)
-        if params['os_type'] == 'windows':
-            driver_name = params.get("driver_name", "balloon")
-            utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-
-            error_context.context("Config balloon service in guest",
-                                  logging.info)
-            drive_letter = get_disk_vol(session)
-            config_balloon_service(session, drive_letter)
-
         error_context.context("Enable polling in qemu", logging.info)
         vm.monitor.qom_set(device_path, set_balloon_property, polling_interval)
         time.sleep(sleep_time)

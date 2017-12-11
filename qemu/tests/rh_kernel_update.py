@@ -387,6 +387,7 @@ def run(test, params, env):
     update_kernel_cmd = "grubby --update-kernel=%s " % kernel_path
     update_kernel_cmd += "".join(remove_args_list)
     update_kernel_cmd += '--args="%s"' % " ".join(args_added)
+    update_kernel_cmd = params.get("update_kernel_cmd", update_kernel_cmd)
     s, o = session.cmd_status_output(update_kernel_cmd)
     if s != 0:
         msg = "Fail to modify the kernel cmdline, guest output: '%s'" % o

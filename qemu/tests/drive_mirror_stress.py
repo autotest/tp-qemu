@@ -75,6 +75,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
             offset = _offset
 
 
+@error_context.context_aware
 def run(test, params, env):
     """
     drive_mirror_stress test:

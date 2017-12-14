@@ -830,7 +830,7 @@ def run(test, params, env):
             dd_session = self.vm.wait_for_login()
             stress_session = self.vm.wait_for_login()
 
-            dd_session.sendline("nohup dd if=/dev/[svh]da of=/tmp/"
+            dd_session.sendline("nohup dd if=$(echo /dev/[svh]da) of=/tmp/"
                                 "stressblock bs=10MB count=100 &")
             cmd = ("nohup %s/cpuflags-test --stress  %s%s &" %
                    (os.path.join(install_path, "src"), smp,

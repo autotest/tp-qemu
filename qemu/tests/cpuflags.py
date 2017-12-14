@@ -760,10 +760,6 @@ def run(test, params, env):
                 raise error.TestFail("Stress test ended before"
                                      " end of test.")
 
-        def clean(self):
-            logging.info("cleanup")
-            self.vm.destroy(gracefully=False)
-
     # 5) Online/offline CPU
     class test_online_offline_guest_CPUs(Test_temp):
 

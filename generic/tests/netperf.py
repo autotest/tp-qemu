@@ -95,10 +95,8 @@ def run(test, params, env):
         ssh_cmd(session, "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore")
         ssh_cmd(session, "echo 0 > /sys/kernel/mm/ksm/run", ignore_status=True)
 
-        download_link = params.get("netperf_download_link")
-        download_dir = data_dir.get_tmp_dir()
-        md5sum = params.get("pkg_md5sum")
-        pkg = utils.unmap_url_cache(download_dir, download_link, md5sum)
+        pkg = params["netperf_pkg"]
+        pkg = os.path.join(data_dir.get_deps_dir(), pkg)
         remote.scp_to_remote(ip, shell_port, username, password, pkg, "/tmp")
         ssh_cmd(session, params.get("setup_cmd"))
 

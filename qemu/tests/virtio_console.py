@@ -58,6 +58,14 @@ def run(test, params, env):
     """
     virtio_test = VirtioPortTest(test, env, params)
 
+    def get_virtio_serial_name():
+        if params.get("machine_type").startswith("arm64-mmio"):
+            return "virtio-serial-device"
+        elif params.get('machine_type').startswith("s390"):
+            return "virtio-serial-ccw"
+        else:
+            return "virtio-serial-pci"
+
     #
     # Smoke tests
     #
@@ -1397,8 +1405,8 @@ def run(test, params, env):
         consoles[1][0].sock.setblocking(0)
         logging.info("Test correct initialization of hotplug ports")
         for bus_id in xrange(1, 5):  # count of pci device
-            ret = vm.monitors[0].cmd("device_add virtio-serial-pci,"
-                                     "id=virtio_serial_pci%d" % (bus_id))
+            ret = vm.monitors[0].cmd("device_add %s,id=virtio_serial_pci%d"
+                                     % (get_virtio_serial_name(), bus_id))
             if ret != "":
                 logging.error(ret)
             for i in xrange(bus_id * 5 + 5):     # max ports 30
@@ -1488,12 +1496,17 @@ def run(test, params, env):
         err = ""
         booted = False
         error_context.context("Hotplug while booting", logging.info)
+        vio_type = get_virtio_serial_name()
+        if "pci" in vio_type:
+            vio_parent_bus = {'aobject': 'pci.0'}
+        else:
+            vio_parent_bus = None
         for i in xrange(int(params.get("virtio_console_loops", 10))):
             error_context.context("Hotpluging virtio_pci (iteration %d)" % i)
             vm.devices.set_dirty()
-            new_dev = qdevices.QDevice("virtio-serial-pci",
+            new_dev = qdevices.QDevice(vio_type,
                                        {'id': 'virtio_serial_pci%d' % idx},
-                                       parent_bus={'aobject': 'pci.0'})
+                                       parent_bus=vio_parent_bus)
 
             # Hotplug
             out = new_dev.hotplug(monitor)
@@ -1791,10 +1804,15 @@ def run(test, params, env):
         output_list = re_comp.findall(output)
         # high version
         if re.search(qemu_version_pattern, output_list[0]):
-            params["extra_params"] = (params["extra_params"] % max_ports_invalid[0])
-            exp_error_message = (params['virtio_console_params'] % max_ports_valid[0])
+            params["extra_params"] = (params["extra_params"]
+                                      % (get_virtio_serial_name(),
+                                         max_ports_invalid[0]))
+            exp_error_message = (params['virtio_console_params']
+                                 % max_ports_valid[0])
         else:
-            params["extra_params"] = (params["extra_params"] % max_ports_invalid[1])
+            params["extra_params"] = (params["extra_params"]
+                                      % (get_virtio_serial_name(),
+                                         max_ports_invalid[1]))
             exp_error_message = (params['virtio_console_params'] % max_ports_valid[1])
 
         env_process.preprocess(test, params, env)

@@ -404,7 +404,7 @@ def run(test, params, env):
         vm.copy_files_to(cpuflags_src, dst_dir)
         session.cmd("sync")
         session.cmd("cd %s; make EXTRA_FLAGS='';" %
-                    os.path.join(dst_dir, "cpu_flags"))
+                    os.path.join(dst_dir, "src"))
         session.cmd("sync")
         session.close()
 
@@ -425,7 +425,7 @@ def run(test, params, env):
             try:
                 for tc in utils_misc.kvm_map_flags_to_test[f]:
                     session.cmd("%s/cpuflags-test --%s" %
-                                (os.path.join(path, "cpu_flags"), tc))
+                                (os.path.join(path, "src"), tc))
                 pass_Flags.append(f)
             except aexpect.ShellCmdError:
                 not_working.append(f)
@@ -449,7 +449,7 @@ def run(test, params, env):
                             " bs=10MB count=100 &")
         try:
             stress_session.cmd("%s/cpuflags-test --stress %s%s" %
-                               (os.path.join(install_path, "cpu_flags"), smp,
+                               (os.path.join(install_path, "src"), smp,
                                 utils_misc.kvm_flags_to_stresstests(flags[0])),
                                timeout=timeout)
         except aexpect.ShellTimeoutError:
@@ -834,7 +834,7 @@ def run(test, params, env):
             dd_session.sendline("nohup dd if=/dev/[svh]da of=/tmp/"
                                 "stressblock bs=10MB count=100 &")
             cmd = ("nohup %s/cpuflags-test --stress  %s%s &" %
-                   (os.path.join(install_path, "cpu_flags"), smp,
+                   (os.path.join(install_path, "src"), smp,
                     utils_misc.kvm_flags_to_stresstests(flags[0])))
             stress_session.sendline(cmd)
 
@@ -957,7 +957,7 @@ def run(test, params, env):
                                          "stressblock bs=10MB count=100 &")
 
                         cmd = ("nohup %s/cpuflags-test --stress  %s%s &" %
-                               (os.path.join(install_path, "cpu_flags"),
+                               (os.path.join(install_path, "src"),
                                 smp,
                                 utils_misc.kvm_flags_to_stresstests(Flags[0] &
                                                                     flags.guest_flags)))

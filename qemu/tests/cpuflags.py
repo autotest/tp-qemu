@@ -856,15 +856,10 @@ def run(test, params, env):
                 self.vm.monitor.migrate_set_downtime(1)
                 self.vm.wait_for_migration(mig_timeout)
 
-            # Swap due to test cleaning.
-            temp = self.vm.clone(copy_state=True)
-            self.vm.__dict__ = self.clone.__dict__
-            self.clone = temp
+            self.clone.resume()
+            self.vm.destroy(gracefully=False)
 
-            self.vm.resume()
-            self.clone.destroy(gracefully=False)
-
-            stress_session = self.vm.wait_for_login()
+            stress_session = self.clone.wait_for_login()
 
             # If cpuflags-test hang up during migration test raise exception
             try:

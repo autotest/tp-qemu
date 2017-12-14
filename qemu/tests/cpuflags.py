@@ -865,8 +865,14 @@ def run(test, params, env):
             try:
                 stress_session.cmd('killall cpuflags-test')
             except aexpect.ShellCmdError:
-                raise error.TestFail("Cpuflags-test should work after"
-                                     " migration.")
+                raise error.TestFail("Stress cpuflags-test should be still "
+                                     "running after migration.")
+            try:
+                stress_session.cmd("ls /tmp/stressblock && "
+                                   "rm -f /tmp/stressblock")
+            except aexpect.ShellCmdError:
+                raise error.TestFail("Background 'dd' command failed to "
+                                     "produce output file.")
 
     def net_send_object(socket, obj):
         """

@@ -510,9 +510,12 @@ def run(test, params, env):
 
         def clean(self):
             logging.info("cleanup")
-            if (hasattr(self, "vm")):
-                vm = getattr(self, "vm")
+            vm = getattr(self, "vm", None)
+            if vm:
                 vm.destroy(gracefully=False)
+            clone = getattr(self, "clone", None)
+            if clone:
+                clone.destroy(gracefully=False)
 
     # 1) <qemu-kvm-cmd> -cpu ?model
     class test_qemu_cpu_model(MiniSubtest):

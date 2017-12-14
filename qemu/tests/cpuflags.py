@@ -827,6 +827,10 @@ def run(test, params, env):
             install_cpuflags_test_on_vm(self.vm, install_path)
             flags = check_cpuflags_work(self.vm, install_path,
                                         flags.guest_flags)
+            test.assertTrue(flags[0], "No cpuflags passed the check: %s"
+                            % str(flags))
+            test.assertFalse(flags[1], "Some cpuflags failed the check: %s"
+                             % str(flags))
             dd_session = self.vm.wait_for_login()
             stress_session = self.vm.wait_for_login()
 

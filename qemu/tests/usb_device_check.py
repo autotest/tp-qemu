@@ -27,23 +27,26 @@ def run(test, params, env):
         else:
             test.fail(output)
 
-    # parse the usb toplogy from cfg
+    # parse the usb topology from cfg
     parsed_devs = parse_usb_topology(params)
 
-    logging.info("starting vm according to the usb toplogy")
+    logging.info("starting vm according to the usb topology")
     env_process.process(test, params, env,
                         env_process.preprocess_image,
                         env_process.preprocess_vm)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    devs = collect_usb_dev(params, vm, parsed_devs)
+    # collect usb dev information for qemu check
+    devs = collect_usb_dev(params, vm, parsed_devs, "for_qemu")
 
-    error_context.context("verify usb devices information in monitor...",
+    error_context.context("verify usb devices information in qemu...",
                           logging.info)
     result, output = verify_usb_device_in_monitor_qtree(vm, devs)
     _check_test_step_result(result, output)
 
+    # collect usb dev information for guest check
+    devs = collect_usb_dev(params, vm, parsed_devs, "for_guest")
     login_timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
 

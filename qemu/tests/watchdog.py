@@ -34,9 +34,11 @@ def run(test, params, env):
         Check the watchdog device have been found and init successfully. if  not
         will raise error.
         """
-        # when using ib700 need modprobe it's driver manually.
+        # when using ib700 or diag288, need modprobe it's driver manually.
         if watchdog_device == "ib700":
             session.cmd("modprobe ib700wdt")
+        if watchdog_device == "diag288":
+            session.cmd("modprobe diag288_wdt")
 
         # when wDT is 6300esb need check pci info
         if watchdog_device == "i6300esb":
@@ -50,12 +52,13 @@ def run(test, params, env):
             logging.info("Found watchdog pci device : %s" % wdt_pci_info)
 
         # checking watchdog init info using dmesg
-        error.context("Checking watchdog init info using dmesg", logging.info)
+        error.context("Checking watchdog load info", logging.info)
         dmesg_info = params.get("dmesg_info", "(i6300ESB|ib700wdt).*init")
-        (s, o) = session.cmd_status_output(
-            "dmesg | grep -i '%s' " % dmesg_info)
+        module_check_cmd = params.get("module_check_cmd",
+                                      "dmesg | grep -i '%s' " % dmesg_info)
+        (s, o) = session.cmd_status_output(module_check_cmd)
         if s != 0:
-            error_msg = "Wactchdog device '%s' initialization failed "
+            error_msg = "Wactchdog device '%s' load/initialization failed "
             raise error.TestError(error_msg % watchdog_device)
         logging.info("Watchdog device '%s' add and init successfully"
                      % watchdog_device)

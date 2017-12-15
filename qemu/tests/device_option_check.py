@@ -1,14 +1,13 @@
 import logging
 import re
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_misc
 from virttest import env_process
 from virttest import qemu_qtree
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu device options value check test:
@@ -20,7 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    error.context("Boot up guest.", logging.info)
+    error_context.context("Boot up guest.", logging.info)
     timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
     parameter_value = params.get("parameter_value", "random")
@@ -57,7 +56,7 @@ def run(test, params, env):
         parameter_value_raw = parameter_value
 
     if params.get("check_in_qtree") == "yes":
-        error.context("Check option in qtree", logging.info)
+        error_context.context("Check option in qtree", logging.info)
         qtree = qemu_qtree.QtreeContainer()
         try:
             qtree.parse_info_qtree(vm.monitor.info('qtree'))
@@ -80,14 +79,14 @@ def run(test, params, env):
                 if qtree_value is not None:
                     break
             else:
-                raise error.TestFail(
+                test.fail(
                     "Can not find property '%s' from info qtree where '%s' is "
                     "'%s'" % (qtree_check_option, keyword, qtree_check_value))
 
             qtree_value = re.findall('"?(.*)"?$', qtree_value)[0]
             if (qtree_value != parameter_value_raw and
                     parameter_value_raw not in qtree_value):
-                raise error.TestFail(
+                test.fail(
                     "Value from info qtree is not match with the value from"
                     "command line: '%s' vs '%s'" % (
                         qtree_value, parameter_value_raw))
@@ -100,9 +99,10 @@ def run(test, params, env):
     for check_cmd in check_cmds.split():
         check_cmd_params = params.object_params(check_cmd)
         cmd = check_cmd_params['cmd']
+        cmd = utils_misc.set_winutils_letter(session, cmd)
         pattern = check_cmd_params['pattern'] % parameter_value_raw
 
-        error.context("Check option with command %s" % cmd, logging.info)
+        error_context.context("Check option with command %s" % cmd, logging.info)
         _, output = session.cmd_status_output(cmd)
         if not re.findall(r'%s' % pattern, output):
             failed_log += ("Can not find option %s from guest."
@@ -112,4 +112,4 @@ def run(test, params, env):
     session.close()
 
     if failed_log:
-        raise error.TestFail(failed_log)
+        test.fail(failed_log)

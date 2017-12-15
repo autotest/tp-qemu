@@ -10,6 +10,7 @@ from qemu.tests import drive_mirror
 
 class DriveMirrorStress(drive_mirror.DriveMirror):
 
+    @error_context.context_aware
     def load_stress(self):
         """
         load IO/CPU/Memory stress in guest;
@@ -26,6 +27,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
         time.sleep(10)
         return None
 
+    @error_context.context_aware
     def unload_stress(self):
         """
         stop stress app
@@ -54,6 +56,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
         session.close()
         return status == 0
 
+    @error_context.context_aware
     def verify_steady(self):
         """
         verify offset not decreased, after block mirror job in steady status;
@@ -72,6 +75,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
             offset = _offset
 
 
+@error_context.context_aware
 def run(test, params, env):
     """
     drive_mirror_stress test:

@@ -1,6 +1,10 @@
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
+import logging
 
-from collections import OrderedDict, Counter
+from collections import OrderedDict
 
 from virttest import utils_misc
 
@@ -27,23 +31,30 @@ def parse_usb_topology(params):
     return parsed_devs
 
 
-def collect_usb_dev(params, vm, parsed_devs):
+def collect_usb_dev(params, vm, parsed_devs, suffix):
     """
     Collect usb device information of parsed_devs.
 
     :param params: Dictionary with the test parameters.
     :param vm: Virtual machine object.
     :param parsed_devs: A list of parsed usb devices.
-    :return: A list of tuple contains (id, type, port) of a
-             usb device.
+    :params suffix: A string to read different cfg,
+                    choose from("for_monitor", "for_guest")
+    :return: A list of list contains information of usb devices for
+             verification,[id(eg.d0), info(eg.usb-hub), port(eg.1)]
+             the info will change based on suffix.
     """
+    def _change_dev_info_key(parsed_type, suffix):
+        info_key = parsed_type.replace("-", "_")
+        return "_".join([info_key, suffix])
+
     devs = []
     for parsed_dev in parsed_devs:
         key = list(parsed_dev.keys())[0]
         usb_dev_id = "usb-%s" % key[9:]
-        usb_dev_type = params[parsed_dev[key]]
+        usb_dev_info = params[_change_dev_info_key(parsed_dev[key], suffix)]
         usb_dev_port = str(vm.devices.get(usb_dev_id).get_param("port"))
-        devs.append((usb_dev_id, usb_dev_type, usb_dev_port))
+        devs.append([usb_dev_id, usb_dev_info, usb_dev_port])
     return devs
 
 
@@ -104,17 +115,33 @@ def verify_usb_device_in_guest(params, session, devs):
         # each dev must in the output
         for dev in devs:
             if dev[1] not in output:
+                logging.info("%s does not exist" % dev[1])
                 return False
         # match number of devices
-        counter = Counter(dev[1] for dev in devs)
-        for k, v in counter.items():
-            if output.count(k) != v:
+        dev_list = [dev[1] for dev in devs]
+        dev_nums = dict((i, dev_list.count(i)) for i in dev_list)
+        for k, v in dev_nums.items():
+            logging.info("the number of %s is %s" % (k, v))
+            count = output.count(k)
+            if count != v:
+                logging.info("expected %s %s, got %s in the guest" %
+                             (v, k, count))
                 return False
         return True
 
+    if params.get("os_type") == "linux":
+        logging.info("checking if there is I/O error in dmesg")
+        output = session.cmd_output("dmesg | grep -i usb",
+                                    float(params["cmd_timeout"]))
+        for line in output.splitlines():
+            if "error" in line or "ERROR" in line:
+                return (False, "error found in guest's dmesg: %s " % line)
+
     res = utils_misc.wait_for(_verify_guest_usb,
                               float(params["cmd_timeout"]),
-                              text="wait for getting guest usb devices info")
+                              step=5.0,
+                              text="wait for getting guest usb devices info"
+                              )
 
     if res:
         return (True, "all given devices are verified in the guest")

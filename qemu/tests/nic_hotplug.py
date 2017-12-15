@@ -36,11 +36,13 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
-    def renew_ip_address(session, mac, is_linux_guest=True):
+    def renew_ip_address(mac, is_linux_guest=True):
+        session = vm.wait_for_serial_login(timeout=login_timeout)
         if not is_linux_guest:
             utils_net.restart_windows_guest_network_by_key(session,
                                                            "macaddress",
                                                            mac)
+            session.close()
             return None
         ifname = utils_net.get_linux_ifname(session, mac)
         p_cfg = "/etc/sysconfig/network-scripts/ifcfg-%s" % ifname
@@ -52,9 +54,10 @@ def run(test, params, env):
         session.cmd_output_safe("dhclient -r", timeout=240)
         session.cmd_output_safe("dhclient %s" % ifname, timeout=240)
         session.cmd_output_safe(arp_clean)
+        session.close()
         return None
 
-    def get_hotplug_nic_ip(vm, nic, session, is_linux_guest=True):
+    def get_hotplug_nic_ip(vm, nic, is_linux_guest=True):
         def __get_address():
             try:
                 index = [
@@ -67,7 +70,7 @@ def run(test, params, env):
                     (nic["nic_name"], vm.name))
             except (virt_vm.VMIPAddressMissingError,
                     virt_vm.VMAddressVerificationError):
-                renew_ip_address(session, nic["mac"], is_linux_guest)
+                renew_ip_address(nic["mac"], is_linux_guest)
             return
 
         nic_ip = utils_misc.wait_for(__get_address, timeout=360)
@@ -80,11 +83,12 @@ def run(test, params, env):
         logging.debug("\tARP table: %s", arps)
         return None
 
-    def ping_hotplug_nic(ip, mac, session, is_linux_guest):
+    def ping_hotplug_nic(ip, mac, is_linux_guest):
         status, output = utils_test.ping(ip, 10, timeout=30)
         if status != 0:
             if not is_linux_guest:
                 return status, output
+            session = vm.wait_for_serial_login(timeout=login_timeout)
             ifname = utils_net.get_linux_ifname(session, mac)
             add_route_cmd = "route add %s dev %s" % (ip, ifname)
             del_route_cmd = "route del %s dev %s" % (ip, ifname)
@@ -94,6 +98,7 @@ def run(test, params, env):
             status, output = utils_test.ping(hotnic_ip, 10, timeout=30)
             logging.info("Del the route.")
             status, output = session.cmd_output_safe(del_route_cmd)
+            session.close()
         return status, output
 
     def device_add_nic(pci_model, netdev, device_id):
@@ -165,11 +170,11 @@ def run(test, params, env):
             logging.debug("Hotplug %sth '%s' nic named '%s'",
                           nic_index, nic_model, nic_name)
             hotplug_nic = vm.hotplug_nic(**nic_params)
+            s_session.close()
             logging.info("Check if new interface gets ip address")
             hotnic_ip = get_hotplug_nic_ip(
                 vm,
                 hotplug_nic,
-                s_session,
                 guest_is_linux)
             if not hotnic_ip:
                 test.fail("Hotplug nic can not get ip address")
@@ -177,7 +182,7 @@ def run(test, params, env):
 
             logging.info("Ping guest's new ip from host")
             status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
-                                              s_session, guest_is_linux)
+                                              guest_is_linux)
             if status:
                 err_msg = "New nic failed ping test, error info: '%s'"
                 test.fail(err_msg % output)
@@ -185,12 +190,11 @@ def run(test, params, env):
             logging.info("Reboot vm after hotplug nic")
             # reboot vm via serial port since some guest can't auto up
             # hotplug nic and next step will check is hotplug nic works.
-            s_session = vm.reboot(session=s_session, serial=True)
-            vm.verify_alive()
+            session = vm.wait_for_serial_login(timeout=login_timeout)
+            vm.reboot(session, serial=True).close()
             hotnic_ip = get_hotplug_nic_ip(
                 vm,
                 hotplug_nic,
-                s_session,
                 guest_is_linux)
             if not hotnic_ip:
                 test.fail(
@@ -198,7 +202,7 @@ def run(test, params, env):
 
             logging.info("Ping guest's new ip from host")
             status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
-                                              s_session, guest_is_linux)
+                                              guest_is_linux)
             if status:
                 err_msg = "New nic failed ping test, error info: '%s'"
                 test.fail(err_msg % output)
@@ -209,7 +213,7 @@ def run(test, params, env):
             vm.resume()
             logging.info("Ping guest's new ip after resume")
             status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
-                                              s_session, guest_is_linux)
+                                              guest_is_linux)
             if status:
                 err_msg = "New nic failed ping test after stop/cont, "
                 err_msg += "error info: '%s'" % output
@@ -222,17 +226,16 @@ def run(test, params, env):
                 unplug_nic_index = random.randint(0, len(nic_hotplugged) - 1)
                 vm.hotunplug_nic(nic_hotplugged[unplug_nic_index].nic_name)
                 nic_hotplugged.pop(unplug_nic_index)
-                s_session = vm.reboot(session=s_session, serial=True)
-                vm.verify_alive()
-            s_session.close()
-    finally:
+                session = vm.wait_for_serial_login(timeout=login_timeout)
+                vm.reboot(session, serial=True).close()
         for nic in nic_hotplugged:
             vm.hotunplug_nic(nic.nic_name)
         logging.info("Re-enabling the primary link(s)")
         for nic in primary_nic:
             vm.set_link(nic.device_id, up=True)
         logging.info("Reboot vm to verify it alive after hotunplug nic(s)")
-        serial = len(vm.virtnet) > 0 and False or True
-        session = vm.reboot(serial=serial)
-        vm.verify_alive()
-        session.close()
+        session = vm.wait_for_serial_login(timeout=login_timeout)
+        vm.reboot(session, serial=True).close()
+    finally:
+        if s_session:
+            s_session.close()

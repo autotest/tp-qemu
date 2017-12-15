@@ -15,7 +15,7 @@ class BlockStream(block_copy.BlockCopy):
 
     def __init__(self, test, params, env, tag):
         super(BlockStream, self).__init__(test, params, env, tag)
-        self.base_image = self.image_file
+        self.base_image = None
         self.ext_args = {}
 
     def parser_test_args(self):

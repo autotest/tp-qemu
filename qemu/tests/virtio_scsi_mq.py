@@ -68,7 +68,8 @@ def run(test, params, env):
     images_num = int(num_queues)
     extra_image_size = params.get("image_size_extra_images", "512M")
     system_image = params.get("images")
-    system_image_drive_format = params.get("system_image_drive_format", "ide")
+    system_image_drive_format = params.get("system_image_drive_format",
+                                           "virtio_blk")
     params["drive_format_%s" % system_image] = system_image_drive_format
 
     error.context("Boot up guest with block devcie with num_queues"

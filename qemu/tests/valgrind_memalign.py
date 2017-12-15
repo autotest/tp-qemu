@@ -47,9 +47,10 @@ def run(test, params, env):
 
     time.sleep(interval)
     error.context("Verify guest status is running after cont", logging.info)
-    vm.verify_status("running")
+    vm.verify_status(params.get("expected_status", "running"))
 
     error.context("Quit guest and check the process quit normally",
                   logging.info)
-    vm.destroy(gracefully=False)
+    vm.monitor.quit()
+    vm.wait_until_dead(5, 0.5, 0.5)
     vm.verify_userspace_crash()

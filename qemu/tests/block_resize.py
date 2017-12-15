@@ -73,7 +73,13 @@ def run(test, params, env):
 
     drive_path = ""
     if params.get("os_type") == 'linux':
-        drive_id = params["blk_extra_params_%s" % data_image].split("=")[1]
+        pattern = r"(serial|wwn)=(\w+)"
+        match = re.search(pattern, params["blk_extra_params_%s"
+                          % data_image], re.M)
+        if match:
+            drive_id = match.group(2)
+        else:
+            test.fail("No available tag to get drive id")
         drive_path = utils_misc.get_linux_drive_path(session, drive_id)
         if not drive_path:
             raise error.TestError("Failed to get '%s' drive path"

@@ -60,7 +60,8 @@ class BaseVirtTest(object):
 
     def execute(self, test, params, env):
         self.initialize(test, params, env)
-        self.setup(test, params, env)
+        if params.get("gagent_serial_type") is not None:
+            self.setup(test, params, env)
         try:
             self.before_run_once(test, params, env)
             self.run_once(test, params, env)
@@ -231,23 +232,29 @@ class QemuGuestAgentTest(BaseVirtTest):
             vm = self.env.get_vm(params["main_vm"])
             vm.verify_alive()
             self.vm = vm
-            session = self._get_session(params, self.vm)
+        session = self._get_session(params, self.vm)
 
-            if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
-                logging.info("qemu-ga is already installed.")
-            else:
-                logging.info("qemu-ga is not installed.")
-                self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
+        if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
+            logging.info("qemu-ga is already installed.")
+        else:
+            logging.info("qemu-ga is not installed.")
+            self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
 
-            if self._check_ga_service(session, params.get("gagent_status_cmd")):
-                logging.info("qemu-ga service is already running.")
-            else:
-                logging.info("qemu-ga service is not running.")
-                self.gagent_start(session, self.vm)
+        if self._check_ga_service(session, params.get("gagent_status_cmd")):
+            logging.info("qemu-ga service is already running.")
+        else:
+            logging.info("qemu-ga service is not running.")
+            self.gagent_start(session, self.vm)
 
-            session.close()
+        session.close()
+        if params.get("gagent_serial_type") is not None:
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)
+        else:
+            self.gagent = guest_agent.QemuAgent(self.vm, params["gagent_name"],
+                                                params["hotplug_gagent_serial_type"],
+                                                params["char_path"],
+                                                get_supported_cmds=True)
 
     def run_once(self, test, params, env):
         BaseVirtTest.run_once(self, test, params, env)
@@ -256,7 +263,8 @@ class QemuGuestAgentTest(BaseVirtTest):
             vm = self.env.get_vm(params["main_vm"])
             vm.verify_alive()
             self.vm = vm
-            self.gagent_verify(self.params, self.vm)
+            if params.get("gagent_serial_type") is not None:
+                self.gagent_verify(self.params, self.vm)
 
     def cleanup(self, test, params, env):
         self._cleanup_open_session()
@@ -885,6 +893,100 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # Finally, do something after thaw.
         self._action_after_fsthaw(test, params, env)
 
+    @error_context.context_aware
+    def gagent_check_hotplug_virtio_console(self, test, params, env):
+        """
+        hotplug guest agent device
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def cmd_qmp_log(vm, cmd, args):
+            """
+            log the qmp command and its output
+
+            :param vm: VM object
+            :param cmd: the qmp command
+            :param args: the parameters of qmp command
+            """
+            logging.debug("[qmp cmd %s] %s" % (cmd, args))
+            reply = vm.monitor.cmd_qmp(cmd, args)
+            logging.debug("[qmp reply] %s" % reply)
+            if "error" in reply:
+                if reply["error"]["class"] == "CommandNotFound":
+                    raise error.TestNAError("qmp command %s not supported"
+                                            % cmd)
+                else:
+                    raise error.TestFail("qmp error: %s" % reply["error"]["desc"])
+            return reply
+
+        def pci_serial_add(vm, name, chardev):
+            """
+            send the device_add cmd
+
+            :param vm: VM object
+            :name: id of device 
+            :chardev: id of chardev
+            """
+            reply = cmd_qmp_log(vm, 'device_add', {'driver': 'virtserialport',
+                                                   'id': name,
+                                                   'name': 'org.qemu.guest_agent.0',
+                                                   'chardev': chardev})
+            return reply
+
+        def chardev_add(vm, name, kind, args):
+            """
+            send the chardev-add cmd
+
+            :param vm: VM object
+            :param name: id of chardev
+            :param kind: type of chardev
+            :param args: parameters of backend
+            """
+            backend = {'type': kind, 'data': args}
+            reply = cmd_qmp_log(vm, 'chardev-add', {'id': name,
+                                                    'backend': backend})
+            return reply
+
+        def device_del(vm, name):
+            """
+            send device_del cmd
+
+            :param vm: VM object
+            :param name: id of device
+            """
+            reply = cmd_qmp_log(vm, 'device_del', {'id': name})
+            return reply
+
+        def chardev_del(vm, name):
+            """
+            send chardev-remove cmd
+
+            :param vm: VM object
+            :param name: id of chardev
+            """
+            reply = cmd_qmp_log(vm, 'chardev-remove', {'id': name})
+            return reply
+
+        char_id = params["char_id"]
+        char_path = params["char_path"]
+        dev_driver = params["dev_driver"]
+        dev_id = params["dev_id"]
+        dev_name = params["dev_name"]
+        self.vm.verify_alive()
+        args = {'addr': {'type': 'unix', 'data': {'path': char_path}}}
+        error_context.context("hotplug guest agent device", logging.info)
+        chardev_add(self.vm, char_id, "socket", args)
+        pci_serial_add(self.vm, dev_id, char_id)
+        error_context.context("install and start guest agent", logging.info)
+        self.setup(test, params, env)
+        self.gagent_verify(params, self.vm)
+        error_context.context("hot unplug guest agent device", logging.info)
+        device_del(self.vm, dev_id)
+        chardev_del(self.vm, char_id)
+        self.vm.verify_alive()
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 
@@ -935,24 +1037,30 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             vm = self.env.get_vm(params["main_vm"])
             vm.verify_alive()
             self.vm = vm
-            session = self._get_session(params, self.vm)
+        session = self._get_session(params, self.vm)
 
-            if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
-                logging.info("qemu-ga is already installed.")
-            else:
-                logging.info("qemu-ga is not installed.")
-                self.setup_gagent_in_host(session, params, self.vm)
-                self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
+        if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
+            logging.info("qemu-ga is already installed.")
+        else:
+            logging.info("qemu-ga is not installed.")
+            self.setup_gagent_in_host(session, params, self.vm)
+            self.gagent_install(session, self.vm, *[params.get("gagent_install_cmd")])
 
-            if self._check_ga_service(session, params.get("gagent_status_cmd")):
-                logging.info("qemu-ga service is already running.")
-            else:
-                logging.info("qemu-ga service is not running.")
-                self.gagent_start(session, self.vm)
+        if self._check_ga_service(session, params.get("gagent_status_cmd")):
+            logging.info("qemu-ga service is already running.")
+        else:
+            logging.info("qemu-ga service is not running.")
+            self.gagent_start(session, self.vm)
 
-            session.close()
+        session.close()
+        if params.get("gagent_serial_type") is not None:
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
-            self.gagent_create(params, vm, *args)
+            self.gagent_create(params, self.vm, *args)
+        else:
+            self.gagent = guest_agent.QemuAgent(self.vm, params["gagent_name"],
+                                                params["hotplug_gagent_serial_type"],
+                                                params["char_path"],
+                                                get_supported_cmds=True)
 
 
 def run(test, params, env):

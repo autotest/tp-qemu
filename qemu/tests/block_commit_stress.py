@@ -49,25 +49,6 @@ class BlockCommitStress(blk_commit.BlockCommit):
         session.close()
         return status == 0
 
-    def verify_backingfile(self):
-        """
-        check no backingfile found after commit job done via qemu-img info;
-        """
-        logging.info("Check image backing-file")
-        exp_img_file = self.params["expected_image_file"]
-        exp_img_file = utils_misc.get_path(self.data_dir, exp_img_file)
-        logging.debug("Expected image file read from config file is '%s'" % exp_img_file)
-
-        backingfile = self.get_backingfile("monitor")
-        if backingfile:
-            logging.info("Got backing-file: #{0}# by 'info/query block' in #{1}# "
-                         "monitor".format(backingfile, self.vm.monitor.protocol))
-        if exp_img_file == backingfile:
-            logging.info("check backing file with monitor passed")
-        else:
-            self.test.fail("backing file is different with the expected one. "
-                           "expecting: %s, actual: %s" % (exp_img_file, backingfile))
-
 
 def run(test, params, env):
     """

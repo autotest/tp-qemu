@@ -1,4 +1,6 @@
 import re
+import time
+import random
 import logging
 
 from virttest import utils_misc
@@ -36,9 +38,11 @@ class BlockCommit(block_copy.BlockCopy):
             self.test.fail("no active job found")
         logging.info("block commit job running, with limited speed {0} B/s".format(default_speed))
 
-    def create_snapshots(self):
+    def create_snapshots(self, create_file=True):
         """
         create live snapshot_chain, snapshots chain define in $snapshot_chain
+
+        :param create_file, create file inside guest or not
         """
         image_format = self.params["snapshot_format"]
         snapshots = self.params["snapshot_chain"].split()
@@ -55,8 +59,12 @@ class BlockCommit(block_copy.BlockCopy):
                 logging.info("expect file: {0}, opening file: {1}".format(snapshot, image_file))
                 self.test.fail("create snapshot '%s' failed" % snapshot)
             self.trash_files.append(snapshot)
-            #create file inside guest after each snapshot
-            self.create_file("%s_%s" % (guest_file_name, snapshot_name))
+            # By default, create file inside guest after each snapshot,
+            # or sleep for a while for vm to generate data by itself.
+            if create_file:
+                self.create_file("%s_%s" % (guest_file_name, snapshot_name))
+            else:
+                time.sleep(random.uniform(10, 100))
 
     def verify_backingfile(self):
         """

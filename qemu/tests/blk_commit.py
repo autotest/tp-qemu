@@ -75,12 +75,14 @@ class BlockCommit(block_copy.BlockCopy):
         exp_img_file = utils_misc.get_path(self.data_dir, exp_img_file)
         logging.debug("Expected image file read from config file is '%s'" % exp_img_file)
 
-        backingfile = self.get_backingfile("monitor")
-        if backingfile:
+        backingfile_monitor = self.get_backingfile("monitor")
+        backingfile_qemu_img = self.get_backingfile("qemu_img")
+        if backingfile_monitor:
             logging.info("Got backing-file: #{0}# by 'info/query block' in #{1}# "
-                         "monitor".format(backingfile, self.vm.monitor.protocol))
-        if exp_img_file == backingfile:
-            logging.info("check backing file with monitor passed")
+                         "monitor".format(backingfile_monitor, self.vm.monitor.protocol))
+        if exp_img_file == backingfile_monitor == backingfile_qemu_img:
+            logging.info("check backing file with monitor and qemu-img passed")
         else:
             self.test.fail("backing file is different with the expected one. "
-                           "expecting: %s, actual: %s" % (exp_img_file, backingfile))
+                           "expecting: %s, monitor feedback: %s, qemu-img feedback %s" %
+                           (exp_img_file, backingfile_monitor, backingfile_qemu_img))

@@ -11,15 +11,15 @@ from qemu.tests import block_copy
 class BlockCommit(block_copy.BlockCopy):
     def __init__(self, test, params, env, tag):
         super(BlockCommit, self).__init__(test, params, env, tag)
+        self.base_image = self.params["base_image"]
+        self.top_image = self.params["top_image"]
 
     def start(self):
         """
         start block device committing job;
         """
-        base_image = self.params["base_image"]
-        base_image = utils_misc.get_path(self.data_dir, base_image)
-        top_image = self.params["top_image"]
-        top_image = utils_misc.get_path(self.data_dir, top_image)
+        base_image = utils_misc.get_path(self.data_dir, self.base_image)
+        top_image = utils_misc.get_path(self.data_dir, self.top_image)
         default_speed = self.params.get("default_speed")
         backing_file = self.params.get("backing_file", None)
         if backing_file is not None:

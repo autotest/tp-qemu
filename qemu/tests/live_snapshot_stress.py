@@ -2,7 +2,8 @@ import logging
 
 from virttest import utils_misc
 from virttest import utils_test
-from autotest.client.shared import error
+from virttest import error_context
+
 from qemu.tests import live_snapshot_basic
 
 
@@ -11,20 +12,21 @@ class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
     def __init__(self, test, params, env, tag):
         super(LiveSnapshotStress, self).__init__(test, params, env, tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def load_stress(self):
         """
         load IO/CPU/Memory stress in guest;
         """
-        error.context("launch stress app in guest", logging.info)
+        error_context.context("launch stress app in guest", logging.info)
         args = (self.test, self.params, self.env, self.params["stress_test"])
         bg_test = utils_test.BackgroundTest(utils_test.run_virt_sub_test, args)
         bg_test.start()
         if not utils_misc.wait_for(bg_test.is_alive, first=10, step=3, timeout=100):
-            raise error.TestFail("background test start failed")
+            self.test.fail("background test start failed")
         if not utils_misc.wait_for(self.stress_app_running, timeout=360, step=5):
-            raise error.TestFail("stress app isn't running")
+            self.test.fail("stress app isn't running")
 
+    @error_context.context_aware
     def unload_stress(self):
         """
         stop stress app
@@ -35,7 +37,7 @@ class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
             session.sendline(cmd)
             return not self.stress_app_running()
 
-        error.context("stop stress app in guest", logging.info)
+        error_context.context("stop stress app in guest", logging.info)
         utils_misc.wait_for(_unload_stress, first=2.0,
                             text="wait stress app quit", step=1.0, timeout=120)
 
@@ -49,7 +51,7 @@ class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
         return status == 0
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     live_snapshot_stress test:

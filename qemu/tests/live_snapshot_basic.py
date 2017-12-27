@@ -51,7 +51,8 @@ class LiveSnapshot(block_copy.BlockCopy):
         """
         Get path of snapshot file.
         """
-        snapshot_file = "images/%s" % self.snapshot_file
+        image_format = self.params["image_format"]
+        snapshot_file = "images/%s.%s" % (self.snapshot_file, image_format)
         return utils_misc.get_path(data_dir.get_data_dir(), snapshot_file)
 
     def create_snapshot(self):
@@ -63,6 +64,7 @@ class LiveSnapshot(block_copy.BlockCopy):
             self.snapshot_file = self.create_image()
         else:
             self.snapshot_file = self.get_snapshot_file()
+        self.trash_files.append(self.snapshot_file)
         logging.info("Creating snapshot")
         self.vm.monitor.live_snapshot(self.device, self.snapshot_file,
                                       **self.snapshot_args)

@@ -5,13 +5,13 @@ import re
 
 import aexpect
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import utils_package
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM migration test:
@@ -63,7 +63,7 @@ def run(test, params, env):
             logging.info("sleep %ds waiting guest test start.", timeout)
             time.sleep(timeout)
         if not bg.is_alive():
-            raise error.TestFail("Failed to start guest test!")
+            test.fail("Failed to start guest test!")
 
     def guest_stress_deamon():
         """
@@ -142,7 +142,7 @@ def run(test, params, env):
             failed_msg += " dmesg from guest is: %s\n" % dmesg
 
         if failed_msg:
-            raise error.TestFail(failed_msg)
+            test.fail(failed_msg)
 
     login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))
@@ -173,6 +173,11 @@ def run(test, params, env):
 
         # Start some process in the background (and leave the session open)
         background_command = params.get("migration_bg_command", "")
+
+        # check whether tcpdump is installed
+        if "tcpdump" in background_command:
+            if not utils_package.package_install("tcpdump", session):
+                test.cancel("Please install tcpdump to proceed")
         session.sendline(background_command)
         time.sleep(5)
 
@@ -182,8 +187,8 @@ def run(test, params, env):
 
         try:
             check_command = params.get("migration_bg_check_command", "")
-            error.context("Checking the background command in the guest "
-                          "pre migration", logging.info)
+            error_context.context("Checking the background command in the "
+                                  "guest pre migration", logging.info)
             session2.cmd(check_command, timeout=30)
             session2.close()
 
@@ -227,8 +232,8 @@ def run(test, params, env):
             logging.info("Logged in after migration")
 
             # Make sure the background process is still running
-            error.context("Checking the background command in the guest "
-                          "post migration", logging.info)
+            error_context.context("Checking the background command in the "
+                                  "guest post migration", logging.info)
             session2.cmd(check_command, timeout=30)
 
             # Get the output of migration_test_command
@@ -243,8 +248,8 @@ def run(test, params, env):
                              utils_misc.format_str_for_message(reference_output))
                 logging.info("Output after:" +
                              utils_misc.format_str_for_message(output))
-                raise error.TestFail("Command '%s' produced different output "
-                                     "before and after migration" % test_command)
+                test.fail("Command '%s' produced different output "
+                          "before and after migration" % test_command)
 
         finally:
             # Kill the background process

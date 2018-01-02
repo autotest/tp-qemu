@@ -2,13 +2,13 @@ import os
 import re
 import logging
 
-from autotest.client.shared import error
 from autotest.client import utils
 
 from virttest import utils_misc
 from virttest import funcatexit
 from virttest import utils_test
 from virttest import data_dir
+from virttest import error_context
 from virttest.staging import utils_memory
 
 from generic.tests import autotest_control
@@ -53,7 +53,7 @@ def get_tmpfs_write_speed():
         os.removedirs("/tmp/test_speed")
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu numa stress test:
@@ -70,8 +70,7 @@ def run(test, params, env):
     """
     host_numa_node = utils_misc.NumaInfo()
     if len(host_numa_node.online_nodes) < 2:
-        raise error.TestNAError("Host only has one NUMA node, "
-                                "skipping test...")
+        test.cancel("Host only has one NUMA node, cancelling the test...")
 
     timeout = float(params.get("login_timeout", 240))
     test_count = int(params.get("test_count", 4))
@@ -100,8 +99,8 @@ def run(test, params, env):
     utils_memory.drop_caches()
 
     if utils_memory.freememtotal() < tmpfs_size:
-        raise error.TestNAError("Host does not have enough free memory to run the test, "
-                                "skipping test...")
+        test.cancel("Host does not have enough free memory to run the test, "
+                    "cancelling test...")
 
     if not os.path.isdir(tmpfs_path):
         os.mkdir(tmpfs_path)
@@ -114,39 +113,37 @@ def run(test, params, env):
             os.remove(memory_file)
         utils_memory.drop_caches()
         if utils_memory.freememtotal() < tmpfs_size:
-            raise error.TestError("Don't have enough memory to execute this "
-                                  "test after %s round" % test_round)
-        error.context("Executing stress test round: %s" % test_round,
-                      logging.info)
+            test.error("Don't have enough memory to execute this "
+                       "test after %s round" % test_round)
+        error_context.context("Executing stress test round: %s" % test_round,
+                              logging.info)
         numa_node_malloc = most_used_node
         numa_dd_cmd = "numactl -m %s %s" % (numa_node_malloc, dd_cmd)
-        error.context("Try to allocate memory in node %s" % numa_node_malloc,
-                      logging.info)
+        error_context.context("Try to allocate memory in node %s" % numa_node_malloc,
+                              logging.info)
         try:
             utils_misc.mount("none", tmpfs_path, "tmpfs", perm=mount_fs_size)
             funcatexit.register(env, params.get("type"), utils_misc.umount,
-                                "none", tmpfs_path, "tmpfs")
+                                None, tmpfs_path, "tmpfs")
             utils.system(numa_dd_cmd, timeout=dd_timeout)
         except Exception, error_msg:
             if "No space" in str(error_msg):
                 pass
             else:
-                raise error.TestFail("Can not allocate memory in node %s."
-                                     " Error message:%s" % (numa_node_malloc,
-                                                            str(error_msg)))
-        error.context("Run memory heavy stress in guest", logging.info)
+                test.fail("Can not allocate memory in node %s. Error message: "
+                          "%s" % (numa_node_malloc, str(error_msg)))
+        error_context.context("Run memory heavy stress in guest", logging.info)
         autotest_control.run(test, params, env)
-        error.context("Get the qemu process memory use status", logging.info)
+        error_context.context("Get the qemu process memory use status", logging.info)
         node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
         if node_after == most_used_node and memory_after >= memory_used:
-            raise error.TestFail("Memory still stick in "
-                                 "node %s" % numa_node_malloc)
+            test.fail("Memory still stick in node %s" % numa_node_malloc)
         else:
             most_used_node = node_after
             memory_used = memory_after
-        utils_misc.umount("none", tmpfs_path, "tmpfs")
+        utils_misc.umount(None, tmpfs_path, "tmpfs")
         funcatexit.unregister(env, params.get("type"), utils_misc.umount,
-                              "none", tmpfs_path, "tmpfs")
+                              None, tmpfs_path, "tmpfs")
         session.cmd("sync; echo 3 > /proc/sys/vm/drop_caches")
         utils_memory.drop_caches()
 

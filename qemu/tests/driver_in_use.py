@@ -37,9 +37,11 @@ def run(test, params, env):
         session.close()
         return bool(process)
 
-    def run_bg_stress_test(bg_stress_test):
+    def run_bg_test_simu(bg_stress_test):
         """
-        Run backgroud test.
+        Run backgroud test simultaneously with main_test.
+        background test: e.g. rng_bat/balloon_test/netperf ...
+        main test: e.g reboot/shutdown/stop/cont/driver_load ...
 
         :param bg_stress_test: Background test.
         :return: return the background case thread if it's successful;
@@ -77,15 +79,22 @@ def run(test, params, env):
         env["bg_status"] = 1
         return stress_thread
 
-    def run_subtest(sub_type):
+    def run_bg_test_sep(sub_type):
         """
-        Run sub test which include main test and background test.
-        main test: e.g. reboot/shutdown/migration/stop/cont ...
+        Run background test separately with main_test.
         background test: e.g. rng_bat/balloon_test/netperf ...
+        main test: e.g. reboot/shutdown/stop/cont/driver_load ...
 
-        :params: sub_type: Sub test.
+        :params: sub_type: Background test.
         """
-        utils_test.run_virt_sub_test(test, params, env, sub_type)
+        if params.get("bg_stress_test_is_cmd", "no") == "yes":
+            session = vm.wait_for_login()
+            sub_type = utils_misc.set_winutils_letter(
+                session, sub_type)
+            session.cmd(sub_type, timeout=600)
+            session.close()
+        else:
+            utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     driver = params["driver_name"]
     timeout = int(params.get("login_timeout", 360))
@@ -107,24 +116,24 @@ def run(test, params, env):
     error_context.context("Run %s %s %s" % (main_test, run_bg_flag,
                                             bg_stress_test), logging.info)
     if run_bg_flag == "before_bg_test":
-        run_subtest(main_test)
+        utils_test.run_virt_sub_test(test, params, env, main_test)
         if vm.is_dead():
             vm.create(params=params)
-        run_subtest(bg_stress_test)
+        run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "during_bg_test":
-        stress_thread = run_bg_stress_test(bg_stress_test)
+        stress_thread = run_bg_test_simu(bg_stress_test)
         stop_time = time.time() + wait_time
         while time.time() < stop_time:
             if env["bg_status"] == 1:
-                run_subtest(main_test)
+                utils_test.run_virt_sub_test(test, params, env, main_test)
                 break
         if stress_thread:
             stress_thread.join(timeout=timeout,
                                suppress_exception=suppress_exception)
         if vm.is_alive():
-            run_subtest(bg_stress_test)
+            run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "after_bg_test":
-        run_subtest(bg_stress_test)
+        run_bg_test_sep(bg_stress_test)
         if vm.is_dead():
             vm.create(params=params)
-        run_subtest(main_test)
+        utils_test.run_virt_sub_test(test, params, env, main_test)

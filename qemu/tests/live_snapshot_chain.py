@@ -62,6 +62,25 @@ def run(test, params, env):
                 cmd = cmd[8:]
                 vm.monitor.send_args_cmd(cmd)
 
+    def cleanup_images(snapshot_chain, params):
+        if not params.get("remove_snapshot_images"):
+            return []
+        errs = []
+        for index, image in enumerate(snapshot_chain):
+            try:
+                image_params = params.object_params(image)
+                if index != 0:
+                    image = qemu_storage.QemuImg(
+                        image_params, data_dir.get_data_dir(), image)
+                    if not os.path.exists(image.image_filename):
+                        errs.append("Image %s was not created during test."
+                                    % image.image_filename)
+                    image.remove()
+            except Exception as details:
+                errs.append("Fail to remove image %s: %s"
+                            % (image.image_filename, details))
+        return errs
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -79,97 +98,99 @@ def run(test, params, env):
 
     md5_value = {}
     files_in_guest = {}
-    for index, image in enumerate(snapshot_chain):
-        image_params = params.object_params(image)
-        if image_params.get("file_create"):
-            session.cmd(dir_create_cmd % file_dir)
-        if index > 0:
-            snapshot_file = storage.get_image_filename(image_params,
-                                                       data_dir.get_data_dir())
-            base_image = get_base_image(snapshot_chain, image)
-            base_image_params = params.object_params(base_image)
-            base_file = storage.get_image_filename(base_image_params,
-                                                   data_dir.get_data_dir())
-            snapshot_format = image_params.get("image_format")
-
-            error.context("Do pre snapshot operates", logging.info)
-            if image_params.get("pre_snapshot_cmd"):
-                do_operate(image_params, "pre_snapshot_cmd")
-
-            error.context("Do live snapshot ", logging.info)
-            vm.live_snapshot(base_file, snapshot_file, snapshot_format)
-
-            error.context("Do post snapshot operates", logging.info)
-            if image_params.get("post_snapshot_cmd"):
-                do_operate(image_params, "post_snapshot_cmd")
-            md5 = ""
-            if image_params.get("file_create"):
-                session.cmd(file_create_cmd % image)
-                md5 = session.cmd_output(md5_cmd % image)
-            md5_value[image] = md5_value[base_image].copy()
-            md5_value[image].update({image: md5})
-        elif index == 0:
-            md5 = ""
-            if params.get("file_create"):
-                session.cmd(file_create_cmd % image)
-                md5 = session.cmd_output(md5_cmd % image)
-            md5_value[image] = {image: md5}
-        if image_params.get("check_alive_cmd"):
-            session.cmd(image_params.get("check_alive_cmd"))
-        if image_params.get("file_create"):
-            files_check = session.cmd(file_check_cmd % file_dir)
-            files_in_guest[image] = files_check
-    session.close()
-
-    error.context("Reboot guest", logging.info)
-    if image_params.get("need_reboot", "no") == "yes":
-        vm.monitor.cmd("system_reset")
-        vm.verify_alive()
-
-    error.context("Do base files check", logging.info)
-    snapshot_chain_backward = snapshot_chain[:]
-    snapshot_chain_backward.reverse()
-    for index, image in enumerate(snapshot_chain_backward):
-        image_params = params.object_params(image)
-        if image_params.get("check_base_image"):
-            vm.destroy()
-            vm.create(params=image_params)
-            vm.verify_alive()
-
-            session = vm.wait_for_login(timeout=timeout)
-            if image_params.get("file_create"):
-                for file in md5_value[image]:
-                    md5 = session.cmd_output(md5_cmd % file)
-                    if md5 != md5_value[image][file]:
-                        error_message = "File %s in image %s changed " %\
-                                        (file, image)
-                        error_message += "from '%s' to '%s'(md5)" %\
-                                         (md5_value[image][file], md5)
-                        raise error.TestFail(error_message)
-                files_check = session.cmd(file_check_cmd % file_dir)
-                if files_check != files_in_guest[image]:
-                    error_message = "Files in image %s is not as expect:" %\
-                                    image
-                    error_message += "Before shut down: %s" %\
-                        files_in_guest[image]
-                    error_message += "Now: %s" % files_check
-                    raise error.TestFail(error_message)
-            if image_params.get("image_check"):
-                image = qemu_storage.QemuImg(
-                    image_params, data_dir.get_data_dir(), image)
-                image.check_image(image_params, data_dir.get_data_dir())
-            session.close()
-
-    error.context("Remove snapshot images", logging.info)
-    if vm.is_alive():
-        vm.destroy()
-    if params.get("remove_snapshot_images"):
+    try:
         for index, image in enumerate(snapshot_chain):
             image_params = params.object_params(image)
-            if index != 0:
-                image = qemu_storage.QemuImg(
-                    image_params, data_dir.get_data_dir(), image)
-                test.assertTrue(os.path.exists(image.image_filename),
-                                "Produced snapshot is not present in "
-                                "filesystem: %s." % image.image_filename)
-                image.remove()
+            if image_params.get("file_create"):
+                session.cmd(dir_create_cmd % file_dir)
+            if index > 0:
+                snapshot_file = storage.get_image_filename(image_params,
+                                                           data_dir.get_data_dir())
+                base_image = get_base_image(snapshot_chain, image)
+                base_image_params = params.object_params(base_image)
+                base_file = storage.get_image_filename(base_image_params,
+                                                       data_dir.get_data_dir())
+                snapshot_format = image_params.get("image_format")
+
+                error.context("Do pre snapshot operates", logging.info)
+                if image_params.get("pre_snapshot_cmd"):
+                    do_operate(image_params, "pre_snapshot_cmd")
+
+                error.context("Do live snapshot ", logging.info)
+                vm.live_snapshot(base_file, snapshot_file, snapshot_format)
+
+                error.context("Do post snapshot operates", logging.info)
+                if image_params.get("post_snapshot_cmd"):
+                    do_operate(image_params, "post_snapshot_cmd")
+                md5 = ""
+                if image_params.get("file_create"):
+                    session.cmd(file_create_cmd % image)
+                    md5 = session.cmd_output(md5_cmd % image)
+                md5_value[image] = md5_value[base_image].copy()
+                md5_value[image].update({image: md5})
+            elif index == 0:
+                md5 = ""
+                if params.get("file_create"):
+                    session.cmd(file_create_cmd % image)
+                    md5 = session.cmd_output(md5_cmd % image)
+                md5_value[image] = {image: md5}
+            if image_params.get("check_alive_cmd"):
+                session.cmd(image_params.get("check_alive_cmd"))
+            if image_params.get("file_create"):
+                files_check = session.cmd(file_check_cmd % file_dir)
+                files_in_guest[image] = files_check
+        session.close()
+
+        error.context("Reboot guest", logging.info)
+        if image_params.get("need_reboot", "no") == "yes":
+            vm.monitor.cmd("system_reset")
+            vm.verify_alive()
+
+        error.context("Do base files check", logging.info)
+        snapshot_chain_backward = snapshot_chain[:]
+        snapshot_chain_backward.reverse()
+
+        for index, image in enumerate(snapshot_chain_backward):
+            image_params = params.object_params(image)
+            if image_params.get("check_base_image"):
+                vm.destroy()
+                vm.create(params=image_params)
+                vm.verify_alive()
+
+                session = vm.wait_for_login(timeout=timeout)
+                if image_params.get("file_create"):
+                    for file in md5_value[image]:
+                        md5 = session.cmd_output(md5_cmd % file)
+                        if md5 != md5_value[image][file]:
+                            error_message = "File %s in image %s changed " %\
+                                            (file, image)
+                            error_message += "from '%s' to '%s'(md5)" %\
+                                             (md5_value[image][file], md5)
+                            raise error.TestFail(error_message)
+                    files_check = session.cmd(file_check_cmd % file_dir)
+                    if files_check != files_in_guest[image]:
+                        error_message = "Files in image %s is not as expect:" %\
+                                        image
+                        error_message += "Before shut down: %s" %\
+                            files_in_guest[image]
+                        error_message += "Now: %s" % files_check
+                        raise error.TestFail(error_message)
+                if image_params.get("image_check"):
+                    image = qemu_storage.QemuImg(
+                        image_params, data_dir.get_data_dir(), image)
+                    image.check_image(image_params, data_dir.get_data_dir())
+                session.close()
+
+        error.context("Remove snapshot images", logging.info)
+        if vm.is_alive():
+            vm.destroy()
+        errs = cleanup_images(snapshot_chain, params)
+        test.assertFalse(errs, "Errors occurred while removing images:\n%s"
+                         % "\n".join(errs))
+    except Exception as details:
+        error.context("Force-cleaning after exception: %s" % details,
+                      logging.error)
+        if vm.is_alive():
+            vm.destroy()
+        cleanup_images(snapshot_chain, params)
+        raise

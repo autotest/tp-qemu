@@ -1,13 +1,12 @@
 import logging
 import re
+import time
 
 from autotest.client import utils
-from autotest.client.shared import error
-
-from virttest import utils_misc
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM Autotest set boot order for multiple NIC and block devices
@@ -21,7 +20,8 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    error.context("Boot vm by passing boot order decided", logging.info)
+    error_context.context("Boot vm by passing boot order decided",
+                          logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -36,11 +36,11 @@ def run(test, params, env):
 
     timeout = int(params.get("login_timeout", 240))
     bootorder_type = params.get("bootorder_type")
-    backspace_char = params.get("backspace_char")
     boot_fail_infos = params.get("boot_fail_infos")
     bootorder = params.get("bootorder")
     nic_addr_filter = params.get("nic_addr_filter")
     output = None
+    result = None
     list_nic_addr = []
 
     # As device id in the last line of info pci output
@@ -74,25 +74,14 @@ def run(test, params, env):
                                          list_nic_addr[1][0],
                                          list_nic_addr[2][0])
 
-    error.context("Check the guest boot result", logging.info)
-    if bootorder_type == "type2":
-        session_serial = vm.wait_for_serial_login(timeout=timeout)
+    error_context.context("Check the guest boot result", logging.info)
+    start = time.time()
+    while True:
         output = vm.serial_console.get_stripped_output()
-        session_serial.close()
-    else:
-        output = vm.serial_console.get_stripped_output()
-        utils_misc.wait_for(lambda: re.search("No bootable device.", output),
-                            timeout, 1)
-        output = vm.serial_console.get_stripped_output()
-
-    # find and replace some ascii characters to non-ascii char,
-    # like as: '\b' (backspace)
-    if backspace_char:
-        data = re.sub(r".%s" % backspace_char, "", output)
-    else:
-        data = output
-    result = re.findall(boot_fail_infos, data, re.S | re.M | re.I)
-
+        result = re.findall(boot_fail_infos, output, re.S | re.I)
+        if result or time.time() > start + timeout:
+            break
+        time.sleep(1)
     if not result:
-        raise error.TestFail("Got a wrong boot order, "
-                             "Excepted order: '%s'" % bootorder)
+        test.fail("Timeout when try to get expected boot order: "
+                  "'%s', actual result: '%s'" % (bootorder, output))

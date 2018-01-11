@@ -404,7 +404,7 @@ def run(test, params, env):
         vm.copy_files_to(cpuflags_src, dst_dir)
         session.cmd("sync")
         session.cmd("cd %s; make EXTRA_FLAGS='';" %
-                    os.path.join(dst_dir, "cpu_flags"))
+                    os.path.join(dst_dir, "src"))
         session.cmd("sync")
         session.close()
 
@@ -425,7 +425,7 @@ def run(test, params, env):
             try:
                 for tc in utils_misc.kvm_map_flags_to_test[f]:
                     session.cmd("%s/cpuflags-test --%s" %
-                                (os.path.join(path, "cpu_flags"), tc))
+                                (os.path.join(path, "src"), tc))
                 pass_Flags.append(f)
             except aexpect.ShellCmdError:
                 not_working.append(f)
@@ -449,7 +449,7 @@ def run(test, params, env):
                             " bs=10MB count=100 &")
         try:
             stress_session.cmd("%s/cpuflags-test --stress %s%s" %
-                               (os.path.join(install_path, "cpu_flags"), smp,
+                               (os.path.join(install_path, "src"), smp,
                                 utils_misc.kvm_flags_to_stresstests(flags[0])),
                                timeout=timeout)
         except aexpect.ShellTimeoutError:
@@ -510,9 +510,12 @@ def run(test, params, env):
 
         def clean(self):
             logging.info("cleanup")
-            if (hasattr(self, "vm")):
-                vm = getattr(self, "vm")
+            vm = getattr(self, "vm", None)
+            if vm:
                 vm.destroy(gracefully=False)
+            clone = getattr(self, "clone", None)
+            if clone:
+                clone.destroy(gracefully=False)
 
     # 1) <qemu-kvm-cmd> -cpu ?model
     class test_qemu_cpu_model(MiniSubtest):
@@ -757,10 +760,6 @@ def run(test, params, env):
                 raise error.TestFail("Stress test ended before"
                                      " end of test.")
 
-        def clean(self):
-            logging.info("cleanup")
-            self.vm.destroy(gracefully=False)
-
     # 5) Online/offline CPU
     class test_online_offline_guest_CPUs(Test_temp):
 
@@ -828,13 +827,17 @@ def run(test, params, env):
             install_cpuflags_test_on_vm(self.vm, install_path)
             flags = check_cpuflags_work(self.vm, install_path,
                                         flags.guest_flags)
+            test.assertTrue(flags[0], "No cpuflags passed the check: %s"
+                            % str(flags))
+            test.assertFalse(flags[1], "Some cpuflags failed the check: %s"
+                             % str(flags))
             dd_session = self.vm.wait_for_login()
             stress_session = self.vm.wait_for_login()
 
-            dd_session.sendline("nohup dd if=/dev/[svh]da of=/tmp/"
+            dd_session.sendline("nohup dd if=$(echo /dev/[svh]da) of=/tmp/"
                                 "stressblock bs=10MB count=100 &")
             cmd = ("nohup %s/cpuflags-test --stress  %s%s &" %
-                   (os.path.join(install_path, "cpu_flags"), smp,
+                   (os.path.join(install_path, "src"), smp,
                     utils_misc.kvm_flags_to_stresstests(flags[0])))
             stress_session.sendline(cmd)
 
@@ -853,22 +856,23 @@ def run(test, params, env):
                 self.vm.monitor.migrate_set_downtime(1)
                 self.vm.wait_for_migration(mig_timeout)
 
-            # Swap due to test cleaning.
-            temp = self.vm.clone(copy_state=True)
-            self.vm.__dict__ = self.clone.__dict__
-            self.clone = temp
+            self.clone.resume()
+            self.vm.destroy(gracefully=False)
 
-            self.vm.resume()
-            self.clone.destroy(gracefully=False)
-
-            stress_session = self.vm.wait_for_login()
+            stress_session = self.clone.wait_for_login()
 
             # If cpuflags-test hang up during migration test raise exception
             try:
                 stress_session.cmd('killall cpuflags-test')
             except aexpect.ShellCmdError:
-                raise error.TestFail("Cpuflags-test should work after"
-                                     " migration.")
+                raise error.TestFail("Stress cpuflags-test should be still "
+                                     "running after migration.")
+            try:
+                stress_session.cmd("ls /tmp/stressblock && "
+                                   "rm -f /tmp/stressblock")
+            except aexpect.ShellCmdError:
+                raise error.TestFail("Background 'dd' command failed to "
+                                     "produce output file.")
 
     def net_send_object(socket, obj):
         """
@@ -957,7 +961,7 @@ def run(test, params, env):
                                          "stressblock bs=10MB count=100 &")
 
                         cmd = ("nohup %s/cpuflags-test --stress  %s%s &" %
-                               (os.path.join(install_path, "cpu_flags"),
+                               (os.path.join(install_path, "src"),
                                 smp,
                                 utils_misc.kvm_flags_to_stresstests(Flags[0] &
                                                                     flags.guest_flags)))

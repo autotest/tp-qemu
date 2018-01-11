@@ -119,7 +119,7 @@ def run(test, params, env):
             except process.CmdError:
                 test.error("ndctl is not available in host!")
             ndctl_ver = process.system_output("ndctl -v", shell=True)
-            if int(ndctl_ver) < 56:
+            if float(ndctl_ver) < 56:
                 test.cancel("ndctl version should be equal or greater than 56!"
                             "Current ndctl version is %s." % ndctl_ver)
             try:

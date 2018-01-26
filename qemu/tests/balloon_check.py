@@ -20,7 +20,6 @@ class BallooningTest(MemoryBaseTest):
 
     def __init__(self, test, params, env):
         self.test_round = 0
-        self.ratio = float(params.get("ratio", 0.1))
         super(BallooningTest, self).__init__(test, params, env)
 
         self.vm = env.get_vm(params["main_vm"])
@@ -183,19 +182,20 @@ class BallooningTest(MemoryBaseTest):
         max_size = self.ori_mem
         min_size = self.params.get("minmem", "512M")
         min_size = int(float(utils_misc.normalize_data_size(min_size)))
+        balloon_buffer = self.params.get("balloon_buffer", 300)
         if self.params.get('os_type') == 'windows':
             logging.info("Get windows miminum balloon value:")
             self.vm.balloon(1)
             balloon_timeout = self.params.get("balloon_timeout", 900)
             self.wait_for_balloon_complete(balloon_timeout)
-            used_size = int(self.get_ballooned_memory() + self.ratio * self.ori_mem)
+            used_size = min((self.get_ballooned_memory() + balloon_buffer), max_size)
             self.vm.balloon(max_size)
             self.wait_for_balloon_complete(balloon_timeout)
             self.ori_gmem = self.get_memory_status()
         else:
             vm_total = self.get_memory_status()
             vm_mem_free = self.get_free_mem()
-            used_size = vm_total - vm_mem_free + 16
+            used_size = min((self.ori_mem - vm_mem_free + balloon_buffer), max_size)
         if balloon_type == "enlarge":
             min_size = self.current_mmem
         elif balloon_type == "evict":

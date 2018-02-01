@@ -193,9 +193,8 @@ class BallooningTest(MemoryBaseTest):
             self.wait_for_balloon_complete(balloon_timeout)
             self.ori_gmem = self.get_memory_status()
         else:
-            vm_total = self.get_memory_status()
             vm_mem_free = self.get_free_mem()
-            used_size = vm_total - vm_mem_free + 16
+            used_size = self.ori_mem - vm_mem_free + 300
         if balloon_type == "enlarge":
             min_size = self.current_mmem
         elif balloon_type == "evict":

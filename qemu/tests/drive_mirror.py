@@ -53,8 +53,7 @@ class DriveMirror(block_copy.BlockCopy):
                                           params["target_image"])
             return image.setup()
 
-        if (params["create_mode"] == "existing" and
-                not os.path.exists(target_image)):
+        if params["create_mode"] == "existing":
             image = qemu_storage.QemuImg(params, self.data_dir,
                                          params["target_image"])
             image.create(params)

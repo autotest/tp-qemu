@@ -58,7 +58,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     driver_name = params.get("driver_name")
 
-    if params.get("os_type") == "windows":
+    if params.get("os_type") == "windows" and driver_name:
         utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
 
     session = vm.wait_for_login(timeout=timeout)

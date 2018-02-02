@@ -109,11 +109,10 @@ def run(test, params, env):
                     controller = qdevices.QDevice(controller_model, params={"id":
                                                   "hotadded_scsi%s" % num})
                     bus_extra_param = params.get("bus_extra_params_%s" % img_list[num + 1])
-                    # TODO:Add iothread support for qdevice
-                    if bus_extra_param and "iothread" in bus_extra_param:
-                        match = re.search("iothread=(\w+)", bus_extra_param)
-                        if match:
-                            qdevice_params = {"iothread": match.group(1)}
+                    if bus_extra_param:
+                        for item in bus_extra_param.split():
+                            key, value = item.split("=", 1)
+                            qdevice_params = {key: value}
                             controller.params.update(qdevice_params)
                     controller.hotplug(vm.monitor)
                     ver_out = controller.verify_hotplug("", vm.monitor)
@@ -134,10 +133,10 @@ def run(test, params, env):
                 if params.get("need_controller", "no") == "yes" and bool(random.randrange(2)):
                     device.set_param("bus", controller.get_param("id")+'.0')
                 blk_extra_param = params.get("blk_extra_params_%s" % img_list[num + 1])
-                if blk_extra_param and "iothread" in blk_extra_param:
-                    match = re.search("iothread=(\w+)", blk_extra_param)
-                    if match:
-                        device.set_param("iothread", match.group(1))
+                if blk_extra_param:
+                    for item in blk_extra_param.split():
+                        key, value = item.split("=", 1)
+                        device.set_param(key, value)
                 device.hotplug(vm.monitor)
                 ver_out = device.verify_hotplug("", vm.monitor)
                 if not ver_out:

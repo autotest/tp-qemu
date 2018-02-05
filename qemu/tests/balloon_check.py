@@ -23,21 +23,22 @@ class BallooningTest(MemoryBaseTest):
         super(BallooningTest, self).__init__(test, params, env)
 
         self.vm = env.get_vm(params["main_vm"])
-        self.session = self.get_session(self.vm)
-        self.params["balloon_test_setup_ready"] = False
-        if self.params.get('os_type') == 'windows':
-            sleep_time = 180
-        else:
-            sleep_time = 90
-        logging.info("Waiting %d seconds for guest's applications up" % sleep_time)
-        time.sleep(sleep_time)
-        self.params["balloon_test_setup_ready"] = True
+        if params.get("paused_after_start_vm") != "yes":
+            self.params["balloon_test_setup_ready"] = False
+            if self.params.get('os_type') == 'windows':
+                sleep_time = 180
+            else:
+                sleep_time = 90
+            logging.info("Waiting %d seconds for guest's "
+                         "applications up" % sleep_time)
+            time.sleep(sleep_time)
+            self.params["balloon_test_setup_ready"] = True
+            self.ori_gmem = self.get_memory_status()
+            self.current_gmem = self.ori_gmem
         self.ori_mem = self.get_vm_mem(self.vm)
         self.current_mmem = self.get_ballooned_memory()
         if self.current_mmem != self.ori_mem:
             self.balloon_memory(self.ori_mem)
-        self.ori_gmem = self.get_memory_status()
-        self.current_gmem = self.ori_gmem
         self.current_mmem = self.ori_mem
 
     def get_ballooned_memory(self):

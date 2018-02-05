@@ -46,7 +46,7 @@ class BallooningTestPause(BallooningTest):
                             abs(gmem - self.old_gmem) - changed_mem) > 100):
             self.error_report(step, abs(self.old_mmem - changed_mem),
                               mmem, gmem)
-            raise exceptions.TestFail("Balloon test failed %s" % step)
+            self.test.fail("Balloon test failed %s" % step)
         return (mmem, gmem)
 
     @error_context.context_aware
@@ -64,24 +64,22 @@ class BallooningTestPause(BallooningTest):
             if self.vm.monitor.verify_status('paused'):
                 # Make sure memory not changed before the guest resumed
                 if self.get_ballooned_memory() != self.ori_mem:
-                    raise exceptions.TestFail("Memory changed before guest "
-                                              "resumed")
+                    self.test.fail("Memory changed before guest resumed")
 
                 logging.info("Resume the guest")
                 self.vm.resume()
             elif new_mem == self.get_ballooned_memory():
                 pass
             else:
-                raise exceptions.TestFail("Balloon memory fail with error"
-                                          " message: %s" % e)
+                self.test.fail("Balloon memory fail with error message:%s" % e)
         compare_mem = new_mem
         balloon_timeout = float(self.params.get("balloon_timeout", 240))
         status = utils_misc.wait_for((lambda: compare_mem ==
                                       self.get_ballooned_memory()),
                                      balloon_timeout)
         if status is None:
-            raise exceptions.TestFail("Failed to balloon memory to expect"
-                                      " value during %ss" % balloon_timeout)
+            self.test.fail("Failed to balloon memory to expect value during "
+                           "%ss" % balloon_timeout)
 
     def get_memory_boundary(self):
         """
@@ -226,8 +224,8 @@ def run(test, params, env):
         output = utils_misc.wait_for(_memory_check_after_sub_test, timeout,
                                      sleep_before_check, 5, msg)
         if output is None:
-            raise exceptions.TestFail("Check memory status failed after "
-                                      "subtest after %s seconds" % timeout)
+            test.fail("Check memory status failed after subtest "
+                      "after %s seconds" % timeout)
 
     error_context.context("Reset guest memory to original one after all the "
                           "test", logging.info)

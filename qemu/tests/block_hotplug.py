@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 
 from virttest import data_dir
 from virttest import storage
@@ -66,8 +67,10 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     disk_op_timeout = int(params.get("disk_op_timeout", 360))
     get_disk_cmd = params.get("get_disk_cmd")
+    remove_controller = False
     context_msg = "Running sub test '%s' %s"
     device_list = []
+    controller_list = []
     disk_index = params.objects("disk_index")
     disk_letter = params.objects("disk_letter")
 
@@ -90,6 +93,7 @@ def run(test, params, env):
                 disks_before_plug = find_disk(vm, get_disk_cmd)
 
                 if params.get("need_controller", "no") == "yes":
+                    remove_controller = True
                     controller_model = params.get("controller_model")
                     controller = qdevices.QDevice(controller_model)
                     bus_extra_param = params.get("bus_extra_params_%s" % img_list[num + 1])
@@ -99,6 +103,8 @@ def run(test, params, env):
                         if match:
                             qdevice_params = {"iothread": match.group(1)}
                             controller.params.update(qdevice_params)
+                    controller.set_param("id", "virtio_scsi_pci%d" % (num + 1))
+                    controller_list.append(controller)
                     controller.hotplug(vm.monitor)
                     ver_out = controller.verify_hotplug("", vm.monitor)
                     if not ver_out:
@@ -190,7 +196,12 @@ def run(test, params, env):
                                   logging.info)
             disks_before_unplug = find_disk(vm, get_disk_cmd)
             device_list[num].unplug(vm.monitor)
+            time.sleep(5)
             device_list[num].verify_unplug("", vm.monitor)
+            if remove_controller:
+                controller_list[num].unplug(vm.monitor)
+                time.sleep(5)
+                controller_list[num].verify_unplug("", vm.monitor)
             unplug_status = utils_misc.wait_for(lambda: len(get_new_disk(find_disk(vm, get_disk_cmd),
                                                 disks_before_unplug)) != 0, pause)
             if not unplug_status:

@@ -25,8 +25,12 @@ class BallooningTest(MemoryBaseTest):
 
         self.vm = env.get_vm(params["main_vm"])
         self.session = self.get_session(self.vm)
-        logging.info("Waiting 90s for guest's applications up")
-        time.sleep(90)
+        if self.params.get('os_type') == 'windows':
+            sleep_time = 180
+        else:
+            sleep_time = 90
+        logging.info("Waiting %d seconds for guest's applications up" % sleep_time)
+        time.sleep(sleep_time)
         self.ori_mem = self.get_vm_mem(self.vm)
         self.current_mmem = self.get_ballooned_memory()
         if self.current_mmem != self.ori_mem:

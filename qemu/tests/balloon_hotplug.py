@@ -5,7 +5,6 @@ from virttest.qemu_devices import qdevices
 from virttest import error_context
 from virttest import utils_test
 from qemu.tests import balloon_check
-from avocado.core import exceptions
 
 
 @error_context.context_aware
@@ -16,10 +15,10 @@ def run(test, params, env):
     1) Boot up guest w/o balloon device.
     2) Hoplug balloon device and check hotplug successfully or not.
     3) Do memory balloon.
-    4) Reboot/shutdown guest after hotplug balloon device(option)
+    4) Reboot/shutdown/migrate guest after hotplug balloon device(option)
     5) Do memory balloon after guest reboot(option)
     6) Unplug balloon device and check unplug successfully or not.
-    7) Reboot/shutdown guest after unplug balloon device(option)
+    7) Reboot/shutdown/migrate guest after unplug balloon device(option)
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -66,6 +65,11 @@ def run(test, params, env):
             err += ("\nDevice is not in qtree %ss after hotplug:\n%s"
                     % (pause, vm.monitor.info("qtree")))
 
+        # temporary workaround for migration
+        vm.params["balloon"] = "balloon%d" % idx
+        vm.params["balloon_dev_devid"] = "balloon%d" % idx
+        vm.params["balloon_dev_add_bus"] = "yes"
+
         error_context.context("Check whether balloon device work after hotplug",
                               logging.info)
         balloon_check.run(test, params, env)
@@ -92,11 +96,23 @@ def run(test, params, env):
                     % (pause, vm.monitor.info("qtree")))
         if err:
             logging.error(vm.monitor.info("qtree"))
-            raise exceptions.TestFail("Error occurred while hotpluging "
-                                      "virtio-pci. Iteration %s, monitor "
-                                      "output:%s" % (i, err))
+            test.fail("Error occurred while hotpluging "
+                      "virtio-pci. Iteration %s, monitor "
+                      "output:%s" % (i, err))
         else:
+            if params.get("migrate_after_unplug", "no") == "yes":
+                error_context.context("Migrate after hotunplug balloon device",
+                                      logging.info)
+                # temporary workaround for migration
+                del vm.params["balloon"]
+                del vm.params["balloon_dev_devid"]
+                del vm.params["balloon_dev_add_bus"]
+                vm.migrate(float(params.get("mig_timeout", "3600")))
+
             if pm_test_after_unplug:
                 run_pm_test(pm_test_after_unplug, "hot-unplug")
                 if not vm.is_alive():
                     return
+
+    error_context.context("Verify guest alive!", logging.info)
+    vm.verify_kernel_crash()

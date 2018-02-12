@@ -266,7 +266,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     def __init__(self, test, params, env):
         QemuGuestAgentTest.__init__(self, test, params, env)
-
         self.exception_list = []
 
     def gagent_check_install(self, test, params, env):
@@ -813,21 +812,23 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     @error_context.context_aware
     def _action_after_fsfreeze(self, *args):
-        error_context.context("Verfiy FS is frozen in guest.")
-        if not isinstance(args, tuple):
-            return
+        error_context.context("Verify FS is frozen in guest.", logging.info)
 
         if not self._open_session_list:
-            raise error.TestError("Could not find any opened session")
+            self.test.error("Could not find any opened session")
         # Use the last opened session to send cmd.
         session = self._open_session_list[-1]
+
+        gagent_fs_test_cmd = args[0]
+        freeze_timeout = args[1]
         try:
-            session.cmd(self.params["gagent_fs_test_cmd"])
+            # The frozen state is limited for up to 10 seconds by VSS
+            # in windows guest.
+            session.cmd(gagent_fs_test_cmd, freeze_timeout)
         except aexpect.ShellTimeoutError:
-            logging.debug("FS freeze successfully.")
+            logging.info("FS is frozen,can't write in guest.")
         else:
-            raise error.TestFail("FS freeze failed, guest still can"
-                                 " write file")
+            self.test.fail("FS is not frozen,still can write in guest.")
 
     @error_context.context_aware
     def _action_before_fsthaw(self, *args):
@@ -835,7 +836,22 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     @error_context.context_aware
     def _action_after_fsthaw(self, *args):
-        pass
+        error_context.context("Verify FS is thawed in guest.", logging.info)
+
+        if not self._open_session_list:
+            self.test.error("Could not find any opened session.")
+        # Use the last opened session to send cmd.
+        session = self._open_session_list[-1]
+
+        gagent_fs_test_cmd = args[0]
+        freeze_timeout = args[1]
+        try:
+            # keep action like after fsfreeze
+            session.cmd(gagent_fs_test_cmd, freeze_timeout)
+        except aexpect.ShellTimeoutError:
+            self.test.fail("FS is not thawed,still can't write in guest.")
+        else:
+            logging.info("FS is thawed,can write in guest.")
 
     @error_context.context_aware
     def gagent_check_fsfreeze(self, test, params, env):
@@ -847,14 +863,17 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         2) Freeze the FS.
         3) Check the FS is frozen from both guest agent side and guest os side.
         4) Thaw the FS.
+        5) Check the FS is unfrozen from both guest agent side and guest os side.
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environmen.
         """
-        error.base_context("Check guest agent command 'guest-fsfreeze-freeze'",
-                           logging.info)
-        error_context.context("Verify FS is thawed and freeze the FS.")
+        error_context.context("Check guest agent command "
+                              "'guest-fsfreeze-freeze/thaw'",
+                              logging.info)
+        gagent_fs_test_cmd = params["gagent_fs_test_cmd"]
+        freeze_timeout = float(params.get("freeze_timeout", 60))
 
         try:
             expect_status = self.gagent.FSFREEZE_STATUS_THAWED
@@ -862,28 +881,26 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         except guest_agent.VAgentFreezeStatusError:
             # Thaw guest FS if the fs status is incorrect.
             self.gagent.fsthaw(check_status=False)
-
         self._action_before_fsfreeze(test, params, env)
+        error_context.context("Freeze the FS.")
         self.gagent.fsfreeze()
         try:
-            self._action_after_fsfreeze(test, params, env)
-
+            self._action_after_fsfreeze(gagent_fs_test_cmd, freeze_timeout)
             # Next, thaw guest fs.
             self._action_before_fsthaw(test, params, env)
             error_context.context("Thaw the FS.")
             self.gagent.fsthaw()
+            self._action_after_fsthaw(gagent_fs_test_cmd, freeze_timeout)
         except Exception:
             # Thaw fs finally, avoid problem in following cases.
+            logging.info("Thaw fs to avoid problem in following cases.")
             try:
                 self.gagent.fsthaw(check_status=False)
             except Exception, detail:
                 # Ignore exception for this thaw action.
-                logging.warn("Finally failed to thaw guest fs,"
-                             " detail: '%s'", detail)
+                logging.warn("Finally failed to thaw guest fs, "
+                             "detail: '%s'" % detail)
             raise
-
-        # Finally, do something after thaw.
-        self._action_after_fsthaw(test, params, env)
 
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)

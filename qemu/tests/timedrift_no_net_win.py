@@ -143,7 +143,7 @@ def run(test, params, env):
     session.close()
 
     if sub_work in globals():  # Try to find sub work function.
-        globals()[sub_work](params, vm, session)
+        globals()[sub_work](test, params, vm, session)
     else:
         test.cancel("Unable to found subwork %s in %s test file." %
                     (sub_work, __file__))

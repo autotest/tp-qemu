@@ -146,9 +146,18 @@ def run(test, params, env):
 
     def find_cpu_obj(vm):
         """Find path of a valid VCPU object"""
+        cpus = vm.monitor.cmd('query-cpus')
+        if len(cpus) > 0 and cpus[0].has_key('qom_path'):
+            return cpus[0]['qom_path']
+        # if there's no qom_path on query-cpus
         roots = ['/machine/icc-bridge/icc', '/machine/unattached/device']
         for root in roots:
-            for child in vm.monitor.cmd('qom-list', dict(path=root)):
+            try:
+                children = vm.monitor.cmd('qom-list', dict(path=root))
+            except:
+                dbg("can't run qom-list on path=%s", root)
+                continue
+            for child in children:
                 logging.debug('child: %r', child)
                 if child['type'].rstrip('>').endswith('-cpu'):
                     return root + '/' + child['name']
@@ -156,6 +165,8 @@ def run(test, params, env):
     def get_qom_cpuid(self, vm):
         assert vm.monitor.protocol == "qmp"
         cpu_path = find_cpu_obj(vm)
+        if cpu_path is None:
+            raise error.TestNAError("Can't find QOM path for CPU object")
         logging.debug('cpu path: %r', cpu_path)
         r = {}
         for prop in 'feature-words', 'filtered-features':
@@ -265,8 +276,7 @@ def run(test, params, env):
             raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_to_level(cpuid_dump):
-        r = cpuid_dump[0, 0]
-        return r['eax']
+        return cpuid_dump[0, 0, 'eax']
 
     def custom_level(self):
         """
@@ -292,7 +302,7 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_dump[1, 0]['eax']
+        eax = cpuid_dump[1, 0, 'eax']
         family = (eax >> 8) & 0xf
         if family == 0xf:
             # extract extendend family
@@ -323,7 +333,7 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_dump[1, 0]['eax']
+        eax = cpuid_dump[1, 0, 'eax']
         model = (eax >> 4) & 0xf
         # extended model
         model |= (eax >> 12) & 0xf0
@@ -353,7 +363,7 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_dump[1, 0]['eax']
+        eax = cpuid_dump[1, 0, 'eax']
         stepping = eax & 0xf
         return stepping
 
@@ -381,7 +391,7 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.2.1 Largest Extendend Function # (Function 80000000h)
-        return cpuid_dump[0x80000000, 0x00]['eax']
+        return cpuid_dump[0x80000000, 0x00, 'eax']
 
     def custom_xlevel(self):
         """
@@ -417,7 +427,8 @@ def run(test, params, env):
             regs = cpuid_dump[idx, 0]
             for name in ('eax', 'ebx', 'ecx', 'edx'):
                 for shift in range(4):
-                    c = ((regs[name] >> (shift * 8)) & 0xff)
+                    r = cpuid_dump[idx, 0, name]
+                    c = ((r >> (shift * 8)) & 0xff)
                     if c == 0:  # drop trailing \0-s
                         break
                     m_id += chr(c)
@@ -446,11 +457,10 @@ def run(test, params, env):
             raise error.TestFail("Test was expected to fail, but it didn't")
 
     def cpuid_regs_to_string(cpuid_dump, leaf, idx, regs):
-        r = cpuid_dump[leaf, idx]
         signature = ""
         for i in regs:
             for shift in range(0, 4):
-                c = chr((r[i] >> (shift * 8)) & 0xFF)
+                c = chr((cpuid_dump[leaf, idx, i] >> (shift * 8)) & 0xFF)
                 if c in string.printable:
                     signature = signature + c
                 else:
@@ -495,7 +505,7 @@ def run(test, params, env):
         bits = params["bits"].split()
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
-            r = out[leaf, idx][reg]
+            r = out[leaf, idx, reg]
             logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
             for i in bits:
                 if (r & (1 << int(i))) == 0:
@@ -520,7 +530,7 @@ def run(test, params, env):
         val = int(params["value"], 0)
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
-            r = out[leaf, idx][reg]
+            r = out[leaf, idx, reg]
             logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
             if r != val:
                 raise error.TestFail("CPUID(%s.%s).%s is not 0x%08x" %

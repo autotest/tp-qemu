@@ -874,6 +874,26 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # Finally, do something after thaw.
         self._action_after_fsthaw(test, params, env)
 
+    @error_context.context_aware
+    def gagent_check_thaw_unfrozen(self, test, params, env):
+        """
+        Thaw the unfrozen fs
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        error_context.context("Verify if FS is thawed", logging.info)
+        expect_status = self.gagent.FSFREEZE_STATUS_THAWED
+        if self.gagent.get_fsfreeze_status() != expect_status:
+            # Thaw guest FS if the fs status isn't thawed.
+            self.gagent.fsthaw()
+        error_context.context("Thaw the unfrozen FS", logging.info)
+        ret = self.gagent.fsthaw(check_status=False)
+        if ret != 0:
+            test.fail("The return value of thawing an unfrozen fs is %s,"
+                      "it should be zero" % ret)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

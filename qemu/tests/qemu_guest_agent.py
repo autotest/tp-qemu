@@ -31,6 +31,12 @@ class BaseVirtTest(object):
             self.params = params
         if env:
             self.env = env
+        start_vm = self.params["start_vm"]
+        self.start_vm = start_vm
+        if self.start_vm == "yes":
+            vm = self.env.get_vm(params["main_vm"])
+            vm.verify_alive()
+            self.vm = vm
 
     def setup(self, test, params, env):
         if test:
@@ -215,13 +221,8 @@ class QemuGuestAgentTest(BaseVirtTest):
     @error_context.context_aware
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
-        start_vm = params["start_vm"]
-        if (not self.vm) and (start_vm == "yes"):
-            vm = self.env.get_vm(params["main_vm"])
-            vm.verify_alive()
-            self.vm = vm
+        if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
-
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 logging.info("qemu-ga is already installed.")
             else:
@@ -240,11 +241,7 @@ class QemuGuestAgentTest(BaseVirtTest):
 
     def run_once(self, test, params, env):
         BaseVirtTest.run_once(self, test, params, env)
-        start_vm = params["start_vm"]
-        if (not self.vm) and (start_vm == "yes"):
-            vm = self.env.get_vm(params["main_vm"])
-            vm.verify_alive()
-            self.vm = vm
+        if self.start_vm == "yes":
             self.gagent_verify(self.params, self.vm)
 
     def cleanup(self, test, params, env):
@@ -697,6 +694,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("boot guest with disk '%s'" % disk_name, logging.info)
         env_process.preprocess_vm(test, params, env, vm_name)
 
+        self.initialize(test, params, env)
         self.setup(test, params, env)
         timeout = float(params.get("login_timeout", 240))
         session = self.vm.wait_for_login(timeout=timeout)
@@ -943,13 +941,8 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
     @error_context.context_aware
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
-        start_vm = params["start_vm"]
-        if (not self.vm) and (start_vm == "yes"):
-            vm = self.env.get_vm(params["main_vm"])
-            vm.verify_alive()
-            self.vm = vm
+        if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
-
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 logging.info("qemu-ga is already installed.")
             else:
@@ -967,7 +960,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
             session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
-            self.gagent_create(params, vm, *args)
+            self.gagent_create(params, self.vm, *args)
 
 
 def run(test, params, env):

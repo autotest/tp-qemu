@@ -209,7 +209,7 @@ def run(test, params, env):
             error_context.context(context_msg % (sub_type, "after hotplug"),
                                   logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
-            if vm.is_dead():
+            if sub_type == "shutdown" and vm.is_dead():
                 return
 
         sub_type = params.get("sub_type_before_unplug")

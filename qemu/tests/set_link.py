@@ -72,7 +72,7 @@ def run(test, params, env):
         Reboot guest by different method (shell/system_reset)
         """
         try:
-            vm.reboot(method=reboot_method, timeout=120)
+            vm.reboot(method=reboot_method, serial=True, timeout=120)
         except (remote.LoginError, virt_vm.VMAddressError):
             if not link_up:
                 logging.info("Login error is expected when net link is down")

@@ -84,7 +84,7 @@ def run(test, params, env):
         """
         Check stress app really run in background.
         """
-        cmd = params.get("check_cmd")
+        cmd = params.get("kdump_check_cmd")
         status = session.cmd_status(cmd, timeout=120)
         return status == 0
 

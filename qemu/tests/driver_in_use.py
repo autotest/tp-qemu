@@ -66,6 +66,13 @@ def run(test, params, env):
                 utils_test.run_virt_sub_test, (test, params, env),
                 {"sub_type": bg_stress_test})
             stress_thread.start()
+
+        for event in params.get("check_setup_events", "").strip().split():
+            if not utils_misc.wait_for(lambda: env.get(event),
+                                       240, 0, 1):
+                test.error("Background test not in ready state since haven't "
+                           "received event %s" % event)
+
         if not utils_misc.wait_for(lambda: check_bg_running(target_process),
                                    120, 0, 1):
             raise exceptions.TestFail("Backgroud test %s is not "

@@ -5,8 +5,7 @@ import re
 
 import aexpect
 
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import genio
 from avocado.utils import path as avo_path
 from avocado.utils import process
 from avocado.core import exceptions
@@ -189,7 +188,7 @@ class QemuGuestAgentTest(BaseVirtTest):
 
         error_context.context("Create a QemuAgent object.", logging.info)
         if not (args and isinstance(args, tuple) and len(args) == 2):
-            raise error.TestError("Got invalid arguments for guest agent")
+            self.test.error("Got invalid arguments for guest agent")
 
         gagent_serial_type = args[0]
         gagent_name = args[1]
@@ -212,8 +211,8 @@ class QemuGuestAgentTest(BaseVirtTest):
         error_context.context("Check if guest agent work.", logging.info)
 
         if not self.gagent:
-            raise error.TestError("Could not find guest agent object"
-                                  "for VM '%s'" % vm.name)
+            self.test.error("Could not find guest agent object "
+                            "for VM '%s'" % vm.name)
 
         self.gagent.verify_responsive()
         logging.info(self.gagent.cmd("guest-info"))
@@ -332,7 +331,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Check guest agent command 'guest-shutdown'"
                               ", shutdown mode '%s'" % shutdown_mode, logging.info)
         if not self.env or not self.params:
-            raise error.TestError("You should run 'setup' method before test")
+            self.test.error("You should run 'setup' method before test")
 
         if not (self.vm and self.vm.is_alive()):
             vm = self.env.get_vm(self.params["main_vm"])
@@ -357,7 +356,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
         if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
-            raise error.TestFail("Could not shutdown VM via guest agent'")
+            test.fail("Could not shutdown VM via guest agent'")
 
     @error_context.context_aware
     def gagent_check_reboot(self, test, params, env):
@@ -373,14 +372,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Verify serial output has '%s'" % pattern)
         rebooted = self.__gagent_check_serial_output(pattern)
         if not rebooted:
-            raise error.TestFail("Could not reboot VM via guest agent")
+            test.fail("Could not reboot VM via guest agent")
         error_context.context("Try to re-login to guest after reboot")
         try:
             session = self._get_session(self.params, None)
             session.close()
         except Exception, detail:
-            raise error.TestFail("Could not login to guest,"
-                                 " detail: '%s'" % detail)
+            test.fail("Could not login to guest"
+                      " detail: '%s'" % detail)
 
     @error_context.context_aware
     def gagent_check_halt(self, test, params, env):
@@ -396,7 +395,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Verify serial output has '%s'" % pattern)
         halted = self.__gagent_check_serial_output(pattern)
         if not halted:
-            raise error.TestFail("Could not halt VM via guest agent")
+            test.fail("Could not halt VM via guest agent")
         # Since VM is halted, force shutdown it.
         try:
             self.vm.destroy(gracefully=False)
@@ -473,8 +472,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         vcpus_num = len(vcpus_info)
         error_context.context("the vcpu number:%d" % vcpus_num, logging.info)
         if vcpus_num < 2:
-            raise error.TestNAError("the vpus number of guest should be more"
-                                    " than 1")
+            test.error("the vpus number of guest should be more than 1")
         vcpus_info[vcpus_num - 1]["online"] = False
         del vcpus_info[vcpus_num - 1]["can-offline"]
         action = {'vcpus': [vcpus_info[vcpus_num - 1]]}
@@ -482,7 +480,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # Check if the result is as expected
         vcpus_info = self.gagent.get_vcpus()
         if vcpus_info[vcpus_num - 1]["online"] is not False:
-            raise error.TestFail("the vcpu status is not changed as expected")
+            test.fail("the vcpu status is not changed as expected")
 
     @error_context.context_aware
     def gagent_check_get_time(self, test, params, env):
@@ -501,13 +499,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               % nanoseconds_time, logging.info)
         guest_time = session.cmd_output(get_guest_time_cmd)
         if not guest_time:
-            raise error.TestError("can't get the guest time for contrast")
+            test.error("can't get the guest time for contrast")
         error_context.context("the time get inside guest by shell cmd is '%d' "
                               % int(guest_time), logging.info)
         delta = abs(int(guest_time) - nanoseconds_time / 1000000000)
         if delta > 3:
-            raise error.TestFail("the time get by guest agent is not the same "
-                                 "with that by time check cmd inside guest")
+            test.fail("the time get by guest agent is not the same "
+                      "with that by time check cmd inside guest")
 
     @error_context.context_aware
     def gagent_check_set_time(self, test, params, env):
@@ -523,7 +521,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("get the time of the guest", logging.info)
         guest_time_before = session.cmd_output(get_guest_time_cmd)
         if not guest_time_before:
-            raise error.TestError("can't get the guest time for contrast")
+            test.error("can't get the guest time for contrast")
         error_context.context("the time before being moved back into past  is '%d' "
                               % int(guest_time_before), logging.info)
         # Need to move the guest time one week into the past
@@ -534,8 +532,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               % int(guest_time_after), logging.info)
         delta = abs(int(guest_time_after) - target_time / 1000000000)
         if delta > 3:
-            raise error.TestFail("the time set for guest is not the same "
-                                 "with target")
+            test.fail("the time set for guest is not the same with target")
         # Set the system time from the hwclock
         if params["os_type"] != "windows":
             move_time_cmd = params["move_time_cmd"]
@@ -556,8 +553,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                   logging.info)
             delta = abs(int(guest_time_after_reset) - int(guest_hwclock))
             if delta > 3:
-                raise error.TestFail("The guest time can't be set from hwclock"
-                                     " on host")
+                test.fail("The guest time can't be set from hwclock on host")
 
     @error_context.context_aware
     def _get_mem_used(self, session, cmd):
@@ -611,10 +607,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.close()
         # less than 500K is acceptable.
         if memory_usage_after - memory_usage_before > 500:
-            raise error.TestFail("The memory usages are different, "
-                                 "before run command is %skb and after"
-                                 " run command is %skb" % (memory_usage_before,
-                                                           memory_usage_after))
+            test.fail("The memory usages are different, "
+                      "before run command is %skb and "
+                      "after run command is %skb" % (memory_usage_before,
+                                                     memory_usage_after))
 
     @error_context.context_aware
     def gagent_check_fstrim(self, test, params, env):
@@ -654,7 +650,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             device_name = os.path.basename(device)
             path = "/sys/block/%s/device/scsi_disk" % device_name
             path += "/%s/provisioning_mode" % host_id
-            return utils.read_one_line(path).strip()
+            return genio.read_one_line(path).strip()
 
         def get_allocation_bitmap():
             """
@@ -662,7 +658,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
             path = "/sys/bus/pseudo/drivers/scsi_debug/map"
             try:
-                return utils.read_one_line(path).strip()
+                return genio.read_one_line(path).strip()
             except IOError:
                 logging.warn("could not get bitmap info, path '%s' is "
                              "not exist", path)
@@ -678,8 +674,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         bitmap = get_allocation_bitmap()
         if bitmap:
             logging.debug("block allocation bitmap: %s" % bitmap)
-            raise error.TestError("block allocation bitmap"
-                                  " not empty before test.")
+            test.error("block allocation bitmap not empty before test.")
         vm_name = params["main_vm"]
         test_image = "scsi_debug"
         params["start_vm"] = "yes"
@@ -722,7 +717,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # check the bitmap before trim
         bitmap_before_trim = get_allocation_bitmap()
         if not re.match(r"\d+-\d+", bitmap_before_trim):
-            raise error.TestFail("didn't get the bitmap of the target disk")
+            test.fail("didn't get the bitmap of the target disk")
         error_context.context("the bitmap_before_trim is %s" % bitmap_before_trim,
                               logging.info)
         total_block_before_trim = abs(sum([eval(i) for i in
@@ -736,7 +731,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # check the bitmap after trim
         bitmap_after_trim = get_allocation_bitmap()
         if not re.match(r"\d+-\d+", bitmap_after_trim):
-            raise error.TestFail("didn't get the bitmap of the target disk")
+            test.fail("didn't get the bitmap of the target disk")
         error_context.context("the bitmap_after_trim is %s" % bitmap_after_trim,
                               logging.info)
         total_block_after_trim = abs(sum([eval(i) for i in
@@ -745,8 +740,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               % total_block_after_trim, logging.info)
 
         if total_block_after_trim > total_block_before_trim:
-            raise error.TestFail("the bitmap_after_trim is lager, the command"
-                                 " guest-fstrim may not work")
+            test.fail("the bitmap_after_trim is lager, the command"
+                      "guest-fstrim may not work")
         if self.vm:
             self.vm.destroy()
 
@@ -772,7 +767,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # check if the cmd "guest-network-get-interfaces" work
         ret = self.gagent.get_network_interface()
         if not find_interface_by_name(ret, "lo"):
-            error.TestFail("didn't find 'lo' interface in the return value")
+            test.fail("didn't find 'lo' interface in the return value")
 
         error_context.context("set down the interface: lo", logging.info)
         down_interface_cmd = "ip link set lo down"
@@ -790,8 +785,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                        interfaces_pre_add]
         if (len(bridge_list) != 1) or \
            ("lo_brige" != bridge_list[0]["name"]):
-            error.TestFail("the interface list info after interface was down"
-                           " was not as expected")
+            test.fail("the interface list info after interface was down "
+                      "was not as expected")
 
     @error_context.context_aware
     def _action_before_fsfreeze(self, *args):
@@ -800,21 +795,19 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     @error_context.context_aware
     def _action_after_fsfreeze(self, *args):
-        error_context.context("Verfiy FS is frozen in guest.")
-        if not isinstance(args, tuple):
-            return
+        error_context.context("Verfiy FS is frozen in guest.", logging.info)
 
         if not self._open_session_list:
-            raise error.TestError("Could not find any opened session")
+            self.test.error("Could not find any opened session")
         # Use the last opened session to send cmd.
         session = self._open_session_list[-1]
+
         try:
             session.cmd(self.params["gagent_fs_test_cmd"])
         except aexpect.ShellTimeoutError:
-            logging.debug("FS freeze successfully.")
+            logging.info("FS is frozen as expected,can't write in guest.")
         else:
-            raise error.TestFail("FS freeze failed, guest still can"
-                                 " write file")
+            self.test.fail("FS is not frozen,still can write in guest.")
 
     @error_context.context_aware
     def _action_before_fsthaw(self, *args):
@@ -822,7 +815,20 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     @error_context.context_aware
     def _action_after_fsthaw(self, *args):
-        pass
+        error_context.context("Verify FS is thawed in guest.", logging.info)
+
+        if not self._open_session_list:
+            session = self._get_session(self.params, None)
+            self._open_session_list.append(session)
+        # Use the last opened session to send cmd.
+        session = self._open_session_list[-1]
+
+        try:
+            session.cmd(self.params["gagent_fs_test_cmd"])
+        except aexpect.ShellTimeoutError:
+            self.test.fail("FS is not thawed, still can't write in guest.")
+        else:
+            logging.info("FS is thawed as expected, can write in guest.")
 
     @error_context.context_aware
     def gagent_check_fsfreeze(self, test, params, env):
@@ -834,15 +840,15 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         2) Freeze the FS.
         3) Check the FS is frozen from both guest agent side and guest os side.
         4) Thaw the FS.
+        5) Check the FS is unfrozen from both guest agent side and guest os side.
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environmen.
         """
-        error.base_context("Check guest agent command 'guest-fsfreeze-freeze'",
-                           logging.info)
-        error_context.context("Verify FS is thawed and freeze the FS.")
-
+        error_context.context("Check guest agent command "
+                              "'guest-fsfreeze-freeze/thaw'",
+                              logging.info)
         try:
             expect_status = self.gagent.FSFREEZE_STATUS_THAWED
             self.gagent.verify_fsfreeze_status(expect_status)
@@ -850,14 +856,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             # Thaw guest FS if the fs status is incorrect.
             self.gagent.fsthaw(check_status=False)
 
-        self._action_before_fsfreeze(test, params, env)
+        self._action_before_fsfreeze()
+        error_context.context("Freeze the FS.", logging.info)
         self.gagent.fsfreeze()
         try:
-            self._action_after_fsfreeze(test, params, env)
-
+            self._action_after_fsfreeze()
             # Next, thaw guest fs.
-            self._action_before_fsthaw(test, params, env)
-            error_context.context("Thaw the FS.")
+            self._action_before_fsthaw()
+            error_context.context("Thaw the FS.", logging.info)
             self.gagent.fsthaw()
         except Exception:
             # Thaw fs finally, avoid problem in following cases.
@@ -869,8 +875,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                              " detail: '%s'", detail)
             raise
 
-        # Finally, do something after thaw.
-        self._action_after_fsthaw(test, params, env)
+        self._action_after_fsthaw()
 
     @error_context.context_aware
     def gagent_check_thaw_unfrozen(self, test, params, env):
@@ -901,8 +906,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             func = getattr(self, chk_type)
             func(test, params, env)
         else:
-            raise error.TestError("Could not find matching test, check your"
-                                  " config file")
+            test.error("Could not find matching test, check your config file")
 
 
 class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
@@ -935,7 +939,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
             error_context.context("Download qemu-ga.msi from website and copy "
                                   "it to guest.", logging.info)
-            utils.run(gagent_download_cmd, float(params.get("login_timeout", 360)))
+            process.system(gagent_download_cmd, float(params.get("login_timeout", 360)))
             if not os.path.exists(gagent_host_path):
                 test.error("qemu-ga.msi is not exist, maybe it is not "
                            "successfully downloaded ")

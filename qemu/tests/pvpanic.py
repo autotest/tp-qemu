@@ -98,9 +98,9 @@ def run(test, params, env):
         error_context.context("Check if the driver is installed and "
                               "verified", logging.info)
         driver_name = params.get("driver_name", "pvpanic")
-        utils_test.qemu.windrv_verify_running(session, test, driver_name,
-                                              timeout)
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
 
     error_context.context("Setup crash evironment for test", logging.info)
     setup_test_environment(test, params, vm, session)

@@ -63,12 +63,12 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-
+    session = vm.wait_for_login(timeout=timeout)
     driver_name = get_driver()
     if driver_name:
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-
-    session = vm.wait_for_login(timeout=timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
     if params.get("format_disk", "no") == "yes":
         error_context.context("Format disk", logging.info)
         utils_misc.format_windows_disk(session, disk_index,

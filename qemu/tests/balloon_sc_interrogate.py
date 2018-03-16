@@ -35,9 +35,8 @@ def run(test, params, env):
     session = vm.wait_for_login()
     driver_name = params.get("driver_name", "balloon")
 
-    utils_test.qemu.windrv_verify_running(session, test, driver_name)
-    utils_test.qemu.setup_win_driver_verifier(driver_name, vm)
-
+    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                            test, driver_name)
     balloon_test = BallooningTestWin(test, params, env)
     err = None
     try:

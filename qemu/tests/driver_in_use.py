@@ -111,8 +111,11 @@ def run(test, params, env):
     error_context.context("Boot guest with %s device" % driver, logging.info)
 
     if params["os_type"] == "windows":
-        utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
-
+        session = vm.wait_for_login(timeout=timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver,
+                                                                timeout)
+        session.close()
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")
     main_test = params["sub_test"]

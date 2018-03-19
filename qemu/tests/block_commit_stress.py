@@ -69,8 +69,8 @@ def run(test, params, env):
     tag = params.get("source_image", "image1")
     stress_test = BlockCommitStress(test, params, env, tag)
     try:
-        stress_test.action_before_start()
         stress_test.create_snapshots()
+        stress_test.action_before_start()
         stress_test.start()
         stress_test.action_after_finished()
     finally:

@@ -1089,27 +1089,31 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
     """
     Qemu guest agent test class for windows guest.
     """
+    def __init__(self, test, params, env):
+        QemuGuestAgentBasicCheck.__init__(self, test, params, env)
+        self.gagent_guest_dir = params["gagent_guest_dir"]
+        self.qemu_ga_pkg = params["qemu_ga_pkg"]
+        self.gagent_src_type = params.get("gagent_src_type", "url")
 
     @error_context.context_aware
-    def get_qga_pkg_path(self, test, session, params, vm):
+    def get_qga_pkg_path(self, qemu_ga_pkg, test, session, params, vm):
         """
         Get the qemu-ga pkg path which will be installed.
         There are two methods to get qemu-ga pkg,one is download it
         from fedora people website,and the other is from virtio-win iso.
 
+        :param qemu_ga_pkg: qemu-ga pkg name
         :param test: kvm test object
         :param session: VM session.
         :param params: Dictionary with the test parameters
         :param vm: Virtual machine object.
         :return qemu_ga_pkg_path: Return the guest agent pkg path.
         """
-        error_context.context("Get qemu-ga.msi path where it locate.", logging.info)
-        qemu_ga_pkg = params["qemu_ga_pkg"]
-        gagent_src_type = params.get("gagent_src_type", "url")
+        error_context.context("Get %s path where it locates." % qemu_ga_pkg,
+                              logging.info)
 
-        if gagent_src_type == "url":
+        if self.gagent_src_type == "url":
             gagent_host_path = params["gagent_host_path"]
-            gagent_guest_dir = params["gagent_guest_dir"]
             gagent_download_cmd = params["gagent_download_cmd"]
 
             error_context.context("Download qemu-ga.msi from website and copy "
@@ -1118,15 +1122,15 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             if not os.path.exists(gagent_host_path):
                 test.error("qemu-ga.msi is not exist, maybe it is not "
                            "successfully downloaded ")
-            s, o = session.cmd_status_output("mkdir %s" % gagent_guest_dir)
+            s, o = session.cmd_status_output("mkdir %s" % self.gagent_guest_dir)
             if s and "already exists" not in o:
                 test.error("Could not create qemu-ga directory in "
                            "VM '%s', detail: '%s'" % (vm.name, o))
 
             error_context.context("Copy qemu-ga.msi to guest", logging.info)
-            vm.copy_files_to(gagent_host_path, gagent_guest_dir)
-            qemu_ga_pkg_path = r"%s\%s" % (gagent_guest_dir, qemu_ga_pkg)
-        elif gagent_src_type == "virtio-win":
+            vm.copy_files_to(gagent_host_path, self.gagent_guest_dir)
+            qemu_ga_pkg_path = r"%s\%s" % (self.gagent_guest_dir, qemu_ga_pkg)
+        elif self.gagent_src_type == "virtio-win":
             vol_virtio_key = "VolumeName like '%virtio-win%'"
             vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
             qemu_ga_pkg_path = r"%s:\%s\%s" % (vol_virtio, "guest-agent", qemu_ga_pkg)
@@ -1134,21 +1138,23 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             test.error("Only support 'url' and 'virtio-win' method to "
                        "download qga installer now.")
 
-        logging.info("The qemu-ga pkg which will be installed is %s" % qemu_ga_pkg_path)
+        logging.info("The qemu-ga pkg full path is %s" % qemu_ga_pkg_path)
         return qemu_ga_pkg_path
 
     @error_context.context_aware
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
+
         if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 logging.info("qemu-ga is already installed.")
             else:
                 logging.info("qemu-ga is not installed.")
-                qemu_ga_pkg_path = self.get_qga_pkg_path(test, session, params, self.vm)
-                self.gagent_install_cmd = params.get("gagent_install_cmd") % qemu_ga_pkg_path
-                self.gagent_uninstall_cmd = params.get("gagent_uninstall_cmd") % qemu_ga_pkg_path
+                qemu_ga_pkg_path = self.get_qga_pkg_path(self.qemu_ga_pkg, test,
+                                                         session, params, self.vm)
+                self.gagent_install_cmd = params.get("gagent_install_cmd"
+                                                     ) % qemu_ga_pkg_path
                 self.gagent_install(session, self.vm)
 
             if self._check_ga_service(session, params.get("gagent_status_cmd")):

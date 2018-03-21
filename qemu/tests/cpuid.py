@@ -542,14 +542,14 @@ def run(test, params, env):
         ignore_cpuid_leaves = params.get("ignore_cpuid_leaves", "")
         ignore_cpuid_leaves = ignore_cpuid_leaves.split()
         whitelist = []
-        for l in ignore_cpuid_leaves:
-            l = l.split(',')
+        for leaf in ignore_cpuid_leaves:
+            leaf = leaf.split(',')
             # syntax of ignore_cpuid_leaves:
             # <in_eax>[,<in_ecx>[,<register>[ ,<bit>]]] ...
             for i in 0, 1, 3:  # integer fields:
-                if len(l) > i:
-                    l[i] = int(l[i], 0)
-            whitelist.append(tuple(l))
+                if len(leaf) > i:
+                    leaf[i] = int(leaf[i], 0)
+            whitelist.append(tuple(leaf))
 
         if not machine_type:
             raise error.TestNAError("No machine_type_to_check defined")

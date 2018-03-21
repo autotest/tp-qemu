@@ -88,7 +88,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    def verify_qtree(params, info_qtree, info_block, proc_scsi, qdev):
+    def verify_qtree(params, info_qtree, info_block, qdev):
         """
         Verifies that params, info qtree, info block and /proc/scsi/ matches
         :param params: Dictionary with the test parameters
@@ -97,8 +97,6 @@ def run(test, params, env):
         :type info_qtree: string
         :param info_block: Output of "info block" monitor command
         :type info_block: dict of dicts
-        :param proc_scsi: Output of "/proc/scsi/scsi" guest file
-        :type proc_scsi: string
         :param qdev: qcontainer representation
         :type qdev: virttest.qemu_devices.qcontainer.DevContainer
         """
@@ -110,12 +108,9 @@ def run(test, params, env):
         err += tmp1 + tmp2
         err += disks.generate_params()
         err += disks.check_disk_params(params)
-        (tmp1, tmp2, _, _) = disks.check_guests_proc_scsi(proc_scsi)
-        err += tmp1 + tmp2
         if err:
             logging.error("info qtree:\n%s", info_qtree)
             logging.error("info block:\n%s", info_block)
-            logging.error("/proc/scsi/scsi:\n%s", proc_scsi)
             logging.error(qdev.str_bus_long())
             raise error.TestFail("%s errors occurred while verifying"
                                  " qtree vs. params" % err)
@@ -348,8 +343,7 @@ def run(test, params, env):
             thread.join()
         logging.debug("All threads finished.")
 
-    def verify_qtree_unsupported(params, info_qtree, info_block, proc_scsi,
-                                 qdev):
+    def verify_qtree_unsupported(params, info_qtree, info_block, qdev):
         return logging.warn("info qtree not supported. Can't verify qtree vs. "
                             "guest disks.")
 
@@ -421,8 +415,7 @@ def run(test, params, env):
     error.context("Verify disk before test", logging.info)
     info_qtree = vm.monitor.info('qtree', False)
     info_block = vm.monitor.info_block(False)
-    proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
-    verify_qtree(params, info_qtree, info_block, proc_scsi, qdev)
+    verify_qtree(params, info_qtree, info_block, qdev)
     for iteration in xrange(rp_times):
         error.context("Hotplugging/unplugging devices, iteration %d"
                       % iteration, logging.info)
@@ -447,8 +440,7 @@ def run(test, params, env):
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
         vm.verify_alive()
-        proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
-        verify_qtree(params, info_qtree, info_block, proc_scsi, qdev)
+        verify_qtree(params, info_qtree, info_block, qdev)
         qdev.set_clean()
 
         sub_type = params.get("sub_type_after_plug")
@@ -476,8 +468,7 @@ def run(test, params, env):
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
         vm.verify_alive()
-        proc_scsi = session.cmd_output('cat /proc/scsi/scsi')
-        verify_qtree(params, info_qtree, info_block, proc_scsi, qdev)
+        verify_qtree(params, info_qtree, info_block, qdev)
         # we verified the unplugs, set the state to 0
         for _ in xrange(qdev.get_state()):
             qdev.set_clean()

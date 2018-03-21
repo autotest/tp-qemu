@@ -1,10 +1,81 @@
 import logging
 from resource import getpagesize
 
-from avocado.utils import process
-
 from virttest import env_process
 from virttest import error_context
+from virttest.staging.utils_memory import read_from_vmstat
+
+
+class MlockBasic(object):
+    """
+    Base class for mlock test
+    """
+    def __init__(self, test, params, env):
+        self.test = test
+        self.params = params
+        self.env = env
+        self.realtime_mlock = params["realtime_mlock"]
+        self.vm_mem = int(params["mem"])
+        self.vm = None
+        self.mlock_pre = None
+        self.mlock_post = None
+        self.unevictable_pre = None
+        self.unevictable_post = None
+
+    def _check_mlock_unevictable(self):
+        """
+        Check nr_mlock and nr_unevictable with guest memory
+        """
+        if self.realtime_mlock == "on":
+            vm_pages = self.vm_mem * 1024 * 1024 / getpagesize()
+            nr_mlock = self.mlock_post - self.mlock_pre
+            nr_unevictable = self.unevictable_post - self.unevictable_pre
+            if nr_mlock < vm_pages:
+                self.test.fail("nr_mlock is not fit with VM memory"
+                               " when mlock is %s!"
+                               " nr_mlock = %d, vm_mem = %d."
+                               % (self.realtime_mlock, nr_mlock, self.vm_mem))
+            if nr_unevictable < vm_pages:
+                self.test.fail("nr_unevictable is not fit with VM memory"
+                               " when mlock is %s!"
+                               " nr_unevictable = %d, vm_mem = %d."
+                               % (self.realtime_mlock, nr_unevictable,
+                                  self.vm_mem))
+        else:
+            if self.mlock_post != self.mlock_pre:
+                self.test.fail("mlock_post != mlock_pre when mlock is %s!"
+                               % self.realtime_mlock)
+            if self.unevictable_post != self.unevictable_pre:
+                self.test.fail("unevictable_post != unevictable_pre"
+                               " when mlock is %s!"
+                               % self.realtime_mlock)
+
+    def start(self):
+        """
+        Start mlock basic test
+        """
+        error_context.context("Get nr_mlock and nr_unevictable in host"
+                              " before VM start!", logging.info)
+        self.mlock_pre = read_from_vmstat("nr_mlock")
+        self.unevictable_pre = read_from_vmstat("nr_unevictable")
+        logging.info("mlock_pre is %d and unevictable_pre is %d.",
+                     self.mlock_pre, self.unevictable_pre)
+        self.params["start_vm"] = "yes"
+
+        error_context.context("Starting VM!", logging.info)
+        env_process.preprocess_vm(self.test, self.params,
+                                  self.env, self.params["main_vm"])
+        self.vm = self.env.get_vm(self.params["main_vm"])
+        self.vm.verify_alive()
+
+        error_context.context("Get nr_mlock and nr_unevictable in host"
+                              " after VM start!", logging.info)
+        self.mlock_post = read_from_vmstat("nr_mlock")
+        self.unevictable_post = read_from_vmstat("nr_unevictable")
+        logging.info("mlock_post is %d and unevictable_post is %d.",
+                     self.mlock_post, self.unevictable_post)
+
+        self._check_mlock_unevictable()
 
 
 @error_context.context_aware
@@ -21,52 +92,8 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-
-    def get_mlock_unevictable(mlock_cmd, unevictable_cmd):
-        """
-        Get nr_mlock and nr_unevictable in host
-
-        :param mlock_cmd: CMD to get nr_mlock
-        :param unevictable_cmd: CMD to get nr_unevictable
-        """
-        mlock = int(process.system_output(mlock_cmd).split().pop())
-        unevictable = int(process.system_output(unevictable_cmd).split().pop())
-        return mlock, unevictable
-
-    mlock_cmd = params["mlock_cmd"]
-    unevictable_cmd = params["unevictable_cmd"]
-    vm_mem = int(params["mem"])
-
-    error_context.context("Get nr_mlock and nr_unevictable in host before VM start!", logging.info)
-    mlock_pre, unevictable_pre = get_mlock_unevictable(mlock_cmd, unevictable_cmd)
-    logging.info("mlock_pre is %d and unevictable_pre is %d.", mlock_pre, unevictable_pre)
-    params["start_vm"] = "yes"
-
-    error_context.context("Starting VM!", logging.info)
-    env_process.preprocess_vm(test, params, env, params["main_vm"])
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
-
-    error_context.context("Get nr_mlock and nr_unevictable in host after VM start!", logging.info)
-    mlock_post, unevictable_post = get_mlock_unevictable(mlock_cmd, unevictable_cmd)
-    logging.info("mlock_post is %d and unevictable_post is %d.", mlock_post, unevictable_post)
-
-    realtime_mlock = params["realtime_mlock"]
-    if realtime_mlock == "on":
-        nr_mlock = mlock_post - mlock_pre
-        vm_pages = vm_mem * 1024 * 1024 / getpagesize()
-        if nr_mlock < vm_pages:
-            test.fail("nr_mlock is not fit with VM memory when mlock is %s! nr_mlock = %d, vm_mem = %d."
-                      % (realtime_mlock, nr_mlock, vm_mem))
-        nr_unevictable = unevictable_post - unevictable_pre
-        if nr_unevictable < vm_pages:
-            test.fail("nr_unevictable is not fit with VM memory when mlock is %s! nr_unevictable = %d, vm_mem = %d."
-                      % (realtime_mlock, nr_unevictable, vm_mem))
-    else:
-        if mlock_post != mlock_pre:
-            test.fail("mlock_post is not equal to mlock_pre when mlock is %s!" % realtime_mlock)
-        if unevictable_post != unevictable_pre:
-            test.fail("unevictable_post is not equal to unevictable_pre when mlock is %s!" % realtime_mlock)
+    mlock_test = MlockBasic(test, params, env)
+    mlock_test.start()
 
     error_context.context("Check kernel crash message!", logging.info)
-    vm.verify_kernel_crash()
+    mlock_test.vm.verify_kernel_crash()

@@ -32,7 +32,7 @@ def run(test, params, env):
                 return int(block_size[0])
             else:
                 return float(utils_misc.normalize_data_size(block_size[0],
-                             order_magnitude="B"))
+                                                            order_magnitude="B"))
         else:
             raise error.TestError("Can not find the block size for the"
                                   " deivce. The output of command"
@@ -58,7 +58,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     driver_name = params.get("driver_name")
 
-    if params.get("os_type") == "windows":
+    if params.get("os_type") == "windows" and driver_name:
         utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
 
     session = vm.wait_for_login(timeout=timeout)
@@ -66,14 +66,20 @@ def run(test, params, env):
     data_image_params = params.object_params(data_image)
     data_image_size = data_image_params.get("image_size")
     data_image_size = float(utils_misc.normalize_data_size(data_image_size,
-                            order_magnitude="B"))
+                                                           order_magnitude="B"))
     data_image_filename = storage.get_image_filename(data_image_params,
                                                      data_dir.get_data_dir())
     data_image_dev = vm.get_block({'file': data_image_filename})
 
     drive_path = ""
     if params.get("os_type") == 'linux':
-        drive_id = params["blk_extra_params_%s" % data_image].split("=")[1]
+        pattern = r"(serial|wwn)=(\w+)"
+        match = re.search(pattern, params["blk_extra_params_%s"
+                          % data_image], re.M)
+        if match:
+            drive_id = match.group(2)
+        else:
+            test.fail("No available tag to get drive id")
         drive_path = utils_misc.get_linux_drive_path(session, drive_id)
         if not drive_path:
             raise error.TestError("Failed to get '%s' drive path"

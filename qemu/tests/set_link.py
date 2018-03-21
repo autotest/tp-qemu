@@ -72,7 +72,7 @@ def run(test, params, env):
         Reboot guest by different method (shell/system_reset)
         """
         try:
-            vm.reboot(method=reboot_method, timeout=120)
+            vm.reboot(method=reboot_method, serial=True, timeout=120)
         except (remote.LoginError, virt_vm.VMAddressError):
             if not link_up:
                 logging.info("Login error is expected when net link is down")
@@ -90,7 +90,7 @@ def run(test, params, env):
             utils_misc.wait_for(lambda: env["run_change_queues"], 30, 0, 2,
                                 "wait queues change start")
         time.sleep(0.5)
-        output = utils_test.ping(guest_ip, 10, interface=guest_ifname,
+        output = utils_test.ping(guest_ip, 10, interface=host_interface,
                                  timeout=20, session=None)[1]
         if not link_up and utils_test.get_loss_ratio(output) < 80:
             err_msg = "guest network still connecting after down the link"
@@ -185,18 +185,24 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    netdev_id = vm.virtnet[0].netdev_id
+    device_id = vm.virtnet[0].device_id
+    device_mac = vm.virtnet[0].mac
+    host_interface = None
+    if vm.virtnet[0].netdst:
+        host_interface = vm.virtnet[0].netdst
+    os_type = params.get("os_type", "linux")
     login_timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
 
     change_queues = False
     guest_ifname = ""
-    guest_ip = vm.wait_for_get_address(nic_index_or_name=0, timeout=240)
-    host_ip = utils_net.get_host_ip_address(params)
+    guest_ip = utils_net.get_guest_ip_addr(session, device_mac, os_type)
     # Win guest '2' represent 'Connected', '7' represent 'Media disconnected'
     win_media_connected = params.get("win_media_connected", "2")
     win_media_disconnected = params.get("win_media_disconnected", "7")
 
-    if params.get("os_type") == "linux":
+    if os_type == "linux":
         guest_ifname = utils_net.get_linux_ifname(session,
                                                   vm.get_mac_address())
         queues = int(params.get("queues", 1))
@@ -205,8 +211,6 @@ def run(test, params, env):
 
     session.close()
 
-    netdev_id = vm.virtnet[0].netdev_id
-    device_id = vm.virtnet[0].device_id
     expect_down_status = params.get("down-status", "down")
     expect_up_status = params.get("up-status", "up")
     operstate_always_up = params.get("operstate_always_up", "no") == "yes"

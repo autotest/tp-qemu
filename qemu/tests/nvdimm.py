@@ -1,17 +1,18 @@
 import os
 import logging
 
-from autotest.client.shared import error
 from avocado.utils import process
 
 from virttest import env_process
+from virttest import error_context
 
 
 class NvdimmTest(object):
     """
     Class for NVDIMM test
     """
-    def __init__(self, params, env):
+
+    def __init__(self, test, params, env):
         """
         Init the default values of NvdimmTest object.
 
@@ -19,6 +20,7 @@ class NvdimmTest(object):
         :param env: The environment (a dict-like object).
         """
         self.session = None
+        self.test = test
         self.params = params
         self.env = env
 
@@ -32,7 +34,7 @@ class NvdimmTest(object):
         """
         status, output = self.session.cmd_status_output(cmd)
         if check_status and status != 0:
-            raise error.TestFail("Execute command '%s' failed, output: %s")
+            self.test.fail("Execute command '%s' failed, output: %s" % (cmd, output))
         return output.strip()
 
     def verify_nvdimm(self, vm):
@@ -45,7 +47,7 @@ class NvdimmTest(object):
         dimms_monitor = set([info["data"]["id"] for info in vm.monitor.info("memory-devices")])
         if not dimms_expect.issubset(dimms_monitor):
             invisible_dimms = dimms_expect - dimms_monitor
-            raise error.TestFail("%s dimms are invisible in monitor" % invisible_dimms)
+            self.test.fail("%s dimms are invisible in monitor" % invisible_dimms)
         check_cmd = "test -b %s" % self.params.get("pmem", "/dev/pmem0")
         self.run_guest_cmd(check_cmd)
 
@@ -85,7 +87,7 @@ class NvdimmTest(object):
         return self.run_guest_cmd(cmd)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run nvdimm cases:
@@ -106,50 +108,67 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     if params["start_vm"] == "no":
-        error.context("Check nvdimm backend in host", logging.info)
+        error_context.context("Check nvdimm backend in host", logging.info)
         try:
             process.system("grep 'memmap=' /proc/cmdline")
         except process.CmdError:
-            raise error.TestError("Please add kernel param 'memmap' before start test.")
+            test.error("Please add kernel param 'memmap' before start test.")
+        if params.get("nvdimm_dax") == "yes":
+            try:
+                process.system(params["ndctl_install_cmd"], shell=True)
+            except process.CmdError:
+                test.error("ndctl is not available in host!")
+            ndctl_ver = process.system_output("ndctl -v", shell=True)
+            if float(ndctl_ver) < 56:
+                test.cancel("ndctl version should be equal or greater than 56!"
+                            "Current ndctl version is %s." % ndctl_ver)
+            try:
+                process.system(params["create_dax_cmd"], shell=True)
+            except process.CmdError:
+                test.error("Creating dax failed!")
         if not os.path.exists(params["nv_backend"]):
-            raise error.TestError("Check nv_backend in host failed!")
+            test.fail("Check nv_backend in host failed!")
         params["start_vm"] = "yes"
         vm_name = params['main_vm']
         env_process.preprocess_vm(test, params, env, vm_name)
 
-    nvdimm_test = NvdimmTest(params, env)
+    nvdimm_test = NvdimmTest(test, params, env)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     try:
-        error.context("Login to the guest", logging.info)
+        error_context.context("Login to the guest", logging.info)
         login_timeout = int(params.get("login_timeout", 360))
         nvdimm_test.session = vm.wait_for_login(timeout=login_timeout)
-        error.context("Verify nvdimm in monitor and guest", logging.info)
+        error_context.context("Verify nvdimm in monitor and guest", logging.info)
         nvdimm_test.verify_nvdimm(vm)
-        error.context("Format and mount nvdimm in guest", logging.info)
+        error_context.context("Format and mount nvdimm in guest", logging.info)
         nvdimm_test.mount_nvdimm()
         nv_file = params.get("nv_file", "/mnt/nv")
-        error.context("Create a file in nvdimm mount dir in guest, and get "
-                      "original md5 of the file", logging.info)
+        error_context.context("Create a file in nvdimm mount dir in guest, and get "
+                              "original md5 of the file", logging.info)
         dd_cmd = "dd if=/dev/urandom of=%s bs=1K count=200" % nv_file
         nvdimm_test.run_guest_cmd(dd_cmd)
         orig_md5 = nvdimm_test.md5_hash(nv_file)
         nvdimm_test.umount_nvdimm()
         nvdimm_test.session = vm.reboot()
-        error.context("Verify nvdimm after reboot", logging.info)
+        error_context.context("Verify nvdimm after reboot", logging.info)
         nvdimm_test.verify_nvdimm(vm)
         nvdimm_test.mount_nvdimm(format_device="no")
         new_md5 = nvdimm_test.md5_hash(nv_file)
-        error.context("Compare current md5 to original md5", logging.info)
+        error_context.context("Compare current md5 to original md5", logging.info)
         if new_md5 != orig_md5:
-            raise error.TestFail("'%s' changed. The original md5 is '%s',"
-                                 " current md5 is '%s'"
-                                 % (nv_file, orig_md5, new_md5))
+            test.fail("'%s' changed. The original md5 is '%s', current md5 is '%s'"
+                      % (nv_file, orig_md5, new_md5))
         nvdimm_test.umount_nvdimm()
-        error.context("Check if error and calltrace in guest", logging.info)
+        error_context.context("Check if error and calltrace in guest", logging.info)
         vm.verify_kernel_crash()
 
     finally:
         if nvdimm_test.session:
             nvdimm_test.session.close()
         vm.destroy()
+        if params.get("nvdimm_dax") == "yes":
+            try:
+                process.system(params["del_dax_cmd"], timeout=240, shell=True)
+            except process.CmdError:
+                logging.warn("Host dax configuration cannot be deleted!")

@@ -4,7 +4,7 @@ import time
 import logging
 
 from autotest.client import utils
-from autotest.client.shared import error
+from virttest import error_context
 
 from virttest import utils_misc
 from virttest import data_dir
@@ -12,7 +12,7 @@ from virttest import qemu_storage
 from virttest import env_process
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     QEMU boot from device:
@@ -74,49 +74,43 @@ def run(test, params, env):
         elif dev_name == "iscsi-dev":
             postprocess_remote_storage()
 
-    def check_boot_result(boot_fail_info, device_name):
+    def check_boot_result(boot_entry_info, boot_fail_info, device_name):
         """
         Check boot result, and logout from iscsi device if boot from iscsi.
         """
 
         logging.info("Wait for display and check boot info.")
-        infos = boot_fail_info.split(';')
         start = time.time()
         while True:
             try:
                 output = vm.serial_console.get_stripped_output()
             except ValueError:
                 output = vm.serial_console.get_output()
-            match = re.search(infos[0], output)
-            if match or time.time() > start + timeout:
+            if boot_fail_info in output:
+                test.fail("Could not boot from"
+                          " '%s'" % device_name)
+            elif boot_entry_info in output:
                 break
+            if time.time() > start + timeout:
+                test.fail("No device for boot after %s" % timeout)
             time.sleep(1)
         logging.info("Try to boot from '%s'" % device_name)
         try:
             if dev_name == "hard-drive" or (dev_name == "scsi-hd" and not
                                             params.get("image_name_stg")):
-                error.context("Log into the guest to verify it's up",
-                              logging.info)
+                error_context.context("Log into the guest to verify it's up",
+                                      logging.info)
                 session = vm.wait_for_login(timeout=timeout)
                 session.close()
                 vm.destroy()
                 return
-
-            try:
-                output = vm.serial_console.get_stripped_output()
-            except ValueError:
-                output = vm.serial_console.get_output()
-
-            for i in infos:
-                if not re.search(i, output):
-                    raise error.TestFail("Could not boot from"
-                                         " '%s'" % device_name)
         finally:
             cleanup(device_name)
 
     timeout = int(params.get("login_timeout", 360))
     boot_menu_key = params.get("boot_menu_key", 'f12')
     boot_menu_hint = params.get("boot_menu_hint")
+    boot_entry_info = params.get("boot_entry_info")
     boot_fail_info = params.get("boot_fail_info")
     boot_device = params.get("boot_device")
     dev_name = params.get("dev_name")
@@ -151,9 +145,9 @@ def run(test, params, env):
             time.sleep(1)
         if not match:
             cleanup(dev_name)
-            raise error.TestFail("Could not get boot menu message. "
-                                 "Excepted Result: '%s', Actual result: '%s'"
-                                 % (boot_menu_hint, console_str))
+            test.fail("Could not get boot menu message. "
+                      "Excepted Result: '%s', Actual result: '%s'"
+                      % (boot_menu_hint, console_str))
 
         # Send boot menu key in monitor.
         vm.send_key(boot_menu_key)
@@ -166,7 +160,7 @@ def run(test, params, env):
 
         if not boot_list:
             cleanup(dev_name)
-            raise error.TestFail("Could not get boot entries list.")
+            test.fail("Could not get boot entries list.")
 
         logging.info("Got boot menu entries: '%s'", boot_list)
         for i, v in enumerate(boot_list, start=1):
@@ -175,7 +169,7 @@ def run(test, params, env):
                 vm.send_key(str(i))
                 break
         else:
-            raise error.TestFail("Could not get any boot entry match "
-                                 "pattern '%s'" % boot_device)
+            test.fail("Could not get any boot entry match "
+                      "pattern '%s'" % boot_device)
 
-    check_boot_result(boot_fail_info, dev_name)
+    check_boot_result(boot_entry_info, boot_fail_info, dev_name)

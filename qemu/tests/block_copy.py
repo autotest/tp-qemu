@@ -8,6 +8,7 @@ from autotest.client.shared import error
 
 from virttest import data_dir
 from virttest import storage
+from virttest import qemu_storage
 from virttest import utils_misc
 from virttest import qemu_monitor
 
@@ -263,9 +264,21 @@ class BlockCopy(object):
         blocks = self.vm.monitor.info("block")
         try:
             if isinstance(blocks, str):
+                # ide0-hd0: removable=1 locked=0 file=/tmp/test.img
                 image_regex = '%s.*\s+file=(\S*)' % self.device
                 image_file = re.findall(image_regex, blocks)
-                return image_file[0]
+                if image_file:
+                    return image_file[0]
+                # ide0-hd0 (#block184): a b c
+                # or
+                # ide0-hd0 (#block184): a b c (raw)
+                image_file = re.findall("%s[^:]+: ([^(]+)\(?" % self.device,
+                                        blocks)
+                if image_file:
+                    if image_file[0][-1] == ' ':
+                        return image_file[0][:-1]
+                    else:
+                        return image_file[0]
 
             for block in blocks:
                 if block['device'] == self.device:
@@ -282,9 +295,9 @@ class BlockCopy(object):
         if method == "monitor":
             return self.vm.monitor.get_backingfile(self.device)
 
-        qemu_img = utils_misc.get_qemu_img_binary(self.params)
-        cmd = "%s info %s " % (qemu_img, self.get_image_file())
-        info = utils.system_output(cmd)
+        qemu_img = qemu_storage.QemuImg(self.params, self.data_dir, self.tag)
+        qemu_img.image_filename = self.get_image_file()
+        info = qemu_img.info(force_share=True)
         try:
             matched = re.search(r"backing file: +(.*)", info, re.M)
             return matched.group(1)
@@ -412,11 +425,15 @@ class BlockCopy(object):
         """
         params = self.params
         session = self.get_session()
-        file_create_cmd = params.get("create_cmd", "touch FILE")
+        file_create_cmd = params.get("create_command", "touch FILE")
         test_exists_cmd = params.get("test_exists_cmd", "test -f FILE")
         if session.cmd_status(test_exists_cmd.replace("FILE", file_name)):
-            session.cmd(file_create_cmd.replace("FILE", file_name))
-        session.cmd("md5sum %s > %s.md5" % (file_name, file_name))
+            session.cmd(file_create_cmd.replace("FILE", file_name), timeout=200)
+        session.cmd("md5sum %s > %s.md5" % (file_name, file_name), timeout=200)
+        sync_cmd = params.get("sync_cmd", "sync")
+        sync_cmd = utils_misc.set_winutils_letter(session, sync_cmd)
+        session.cmd(sync_cmd)
+        session.close()
 
     def verify_md5(self, file_name):
         """
@@ -424,7 +441,18 @@ class BlockCopy(object):
         :param file_name: the file need to be verified.
         """
         session = self.get_session()
-        status, output = session.cmd_status_output("md5sum -c %s.md5" % file_name)
+        status, output = session.cmd_status_output("md5sum -c %s.md5" % file_name,
+                                                   timeout=200)
         if status != 0:
             raise error.TestFail("File %s changed, md5sum check output: %s" %
                                  (file_name, output))
+
+    def reopen(self, reopen_image):
+        """
+        Closing the vm and reboot it with the backup image.
+        :param reopen_image: the image that vm reopen with.
+        """
+        self.vm.destroy()
+        self.params["image_name_%s" % self.tag] = reopen_image
+        self.vm.create(params=self.params)
+        self.vm.verify_alive()

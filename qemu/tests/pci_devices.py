@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """
 This is a autotest/virt-test test for testing PCI devices in various PCI setups
 
@@ -217,7 +216,7 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
     params['usb_type_%s' % name] = device[1]
     if not params.get('reserved_slots_%s' % parent_bus):
         params['reserved_slots_%s' % parent_bus] = ""
-    params['reserved_slots_%s' % parent_bus] += " %02x-00" % addr
+    params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
     logging.debug("Add test device %s %s %s addr:%s", name, device[1],
                   parent_bus, addr)
     return params, name_idxs
@@ -264,7 +263,7 @@ def add_virtio_disk(params, name_idxs, parent_bus, addr):
     params['image_size_%s' % name] = '1M'
     if not params.get('reserved_slots_%s' % parent_bus):
         params['reserved_slots_%s' % parent_bus] = ""
-    params['reserved_slots_%s' % parent_bus] += " %02x-00" % addr
+    params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
     logging.debug("Add test device %s virtio_disk %s addr:%s", name,
                   parent_bus, addr)
     return params, name_idxs
@@ -283,13 +282,13 @@ def add_device_random(params, name_idxs, parent_bus, addr):
 def run(test, params, env):
     """
     PCI Devices test
-    1) print outs the used setup
+    1) prints out the setup to be used
     2) boots the defined VM
-    3) verifies monitor "info qtree" vs. autotest representation
+    3) verifies monitor "info qtree" vs. internal representation
     4) verifies guest "lspci" vs. info qtree (Linux only)
     :note: Only PCI device properties are checked
 
-    :param test: kvm test object
+    :param test: VirtTest instance
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
@@ -297,6 +296,8 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     qdev = vm.make_create_command()    # parse params into qdev
+    if isinstance(qdev, tuple):
+        qdev = qdev[0]
 
     error.context("Getting main PCI bus info")
 
@@ -323,7 +324,7 @@ def run(test, params, env):
                     out += "->(test_devices)"
                     break
                 idx = names.get(device, 0) + 1
-                name = "pci_%s%d" % (device, idx)
+                name = "test_pci_%s%d" % (device, idx)
                 names[device] = idx
                 params, bus = add_bus(qdev, params, device, name, _lasts[_idx])
                 # we inserted a device, increase the upper bus first idx
@@ -355,8 +356,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
 
     # PCI devices are initialized by firmware, which might require some time
-    # to setup. Wait 10s before getting the qtree.
-    time.sleep(10)
+    # to setup. Wait 5s before getting the qtree.
+    time.sleep(5)
     qtree = qemu_qtree.QtreeContainer()
 
     error.context("Verify qtree vs. qemu devices", logging.info)

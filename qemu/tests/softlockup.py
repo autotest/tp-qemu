@@ -4,7 +4,6 @@ import socket
 import time
 
 from autotest.client import utils
-from autotest.client.shared import error
 
 from virttest import data_dir
 
@@ -38,8 +37,7 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))
-    auto_dir = os.environ.get("AUTODIR", os.environ.get("AUTOTEST_PATH"))
-    stress_dir = os.path.join(auto_dir, "tests", "stress")
+    stress_dir = data_dir.get_deps_dir("stress")
     monitor_dir = params.get("monitor_dir",
                              data_dir.get_deps_dir("softlockup"))
 
@@ -96,8 +94,7 @@ def run(test, params, env):
                 s.connect(("redhat.com", 80))
                 host_ip = s.getsockname()[0]
             except socket.error, (value, e):
-                raise error.TestError("Could not determine host IP: %d %s" %
-                                      (value, e))
+                test.error("Could not determine host IP: %d %s" % (value, e))
 
         # Now, starting the guest
         vm.verify_alive()

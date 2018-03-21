@@ -49,7 +49,9 @@ class QemuGASuspendTest(QemuGuestAgentTest):
         # Reset guest agent object to None after guest reboot.
         self.gagent = None
         error.context("Check if guest agent work again.", logging.info)
-        self.gagent_start(params, self.vm, *[params.get("gagent_start_cmd")])
+        session = self._get_session(params, self.vm)
+        self.gagent_start(session, self.vm)
+        session.close()
         args = [params.get("gagent_serial_type"), params.get("gagent_name")]
         self.gagent_create(params, self.vm, *args)
         self.gagent.verify_responsive()

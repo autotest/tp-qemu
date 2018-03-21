@@ -25,7 +25,7 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheck):
                                                                file_size))
         self.orig_hash = utils.hash_file(self.host_path)
         error.context("Transfer file from %s to %s" % (self.host_path,
-                      self.guest_path), logging.info)
+                                                       self.guest_path), logging.info)
         self.bg = utils.InterruptedThread(self.vm.copy_files_to,
                                           (self.host_path, self.guest_path),
                                           dict(verbose=True, timeout=copy_timeout))

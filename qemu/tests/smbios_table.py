@@ -54,8 +54,13 @@ def run(test, params, env):
         support_machine_types.append(params.get("machine_type"))
     else:
         qemu_binary = utils_misc.get_qemu_binary(params)
-        tmp = utils_misc.get_support_machine_type(qemu_binary)
+        tmp = utils_misc.get_support_machine_type(qemu_binary, remove_alias=True)[:2]
         (support_machine_types, expect_system_versions) = tmp
+        machine_type = params.get("machine_type", "")
+        if ':' in machine_type:
+            prefix = machine_type.split(':', 1)[0]
+            support_machine_types = ["%s:%s" % (prefix, m_type)
+                                     for m_type in support_machine_types]
 
     failures = []
     for m_type in support_machine_types:

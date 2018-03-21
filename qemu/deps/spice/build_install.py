@@ -19,6 +19,7 @@ def run_subprocess_cmd(args):
                               close_fds=True).stdout.read().strip()
     return output
 
+
 git_repo = {}
 configure_options = {}
 autogen_options = {}

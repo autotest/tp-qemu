@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from autotest.client.shared import utils
 
 
@@ -24,6 +27,14 @@ def run(test, params, env):
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")
     mig_cancel_delay = int(params.get("mig_cancel") == "yes") * 2
+    migration_exec_cmd_src = params.get("migration_exec_cmd_src")
+    migration_exec_cmd_dst = params.get("migration_exec_cmd_dst")
+    if migration_exec_cmd_src and "%s" in migration_exec_cmd_src:
+        mig_file = os.path.join(tempfile.mkdtemp(prefix="migrate",
+                                                 dir=test.workdir),
+                                "migrate_file")
+        migration_exec_cmd_src %= mig_file
+        migration_exec_cmd_dst %= mig_file
 
     try:
         # Reboot the VM in the background
@@ -33,7 +44,9 @@ def run(test, params, env):
         try:
             while bg.isAlive():
                 vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                           env=env)
+                           env=env,
+                           migration_exec_cmd_src=migration_exec_cmd_src,
+                           migration_exec_cmd_dst=migration_exec_cmd_dst)
         except Exception:
             # If something bad happened in the main thread, ignore exceptions
             # raised in the background thread

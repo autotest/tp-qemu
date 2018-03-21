@@ -1,6 +1,8 @@
 import logging
 import re
 
+from autotest.client.shared import error
+
 from avocado.core import exceptions
 from avocado.utils import process
 
@@ -184,40 +186,6 @@ def run(test, params, env):
                 msg = "Output does not match the pattern: '%s'" % output
                 raise exceptions.TestFail(msg)
 
-    def qmp_cpu_check(output):
-        """ qmp_cpu test check """
-        last_cpu = int(params['smp']) - 1
-        for out in output:
-            cpu = out.get('CPU')
-            if cpu is None:
-                raise exceptions.TestFail("'CPU' index is missing in QMP output "
-                                          "'%s'" % out)
-            else:
-                current = out.get('current')
-                if current is None:
-                    raise exceptions.TestFail("'current' key is missing in QMP "
-                                              "output '%s'" % out)
-                elif cpu < last_cpu:
-                    if current is False:
-                        pass
-                    else:
-                        raise exceptions.TestFail("Attribute 'current' should be "
-                                                  "'False', but is '%s' instead.\n"
-                                                  "'%s'" % (current, out))
-                elif cpu == last_cpu:
-                    if current is True:
-                        pass
-                    else:
-                        raise exceptions.TestFail("Attribute 'current' should be "
-                                                  "'True', but is '%s' instead.\n"
-                                                  "'%s'" % (current, out))
-                elif cpu <= last_cpu:
-                    continue
-                else:
-                    raise exceptions.TestFail("Incorrect CPU index '%s' (corrupted "
-                                              "or higher than no_cpus).\n%s"
-                                              % (cpu, out))
-
     qemu_binary = utils_misc.get_qemu_binary(params)
     if not utils_misc.qemu_has_option("qmp", qemu_binary):
         raise exceptions.TestSkipError("Host qemu does not support qmp.")
@@ -242,7 +210,7 @@ def run(test, params, env):
         hmp_port = hmp_ports[0]
     else:
         raise exceptions.TestError("Incorrect configuration, no QMP monitor found.")
-    callback = {"host_cmd": process.system_output,
+    callback = {"host_cmd": lambda cmd: process.system_output(cmd, shell=True),
                 "guest_cmd": session.get_command_output,
                 "monitor_cmd": hmp_port.send_args_cmd,
                 "qmp_cmd": qmp_port.send_args_cmd}
@@ -261,10 +229,6 @@ def run(test, params, env):
     result_check = params.get("cmd_result_check")
     cmd_return_value = params.get("cmd_return_value")
     exception_list = params.get("exception_list", "")
-
-    # HOOKs
-    if result_check == 'qmp_cpu':
-        pre_cmd = "cpu index=%d" % (int(params['smp']) - 1)
 
     # Pre command
     if pre_cmd is not None:
@@ -301,10 +265,15 @@ def run(test, params, env):
     if result_check is not None:
         txt = "Verify that qmp command '%s' works as designed." % qmp_cmd
         logging.info(txt)
-        if result_check == 'qmp_cpu':
-            qmp_cpu_check(output)
-        elif result_check == "equal" or result_check == "contain":
-            check_result(output, cmd_return_value, exception_list)
+        if result_check == "equal" or result_check == "contain":
+            if qmp_cmd == "query-name":
+                vm_name = params["main_vm"]
+                check_result(output, vm_name, exception_list)
+            elif qmp_cmd == "query-uuid":
+                uuid_input = params["uuid"]
+                check_result(output, uuid_input, exception_list)
+            else:
+                check_result(output, cmd_return_value, exception_list)
         elif result_check == "m_format_q":
             check_result(output, cmd_return_value, exception_list)
         elif 'post' in result_check:

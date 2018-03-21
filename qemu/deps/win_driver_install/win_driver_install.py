@@ -169,6 +169,7 @@ def show_log_output(result_file):
     with open(result_file) as fd:
         print os.linesep.join(fd.readlines())
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Windows Driver Operation')

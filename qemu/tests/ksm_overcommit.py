@@ -9,6 +9,8 @@ import aexpect
 from autotest.client.shared import error
 from autotest.client.shared import utils
 
+from avocado.utils import process
+
 from virttest import utils_misc, utils_test, env_process, data_dir
 from virttest.staging import utils_memory
 
@@ -431,11 +433,14 @@ def run(test, params, env):
     # host_reserve: mem reserve kept for the host system to run
     host_reserve = int(params.get("ksm_host_reserve", -1))
     if (host_reserve == -1):
-        # default host_reserve = MemAvailable + one_minimal_guest(128MB)
+        try:
+            available = utils_memory.read_from_meminfo("MemAvailable")
+        except process.CmdError:  # ancient kernels
+            utils_memory.drop_caches()
+            available = utils_memory.read_from_meminfo("MemFree")
+        # default host_reserve = UsedMem + one_minimal_guest(128MB)
         # later we add 64MB per additional guest
-        host_reserve = ((utils_memory.memtotal() -
-                         utils_memory.read_from_meminfo("MemFree")) /
-                        1024 + 128)
+        host_reserve = ((utils_memory.memtotal() - available) / 1024 + 128)
         # using default reserve
         _host_reserve = True
     else:

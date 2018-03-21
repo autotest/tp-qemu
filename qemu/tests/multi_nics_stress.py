@@ -12,7 +12,8 @@ from virttest import utils_test
 
 
 def launch_netperf_client(server_ips, netperf_clients, test_option,
-                          test_duration, netperf_para_sess, netperf_cmd_prefix):
+                          test_duration, netperf_para_sess,
+                          netperf_cmd_prefix):
     """
     start netperf client in guest.
     """
@@ -58,14 +59,12 @@ def run(test, params, env):
     netperf_client = params.get("netperf_client")
     guest_username = params.get("username", "")
     guest_password = params.get("password", "")
-    host_password = params.get("hostpassword", "redhat")
     shell_client = params.get("shell_client")
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
     shell_prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
     linesep = params.get("shell_linesep", "\n").decode('string_escape')
     status_test_command = params.get("status_test_command", "echo $?")
-    host_ip = utils_net.get_host_ip_address(params)
     ping_count = int(params.get("ping_count", 10))
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
@@ -114,13 +113,18 @@ def run(test, params, env):
         client_vm = env.get_vm(client)
         client_vm.verify_alive()
         client_ctl = client_vm.wait_for_login(timeout=login_timeout)
+        if params.get("dhcp_cmd"):
+            status, output = client_ctl.cmd_status_output(params["dhcp_cmd"], timeout=600)
+            if status:
+                logging.warn("Failed to execute dhcp-command, output:\n %s" %
+                             output)
         error.context("Stop fireware on netperf client guest.",
                       logging.info)
         client_ctl.cmd("service iptables stop; iptables -F",
                        ignore_all_errors=True)
+
         client_ip = client_vm.get_address()
         client_ips.append(client_ip)
-        client_ctl_mac = server_vm.get_mac_address()
         params_client_nic = params.object_params(client)
         nics_count = len(params_client_nic.get("nics", "").split())
         if nics_count > 1:
@@ -228,7 +232,6 @@ def run(test, params, env):
         netperf_sessions = params.get("netperf_sessions", "1")
         p_sizes = params.get("package_sizes")
         netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
-        netperf_pkg_size = params.get("netperf_pkg_size", "")
         error.context("Start netperf clients.", logging.info)
         for protocol in test_protocols.split():
             error.context("Testing %s protocol" % protocol, logging.info)

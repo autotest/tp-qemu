@@ -36,6 +36,8 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
             self.test.fail(msg)
 
     def check_backingfile_exist(self):
+        if not self.base_image:
+            self.test.error("No backing file specified.")
         backingfile = self.get_backingfile()
         if backingfile != self.base_image:
             msg = "The backing file from monitor does not meet expectation. "
@@ -60,6 +62,7 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
         """
         Set values for backing-file option
         """
+        self.base_image = self.image_file
         absolute_path = self.params["absolute_path"]
         if absolute_path == "yes":
             backing_file = self.base_image

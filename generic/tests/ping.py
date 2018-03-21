@@ -5,129 +5,119 @@ from autotest.client import utils
 
 from virttest import utils_test
 from virttest import utils_net
+from virttest import error_context
 
 
-@error.context_aware
+def _ping_with_params(test, params, dest, interface=None,
+                      packet_size=None, interval=None,
+                      count=0, session=None, flood=False):
+    if flood:
+        cmd = "ping " + dest + " -f -q"
+        if interface:
+            cmd += " -S %s" % interface
+        flood_minutes = float(params.get("flood_minutes", 10))
+        status, output = utils_net.raw_ping(cmd, flood_minutes * 60,
+                                            session, logging.debug)
+    else:
+        timeout = float(count) * 1.5
+        status, output = utils_net.ping(dest, count, interval, interface,
+                                        packet_size, session=session,
+                                        timeout=timeout)
+    if status != 0:
+        test.fail("Ping failed, status: %s,"
+                  " output: %s" % (status, output))
+    if params.get("strict_check", "no") == "yes":
+        ratio = utils_test.get_loss_ratio(output)
+        if ratio != 0:
+            test.fail("Loss ratio is %s" % ratio)
+
+
+@error_context.context_aware
 def run(test, params, env):
     """
     Ping the guest with different size of packets.
 
     1) Login to guest
-    2) Ping test on nic(s) from host
+    2) Ping test on nic(s) from host - default_ping/multi_nics
         2.1) Ping with packet size from 0 to 65507
         2.2) Flood ping test
         2.3) Ping test after flood ping, Check if the network is still alive
-    3) Ping test from guest side, packet size is from 0 to 65507
-       (win guest is up to 65500) (Optional)
+    3) Ping test from guest side to external host - ext_host
+        3.1) Ping with packet size from 0 to 65507 (win guest is up to 65500)
+        3.2) Flood ping test
+        3.3) Ping test after flood ping, Check if the network is still alive
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    def _get_loss_ratio(output):
-        if params.get("strict_check", "no") == "yes":
-            ratio = utils_test.get_loss_ratio(output)
-            if ratio != 0:
-                raise error.TestFail("Loss ratio is %s" % ratio)
-
+    counts = params.get("ping_counts", 30)
+    packet_sizes = params.get("packet_size", "").split()
+    interval_times = params.get("interval_time", "1").split()
     timeout = int(params.get("login_timeout", 360))
     ping_ext_host = params.get("ping_ext_host", "no") == "yes"
-
+    pre_cmd = params.get("pre_cmd", None)
     vm = env.get_vm(params["main_vm"])
+
+    error_context.context("Login to guest", logging.info)
     vm.verify_alive()
-    error.context("Login to guest", logging.info)
     session = vm.wait_for_login(timeout=timeout)
 
-    # most of linux distribution don't add IP configuration for extra nics,
-    # so get IP for extra nics via pre_cmd;
-    if params.get("pre_cmd"):
-        session.cmd(params["pre_cmd"], timeout=600)
-
+    # get the test ip, interface & session
+    dest_ips = []
+    sessions = []
+    interfaces = []
     if ping_ext_host:
-        default_host = "www.redhat.com"
+        ext_host = params.get("ext_host", "")
         ext_host_get_cmd = params.get("ext_host_get_cmd", "")
         try:
             ext_host = utils.system_output(ext_host_get_cmd)
         except error.CmdError:
             logging.warn("Can't get specified host with cmd '%s',"
                          " Fallback to default host '%s'",
-                         ext_host_get_cmd, default_host)
-            ext_host = default_host
-
-        if not ext_host:
-            # Fallback to a hardcode host, eg:
-            ext_host = default_host
-
-    counts = params.get("ping_counts", 100)
-    flood_minutes = float(params.get("flood_minutes", 10))
-
-    packet_sizes = params.get("packet_size", "").split()
-
-    for i, nic in enumerate(vm.virtnet):
-        ip = vm.get_address(i)
-        if ip.upper().startswith("FE80"):
-            interface = utils_net.get_neigh_attch_interface(ip)
-        else:
-            interface = None
-        nic_name = nic.get("nic_name")
-        if not ip:
-            logging.error("Could not get the ip of nic index %d: %s",
-                          i, nic_name)
-            continue
-
-        error.base_context("Ping test on nic %s (index %d) from host"
-                           " side" % (nic_name, i), logging.info)
-        for size in packet_sizes:
-            error.context("Ping with packet size %s" % size, logging.info)
-            status, output = utils_test.ping(ip, 10, packetsize=size,
-                                             interface=interface, timeout=20)
-            _get_loss_ratio(output)
-
-            if status != 0:
-                raise error.TestFail("Ping failed, status: %s,"
-                                     " output: %s" % (status, output))
-
-        error.context("Flood ping test", logging.info)
-        utils_test.ping(ip, None, flood=True, output_func=None,
-                        interface=interface, timeout=flood_minutes * 60)
-
-        error.context("Ping test after flood ping, Check if the network is"
-                      " still alive", logging.info)
-        status, output = utils_test.ping(ip, counts, interface=interface,
-                                         timeout=float(counts) * 1.5)
-        _get_loss_ratio(output)
-
-        if status != 0:
-            raise error.TestFail("Ping returns non-zero value %s" % output)
-
-        if ping_ext_host:
-            error.base_context("Ping test from guest side,"
-                               " dest: '%s'" % ext_host, logging.info)
-            pkt_sizes = packet_sizes
-            # There is no ping program for guest, so let's hardcode...
-            cmd = ['ping']
-            cmd.append(ext_host)  # external host
-
-            if params.get("os_type") == "windows":
-                cmd.append("-n 10")
-                cmd.append("-l %s")
-                # Windows doesn't support ping with packet
-                # larger than '65500'
-                pkt_sizes = [p for p in packet_sizes if p < 65500]
-                # Add a packet size just equal '65500' for windows
-                pkt_sizes.append(65500)
+                         ext_host_get_cmd, ext_host)
+        dest_ips = [ext_host]
+        sessions = [session]
+        interfaces = [None]
+    else:
+        # most of linux distribution don't add IP configuration for extra nics,
+        # so get IP for extra nics via pre_cmd;
+        if pre_cmd:
+            session.cmd(pre_cmd, timeout=600)
+        for i, nic in enumerate(vm.virtnet):
+            ip = vm.get_address(i)
+            if ip.upper().startswith("FE80"):
+                interface = utils_net.get_neigh_attch_interface(ip)
             else:
-                cmd.append("-c 10")  # ping 10 times
-                cmd.append("-s %s")  # packet size
-            cmd = " ".join(cmd)
-            for size in pkt_sizes:
-                error.context("Ping with packet size %s" % size,
-                              logging.info)
-                status, output = session.cmd_status_output(cmd % size,
-                                                           timeout=60)
-                _get_loss_ratio(output)
+                interface = None
+            nic_name = nic.get("nic_name")
+            if not ip:
+                test.fail("Could not get the ip of nic index %d: %s",
+                          i, nic_name)
+            dest_ips.append(ip)
+            sessions.append(None)
+            interfaces.append(interface)
 
-                if status != 0:
-                    raise error.TestFail(("Ping external host failed,"
-                                          " status: %s, output: %s" %
-                                          (status, output)))
+    for (ip, interface, session) in zip(dest_ips, interfaces, sessions):
+        error_context.context("Ping test with dest: %s" % ip, logging.info)
+
+        # ping with different size & interval
+        for size in packet_sizes:
+            for interval in interval_times:
+                logging.info("Ping with packet size: %s and interval: %s" %
+                             (size, interval))
+                _ping_with_params(test, params, ip, interface, size,
+                                  interval, session=session, count=counts)
+
+        # ping with flood
+        if not ping_ext_host or params.get("os_type") == "linux":
+            error_context.context("Flood ping test", logging.info)
+            _ping_with_params(test, params, ip, interface,
+                              session=session, flood=True)
+
+            # ping to check whether the network is alive
+            error_context.context("Ping test after flood ping,"
+                                  " Check if the network is still alive",
+                                  logging.info)
+            _ping_with_params(test, params, ip, interface,
+                              session=session, count=counts)

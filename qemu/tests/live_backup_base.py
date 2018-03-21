@@ -159,16 +159,10 @@ class LiveBackup(block_copy.BlockCopy):
         """
         Closing the vm and reboot it with the backup image.
         """
-        vm = self.vm
-        vm.destroy()
         image_chain = self.image_chain
         image_name = self.params.get("image_name_%s" %
                                      image_chain[-1])
-        self.params["image_name_%s" % self.source_image] = image_name
-        vm.create(params=self.params)
-        self.vm = vm
-        session = self.get_session()
-        self.vm.verify_alive()
+        super(LiveBackup, self).reopen(image_name)
 
     def before_full_backup(self):
         """

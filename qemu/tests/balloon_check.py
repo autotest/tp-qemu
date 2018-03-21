@@ -2,10 +2,13 @@ import time
 import re
 import logging
 import random
-from autotest.client.shared import error
+
+from avocado.core import exceptions
+
 from virttest import qemu_monitor
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import error_context
 from virttest.utils_test.qemu import MemoryBaseTest
 
 
@@ -17,13 +20,18 @@ class BallooningTest(MemoryBaseTest):
 
     def __init__(self, test, params, env):
         self.test_round = 0
-        self.ratio = float(params.get("ratio", 0.1))
         super(BallooningTest, self).__init__(test, params, env)
 
         self.vm = env.get_vm(params["main_vm"])
         self.session = self.get_session(self.vm)
-        logging.info("Waiting 90s for guest's applications up")
-        time.sleep(90)
+        self.env["balloon_test_setup_ready"] = False
+        if self.params.get('os_type') == 'windows':
+            sleep_time = 180
+        else:
+            sleep_time = 90
+        logging.info("Waiting %d seconds for guest's applications up" % sleep_time)
+        time.sleep(sleep_time)
+        self.env["balloon_test_setup_ready"] = True
         self.ori_mem = self.get_vm_mem(self.vm)
         self.current_mmem = self.get_ballooned_memory()
         if self.current_mmem != self.ori_mem:
@@ -49,7 +57,7 @@ class BallooningTest(MemoryBaseTest):
             return 0
         return ballooned_mem
 
-    @error.context_aware
+    @error_context.context_aware
     def memory_check(self, step, ballooned_mem):
         """
         Check memory status according expect values
@@ -61,7 +69,7 @@ class BallooningTest(MemoryBaseTest):
         :return: memory size get from monitor and guest
         :rtype: tuple
         """
-        error.context("Check memory status %s" % step, logging.info)
+        error_context.context("Check memory status %s" % step, logging.info)
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
         # for windows illegal test:set windows guest balloon in (1,100),free memory will less than 50M
@@ -70,7 +78,7 @@ class BallooningTest(MemoryBaseTest):
             session = self.vm.wait_for_login(timeout=timeout)
             try:
                 if self.get_win_mon_free_mem(session) > 50:
-                    error.TestFail("Balloon_min test failed %s" % step)
+                    self.test.fail("Balloon_min test failed %s" % step)
             finally:
                 session.close()
         else:
@@ -78,10 +86,10 @@ class BallooningTest(MemoryBaseTest):
             if (abs(mmem - self.ori_mem) != ballooned_mem or
                     (abs(guest_ballooned_mem - ballooned_mem) > 100)):
                 self.error_report(step, self.ori_mem - ballooned_mem, mmem, gmem)
-                raise error.TestFail("Balloon test failed %s" % step)
+                raise exceptions.TestFail("Balloon test failed %s" % step)
         return (mmem, gmem)
 
-    @error.context_aware
+    @error_context.context_aware
     def balloon_memory(self, new_mem):
         """
         Baloon memory to new_mem and verifies on both qemu monitor and
@@ -91,13 +99,14 @@ class BallooningTest(MemoryBaseTest):
         :type new_mem: int
         """
         self.env["balloon_test"] = 0
-        error.context("Change VM memory to %s" % new_mem, logging.info)
+        error_context.context("Change VM memory to %s" % new_mem, logging.info)
         try:
             self.vm.balloon(new_mem)
             self.env["balloon_test"] = 1
         except Exception, e:
             if self.params.get('illegal_value_check', 'no') == 'no' and new_mem != self.get_ballooned_memory():
-                raise error.TestFail("Balloon memory fail with error message: %s" % e)
+                raise exceptions.TestFail("Balloon memory fail with error"
+                                          " message: %s" % e)
         if new_mem > self.ori_mem:
             compare_mem = self.ori_mem
         elif new_mem == 0:
@@ -113,8 +122,8 @@ class BallooningTest(MemoryBaseTest):
                                       self.get_ballooned_memory()),
                                      balloon_timeout)
         if status is None:
-            raise error.TestFail("Failed to balloon memory to expect"
-                                 " value during %ss" % balloon_timeout)
+            raise exceptions.TestFail("Failed to balloon memory to expect"
+                                      " value during %ss" % balloon_timeout)
 
     def run_balloon_sub_test(self, test, params, env, test_tag):
         """
@@ -179,19 +188,20 @@ class BallooningTest(MemoryBaseTest):
         max_size = self.ori_mem
         min_size = self.params.get("minmem", "512M")
         min_size = int(float(utils_misc.normalize_data_size(min_size)))
+        balloon_buffer = self.params.get("balloon_buffer", 300)
         if self.params.get('os_type') == 'windows':
             logging.info("Get windows miminum balloon value:")
             self.vm.balloon(1)
             balloon_timeout = self.params.get("balloon_timeout", 900)
             self.wait_for_balloon_complete(balloon_timeout)
-            used_size = int(self.get_ballooned_memory() + self.ratio * self.ori_mem)
+            used_size = min((self.get_ballooned_memory() + balloon_buffer), max_size)
             self.vm.balloon(max_size)
             self.wait_for_balloon_complete(balloon_timeout)
             self.ori_gmem = self.get_memory_status()
         else:
             vm_total = self.get_memory_status()
             vm_mem_free = self.get_free_mem()
-            used_size = vm_total - vm_mem_free + 16
+            used_size = min((self.ori_mem - vm_mem_free + balloon_buffer), max_size)
         if balloon_type == "enlarge":
             min_size = self.current_mmem
         elif balloon_type == "evict":
@@ -199,7 +209,7 @@ class BallooningTest(MemoryBaseTest):
         min_size = max(used_size, min_size)
         return min_size, max_size
 
-    @error.context_aware
+    @error_context.context_aware
     def run_ballooning_test(self, expect_mem, tag):
         """
         Run a loop of ballooning test
@@ -214,7 +224,7 @@ class BallooningTest(MemoryBaseTest):
         def _memory_check_after_sub_test():
             try:
                 output = self.memory_check("after subtest", ballooned_mem)
-            except error.TestFail:
+            except exceptions.TestFail:
                 return None
             return output
 
@@ -246,11 +256,12 @@ class BallooningTest(MemoryBaseTest):
             ballooned_mem = abs(self.ori_mem - expect_mem)
             msg = "Wait memory balloon back after "
             msg += params_tag['sub_test_after_balloon']
-            mmem, gmem = utils_misc.wait_for(_memory_check_after_sub_test,
-                                             timeout, sleep_before_check, 5, msg)
-
-            self.current_mmem = mmem
-            self.current_gmem = gmem
+            ret = utils_misc.wait_for(_memory_check_after_sub_test,
+                                      timeout, sleep_before_check, 5, msg)
+            if not ret:
+                self.test.fail("After sub test, memory check failed")
+            self.current_mmem = ret[0]
+            self.current_gmem = ret[1]
         return False
 
     def reset_memory(self):
@@ -348,7 +359,66 @@ class BallooningTestWin(BallooningTest):
             free = float(utils_misc.normalize_data_size(free, order_magnitude="M"))
             return int(free)
         else:
-            error.TestFail("Failed to get windows guest free memory")
+            self.test.fail("Failed to get windows guest free memory")
+
+    def get_disk_vol(self, session):
+        """
+        Get virtio-win disk volume letter for windows guest.
+
+        :param session: VM session.
+        """
+        key = "VolumeName like 'virtio-win%'"
+        try:
+            return utils_misc.get_win_disk_vol(session,
+                                               condition=key)
+        except Exception:
+            self.test.error("Could not get virtio-win disk vol!")
+
+    @error_context.context_aware
+    def operate_balloon_service(self, session, operation):
+        """
+        Run/check/stop/install/uninstall balloon service in windows guest
+
+        :param session: shell Object
+        :param operation: operation against balloon serive, e.g. run/status/
+                          uninstall/stop
+        :return: cmd execution output
+        """
+        error_context.context("%s Balloon Service in guest." % operation,
+                              logging.info)
+        drive_letter = self.get_disk_vol(session)
+        try:
+            operate_cmd = self.params["%s_balloon_service"
+                                      % operation] % drive_letter
+            if operation == "status":
+                output = session.cmd_output(operate_cmd)
+            else:
+                output = session.cmd(operate_cmd)
+        except Exception as err:
+            self.test.error("%s balloon service failed! Error msg is:\n%s"
+                            % (operation, err))
+        return output
+
+    @error_context.context_aware
+    def configure_balloon_service(self, session):
+        """
+        Check balloon service and install it if it's not running.
+
+        :param session: shell Object
+        :param operation: operation against balloon serive, e.g. run/status/
+                          uninstall/stop
+        """
+        error_context.context("Check Balloon Service status before install"
+                              "service", logging.info)
+        output = self.operate_balloon_service(session, "status")
+        if re.search("running", output.lower(), re.M):
+            logging.info("Balloon service is already running !")
+        elif re.search("stop", output.lower(), re.M):
+            logging.info("Balloon service is stopped,start it now")
+            self.operate_balloon_service(session, "run")
+        else:
+            logging.info("Install Balloon Service in guest.")
+            self.operate_balloon_service(session, "install")
 
 
 class BallooningTestLinux(BallooningTest):
@@ -383,7 +453,7 @@ class BallooningTestLinux(BallooningTest):
         return int(self.get_total_mem())
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Check Memory ballooning, use M when compare memory in this script:
@@ -402,7 +472,7 @@ def run(test, params, env):
         balloon_test = BallooningTestLinux(test, params, env)
 
     for tag in params.objects('test_tags'):
-        error.context("Running %s test" % tag, logging.info)
+        error_context.context("Running %s test" % tag, logging.info)
         params_tag = params.object_params(tag)
         if params_tag.get('expect_memory'):
             expect_mem = int(params_tag.get('expect_memory'))

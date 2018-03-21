@@ -36,6 +36,7 @@ class Message:
     SessionStartup = 18
     SessionShutdown = 19
 
+
 READ_HEADER = "III"
 READ_HEADER_LEN = struct.calcsize(READ_HEADER)
 WRITE_HEADER = "IIII"
@@ -103,6 +104,7 @@ def test(path):
         vport_name = '/dev/virtio-ports/' + path
     vio = VirtIoChannel(vport_name)
     print vio.read()
+
 
 if __name__ == "__main__":
     # ************************************************************************

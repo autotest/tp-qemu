@@ -1,6 +1,7 @@
 import logging
 import re
 import time
+import string
 
 from autotest.client.shared import error
 from autotest.client import local_host
@@ -26,7 +27,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    def proc_interrupts_results(results):
+    def proc_interrupts_results(results, irqs_pattern):
         results_dict = {}
         cpu_count = 0
         cpu_list = []
@@ -38,21 +39,24 @@ def run(test, params, env):
                 continue
             if cpu_count > 0:
                 irq_key = re.split(":", line)[0]
-                results_dict[irq_key] = {}
-                content = line[len(irq_key) + 1:].strip()
-                if len(re.split("\s+", content)) < cpu_count:
-                    continue
-                count = 0
-                irq_des = ""
-                for irq_item in re.split("\s+", content):
-                    if count < cpu_count:
-                        if count == 0:
-                            results_dict[irq_key]["count"] = []
-                        results_dict[irq_key]["count"].append(irq_item)
-                    else:
-                        irq_des += " %s" % irq_item
-                    count += 1
-                results_dict[irq_key]["irq_des"] = irq_des.strip()
+                if re.findall(irqs_pattern, re.split(":", line)[-1]):
+                    results_dict[irq_key] = {}
+                    content = line[len(irq_key) + 1:].strip()
+                    if len(re.split("\s+", content)) < cpu_count:
+                        continue
+                    count = 0
+                    irq_des = ""
+                    for irq_item in re.split("\s+", content):
+                        if count < cpu_count:
+                            if count == 0:
+                                results_dict[irq_key]["count"] = []
+                            results_dict[irq_key]["count"].append(irq_item)
+                        else:
+                            irq_des += " %s" % irq_item
+                        count += 1
+                    results_dict[irq_key]["irq_des"] = irq_des.strip()
+        if not results_dict:
+            test.error("Couldn't find virtio request interrupts from procfs")
         return results_dict, cpu_list
 
     timeout = float(params.get("login_timeout", 240))
@@ -65,7 +69,8 @@ def run(test, params, env):
     images_num = int(num_queues)
     extra_image_size = params.get("image_size_extra_images", "512M")
     system_image = params.get("images")
-    system_image_drive_format = params.get("system_image_drive_format", "ide")
+    system_image_drive_format = params.get("system_image_drive_format",
+                                           "virtio")
     params["drive_format_%s" % system_image] = system_image_drive_format
 
     error.context("Boot up guest with block devcie with num_queues"
@@ -143,37 +148,37 @@ def run(test, params, env):
         raise error.TestError("Didn't find addr from qtree. Please check "
                               "the log.")
     error.context("Check device init status in guest", logging.info)
-    init_check_cmd = params.get("init_check_cmd", "dmesg | grep irq")
-    output = session.cmd_output(init_check_cmd)
-    irqs_pattern = params.get("irqs_pattern", "%s:\s+irq\s+(\d+)")
-    irqs_pattern = irqs_pattern % scsi_bus_addr
-    irqs_watch = re.findall(irqs_pattern, output)
-    # As there are several interrupts count for virtio device:
-    # config, control, event and request. And the each queue have
-    # a request count. So the totally count for virtio device should
-    # equal to queus number plus three.
-    if len(irqs_watch) != 3 + int(num_queues):
-        raise error.TestFail("Failed to check the interrupt ids from dmesg")
     irq_check_cmd = params.get("irq_check_cmd", "cat /proc/interrupts")
     output = session.cmd_output(irq_check_cmd)
-    irq_results, _ = proc_interrupts_results(output)
-    for irq_watch in irqs_watch:
-        if irq_watch not in irq_results:
-            raise error.TestFail("Can't find irq %s from procfs" % irq_watch)
+    irq_name = params.get("irq_regex")
+    prev_irq_results, _ = proc_interrupts_results(output, irq_name)
+    logging.debug('The info of interrupters before testing:')
+    for irq_watch in prev_irq_results.keys():
+        logging.debug('%s : %s %s' % (irq_watch, prev_irq_results[irq_watch]['count'],
+                                      prev_irq_results[irq_watch]['irq_des']))
+
+    error.context("Pin the interrupters to vcpus", logging.info)
+    cpu_select = 1
+    for irq_id in prev_irq_results.keys():
+        bind_cpu_cmd = "echo %s > /proc/irq/%s/smp_affinity" % \
+                       (hex(cpu_select).replace('0x', ''), irq_id)
+        cpu_select = cpu_select << 1
+        session.cmd(bind_cpu_cmd)
 
     error.context("Load I/O in all targets", logging.info)
     get_dev_cmd = params.get("get_dev_cmd", "ls /dev/[svh]d*")
     output = session.cmd_output(get_dev_cmd)
-    system_dev = re.findall("[svh]d(\w+)\d+", output)[0]
+    system_dev = re.findall("/dev/[svh]d\w+\d+", output)[0]
+    system_dev = system_dev.rstrip(string.digits)
     dd_timeout = int(re.findall("\d+", extra_image_size)[0])
     fill_cmd = ""
     count = 0
     for dev in re.split("\s+", output):
         if not dev:
             continue
-        if not re.findall("[svh]d%s" % system_dev, dev):
+        if not re.findall(system_dev, dev):
             fill_cmd += " dd of=%s if=/dev/urandom bs=1M " % dev
-            fill_cmd += "count=%s &" % dd_timeout
+            fill_cmd += "count=%s oflag=direct &" % dd_timeout
             count += 1
     if count != images_num:
         raise error.TestError("Disks are not all show up in system. Output "
@@ -190,13 +195,16 @@ def run(test, params, env):
 
     error.context("Check the interrupt queues in guest", logging.info)
     output = session.cmd_output(irq_check_cmd)
-    irq_results, cpu_list = proc_interrupts_results(output)
+    next_irq_results, cpu_list = proc_interrupts_results(output, irq_name)
+    logging.debug('The info of interrupters after testing :')
+    for irq_watch in next_irq_results.keys():
+        logging.debug('%s : %s %s' % (irq_watch, next_irq_results[irq_watch]['count'],
+                                      next_irq_results[irq_watch]['irq_des']))
     irq_bit_map = 0
-    for irq_watch in irqs_watch:
-        if "request" in irq_results[irq_watch]["irq_des"]:
-            for index, count in enumerate(irq_results[irq_watch]["count"]):
-                if int(count) > 0:
-                    irq_bit_map |= 2 ** index
+    for irq_watch in next_irq_results.keys():
+        for index, count in enumerate(next_irq_results[irq_watch]["count"]):
+            if (int(count) - int(prev_irq_results[irq_watch]["count"][index])) > 0:
+                irq_bit_map |= 2 ** index
 
     error_msg = ""
     cpu_not_used = []

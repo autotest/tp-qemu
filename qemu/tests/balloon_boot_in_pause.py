@@ -16,7 +16,7 @@ class BallooningTestPause(BallooningTest):
     """
 
     def __init__(self, test, params, env):
-        super(BallooningTest, self).__init__(test, params, env)
+        super(BallooningTestPause, self).__init__(test, params, env)
 
         self.vm = env.get_vm(params["main_vm"])
         self.ori_mem = self.get_vm_mem(self.vm)

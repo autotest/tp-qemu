@@ -68,10 +68,12 @@ def run(test, params, env):
             stress_thread.start()
 
         for event in params.get("check_setup_events", "").strip().split():
-            if not utils_misc.wait_for(lambda: env.get(event),
+            if not utils_misc.wait_for(lambda: params.get(event),
                                        240, 0, 1):
                 test.error("Background test not in ready state since haven't "
                            "received event %s" % event)
+            # Clear event
+            params[event] = False
 
         if not utils_misc.wait_for(lambda: check_bg_running(target_process),
                                    120, 0, 1):

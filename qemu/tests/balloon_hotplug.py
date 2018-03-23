@@ -6,7 +6,6 @@ from virttest.qemu_devices import qdevices
 from virttest import error_context
 from virttest import utils_test
 from qemu.tests import balloon_check
-from avocado.core import exceptions
 from qemu.tests.balloon_check import BallooningTestWin
 
 
@@ -83,6 +82,11 @@ def run(test, params, env):
             err += ("\nDevice is not in qtree %ss after hotplug:\n%s"
                     % (pause, vm.monitor.info("qtree")))
 
+        # temporary workaround for migration
+        vm.params["balloon"] = "balloon%d" % idx
+        vm.params["balloon_dev_devid"] = "balloon%d" % idx
+        vm.params["balloon_dev_add_bus"] = "yes"
+        
         if params.get("blnsrv_enable", "no") == "yes":
             error_context.context("Install and check balloon service in windows"
                                   "guest", logging.info)
@@ -114,11 +118,23 @@ def run(test, params, env):
                     % (pause, vm.monitor.info("qtree")))
         if err:
             logging.error(vm.monitor.info("qtree"))
-            raise exceptions.TestFail("Error occurred while hotpluging "
-                                      "virtio-pci. Iteration %s, monitor "
-                                      "output:%s" % (i, err))
+            test.fail("Error occurred while hotpluging "
+                      "virtio-pci. Iteration %s, monitor "
+                      "output:%s" % (i, err))
         else:
+            if params.get("migrate_after_unplug", "no") == "yes":
+                error_context.context("Migrate after hotunplug balloon device",
+                                      logging.info)
+                # temporary workaround for migration
+                del vm.params["balloon"]
+                del vm.params["balloon_dev_devid"]
+                del vm.params["balloon_dev_add_bus"]
+                vm.migrate(float(params.get("mig_timeout", "3600")))
+
             if pm_test_after_unplug:
                 run_pm_test(pm_test_after_unplug, "hot-unplug")
                 if not vm.is_alive():
                     return
+
+    error_context.context("Verify guest alive!", logging.info)
+    vm.verify_kernel_crash()

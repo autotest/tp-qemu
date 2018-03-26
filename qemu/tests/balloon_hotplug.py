@@ -86,7 +86,7 @@ def run(test, params, env):
         vm.params["balloon"] = "balloon%d" % idx
         vm.params["balloon_dev_devid"] = "balloon%d" % idx
         vm.params["balloon_dev_add_bus"] = "yes"
-        
+
         if params.get("blnsrv_enable", "no") == "yes":
             error_context.context("Install and check balloon service in windows"
                                   "guest", logging.info)

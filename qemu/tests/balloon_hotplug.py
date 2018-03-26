@@ -1,10 +1,12 @@
 import logging
 import time
+import re
 
 from virttest.qemu_devices import qdevices
 from virttest import error_context
 from virttest import utils_test
 from qemu.tests import balloon_check
+from qemu.tests.balloon_check import BallooningTestWin
 
 
 @error_context.context_aware
@@ -14,11 +16,12 @@ def run(test, params, env):
 
     1) Boot up guest w/o balloon device.
     2) Hoplug balloon device and check hotplug successfully or not.
-    3) Do memory balloon.
-    4) Reboot/shutdown/migrate guest after hotplug balloon device(option)
-    5) Do memory balloon after guest reboot(option)
-    6) Unplug balloon device and check unplug successfully or not.
-    7) Reboot/shutdown/migrate guest after unplug balloon device(option)
+    3) Install balloon service and check its status in windows guests(option).
+    4) Do memory balloon.
+    5) Reboot/shutdown guest after hotplug balloon device(option)
+    6) Do memory balloon after guest reboot(option)
+    7) Unplug balloon device and check unplug successfully or not.
+    8) Reboot/shutdown guest after unplug balloon device(option)
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -36,6 +39,19 @@ def run(test, params, env):
                               % (pm_test, plug_type), logging.info)
         utils_test.run_virt_sub_test(test, params, env, pm_test)
 
+    def enable_balloon_service(session):
+        """
+        Install balloon service and check its status in windows guests
+        :param session: shell Object
+        """
+        if params['os_type'] == 'windows':
+            balloon_test = BallooningTestWin(test, params, env)
+            balloon_test.configure_balloon_service(session)
+
+            output = balloon_test.operate_balloon_service(session, "status")
+            if not re.search("running", output.lower(), re.M):
+                test.error("Ballooon service status is not running")
+
     pause = float(params.get("virtio_balloon_pause", 3.0))
     pm_test_after_plug = params.get("pm_test_after_plug")
     pm_test_after_unplug = params.get("pm_test_after_unplug")
@@ -44,6 +60,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     balloon_device = params.get("ballon_device", "virtio-balloon-pci")
+    session = vm.wait_for_login()
 
     error_context.context("Hotplug and unplug balloon device in a loop",
                           logging.info)
@@ -69,6 +86,11 @@ def run(test, params, env):
         vm.params["balloon"] = "balloon%d" % idx
         vm.params["balloon_dev_devid"] = "balloon%d" % idx
         vm.params["balloon_dev_add_bus"] = "yes"
+
+        if params.get("blnsrv_enable", "no") == "yes":
+            error_context.context("Install and check balloon service in windows"
+                                  "guest", logging.info)
+            enable_balloon_service(session)
 
         error_context.context("Check whether balloon device work after hotplug",
                               logging.info)

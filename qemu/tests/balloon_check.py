@@ -72,6 +72,7 @@ class BallooningTest(MemoryBaseTest):
         error_context.context("Check memory status %s" % step, logging.info)
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
+        gcompare_threshold = self.params.get("guest_compare_threshold", 100)
         # for windows illegal test:set windows guest balloon in (1,100),free memory will less than 50M
         if ballooned_mem >= self.ori_mem - 100:
             timeout = float(self.params.get("login_timeout", 600))
@@ -84,7 +85,7 @@ class BallooningTest(MemoryBaseTest):
         else:
             guest_ballooned_mem = abs(gmem - self.ori_gmem)
             if (abs(mmem - self.ori_mem) != ballooned_mem or
-                    (abs(guest_ballooned_mem - ballooned_mem) > 100)):
+                    (abs(guest_ballooned_mem - ballooned_mem) > gcompare_threshold)):
                 self.error_report(step, self.ori_mem - ballooned_mem, mmem, gmem)
                 raise exceptions.TestFail("Balloon test failed %s" % step)
         return (mmem, gmem)

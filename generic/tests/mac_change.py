@@ -160,7 +160,10 @@ def run(test, params, env):
                                       logging.info)
                 utils_test.run_file_transfer(test, params, env)
         else:
-            check_guest_mac(test, new_mac, vm)
+            if params.get("ctrl_mac_addr") == "off":
+                check_guest_mac(test, old_mac, vm)
+            else:
+                check_guest_mac(test, new_mac, vm)
     finally:
         if os_type == "windows":
             clean_cmd_pattern = params.get("clean_cmd")

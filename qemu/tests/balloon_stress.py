@@ -43,8 +43,9 @@ def run(test, params, env):
 
     if params['os_type'] == 'windows':
         driver_name = params["driver_name"]
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
         balloon_test = BallooningTestWin(test, params, env)
     else:
         balloon_test = BallooningTestLinux(test, params, env)

@@ -57,11 +57,12 @@ def run(test, params, env):
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     driver_name = params.get("driver_name")
+    session = vm.wait_for_login(timeout=timeout)
 
     if params.get("os_type") == "windows" and driver_name:
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-
-    session = vm.wait_for_login(timeout=timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
     data_image = params.get("images").split()[-1]
     data_image_params = params.object_params(data_image)
     data_image_size = data_image_params.get("image_size")

@@ -160,7 +160,9 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     if params['os_type'] == 'windows':
         driver_name = params.get("driver_name", "balloon")
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
 
         error_context.context("Config balloon service in guest",
                               logging.info)

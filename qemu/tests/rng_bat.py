@@ -81,10 +81,12 @@ def run(test, params, env):
             msg = "Qemu (pid=%d) not using host passthrough " % vm_pid
             msg += "device '%s'" % dev_file
             raise exceptions.TestFail(msg)
+    session = vm.wait_for_login(timeout=timeout)
 
     if params["os_type"] == "windows":
-        utils_test.qemu.setup_win_driver_verifier(driver_name,
-                                                  vm, timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
         error_context.context("Check driver status", logging.info)
         session = vm.wait_for_login(timeout=timeout)
         driver_id_cmd = utils_misc.set_winutils_letter(
@@ -97,7 +99,6 @@ def run(test, params, env):
             check_driver_status(session, driver_check_cmd, driver_id)
     else:
         error_context.context("verify virtio-rng device driver", logging.info)
-        session = vm.wait_for_login(timeout=timeout)
         verify_cmd = params["driver_verifier_cmd"]
         try:
             output = session.cmd_output_safe(verify_cmd, timeout=cmd_timeout)

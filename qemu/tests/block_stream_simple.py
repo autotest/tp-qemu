@@ -34,6 +34,7 @@ def run(test, params, env):
     tag = params.get("source_image", "image1")
     simple_test = BlockStreamSimple(test, params, env, tag)
     try:
+        simple_test.action_before_start()
         simple_test.create_snapshots()
         simple_test.start()
         simple_test.action_when_streaming()

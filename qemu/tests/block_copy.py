@@ -44,6 +44,8 @@ class BlockCopy(object):
         self.test = test
         self.params = params
         self.vm = self.get_vm()
+        if self.vm.monitor.protocol != "qmp":
+            self.test.cancel("hmp is not supported in this test.")
         self.data_dir = data_dir.get_data_dir()
         self.device = self.get_device()
         self.image_file = self.get_image_file()
@@ -67,7 +69,8 @@ class BlockCopy(object):
         return live vm object;
         """
         vm = self.env.get_vm(self.params["main_vm"])
-        vm.verify_alive()
+        if self.params.get("start_vm", "yes") == "yes":
+            vm.verify_alive()
         return vm
 
     def get_device(self):
@@ -121,22 +124,19 @@ class BlockCopy(object):
         """
         def is_cancelled():
             ret = not bool(self.get_status())
-            if self.vm.monitor.protocol == "qmp":
-                ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_CANCELLED"))
+            ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_CANCELLED"))
             return ret
 
         error.context("cancel block copy job", logging.info)
         params = self.parser_test_args()
         timeout = params.get("cancel_timeout")
-        if self.vm.monitor.protocol == "qmp":
-            self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
+        self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
         self.vm.cancel_block_job(self.device)
         cancelled = utils_misc.wait_for(is_cancelled, timeout=timeout)
         if not cancelled:
             msg = "Cancel block job timeout in %ss" % timeout
             raise error.TestFail(msg)
-        if self.vm.monitor.protocol == "qmp":
-            self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
+        self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
 
     def is_paused(self):
         """
@@ -213,19 +213,16 @@ class BlockCopy(object):
             session = self.get_session()
             return self.vm.reboot(session=session,
                                   timeout=timeout, method=method)
-        if self.vm.monitor.protocol == "qmp":
-            error.context("reset guest via system_reset", logging.info)
-            self.vm.monitor.clear_event("RESET")
-            self.vm.monitor.cmd("system_reset")
-            reseted = utils_misc.wait_for(lambda:
-                                          self.vm.monitor.get_event("RESET"),
-                                          timeout=timeout)
-            if not reseted:
-                raise error.TestFail("No RESET event received after"
-                                     "execute system_reset %ss" % timeout)
-            self.vm.monitor.clear_event("RESET")
-        else:
-            self.vm.monitor.cmd("system_reset")
+        error.context("reset guest via system_reset", logging.info)
+        self.vm.monitor.clear_event("RESET")
+        self.vm.monitor.cmd("system_reset")
+        reseted = utils_misc.wait_for(lambda:
+                                      self.vm.monitor.get_event("RESET"),
+                                      timeout=timeout)
+        if not reseted:
+            raise error.TestFail("No RESET event received after"
+                                 "execute system_reset %ss" % timeout)
+        self.vm.monitor.clear_event("RESET")
         return None
 
     @error.context_aware
@@ -328,9 +325,7 @@ class BlockCopy(object):
         """
         if self.get_status():
             return False
-        if self.vm.monitor.protocol == "qmp":
-            return bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
-        return True
+        return bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
 
     def wait_for_finished(self):
         """
@@ -363,9 +358,8 @@ class BlockCopy(object):
         params = self.parser_test_args()
         info = self.get_status()
         ret = bool(info and info["len"] == info["offset"])
-        if self.vm.monitor.protocol == "qmp":
-            if params.get("check_event", "no") == "yes":
-                ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))
+        if params.get("check_event", "no") == "yes":
+            ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))
         return ret
 
     def wait_for_steady(self):
@@ -375,8 +369,7 @@ class BlockCopy(object):
         """
         params = self.parser_test_args()
         timeout = params.get("wait_timeout")
-        if self.vm.monitor.protocol == "qmp":
-            self.vm.monitor.clear_event("BLOCK_JOB_READY")
+        self.vm.monitor.clear_event("BLOCK_JOB_READY")
         steady = utils_misc.wait_for(self.is_steady, first=3.0,
                                      step=3.0, timeout=timeout)
         if not steady:
@@ -426,6 +419,7 @@ class BlockCopy(object):
         params = self.params
         session = self.get_session()
         file_create_cmd = params.get("create_command", "touch FILE")
+        file_create_cmd = utils_misc.set_winutils_letter(session, file_create_cmd)
         test_exists_cmd = params.get("test_exists_cmd", "test -f FILE")
         if session.cmd_status(test_exists_cmd.replace("FILE", file_name)):
             session.cmd(file_create_cmd.replace("FILE", file_name), timeout=200)
@@ -456,3 +450,50 @@ class BlockCopy(object):
         self.params["image_name_%s" % self.tag] = reopen_image
         self.vm.create(params=self.params)
         self.vm.verify_alive()
+
+    def hot_unplug(self):
+        """
+        Host unplug the source image, check if device deleted and block job cancelled
+        or completed, both results is acceptable per different qemu version.
+        """
+        job_cancelled_events = ["BLOCK_JOB_CANCELLED", "BLOCK_JOB_COMPLETED"]
+        device_delete_event = ["DEVICE_DELETED"]
+        for event in job_cancelled_events + device_delete_event:
+            self.vm.monitor.clear_event(event)
+
+        def is_unplugged():
+            event_list = self.vm.monitor.get_events()
+            logging.debug("event_list: %s" % event_list)
+            device_deleted = job_cancelled = False
+            for event_str in event_list:
+                event = event_str.get("event")
+                if event in device_delete_event:
+                    device_deleted = True
+                if event in job_cancelled_events:
+                    job_cancelled = True
+            return device_deleted and job_cancelled
+
+        qdev = self.vm.devices
+        device = qdev.get_by_params({"drive": self.device})
+        if not device:
+            self.test.fail("Device does not exist.")
+        logging.info("Hot unplug device %s" % self.device)
+        qdev.simple_unplug(device[0], self.vm.monitor)
+        timeout = self.params.get("cancel_timeout", 10)
+        unplugged = utils_misc.wait_for(is_unplugged, timeout=timeout)
+        if not unplugged:
+            self.test.fail("Unplug timeout in %ss" % timeout)
+
+    def create_files(self):
+        """
+        Create files and record m5 values of them.
+        """
+        file_names = self.params["file_names"]
+        map(self.create_file, file_names.split())
+
+    def verify_md5s(self):
+        """
+        Check if the md5 values matches the record ones.
+        """
+        file_names = self.params["file_names"]
+        map(self.verify_md5, file_names.split())

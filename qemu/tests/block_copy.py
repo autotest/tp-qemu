@@ -3,10 +3,10 @@ import time
 import random
 import logging
 
-from autotest.client.shared import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
 from virttest import data_dir
+from virttest import error_context
 from virttest import storage
 from virttest import qemu_storage
 from virttest import utils_misc
@@ -113,11 +113,11 @@ class BlockCopy(object):
                     fun = getattr(self, step)
                     fun()
                 else:
-                    error.TestError("undefined step %s" % step)
+                    self.test.error("undefined step %s" % step)
         except KeyError:
             logging.warn("Undefined test phase '%s'" % tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def cancel(self):
         """
         cancel active job on given image;
@@ -127,7 +127,7 @@ class BlockCopy(object):
             ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_CANCELLED"))
             return ret
 
-        error.context("cancel block copy job", logging.info)
+        error_context.context("cancel block copy job", logging.info)
         params = self.parser_test_args()
         timeout = params.get("cancel_timeout")
         self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
@@ -135,7 +135,7 @@ class BlockCopy(object):
         cancelled = utils_misc.wait_for(is_cancelled, timeout=timeout)
         if not cancelled:
             msg = "Cancel block job timeout in %ss" % timeout
-            raise error.TestFail(msg)
+            self.test.fail(msg)
         self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
 
     def is_paused(self):
@@ -163,25 +163,25 @@ class BlockCopy(object):
         pause active job;
         """
         if self.is_paused():
-            raise error.TestError("Job has been already paused.")
+            self.test.error("Job has been already paused.")
         logging.info("Pause block job.")
         self.vm.pause_block_job(self.device)
         time.sleep(5)
         if not self.is_paused():
-            raise error.TestFail("Pause block job failed.")
+            self.test.fail("Pause block job failed.")
 
     def resume_job(self):
         """
         resume a paused job.
         """
         if not self.is_paused():
-            raise error.TestError("Job is not paused, can't be resume.")
+            self.test.error("Job is not paused, can't be resume.")
         logging.info("Resume block job.")
         self.vm.resume_block_job(self.device)
         if self.is_paused():
-            raise error.TestFail("Resume block job failed.")
+            self.test.fail("Resume block job failed.")
 
-    @error.context_aware
+    @error_context.context_aware
     def set_speed(self):
         """
         set limited speed for block job;
@@ -189,23 +189,24 @@ class BlockCopy(object):
         params = self.parser_test_args()
         max_speed = params.get("max_speed")
         expected_speed = int(params.get("expected_speed", max_speed))
-        error.context("set speed to %s B/s" % expected_speed, logging.info)
+        error_context.context("set speed to %s B/s" % expected_speed,
+                              logging.info)
         self.vm.set_job_speed(self.device, expected_speed)
         status = self.get_status()
         if not status:
-            raise error.TestFail("Unable to query job status.")
+            self.test.fail("Unable to query job status.")
         speed = status["speed"]
         if speed != expected_speed:
             msg = "Set speed fail. (expected speed: %s B/s," % expected_speed
             msg += "actual speed: %s B/s)" % speed
-            raise error.TestFail(msg)
+            self.test.fail(msg)
 
-    @error.context_aware
+    @error_context.context_aware
     def reboot(self, method="shell", boot_check=True):
         """
         reboot VM, alias of vm.reboot();
         """
-        error.context("reboot vm", logging.info)
+        error_context.context("reboot vm", logging.info)
         params = self.parser_test_args()
         timeout = params["login_timeout"]
 
@@ -213,42 +214,42 @@ class BlockCopy(object):
             session = self.get_session()
             return self.vm.reboot(session=session,
                                   timeout=timeout, method=method)
-        error.context("reset guest via system_reset", logging.info)
+        error_context.context("reset guest via system_reset", logging.info)
         self.vm.monitor.clear_event("RESET")
         self.vm.monitor.cmd("system_reset")
         reseted = utils_misc.wait_for(lambda:
                                       self.vm.monitor.get_event("RESET"),
                                       timeout=timeout)
         if not reseted:
-            raise error.TestFail("No RESET event received after"
-                                 "execute system_reset %ss" % timeout)
+            self.test.fail("No RESET event received after"
+                           "execute system_reset %ss" % timeout)
         self.vm.monitor.clear_event("RESET")
         return None
 
-    @error.context_aware
+    @error_context.context_aware
     def stop(self):
         """
         stop vm and verify it is really paused;
         """
-        error.context("stop vm", logging.info)
+        error_context.context("stop vm", logging.info)
         self.vm.pause()
         return self.vm.verify_status("paused")
 
-    @error.context_aware
+    @error_context.context_aware
     def resume(self):
         """
         resume vm and verify it is really running;
         """
-        error.context("resume vm", logging.info)
+        error_context.context("resume vm", logging.info)
         self.vm.resume()
         return self.vm.verify_status("running")
 
-    @error.context_aware
+    @error_context.context_aware
     def verify_alive(self):
         """
         check guest can response command correctly;
         """
-        error.context("verify guest alive", logging.info)
+        error_context.context("verify guest alive", logging.info)
         params = self.parser_test_args()
         session = self.get_session()
         cmd = params.get("alive_check_cmd", "dir")
@@ -314,7 +315,7 @@ class BlockCopy(object):
         for test in self.params.get("when_start").split():
             if hasattr(self, test):
                 fun = getattr(self, test)
-                bg = utils.InterruptedThread(fun)
+                bg = utils_misc.InterruptedThread(fun)
                 bg.start()
                 if bg.isAlive():
                     self.processes.append(bg)
@@ -336,7 +337,7 @@ class BlockCopy(object):
         timeout = params.get("wait_timeout")
         finished = utils_misc.wait_for(self.job_finished, timeout=timeout)
         if not finished:
-            raise error.TestFail("Job not finished in %s seconds" % timeout)
+            self.test.fail("Job not finished in %s seconds" % timeout)
         time_end = time.time()
         logging.info("Block job done.")
         return time_end - time_start
@@ -373,8 +374,7 @@ class BlockCopy(object):
         steady = utils_misc.wait_for(self.is_steady, first=3.0,
                                      step=3.0, timeout=timeout)
         if not steady:
-            raise error.TestFail("Wait mirroring job ready "
-                                 "timeout in %ss" % timeout)
+            self.test.fail("Wait mirroring job ready timeout in %ss" % timeout)
 
     def action_before_steady(self):
         """
@@ -409,7 +409,7 @@ class BlockCopy(object):
             self.vm.destroy()
         while self.trash_files:
             tmp_file = self.trash_files.pop()
-            utils.system("rm -f %s" % tmp_file, ignore_status=True)
+            process.system("rm -f %s" % tmp_file, ignore_status=True)
 
     def create_file(self, file_name):
         """
@@ -438,8 +438,8 @@ class BlockCopy(object):
         status, output = session.cmd_status_output("md5sum -c %s.md5" % file_name,
                                                    timeout=200)
         if status != 0:
-            raise error.TestFail("File %s changed, md5sum check output: %s" %
-                                 (file_name, output))
+            self.test.fail("File %s changed, md5sum check output: %s"
+                           % (file_name, output))
 
     def reopen(self, reopen_image):
         """

@@ -3,9 +3,9 @@ import re
 import time
 import logging
 
-from autotest.client import utils
-from virttest import error_context
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
 from virttest import qemu_storage
@@ -35,9 +35,9 @@ def run(test, params, env):
         logging.info("creating test cdrom")
         cdrom_test = params.get("cdrom_test")
         cdrom_test = utils_misc.get_path(data_dir.get_data_dir(), cdrom_test)
-        utils.run("dd if=/dev/urandom of=test bs=10M count=1")
-        utils.run("mkisofs -o %s test" % cdrom_test)
-        utils.run("rm -f test")
+        process.run("dd if=/dev/urandom of=test bs=10M count=1")
+        process.run("mkisofs -o %s test" % cdrom_test)
+        process.run("rm -f test")
 
     def cleanup_cdroms():
         """

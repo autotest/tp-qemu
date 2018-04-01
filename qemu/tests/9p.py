@@ -1,8 +1,6 @@
 import os
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_test
 
 
@@ -45,7 +43,7 @@ def run(test, params, env):
 
         if (mount_status != 0):
             logging.error("mount failed")
-            raise error.TestFail('mount failed.')
+            test.fail('mount failed.')
 
         # Collect test parameters
         timeout = int(params.get("test_timeout", 14400))

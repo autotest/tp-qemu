@@ -1,15 +1,14 @@
 import logging
 import re
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_test
 from virttest import env_process
 from virttest import virt_vm
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Boot guest with different vectors, then do netperf testing.
@@ -27,7 +26,8 @@ def run(test, params, env):
     """
 
     def boot_guest_with_vectors(vectors):
-        error.context("Boot guest with vectors = %s" % vectors, logging.info)
+        error_context.context("Boot guest with vectors = %s" % vectors,
+                              logging.info)
         params["vectors"] = vectors
         params["start_vm"] = "yes"
         try:
@@ -40,7 +40,7 @@ def run(test, params, env):
         if int(vectors) < 0:
             msg = "Qemu did not raise correct error"
             msg += " when vectors = %s" % vectors
-            raise error.TestFail(msg)
+            test.fail(msg)
 
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
@@ -48,7 +48,7 @@ def run(test, params, env):
 
     def enable_multi_queues(vm):
         session = vm.wait_for_login(timeout=login_timeout)
-        error.context("Enable multi queues in guest.", logging.info)
+        error_context.context("Enable multi queues in guest.", logging.info)
         for nic_index, nic in enumerate(vm.virtnet):
             ifname = utils_net.get_linux_ifname(session, nic.mac)
             queues = int(nic.queues)
@@ -57,12 +57,13 @@ def run(test, params, env):
             if status:
                 msg = "Fail to enable multi queue in guest."
                 msg += "Command %s, fail with output %s" % (mq_set_cmd, output)
-                error.TestError(msg)
+                test.error(msg)
 
     def check_msi_support(session):
         devices = session.cmd_output("lspci |grep Eth").strip()
         vectors = params["vectors"]
-        error.context("Check if vnic inside guest support msi.", logging.info)
+        error_context.context("Check if vnic inside guest support msi.",
+                              logging.info)
         for device in devices.split("\n"):
             if not device:
                 continue
@@ -70,7 +71,7 @@ def run(test, params, env):
             msi_check_cmd = "lspci -vvv -s %s |grep MSI" % d_id
             output = session.cmd_output(msi_check_cmd)
             if vectors == 0 and output:
-                error.TestFail("Guest do not support msi when vectors = 0.")
+                test.fail("Guest do not support msi when vectors = 0.")
             if output:
                 if vectors == 1:
                     if "MSI-X: Enable-" in output:
@@ -78,17 +79,18 @@ def run(test, params, env):
                     else:
                         msg = "Command %s get wrong output." % msi_check_cmd
                         msg += " when vectors = 1"
-                        error.TestFail(msg)
+                        test.fail(msg)
                 else:
                     if "MSI-X: Enable+" in output:
                         logging.info("MSI-X is enabled")
                     else:
                         msg = "Command %s get wrong output." % msi_check_cmd
                         msg += " when vectors = %s" % vectors
-                        error.TestFail(msg)
+                        test.fail(msg)
 
     def check_interrupt(session, vectors):
-        error.context("Check the cpu interrupt of virito", logging.info)
+        error_context.context("Check the cpu interrupt of virito",
+                              logging.info)
         cmd = "cat /proc/interrupts |grep virtio"
         output = session.cmd_output(cmd)
         vectors = int(vectors)
@@ -96,20 +98,20 @@ def run(test, params, env):
             if "IO-APIC-fasteoi" not in output:
                 msg = "Could not find IO-APIC-fasteoi interrupt"
                 msg += " when vectors = %s" % vectors
-                error.TestFail(msg)
+                test.fail(msg)
         elif 2 <= vectors and vectors <= 8:
             if not re.findall("vritio[0-9]-virtqueues", output):
                 msg = "Could not find the device for msi interrupt "
                 msg += "when vectors = %s " % vectors
                 msg += "Command %s got output %s" % (cmd, output)
-                error.TestFail(msg)
+                test.fail(msg)
         elif vectors == 9 or vectors == 10:
             if not (re.findall("virtio[0-9]-input", output) and
                     re.findall("virtio[0-9]-output", output)):
                 msg = "Could not find the device for msi interrupt "
                 msg += "when vectors = %s " % vectors
                 msg += "Command %s got output %s" % (cmd, output)
-                error.TestFail(msg)
+                test.fail(msg)
 
     vectors_list = params["vectors_list"]
     login_timeout = int(params.get("login_timeout", 360))
@@ -122,5 +124,5 @@ def run(test, params, env):
         enable_multi_queues(vm)
         check_msi_support(session)
         check_interrupt(session, vectors)
-        error.context("Run netperf test in guest.", logging.info)
+        error_context.context("Run netperf test in guest.", logging.info)
         utils_test.run_virt_sub_test(test, params, env, sub_type=sub_test)

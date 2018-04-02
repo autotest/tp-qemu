@@ -2,14 +2,13 @@ import sys
 import traceback
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from avocado.utils import process
 from virttest import openvswitch
 from virttest import versionable_class
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run basic test of OpenVSwitch driver.
@@ -18,7 +17,7 @@ def run(test, params, env):
     ovs = None
     try:
         try:
-            error.context("Remove all bridge from OpenVSwitch.")
+            error_context.context("Remove all bridge from OpenVSwitch.")
             ovs = versionable_class.factory(openvswitch.OpenVSwitchSystem)(test.tmpdir)
             ovs.init_system()
             ovs.check()
@@ -28,8 +27,8 @@ def run(test, params, env):
             ovs.clean()
 
             for _ in range(int(params.get("mod_loaditer", 100))):
-                utils.run("modprobe openvswitch")
-                utils.run("rmmod openvswitch")
+                process.run("modprobe openvswitch")
+                process.run("rmmod openvswitch")
 
         except Exception:
             _e = sys.exc_info()

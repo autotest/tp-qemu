@@ -1,12 +1,12 @@
 import re
 import logging
 
-from autotest.client.shared import error
+from virttest import error_context
 
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM Seabios test:
@@ -34,7 +34,7 @@ def run(test, params, env):
         return (len(re.findall(boot_menu_hint,
                                get_output(seabios_session))) > 1)
 
-    error.context("Start guest with sga bios")
+    error_context.context("Start guest with sga bios", logging.info)
     vm = env.get_vm(params["main_vm"])
     # Since the seabios is displayed in the beginning of guest boot,
     # booting guest here so that we can check all of sgabios/seabios
@@ -51,7 +51,7 @@ def run(test, params, env):
     seabios_session = vm.logsessions['seabios']
 
     if sgabios_info:
-        error.context("Display and check the SGABIOS info", logging.info)
+        error_context.context("Display and check the SGABIOS info", logging.info)
 
         def info_check():
             return re.search(sgabios_info,
@@ -60,13 +60,13 @@ def run(test, params, env):
         if not utils_misc.wait_for(info_check, timeout, 1):
             err_msg = "Cound not get sgabios message. The output"
             err_msg += " is %s" % get_output(vm.serial_console)
-            raise error.TestFail(err_msg)
+            test.fail(err_msg)
+
+    if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
+        test.fail("Could not get boot menu message.")
 
     if restart_key:
-        error.context("Restart vm and check it's ok", logging.info)
-
-        if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
-            raise error.TestFail("Could not get boot menu message.")
+        error_context.context("Restart vm and check it's ok", logging.info)
 
         seabios_text = get_output(seabios_session)
         headline = seabios_text.split("\n")[0] + "\n"
@@ -74,21 +74,20 @@ def run(test, params, env):
 
         vm.send_key(restart_key)
 
+        if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
+            test.fail("Could not get boot menu message after rebooting")
+        # Send boot menu key in monitor.
+        vm.send_key(boot_menu_key)
+
         def reboot_check():
             return get_output(seabios_session).count(headline) > headline_count
 
         if not utils_misc.wait_for(reboot_check, timeout, 1):
-            raise error.TestFail("Could not restart the vm")
+            test.fail("Could not restart the vm")
 
         utils_misc.wait_for(boot_menu_check, timeout, 1)
 
-    error.context("Display and check the boot menu order", logging.info)
-
-    if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
-        raise error.TestFail("Could not get boot menu message.")
-
-    # Send boot menu key in monitor.
-    vm.send_key(boot_menu_key)
+    error_context.context("Display and check the boot menu order", logging.info)
 
     def get_list():
         return re.findall("^\d+\. (.*)\s", get_output(seabios_session), re.M)
@@ -96,19 +95,19 @@ def run(test, params, env):
     boot_list = utils_misc.wait_for(get_list, timeout, 1)
 
     if not boot_list:
-        raise error.TestFail("Could not get boot entries list.")
+        test.fail("Could not get boot entries list.")
 
     logging.info("Got boot menu entries: '%s'", boot_list)
     for i, v in enumerate(boot_list, start=1):
         if re.search(boot_device, v, re.I):
-            error.context("Start guest from boot entry '%s'" % v,
-                          logging.info)
+            error_context.context("Start guest from boot entry '%s'" % v,
+                                  logging.info)
             vm.send_key(str(i))
             break
     else:
-        raise error.TestFail("Could not get any boot entry match "
-                             "pattern '%s'" % boot_device)
+        test.fail("Could not get any boot entry match "
+                  "pattern '%s'" % boot_device)
 
-    error.context("Log into the guest to verify it's up")
+    error_context.context("Log into the guest to verify it's up")
     session = vm.wait_for_login(timeout=timeout)
     session.close()

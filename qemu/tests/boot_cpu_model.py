@@ -1,13 +1,12 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     boot cpu model test:
@@ -25,7 +24,7 @@ def run(test, params, env):
     model_list = params.get("cpu_model")
     if not model_list:
         if cpu_vendor == "unknow":
-            raise error.TestError("unknow cpu vendor")
+            test.error("unknow cpu vendor")
         else:
             model_list = params.get("cpu_model_%s" % cpu_vendor,
                                     host_model[-1])
@@ -53,7 +52,5 @@ def run(test, params, env):
                     logging.info("shutdown guest successfully")
             else:
                 if params.get("enable_check", "no") == "yes":
-                    raise error.TestWarn("Can not test %s model on %s host, "
-                                         "pls use %s host" % (model,
-                                                              host_model[0],
-                                                              model))
+                    test.cancel("Can not test %s model on %s host, pls use "
+                                "%s host" % (model, host_model[0], model))

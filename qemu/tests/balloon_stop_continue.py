@@ -1,10 +1,11 @@
 import time
 import logging
 import random
-from autotest.client.shared import error
+
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Query balloon memory size, stop and continue vm from monitor
@@ -24,14 +25,14 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     end_time = time.time() + repeat_timeout
     while time.time() < end_time:
-        error.context("Query balloon memory from monitor", logging.info)
+        error_context.context("Query balloon memory from monitor", logging.info)
         vm.monitor.info("balloon")
-        error.context("Stop and continue vm from monitor", logging.info)
+        error_context.context("Stop and continue vm from monitor", logging.info)
         vm.monitor.cmd("stop")
         vm.monitor.cmd('cont')
         vm.verify_alive()
         time.sleep(random.randint(0, 3))
 
-    error.context("Login guest after the test", logging.info)
+    error_context.context("Login guest after the test", logging.info)
     session = vm.wait_for_login(timeout=timeout)
     session.close()

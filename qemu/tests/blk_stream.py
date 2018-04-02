@@ -1,7 +1,6 @@
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_misc
 
 from qemu.tests import block_copy
@@ -25,7 +24,7 @@ class BlockStream(block_copy.BlockCopy):
         self.default_params.update(default_params)
         return super(BlockStream, self).parser_test_args()
 
-    @error.context_aware
+    @error_context.context_aware
     def start(self):
         """
         start block device streaming job;
@@ -33,16 +32,16 @@ class BlockStream(block_copy.BlockCopy):
         params = self.parser_test_args()
         default_speed = params.get("default_speed")
 
-        error.context("start to stream block device", logging.info)
+        error_context.context("start to stream block device", logging.info)
         self.vm.block_stream(self.device, default_speed, self.base_image, self.ext_args)
         status = self.get_status()
         if not status:
-            raise error.TestFail("no active job found")
+            self.test.fail("no active job found")
         msg = "block stream job running, "
         msg += "with limited speed %s B/s" % default_speed
         logging.info(msg)
 
-    @error.context_aware
+    @error_context.context_aware
     def create_snapshots(self):
         """
         create live snapshot_chain, snapshots chain define in $snapshot_chain
@@ -50,7 +49,7 @@ class BlockStream(block_copy.BlockCopy):
         params = self.parser_test_args()
         image_format = params["snapshot_format"]
         snapshots = params["snapshot_chain"].split()
-        error.context("create live snapshots", logging.info)
+        error_context.context("create live snapshots", logging.info)
         for snapshot in snapshots:
             snapshot = utils_misc.get_path(self.data_dir, snapshot)
             image_file = self.get_image_file()
@@ -59,7 +58,7 @@ class BlockStream(block_copy.BlockCopy):
                 image_file = self.get_image_file()
                 logging.info("expect file: %s" % snapshot +
                              "opening file: %s" % image_file)
-                raise error.TestFail("create snapshot '%s' fail" % snapshot)
+                self.test.fail("create snapshot '%s' fail" % snapshot)
             self.trash_files.append(snapshot)
 
     def action_when_streaming(self):

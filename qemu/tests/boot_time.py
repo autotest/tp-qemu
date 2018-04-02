@@ -1,13 +1,12 @@
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_misc
 from virttest import env_process
 from virttest.staging import utils_memory
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM boot time test:
@@ -27,16 +26,17 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Set guest run level to 1", logging.info)
+    error_context.context("Set guest run level to 1", logging.info)
     single_user_cmd = params['single_user_cmd']
     session.cmd(single_user_cmd)
 
     try:
-        error.context("Shut down guest", logging.info)
+        error_context.context("Shut down guest", logging.info)
         session.cmd('sync')
         vm.destroy()
 
-        error.context("Boot up guest and measure the boot time", logging.info)
+        error_context.context("Boot up guest and measure the boot time",
+                              logging.info)
         utils_memory.drop_caches()
         vm.create()
         vm.verify_alive()
@@ -48,7 +48,7 @@ def run(test, params, env):
 
     finally:
         try:
-            error.context("Restore guest run level", logging.info)
+            error_context.context("Restore guest run level", logging.info)
             restore_level_cmd = params['restore_level_cmd']
             session.cmd(restore_level_cmd)
             session.cmd('sync')
@@ -62,7 +62,6 @@ def run(test, params, env):
             params["restore_image_after_testing"] = "yes"
 
     if boot_time > expect_time:
-        raise error.TestFail(
-            "Guest boot up is taking too long: %ss" % boot_time)
+        test.fail("Guest boot up is taking too long: %ss" % boot_time)
 
     session.close()

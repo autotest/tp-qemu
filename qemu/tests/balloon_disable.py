@@ -1,5 +1,3 @@
-from autotest.client.shared import error
-
 from virttest import qemu_monitor
 
 
@@ -23,6 +21,5 @@ def run(test, params, env):
         output = str(e)
     if not ("has not been activated" in output or
             "No balloon device has been activated" in output):
-        raise error.TestFail("Balloon driver still on when disable"
-                             " it on command line")
+        test.fail("Balloon driver still on when disable it on command line")
     session.close()

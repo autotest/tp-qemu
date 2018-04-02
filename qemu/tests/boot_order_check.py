@@ -2,7 +2,8 @@ import logging
 import re
 import time
 
-from autotest.client import utils
+from avocado.utils import process
+
 from virttest import error_context
 
 
@@ -30,7 +31,7 @@ def run(test, params, env):
     # Disable nic device, boot fail from nic device except user model
     if params['nettype'] != 'user':
         for nic in vm.virtnet:
-            utils.system("ifconfig %s down" % nic.ifname)
+            process.system("ifconfig %s down" % nic.ifname)
 
     vm.resume()
 

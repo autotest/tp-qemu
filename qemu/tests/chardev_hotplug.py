@@ -1,10 +1,12 @@
 import logging
 import os
-from autotest.client.shared import error
-from autotest.client import utils
+
+from avocado.utils import process
+
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test chardev hotplug.
@@ -30,9 +32,9 @@ def run(test, params, env):
         logging.debug("[qmp reply] %s" % reply)
         if "error" in reply:
             if reply["error"]["class"] == "CommandNotFound":
-                raise error.TestNAError("qmp command %s not supported" % cmd)
+                test.cancel("qmp command %s not supported" % cmd)
             else:
-                raise error.TestFail("qmp error: %s" % reply["error"]["desc"])
+                test.fail("qmp error: %s" % reply["error"]["desc"])
         return reply
 
     def pci_serial_add(vm, name, addr, chardev):
@@ -84,28 +86,28 @@ def run(test, params, env):
         for line in msg_del.splitlines():
             logging.debug("[dmesg del] %s" % line)
 
-    error.context("Log into guest", logging.info)
+    error_context.context("Log into guest", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
     session.cmd_status("dmesg -c")
 
-    error.context("Test null chardev", logging.info)
+    error_context.context("Test null chardev", logging.info)
     chardev_add(vm, "chardev-null", "null", {})
     chardev_use(vm, "chardev-null")
     chardev_del(vm, "chardev-null")
 
-    error.context("Test file chardev", logging.info)
+    error_context.context("Test file chardev", logging.info)
     filename = "/tmp/chardev-file-%s" % vm.instance
     args = {'out': filename}
     chardev_add(vm, "chardev-file", "file", args)
     chardev_use(vm, "chardev-file")
     chardev_del(vm, "chardev-file")
-    output = utils.system_output("cat %s" % filename)
+    output = process.system_output("cat %s" % filename)
     if output.find("Hello virttest world") == -1:
-        raise error.TestFail("Guest message not found [%s]" % output)
+        test.fail("Guest message not found [%s]" % output)
 
-    error.context("Test pty chardev", logging.info)
+    error_context.context("Test pty chardev", logging.info)
     reply = chardev_add(vm, "chardev-pty", "pty", {})
     filename = reply["return"]["pty"]
     logging.info("host pty device is '%s'" % filename)
@@ -114,8 +116,8 @@ def run(test, params, env):
     output = os.read(fd_dst, 256)
     os.close(fd_dst)
     if output.find("Hello virttest world") == -1:
-        raise error.TestFail("Guest message not found [%s]" % output)
+        test.fail("Guest message not found [%s]" % output)
     chardev_del(vm, "chardev-pty")
 
-    error.context("Cleanup", logging.info)
+    error_context.context("Cleanup", logging.info)
     session.close()

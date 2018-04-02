@@ -6,8 +6,8 @@ import os
 import string
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import build
+from avocado.utils import process
 
 from virttest import utils_misc
 from virttest import env_process
@@ -49,7 +49,7 @@ def run(test, params, env):
         model_opt = params.get("cpu_model")
 
         if (models_opt is None and model_opt is None):
-            raise error.TestError("No cpu_models or cpu_model option is set")
+            test.error("No cpu_models or cpu_model option is set")
 
         cpu_models = set()
 
@@ -74,7 +74,7 @@ def run(test, params, env):
         qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
         missing = set(cpu_models) - set(qemu_models)
         if missing:
-            raise error.TestFail(
+            test.fail(
                 "Some CPU models not in QEMU CPU model list: %r" % (missing))
         added = set(qemu_models) - set(cpu_models)
         if added:
@@ -134,13 +134,13 @@ def run(test, params, env):
                                    re.search("==END TEST==",
                                              vm.serial_console.get_output()),
                                    timeout, 1):
-            raise error.TestFail("Could not get test complete message.")
+            test.fail("Could not get test complete message.")
 
         test_output = parse_cpuid_dump(vm.serial_console.get_output())
         logging.debug("Got CPUID serial output: %r", test_output)
         if test_output is None:
-            raise error.TestFail("Test output signature not found in "
-                                 "output:\n %s", vm.serial_console.get_output())
+            test.fail("Test output signature not found in "
+                      "output:\n %s", vm.serial_console.get_output())
         vm.destroy(gracefully=False)
         return test_output
 
@@ -171,8 +171,7 @@ def run(test, params, env):
     def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None, qom_mode=False):
         if not qom_mode:
             test_kernel_dir = os.path.join(data_dir.get_deps_dir(), "cpuid", "src")
-            os.chdir(test_kernel_dir)
-            utils.make("cpuid_dump_kernel.bin")
+            build.make(test_kernel_dir, extra_args="cpuid_dump_kernel.bin")
 
         vm_name = params['main_vm']
         params_b = params.copy()
@@ -218,7 +217,7 @@ def run(test, params, env):
         vendor = params.get("vendor")
         if vendor is None or vendor == "host":
             cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
-            cmd_result = utils.run(cmd, ignore_status=True)
+            cmd_result = process.run(cmd, ignore_status=True)
             vendor = cmd_result.stdout.strip()
 
         ignore_cpus = set(params.get("ignore_cpu_models", "").split(' '))
@@ -229,9 +228,9 @@ def run(test, params, env):
             guest_vendor = cpuid_to_vendor(out, 0x00000000)
             logging.debug("Guest's vendor: " + guest_vendor)
             if guest_vendor != vendor:
-                raise error.TestFail("Guest vendor [%s], doesn't match "
-                                     "required vendor [%s] for CPU [%s]" %
-                                     (guest_vendor, vendor, cpu_model))
+                test.fail("Guest vendor [%s], doesn't match "
+                          "required vendor [%s] for CPU [%s]" %
+                          (guest_vendor, vendor, cpu_model))
 
     def custom_vendor(self):
         """
@@ -248,21 +247,21 @@ def run(test, params, env):
             logging.debug("Guest's vendor[0x80000000]: " +
                           guest_vendor80000000)
             if guest_vendor0 != vendor:
-                raise error.TestFail("Guest vendor[0] [%s], doesn't match "
-                                     "required vendor [%s] for CPU [%s]" %
-                                     (guest_vendor0, vendor, cpu_model))
+                test.fail("Guest vendor[0] [%s], doesn't match "
+                          "required vendor [%s] for CPU [%s]" %
+                          (guest_vendor0, vendor, cpu_model))
             if guest_vendor80000000 != vendor:
-                raise error.TestFail("Guest vendor[0x80000000] [%s], "
-                                     "doesn't match required vendor "
-                                     "[%s] for CPU [%s]" %
-                                     (guest_vendor80000000, vendor,
-                                      cpu_model))
+                test.fail("Guest vendor[0x80000000] [%s], "
+                          "doesn't match required vendor "
+                          "[%s] for CPU [%s]" %
+                          (guest_vendor80000000, vendor,
+                           cpu_model))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_to_level(cpuid_dump):
         r = cpuid_dump[0, 0]
@@ -278,15 +277,14 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "level=" + level)
             guest_level = str(cpuid_to_level(out))
             if guest_level != level:
-                raise error.TestFail("Guest's level [%s], doesn't match "
-                                     "required level [%s]" %
-                                     (guest_level, level))
+                test.fail("Guest's level [%s], doesn't match "
+                          "required level [%s]" % (guest_level, level))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_to_family(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -309,15 +307,14 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "family=" + family)
             guest_family = str(cpuid_to_family(out))
             if guest_family != family:
-                raise error.TestFail("Guest's family [%s], doesn't match "
-                                     "required family [%s]" %
-                                     (guest_family, family))
+                test.fail("Guest's family [%s], doesn't match "
+                          "required family [%s]" % (guest_family, family))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_to_model(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -339,15 +336,14 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "model=" + model)
             guest_model = str(cpuid_to_model(out))
             if guest_model != model:
-                raise error.TestFail("Guest's model [%s], doesn't match "
-                                     "required model [%s]" %
-                                     (guest_model, model))
+                test.fail("Guest's model [%s], doesn't match "
+                          "required model [%s]" % (guest_model, model))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_to_stepping(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -367,15 +363,15 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "stepping=" + stepping)
             guest_stepping = str(cpuid_to_stepping(out))
             if guest_stepping != stepping:
-                raise error.TestFail("Guest's stepping [%s], doesn't match "
-                                     "required stepping [%s]" %
-                                     (guest_stepping, stepping))
+                test.fail("Guest's stepping [%s], doesn't match "
+                          "required stepping [%s]" %
+                          (guest_stepping, stepping))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_to_xlevel(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -397,15 +393,14 @@ def run(test, params, env):
                                   params.get("xlevel"))
             guest_xlevel = str(cpuid_to_xlevel(out))
             if guest_xlevel != xlevel:
-                raise error.TestFail("Guest's xlevel [%s], doesn't match "
-                                     "required xlevel [%s]" %
-                                     (guest_xlevel, xlevel))
+                test.fail("Guest's xlevel [%s], doesn't match "
+                          "required xlevel [%s]" % (guest_xlevel, xlevel))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_to_model_id(cpuid_dump):
         # Intel Processor Identification and the CPUID Instruction
@@ -435,15 +430,15 @@ def run(test, params, env):
                                   model_id)
             guest_model_id = cpuid_to_model_id(out)
             if guest_model_id != model_id:
-                raise error.TestFail("Guest's model_id [%s], doesn't match "
-                                     "required model_id [%s]" %
-                                     (guest_model_id, model_id))
+                test.fail("Guest's model_id [%s], doesn't match "
+                          "required model_id [%s]" %
+                          (guest_model_id, model_id))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_regs_to_string(cpuid_dump, leaf, idx, regs):
         r = cpuid_dump[leaf, idx]
@@ -473,15 +468,15 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, flags)
             _signature = cpuid_regs_to_string(out, leaf, idx, regs)
             if _signature != signature:
-                raise error.TestFail("Guest's signature [%s], doesn't"
-                                     "match required signature [%s]" %
-                                     (_signature, signature))
+                test.fail("Guest's signature [%s], doesn't"
+                          "match required signature [%s]" %
+                          (_signature, signature))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_bit_test(self):
         """
@@ -499,14 +494,14 @@ def run(test, params, env):
             logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
             for i in bits:
                 if (r & (1 << int(i))) == 0:
-                    raise error.TestFail("CPUID(%s.%s).%s[%s] is not set" %
-                                         (leaf, idx, reg, i))
+                    test.fail("CPUID(%s.%s).%s[%s] is not set" %
+                              (leaf, idx, reg, i))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def cpuid_reg_test(self):
         """
@@ -523,14 +518,14 @@ def run(test, params, env):
             r = out[leaf, idx][reg]
             logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
             if r != val:
-                raise error.TestFail("CPUID(%s.%s).%s is not 0x%08x" %
-                                     (leaf, idx, reg, val))
+                test.fail("CPUID(%s.%s).%s is not 0x%08x" %
+                          (leaf, idx, reg, val))
         except:
             has_error = True
             if xfail is False:
                 raise
         if (has_error is False) and (xfail is True):
-            raise error.TestFail("Test was expected to fail, but it didn't")
+            test.fail("Test was expected to fail, but it didn't")
 
     def check_cpuid_dump(self):
         """
@@ -552,7 +547,7 @@ def run(test, params, env):
             whitelist.append(tuple(leaf))
 
         if not machine_type:
-            raise error.TestNAError("No machine_type_to_check defined")
+            test.cancel("No machine_type_to_check defined")
         cpu_model_flags = params.get('cpu_model_flags', '')
         full_cpu_model_name = cpu_model
         if cpu_model_flags:
@@ -563,14 +558,13 @@ def run(test, params, env):
                                 kvm_enabled and "kvm" or "nokvm",
                                 machine_type, '%s-dump.txt' % (full_cpu_model_name))
         if not os.path.exists(ref_file):
-            raise error.TestNAError("no cpuid dump file: %s" % (ref_file))
+            test.cancel("no cpuid dump file: %s" % (ref_file))
         reference = open(ref_file, 'r').read()
         if not reference:
-            raise error.TestNAError(
-                "no cpuid dump data on file: %s" % (ref_file))
+            test.cancel("no cpuid dump data on file: %s" % (ref_file))
         reference = parse_cpuid_dump(reference)
         if reference is None:
-            raise error.TestNAError(
+            test.cancel(
                 "couldn't parse reference cpuid dump from file; %s" % (ref_file))
         qom_mode = params.get('qom_mode', "no").lower() == 'yes'
         if not qom_mode:
@@ -588,7 +582,7 @@ def run(test, params, env):
                     ("lacks requested flag" in output or
                      "flag restricted to guest" in output)) \
                     or ("Unable to find CPU definition:" in output):
-                raise error.TestNAError(
+                test.cancel(
                     "Can't run CPU model %s on this host" % (full_cpu_model_name))
             else:
                 raise
@@ -620,13 +614,12 @@ def run(test, params, env):
                 if not whitelisted:
                     ok = False
         if not ok:
-            raise error.TestFail("Unexpected CPUID data")
+            test.fail("Unexpected CPUID data")
 
     # subtests runner
     test_type = params["test_type"]
     if test_type not in locals():
-        raise error.TestError("Test function '%s' is not defined in"
-                              " test" % test_type)
+        test.error("Test function '%s' is not defined in test" % test_type)
 
     test_func = locals()[test_type]
     return test_func(test)

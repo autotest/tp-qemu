@@ -1,5 +1,5 @@
 """
-cgroup autotest test (on KVM guest)
+cgroup test (on KVM guest)
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2011 Red Hat, Inc.
 """

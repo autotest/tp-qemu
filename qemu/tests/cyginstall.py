@@ -1,9 +1,9 @@
 import re
 
-from autotest.client.shared import error
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Install cygwin env for windwos guest:
@@ -28,7 +28,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error.context("Install cygwin in guest")
+    error_context.context("Install cygwin in guest")
     session = vm.wait_for_login(timeout=timeout)
     output = session.cmd_output(cdrom_check_cmd, timeout)
     cdrom = re.findall(cdrom_filter, output)
@@ -36,11 +36,11 @@ def run(test, params, env):
         cygwin_install_cmd = re.sub("WINUTILS", cdrom[0],
                                     cygwin_install_cmd)
     else:
-        raise error.TestError("Can not find tools iso in guest")
+        test.error("Can not find tools iso in guest")
 
     session.cmd(cygwin_install_cmd, timeout=cygwin_install_timeout)
 
-    error.context("Verify cygwin install")
+    error_context.context("Verify cygwin install")
     old_prompt = session.prompt
     session.set_prompt(cygwin_prompt)
     session.cmd_output(cygwin_start)

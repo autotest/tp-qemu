@@ -10,8 +10,7 @@ from xml.parsers import expat
 
 import aexpect
 
-from autotest.client.shared import error, utils
-from autotest.client.shared.syncdata import SyncData
+from avocado.utils import process
 
 from virttest import qemu_vm
 from virttest import virt_vm
@@ -131,7 +130,7 @@ def run(test, params, env):
         :return: [corespond flags]
         """
         cmd = qemu_binary + " -cpu ?dump"
-        output = utils.run(cmd).stdout
+        output = process.run(cmd).stdout
         re.escape(cpumodel)
         pattern = (r".+%s.*\n.*\n +feature_edx .+ \((.*)\)\n +feature_"
                    "ecx .+ \((.*)\)\n +extfeature_edx .+ \((.*)\)\n +"
@@ -139,7 +138,7 @@ def run(test, params, env):
         flags = []
         model = re.search(pattern, output)
         if model is None:
-            raise error.TestFail("Cannot find %s cpu model." % (cpumodel))
+            test.fail("Cannot find %s cpu model." % (cpumodel))
         for flag_group in model.groups():
             flags += flag_group.split()
         return set(map(utils_misc.Flag, flags))
@@ -205,7 +204,7 @@ def run(test, params, env):
 
     def get_all_qemu_flags_legacy():
         cmd = qemu_binary + " -cpu ?cpuid"
-        output = utils.run(cmd).stdout
+        output = process.run(cmd).stdout
 
         flags_re = re.compile(r".*\n.*f_edx:(.*)\n.*f_ecx:(.*)\n"
                               ".*extf_edx:(.*)\n.*extf_ecx:(.*)")
@@ -218,7 +217,7 @@ def run(test, params, env):
 
     def get_all_qemu_flags_1350():
         cmd = qemu_binary + " -cpu ?"
-        output = utils.run(cmd).stdout
+        output = process.run(cmd).stdout
 
         flags_re = re.compile(r".*Recognized CPUID flags:\n(.*)", re.DOTALL)
         m = flags_re.search(output)
@@ -246,7 +245,7 @@ def run(test, params, env):
         :return: cpu models.
         """
         cmd = qemu_binary + " -cpu ?"
-        output = utils.run(cmd).stdout
+        output = process.run(cmd).stdout
 
         cpu_re = re.compile(r"\w+\s+\[?(\w+)\]?")
         return cpu_re.findall(output)
@@ -258,7 +257,7 @@ def run(test, params, env):
         :return: cpu models.
         """
         cmd = qemu_binary + " -cpu ?"
-        output = utils.run(cmd).stdout
+        output = process.run(cmd).stdout
 
         cpu_re = re.compile(r"x86\s+\[?(\w+)\]?")
         return cpu_re.findall(output)
@@ -268,11 +267,11 @@ def run(test, params, env):
     def get_qemu_cpu_cmd_version():
         cmd = qemu_binary + " -cpu ?cpuid"
         try:
-            utils.run(cmd).stdout
+            process.run(cmd).stdout
             return "legacy"
         except:
             cmd = qemu_binary + " -cpu ?"
-            output = utils.run(cmd).stdout
+            output = process.run(cmd).stdout
             if "CPUID" in output:
                 return "1350"
             else:
@@ -387,9 +386,9 @@ def run(test, params, env):
         cpu_state_proc = map(lambda x: int(x),
                              re.findall(r"processor\s+:\s*(\d+)\n", cpu_proc))
         if set(online) != set(cpu_state_proc):
-            raise error.TestError("Some cpus are disabled but %s are still "
-                                  "visible like online in /proc/cpuinfo." %
-                                  (set(cpu_state_proc) - set(online)))
+            test.error("Some cpus are disabled but %s are still "
+                       "visible like online in /proc/cpuinfo." %
+                       (set(cpu_state_proc) - set(online)))
 
         return set(online) - set(disabled_cpu)
 
@@ -524,19 +523,19 @@ def run(test, params, env):
             if qcver == "legacy":
                 cpu_models = params.get("cpu_models", "core2duo").split()
                 cmd = qemu_binary + " -cpu ?model"
-                result = utils.run(cmd)
+                result = process.run(cmd)
                 missing = []
                 cpu_models = map(separe_cpu_model, cpu_models)
                 for cpu_model in cpu_models:
                     if cpu_model not in result.stdout:
                         missing.append(cpu_model)
                 if missing:
-                    raise error.TestFail("CPU models %s are not in output "
-                                         "'%s' of command \n%s" %
-                                         (missing, cmd, result.stdout))
+                    test.fail("CPU models %s are not in output "
+                              "'%s' of command \n%s" %
+                              (missing, cmd, result.stdout))
             else:
-                raise error.TestNAError("New qemu does not support -cpu "
-                                        "?model. (%s)" % qcver)
+                test.cancel("New qemu does not support -cpu "
+                            "?model. (%s)" % qcver)
 
     # 2) <qemu-kvm-cmd> -cpu ?dump
     class test_qemu_dump(MiniSubtest):
@@ -545,19 +544,19 @@ def run(test, params, env):
             if qcver == "legacy":
                 cpu_models = params.get("cpu_models", "core2duo").split()
                 cmd = qemu_binary + " -cpu ?dump"
-                result = utils.run(cmd)
+                result = process.run(cmd)
                 cpu_models = map(separe_cpu_model, cpu_models)
                 missing = []
                 for cpu_model in cpu_models:
                     if cpu_model not in result.stdout:
                         missing.append(cpu_model)
                 if missing:
-                    raise error.TestFail("CPU models %s are not in output "
-                                         "'%s' of command \n%s" %
-                                         (missing, cmd, result.stdout))
+                    test.fail("CPU models %s are not in output "
+                              "'%s' of command \n%s" %
+                              (missing, cmd, result.stdout))
             else:
-                raise error.TestNAError("New qemu does not support -cpu "
-                                        "?dump. (%s)" % qcver)
+                test.cancel("New qemu does not support -cpu "
+                            "?dump. (%s)" % qcver)
 
     # 3) <qemu-kvm-cmd> -cpu ?cpuid
     class test_qemu_cpuid(MiniSubtest):
@@ -565,14 +564,13 @@ def run(test, params, env):
         def test(self):
             if qcver == "legacy":
                 cmd = qemu_binary + " -cpu ?cpuid"
-                result = utils.run(cmd)
+                result = process.run(cmd)
                 if result.stdout is "":
-                    raise error.TestFail("There aren't any cpu Flag in output"
-                                         " '%s' of command \n%s" %
-                                         (cmd, result.stdout))
+                    test.fail("There aren't any cpu Flag in output"
+                              " '%s' of command \n%s" % (cmd, result.stdout))
             else:
-                raise error.TestNAError("New qemu does not support -cpu "
-                                        "?cpuid. (%s)" % qcver)
+                test.cancel("New qemu does not support -cpu "
+                            "?cpuid. (%s)" % qcver)
 
     # 1) boot with cpu_model
     class test_boot_cpu_model(Test_temp):
@@ -585,8 +583,8 @@ def run(test, params, env):
             not_enable_flags = (check_cpuflags(cpu_model, session) -
                                 flags.hw_flags)
             if not_enable_flags != set([]):
-                raise error.TestFail("Flags defined on host but not found "
-                                     "on guest: %s" % (not_enable_flags))
+                test.fail("Flags defined on host but not found "
+                          "on guest: %s" % (not_enable_flags))
 
     # 2) success boot with supported flags
     class test_boot_cpu_model_and_additional_flags(Test_temp):
@@ -638,8 +636,7 @@ def run(test, params, env):
             logging.warning("Not tested CPU flags: %s", str(Flags[2]))
 
             if Flags[1] & guest_flags:
-                raise error.TestFail("Some flags do not work: %s" %
-                                     (str(Flags[1])))
+                test.fail("Some flags do not work: %s" % (str(Flags[1])))
 
     # 3) fail boot unsupported flags
     class test_boot_warn_with_host_unsupported_flags(MiniSubtest):
@@ -667,11 +664,10 @@ def run(test, params, env):
 
             try:
                 try:
-                    out = utils.run(cmd, timeout=5, ignore_status=True).stderr
-                    raise error.TestFail("Guest not boot with unsupported "
-                                         "flags.")
-                except error.CmdError, e:
-                    out = e.result_obj.stderr
+                    out = process.run(cmd, timeout=5, ignore_status=True).stderr
+                    test.fail("Guest not boot with unsupported flags.")
+                except process.CmdError, e:
+                    out = e.result.stderr
             finally:
                 uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
                 nf_re = re.compile(
@@ -683,8 +679,8 @@ def run(test, params, env):
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 fwarn_flags -= not_found
                 if fwarn_flags:
-                    raise error.TestFail("Qemu did not warn the use of "
-                                         "flags %s" % str(fwarn_flags))
+                    test.fail("Qemu did not warn the use of "
+                              "flags %s" % str(fwarn_flags))
 
     # 3) fail boot unsupported flags
     class test_fail_boot_with_host_unsupported_flags(MiniSubtest):
@@ -711,8 +707,8 @@ def run(test, params, env):
             out = None
             try:
                 try:
-                    out = utils.run(cmd, timeout=5, ignore_status=True).stderr
-                except error.CmdError:
+                    out = process.run(cmd, timeout=5, ignore_status=True).stderr
+                except process.CmdError:
                     logging.error("Host boot with unsupported flag")
             finally:
                 uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
@@ -725,8 +721,8 @@ def run(test, params, env):
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 fwarn_flags -= not_found
                 if fwarn_flags:
-                    raise error.TestFail("Qemu did not warn the use of "
-                                         "flags %s" % str(fwarn_flags))
+                    test.fail("Qemu did not warn the use of "
+                              "flags %s" % str(fwarn_flags))
 
     # 4) check guest flags under load cpu, stress and system (dd)
     class test_boot_guest_and_try_flags_under_load(Test_temp):
@@ -757,8 +753,7 @@ def run(test, params, env):
             (self.vm, _) = start_guest_with_cpuflags(cpuf_model, smp)
 
             if (not run_stress(self.vm, 60, flags.guest_flags)):
-                raise error.TestFail("Stress test ended before"
-                                     " end of test.")
+                test.fail("Stress test ended before end of test.")
 
     # 5) Online/offline CPU
     class test_online_offline_guest_CPUs(Test_temp):
@@ -797,8 +792,7 @@ def run(test, params, env):
                                           (run_stress, [self.vm, timeout,
                                                         test_flags])])
             if not (result[0] and result[1]):
-                raise error.TestFail("Stress tests failed before"
-                                     " end of testing.")
+                test.fail("Stress tests failed before end of testing.")
 
     # 6) migration test
     class test_migration_with_additional_flags(Test_temp):
@@ -865,14 +859,14 @@ def run(test, params, env):
             try:
                 stress_session.cmd('killall cpuflags-test')
             except aexpect.ShellCmdError:
-                raise error.TestFail("Stress cpuflags-test should be still "
-                                     "running after migration.")
+                test.fail("Stress cpuflags-test should be still "
+                          "running after migration.")
             try:
                 stress_session.cmd("ls /tmp/stressblock && "
                                    "rm -f /tmp/stressblock")
             except aexpect.ShellCmdError:
-                raise error.TestFail("Background 'dd' command failed to "
-                                     "produce output file.")
+                test.fail("Background 'dd' command failed to "
+                          "produce output file.")
 
     def net_send_object(socket, obj):
         """
@@ -904,8 +898,7 @@ def run(test, params, env):
             data = pickle.loads(data)
             return data
         except:
-            error.TestFail("Failed to receive python object over the network")
-            raise
+            test.fail("Failed to receive python object over the network")
 
     class test_multi_host_migration(Test_temp):
 
@@ -981,9 +974,9 @@ def run(test, params, env):
                         try:
                             session.cmd('killall cpuflags-test')
                         except aexpect.ShellCmdError:
-                            raise error.TestFail("The cpuflags-test program"
-                                                 " should be active after"
-                                                 " migration and it's not.")
+                            test.fail("The cpuflags-test program"
+                                      " should be active after"
+                                      " migration and it's not.")
 
                         Flags = check_cpuflags_work(vm, install_path,
                                                     flags.all_possible_guest_flags)
@@ -1066,6 +1059,7 @@ def run(test, params, env):
                         self.srchost = tmp
 
                 def migration_scenario(self):
+                    from autotest.client.shared.syncdata import SyncData
 
                     sync = SyncData(self.master_id(), self.hostid, self.hosts,
                                     self.id, self.sync_server)
@@ -1110,12 +1104,12 @@ def run(test, params, env):
 
                         not_disabled = set(really_disabled) & set(disable_cpus)
                         if not_disabled:
-                            raise error.TestFail("Some of disabled cpus are "
-                                                 "online. This shouldn't "
-                                                 "happen. Cpus disabled on "
-                                                 "srchost:%s, Cpus not "
-                                                 "disabled on dsthost:%s" %
-                                                 (disable_cpus, not_disabled))
+                            test.fail("Some of disabled cpus are "
+                                      "online. This shouldn't "
+                                      "happen. Cpus disabled on "
+                                      "srchost:%s, Cpus not "
+                                      "disabled on dsthost:%s" %
+                                      (disable_cpus, not_disabled))
 
                         Flags = check_cpuflags_work(vm, install_path,
                                                     flags.all_possible_guest_flags)
@@ -1156,8 +1150,7 @@ def run(test, params, env):
                     print_exception(tests_group)
                     failed.append(cpumodel)
             if failed != []:
-                raise error.TestFail("Test of cpu models %s failed." %
-                                     (str(failed)))
+                test.fail("Test of cpu models %s failed." % (str(failed)))
     else:
-        raise error.TestFail("Test group '%s' is not defined in"
-                             " cpuflags test" % test_type)
+        test.fail("Test group '%s' is not defined in"
+                  " cpuflags test" % test_type)

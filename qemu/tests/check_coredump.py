@@ -7,10 +7,10 @@ import glob
 import logging
 import time
 
-from autotest.client import os_dep
-from autotest.client.shared import error
+from avocado.utils import path as utils_path
 
 from virttest import data_dir
+from virttest import error_context
 from virttest import utils_misc
 import virttest.utils_libguestfs as lgf
 
@@ -52,8 +52,8 @@ def coredump_exists(mntpnt, files, out_dir):
                 file_ctime = time.ctime(os.path.getctime(item))
                 msgs_return.append((os.path.basename(item),
                                     file_ctime))
-                error.context("copy files %s %s" %
-                              (item, out_dir), logging.info)
+                error_context.context("copy files %s %s" %
+                                      (item, out_dir), logging.info)
                 os.system("cp -rf %s %s" % (item, out_dir))
 
     return file_exists, msgs_return
@@ -73,21 +73,21 @@ def check_images_coredump(image, mntpnt, check_files, debugdir):
     msgs_return = []
 
     try:
-        error.context("Mount the guest image %s to host mount point" %
-                      image,
-                      logging.info)
+        error_context.context("Mount the guest image %s to host mount point" %
+                              image,
+                              logging.info)
         status = lgf.guestmount(image, mntpnt,
                                 True, True, debug=True, is_disk=True)
         if status.exit_status:
             msgs_return.append("Could not mount guest image %s." % image)
-            error.context(msgs_return[0], logging.error)
+            error_context.context(msgs_return[0], logging.error)
         else:
             found_coredump, msgs_return = coredump_exists(mntpnt,
                                                           check_files,
                                                           debugdir)
     finally:
         if os.path.ismount(mntpnt):
-            error.context("guestunmount host mount point")
+            error_context.context("guestunmount host mount point")
             lgf.lgf_command("guestunmount %s" % mntpnt)
 
     return found_coredump, msgs_return
@@ -129,7 +129,7 @@ def format_report(results):
     return line_break.join(all_lines)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     We find out that sometimes the guest crashed between two
@@ -153,11 +153,11 @@ def run(test, params, env):
     # Preliminary
     # yum install libguestfs libguestfs-tools libguestfs-winsupport
     try:
-        os_dep.command("guestmount")
+        utils_path.find_command("guestmount")
     except:
         warn_msg = "Need packages: libguestfs libguestfs-tools" + \
                    " libguestfs-winsupport"
-        raise error.TestWarn(warn_msg)
+        test.cancel(warn_msg)
 
     # define the file name need to be checked
     file_check_win_default = "Windows/dump"
@@ -179,13 +179,13 @@ def run(test, params, env):
     check_files = [file_chk_for_win, file_chk_for_linux]
     check_results = []
 
-    error.context("Get all the images name", logging.info)
+    error_context.context("Get all the images name", logging.info)
     images = get_images()
-    error.context("images: %s" % images, logging.info)
+    error_context.context("images: %s" % images, logging.info)
 
     # find all the images
     # mount per-image to check if the dump file exists
-    error.context("Check coredump file per-image", logging.info)
+    error_context.context("Check coredump file per-image", logging.info)
     for image in images:
         status, chk_msgs = check_images_coredump(image,
                                                  host_mountpoint,
@@ -197,4 +197,4 @@ def run(test, params, env):
     # if found, report the result
     if coredump_file_exists:
         report_msg = format_report(check_results)
-        raise error.TestFail(report_msg)
+        test.fail(report_msg)

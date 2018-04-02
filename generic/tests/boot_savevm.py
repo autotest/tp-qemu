@@ -3,8 +3,6 @@ import time
 import tempfile
 import os
 
-from autotest.client.shared import error
-
 from virttest import qemu_storage
 from virttest import data_dir
 from virttest import utils_misc
@@ -77,7 +75,7 @@ def run(test, params, env):
     time_elapsed = int(time.time() - start_time)
     info = "after %s s, %d load/save cycles" % (time_elapsed, cycles + 1)
     if not successful_login:
-        raise error.TestFail("Can't log on '%s' %s" % (vm.name, info))
+        test.fail("Can't log on '%s' %s" % (vm.name, info))
     else:
         logging.info("Test ended %s", info)
 
@@ -85,7 +83,7 @@ def run(test, params, env):
         vm.destroy()
         floppy_info = floppy.snapshot_list()
         if floppy_info == floppy_orig_info:
-            raise error.TestFail("savevm didn't create snapshot in floppy."
-                                 "    original snapshot list is: %s"
-                                 "    now snapshot list is: %s"
-                                 % (floppy_orig_info, floppy_info))
+            test.fail("savevm didn't create snapshot in floppy."
+                      "    original snapshot list is: %s"
+                      "    now snapshot list is: %s"
+                      % (floppy_orig_info, floppy_info))

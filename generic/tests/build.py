@@ -1,5 +1,3 @@
-from autotest.client.shared import error
-
 from virttest import installer
 
 
@@ -30,5 +28,5 @@ def run(test, params, env):
             minor_failure_reasons.append(reason)
 
     if minor_failure:
-        raise error.TestWarn("Minor (worked around) failures during build "
-                             "test: %s" % ", ".join(minor_failure_reasons))
+        test.error("Minor (worked around) failures during build "
+                   "test: %s" % ", ".join(minor_failure_reasons))

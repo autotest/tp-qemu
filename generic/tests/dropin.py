@@ -1,7 +1,6 @@
 import os
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
 from virttest import data_dir
 
@@ -14,6 +13,6 @@ def run(test, params, env):
     dropin_path = os.path.join(data_dir.get_root_dir(), "dropin",
                                dropin_path)
     try:
-        utils.system(dropin_path)
-    except error.CmdError:
-        raise error.TestFail("Drop in test %s failed" % dropin_path)
+        process.system(dropin_path)
+    except process.CmdError:
+        test.fail("Drop in test %s failed" % dropin_path)

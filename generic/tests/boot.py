@@ -1,12 +1,11 @@
 import time
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_test
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu reboot test:
@@ -23,7 +22,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     vms = env.get_all_vms()
     for vm in vms:
-        error.context("Try to log into guest '%s'." % vm.name, logging.info)
+        error_context.context("Try to log into guest '%s'." % vm.name, logging.info)
         session = vm.wait_for_login(timeout=timeout)
         session.close()
 
@@ -34,7 +33,7 @@ def run(test, params, env):
             session.close()
     if params.get("reboot_method"):
         for vm in vms:
-            error.context("Reboot guest '%s'." % vm.name, logging.info)
+            error_context.context("Reboot guest '%s'." % vm.name, logging.info)
             if params["reboot_method"] == "system_reset":
                 time.sleep(int(params.get("sleep_before_reset", 10)))
             # Reboot the VM

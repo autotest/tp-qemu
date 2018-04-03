@@ -49,7 +49,10 @@ def run(test, params, env):
             err_msg = "Unexpected vlan operation command: %s, " % cmd_type
             err_msg += "only support 'ip' and 'vconfig' now"
             raise error.TestError(err_msg)
-        session.cmd(cmd)
+        status, output = session.cmd_status_output(cmd)
+        if status:
+            logging.error("Adding vlan failed, status: %s, output: %s" % (status,output))
+        return status
 
     def set_ip_vlan(session, v_id, vlan_ip, iface="eth0"):
         """
@@ -83,7 +86,10 @@ def run(test, params, env):
             err_msg += "only support 'ip' and 'vconfig' now"
             raise error.TestError(err_msg)
         error.context("Remove vlan interface '%s'." % v_iface, logging.info)
-        return session.cmd_status(rem_vlan_cmd)
+        status, output = session.cmd_status_output(rem_vlan_cmd)
+        if status:
+            logging.error("Removing vlan failed, status: %s, output: %s" % (status,output))
+        return status
 
     def nc_transfer(src, dst):
         """
@@ -238,14 +244,15 @@ def run(test, params, env):
             error.base_context("Vlan scalability test")
             error.context("Testing the plumb of vlan interface", logging.info)
             for vlan_index in range(1, bound):
-                add_vlan(sessions[0], vlan_index, ifname[0], cmd_type)
+                if add_vlan(sessions[0], vlan_index, ifname[0], cmd_type):
+                    raise error.TestFail("Add vlan %s failed" % vlan_index)
                 vlan_added = vlan_index
             if vlan_added != maximal:
                 raise error.TestFail("Maximal interface plumb test failed")
         finally:
             for vlan_index in range(1, vlan_added + 1):
                 if rem_vlan(sessions[0], vlan_index, ifname[0], cmd_type):
-                    logging.error("Remove vlan %s failed" % vlan_index)
+                    raise error.TestFail("Remove vlan %s failed" % vlan_index)
 
         error.base_context("Vlan negative test")
         error.context("Create vlan with ID %s in guest" % bound, logging.info)

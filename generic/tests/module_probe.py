@@ -1,16 +1,7 @@
 import logging
+
 from virttest import base_installer
-
-# Make it work under both autotest-framework and avocado-framework
-try:
-    from avocado.utils import linux_modules
-except ImportError:
-    from autotest.client import base_utils as linux_modules
-
-try:
-    from avocado.core import exceptions
-except ImportError:
-    from autotest.client.shared import error as exceptions
+from avocado.utils import linux_modules
 
 
 def run(test, params, env):
@@ -19,7 +10,7 @@ def run(test, params, env):
 
     This tests the kernel pre-installed kernel modules
     """
-    #Destory all vms for unload/load module kvm_intel/kvm_amd
+    # Destory all vms for unload/load module kvm_intel/kvm_amd
     for vm in env.get_all_vms():
         if vm:
             vm.destroy()
@@ -55,12 +46,12 @@ def run(test, params, env):
         for _ in range(load_count):
             try:
                 installer_object.load_modules()
-            except base_installer.NoModuleError, e:
+            except base_installer.NoModuleError as e:
                 logging.error(e)
                 break
-            except Exception, e:
-                raise exceptions.TestFail("Failed to load modules [%r]: %s" %
-                                          (installer_object.module_list, e))
+            except Exception as e:
+                test.fail("Failed to load modules [%r]: %s" %
+                          (installer_object.module_list, e))
             installer_object.unload_modules()
     finally:
         try:

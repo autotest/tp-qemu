@@ -7,14 +7,14 @@ import re
 
 import aexpect
 
-from autotest.client.shared import error
-
-from virttest import utils_misc, data_dir
+from virttest import data_dir
+from virttest import error_context
+from virttest import utils_misc
 
 TMPFS_OVERHEAD = 0.0022
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test how KSM (Kernel Shared Memory) act when more than physical memory is
@@ -41,8 +41,8 @@ def run(test, params, env):
             _ = session.read_until_last_line_matches(["PASS:", "FAIL:"],
                                                      timeout)
         except aexpect.ExpectProcessTerminatedError, exc:
-            raise error.TestFail("Command guest script on vm '%s' failed: %s" %
-                                 (vm.name, str(exc)))
+            test.fail("Command guest script on vm '%s' failed: %s" %
+                      (vm.name, str(exc)))
 
     def _execute_allocator(command, vm, session, timeout):
         """
@@ -66,7 +66,7 @@ def run(test, params, env):
         except aexpect.ExpectProcessTerminatedError, exc:
             e_str = ("Failed to execute command '%s' on guest script, "
                      "vm '%s': %s" % (command, vm.name, str(exc)))
-            raise error.TestFail(e_str)
+            test.fail(e_str)
         return (match, data)
 
     timeout = float(params.get("login_timeout", 240))
@@ -76,7 +76,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     # Prepare work in guest
-    error.context("Turn off swap in guest", logging.info)
+    error_context.context("Turn off swap in guest", logging.info)
     session.cmd_status_output("swapoff -a")
     script_file_path = os.path.join(data_dir.get_root_dir(),
                                     "shared/scripts/ksm_overcommit_guest.py")
@@ -103,9 +103,9 @@ def run(test, params, env):
     if query_regex:
         sharing_page_0 = re.findall(query_regex, sharing_page_0)[0]
 
-    error.context("Start to allocate pages inside guest", logging.info)
+    error_context.context("Start to allocate pages inside guest", logging.info)
     _start_allocator(vm, session, 60)
-    error.context("Start to fill memory in guest", logging.info)
+    error_context.context("Start to fill memory in guest", logging.info)
     mem_fill = "mem = MemFill(%s, 0, %s)" % (shared_mem, seed)
     _execute_allocator(mem_fill, vm, session, fill_timeout)
     cmd = "mem.value_fill()"
@@ -116,8 +116,8 @@ def run(test, params, env):
     if query_regex:
         sharing_page_1 = re.findall(query_regex, sharing_page_1)[0]
 
-    error.context("Start to fill memory with random value in guest",
-                  logging.info)
+    error_context.context("Start to fill memory with random value in guest",
+                          logging.info)
     split = params.get("split")
     if split == "yes":
         if test_type == "negative":
@@ -132,7 +132,7 @@ def run(test, params, env):
         sharing_page_2 = re.findall(query_regex, sharing_page_2)[0]
 
     # clean up work in guest
-    error.context("Clean up env in guest", logging.info)
+    error_context.context("Clean up env in guest", logging.info)
     session.cmd_output("die()", 20)
     session.cmd_status_output("swapon -a")
     session.cmd_output("echo 3 > /proc/sys/vm/drop_caches")
@@ -168,7 +168,7 @@ def run(test, params, env):
                 logging.error(fail[turns])
             fail_type = fail_type / 2
             turns += 1
-        raise error.TestFail("KSM test failed: %s %s %s" %
-                             (sharing_page_0, sharing_page_1,
-                              sharing_page_2))
+        test.fail("KSM test failed: %s %s %s" %
+                  (sharing_page_0, sharing_page_1,
+                   sharing_page_2))
     session.close()

@@ -1,9 +1,8 @@
 import time
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from virttest import error_context
+from virttest import utils_misc
 from virttest import utils_test
 
 
@@ -20,7 +19,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    @error.context_aware
+    @error_context.context_aware
     def create_snapshot(vm):
         """
         Create live snapshot:
@@ -28,7 +27,7 @@ def run(test, params, env):
         2). Get device info
         3). Create snapshot
         """
-        error.context("Creating live snapshot ...", logging.info)
+        error_context.context("Creating live snapshot ...", logging.info)
         block_info = vm.monitor.info("block")
         if vm.monitor.protocol == 'qmp':
             device = block_info[0]["device"]
@@ -42,7 +41,7 @@ def run(test, params, env):
         snapshot_info = str(vm.monitor.info("block"))
         if snapshot_name not in snapshot_info:
             logging.error(snapshot_info)
-            raise error.TestFail("Snapshot doesn't exist")
+            test.fail("Snapshot doesn't exist")
 
     timeout = int(params.get("login_timeout", 360))
     dd_timeout = int(params.get("dd_timeout", 900))
@@ -94,7 +93,7 @@ def run(test, params, env):
 
     def installation_test():
         args = (test, params, env)
-        bg = utils.InterruptedThread(
+        bg = utils_misc.InterruptedThread(
             utils_test.run_virt_sub_test, args,
             {"sub_type": "unattended_install"})
         bg.start()

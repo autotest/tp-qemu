@@ -1,10 +1,11 @@
 import logging
 
-from autotest.client.shared import error
+from virttest import error_context
+
 from qemu.tests import live_snapshot_basic
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     live_snapshot_transaction test:
@@ -32,14 +33,14 @@ def run(test, params, env):
                     "data": transaction_test.snapshot_args}
             arg_list.append(args)
 
-        error.context("Create multiple live snapshots simultaneously"
-                      " with transaction", logging.info)
+        error_context.context("Create multiple live snapshots simultaneously"
+                              " with transaction", logging.info)
         output = transaction_test.vm.monitor.transaction(arg_list)
         # return nothing on successful transaction
         if bool(output):
-            raise error.TestFail("Live snapshot transatcion failed,"
-                                 " there should be nothing on success.\n"
-                                 "More details: %s" % output)
+            test.fail("Live snapshot transatcion failed,"
+                      " there should be nothing on success.\n"
+                      "More details: %s" % output)
         transaction_test.action_after_finished()
     finally:
         try:

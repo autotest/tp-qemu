@@ -1,16 +1,17 @@
 import logging
 import os
 
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import aurl
+from avocado.utils import download
 
+from virttest import error_context
 from virttest import utils_test
 from virttest import data_dir
 
 CLIENT_TEST = "kernelinstall"
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM kernel install test:
@@ -32,11 +33,11 @@ def run(test, params, env):
     _tmp_params_dict = {}
 
     def _copy_file_to_test_dir(file_path):
-        if utils.is_url(file_path):
+        if aurl.is_url(file_path):
             return file_path
         file_abs_path = os.path.join(test.bindir, file_path)
         dest = os.path.join(sub_test_path, os.path.basename(file_abs_path))
-        return os.path.basename(utils.get_file(file_path, dest))
+        return os.path.basename(download.get_file(file_path, dest))
 
     def _save_bootloader_config(session):
         """
@@ -51,7 +52,7 @@ def run(test, params, env):
         return default_kernel
 
     def _restore_bootloader_config(session, default_kernel):
-        error.context("Restore the grub to old version")
+        error_context.context("Restore the grub to old version")
 
         if not default_kernel:
             logging.warn("Could not get previous grub config, do noting.")
@@ -61,7 +62,7 @@ def run(test, params, env):
         try:
             session.cmd(cmd)
         except Exception, e:
-            raise error.TestWarn("Restore grub failed: '%s'" % e)
+            test.error("Restore grub failed: '%s'" % e)
 
     def _clean_up_tmp_files(file_list):
         for f in file_list:
@@ -80,7 +81,7 @@ def run(test, params, env):
             return {param_str: param}
         return {param_str: default_value}
 
-    error.context("Log into a guest")
+    error_context.context("Log into a guest")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
@@ -89,7 +90,7 @@ def run(test, params, env):
     logging.info("Guest kernel before install: %s",
                  session.cmd('uname -a').strip())
 
-    error.context("Save current default kernel information")
+    error_context.context("Save current default kernel information")
     default_kernel = _save_bootloader_config(session)
 
     # Check if there is local file in params, move local file to
@@ -128,7 +129,7 @@ def run(test, params, env):
 
     tag = params.get('kernel_tag')
 
-    error.context("Generate control file for kernel install test")
+    error_context.context("Generate control file for kernel install test")
     # Generate control file from parameters
     control_base = "params = %s\n"
     control_base += "job.run_test('kernelinstall'"
@@ -149,27 +150,26 @@ def run(test, params, env):
         _tmp_file_list.append(os.path.abspath(test_control_path))
     except IOError, e:
         _clean_up_tmp_files(_tmp_file_list)
-        raise error.TestError("Fail to Generate control file,"
-                              " error message:\n '%s'" % e)
+        test.error("Fail to Generate control file, error message:\n '%s'" % e)
 
     params["test_control_file_install"] = test_control_file
 
-    error.context("Launch kernel installation test in guest")
+    error_context.context("Launch kernel installation test in guest")
     utils_test.run_virt_sub_test(test, params, env,
                                  sub_type="autotest_control", tag="install")
 
     if params.get("need_reboot", "yes") == "yes":
-        error.context("Reboot guest after kernel is installed")
+        error_context.context("Reboot guest after kernel is installed")
         session.close()
         try:
             vm.reboot()
         except Exception:
             _clean_up_tmp_files(_tmp_file_list)
-            raise error.TestFail("Could not login guest after install kernel")
+            test.fail("Could not login guest after install kernel")
 
     # Run Subtest in guest with new kernel
     if "sub_test" in params:
-        error.context("Run sub test in guest with new kernel")
+        error_context.context("Run sub test in guest with new kernel")
         sub_test = params.get("sub_test")
         tag = params.get("sub_test_tag", "run")
         try:
@@ -181,15 +181,15 @@ def run(test, params, env):
 
     if params.get("restore_defaut_kernel", "no") == "yes":
         # Restore grub
-        error.context("Restore grub and reboot guest")
+        error_context.context("Restore grub and reboot guest")
         try:
             session = vm.wait_for_login(timeout=timeout)
             _restore_bootloader_config(session, default_kernel)
         except Exception, e:
             _clean_up_tmp_files(_tmp_file_list)
             session.close()
-            raise error.TestFail("Fail to restore to default kernel,"
-                                 " error message:\n '%s'" % e)
+            test.fail("Fail to restore to default kernel,"
+                      " error message:\n '%s'" % e)
         vm.reboot()
 
     session = vm.wait_for_login(timeout=timeout)

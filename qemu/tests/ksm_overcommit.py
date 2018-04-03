@@ -6,9 +6,6 @@ import os
 
 import aexpect
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
 from avocado.utils import process
 
 from virttest import utils_misc, utils_test, env_process, data_dir
@@ -81,7 +78,7 @@ def run(test, params, env):
         except aexpect.ExpectProcessTerminatedError, details:
             e_msg = ("Command ksm_overcommit_guest.py on vm '%s' failed: %s" %
                      (vm.name, str(details)))
-            raise error.TestFail(e_msg)
+            test.fail(e_msg)
 
     def _execute_allocator(command, vm, session, timeout):
         """
@@ -106,7 +103,7 @@ def run(test, params, env):
             e_msg = ("Failed to execute command '%s' on "
                      "ksm_overcommit_guest.py, vm '%s': %s" %
                      (command, vm.name, str(details)))
-            raise error.TestFail(e_msg)
+            test.fail(e_msg)
         return (match, data)
 
     def get_ksmstat():
@@ -155,8 +152,8 @@ def run(test, params, env):
                     (not new_ksm and (shm < (ksm_size)))):
                 if j > 64:
                     logging.debug(utils_test.get_memory_info(lvms))
-                    raise error.TestError("SHM didn't merge the memory until "
-                                          "the DL on guest: %s" % vm.name)
+                    test.error("SHM didn't merge the memory until "
+                               "the DL on guest: %s" % vm.name)
                 pause = ksm_size / 200 * perf_ratio
                 logging.debug("Waiting %ds before proceeding...", pause)
                 time.sleep(pause)
@@ -209,7 +206,7 @@ def run(test, params, env):
                 if not lvms[j].is_alive:
                     e_msg = ("VM %d died while executing static_random_fill on"
                              " VM %d in allocator loop" % (j, i))
-                    raise error.TestFail(e_msg)
+                    test.fail(e_msg)
             vm = lvms[i]
             session = lsessions[i]
             cmd = "mem.static_random_fill()"
@@ -226,7 +223,7 @@ def run(test, params, env):
                     if not vm.is_alive():
                         e_msg = ("VM %d died while executing "
                                  "static_random_fill on allocator loop" % i)
-                        raise error.TestFail(e_msg)
+                        test.fail(e_msg)
                     free_mem = int(utils_memory.read_from_meminfo("MemFree"))
                     if (ksm_swap):
                         free_mem = (free_mem +
@@ -323,7 +320,7 @@ def run(test, params, env):
         while (shm < ksm_size):
             if i > 64:
                 logging.debug(utils_test.get_memory_info(lvms))
-                raise error.TestError("SHM didn't merge the memory until DL")
+                test.error("SHM didn't merge the memory until DL")
             pause = ksm_size / 200 * perf_ratio
             logging.debug("Waiting %ds before proceed...", pause)
             time.sleep(pause)
@@ -407,28 +404,28 @@ def run(test, params, env):
 
     # Main test code
     logging.info("Starting phase 0: Initialization")
-    if utils.run("ps -C ksmtuned", ignore_status=True).exit_status == 0:
+    if process.run("ps -C ksmtuned", ignore_status=True).exit_status == 0:
         logging.info("Killing ksmtuned...")
-        utils.run("killall ksmtuned")
+        process.run("killall ksmtuned")
     new_ksm = False
     if (os.path.exists("/sys/kernel/mm/ksm/run")):
-        utils.run("echo 50 > /sys/kernel/mm/ksm/sleep_millisecs")
-        utils.run("echo 5000 > /sys/kernel/mm/ksm/pages_to_scan")
-        utils.run("echo 1 > /sys/kernel/mm/ksm/run")
+        process.run("echo 50 > /sys/kernel/mm/ksm/sleep_millisecs")
+        process.run("echo 5000 > /sys/kernel/mm/ksm/pages_to_scan")
+        process.run("echo 1 > /sys/kernel/mm/ksm/run")
 
         e_up = "/sys/kernel/mm/transparent_hugepage/enabled"
         e_rh = "/sys/kernel/mm/redhat_transparent_hugepage/enabled"
         if os.path.exists(e_up):
-            utils.run("echo 'never' > %s" % e_up)
+            process.run("echo 'never' > %s" % e_up)
         if os.path.exists(e_rh):
-            utils.run("echo 'never' > %s" % e_rh)
+            process.run("echo 'never' > %s" % e_rh)
         new_ksm = True
     else:
         try:
-            utils.run("modprobe ksm")
-            utils.run("ksmctl start 5000 100")
-        except error.CmdError, details:
-            raise error.TestFail("Failed to load KSM: %s" % details)
+            process.run("modprobe ksm")
+            process.run("ksmctl start 5000 100")
+        except process.CmdError, details:
+            test.fail("Failed to load KSM: %s" % details)
 
     # host_reserve: mem reserve kept for the host system to run
     host_reserve = int(params.get("ksm_host_reserve", -1))
@@ -597,10 +594,9 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, vm_name)
     lvms.append(env.get_vm(vm_name))
     if not lvms[0]:
-        raise error.TestError("VM object not found in environment")
+        test.error("VM object not found in environment")
     if not lvms[0].is_alive():
-        raise error.TestError("VM seems to be dead; Test requires a living "
-                              "VM")
+        test.error("VM seems to be dead; Test requires a living VM")
 
     logging.debug("Booting first guest %s", lvms[0].name)
 
@@ -610,7 +606,7 @@ def run(test, params, env):
         tmp = open(params.get('pid_' + vm_name), 'r')
         params['pid_' + vm_name] = int(tmp.readline())
     except Exception:
-        raise error.TestFail("Could not get PID of %s" % (vm_name))
+        test.fail("Could not get PID of %s" % (vm_name))
 
     # Creating other guest systems
     for i in range(1, vmsc):
@@ -630,15 +626,15 @@ def run(test, params, env):
         logging.debug("Booting guest %s", lvms[i].name)
         lvms[i].create()
         if not lvms[i].is_alive():
-            raise error.TestError("VM %s seems to be dead; Test requires a"
-                                  "living VM" % lvms[i].name)
+            test.error("VM %s seems to be dead; Test requires a"
+                       "living VM" % lvms[i].name)
 
         lsessions.append(lvms[i].wait_for_login(timeout=360))
         try:
             tmp = open(params.get('pid_' + vm_name), 'r')
             params['pid_' + vm_name] = int(tmp.readline())
         except Exception:
-            raise error.TestFail("Could not get PID of %s" % (vm_name))
+            test.fail("Could not get PID of %s" % (vm_name))
 
     # Let guests rest a little bit :-)
     pause = vmsc * 2 * perf_ratio

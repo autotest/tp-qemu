@@ -1,9 +1,9 @@
 import logging
 
-from autotest.client.shared import error
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Fileup disk test:
@@ -30,7 +30,8 @@ def run(test, params, env):
     number = 0
 
     try:
-        error.context("Start filling the disk in %s" % fill_dir, logging.info)
+        error_context.context("Start filling the disk in %s" % fill_dir,
+                              logging.info)
         cmd = params.get("fillup_cmd")
         while not filled:
             # As we want to test the backing file, so bypass the cache
@@ -41,10 +42,10 @@ def run(test, params, env):
                 logging.debug("Successfully filled up the disk")
                 filled = True
             elif s != 0:
-                raise error.TestFail("Command dd failed to execute: %s" % o)
+                test.fail("Command dd failed to execute: %s" % o)
             number += 1
     finally:
-        error.context("Cleaning the temporary files...", logging.info)
+        error_context.context("Cleaning the temporary files...", logging.info)
         try:
             clean_cmd = params.get("clean_cmd") % fill_dir
             session2.cmd(clean_cmd, ignore_all_errors=True)

@@ -1,12 +1,11 @@
 import logging
 import re
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import env_process
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Device bit check test:
@@ -45,8 +44,8 @@ def run(test, params, env):
         else:
             properties = default_value
 
-        error.context("Boot up guest with properites: %s value as: %s"
-                      % (str(options), properties), logging.info)
+        error_context.context("Boot up guest with properites: %s value as: %s"
+                              % (str(options), properties), logging.info)
         vm_name = params["main_vm"]
         params["start_vm"] = 'yes'
         env_process.preprocess_vm(test, params, env, vm_name)
@@ -57,27 +56,26 @@ def run(test, params, env):
         qtree_info = vm.monitor.info("qtree")
         dev_info = re.findall(dev_pattern, qtree_info, re.S)
         if not dev_info:
-            raise error.TestError("Can't get device info from qtree result.")
+            test.error("Can't get device info from qtree result.")
 
         for index, option in enumerate(options):
             option_regex = "%s\s+=\s+(\w+)" % option
             option_value = re.findall(option_regex, dev_info[0], re.M)
             if not option_value:
                 logging.debug("dev info in qtree: %s" % dev_info[0])
-                raise error.TestError("Can't get the property info from qtree"
-                                      " result")
+                test.error("Can't get the property info from qtree result")
             if option_value[0] not in convert_dict[properties[index]]:
                 msg = "'%s' value get '%s', " % (option, option_value)
                 msg += "expect value '%s'" % convert_dict[properties[index]]
                 logging.debug(msg)
-                raise error.TestFail("Properity bit for %s is wrong." % option)
+                test.fail("Properity bit for %s is wrong." % option)
 
             logging.info("Properity bit in qtree is right for %s." % option)
             if params.get("check_in_guest", "yes") == "yes":
                 pci_info = session.cmd_output("lspci")
                 pci_n = re.findall(pci_id_pattern, pci_info)
                 if not pci_n:
-                    raise error.TestError("Can't get the pci id for device")
+                    test.error("Can't get the pci id for device")
                 cmd = "cat /sys/bus/pci/devices/0000:%s/" % pci_n[0]
                 cmd += "virtio*/features"
                 bitstr = session.cmd_output(cmd)
@@ -87,8 +85,8 @@ def run(test, params, env):
                     msg = "bit string in guest: %s" % bitstr
                     msg += "expect bit string: %s" % properties[index]
                     logging.debug(msg)
-                    raise error.TestFail("Properity bit for %s is wrong"
-                                         " inside guest." % option)
+                    test.fail("Properity bit for %s is wrong"
+                              " inside guest." % option)
             logging.info("Properity bit in qtree is right for %s"
                          " in guest." % option)
         session.close()

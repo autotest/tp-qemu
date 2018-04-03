@@ -1,13 +1,12 @@
 import logging
 import re
 
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     enforce quit test:
@@ -42,14 +41,14 @@ def run(test, params, env):
         force_quit = True
 
     if "enforce" not in extra_flags:
-        raise error.TestError("pls add 'enforce' params to the cmd line")
+        test.error("pls add 'enforce' params to the cmd line")
 
     msg_unavailable = params.get("msg_unavailable", "").split(":")
     msg_unknow = params.get("msg_unknow", "not found")
     try:
-        error.context("boot guest with -cpu %s,%s" %
-                      (guest_cpumodel, extra_flags),
-                      logging.info)
+        error_context.context("boot guest with -cpu %s,%s" %
+                              (guest_cpumodel, extra_flags),
+                              logging.info)
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     except Exception, err:
@@ -60,10 +59,9 @@ def run(test, params, env):
         if tmp_flag or msg_unknow in str(err):
             logging.info("unavailable host feature, guest force quit")
         else:
-            raise error.TestFail("guest quit with error\n%s" % str(err))
+            test.fail("guest quit with error\n%s" % str(err))
 
     vm = env.get_vm(params["main_vm"])
     if force_quit:
         if not vm.is_dead():
-            raise error.TestFail("guest didn't enforce quit"
-                                 " while flag lacked in host")
+            test.fail("guest didn't enforce quit while flag lacked in host")

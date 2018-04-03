@@ -1,8 +1,9 @@
 import os
 import logging
 
-from autotest.client.shared import error, utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 from virttest import storage
 from virttest import qemu_storage
@@ -65,7 +66,7 @@ class DriveMirror(block_copy.BlockCopy):
         image_file = storage.get_image_filename(params, self.data_dir)
         return self.vm.get_block({"file": image_file})
 
-    @error.context_aware
+    @error_context.context_aware
     def check_node_name(self):
         """
         Check node name as set, after block job complete.
@@ -76,11 +77,10 @@ class DriveMirror(block_copy.BlockCopy):
             node_name_exp = self.params["node_name"]
             node_name = info.get("node-name", "")
             if node_name != node_name_exp:
-                raise error.TestFail(
-                    "node-name is: %s, while set value is: %s" %
-                    (node_name, node_name_exp))
+                self.test.fail("node-name is: %s, while set value is: %s" %
+                               (node_name, node_name_exp))
 
-    @error.context_aware
+    @error_context.context_aware
     def start(self):
         """
         start block device mirroring job;
@@ -101,15 +101,15 @@ class DriveMirror(block_copy.BlockCopy):
                          "buf-size": buf_size})
         if 'node_name' in params:
             args.update({"node-name": params.get("node_name")})
-        error.context("Start to mirror block device", logging.info)
+        error_context.context("Start to mirror block device", logging.info)
         self.vm.block_mirror(device, target_image, full_copy,
                              **args)
         if not self.get_status():
-            raise error.TestFail("No active mirroring job found")
+            self.test.fail("No active mirroring job found")
         if params.get("image_type") != "iscsi":
             self.trash_files.append(target_image)
 
-    @error.context_aware
+    @error_context.context_aware
     def reopen(self):
         """
         reopen target image, then check if image file of the device is
@@ -118,7 +118,7 @@ class DriveMirror(block_copy.BlockCopy):
         params = self.parser_test_args()
         target_format = params["image_format"]
         timeout = params["reopen_timeout"]
-        error.context("reopen new target image", logging.info)
+        error_context.context("reopen new target image", logging.info)
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_COMPLETED")
         self.vm.block_reopen(self.device, self.target_image, target_format)
@@ -141,7 +141,7 @@ class DriveMirror(block_copy.BlockCopy):
                                              params["image_format"],
                                              self.target_image,
                                              params["image_size"])
-            utils.system(cmd)
+            process.system(cmd)
             image = qemu_storage.Iscsidev(params, self.data_dir,
                                           params["target_image"])
             image.cleanup()

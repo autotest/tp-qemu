@@ -1,10 +1,14 @@
 import logging
-from autotest.client.shared import utils
-from autotest.client.shared import error
+
+from avocado.utils import process
+
+from virttest import error_context
+from virttest import utils_misc
+
 from qemu.tests import drive_mirror
 
 
-@error.context_aware
+@error_context.context_aware
 def run_drive_mirror_cancel(test, params, env):
     """
     Test block mirroring functionality
@@ -19,15 +23,16 @@ def run_drive_mirror_cancel(test, params, env):
     mirror_test = drive_mirror.DriveMirror(test, params, env, tag)
     try:
         mirror_test.start()
-        error.context("Block network connection with iptables", logging.info)
-        utils.run(params["start_firewall_cmd"])
-        bg = utils.InterruptedThread(mirror_test.cancel,)
+        error_context.context("Block network connection with iptables",
+                              logging.info)
+        process.run(params["start_firewall_cmd"])
+        bg = utils_misc.InterruptedThread(mirror_test.cancel)
         bg.start()
         job = mirror_test.get_status()
         if job.get("type", "0") != "mirror":
-            raise error.TestFail("Job cancel immediacatly")
-        error.context("Cleanup rules in iptables", logging.info)
-        utils.run(params["stop_firewall_cmd"])
+            test.fail("Job cancel immediacatly")
+        error_context.context("Cleanup rules in iptables", logging.info)
+        process.run(params["stop_firewall_cmd"])
         bg.join(timeout=int(params["cancel_timeout"]))
     finally:
         mirror_test.vm.destroy()

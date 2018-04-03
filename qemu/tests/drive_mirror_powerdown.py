@@ -1,8 +1,7 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 
 from qemu.tests import drive_mirror_stress
 
@@ -12,15 +11,15 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
     def __init__(self, test, params, env, tag):
         super(DriveMirrorPowerdown, self).__init__(test, params, env, tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def powerdown(self):
         """
         power down guest via quit qemu;
         """
-        error.context("powerdown vm", logging.info)
+        error_context.context("powerdown vm", logging.info)
         return self.vm.destroy()
 
-    @error.context_aware
+    @error_context.context_aware
     def powerup(self):
         """
         bootup guest with target image;
@@ -28,7 +27,7 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
         params = self.parser_test_args()
         vm_name = params['main_vm']
         logging.info("Target image: %s" % self.target_image)
-        error.context("powerup vm with target image", logging.info)
+        error_context.context("powerup vm with target image", logging.info)
         env_process.preprocess_vm(self.test, params, self.env, vm_name)
         vm = self.env.get_vm(vm_name)
         vm.verify_alive()

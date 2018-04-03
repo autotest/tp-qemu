@@ -1,8 +1,11 @@
 import logging
 import time
 import random
-from autotest.client.shared import error
-from autotest.client.shared import utils
+
+from avocado.utils import process
+
+from virttest import error_context
+
 from qemu.tests import drive_mirror
 
 
@@ -11,26 +14,27 @@ class DriveMirrorSimple(drive_mirror.DriveMirror):
     def __init__(self, test, params, env, tag):
         super(DriveMirrorSimple, self).__init__(test, params, env, tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def query_status(self):
         """
         query running block mirroring job info;
         """
-        error.context("query job status", logging.info)
+        error_context.context("query job status", logging.info)
         if not self.get_status():
-            raise error.TestFail("No active job")
+            self.test.fail("No active job")
 
-    @error.context_aware
+    @error_context.context_aware
     def readonly_target(self):
-        error.context("Set readonly bit on target image", logging.info)
+        error_context.context("Set readonly bit on target image", logging.info)
         cmd = "chattr +i %s" % self.target_image
-        return utils.system(cmd)
+        return process.system(cmd)
 
-    @error.context_aware
+    @error_context.context_aware
     def clear_readonly_bit(self):
-        error.context("Clear readonly bit on target image", logging.info)
+        error_context.context("Clear readonly bit on target image",
+                              logging.info)
         cmd = "chattr -i %s" % self.target_image
-        return utils.system(cmd)
+        return process.system(cmd)
 
 
 def run(test, params, env):
@@ -59,7 +63,7 @@ def run(test, params, env):
                 if params.get("negative_test") == "yes":
                     keywords = params.get("error_key_words", "Could not open")
                     if simple_test.get_status():
-                        raise error.TestFail("Block job not cancel as expect")
+                        test.fail("Block job not cancel as expect")
                     if keywords not in str(detail):
                         raise
             simple_test.action_before_steady()

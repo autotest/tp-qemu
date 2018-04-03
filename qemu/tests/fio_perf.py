@@ -4,10 +4,7 @@ import time
 import threading
 import logging
 
-from autotest.client import utils
-
 from avocado.utils import process
-from avocado.core import exceptions
 
 from virttest import utils_misc, utils_test
 from virttest import data_dir
@@ -64,7 +61,7 @@ def get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, type, driv
     :param timeout: Timeout in seconds
     """
 
-    kvm_ver = utils.system_output(kvm_ver_chk_cmd)
+    kvm_ver = process.system_output(kvm_ver_chk_cmd)
     host_ver = os.uname()[2]
 
     result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
@@ -207,7 +204,7 @@ def run(test, params, env):
                 (s, o) = session.cmd_status_output(online_disk_run,
                                                    timeout=cmd_timeout)
                 if s:
-                    raise exceptions.TestFail("Failed to online disk: %s" % o)
+                    test.fail("Failed to online disk: %s" % o)
     # format disk
     if format == "True":
         session.cmd(pre_cmd, cmd_timeout)
@@ -239,7 +236,7 @@ def run(test, params, env):
                         (s, o) = session.cmd_status_output(drop_cache,
                                                            timeout=cmd_timeout)
                         if s:
-                            raise exceptions.TestFail("Failed to free memory: %s" % o)
+                            test.fail("Failed to free memory: %s" % o)
                     cpu_file = os.path.join(data_dir.get_tmp_dir(), "cpus")
                     io_exits_b = int(process.system_output("cat /sys/kernel/debug/kvm/exits"))
                     fio_t = threading.Thread(target=fio_thread)

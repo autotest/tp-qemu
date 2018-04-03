@@ -1,17 +1,8 @@
 import time
 import logging
 
+from virttest import error_context
 from virttest.utils_test.qemu import MemoryHotplugTest
-
-try:
-    from avocado.core import exceptions
-except ImportError:
-    from autotest.client.shared import error as exceptions
-
-try:
-    from virttest import error_context
-except ImportError:
-    from autotest.client.shared import error as error_context
 
 
 class MemoryHotplugRepeat(MemoryHotplugTest):
@@ -35,9 +26,8 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
             self.turn(vm, target_mem, extra_params)
             current_mem = self.get_guest_total_mem(vm)
             if current_mem != original_mem:
-                raise exceptions.TestFail("Guest memory changed about repeat"
-                                          " hotpug/unplug memory %d times"
-                                          % repeat)
+                self.test.fail("Guest memory changed about repeat"
+                               " hotpug/unplug memory %d times" % repeat)
             time.sleep(1.5)
         vm.verify_alive()
         vm.reboot()

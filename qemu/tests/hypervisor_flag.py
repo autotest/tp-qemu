@@ -3,7 +3,6 @@ Sanity check for hypervisor flag in guest.
 """
 
 import logging
-from autotest.client.shared import error
 
 
 def run(test, params, env):
@@ -26,4 +25,4 @@ def run(test, params, env):
     cpuinfo = session.cmd("cat /proc/cpuinfo")
     logging.debug("Guest '/proc/cpuinfo': %s", cpuinfo)
     if "hypervisor" not in cpuinfo:
-        raise error.TestFail("hypervisor flag undefined in cpuinfo")
+        test.fail("hypervisor flag undefined in cpuinfo")

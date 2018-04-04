@@ -1,7 +1,6 @@
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import guest_agent
 
 from generic.tests.guest_suspend import GuestSuspendBaseTest
@@ -13,12 +12,12 @@ class SuspendViaGA(GuestSuspendBaseTest):
     guest_agent = None
     suspend_mode = ""
 
-    @error.context_aware
+    @error_context.context_aware
     def start_suspend(self, **args):
         """
         Start suspend via qemu guest agent.
         """
-        error.context("Suspend guest via guest agent", logging.info)
+        error_context.context("Suspend guest via guest agent", logging.info)
         if self.guest_agent:
             self.guest_agent.suspend(self.suspend_mode)
 
@@ -36,19 +35,19 @@ class QemuGASuspendTest(QemuGuestAgentTest):
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 
-        error.context("Suspend guest to memory", logging.info)
+        error_context.context("Suspend guest to memory", logging.info)
         gs = SuspendViaGA(params, self.vm)
         gs.guest_agent = self.gagent
         gs.suspend_mode = guest_agent.QemuAgent.SUSPEND_MODE_RAM
         gs.guest_suspend_mem(params)
 
-        error.context("Suspend guest to disk", logging.info)
+        error_context.context("Suspend guest to disk", logging.info)
         gs.suspend_mode = guest_agent.QemuAgent.SUSPEND_MODE_DISK
         gs.guest_suspend_disk(params)
 
         # Reset guest agent object to None after guest reboot.
         self.gagent = None
-        error.context("Check if guest agent work again.", logging.info)
+        error_context.context("Check if guest agent work again.", logging.info)
         session = self._get_session(params, self.vm)
         self.gagent_start(session, self.vm)
         session.close()
@@ -57,7 +56,7 @@ class QemuGASuspendTest(QemuGuestAgentTest):
         self.gagent.verify_responsive()
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test suspend commands in qemu guest agent.

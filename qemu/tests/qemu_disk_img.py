@@ -2,11 +2,11 @@ import os
 import re
 import logging
 
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import process
 
 from virttest import data_dir
 from virttest import env_process
+from virttest import error_context
 from virttest import storage
 from virttest import qemu_storage
 from virttest import utils_test
@@ -28,12 +28,12 @@ class QemuImgTest(qemu_storage.QemuImg):
         t_params = params.object_params(tag)
         super(QemuImgTest, self).__init__(t_params, self.data_dir, tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def create_snapshot(self, t_params=None):
         """
         create snapshot image file
         """
-        error.context("create snapshot image")
+        error_context.context("create snapshot image")
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)
@@ -41,17 +41,17 @@ class QemuImgTest(qemu_storage.QemuImg):
             return {}
         snapshot = storage.get_image_filename(params, self.data_dir)
         if os.path.exists(snapshot):
-            utils.run("rm -f %s" % snapshot)
+            process.run("rm -f %s" % snapshot)
         super(QemuImgTest, self).create(params)
         self.trash.append(snapshot)
         return params
 
-    @error.context_aware
+    @error_context.context_aware
     def start_vm(self, t_params=None):
         """
         Start a vm and wait for it bootup;
         """
-        error.context("start vm", logging.info)
+        error_context.context("start vm", logging.info)
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)
@@ -71,14 +71,14 @@ class QemuImgTest(qemu_storage.QemuImg):
         self.vm = vm
         return vm
 
-    @error.context_aware
+    @error_context.context_aware
     def __create_file(self, dst):
         logging.info("create tmp file on host")
         if not self.vm:
             return False
         src = self.params["tmp_file_name"]
         cmd = self.params["file_create_cmd"] % src
-        utils.run(cmd)
+        process.run(cmd)
         self.vm.copy_files_to(src, dst)
         self.trash.append(src)
         return True
@@ -98,11 +98,12 @@ class QemuImgTest(qemu_storage.QemuImg):
         md5 = re.findall("\w{32}", output)[0]
         return md5
 
-    @error.context_aware
+    @error_context.context_aware
     def save_file(self, dst):
         login_timeout = int(self.params.get("login_timeout", 360))
         cmd = self.params.get("sync_bin", "sync")
-        error.context("save file('%s') md5sum in guest" % dst, logging.info)
+        error_context.context("save file('%s') md5sum in guest" % dst,
+                              logging.info)
         self.__create_file(dst)
         session = self.vm.wait_for_login(timeout=login_timeout)
         logging.info("sync guest data")
@@ -114,9 +115,10 @@ class QemuImgTest(qemu_storage.QemuImg):
         session.close()
         return self.__md5sum(dst)
 
-    @error.context_aware
+    @error_context.context_aware
     def check_file(self, dst, md5):
-        error.context("check file('%s') md5sum in guest" % dst, logging.info)
+        error_context.context("check file('%s') md5sum in guest" % dst,
+                              logging.info)
         if md5 != self.__md5sum(dst):
             err = ("Md5 value does not match. "
                    "Expected value: %s Actual value: %s" %
@@ -125,31 +127,31 @@ class QemuImgTest(qemu_storage.QemuImg):
             return False
         return True
 
-    @error.context_aware
+    @error_context.context_aware
     def destroy_vm(self):
-        error.context("destroy vm", logging.info)
+        error_context.context("destroy vm", logging.info)
         if self.vm:
             self.vm.destroy()
         self.vm = None
 
-    @error.context_aware
+    @error_context.context_aware
     def check_image(self, t_params=None):
-        error.context("check image file ('%s')" % self.image_filename,
-                      logging.info)
+        error_context.context("check image file ('%s')" % self.image_filename,
+                              logging.info)
         t_params = t_params or {}
         return super(QemuImgTest, self).check_image(t_params, self.data_dir)
 
-    @error.context_aware
+    @error_context.context_aware
     def get_info(self):
-        error.context("get image file ('%s')" % self.image_filename)
+        error_context.context("get image file ('%s')" % self.image_filename)
         return super(QemuImgTest, self).info()
 
-    @error.context_aware
+    @error_context.context_aware
     def verify_info(self, params=None):
         """
         verify option is applied to image file correctly
         """
-        error.context("verify option of converted image", logging.info)
+        error_context.context("verify option of converted image", logging.info)
         image_filename = storage.get_image_filename(params, self.data_dir)
         info = utils_test.get_image_info(image_filename)
         avalue = evalue = ""
@@ -174,7 +176,7 @@ class QemuImgTest(qemu_storage.QemuImg):
             if avalue is not None and avalue != evalue:
                 msg = "Get wrong %s from image %s!" % (option, image_filename)
                 msg += "Expect: %s, actual: %s" % (evalue, avalue)
-                raise error.TestFail(msg)
+                self.test.fail(msg)
 
     @error_context.context_aware
     def check_backingfile(self):
@@ -197,12 +199,12 @@ class QemuImgTest(qemu_storage.QemuImg):
                        self.image_filename)
                 raise exceptions.TestFail(msg)
 
-    @error.context_aware
+    @error_context.context_aware
     def clean(self):
-        error.context("clean up useless images")
+        error_context.context("clean up useless images")
         self.destroy_vm()
         for temp in self.trash:
-            utils.run("rm -f %s" % temp)
+            process.run("rm -f %s" % temp)
 
 
 def run(test, params, env):

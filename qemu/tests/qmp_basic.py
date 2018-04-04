@@ -1,6 +1,3 @@
-from autotest.client.shared import error
-
-
 def run(test, params, env):
     """
     QMP Specification test-suite: this checks if the *basic* protocol conforms
@@ -31,11 +28,10 @@ def run(test, params, env):
     """
     def fail_no_key(qmp_dict, key):
         if not isinstance(qmp_dict, dict):
-            raise error.TestFail("qmp_dict is not a dict (it's '%s')" %
-                                 type(qmp_dict))
+            test.fail("qmp_dict is not a dict (it's '%s')" % type(qmp_dict))
         if key not in qmp_dict:
-            raise error.TestFail("'%s' key doesn't exist in dict ('%s')" %
-                                 (key, str(qmp_dict)))
+            test.fail("'%s' key doesn't exist in dict ('%s')" %
+                      (key, str(qmp_dict)))
 
     def check_dict_key(qmp_dict, key, keytype):
         """
@@ -49,8 +45,8 @@ def run(test, params, env):
         """
         fail_no_key(qmp_dict, key)
         if not isinstance(qmp_dict[key], keytype):
-            raise error.TestFail("'%s' key is not of type '%s', it's '%s'" %
-                                 (key, keytype, type(qmp_dict[key])))
+            test.fail("'%s' key is not of type '%s', it's '%s'" %
+                      (key, keytype, type(qmp_dict[key])))
 
     def check_key_is_dict(qmp_dict, key):
         check_dict_key(qmp_dict, key, dict)
@@ -64,22 +60,22 @@ def run(test, params, env):
     def check_str_key(qmp_dict, keyname, value=None):
         check_dict_key(qmp_dict, keyname, unicode)
         if value and value != qmp_dict[keyname]:
-            raise error.TestFail("'%s' key value '%s' should be '%s'" %
-                                 (keyname, str(qmp_dict[keyname]), str(value)))
+            test.fail("'%s' key value '%s' should be '%s'" %
+                      (keyname, str(qmp_dict[keyname]), str(value)))
 
     def check_key_is_int(qmp_dict, key):
         fail_no_key(qmp_dict, key)
         try:
             int(qmp_dict[key])
         except Exception:
-            raise error.TestFail("'%s' key is not of type int, it's '%s'" %
-                                 (key, type(qmp_dict[key])))
+            test.fail("'%s' key is not of type int, it's '%s'" %
+                      (key, type(qmp_dict[key])))
 
     def check_bool_key(qmp_dict, keyname, value=None):
         check_dict_key(qmp_dict, keyname, bool)
         if value and value != qmp_dict[keyname]:
-            raise error.TestFail("'%s' key value '%s' should be '%s'" %
-                                 (keyname, str(qmp_dict[keyname]), str(value)))
+            test.fail("'%s' key value '%s' should be '%s'" %
+                      (keyname, str(qmp_dict[keyname]), str(value)))
 
     def check_success_resp(resp, empty=False):
         """
@@ -90,8 +86,7 @@ def run(test, params, env):
         """
         check_key_is_dict(resp, "return")
         if empty and len(resp["return"]) > 0:
-            raise error.TestFail("success response is not empty ('%s')" %
-                                 str(resp))
+            test.fail("success response is not empty ('%s')" % str(resp))
 
     def check_error_resp(resp, classname=None, datadict=None):
         """
@@ -104,8 +99,8 @@ def run(test, params, env):
         check_key_is_dict(resp, "error")
         check_key_is_str(resp["error"], "class")
         if classname and resp["error"]["class"] != classname:
-            raise error.TestFail("got error class '%s' expected '%s'" %
-                                 (resp["error"]["class"], classname))
+            test.fail("got error class '%s' expected '%s'" %
+                      (resp["error"]["class"], classname))
 
     def test_version(version):
         """
@@ -195,8 +190,8 @@ def run(test, params, env):
             resp = monitor.cmd_qmp("query-status", q_id=id_key)
             check_success_resp(resp)
             if resp["id"] != id_key:
-                raise error.TestFail("expected id '%s' but got '%s'" %
-                                     (str(id_key), str(resp["id"])))
+                test.fail("expected id '%s' but got '%s'" %
+                          (str(id_key), str(resp["id"])))
 
     def test_invalid_arg_key(monitor):
         """
@@ -360,7 +355,7 @@ def run(test, params, env):
     if qmp_monitor:
         qmp_monitor = qmp_monitor[0]
     else:
-        raise error.TestError('Could not find a QMP monitor, aborting test')
+        test.error('Could not find a QMP monitor, aborting test')
 
     # Run all suites
     greeting_suite(qmp_monitor)
@@ -371,4 +366,4 @@ def run(test, params, env):
 
     # check if QMP is still alive
     if not qmp_monitor.is_responsive():
-        raise error.TestFail('QMP monitor is not responsive after testing')
+        test.fail('QMP monitor is not responsive after testing')

@@ -5,8 +5,7 @@ import threading
 import re
 import time
 
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import utils_net
@@ -139,7 +138,7 @@ def run(test, params, env):
         error_context.context("Change all Bridge NICs MTU to %s"
                               % mtu, logging.info)
         for iface in target_ifaces:
-            utils.run(host_mtu_cmd % (iface, mtu), ignore_status=False)
+            process.run(host_mtu_cmd % (iface, mtu), ignore_status=False)
 
     def _pin_vm_threads(vm, node):
         if node:
@@ -285,7 +284,8 @@ def run(test, params, env):
     if params.get("log_hostinfo_script"):
         src = os.path.join(test.virtdir, params.get("log_hostinfo_script"))
         path = os.path.join(test.resultsdir, "systeminfo")
-        utils.system_output("bash %s %s &> %s" % (src, test.resultsdir, path))
+        process.system_output(
+            "bash %s %s &> %s" % (src, test.resultsdir, path))
 
     if params.get("log_guestinfo_script") and params.get("log_guestinfo_exec"):
         src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
@@ -449,8 +449,8 @@ def ssh_cmd(session, cmd, timeout=120, ignore_status=False):
     :param timeout: timeout for the command
     """
     if session == "localhost":
-        o = utils.system_output(cmd, timeout=timeout,
-                                ignore_status=ignore_status)
+        o = process.system_output(cmd, timeout=timeout,
+                                  ignore_status=ignore_status)
     else:
         o = session.cmd(cmd, timeout=timeout, ignore_all_errors=ignore_status)
     return o

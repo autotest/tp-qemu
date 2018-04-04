@@ -6,12 +6,11 @@ import commands
 
 import aexpect
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from avocado.utils import process
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import remote
+from virttest import error_context
 
 _receiver_ready = False
 
@@ -44,8 +43,8 @@ def run(test, params, env):
     vm_receiver = None
     receiver_addr = params.get("receiver_address")
 
-    logging.debug(utils.system("numactl --hardware", ignore_status=True))
-    logging.debug(utils.system("numactl --show", ignore_status=True))
+    logging.debug(process.system("numactl --hardware", ignore_status=True))
+    logging.debug(process.system("numactl --show", ignore_status=True))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     if params.get('numa_node'):
         numa_node = int(params.get('numa_node'))
@@ -60,25 +59,25 @@ def run(test, params, env):
             sess = vm_receiver.wait_for_login(timeout=login_timeout)
             receiver_addr = vm_receiver.get_address()
             if not receiver_addr:
-                raise error.TestError("Can't get receiver(%s) ip address" %
-                                      vm_sender.name)
+                test.error("Can't get receiver(%s) ip address" %
+                           vm_sender.name)
             if params.get('numa_node'):
                 utils_test.qemu.pin_vm_threads(vm_receiver, node)
         finally:
             if sess:
                 sess.close()
 
-    @error.context_aware
+    @error_context.context_aware
     def install_ntttcp(session):
         """ Install ntttcp through a remote session """
         logging.info("Installing NTttcp ...")
         try:
             # Don't install ntttcp if it's already installed
-            error.context("NTttcp directory already exists")
+            error_context.context("NTttcp directory already exists")
             session.cmd(params.get("check_ntttcp_cmd"))
         except aexpect.ShellCmdError:
             ntttcp_install_cmd = params.get("ntttcp_install_cmd")
-            error.context("Installing NTttcp on guest")
+            error_context.context("Installing NTttcp on guest")
             session.cmd(ntttcp_install_cmd % (platform, platform), timeout=200)
 
     def receiver():
@@ -168,13 +167,13 @@ def run(test, params, env):
         return lst
 
     try:
-        bg = utils.InterruptedThread(receiver, ())
+        bg = utils_misc.InterruptedThread(receiver, ())
         bg.start()
         if bg.isAlive():
             sender()
             bg.join(suppress_exception=True)
         else:
-            raise error.TestError("Can't start backgroud receiver thread")
+            test.error("Can't start backgroud receiver thread")
     finally:
         for i in glob.glob("%s.receiver" % results_path):
             f = open("%s.RHS" % results_path, "w")

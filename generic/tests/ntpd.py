@@ -3,9 +3,7 @@ import time
 
 import aexpect
 
-from autotest.client.shared import utils
-from autotest.client.shared import error
-
+from avocado.utils import process
 from virttest import remote
 from virttest import utils_test
 from virttest.staging import service
@@ -17,14 +15,15 @@ class NTPTest(object):
     This class is for ntpd test
     """
 
-    def __init__(self, params, env):
+    def __init__(self, test, params, env):
         """
         Initialize the object and set a few attributes.
         """
+        self.test = test
         self.server_hostname = None
         self.server_ip = params.get("remote_ip")
         if self.server_ip.count("REMOTE"):
-            raise error.TestNAError("Please set server ip!")
+            self.test.cancel("Please set server ip!")
         self.server_user = params.get("remote_user")
         self.server_password = params.get("remote_pwd")
         self.local_clock = params.get("local_clock")
@@ -44,7 +43,7 @@ class NTPTest(object):
                                                         r"[\$#]\s*$")
             self.session = self.vm.wait_for_login()
         except remote.LoginTimeoutError, detail:
-            raise error.TestNAError(str(detail))
+            self.test.cancel(str(detail))
 
     def close_session(self):
         """
@@ -68,7 +67,7 @@ class NTPTest(object):
         cmd = 'echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock'
         status = self.server_session.cmd_status(cmd)
         if status:
-            raise error.TestError("set ZONE in server failed.")
+            self.test.error("set ZONE in server failed.")
         cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
         self.server_session.cmd_status(cmd_ln)
 
@@ -81,7 +80,7 @@ class NTPTest(object):
                                                     "/etc/ntp.conf"
                                                     % self.local_clock)
             if status:
-                raise error.TestError("config local_clock failed.")
+                self.test.error("config local_clock failed.")
 
         # Add host and guest in restrict
         output = self.server_session.cmd_output("grep '^restrict %s'"
@@ -95,7 +94,7 @@ class NTPTest(object):
                                                        self.mask,
                                                        self.restrict_option))
             if status:
-                raise error.TestError("config restrict failed.")
+                self.test.error("config restrict failed.")
 
         # Restart ntpd service
         server_run = remote.RemoteRunner(session=self.server_session)
@@ -114,17 +113,17 @@ class NTPTest(object):
         # Set the time zone to New_York
         cmd = ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
         try:
-            utils.run(cmd, ignore_status=False)
-        except error.CmdError, detail:
-            raise error.TestFail("set Zone on host failed.%s" % detail)
+            process.run(cmd, ignore_status=False)
+        except process.CmdError, detail:
+            self.test.fail("set Zone on host failed.%s" % detail)
         cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
-        utils.run(cmd_ln, ignore_status=True)
+        process.run(cmd_ln, ignore_status=True)
 
         # Check the cpu info of constant_tsc
         cmd = "cat /proc/cpuinfo | grep constant_tsc"
-        result = utils.run(cmd)
+        result = process.run(cmd)
         if not result.stdout.strip():
-            raise error.TestFail("constant_tsc not available in this system!!")
+            self.test.fail("constant_tsc not available in this system!!")
 
         # Stop ntpd to use ntpdate
         host_ntpd = service.Factory.create_service("ntpd")
@@ -139,22 +138,22 @@ class NTPTest(object):
         logging.info("server time: %s" % server_date)
         logging.info("host time: %s" % host_date)
         if not abs(int(server_date) - int(host_date)) < 2:
-            raise error.TestFail("timing by ntpdate on host failed!!")
+            self.test.fail("timing by ntpdate on host failed!!")
 
         # Delete server of local clock
-        result = utils.run("grep '^server %s' /etc/ntp.conf" % self.local_clock,
-                           ignore_status=True)
+        result = process.run("grep '^server %s' /etc/ntp.conf" %
+                             self.local_clock, ignore_status=True)
         if result.stdout.strip():
-            utils.run("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock)
+            process.run("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock)
         # Check the ntp.conf and add server ip into it
         cmd = "grep '^server %s' /etc/ntp.conf" % self.server_ip
-        result = utils.run(cmd, ignore_status=True)
+        result = process.run(cmd, ignore_status=True)
         if not result.stdout.strip():
             cmd = "echo 'server %s' >> /etc/ntp.conf" % self.server_ip
             try:
-                utils.run(cmd, ignore_status=False)
-            except error.CmdError, detail:
-                raise error.TestFail("config /etc/ntp.conf on host failed!!")
+                process.run(cmd, ignore_status=False)
+            except process.CmdError, detail:
+                self.test.fail("config /etc/ntp.conf on host failed!!")
 
         # Start ntpd service
         host_ntpd.start()
@@ -188,7 +187,7 @@ class NTPTest(object):
         logging.info("server time is : %s" % server_date)
         logging.info("guest time is : %s " % guest_date)
         if not abs(int(server_date) - int(guest_date)) < 2:
-            raise error.TestFail("timing by ntpdate on guest failed!!")
+            self.test.fail("timing by ntpdate on guest failed!!")
 
         # Delete server of local clock
         output = self.session.cmd_output("grep '%s' /etc/ntp.conf"
@@ -202,7 +201,7 @@ class NTPTest(object):
             cmd = "echo 'server %s' >> /etc/ntp.conf" % self.server_ip
             status = self.session.cmd_status(cmd)
             if status:
-                raise error.TestFail("config /etc/ntp.conf on server failed!!")
+                self.test.fail("config /etc/ntp.conf on server failed!!")
 
         # Start the ntpd service
         guest_ntpd.start()
@@ -219,18 +218,16 @@ class NTPTest(object):
         cmd_name = ""
         if self.server_hostname:
             cmd_name = "ntpq -p | grep '^*%s'" % self.server_hostname
-        result_ntpq_ip = utils.run(cmd_ip, ignore_status=True)
-        result_ntpq_name = utils.run(cmd_name, ignore_status=True)
+        result_ntpq_ip = process.run(cmd_ip, ignore_status=True)
+        result_ntpq_name = process.run(cmd_name, ignore_status=True)
         if (not result_ntpq_ip.stdout.strip() and
                 not result_ntpq_name.stdout.strip()):
-            raise error.TestFail("ntpd setting failed of %s host !!"
-                                 % self.vm_name)
+            self.test.fail("ntpd setting failed of %s host !!" % self.vm_name)
         # Test on guest
         output_ip = self.session.cmd_output(cmd_ip).strip()
         output_name = self.session.cmd_output(cmd_name).strip()
         if not output_ip and not output_name:
-            raise error.TestFail("ntpd setting failed of %s guest !!"
-                                 % self.vm_name)
+            self.test.fail("ntpd setting failed of %s guest !!" % self.vm_name)
 
     def long_time_test(self):
         """
@@ -243,7 +240,7 @@ class NTPTest(object):
         logging.info("server time is %s" % server_date)
         logging.info("guest time is %s" % guest_date)
         if not abs(int(server_date) - int(guest_date)) < 2:
-            raise error.TestFail("timing by ntpd on guest failed")
+            self.test.fail("timing by ntpd on guest failed")
 
 
 def run(test, params, env):
@@ -258,12 +255,12 @@ def run(test, params, env):
     5.After long time, test ntpd service still works on guest.
     """
 
-    ntp_test = NTPTest(params, env)
+    ntp_test = NTPTest(test, params, env)
     ping_s, _ = utils_test.ping(ntp_test.server_ip, count=1,
                                 timeout=5, session=ntp_test.session)
     if ping_s:
         ntp_test.close_session()
-        raise error.TestNAError("Please make sure the guest can ping server!")
+        test.cancel("Please make sure the guest can ping server!")
 
     # Start test from here
     try:
@@ -271,7 +268,7 @@ def run(test, params, env):
         try:
             ntp_test.server_config()
         except (aexpect.ShellError, remote.LoginTimeoutError), detail:
-            raise error.TestFail("server config failed. %s" % detail)
+            test.fail("server config failed. %s" % detail)
         logging.info("waiting for ntp server : %s s" % ntp_test.ntpdate_sleep)
         # Host and Guest will use server's ntpd service to set time.
         # here wait for some seconds for server ntpd service valid
@@ -281,24 +278,24 @@ def run(test, params, env):
         try:
             ntp_test.host_config()
         except (aexpect.ShellError, remote.LoginTimeoutError), detail:
-            raise error.TestFail("host config failed.%s" % detail)
+            test.fail("host config failed.%s" % detail)
 
         # Guest configuration
         try:
             ntp_test.guest_config()
         except (aexpect.ShellError, remote.LoginTimeoutError), detail:
-            raise error.TestFail("guest config failed.%s" % detail)
+            test.fail("guest config failed.%s" % detail)
 
         try:
             # Wait 20min for ntpq test
             ntp_test.ntpq_test()
         except (aexpect.ShellError, remote.LoginTimeoutError), detail:
-            raise error.TestFail("ntpq test failed.%s" % detail)
+            test.fail("ntpq test failed.%s" % detail)
 
         try:
             # Wait 24h for  test
             ntp_test.long_time_test()
         except (aexpect.ShellError, remote.LoginTimeoutError), detail:
-            raise error.TestFail("long time test failed.%s" % detail)
+            test.fail("long time test failed.%s" % detail)
     finally:
         ntp_test.close_session()

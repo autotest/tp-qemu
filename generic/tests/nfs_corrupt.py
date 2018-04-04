@@ -2,9 +2,8 @@ import os
 import re
 import logging
 
-from autotest.client import utils
-from autotest.client import os_dep
-
+from avocado.utils import process
+from avocado.utils import path as utils_path
 from virttest import utils_misc
 from virttest import utils_net
 from virttest import env_process
@@ -43,9 +42,9 @@ class NFSCorruptConfig(object):
         """
         error_context.context("Finding out commands to handle NFS service",
                               logging.info)
-        service = os_dep.command("service")
+        service = utils_path.find_command("service")
         try:
-            systemctl = os_dep.command("systemctl")
+            systemctl = utils_path.find_command("systemctl")
         except ValueError:
             systemctl = None
 
@@ -105,16 +104,16 @@ class NFSCorruptConfig(object):
             if not self.is_service_active():
                 self.start_service()
 
-        utils.run("exportfs %s:%s -o rw,no_root_squash" %
-                  (self.nfs_ip, self.nfs_dir))
-        utils.run("mount %s:%s %s -o rw,soft,timeo=30,retrans=1,vers=3" %
-                  (self.nfs_ip, self.nfs_dir, self.mnt_dir))
+        process.run("exportfs %s:%s -o rw,no_root_squash" %
+                    (self.nfs_ip, self.nfs_dir))
+        process.run("mount %s:%s %s -o rw,soft,timeo=30,retrans=1,vers=3" %
+                    (self.nfs_ip, self.nfs_dir, self.mnt_dir))
 
     @error_context.context_aware
     def cleanup(self, force_stop=False):
         error_context.context("Cleaning up test NFS share", logging.info)
-        utils.run("umount %s" % self.mnt_dir)
-        utils.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir))
+        process.run("umount %s" % self.mnt_dir)
+        process.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir))
         if force_stop:
             self.stop_service()
 
@@ -122,19 +121,19 @@ class NFSCorruptConfig(object):
         """
         Starts the NFS server.
         """
-        utils.run(self.start_cmd)
+        process.run(self.start_cmd)
 
     def stop_service(self):
         """
         Stops the NFS server.
         """
-        utils.run(self.stop_cmd)
+        process.run(self.stop_cmd)
 
     def restart_service(self):
         """
         Restarts the NFS server.
         """
-        utils.run(self.restart_cmd)
+        process.run(self.restart_cmd)
 
     def is_service_active(self):
         """
@@ -143,7 +142,7 @@ class NFSCorruptConfig(object):
         :param chk_re: Regular expression that tells whether NFS is running
                 or not.
         """
-        status = utils.system_output(self.status_cmd, ignore_status=True)
+        status = process.system_output(self.status_cmd, ignore_status=True)
         if re.findall(self.chk_re, status):
             return True
         else:
@@ -257,7 +256,7 @@ def run(test, params, env):
             cmd += " -j REJECT"
 
             error_context.context("Reject NFS connection on host", logging.info)
-            utils.system(cmd)
+            process.system(cmd)
 
             error_context.context("Check if VM status is 'paused'", logging.info)
             if not utils_misc.wait_for(
@@ -276,7 +275,7 @@ def run(test, params, env):
             cmd += " --dport 2049"
             cmd += " -j REJECT"
 
-            utils.system(cmd)
+            process.system(cmd)
 
         error_context.context("Continue guest", logging.info)
         vm.resume()

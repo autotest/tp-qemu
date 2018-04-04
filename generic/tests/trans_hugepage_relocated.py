@@ -4,8 +4,6 @@ import commands
 import os
 import re
 
-from autotest.client.shared import error
-
 from virttest import utils_test
 from virttest.staging import utils_memory
 
@@ -94,7 +92,7 @@ def run(test, params, env):
         if not os.path.isdir('/space'):
             os.makedirs('/space')
         if os.system("mount -t tmpfs -o size=%sM none /space" % vmsm):
-            raise error.TestError("Can not mount tmpfs")
+            test.error("Can not mount tmpfs")
 
         # Try to make some fragment in memory
         # The total size of fragments is vmsm
@@ -104,7 +102,7 @@ def run(test, params, env):
         logging.info("Start to make fragment in host")
         s, o = commands.getstatusoutput(cmd)
         if s != 0:
-            raise error.TestError("Can not dd in host")
+            test.error("Can not dd in host")
     finally:
         s, o = commands.getstatusoutput("umount /space")
 
@@ -130,14 +128,14 @@ def run(test, params, env):
             count += 1
         elif current < last_value:
             if last_value - current < mem_increase_step * 0.95:
-                raise error.TestError("Hugepage memory increased too slow")
+                test.error("Hugepage memory increased too slow")
             mem_increase += last_value - current
             count = 0
         if count > w_step:
             logging.warning("Memory didn't increase in %s s" % (count *
                                                                 s_time))
     if mem_increase < file_size * 0.5:
-        raise error.TestError("Hugepages allocated can not reach a half: %s/%s"
-                              % (mem_increase, file_size))
+        test.error("Hugepages allocated can not reach a half: %s/%s"
+                   % (mem_increase, file_size))
     session.close()
     logging.info("Relocated test succeed")

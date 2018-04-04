@@ -1,14 +1,13 @@
 import logging
 import os
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import utils_test
 from virttest.staging import utils_memory
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run stress as a memory stress in guest for THP testing
@@ -26,12 +25,12 @@ def run(test, params, env):
     qemu_mem = int(params.get("qemu_mem", "64"))
     hugetlbfs_path = params.get("hugetlbfs_path", "/proc/sys/vm/nr_hugepages")
 
-    error.context("smoke test setup")
+    error_context.context("smoke test setup")
     if not os.path.ismount(debugfs_path):
         if not os.path.isdir(debugfs_path):
             os.makedirs(debugfs_path)
         try:
-            utils.system("mount -t debugfs none %s" % debugfs_path)
+            process.system("mount -t debugfs none %s" % debugfs_path)
         except Exception:
             debugfs_flag = 0
 
@@ -46,11 +45,11 @@ def run(test, params, env):
         fd.write(str(nr_hugetlbfs))
         fd.close()
 
-        error.context("Memory stress test")
+        error_context.context("Memory stress test")
 
         nr_ah.append(int(utils_memory.read_from_meminfo('AnonHugePages')))
         if nr_ah[0] <= 0:
-            raise error.TestFail("VM is not using transparent hugepage")
+            test.fail("VM is not using transparent hugepage")
 
         # Run stress memory heavy in guest
         memory_stress_test = params['thp_memory_stress']
@@ -66,15 +65,15 @@ def run(test, params, env):
 
         if debugfs_flag == 1:
             if int(open(hugetlbfs_path, 'r').read()) <= 0:
-                raise error.TestFail("KVM doesn't use transparenthugepage")
+                test.fail("KVM doesn't use transparenthugepage")
 
         logging.info("memory stress test finished")
     finally:
-        error.context("all tests cleanup")
+        error_context.context("all tests cleanup")
         fd = open(hugetlbfs_path, "w")
         fd.write("0")
         fd.close()
         if os.path.ismount(debugfs_path):
-            utils.run("umount %s" % debugfs_path)
+            process.run("umount %s" % debugfs_path)
         if os.path.isdir(debugfs_path):
             os.removedirs(debugfs_path)

@@ -1,11 +1,10 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import remote
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run_whql_hck_client_install(test, params, env):
     """
     WHQL HCK client installation:
@@ -42,14 +41,14 @@ def run_whql_hck_client_install(test, params, env):
 
     # Join the server's workgroup
     if params.get("join_domain") == "yes":
-        error.context("Join the workgroup", logging.info)
+        error_context.context("Join the workgroup", logging.info)
         cmd = ("netdom join %s /domain:%s /UserD:%s "
                "/PasswordD:%s" % (client_name, server_domname,
                                   client_username, client_password))
         session.cmd(cmd, timeout=600)
 
-    error.context("Setting up auto logon for user '%s'" % client_username,
-                  logging.info)
+    error_context.context(("Setting up auto logon for user '%s'" %
+                          client_username), logging.info)
     cmd = ('reg add '
            '"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\winlogon"'
            ' /v "%s" /d "%s" /t REG_SZ /f')
@@ -60,14 +59,14 @@ def run_whql_hck_client_install(test, params, env):
     session = vm.reboot(session)
 
     if params.get("pre_hck_install"):
-        error.context("Install some program before install HCK client.",
-                      logging.info)
+        error_context.context("Install some program before install HCK client",
+                              logging.info)
         install_cmd = params.get("pre_hck_install")
         session.cmd(install_cmd, timeout=install_timeout)
 
     install_cmd = params["install_cmd"]
-    error.context("Installing HCK client (timeout=%ds)" % install_timeout,
-                  logging.info)
+    error_context.context(("Installing HCK client (timeout=%ds)" %
+                          install_timeout), logging.info)
     session.cmd(install_cmd, timeout=install_timeout)
     reboot_timeout = login_timeout + 1500
     session = vm.reboot(session, timeout=reboot_timeout)

@@ -169,7 +169,7 @@ def run(test, params, env):
             try:
                 process.run("lvextend -L +200M %s" % logical_volume)
             except process.CmdError, e:
-                logging.debug(e.result_obj.stdout)
+                logging.debug(e.result.stdout)
             error_context.context("Continue paused guest", logging.info)
             vm.resume()
         elif not vm.monitor.verify_status("running"):

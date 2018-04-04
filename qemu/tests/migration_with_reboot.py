@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from autotest.client.shared import utils
+from virttest import utils_misc
 
 
 def run(test, params, env):
@@ -38,8 +38,8 @@ def run(test, params, env):
 
     try:
         # Reboot the VM in the background
-        bg = utils.InterruptedThread(vm.reboot, kwargs={'session': session,
-                                                        'timeout': login_timeout})
+        bg = utils_misc.InterruptedThread(
+            vm.reboot, kwargs={'session': session, 'timeout': login_timeout})
         bg.start()
         try:
             while bg.isAlive():

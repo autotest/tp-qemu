@@ -1,14 +1,13 @@
 import logging
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_test
 from virttest import virt_vm
 from virttest import utils_net
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM migration test:
@@ -56,7 +55,8 @@ def run(test, params, env):
     if session_serial:
         session_serial.close()
 
-    error.context("Add network devices through monitor cmd", logging.info)
+    error_context.context("Add network devices through monitor cmd",
+                          logging.info)
     nic_name = 'hotadded'
     enable_msix_vectors = params.get("enable_msix_vectors")
     nic_info = vm.hotplug_nic(nic_model=pci_model, nic_name=nic_name,
@@ -77,42 +77,45 @@ def run(test, params, env):
         # while to wait for guest done.
         time.sleep(60)
 
-    error.context("Disable the primary link of guest", logging.info)
+    error_context.context("Disable the primary link of guest", logging.info)
     set_link(nic_name, up=False)
 
-    error.context("Check if new interface gets ip address", logging.info)
+    error_context.context("Check if new interface gets ip address",
+                          logging.info)
     try:
         ip = vm.wait_for_get_address(nic_name)
     except virt_vm.VMIPAddressMissingError:
-        raise error.TestFail("Could not get or verify ip address of nic")
+        test.fail("Could not get or verify ip address of nic")
     logging.info("Got the ip address of new nic: %s", ip)
 
-    error.context("Ping guest's new ip from host", logging.info)
+    error_context.context("Ping guest's new ip from host", logging.info)
     s, o = utils_test.ping(ip, 10, timeout=15)
     if s != 0:
-        raise error.TestFail("New nic failed ping test with output:\n %s" % o)
+        test.fail("New nic failed ping test with output:\n %s" % o)
 
-    error.context("Re-enabling the primary link", logging.info)
+    error_context.context("Re-enabling the primary link", logging.info)
     set_link(nic_name, up=True)
 
-    error.context("Migrate from source VM to Destination VM", logging.info)
+    error_context.context("Migrate from source VM to Destination VM",
+                          logging.info)
     vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
 
-    error.context("Disable the primary link", logging.info)
+    error_context.context("Disable the primary link", logging.info)
     set_link(nic_name, up=False)
 
-    error.context("Ping guest's new ip from host", logging.info)
+    error_context.context("Ping guest's new ip from host", logging.info)
     s, o = utils_test.ping(ip, 10, timeout=15)
     if s != 0:
-        raise error.TestFail("New nic failed ping test with output:\n %s" % o)
+        test.fail("New nic failed ping test with output:\n %s" % o)
 
-    error.context("Re-enabling the primary link", logging.info)
+    error_context.context("Re-enabling the primary link", logging.info)
     set_link(nic_name, up=True)
 
-    error.context("Reboot guest and verify new nic works", logging.info)
+    error_context.context("Reboot guest and verify new nic works",
+                          logging.info)
     host_ip = utils_net.get_ip_address_by_interface(netdst)
     session = vm.reboot()
     status, output = utils_test.ping(dest=host_ip, count=100,
                                      timeout=240, session=session)
     if status != 0:
-        raise error.TestFail("Fail to ping host form guest")
+        test.fail("Fail to ping host form guest")

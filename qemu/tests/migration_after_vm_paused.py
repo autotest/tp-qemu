@@ -1,15 +1,11 @@
 import logging
 import time
-from autotest.client.shared import error
-from autotest.client.shared import utils
+
+import aexpect
+
+from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
-
-# Make it work under both autotest-framework and avocado-framework
-try:
-    import aexpect
-except ImportError:
-    from virttest import aexpect
 
 
 class MigrationAfterVmPaused(object):
@@ -45,15 +41,15 @@ class MigrationAfterVmPaused(object):
 
     def stress_test_in_guest(self, timeout=60):
 
-        self.bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
-                                          args=(
-                                              self.test, self.params, self.env,),
-                                          kwargs={"sub_type": self.guest_stress_test})
+        self.bg = utils_misc.InterruptedThread(
+            utils_test.run_virt_sub_test,
+            args=(self.test, self.params, self.env,),
+            kwargs={"sub_type": self.guest_stress_test})
         self.bg.start()
         logging.info("sleep %ds waiting guest stress test start.", timeout)
         time.sleep(timeout)
         if not self.bg.is_alive():
-            raise error.TestFail("Failed to start guest stress test!")
+            self.test.fail("Failed to start guest stress test!")
 
     def stop_stress_test_in_guest(self):
 
@@ -71,7 +67,7 @@ class MigrationAfterVmPaused(object):
             except Exception:
                 pass
 
-    @error.context_aware
+    @error_context.context_aware
     def before_migration(self):
 
         self.vm.verify_alive()
@@ -85,23 +81,23 @@ class MigrationAfterVmPaused(object):
             # Start another session with the guest and make sure the background
             # process is running
             session2 = self.vm.wait_for_login(timeout=self.login_timeout)
-            error.context("Checking the background command in the guest "
-                          "pre migration", logging.info)
+            error_context.context("Checking the background command in "
+                                  "the guest pre migration", logging.info)
             session2.cmd(self.bg_check_command, timeout=30)
             session2.close()
         else:
             # Just migrate on a living guest OS
-            raise error.TestFail("The guest is not alive,"
-                                 " this test must on a living guest OS.")
+            self.test.fail("The guest is not alive,"
+                           " this test must on a living guest OS.")
 
-    @error.context_aware
+    @error_context.context_aware
     def after_migration(self):
 
         logging.info("Logging into guest after migration...")
         session2 = self.vm.wait_for_login(timeout=self.login_timeout)
         logging.info("Logged in after migration")
-        error.context("Checking the background command in the guest "
-                      "post migration", logging.info)
+        error_context.context("Checking the background command in the guest "
+                              "post migration", logging.info)
         session2.cmd(self.bg_check_command, timeout=30)
         output = session2.cmd_output(self.test_command)
         # Compare output to reference output
@@ -113,8 +109,8 @@ class MigrationAfterVmPaused(object):
                          utils_misc.format_str_for_message(self.reference_output))
             logging.info("Output after:" +
                          utils_misc.format_str_for_message(output))
-            raise error.TestFail("Command '%s' produced different output "
-                                 "before and after migration" % self.test_command)
+            self.test.fail("Command '%s' produced different output "
+                           "before and after migration" % self.test_command)
         # Kill the background process
         if session2 and session2.is_alive():
             bg_kill_cmd = self.params.get("migration_bg_kill_command", None)

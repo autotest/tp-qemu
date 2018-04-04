@@ -1,7 +1,7 @@
 import logging
 import random
 
-from autotest.client.shared import utils
+from avocado.utils import process
 
 from virttest import utils_test
 from virttest import utils_net
@@ -74,7 +74,7 @@ def run(test, params, env):
         if nic_ip:
             return nic_ip
         cached_ip = vm.address_cache.get(nic["mac"])
-        arps = utils.system_output("arp -aen")
+        arps = process.system_output("arp -aen")
         logging.debug("Can't get IP address:")
         logging.debug("\tCached IP: %s", cached_ip)
         logging.debug("\tARP table: %s", arps)

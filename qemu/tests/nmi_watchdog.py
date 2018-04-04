@@ -1,9 +1,10 @@
 import time
 import logging
-from autotest.client.shared import error
+
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test the function of nmi injection and verify the response of guest
@@ -27,16 +28,16 @@ def run(test, params, env):
                          "--args='nmi_watchdog=%d'" %
                          (kernel_version, nmi_watchdog_type))
 
-    error.context("Add 'nmi_watchdog=%d' to guest kernel cmdline and reboot"
-                  % nmi_watchdog_type)
+    error_context.context("Add 'nmi_watchdog=%d' to guest kernel "
+                          "cmdline and reboot" % nmi_watchdog_type)
     session.cmd(update_kernel_cmd)
     time.sleep(int(params.get("sleep_before_reset", 10)))
     session = vm.reboot(session, method='shell', timeout=timeout)
     try:
-        error.context("Getting guest's number of vcpus")
+        error_context.context("Getting guest's number of vcpus")
         guest_cpu_num = session.cmd(params["cpu_chk_cmd"])
 
-        error.context("Getting guest's NMI counter")
+        error_context.context("Getting guest's NMI counter")
         output = session.cmd(get_nmi_cmd)
         logging.debug(output.strip())
         nmi_counter1 = output.split()[1:]
@@ -45,17 +46,17 @@ def run(test, params, env):
                      "increases")
         time.sleep(60)
 
-        error.context("Getting guest's NMI counter 2nd time")
+        error_context.context("Getting guest's NMI counter 2nd time")
         output = session.cmd(get_nmi_cmd)
         logging.debug(output.strip())
         nmi_counter2 = output.split()[1:]
 
-        error.context("")
+        error_context.context("")
         for i in range(int(guest_cpu_num)):
             logging.info("vcpu: %s, nmi_counter1: %s, nmi_counter2: %s" %
                          (i, nmi_counter1[i], nmi_counter2[i]))
             if int(nmi_counter2[i]) <= int(nmi_counter1[i]):
-                raise error.TestFail("Guest's NMI counter did not increase "
-                                     "after 60 seconds")
+                test.fail("Guest's NMI counter did not increase "
+                          "after 60 seconds")
     finally:
         session.close()

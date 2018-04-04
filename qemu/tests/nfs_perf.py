@@ -2,15 +2,15 @@ import logging
 import re
 import os
 
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 
 STEP_1, STEP_2, STEP_3, STEP_4, STEP_5, STEP_6 = range(6)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM nfs performance test:
@@ -41,7 +41,7 @@ def run(test, params, env):
                          " error message:\n%s", func.__name__, e)
 
     def _clean_up(step_cnt):
-        error.context("Clean up", logging.info)
+        error_context.context("Clean up", logging.info)
         if step_cnt >= STEP_5:
             # remove test file.
             cmd = "rm -f %s" % " ".join(test_file_list)
@@ -65,8 +65,8 @@ def run(test, params, env):
         # Clean up caches
         session.cmd("echo 3 >/proc/sys/vm/drop_caches")
 
-        error.context("test %s size block write performance in guest"
-                      " using dd commands" % blk_size, logging.info)
+        error_context.context("test %s size block write performance in guest"
+                              " using dd commands" % blk_size, logging.info)
         dd_cmd = "dd"
         dd_cmd += " if=/dev/zero"
         dd_cmd += " of=%s" % test_file
@@ -85,8 +85,8 @@ def run(test, params, env):
         # Clean up caches
         session.cmd("echo 3 >/proc/sys/vm/drop_caches")
 
-        error.context("test %s size block read performance in guest"
-                      " using dd commands" % blk_size, logging.info)
+        error_context.context("test %s size block read performance in guest"
+                              " using dd commands" % blk_size, logging.info)
         dd_cmd = "dd"
         dd_cmd += " if=%s" % test_file
         dd_cmd += " of=/dev/null"
@@ -102,10 +102,10 @@ def run(test, params, env):
         return out
 
     if not hasattr(test, "write_perf_keyval"):
-        raise error.TestNAError("There is no 'write_perf_keyval' method in"
-                                " test object, skip this test")
+        test.cancel("There is no 'write_perf_keyval' method in"
+                    " test object, skip this test")
 
-    error.context("boot guest over virtio driver", logging.info)
+    error_context.context("boot guest over virtio driver", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -117,13 +117,14 @@ def run(test, params, env):
     kvm_userspace_ver_cmd = params.get("kvm_userspace_ver_cmd", "")
     if kvm_userspace_ver_cmd:
         try:
-            cmd_result = utils.run(kvm_userspace_ver_cmd)
+            cmd_result = process.run(kvm_userspace_ver_cmd)
             qemu_version = cmd_result.stdout.strip()
-        except error.CmdError:
+        except process.CmdError:
             qemu_version = "Unknown"
     else:
         qemu_path = utils_misc.get_qemu_binary(params)
-        version_line = utils.system_output("%s -help | head -n 1" % qemu_path)
+        version_line = process.system_output("%s -help | head -n 1"
+                                             % qemu_path)
         matches = re.findall("version .*?,", version_line, re.I)
         if matches:
             qemu_version = " ".join(matches[0].split()[1:]).strip(",")
@@ -140,7 +141,8 @@ def run(test, params, env):
         raise
     # After STEP 2
 
-    error.context("mount nfs server in guest with tcp protocol", logging.info)
+    error_context.context("mount nfs server in guest with tcp protocol",
+                          logging.info)
     nfs_server = params.get("nfs_server")
     nfs_path = params.get("nfs_path")
     mnt_option = params.get("mnt_option")
@@ -153,8 +155,8 @@ def run(test, params, env):
 
     if (not nfs_server) or (not nfs_path) or (not mnt_point):
         _clean_up(STEP_2)
-        raise error.TestError("Missing configuration for nfs partition."
-                              " Check your config files")
+        test.error("Missing configuration for nfs partition."
+                   " Check your config files")
 
     try:
         session.cmd("mkdir -p %s" % mnt_point)
@@ -201,8 +203,8 @@ def run(test, params, env):
             tmp_list = re.findall(speed_pattern, out)
             if not tmp_list:
                 _clean_up(STEP_5)
-                raise error.TestError("Could not get correct write result."
-                                      " dd cmd output:\n%s" % out)
+                test.error("Could not get correct write result."
+                           " dd cmd output:\n%s" % out)
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
             result += "%016s|" % speed
@@ -213,8 +215,8 @@ def run(test, params, env):
             tmp_list = re.findall(speed_pattern, out)
             if not tmp_list:
                 _clean_up(STEP_6)
-                raise error.TestError("Could not get correct read result."
-                                      " dd cmd output:\n%s" % out)
+                test.error("Could not get correct read result."
+                           " dd cmd output:\n%s" % out)
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
             result += "%016s" % speed

@@ -1,11 +1,13 @@
 import logging
 import time
-from autotest.client import utils
-from autotest.client.shared import error
+
+from avocado.utils import process
+
+from virttest import error_context
 
 
 # This decorator makes the test function aware of context strings
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     QEMU 'Hello, world!' test
@@ -28,7 +30,7 @@ def run(test, params, env):
     """
     # Error contexts are used to give more info on what was
     # going on when one exception happened executing test code.
-    error.context("Get the main VM", logging.info)
+    error_context.context("Get the main VM", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -42,8 +44,8 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     # Send command to the guest, using session command.
-    error.context("Echo 'Hello, world!' in guest and get the output",
-                  logging.info)
+    error_context.context("Echo 'Hello, world!' in guest and get the output",
+                          logging.info)
     # Here, timeout was passed explicitly to show it can be tweaked
     guest_cmd = "echo 'Hello, world!'"
     # If you just need the output, use session.cmd(). If the command fails,
@@ -56,10 +58,10 @@ def run(test, params, env):
 
     # Here, we will fail a test if the guest outputs something unexpected
     if guest_cmd_output != 'Hello, world!':
-        raise error.TestFail("Unexpected output from guest")
+        test.fail("Unexpected output from guest")
 
     # Send command to the guest, using monitor command.
-    error.context("Send a monitor command", logging.info)
+    error_context.context("Send a monitor command", logging.info)
 
     monitor_cmd_ouput = vm.monitor.info("status")
     logging.info("Monitor returns '%s'", monitor_cmd_ouput)
@@ -69,18 +71,19 @@ def run(test, params, env):
     vm.verify_status("running")
 
     # Send command to host
-    error.context("Echo 'Hello, world!' in the host using shell", logging.info)
-    # If the command fails, it will raise a error.CmdError exception
-    host_cmd_output = utils.system_output("echo 'Hello, world!'")
+    error_context.context("Echo 'Hello, world!' in the host using shell",
+                          logging.info)
+    # If the command fails, it will raise a process.CmdError exception
+    host_cmd_output = process.system_output("echo 'Hello, world!'")
     logging.info("Host cmd output '%s'", host_cmd_output)
 
     # Here, we will fail a test if the host outputs something unexpected
     if host_cmd_output != 'Hello, world!':
-        raise error.TestFail("Unexpected output from guest")
+        test.fail("Unexpected output from guest")
 
     # An example of getting a required parameter from the config file
-    error.context("Get a required parameter from the config file",
-                  logging.info)
+    error_context.context("Get a required parameter from the config file",
+                          logging.info)
     sleep_time = int(params["sleep_time"])
     logging.info("Sleep for '%d' seconds", sleep_time)
     time.sleep(sleep_time)

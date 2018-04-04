@@ -1,20 +1,11 @@
 import logging
 
+from avocado.utils.wait import wait_for
+
+from virttest import error_context
 from virttest.utils_test import BackgroundTest
 from virttest.utils_test import run_virt_sub_test
 from virttest.utils_test.qemu import MemoryHotplugTest
-from avocado.core import exceptions
-
-# Make it work under both autotest-framework and avocado-framework
-try:
-    from avocado.utils.wait import wait_for
-except ImportError:
-    from autotest.client.shared.utils import wait_for
-
-try:
-    from virttest import error_context as step_engine
-except ImportError:
-    from autotest.client.shared.error import step_engine
 
 
 class MemoryHotplugSimple(MemoryHotplugTest):
@@ -26,7 +17,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
                     (self.params["sub_test"],
                      self.params["stage"],
                      self.params["operation"]))
-            step_engine.context(step, logging.info)
+            error_context.context(step, logging.info)
             args = (self.test, self.params, self.env, self.params["sub_type"])
             run_virt_sub_test(*args)
 
@@ -83,9 +74,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
                 self.run_sub_test])[0]
         func = getattr(self, "%s_memory" % operation)
         if not callable(func):
-            raise exceptions.TestError(
-                "Unsupported memory operation '%s'" %
-                operation)
+            self.test.error("Unsupported memory operation '%s'" % operation)
         vm = self.env.get_vm(self.params["main_vm"])
         try:
             if stage != "after":
@@ -110,7 +99,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
             self.close_sessions()
 
 
-@step_engine.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu memory hotplug test:

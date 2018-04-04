@@ -1,11 +1,10 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu invalid parameter in qemu command line test:
@@ -19,16 +18,16 @@ def run(test, params, env):
     vm_name = params["main_vm"]
     params['start_vm'] = "yes"
     try:
-        error.context("Start guest with invalid parameters.")
+        error_context.context("Start guest with invalid parameters.")
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.destroy()
     except Exception, emsg:
-        error.context("Check guest exit status.")
+        error_context.context("Check guest exit status.")
         if "(core dumped)" in str(emsg):
-            raise error.TestFail("Guest core dumped with invalid parameters.")
+            test.fail("Guest core dumped with invalid parameters.")
         else:
             logging.info("Guest quit as expect: %s" % str(emsg))
             return
 
-    raise error.TestFail("Guest start normally, didn't quit as expect.")
+    test.fail("Guest start normally, didn't quit as expect.")

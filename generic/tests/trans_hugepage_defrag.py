@@ -3,13 +3,12 @@ import time
 import os
 import re
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import test_setup
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM khugepage userspace side test:
@@ -56,7 +55,7 @@ def run(test, params, env):
             ret.strip())
         return int(ret)
 
-    def change_feature_status(status, feature_path, test_config):
+    def change_feature_status(test, status, feature_path, test_config):
         """
         Turn on/off feature functionality.
 
@@ -95,8 +94,7 @@ def run(test, params, env):
             feature_file.write(action)
             feature_file.close()
         except IOError, e:
-            raise error.TestFail("Error writing %s to %s: %s" %
-                                 (action, feature_path, e))
+            test.fail("Error writing %s to %s: %s" % (action, feature_path, e))
         time.sleep(1)
 
     def fragment_host_memory(mem_path):
@@ -108,18 +106,18 @@ def run(test, params, env):
 
         :param mem_path: tmpfs mount point.
         """
-        error.context("Fragmenting host memory")
+        error_context.context("Fragmenting host memory")
         try:
             logging.info("Prepare tmpfs in host")
             if not os.path.isdir(mem_path):
                 os.makedirs(mem_path)
-            utils.run("mount -t tmpfs none %s" % mem_path)
+            process.run("mount -t tmpfs none %s" % mem_path)
             logging.info("Start using dd to fragment memory in guest")
             cmd = ("for i in `seq 262144`; do dd if=/dev/urandom of=%s/$i "
                    "bs=4K count=1 & done" % mem_path)
-            utils.run(cmd)
+            process.run(cmd)
         finally:
-            utils.run("umount %s" % mem_path)
+            process.run("umount %s" % mem_path)
 
     test_config = test_setup.TransparentHugePageConfig(test, params)
     logging.info("Defrag test start")
@@ -127,9 +125,9 @@ def run(test, params, env):
     mem_path = os.path.join("/tmp", "thp_space")
 
     try:
-        error.context("deactivating khugepaged defrag functionality")
-        change_feature_status("off", "khugepaged/defrag", test_config)
-        change_feature_status("off", "defrag", test_config)
+        error_context.context("deactivating khugepaged defrag functionality")
+        change_feature_status(test, "off", "khugepaged/defrag", test_config)
+        change_feature_status(test, "off", "defrag", test_config)
 
         vm = env.get_vm(params.get("main_vm"))
         session = vm.wait_for_login(timeout=login_timeout)
@@ -142,9 +140,9 @@ def run(test, params, env):
 
         nr_hp_before = set_libhugetlbfs(nr_full)
 
-        error.context("activating khugepaged defrag functionality")
-        change_feature_status("on", "khugepaged/defrag", test_config)
-        change_feature_status("on", "defrag", test_config)
+        error_context.context("activating khugepaged defrag functionality")
+        change_feature_status(test, "on", "khugepaged/defrag", test_config)
+        change_feature_status(test, "on", "defrag", test_config)
 
         sleep_time = 10
         logging.debug("Sleeping %s s to settle things out" % sleep_time)
@@ -153,10 +151,10 @@ def run(test, params, env):
         nr_hp_after = set_libhugetlbfs(nr_full)
 
         if nr_hp_before >= nr_hp_after:
-            raise error.TestFail("No memory defragmentation on host: "
-                                 "%s huge pages before turning "
-                                 "khugepaged defrag on, %s after it" %
-                                 (nr_hp_before, nr_hp_after))
+            test.fail("No memory defragmentation on host: "
+                      "%s huge pages before turning "
+                      "khugepaged defrag on, %s after it" %
+                      (nr_hp_before, nr_hp_after))
         logging.info("Defrag test succeeded")
         session.close()
     finally:

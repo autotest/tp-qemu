@@ -3,9 +3,6 @@ import os
 import re
 
 import aexpect
-
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import remote
 from virttest import rss_client
@@ -110,28 +107,28 @@ def run(test, params, env):
 
     # Helper function: wait for a given prompt and raise an exception if an
     # error occurs
-    def find_prompt(prompt):
+    def find_prompt(test, prompt):
         m, o = server_session.read_until_last_line_matches(
             [prompt, server_session.prompt], print_func=logging.info,
             timeout=600)
         if m != 0:
             errors = re.findall("^Error:.*$", o, re.I | re.M)
             if errors:
-                raise error.TestError(errors[0])
+                test.error(errors[0])
             else:
-                raise error.TestError("Error running automation program: "
-                                      "could not find '%s' prompt" % prompt)
+                test.error("Error running automation program: "
+                           "could not find '%s' prompt" % prompt)
 
     # Tell the automation program which device to test
-    find_prompt("Device to test:")
+    find_prompt(test, "Device to test:")
     server_session.sendline(params.get("test_device"))
 
     # Tell the automation program which jobs to run
-    find_prompt("Jobs to run:")
+    find_prompt(test, "Jobs to run:")
     server_session.sendline(params.get("job_filter", ".*"))
 
     # Set submission DeviceData
-    find_prompt("DeviceData name:")
+    find_prompt(test, "DeviceData name:")
     for dd in params.objects("device_data"):
         dd_params = params.object_params(dd)
         if dd_params.get("dd_name") and dd_params.get("dd_data"):
@@ -140,7 +137,7 @@ def run(test, params, env):
     server_session.sendline()
 
     # Set submission descriptors
-    find_prompt("Descriptor path:")
+    find_prompt(test, "Descriptor path:")
     for desc in params.objects("descriptors"):
         desc_params = params.object_params(desc)
         if desc_params.get("desc_path"):
@@ -150,7 +147,7 @@ def run(test, params, env):
     # Set machine dimensions for each client machine
     for vm_name in params.objects("vms"):
         vm_params = params.object_params(vm_name)
-        find_prompt(r"Dimension name\b.*:")
+        find_prompt(test, r"Dimension name\b.*:")
         for dp in vm_params.objects("dimensions"):
             dp_params = vm_params.object_params(dp)
             if dp_params.get("dim_name") and dp_params.get("dim_value"):
@@ -161,7 +158,7 @@ def run(test, params, env):
     # Set extra parameters for tests that require them (e.g. NDISTest)
     for vm_name in params.objects("vms"):
         vm_params = params.object_params(vm_name)
-        find_prompt(r"Parameter name\b.*:")
+        find_prompt(test, r"Parameter name\b.*:")
         for dp in vm_params.objects("device_params"):
             dp_params = vm_params.object_params(dp)
             if dp_params.get("dp_name") and dp_params.get("dp_regex"):
@@ -169,7 +166,7 @@ def run(test, params, env):
                 server_session.sendline(dp_params.get("dp_regex"))
                 # Make sure the prompt appears again (if the device isn't found
                 # the automation program will terminate)
-                find_prompt(r"Parameter name\b.*:")
+                find_prompt(test, r"Parameter name\b.*:")
         server_session.sendline()
 
     # Wait for the automation program to terminate
@@ -187,8 +184,7 @@ def run(test, params, env):
     # Look for test results in the automation program's output
     result_summaries = re.findall(r"---- \[.*?\] ----", o, re.DOTALL)
     if not result_summaries:
-        raise error.TestError("The automation program did not return any "
-                              "results")
+        test.error("The automation program did not return any results")
     results = result_summaries[-1].strip("-")
     results = eval("".join(results.splitlines()))
 
@@ -263,8 +259,7 @@ def run(test, params, env):
     # on time
     if not done:
         utils_misc.parallel(vm.destroy for vm in vms)
-        raise error.TestFail("The automation program did not terminate "
-                             "on time")
+        test.fail("The automation program did not terminate on time")
 
     # Fail if there are failed or incomplete jobs (kill the client VMs if there
     # are incomplete jobs)
@@ -280,4 +275,4 @@ def run(test, params, env):
             vm.destroy()
         errors += ["Jobs did not complete on time: %s." % running_jobs]
     if errors:
-        raise error.TestFail(" ".join(errors))
+        test.fail(" ".join(errors))

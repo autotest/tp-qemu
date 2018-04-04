@@ -3,14 +3,13 @@ import re
 import random
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from virttest import error_context
 from virttest import utils_test
 from virttest import utils_net
+from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test failover by team driver
@@ -35,13 +34,13 @@ def run(test, params, env):
         ports = re.findall(r"%s" % params["ptn_teamnl"], output_teamnl)
         for port in ifnames:
             if port not in ports:
-                raise error.TestFail("Add %s to %s failed." % (port, team_if))
+                test.fail("Add %s to %s failed." % (port, team_if))
         session_serial.cmd_output_safe(params["killdhclient_cmd"])
         output = session_serial.cmd_output_safe(params["getip_cmd"],
                                                 timeout=300)
         team_ip = re.search(r"%s" % params["ptn_ipv4"], output).group()
         if not team_ip:
-            raise error.TestFail("Failed to get ip address of %s" % team_if)
+            test.fail("Failed to get ip address of %s" % team_if)
         return ports, team_ip
 
     def failover(ifnames, timeout):
@@ -66,15 +65,14 @@ def run(test, params, env):
     def check_ping(status, output):
         """ ratio <5% is acceptance."""
         if status != 0:
-            raise error.TestFail("Ping failed, staus:%s, output:%s"
-                                 % (status, output))
+            test.fail("Ping failed, staus:%s, output:%s" % (status, output))
         # if status != 0 the ping process seams hit issue.
         ratio = utils_test.get_loss_ratio(output)
         if ratio == -1:
-            raise error.TestFail('''The ratio is %s, and status is %s,
-                                    output is %s''' % (ratio, status, output))
+            test.fail("The ratio is %s, and status is %s, "
+                      "output is %s" % (ratio, status, output))
         elif ratio > int(params["failed_ratio"]):
-            raise error.TestFail("The loss raito is %s, test failed" % ratio)
+            test.fail("The loss raito is %s, test failed" % ratio)
         logging.info("ping pass with loss raito:%s, that less than %s" %
                      (ratio, params["failed_ratio"]))
 
@@ -94,14 +92,15 @@ def run(test, params, env):
     team_if = params.get("team_if")
     # initial
 
-    error.context("Step1: Configure the team environment", logging.info)
+    error_context.context("Step1: Configure the team environment",
+                          logging.info)
     # steps of building the teaming environment starts
     modprobe_cmd = "modprobe team"
     session_serial.cmd_output_safe(modprobe_cmd)
     session_serial.cmd_output_safe(params["createteam_cmd"])
     # this cmd is to create the team0 and correspoding userspace daemon
     if not team_if_exist():
-        raise error.TestFail("Interface %s is not created." % team_if)
+        test.fail("Interface %s is not created." % team_if)
     # check if team0 is created successfully
     ports, team_ip = team_port_add(ifnames, team_if)
     logging.debug("The list of the ports that added to %s : %s"
@@ -115,45 +114,48 @@ def run(test, params, env):
     # steps of building finished
 
     try:
-        error.context("Login in guest via ssh", logging.info)
+        error_context.context("Login in guest via ssh", logging.info)
         # steps of testing this case starts
         session = vm.wait_for_login(timeout=timeout)
         dest = utils_net.get_ip_address_by_interface(params["netdst"])
         count = params.get("count")
         timeout = float(count) * 2
-        error.context("Step2: Check if guest can ping out:", logging.info)
+        error_context.context("Step2: Check if guest can ping out:",
+                              logging.info)
         status, output = utils_test.ping(dest=dest, count=10,
                                          interface=team_if,
                                          timeout=30,
                                          session=session)
         check_ping(status, output)
         # small ping check if the team0 works w/o failover
-        error.context("Step3: Start failover testing until ping finished",
-                      logging.info)
-        failover_thread = utils.InterruptedThread(failover, (ifnames, timeout))
+        error_context.context("Step3: Start failover testing until "
+                              "ping finished", logging.info)
+        failover_thread = utils_misc.InterruptedThread(failover,
+                                                       (ifnames, timeout))
         failover_thread.start()
         # start failover loop until ping finished
-        error.context("Step4: Start ping host for %s counts"
-                      % count, logging.info)
+        error_context.context("Step4: Start ping host for %s counts"
+                              % count, logging.info)
         if failover_thread.is_alive():
             status, output = utils_test.ping(dest=dest, count=count,
                                              interface=team_if,
                                              timeout=float(count) * 1.5,
                                              session=session)
-            error.context("Step5: Check if ping succeeded", logging.info)
+            error_context.context("Step5: Check if ping succeeded",
+                                  logging.info)
             check_ping(status, output)
         else:
-            raise error.TestWarn("The failover thread is not alive")
+            test.error("The failover thread is not alive")
         time.sleep(3)
         try:
             timeout = timeout * 1.5
             failover_thread.join(timeout)
         except Exception:
-            raise error.TestWarn("Failed to join the failover thread")
+            test.error("Failed to join the failover thread")
         # finish the main steps and check the result
         session_serial.cmd_output_safe(params["killteam_cmd"])
         if team_if_exist():
-            raise error.TestFail("Remove %s failed" % team_if)
+            test.fail("Remove %s failed" % team_if)
         logging.info("%s removed" % team_if)
         # remove the team0 and the daemon, check if succeed
     finally:

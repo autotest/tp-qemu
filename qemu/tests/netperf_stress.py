@@ -2,15 +2,14 @@ import os
 import logging
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_netperf
 from virttest import utils_misc
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run netperf stress on server and client side.
@@ -227,7 +226,8 @@ def run(test, params, env):
         num = 0
         s_len = len(server_infos)
         for protocol in test_protocols.split():
-            error.context("Testing %s protocol" % protocol, logging.info)
+            error_context.context("Testing %s protocol" % protocol,
+                                  logging.info)
             t_option = "%s -t %s" % (test_option, protocol)
             for n_client in netperf_clients:
                 index = num % s_len
@@ -239,7 +239,7 @@ def run(test, params, env):
                                        "Wait netperf test start"):
                     logging.info("Netperf test start successfully.")
                 else:
-                    raise error.TestError("Can not start netperf client.")
+                    test.error("Can not start netperf client.")
                 num += 1
             # here when set a run flag, when other case call this case as a
             # subprocess backgroundly, can set this run flag to False to stop

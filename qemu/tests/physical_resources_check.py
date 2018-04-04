@@ -3,9 +3,9 @@ import string
 import logging
 import random
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import qemu_monitor
 from virttest import storage
 from virttest import utils_misc
@@ -14,7 +14,7 @@ from virttest import data_dir
 from virttest import qemu_qtree
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Check physical resources assigned to KVM virtual machines:
@@ -173,11 +173,11 @@ def run(test, params, env):
 
         status, actual_mtype = session.cmd_status_output(cmd)
         if status != 0:
-            raise error.TestError("Failed to get machine type from vm")
+            test.error("Failed to get machine type from vm")
 
         machine_type_cmd = "%s -M ?" % utils_misc.get_qemu_binary(params)
-        machine_types = utils.system_output(machine_type_cmd,
-                                            ignore_status=True)
+        machine_types = process.system_output(machine_type_cmd,
+                                              ignore_status=True)
         machine_types = machine_types.split(':')[-1]
         machine_type_map = {}
         for machine_type in machine_types.splitlines():
@@ -229,7 +229,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     chk_timeout = int(params.get("chk_timeout", 240))
 
-    error.context("Login to the guest", logging.info)
+    error_context.context("Login to the guest", logging.info)
     session = vm.wait_for_login(timeout=timeout)
 
     qtree = qemu_qtree.QtreeContainer()
@@ -249,7 +249,7 @@ def run(test, params, env):
     image_name = storage.get_image_filename(params, data_dir.get_data_dir())
 
     # Check cpu count
-    error.context("CPU count check", logging.info)
+    error_context.context("CPU count check", logging.info)
     actual_cpu_nr = vm.get_cpu_count()
     cpu_cores_num = get_cpu_number("cores", chk_timeout)
     cpu_lp_num = get_cpu_number("logical_processors", chk_timeout)
@@ -290,7 +290,7 @@ def run(test, params, env):
             logging.error(fail_log)
 
     # Check memory size
-    error.context("Memory size check", logging.info)
+    error_context.context("Memory size check", logging.info)
     expected_mem = int(params["mem"])
     actual_mem = vm.get_memory_size()
     if actual_mem != expected_mem:
@@ -300,20 +300,20 @@ def run(test, params, env):
         n_fail.append(fail_log)
         logging.error(fail_log)
 
-    error.context("Hard drive count check", logging.info)
+    error_context.context("Hard drive count check", logging.info)
     f_fail = check_num("images", "block", image_name)
     n_fail.extend(f_fail)
 
-    error.context("NIC count check", logging.info)
+    error_context.context("NIC count check", logging.info)
     f_fail = check_num("nics", "network", "model=")
     n_fail.extend(f_fail)
 
-    error.context("NICs model check", logging.info)
+    error_context.context("NICs model check", logging.info)
     f_fail = chk_fmt_model("nics", "nic_model", "network", "model=(.*),")
     n_fail.extend(f_fail)
 
     if qtree is not None:
-        error.context("Images params check", logging.info)
+        error_context.context("Images params check", logging.info)
         logging.debug("Found devices: %s", params.objects('images'))
         qdisks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
         disk_errors = sum(qdisks.parse_info_block(
@@ -329,7 +329,7 @@ def run(test, params, env):
         logging.info("Images check param skipped (qemu monitor doesn't "
                      "support 'info qtree')")
 
-    error.context("Network card MAC check", logging.info)
+    error_context.context("Network card MAC check", logging.info)
     o = ""
     try:
         o = vm.monitor.human_monitor_cmd("info network")
@@ -350,13 +350,13 @@ def run(test, params, env):
             n_fail.append(fail_log)
             logging.error(fail_log)
 
-    error.context("UUID check", logging.info)
+    error_context.context("UUID check", logging.info)
     if vm.get_uuid():
         f_fail = verify_device(vm.get_uuid(), "UUID",
                                params.get("catch_uuid_cmd"))
         n_fail.extend(f_fail)
 
-    error.context("Hard Disk serial number check", logging.info)
+    error_context.context("Hard Disk serial number check", logging.info)
     catch_serial_cmd = params.get("catch_serial_cmd")
     f_fail = verify_device(params.get("drive_serial"), "Serial",
                            catch_serial_cmd)
@@ -365,7 +365,7 @@ def run(test, params, env):
     # only check if the MS Windows VirtIO driver is digital signed.
     chk_cmd = params.get("vio_driver_chk_cmd")
     if chk_cmd:
-        error.context("Virtio Driver Check", logging.info)
+        error_context.context("Virtio Driver Check", logging.info)
         chk_output = session.cmd_output(chk_cmd, timeout=chk_timeout)
         if "FALSE" in chk_output:
             fail_log = "VirtIO driver is not digitally signed!"
@@ -373,14 +373,14 @@ def run(test, params, env):
             n_fail.append(fail_log)
             logging.error(fail_log)
 
-    error.context("Machine Type Check", logging.info)
+    error_context.context("Machine Type Check", logging.info)
     f_fail = verify_machine_type()
     n_fail.extend(f_fail)
 
     if n_fail:
         session.close()
-        raise error.TestFail("Physical resources check test "
-                             "reported %s failures:\n%s" %
-                             (len(n_fail), "\n".join(n_fail)))
+        test.fail("Physical resources check test "
+                  "reported %s failures:\n%s" %
+                  (len(n_fail), "\n".join(n_fail)))
 
     session.close()

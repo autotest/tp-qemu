@@ -1,4 +1,4 @@
-from autotest.client import utils
+from avocado.utils import process
 
 
 def run(test, params, env):
@@ -33,7 +33,7 @@ def run(test, params, env):
     perf_report_cmd = "perf kvm --host --guest --guestkallsyms=%s" % vm_kallsyms_path
     perf_report_cmd += " --guestmodules=%s report -i /tmp/perf.data --force " % vm_modules_path
 
-    utils.system(perf_record_cmd)
-    utils.system(perf_report_cmd)
+    process.system(perf_record_cmd)
+    process.system(perf_report_cmd)
 
     session.close()

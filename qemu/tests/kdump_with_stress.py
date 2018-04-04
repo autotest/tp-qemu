@@ -1,15 +1,16 @@
 import logging
+import os
 
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import download
 
+from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
 
 from generic.tests import kdump
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM kdump test with stress:
@@ -37,13 +38,15 @@ def run(test, params, env):
         install_cmd = params.get("install_cmd")
 
         logging.info("Fetch package: '%s'" % link)
-        pkg = utils.unmap_url_cache(test.tmpdir, link, md5sum)
-        vm.copy_files_to(pkg, tmp_dir)
+        pkg_name = os.path.basename(link)
+        pkg_path = os.path.join(test.tmpdir, pkg_name)
+        download.get_file(link, pkg_path, hash_expected=md5sum)
+        vm.copy_files_to(pkg_path, tmp_dir)
 
         logging.info("Install app: '%s' in guest." % install_cmd)
         s, o = session.cmd_status_output(install_cmd, timeout=300)
         if s != 0:
-            raise error.TestError("Fail to install stress app(%s)" % o)
+            test.error("Fail to install stress app(%s)" % o)
 
         logging.info("Install app successed")
 
@@ -51,7 +54,7 @@ def run(test, params, env):
         """
         Load stress in guest.
         """
-        error.context("Load stress in guest", logging.info)
+        error_context.context("Load stress in guest", logging.info)
         stress_type = params.get("stress_type", "none")
 
         if stress_type == "none":
@@ -61,9 +64,9 @@ def run(test, params, env):
             bg = ""
             bg_stress_test = params.get("run_bgstress")
 
-            bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
-                                         (test, params, env),
-                                         {"sub_type": bg_stress_test})
+            bg = utils_misc.InterruptedThread(utils_test.run_virt_sub_test,
+                                              (test, params, env),
+                                              {"sub_type": bg_stress_test})
             bg.start()
 
         if stress_type == "io":
@@ -76,7 +79,7 @@ def run(test, params, env):
         running = utils_misc.wait_for(lambda: stress_running(session),
                                       timeout=150, step=5)
         if not running:
-            raise error.TestError("Stress isn't running")
+            test.error("Stress isn't running")
 
         logging.info("Stress running now")
 
@@ -109,8 +112,8 @@ def run(test, params, env):
     try:
         start_stress(session)
 
-        error.context("Kdump Testing, force the Linux kernel to crash",
-                      logging.info)
+        error_context.context("Kdump Testing, force the Linux kernel to crash",
+                              logging.info)
         crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
         if crash_cmd == "nmi":
             kdump.crash_test(vm, None, crash_cmd, timeout)

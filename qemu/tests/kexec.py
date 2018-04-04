@@ -1,9 +1,9 @@
 import logging
 
-from autotest.client.shared import error
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Reboot to new kernel through kexec command:
@@ -20,24 +20,23 @@ def run(test, params, env):
 
     def check_x2apic_flag():
         x2apic_enabled = False
-        error.context("Check x2apic enabled in guest", logging.info)
+        error_context.context("Check x2apic enabled in guest", logging.info)
         x2apic_output = session.cmd_output(check_x2apic_cmd).strip()
         x2apic_check_string = params.get("x2apic_check_string").split(",")
         for check_string in x2apic_check_string:
             if check_string.strip() in x2apic_output:
                 x2apic_enabled = True
         if not x2apic_enabled:
-            raise error.TestFail("x2apic is not enabled in guest.")
+            test.fail("x2apic is not enabled in guest.")
 
     def install_new_kernel():
-        error.context("Install a new kernel in guest", logging.info)
+        error_context.context("Install a new kernel in guest", logging.info)
         try:
             # pylint: disable=E0611
             from qemu.tests import rh_kernel_update
             rh_kernel_update.run_rh_kernel_update(test, params, env)
         except Exception, detail:
-            raise error.TestError("Failed to install a new kernel in "
-                                  "guest: %s" % detail)
+            test.error("Failed to install a new kernel in guest: %s" % detail)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -57,8 +56,7 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
         count = session.cmd_output(cmd, timeout=cmd_timeout)
         if int(count) <= 1:
-            raise error.TestError("Could not find a new kernel "
-                                  "after rh_kernel_update.")
+            test.error("Could not find a new kernel after rh_kernel_update.")
 
     check_cur_kernel_cmd = params.get("check_cur_kernel_cmd")
     cur_kernel_version = session.cmd_output(check_cur_kernel_cmd).strip()
@@ -72,10 +70,10 @@ def run(test, params, env):
         if cur_kernel_version not in kernel:
             new_kernel = kernel[7:]
     if not new_kernel:
-        raise error.TestError("Could not find new kernel, "
-                              "command line output: %s" % output)
+        test.error("Could not find new kernel, "
+                   "command line output: %s" % output)
     msg = "Reboot to kernel %s through kexec" % new_kernel
-    error.context(msg, logging.info)
+    error_context.context(msg, logging.info)
     cmd = params.get("get_kernel_image") % new_kernel
     kernel_file = session.cmd_output(cmd).strip().splitlines()[0]
     cmd = params.get("get_kernel_ramdisk") % new_kernel
@@ -88,8 +86,8 @@ def run(test, params, env):
     kernel = session.cmd_output(check_cur_kernel_cmd).strip()
     logging.info("Current kernel is: %s" % kernel)
     if kernel.strip() != new_kernel.strip():
-        raise error.TestFail("Fail to boot to kernel %s, current kernel is %s"
-                             % (new_kernel, kernel))
+        test.fail("Fail to boot to kernel %s, current kernel is %s"
+                  % (new_kernel, kernel))
     if "yes" in check_x2apic:
         check_x2apic_flag()
     session.close()

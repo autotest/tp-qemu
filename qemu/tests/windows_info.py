@@ -1,9 +1,10 @@
 import logging
 import re
-from autotest.client.shared import error
+
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM Windows version collect:
@@ -22,14 +23,15 @@ def run(test, params, env):
     drivers_pattern = "|".join(drivers_keywords)
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Get OS version and name.", logging.info)
+    error_context.context("Get OS version and name.", logging.info)
     output = session.cmd("ver")
     logging.info("Windows version: %s" % output.strip())
     output = session.cmd("wmic os get Name")
     output = output.strip().split()[-1]
     logging.info("Windows name: %s" % output)
 
-    error.context("Get driver version information in guest.", logging.info)
+    error_context.context("Get driver version information in guest.",
+                          logging.info)
     system_drivers = session.cmd("wmic sysdriver get DisplayName,PathName")
     logging.debug("Drivers exist in the system:\n %s" % system_drivers)
     for i in system_drivers.splitlines():

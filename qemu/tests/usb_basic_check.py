@@ -3,25 +3,23 @@ import re
 import logging
 
 import aexpect
-
-from autotest.client.shared import error
-
 from virttest import utils_misc
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def check_usb_device_monitor(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error.context("Verify USB device in monitor.", logging.info)
+    error_context.context("Verify USB device in monitor.", logging.info)
     o = vm.monitor.info("usb")
     if isinstance(o, dict):
         o = o.get("return")
     info_usb_name = params.get("info_usb_name")
     if info_usb_name and (info_usb_name not in o):
-        raise error.TestFail("Could not find '%s' device, monitor "
-                             "returns: \n%s" % (params.get("product"), o))
+        test.fail("Could not find '%s' device, monitor "
+                  "returns: \n%s" % (params.get("product"), o))
 
 
 def check_usb_device_guest(session, item, cmd, timeout):
@@ -40,7 +38,7 @@ def check_usb_device_guest(session, item, cmd, timeout):
     return devices, msgbox
 
 
-@error.context_aware
+@error_context.context_aware
 def check_usb_device(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -67,18 +65,18 @@ def check_usb_device(test, params, env):
     except aexpect.ShellCmdError:
         pass
 
-    error.context("Verify USB device in guest.")
+    error_context.context("Verify USB device in guest.")
     cmd = params["chk_usb_info_cmd"]
     for item in chk_list:
         kargs = (session, item, cmd, 5.0)
         exists, msgbox = check_usb_device_guest(*kargs)
         if not exists:
-            raise error.TestFail(msgbox[0])
+            test.fail(msgbox[0])
 
     output = ""
     try:
         output = session.cmd("dmesg -c")
-        error.context("Checking if there is I/O error in dmesg")
+        error_context.context("Checking if there is I/O error in dmesg")
     except aexpect.ShellCmdError:
         pass
 
@@ -92,10 +90,10 @@ def check_usb_device(test, params, env):
         logging.error(e_msg)
         for line in io_error_msg:
             logging.error(line)
-        raise error.TestFail(e_msg)
+        test.fail(e_msg)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM usb_basic_check test:
@@ -121,19 +119,19 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
-    error.context("Try to log into guest.", logging.info)
+    error_context.context("Try to log into guest.", logging.info)
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Verify device(s) before rebooting.")
+    error_context.context("Verify device(s) before rebooting.")
     _check_dev()
 
     if params.get("reboot_method"):
-        error.context("Reboot guest.", logging.info)
+        error_context.context("Reboot guest.", logging.info)
         if params["reboot_method"] == "system_reset":
             time.sleep(int(params.get("sleep_before_reset", 10)))
         session = vm.reboot(session, params["reboot_method"], 0, timeout)
 
-        error.context("Verify device(s) after rebooting.")
+        error_context.context("Verify device(s) after rebooting.")
         _check_dev()
 
     session.close()

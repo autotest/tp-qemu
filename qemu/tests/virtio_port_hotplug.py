@@ -1,13 +1,11 @@
 import time
 import logging
 
-from autotest.client.shared import error
-from avocado.core import exceptions
-
 from virttest.qemu_devices import qdevices
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test hot unplug virtio serial devices.
@@ -60,26 +58,25 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=timeout)
         module = params.get("modprobe_module")
         if module:
-            error.context("Load module %s" % module, logging.info)
+            error_context.context("Load module %s" % module, logging.info)
             session.cmd("modprobe %s" % module)
         for port in params.objects("virtio_ports"):
             port_params = params.object_params(port)
             port_name = get_virtio_port_name_by_params(port_params, port)
             virtio_port = get_virtio_port_by_name(vm, port_name)
             if not virtio_port:
-                raise exceptions.TestFail(
-                    "Virtio Port named '%s' not found" %
-                    port_name)
+                test.fail("Virtio Port named '%s' not found" % port_name)
             chardev_qid = virtio_port.get_param("chardev")
             port_chardev = vm.devices.get_by_qid(chardev_qid)[0]
             if module:
-                error.context("Unload module %s" % module, logging.info)
+                error_context.context("Unload module %s" % module,
+                                      logging.info)
                 session.cmd("modprobe -r %s" % module)
-            error.context("Unplug virtio port '%s' in %d tune(s)" %
-                          (port, repeat), logging.info)
+            error_context.context("Unplug virtio port '%s' in %d tune(s)" %
+                                  (port, repeat), logging.info)
             virtio_port.unplug(vm.monitor)
             if port_params.get("unplug_chardev") == "yes":
-                error.context(
+                error_context.context(
                     "Unplug chardev '%s' for virtio port '%s'" %
                     (port, chardev_qid), logging.info)
                 port_chardev.unplug(vm.monitor)
@@ -87,7 +84,7 @@ def run(test, params, env):
                 port_chardev.hotplug(vm.monitor)
             virtio_port.hotplug(vm.monitor)
             if module:
-                error.context("Load  module %s" % module, logging.info)
+                error_context.context("Load  module %s" % module, logging.info)
                 session.cmd("modprobe %s" % module)
         session.close()
     vm.reboot()

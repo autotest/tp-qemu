@@ -2,16 +2,13 @@ import logging
 import re
 
 from aexpect import ShellCmdError
-
-from autotest.client import utils
-from autotest.client.shared import error
-
 from virttest import remote
 from virttest import utils_misc
 from virttest import utils_net
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test Step:
@@ -28,8 +25,7 @@ def run(test, params, env):
             session.cmd(cmd, timeout)
         except ShellCmdError, e:
             if re.findall(catch_date % (addresses[1], addresses[0]), str(e)):
-                raise error.TestFail("God! Capture the transfet data:'%s'"
-                                     % str(e))
+                test.fail("God! Capture the transfet data:'%s'" % str(e))
             logging.info("Guest3 catch data is '%s'" % str(e))
 
     timeout = int(params.get("login_timeout", '360'))
@@ -49,7 +45,7 @@ def run(test, params, env):
     addresses = []
     vms = []
 
-    error.context("Init boot the vms")
+    error_context.context("Init boot the vms")
     for vm_name in params.get("vms", "vm1 vm2 vm3").split():
         vms.append(env.get_vm(vm_name))
     for vm in vms:
@@ -65,7 +61,7 @@ def run(test, params, env):
     try:
         # Before transfer, run tcpdump to try to catche data
         error_msg = "In guest3, try to capture the packets(guest1 <-> guest2)"
-        error.context(error_msg, logging.info)
+        error_context.context(error_msg, logging.info)
         if params.get("os_type") == "linux":
             if_func = utils_net.get_linux_ifname
             args = (mon_session, mon_macaddr)
@@ -75,15 +71,18 @@ def run(test, params, env):
         interface_name = if_func(*args)
         tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
                                      interface_name)
-        dthread = utils.InterruptedThread(data_mon, (sessions[2], tcpdump_cmd,
-                                                     mon_process_timeout))
+        dthread = utils_misc.InterruptedThread(data_mon,
+                                               (sessions[2],
+                                                tcpdump_cmd,
+                                                mon_process_timeout))
 
         logging.info("Tcpdump mon start ...")
         logging.info("Creating %dMB file on guest1", filesize)
         sessions[0].cmd(dd_cmd % (src_file, filesize), timeout=timeout)
         dthread.start()
 
-        error.context("Transferring file guest1 -> guest2", logging.info)
+        error_context.context("Transferring file guest1 -> guest2",
+                              logging.info)
         if params.get("os_type") == "windows":
             cp_cmd = params["copy_cmd"]
             cp_cmd = cp_cmd % (addresses[1], params['file_transfer_port'],
@@ -94,24 +93,25 @@ def run(test, params, env):
                                        shell_port, password, password,
                                        username, username, src_file, dst_file)
 
-        error.context("Check the src and dst file is same", logging.info)
+        error_context.context("Check the src and dst file is same",
+                              logging.info)
         src_md5 = sessions[0].cmd_output(md5_check % src_file).split()[0]
         dst_md5 = sessions[1].cmd_output(md5_check % dst_file).split()[0]
 
         if dst_md5 != src_md5:
             debug_msg = "Files md5sum mismatch!"
             debug_msg += "source file md5 is '%s', after transfer md5 is '%s'"
-            raise error.TestFail(debug_msg % (src_md5, dst_md5), logging.info)
+            test.fail(debug_msg % (src_md5, dst_md5), logging.info)
         logging.info("Files md5sum match, file md5 is '%s'" % src_md5)
 
-        error.context("Checking network private", logging.info)
+        error_context.context("Checking network private", logging.info)
         tcpdump_check_cmd = params["tcpdump_check_cmd"]
         tcpdump_kill_cmd = params["tcpdump_kill_cmd"]
         tcpdump_check_cmd = re.sub("ADDR0", addresses[0], tcpdump_check_cmd)
         tcpdump_check_cmd = re.sub("ADDR1", addresses[1], tcpdump_check_cmd)
         status = mon_session.cmd_status(tcpdump_check_cmd)
         if status:
-            raise error.TestError("Tcpdump process terminate exceptly")
+            test.error("Tcpdump process terminate exceptly")
         mon_session.cmd(tcpdump_kill_cmd)
         dthread.join()
 

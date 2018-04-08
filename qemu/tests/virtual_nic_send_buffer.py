@@ -1,15 +1,13 @@
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
-
 from virttest import remote
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_net
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test Steps:
@@ -28,7 +26,8 @@ def run(test, params, env):
 
     dst_ses = None
     try:
-        error.context("Transfer file between host and guest", logging.info)
+        error_context.context("Transfer file between host and guest",
+                              logging.info)
         utils_test.run_file_transfer(test, params, env)
 
         dsthost = params.get("dsthost")
@@ -49,13 +48,13 @@ def run(test, params, env):
             dsthost = vm.get_address()
 
         bg_stress_test = params.get("background_stress_test", 'netperf_stress')
-        error.context("Run subtest %s between host and guest." % bg_stress_test,
-                      logging.info)
-        s_thread = ""
+        error_context.context(("Run subtest %s between host and guest." %
+                               bg_stress_test), logging.info)
+
         wait_time = float(params.get("wait_bg_time", 60))
         bg_stress_run_flag = params.get("bg_stress_run_flag")
         env[bg_stress_run_flag] = False
-        stress_thread = utils.InterruptedThread(
+        stress_thread = utils_misc.InterruptedThread(
             utils_test.run_virt_sub_test, (test, params, env),
             {"sub_type": bg_stress_test})
         stress_thread.start()
@@ -63,16 +62,16 @@ def run(test, params, env):
                                    wait_time, 0, 1,
                                    "Wait %s test start" % bg_stress_test):
             err = "Fail to start netperf test between guest and host"
-            raise error.TestError(err)
+            test.error(err)
 
         ping_timeout = int(params.get("ping_timeout", 60))
         host_ip = utils_net.get_host_ip_address(params)
         txt = "Ping %s from %s during netperf testing" % (host_ip, dsthost)
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         status, output = utils_test.ping(host_ip, session=dst_ses,
                                          timeout=ping_timeout)
         if status != 0:
-            raise error.TestFail("Ping returns non-zero value %s" % output)
+            test.fail("Ping returns non-zero value %s" % output)
 
         package_lost = utils_test.get_loss_ratio(output)
         package_lost_ratio = float(params.get("package_lost_ratio", 5))
@@ -80,7 +79,7 @@ def run(test, params, env):
                                                             host_ip,
                                                             dsthost)
         if package_lost > package_lost_ratio:
-            raise error.TestFail(txt)
+            test.fail(txt)
         logging.info(txt)
 
     finally:

@@ -15,9 +15,7 @@ import time
 import re
 from subprocess import Popen
 
-from autotest.client import utils
 from avocado.utils import process
-
 from virttest import error_context
 from virttest import qemu_virtio_port
 from virttest import env_process
@@ -961,6 +959,7 @@ def run(test, params, env):
         :param cfg: virtio_console_test_time - default test_duration time
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
+        from autotest.client import utils
         test_params = params['virtio_console_params']
         test_time = int(params.get('virtio_console_test_time', 60))
         no_serialports = 0
@@ -1579,6 +1578,7 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
+        from autotest.client import utils
         vm = env.get_vm(params["main_vm"])
         use_serialport = params.get('virtio_console_params') == "serialport"
         if use_serialport:

@@ -1,8 +1,9 @@
 import logging
 import time
 import os
-from autotest.client.shared import error
-from autotest.client import utils
+
+from avocado.utils import crypto, process
+from virttest import utils_misc
 
 
 def run(test, params, env):
@@ -33,12 +34,12 @@ def run(test, params, env):
     file_size = params.get("file_size", "1000")
 
     try:
-        utils.run("dd if=/dev/zero of=/tmp/file bs=1M count=%s" % file_size)
+        process.run("dd if=/dev/zero of=/tmp/file bs=1M count=%s" % file_size)
         # Transfer file from host to guest, we didn't expect the finish of
         # transfer, we just let it to be a kind of stress in guest.
-        bg = utils.InterruptedThread(vm.copy_files_to,
-                                     ("/tmp/file", guest_path),
-                                     dict(verbose=True, timeout=60))
+        bg = utils_misc.InterruptedThread(vm.copy_files_to,
+                                          ("/tmp/file", guest_path),
+                                          dict(verbose=True, timeout=60))
         logging.info("Start the background transfer")
         bg.start()
 
@@ -52,13 +53,13 @@ def run(test, params, env):
             logging.info("Check the status through monitor")
             if not vm.monitor.verify_status("paused"):
                 status = str(vm.monitor.info("status"))
-                raise error.TestFail("Guest did not pause after sending stop,"
-                                     " guest status is %s" % status)
+                test.fail("Guest did not pause after sending stop,"
+                          " guest status is %s" % status)
 
             # check through session
             logging.info("Check the session")
             if session.is_responsive():
-                raise error.TestFail("Session still alive after sending stop")
+                test.fail("Session still alive after sending stop")
 
             # Check with the migration file
             logging.info("Save and check the state files")
@@ -66,13 +67,13 @@ def run(test, params, env):
                 vm.save_to_file(p)
                 time.sleep(1)
                 if not os.path.isfile(p):
-                    raise error.TestFail("VM failed to save state file %s" % p)
+                    test.fail("VM failed to save state file %s" % p)
 
             # Fail if we see deltas
-            md5_save1 = utils.hash_file(save1)
-            md5_save2 = utils.hash_file(save2)
+            md5_save1 = crypto.hash_file(save1)
+            md5_save2 = crypto.hash_file(save2)
             if md5_save1 != md5_save2:
-                raise error.TestFail("The produced state files differ")
+                test.fail("The produced state files differ")
         finally:
             bg.join(suppress_exception=True)
 

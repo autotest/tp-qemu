@@ -1,16 +1,16 @@
 import logging
 import re
 
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import data_dir
 from virttest import storage
 from virttest import utils_disk
 from virttest import env_process
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Timer device measure clock drift after sleep in guest with kvmclock:
@@ -38,36 +38,37 @@ def run(test, params, env):
         output = session.cmd_output(get_time_cmd, timeout=timeout)
 
         times_list = output.splitlines()[1:]
-        times_list = [_ for _ in times_list if _ > 10.0 or _ < 11.0]
+        times_list = [_ for _ in times_list if float(_) < 10.0 or float(_) > 11.0]
 
         if times_list:
-            raise error.TestFail("Unexpected time drift found:"
-                                 " Detail: '%s'" % output)
+            test.fail("Unexpected time drift found:"
+                      " Detail: '%s' \n timelist: %s" % (output, times_list))
 
-    error.context("Sync the host system time with ntp server", logging.info)
-    utils.system("yum install -y ntpdate; ntpdate clock.redhat.com")
+    error_context.context("Sync the host system time with ntp server", logging.info)
+    ntp_sync_cmd = "yum install -y ntpdate; ntpdate clock.redhat.com"
+    process.system(ntp_sync_cmd, shell=True)
 
-    error.context("Boot the guest", logging.info)
+    error_context.context("Boot the guest", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Check the clock source currently used on guest",
-                  logging.info)
+    error_context.context("Check the clock source currently used on guest",
+                          logging.info)
     cmd = "cat /sys/devices/system/clocksource/"
     cmd += "clocksource0/current_clocksource"
     if "kvm-clock" not in session.cmd(cmd):
         grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
         if "clocksource=" not in session.cmd("cat %s" % grub_file):
-            raise error.TestFail("Guest didn't use 'kvm-clock' clocksource")
+            test.fail("Guest didn't use 'kvm-clock' clocksource")
 
-        error.context("Shutdown guest")
+        error_context.context("Shutdown guest")
         vm.destroy()
         env.unregister_vm(vm.name)
-        error.context("Update guest kernel cli to kvm-clock",
-                      logging.info)
+        error_context.context("Update guest kernel cli to kvm-clock",
+                              logging.info)
         image_filename = storage.get_image_filename(params,
                                                     data_dir.get_data_dir())
         kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
@@ -80,16 +81,16 @@ def run(test, params, env):
             kernel_cfg = re.findall(kernel_cfg_pattern,
                                     kernel_cfg_original)[0]
         except IndexError, detail:
-            raise error.TestError("Couldn't find the kernel config, regex"
-                                  " pattern is '%s', detail: '%s'" %
-                                  (kernel_cfg_pattern, detail))
+            test.error("Couldn't find the kernel config, regex"
+                       " pattern is '%s', detail: '%s'" %
+                       kernel_cfg_pattern, detail)
 
         if "clocksource=" in kernel_cfg:
             kernel_cfg_new = re.sub(r"clocksource=[a-z\- ]+", " ", kernel_cfg)
             disk_obj.replace_image_file_content(grub_file, kernel_cfg,
                                                 kernel_cfg_new)
 
-        error.context("Boot the guest", logging.info)
+        error_context.context("Boot the guest", logging.info)
         vm_name = params["main_vm"]
         cpu_model_flags = params.get("cpu_model_flags")
         params["cpu_model_flags"] = cpu_model_flags + ",-kvmclock"
@@ -98,36 +99,37 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Stop auto sync service in guest", logging.info)
+    error_context.context("Stop auto sync service in guest", logging.info)
     cmd = "(service chronyd status | grep 'Loaded: loaded')"
     cmd += " && service chronyd stop"
     session.cmd_status_output(cmd)
 
-    error.context("Sync time from guest to ntpserver", logging.info)
-    session.cmd("yum install -y ntpdate; ntpdate clock.redhat.com",
-                timeout=timeout)
+    error_context.context("Sync time from guest to ntpserver", logging.info)
 
-    error.context("Sleep a while and check the time drift on guest"
-                  " (without any pinned vcpu)", logging.info)
+    session.cmd(ntp_sync_cmd, timeout=timeout)
+
+    error_context.context("Sleep a while and check the time drift on guest"
+                          " (without any pinned vcpu)", logging.info)
     verify_elapsed_time()
 
-    error.context("Pin every vcpu to physical cpu", logging.info)
+    error_context.context("Pin every vcpu to physical cpu", logging.info)
     host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
-    host_cpu_num = utils.system_output(host_cpu_cnt_cmd).strip()
+    host_cpu_num = process.system_output(host_cpu_cnt_cmd, shell=True).strip()
     host_cpu_list = (_ for _ in range(int(host_cpu_num)))
     cpu_pin_list = zip(vm.vcpu_threads, host_cpu_list)
     if len(cpu_pin_list) < len(vm.vcpu_threads):
-        raise error.TestNAError("There isn't enough physical cpu to"
-                                " pin all the vcpus")
+        test.error("There isn't enough physical cpu to"
+                   " pin all the vcpus")
     check_one_cpu_pinned = False
     for vcpu, pcpu in cpu_pin_list:
-        utils.system("taskset -p -c %s %s" % (pcpu, vcpu))
+        pin_vcpu_cmd = "taskset -p -c %s %s" % (pcpu, vcpu)
+        process.system(pin_vcpu_cmd, shell=True)
         if not check_one_cpu_pinned:
-            error.context("Sleep a while and check the time drift on"
-                          "guest (with one pinned vcpu)", logging.info)
+            error_context.context("Sleep a while and check the time drift on"
+                                  "guest (with one pinned vcpu)", logging.info)
             verify_elapsed_time()
             check_one_cpu_pinned = True
 
-    error.context("Sleep a while and check the time drift on"
-                  "guest (with all pinned vcpus)", logging.info)
+    error_context.context("Sleep a while and check the time drift on"
+                          "guest (with all pinned vcpus)", logging.info)
     verify_elapsed_time()

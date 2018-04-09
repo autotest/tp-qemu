@@ -3,15 +3,15 @@ import re
 import time
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import storage
 from virttest import data_dir
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Install/upgrade special kernel package via brew tool or link. And we have
@@ -53,7 +53,7 @@ def run(test, params, env):
             cmd += " --nodeps"
         s, o = session.cmd_status_output(cmd, timeout=timeout)
         if s != 0 and ("already" not in o):
-            raise error.TestFail("Fail to install %s:%s" % (url, o))
+            test.fail("Fail to install %s:%s" % (url, o))
 
         return True
         # FIXME: need to add the check for newer version
@@ -62,7 +62,7 @@ def run(test, params, env):
         rpm_name = os.path.basename(url)
         if url.startswith("http"):
             download_cmd = "wget %s" % url
-            utils.system_output(download_cmd)
+            process.system_output(download_cmd)
             rpm_src = rpm_name
         else:
             rpm_src = utils_misc.get_path(test.bindir, url)
@@ -72,14 +72,15 @@ def run(test, params, env):
     def get_kernel_rpm_link():
         method = params.get("method", "link")
         if method not in ["link", "brew"]:
-            raise error.TestError("Unknown installation method %s" % method)
+            test.error("Unknown installation method %s" % method)
 
         if method == "link":
             return (params.get("kernel_version"),
                     params.get("kernel_rpm"),
                     params.get("firmware_rpm"))
 
-        error.context("Get latest kernel package link from brew", logging.info)
+        error_context.context("Get latest kernel package link from brew",
+                              logging.info)
         # fetch the newest packages from brew
         # FIXME: really brain dead method to fetch the kernel version
         #        kernel_vesion = re... + hint from configuration file
@@ -91,13 +92,13 @@ def run(test, params, env):
         kbuild_name = params.get("kernel_build_name", "kernel")
 
         latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
-        o = utils.system_output(latest_pkg_cmd, timeout=360)
+        o = process.system_output(latest_pkg_cmd, timeout=360)
         build = re.findall("kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %
                       (tag, build))
 
-        buildinfo = utils.system_output("brew buildinfo %s" % build,
-                                        timeout=360)
+        buildinfo = process.system_output("brew buildinfo %s" % build,
+                                          timeout=360)
 
         # install kernel-firmware
         firmware_url = None
@@ -107,24 +108,24 @@ def run(test, params, env):
             try:
                 fw_brew_link = re.findall(fw_pattern, buildinfo)[0]
             except IndexError:
-                raise error.TestError("Could not get kernel-firmware package"
-                                      " brew link matching pattern '%s'" % fw_pattern)
+                test.error("Could not get kernel-firmware package"
+                           " brew link matching pattern '%s'" % fw_pattern)
             firmware_url = get_brew_url(fw_brew_link, download_root)
 
         knl_pattern = kernel_re % rh_kernel_hint
         try:
             knl_brew_link = re.findall(knl_pattern, buildinfo, re.I)[0]
         except IndexError:
-            raise error.TestError("Could not get kernel package brew link"
-                                  " matching pattern '%s'" % knl_pattern)
+            test.error("Could not get kernel package brew link"
+                       " matching pattern '%s'" % knl_pattern)
         kernel_url = get_brew_url(knl_brew_link, download_root)
 
         debug_re = kernel_re % ("(%s)" % rh_kernel_hint)
         try:
             kernel_version = re.findall(debug_re, kernel_url, re.I)[0]
         except IndexError:
-            raise error.TestError("Could not get kernel version matching"
-                                  " pattern '%s'" % debug_re)
+            test.error("Could not get kernel version matching"
+                       " pattern '%s'" % debug_re)
         kernel_version += "." + params.get("kernel_suffix", "")
 
         return kernel_version, kernel_url, firmware_url
@@ -135,21 +136,20 @@ def run(test, params, env):
         kbuild_name = params.get("kernel_build_name", "kernel")
 
         latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
-        o = utils.system_output(latest_pkg_cmd, timeout=360)
+        o = process.system_output(latest_pkg_cmd, timeout=360)
         build = re.findall("kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %
                       (tag, build))
 
-        buildinfo = utils.system_output("brew buildinfo %s" % build,
-                                        timeout=360)
+        buildinfo = process.system_output("brew buildinfo %s" % build,
+                                          timeout=360)
 
         try:
             knl_dbginfo_links = re.findall(knl_dbginfo_re,
                                            buildinfo, re.I)
         except IndexError:
-            raise error.TestError("Could not get kernel-debuginfo package "
-                                  "brew link matching pattern '%s'" %
-                                  knl_dbginfo_re)
+            test.error("Could not get kernel-debuginfo package "
+                       "brew link matching pattern '%s'" % knl_dbginfo_re)
 
         knl_dbginfo_urls = []
         for l in knl_dbginfo_links:
@@ -159,7 +159,8 @@ def run(test, params, env):
         return knl_dbginfo_urls
 
     def get_guest_kernel_version():
-        error.context("Verify the version of guest kernel", logging.info)
+        error_context.context("Verify the version of guest kernel",
+                              logging.info)
         s, o = session.cmd_status_output("uname -r")
         return o.strip()
 
@@ -191,7 +192,8 @@ def run(test, params, env):
         return True
 
     def compare_kernel_version(kernel_version, guest_version):
-        error.context("Compare guest kernel version and brew's", logging.info)
+        error_context.context("Compare guest kernel version and brew's",
+                              logging.info)
         # return True: when kernel_version <= guest_version
         if guest_version == kernel_version:
             logging.info("The kernel version is matched %s" % guest_version)
@@ -250,7 +252,7 @@ def run(test, params, env):
         latest_pkg_cmd = params.get("latest_pkg_cmd", "brew latest-pkg")
         latest_pkg_cmd = "%s %s %s" % (latest_pkg_cmd, tag, pkg)
         latest_pkg_cmd = "%s --arch=%s --paths" % (latest_pkg_cmd, arch)
-        mnt_paths = utils.system_output(latest_pkg_cmd).splitlines()
+        mnt_paths = process.system_output(latest_pkg_cmd).splitlines()
         return [get_brew_url(_, download_root)
                 for _ in mnt_paths if _.endswith(".rpm")]
 
@@ -265,7 +267,8 @@ def run(test, params, env):
         :parm nodeps: bool type, if True, ignore deps when install rpm.
         :parm timeout: float type, timeout value when install rpm.
         """
-        error.context("Upgrade package '%s' in guest" % pkg, logging.info)
+        error_context.context("Upgrade package '%s' in guest" % pkg,
+                              logging.info)
         pkgs = get_guest_pkgs(session, pkg, "%{NAME}")
         latest_pkgs_url = get_latest_pkgs_url(pkg, arch)
         for url in latest_pkgs_url:
@@ -325,22 +328,24 @@ def run(test, params, env):
                 upgrade_guest_pkgs(session, pkg, arch)
 
         if firmware_rpm:
-            error.context("Install guest kernel firmware", logging.info)
+            error_context.context("Install guest kernel firmware",
+                                  logging.info)
             rpm_install_func(session, firmware_rpm, upgrade=True)
-        error.context("Install guest kernel", logging.info)
+        error_context.context("Install guest kernel", logging.info)
         rpm_install_func(session, kernel_rpm)
 
     kernel_path = "/boot/vmlinuz-%s" % kernel_version
 
     if install_knl_debuginfo == "yes":
-        error.context("Installing kernel-debuginfo packages", logging.info)
+        error_context.context("Installing kernel-debuginfo packages",
+                              logging.info)
         links = ""
         for r in knl_dbginfo_rpm:
             links += " %s" % r
         install_rpm(session, links)
 
     if install_virtio == "yes":
-        error.context("Installing virtio driver", logging.info)
+        error_context.context("Installing virtio driver", logging.info)
 
         initrd_prob_cmd = "grubby --info=%s" % kernel_path
         s, o = session.cmd_status_output(initrd_prob_cmd)
@@ -348,41 +353,41 @@ def run(test, params, env):
             msg = ("Could not get guest kernel information,"
                    " guest output: '%s'" % o)
             logging.error(msg)
-            raise error.TestError(msg)
+            test.error(msg)
 
         try:
             initrd_path = re.findall("initrd=(.*)", o)[0]
         except IndexError:
-            raise error.TestError("Could not get initrd path from guest,"
-                                  " guest output: '%s'" % o)
+            test.error("Could not get initrd path from guest,"
+                       " guest output: '%s'" % o)
 
         driver_list = ["--with=%s " % drv for drv in virtio_drivers]
         mkinitrd_cmd = "mkinitrd -f %s " % initrd_path
         mkinitrd_cmd += "".join(driver_list)
         mkinitrd_cmd += " %s" % kernel_version
 
-        error.context("Update initrd file", logging.info)
+        error_context.context("Update initrd file", logging.info)
         s, o = session.cmd_status_output(mkinitrd_cmd, timeout=360)
         if s != 0:
             msg = "Failed to install virtio driver, guest output '%s'" % o
             logging.error(msg)
-            raise error.TestFail(msg)
+            test.fail(msg)
 
     # make sure the newly installed kernel as default
     if ifupdatekernel:
-        error.context("Make the new installed kernel as default",
-                      logging.info)
+        error_context.context("Make the new installed kernel as default",
+                              logging.info)
         make_def_cmd = "grubby --set-default=%s " % kernel_path
         s, o = session.cmd_status_output(make_def_cmd)
         if s != 0:
             msg = ("Fail to set %s as default kernel,"
                    " guest output: '%s'" % (kernel_path, o))
             logging.error(msg)
-            raise error.TestError(msg)
+            test.error(msg)
 
     # remove or add the required arguments
 
-    error.context("Update the guest kernel cmdline", logging.info)
+    error_context.context("Update the guest kernel cmdline", logging.info)
     remove_args_list = ["--remove-args=%s " % arg for arg in args_removed]
     update_kernel_cmd = "grubby --update-kernel=%s " % kernel_path
     update_kernel_cmd += "".join(remove_args_list)
@@ -392,7 +397,7 @@ def run(test, params, env):
     if s != 0:
         msg = "Fail to modify the kernel cmdline, guest output: '%s'" % o
         logging.error(msg)
-        raise error.TestError(msg)
+        test.error(msg)
 
     # upgrade listed packages to latest version.
     for pkg in params.get("upgrade_pkgs", "").split():
@@ -417,23 +422,22 @@ def run(test, params, env):
         logging.info(mesg)
 
     # reboot guest
-    error.context("Reboot guest after updating kernel", logging.info)
+    error_context.context("Reboot guest after updating kernel", logging.info)
     time.sleep(int(params.get("sleep_before_reset", 10)))
     session = vm.reboot(session, 'shell', timeout=login_timeout)
     # check if the guest can bootup normally after kernel update
     guest_version = get_guest_kernel_version()
     if guest_version != kernel_version:
-        raise error.TestFail("Fail to verify the guest kernel, \n"
-                             "Expected version %s \n"
-                             "In fact version %s \n" %
-                             (kernel_version, guest_version))
+        test.fail("Fail to verify the guest kernel, \n"
+                  "Expected version %s \n"
+                  "In fact version %s \n" %
+                  (kernel_version, guest_version))
 
     if verify_virtio == "yes":
-        error.context("Verifying the virtio drivers", logging.info)
+        error_context.context("Verifying the virtio drivers", logging.info)
         if not is_virtio_driver_installed():
-            raise error.TestFail("Fail to verify the installation of"
-                                 " virtio drivers")
-    error.context("OS updated, commit changes to disk", logging.info)
+            test.fail("Fail to verify the installation of virtio drivers")
+    error_context.context("OS updated, commit changes to disk", logging.info)
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
     image_filename = storage.get_image_filename(params, base_dir)
     logging.info("image file name: %s" % image_filename)

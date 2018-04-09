@@ -11,8 +11,6 @@ import logging
 
 from aexpect import ShellCmdError
 
-from autotest.client.shared import error
-
 
 def run(test, params, env):
     """
@@ -46,11 +44,11 @@ def run(test, params, env):
         client_res_raw = client_session.cmd("cat /tmp/res|awk '{print $1}'")
         client_res = client_res_raw.split()[0]
     except ShellCmdError:
-        raise error.TestFail("Could not get guest resolution, xrandr output:" +
-                             " %s" % client_res_raw)
+        test.fail("Could not get guest resolution, xrandr output:"
+                  " %s" % client_res_raw)
     except IndexError:
-        raise error.TestFail("Could not get guest resolution, xrandr output:" +
-                             " %s" % client_res_raw)
+        test.fail("Could not get guest resolution, xrandr output:"
+                  " %s" % client_res_raw)
 
     logging.info("Getting the Resolution on the guest")
     guest_session.cmd("export DISPLAY=:0.0")
@@ -60,11 +58,11 @@ def run(test, params, env):
         guest_res_raw = guest_session.cmd("cat /tmp/res|awk '{print $1}'")
         guest_res = guest_res_raw.split()[0]
     except ShellCmdError:
-        raise error.TestFail("Could not get guest resolution, xrandr output:" +
-                             " %s" % guest_res_raw)
+        test.fail("Could not get guest resolution, xrandr output:"
+                  " %s" % guest_res_raw)
     except IndexError:
-        raise error.TestFail("Could not get guest resolution, xrandr output:" +
-                             " %s" % guest_res_raw)
+        test.fail("Could not get guest resolution, xrandr output:"
+                  " %s" % guest_res_raw)
 
     logging.info("Here's the information I have: ")
     logging.info("\nClient Resolution: " + client_res)
@@ -75,15 +73,15 @@ def run(test, params, env):
         if(client_res == guest_res):
             logging.info("PASS: Guest resolution is the same as the client")
         else:
-            raise error.TestFail("Guest resolution differs from the client")
+            test.fail("Guest resolution differs from the client")
     # Negative Test, verify the resolutions are not equal
     elif full_screen == "no":
         if(client_res != guest_res):
             logging.info("PASS: Guest resolution differs from the client")
         else:
-            raise error.TestFail("Guest resolution is the same as the client")
+            test.fail("Guest resolution is the same as the client")
     else:
-        raise error.TestFail("The test setup is incorrect.")
+        test.fail("The test setup is incorrect.")
 
     client_session.close()
     guest_session.close()

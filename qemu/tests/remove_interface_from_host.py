@@ -4,15 +4,14 @@ Remove tap/interface in host while guest is using it.
 import logging
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import env_process
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     While the guest is using the interface, delete it.
@@ -33,96 +32,94 @@ def run(test, params, env):
     vm = env.get_vm(params.get("main_vm"))
     vm.verify_alive()
 
-    error.context("Login to guest", logging.info)
+    error_context.context("Login to guest", logging.info)
     vm.wait_for_login(timeout=login_timeout)
 
     # Step 2, ping should work
     guest_ip = vm.get_address()
-    error.context("Get the guest ip %s" % guest_ip, logging.info)
+    error_context.context("Get the guest ip %s" % guest_ip, logging.info)
 
-    error.context("Ping test from host to guest, should work",
-                  logging.info)
+    error_context.context("Ping test from host to guest, should work",
+                          logging.info)
     status, output = utils_test.ping(guest_ip, 30, timeout=20)
     if status != 0:
-        raise error.TestFail("Ping failed, status: %s, output: %s"
-                             % (status, output))
+        test.fail("Ping failed, status: %s, output: %s" % (status, output))
 
     host_ifname_name = vm.get_ifname()
-    error.context("Get interface name: %s. " % host_ifname_name, logging.info)
+    error_context.context("Get interface name: %s. " % host_ifname_name,
+                          logging.info)
     host_ifname = utils_net.Interface(host_ifname_name)
 
     # Step 3,4, disable interface and ping should fail
-    error.context("Set interface %s down." % host_ifname_name, logging.info)
+    error_context.context("Set interface %s down." % host_ifname_name,
+                          logging.info)
     host_ifname.down()
     time.sleep(secs_after_iplink_action)
 
-    error.context("After disable the ifname, "
-                  "Ping test from host to guest, should fail.",
-                  logging.info)
+    error_context.context("After disable the ifname, "
+                          "Ping test from host to guest, should fail.",
+                          logging.info)
     status, output = utils_test.ping(guest_ip, 30, timeout=20)
     if status == 0:
-        raise error.TestFail("Ping should fail, "
-                             "status: %s, output: %s"
-                             % (status, output))
+        test.fail("Ping should fail, status: %s, output: %s"
+                  % (status, output))
 
     # Step 5, enable interface, ping should work
-    error.context("Set interface %s up." % host_ifname_name, logging.info)
+    error_context.context("Set interface %s up." % host_ifname_name,
+                          logging.info)
     host_ifname.up()
     time.sleep(secs_after_iplink_action)
 
-    error.context("After enable the ifname, "
-                  "Ping test from host to guest, should work",
-                  logging.info)
+    error_context.context("After enable the ifname, "
+                          "Ping test from host to guest, should work",
+                          logging.info)
     status, output = utils_test.ping(guest_ip, 30, timeout=20)
     if status != 0:
-        raise error.TestFail("Ping should work, "
-                             "status: %s, output: %s"
-                             % (status, output))
+        test.fail("Ping should work, status: %s, output: %s"
+                  % (status, output))
 
     # Step 6, delete the interface, qemu should not crash,
     # ping should fail
-    error.context("Delete the interface %s." % host_ifname_name,
-                  logging.info)
+    error_context.context("Delete the interface %s." % host_ifname_name,
+                          logging.info)
     host_ifname.dellink()
     time.sleep(secs_after_iplink_action)
 
-    error.context("After delete the ifname, "
-                  "VM and qemu should not crash, ping should fail",
-                  logging.info)
+    error_context.context("After delete the ifname, "
+                          "VM and qemu should not crash, ping should fail",
+                          logging.info)
     vm.verify_alive()
     status, output = utils_test.ping(guest_ip, 30, timeout=20)
     if status == 0:
-        raise error.TestFail("Ping should fail, "
-                             "status: %s, output: %s"
-                             % (status, output))
+        test.fail("Ping should fail, status: %s, output: %s"
+                  % (status, output))
 
     # Step 7, shutdown guest, and restart a guest
-    error.context("Shutdown the VM.", logging.info)
+    error_context.context("Shutdown the VM.", logging.info)
     session = vm.wait_for_serial_login()
     shutdown_cmd = params.get("shutdown_command", "shutdown")
     logging .debug("Shutdown guest with command %s" % shutdown_cmd)
     session.sendline(shutdown_cmd)
 
-    error.context("Waiting VM to go down", logging.info)
+    error_context.context("Waiting VM to go down", logging.info)
 
     if not utils_misc.wait_for(vm.is_dead, 360, 0, 1):
-        raise error.TestFail("Guest refuses to go down")
+        test.fail("Guest refuses to go down")
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
 
     # Repeat step 1: Boot a guest
     vm = env.get_vm(params.get("main_vm"))
     vm.verify_alive()
 
-    error.context("Login to guest", logging.info)
+    error_context.context("Login to guest", logging.info)
     vm.wait_for_login(timeout=login_timeout)
 
     guest_ip = vm.get_address()
-    error.context("Get the guest ip %s" % guest_ip, logging.info)
+    error_context.context("Get the guest ip %s" % guest_ip, logging.info)
 
     # Repeat step 2, ping should work
-    error.context("Ping test from host to guest, should work",
-                  logging.info)
+    error_context.context("Ping test from host to guest, should work",
+                          logging.info)
     status, output = utils_test.ping(guest_ip, 30, timeout=20)
     if status != 0:
-        raise error.TestFail("Ping failed, status: %s, output: %s"
-                             % (status, output))
+        test.fail("Ping failed, status: %s, output: %s" % (status, output))

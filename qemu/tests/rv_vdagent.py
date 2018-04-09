@@ -5,8 +5,6 @@ and restarting correctly.
 Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
-from autotest.client.shared import error
-
 from virttest import utils_spice
 
 
@@ -50,8 +48,7 @@ def run(test, params, env):
         if "running" in status:
             pass
         else:
-            raise error.TestFail(
-                "Vdagent status is not running after a start attempt.")
+            test.fail("Vdagent status is not running after a start attempt.")
     # stop test
     elif vdagent_test == "stop":
         if "stopped" in vdagent_status:
@@ -67,8 +64,7 @@ def run(test, params, env):
             pass
         else:
             print "Status: " + status
-            raise error.TestFail(
-                "Vdagent status is not stopped after a stop attempt.")
+            test.fail("Vdagent status is not stopped after a stop attempt.")
     # restart test when vdagent service is running
     elif vdagent_test == "restart_start":
         if "stopped" in vdagent_status:
@@ -83,8 +79,7 @@ def run(test, params, env):
         if "running" in status:
             pass
         else:
-            raise error.TestFail(
-                "Vdagent status is not started after a restart attempt.")
+            test.fail("Vdagent status is not started after a restart attempt.")
     # restart test when vdagent service is stopped
     elif vdagent_test == "restart_stop":
         if "running" in vdagent_status:
@@ -99,10 +94,9 @@ def run(test, params, env):
         if "running" in status:
             pass
         else:
-            raise error.TestFail(
-                "Vdagent status is not started after a restart attempt.")
+            test.fail("Vdagent status is not started after a restart attempt.")
     else:
-        raise error.TestFail("No test to run, check value of vdagent_test")
+        test.fail("No test to run, check value of vdagent_test")
 
     client_session.close()
     guest_root_session.close()

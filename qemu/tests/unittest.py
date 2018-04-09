@@ -4,8 +4,6 @@ import shutil
 import glob
 import ConfigParser
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import env_process
 
@@ -24,13 +22,13 @@ def run(test, params, env):
     """
     unittest_dir = os.path.join(test.builddir, 'unittests')
     if not os.path.isdir(unittest_dir):
-        raise error.TestNAError("No unittest dir %s available (did you run the "
-                                "build test first?)" % unittest_dir)
+        test.cancel("No unittest dir %s available (did you run the "
+                    "build test first?)" % unittest_dir)
     os.chdir(unittest_dir)
     unittest_list = glob.glob('*.flat')
     if not unittest_list:
-        raise error.TestNAError("No unittest files available (did you run the "
-                                "build test first?)")
+        test.cancel("No unittest files available (did you run the "
+                    "build test first?)")
     logging.debug('Flat file list: %s', unittest_list)
 
     unittest_cfg = os.path.join(unittest_dir, 'unittests.cfg')
@@ -39,8 +37,7 @@ def run(test, params, env):
     test_list = parser.sections()
 
     if not test_list:
-        raise error.TestError("No tests listed on config file %s" %
-                              unittest_cfg)
+        test.error("No tests listed on config file %s" % unittest_cfg)
     logging.debug('Unit test list: %s', test_list)
 
     if params.get('unittest_test_list'):
@@ -121,7 +118,7 @@ def run(test, params, env):
                 logging.info(msg)
 
                 if not utils_misc.wait_for(vm.is_dead, timeout):
-                    raise error.TestFail("Timeout elapsed (%ss)" % timeout)
+                    test.fail("Timeout elapsed (%ss)" % timeout)
 
                 # Check qemu's exit status
                 status = vm.process.get_status()
@@ -156,4 +153,4 @@ def run(test, params, env):
         params['extra_params'] = extra_params_original
 
     if nfail != 0:
-        raise error.TestFail("Unit tests failed: %s" % " ".join(tests_failed))
+        test.fail("Unit tests failed: %s" % " ".join(tests_failed))

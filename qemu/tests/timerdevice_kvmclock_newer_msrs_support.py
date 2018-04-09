@@ -1,9 +1,7 @@
 import re
 import logging
-from autotest.client.shared import error
 
 
-@error.context_aware
 def run(test, params, env):
     """
     check kvm-clock using newer msrs test (only for Linux guest):
@@ -28,8 +26,8 @@ def run(test, params, env):
     if current_msrs:
         current_msrs = set(current_msrs.groups())
         if current_msrs != set(msrs):
-            raise error.TestFail("Except msrs (%s), " % msrs +
-                                 "got (%s)" % current_msrs)
+            test.fail("Except msrs (%s), " % msrs +
+                      "got (%s)" % current_msrs)
     else:
         logging.debug(dmesg)
-        raise error.TestFail("No newer msr available for kvm-clock")
+        test.fail("No newer msr available for kvm-clock")

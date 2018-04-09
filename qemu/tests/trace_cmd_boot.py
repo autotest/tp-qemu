@@ -3,13 +3,12 @@ import os
 import signal
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
-
+from avocado.utils import process
 from virttest import utils_misc
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu reboot test:
@@ -30,13 +29,14 @@ def run(test, params, env):
     """
 
     def find_trace_cmd():
-        if utils.system("ps -a | grep trace-cmd", ignore_status=True):
+        if process.system("ps -a | grep trace-cmd", ignore_status=True,
+                          shell=True):
             return False
         else:
             return True
 
     if os.system("which trace-cmd"):
-        raise error.TestNAError("Please install trace-cmd.")
+        test.cancel("Please install trace-cmd.")
 
     timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
@@ -54,43 +54,42 @@ def run(test, params, env):
     report_file = os.path.join(test.debugdir, "trace.txt")
     trace_report_cmd = "trace-cmd report -i %s > %s " % (trace_o, report_file)
     try:
-        error.context("Run stress tool on host.", logging.info)
-        stress_job = utils.BgJob(stress_cmd)
+        error_context.context("Run stress tool on host.", logging.info)
+        stress_job = utils_misc.BgJob(stress_cmd)
         # Reboot the VM
         for num in xrange(int(params.get("reboot_count", 1))):
-            error.context("Reboot guest '%s'. Repeat %d" % (vm.name, num + 1),
-                          logging.info)
-            trace_job = utils.BgJob(trace_cmd)
+            error_context.context("Reboot guest '%s'. Repeat %d" %
+                                  (vm.name, num + 1), logging.info)
+            trace_job = utils_misc.BgJob(trace_cmd)
             try:
                 session = vm.reboot(session,
                                     reboot_method,
                                     0,
                                     timeout)
-            except Exception, err:
+            except Exception:
                 txt = "stop the trace-cmd and generate the readable report."
-                error.context(txt, logging.info)
+                error_context.context(txt, logging.info)
                 os.kill(trace_job.sp.pid, signal.SIGINT)
                 if not utils_misc.wait_for(lambda: not find_trace_cmd(),
                                            120, 60, 3):
                     logging.warn("trace-cmd could not finish after 120s.")
                 trace_job = None
-                utils.system(trace_report_cmd)
+                process.system(trace_report_cmd, shell=True)
                 report_txt = file(report_file).read()
                 txt = "Check whether the trace.txt includes the error log."
-                error.context(txt, logging.info)
+                error_context.context(txt, logging.info)
                 if re.findall(re_trace, report_txt, re.S):
                     msg = "Found %s in trace log %s" % (re_trace, report_file)
-                    logging.info(msg)
-                    error.TestFail(msg)
+                    test.fail(msg)
             else:
                 txt = "stop the trace-cmd and remove the trace.dat file."
-                error.context(txt, logging.info)
+                error_context.context(txt, logging.info)
                 os.kill(trace_job.sp.pid, signal.SIGINT)
                 if not utils_misc.wait_for(lambda: not find_trace_cmd(),
                                            120, 60, 3):
                     logging.warn("trace-cmd could not finish after 120s.")
                 trace_job = None
-                utils.system("rm -rf %s" % trace_o, timeout=60)
+                process.system("rm -rf %s" % trace_o, timeout=60)
     finally:
         if session:
             session.close()

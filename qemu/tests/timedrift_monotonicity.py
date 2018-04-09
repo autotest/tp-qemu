@@ -4,10 +4,8 @@ import time
 import re
 import shutil
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
 from virttest import utils_test
+from virttest import utils_misc
 
 
 def run(test, params, env):
@@ -66,7 +64,7 @@ def run(test, params, env):
     try:
         # take time
         logging.info("Start take guest time")
-        bg = utils.InterruptedThread(get_time, (cmd, test_time, session1))
+        bg = utils_misc.InterruptedThread(get_time, (cmd, test_time, session1))
         bg.start()
 
         # migration
@@ -77,7 +75,7 @@ def run(test, params, env):
         logging.info("Logging in after migration...")
         session2 = vm.wait_for_login(timeout=timeout)
         if not session2:
-            raise error.TestFail("Could not log in after migration")
+            test.fail("Could not log in after migration")
         logging.info("Logged in after migration")
 
         # linger a while
@@ -92,8 +90,8 @@ def run(test, params, env):
             for line in myfile:
                 if "time went backwards" in line:
                     myfile.close()
-                    raise error.TestFail("Failed Time Monotonicity testing, "
-                                         "Please check log %s" % host_path)
+                    test.fail("Failed Time Monotonicity testing, "
+                              "Please check log %s" % host_path)
     finally:
         session1.close()
         # remove flags add for this test.

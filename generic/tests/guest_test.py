@@ -2,8 +2,7 @@ import os
 import logging
 import sys
 
-from autotest.client.shared import error
-
+from avocado.core import exceptions
 from virttest import utils_misc
 
 
@@ -123,11 +122,11 @@ def run_guest_test_background(test, params, env):
         # Launch guest_test
         run(test, params, env)
         os.remove(flag_fname)
-    except error.TestFail, message_fail:
+    except exceptions.TestFail, message_fail:
         logging.info("[Guest_test Background FAIL] %s" % message_fail)
         os.remove(flag_fname)
         os._exit(1)
-    except error.TestError, message_error:
+    except exceptions.TestError, message_error:
         logging.info("[Guest_test Background ERROR] %s" % message_error)
         os.remove(flag_fname)
         os._exit(2)

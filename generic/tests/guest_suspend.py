@@ -1,5 +1,4 @@
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_test
 
 
@@ -105,11 +104,11 @@ class GuestSuspendNegativeTest(GuestSuspendBaseTest):
     def do_guest_suspend(self, **args):
         s, o = self._check_guest_suspend_log(**args)
         if not s:
-            raise error.TestFail("Guest reports support Suspend even if it's"
-                                 " disabled in qemu. Output:\n '%s'" % o)
+            self.test.fail("Guest reports support Suspend even if it's"
+                           " disabled in qemu. Output:\n '%s'" % o)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Suspend guest to memory/disk, supports both Linux and Windows.
@@ -122,9 +121,9 @@ def run(test, params, env):
     vm = env.get_vm(vms[0])
     vm.verify_alive()
     if params.get("negative_test") == "yes":
-        gs = GuestSuspendNegativeTest(params, vm)
+        gs = GuestSuspendNegativeTest(test, params, vm)
     else:
-        gs = GuestSuspendBaseTest(params, vm)
+        gs = GuestSuspendBaseTest(test, params, vm)
 
     suspend_type = params.get("guest_suspend_type")
     if suspend_type == gs.SUSPEND_TYPE_MEM:
@@ -132,5 +131,5 @@ def run(test, params, env):
     elif suspend_type == gs.SUSPEND_TYPE_DISK:
         gs.guest_suspend_disk(params)
     else:
-        raise error.TestError("Unknown guest suspend type, Check your"
-                              " 'guest_suspend_type' config.")
+        test.error("Unknown guest suspend type, Check your"
+                   " 'guest_suspend_type' config.")

@@ -4,8 +4,6 @@ import random
 
 import aexpect
 
-from autotest.client.shared import error
-
 from virttest import data_dir
 from virttest import qemu_storage
 from virttest import qemu_vm
@@ -72,7 +70,7 @@ def run(test, params, env):
         except aexpect.ShellError, err:
             logging.debug(err)
 
-    def fuzz(session, inst_list):
+    def fuzz(test, session, inst_list):
         """
         Executes a series of read/write/randwrite instructions.
 
@@ -90,16 +88,16 @@ def run(test, params, env):
             elif wr_op == "write":
                 outb(session, operand[0], operand[1])
             else:
-                raise error.TestError("Unknown command %s" % wr_op)
+                test.error("Unknown command %s" % wr_op)
 
             if not session.is_responsive():
                 logging.debug("Session is not responsive")
                 try:
                     vm.verify_alive()
                 except qemu_vm.QemuSegFaultError, err:
-                    raise error.TestFail("Qemu crash, error info: %s" % err)
+                    test.fail("Qemu crash, error info: %s" % err)
                 except virt_vm.VMDeadKernelCrashError, err:
-                    raise error.TestFail("Guest kernel crash, info: %s" % err)
+                    test.fail("Guest kernel crash, info: %s" % err)
                 else:
                     logging.warn("Guest is not alive during test")
 
@@ -112,8 +110,8 @@ def run(test, params, env):
                         qemu_img_check()
                         session = vm.reboot(method="system_reset")
                 else:
-                    raise error.TestFail("VM has quit abnormally during "
-                                         "%s: %s" % (wr_op, operand))
+                    test.fail("VM has quit abnormally during "
+                              "%s: %s" % (wr_op, operand))
 
     login_timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
@@ -157,7 +155,7 @@ def run(test, params, env):
                 inst.append(("write", [o_random.randint(beg, end),
                                        o_random.randint(0, 255)]))
 
-            fuzz(session, inst)
+            fuzz(test, session, inst)
         vm.verify_alive()
     finally:
         session.close()

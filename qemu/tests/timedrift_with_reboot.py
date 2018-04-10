@@ -1,7 +1,5 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_test
 
 
@@ -73,8 +71,8 @@ def run(test, params, env):
                          (i + 1), drift)
             # Fail if necessary
             if drift > drift_threshold_single:
-                raise error.TestFail("Time drift too large at iteration %d: "
-                                     "%.2f seconds" % (i + 1, drift))
+                test.fail("Time drift too large at iteration %d: "
+                          "%.2f seconds" % (i + 1, drift))
 
         # Get final time
         (ht1, gt1) = utils_test.get_time(session, time_command,
@@ -102,5 +100,5 @@ def run(test, params, env):
 
     # Fail if necessary
     if drift > drift_threshold:
-        raise error.TestFail("Time drift too large after %d reboots: "
-                             "%.2f seconds" % (reboot_iterations, drift))
+        test.fail("Time drift too large after %d reboots: "
+                  "%.2f seconds" % (reboot_iterations, drift))

@@ -3,10 +3,7 @@ import time
 import commands
 
 import aexpect
-
 from virttest import utils_test
-
-from autotest.client.shared import error
 
 
 def run(test, params, env):
@@ -199,7 +196,7 @@ def run(test, params, env):
 
     # Fail the test if necessary
     if abs(drift) > drift_threshold:
-        raise error.TestFail("Time drift too large: %.2f%%" % drift)
+        test.fail("Time drift too large: %.2f%%" % drift)
     if abs(drift_total) > drift_threshold_after_rest:
-        raise error.TestFail("Time drift too large after rest period: %.2f%%"
-                             % drift_total)
+        test.fail("Time drift too large after rest period: %.2f%%"
+                  % drift_total)

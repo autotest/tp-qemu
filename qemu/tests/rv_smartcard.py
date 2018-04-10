@@ -9,8 +9,6 @@ options to handle smartcards.
 """
 import logging
 
-from autotest.client.shared import error
-
 
 def run(test, params, env):
     """
@@ -48,7 +46,7 @@ def run(test, params, env):
         pid = client_session.cmd("pgrep remote-viewer")
         logging.info("remote-viewer is running as PID %s", pid.strip())
     except:
-        raise error.TestFail("remote-viewer is not running")
+        test.fail("remote-viewer is not running")
 
     # verify the smart card reader can be seen
     output = guest_session.cmd("lsusb")
@@ -56,7 +54,7 @@ def run(test, params, env):
     if "Gemalto (was Gemplus) GemPC433-Swap" in output:
         logging.info("Smartcard reader, Gemalto GemPC433-Swap detected.")
     else:
-        raise error.TestFail("No smartcard reader found")
+        test.fail("No smartcard reader found")
 
     if smartcard_testtype == "pkcs11_listcerts":
         # pkcs11_listcerts not installed until Smart Card Support is installed
@@ -69,8 +67,8 @@ def run(test, params, env):
                 # Send a carriage return for PIN for token
                 listcerts_output = guest_session.cmd("")
             except:
-                raise error.TestFail("Test failed trying to get the output"
-                                     " of pkcs11_listcerts")
+                test.fail("Test failed trying to get the output"
+                          " of pkcs11_listcerts")
 
         logging.info("Listing Certs available on the guest:  " +
                      listcerts_output)
@@ -81,8 +79,8 @@ def run(test, params, env):
                 logging.debug(subj_string + " has been found" +
                               " as a listed cert in the guest")
             else:
-                raise error.TestFail("Certificate %s was not found as a listed"
-                                     " cert in the guest" % subj_string)
+                test.fail("Certificate %s was not found as a listed"
+                          " cert in the guest" % subj_string)
     elif smartcard_testtype == "pklogin_finder":
         # pkcs11_listcerts not installed until
         # Smart Card Support is installed
@@ -95,8 +93,8 @@ def run(test, params, env):
                 # Send a carriage return for PIN for token
                 certsinfo_output = guest_session.cmd("", ok_status=[0, 1])
             except:
-                raise error.TestFail("Test failed trying to get the output"
-                                     " of pklogin_finder")
+                test.fail("Test failed trying to get the output"
+                          " of pklogin_finder")
         testindex = certsinfo_output.find(searchstr)
         if testindex >= 0:
             string_aftercheck = certsinfo_output[testindex:]
@@ -125,30 +123,29 @@ def run(test, params, env):
                                 logging.debug("Found " + certcheck2 +
                                               "in output of pklogin")
                             else:
-                                raise error.TestFail(certcheck2 + " not found"
-                                                     " in output of pklogin "
-                                                     "on the guest")
+                                test.fail(certcheck2 + " not found"
+                                          " in output of pklogin "
+                                          "on the guest")
                         else:
-                            raise error.TestFail(certcheck1 + " not found in "
-                                                 "output of pklogin on the"
-                                                 " guest")
+                            test.fail(certcheck1 + " not found in "
+                                      "output of pklogin on the guest")
                     else:
-                        raise error.TestFail("Common name %s, not found "
-                                             "in pkogin_finder after software "
-                                             "smartcard was inserted into the "
-                                             "guest" % subj_string)
+                        test.fail("Common name %s, not found "
+                                  "in pkogin_finder after software "
+                                  "smartcard was inserted into the "
+                                  "guest" % subj_string)
 
                 else:
-                    raise error.TestFail(checkstr + " not found in output of "
-                                         "pklogin on the guest")
+                    test.fail(checkstr + " not found in output of "
+                              "pklogin on the guest")
 
         else:
-            raise error.TestFail(searchstr + " not found in output of pklogin"
-                                 " on the guest")
+            test.fail(searchstr + " not found in output of pklogin"
+                      " on the guest")
 
         logging.info("Certs Info on the guest:  " + certsinfo_output)
     else:
-        raise error.TestFail("Please specify a valid smartcard testype")
+        test.fail("Please specify a valid smartcard testype")
 
     # Do some cleanup, remove the certs on the client
         # for each cert listed by the test, create it on the client

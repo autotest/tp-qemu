@@ -6,7 +6,8 @@ Requires: rv_connect test
 
 """
 import logging
-from autotest.client.shared import error, utils
+
+from virttest import utils_misc
 
 
 def verify_recording(recording, params):
@@ -109,7 +110,7 @@ def run(test, params, env):
                params.get("audio_tgt"), timeout=30)
 
     if params.get("config_test", "no") == "migration":
-        bg = utils.InterruptedThread(guest_vm.migrate, kwargs={})
+        bg = utils_misc.InterruptedThread(guest_vm.migrate, kwargs={})
         bg.start()
 
     recorder_session.cmd("arecord -d %s -f cd -D hw:0,1 %s" % (  # records
@@ -123,4 +124,4 @@ def run(test, params, env):
     recorder_session_vm.copy_files_from(
         params.get("audio_rec"), "./recorded.wav")
     if not verify_recording("./recorded.wav", params):
-        raise error.TestFail("Test failed")
+        test.fail("Test failed")

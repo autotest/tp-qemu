@@ -13,8 +13,6 @@ import os
 
 from aexpect import ShellCmdError
 
-from autotest.client.shared import error
-
 from virttest import utils_spice
 from virttest import data_dir
 
@@ -288,7 +286,7 @@ def run(test, params, env):
     try:
         guest_session.cmd("ps aux | grep -v grep | grep gnome-session")
     except ShellCmdError:
-        raise error.TestWarn("gnome-session was probably not corretly started")
+        test.error("gnome-session was probably not corretly started")
 
     guest_session.cmd("export DISPLAY=:0.0")
 
@@ -312,7 +310,7 @@ def run(test, params, env):
         func = test_mapping[test_type]
         args = test_parameters[test_type]
     except:
-        raise error.TestFail("Unknown type of test")
+        test.fail("Unknown type of test")
 
     func(*args)
 
@@ -322,7 +320,7 @@ def run(test, params, env):
     # do not match with expected keycodes
     result = analyze_results(result_path, test_type)
     if result is not None:
-        raise error.TestFail("Testing of sending keys failed:"
-                             "  Expected keycode = %s" % result)
+        test.fail("Testing of sending keys failed:"
+                  "  Expected keycode = %s" % result)
 
     guest_session.close()

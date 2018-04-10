@@ -1,26 +1,26 @@
 import re
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_test
 
 
 def get_macvtap_device_on_ifname(ifname):
     macvtaps = []
-    ip_link_out = utils.system_output("ip -d link show")
+    ip_link_out = process.system_output("ip -d link show")
     re_str = "(\S*)@%s" % ifname
     devices = re.findall(re_str, ip_link_out)
     for device in devices:
-        out = utils.system_output("ip -d link show %s" % device)
+        out = process.system_output("ip -d link show %s" % device)
         if "macvtap  mode" in out:
             macvtaps.append(device)
     return macvtaps
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     create/delete macvtap in host
@@ -47,51 +47,52 @@ def run(test, params, env):
         ifname = params.get("netdst")
     ifname = utils_net.get_macvtap_base_iface(ifname)
 
-    error.context("Verify no other macvtap share the physical network device.",
-                  logging.info)
+    error_context.context("Verify no other macvtap share the physical "
+                          "network device.", logging.info)
     macvtap_devices = get_macvtap_device_on_ifname(ifname)
     for device in macvtap_devices:
-        utils.system_output("ip link delete %s" % device)
+        process.system_output("ip link delete %s" % device)
 
     for mode in macvtap_mode.split():
         macvtap_name = "%s_01" % mode
         txt = "Create %s mode macvtap device %s on %s." % (mode,
                                                            macvtap_name,
                                                            ifname)
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         cmd = " ip link add link %s name %s type macvtap mode %s" % (ifname,
                                                                      macvtap_name,
                                                                      mode)
-        utils.system(cmd, timeout=240)
+        process.system(cmd, timeout=240)
         if set_mac:
             txt = "Determine and configure mac address of %s, " % macvtap_name
             txt += "Then link up it."
-            error.context(txt, logging.info)
+            error_context.context(txt, logging.info)
             mac = utils_net.generate_mac_address_simple()
             cmd = " ip link set %s address %s up" % (macvtap_name, mac)
-            utils.system(cmd, timeout=240)
+            process.system(cmd, timeout=240)
 
-        error.context("Check configuraton of macvtap device", logging.info)
+        error_context.context("Check configuraton of macvtap device",
+                              logging.info)
         check_cmd = " ip -d link show %s" % macvtap_name
         try:
-            tap_info = utils.system_output(check_cmd, timeout=240)
-        except error.CmdError:
+            tap_info = process.system_output(check_cmd, timeout=240)
+        except process.CmdError:
             err = "Fail to create %s mode macvtap on %s" % (mode, ifname)
-            raise error.TestFail(err)
+            test.fail(err)
         if set_mac:
             if mac not in tap_info:
                 err = "Fail to set mac for %s" % macvtap_name
-                raise error.TestFail(err)
+                test.fail(err)
         macvtaps.append(macvtap_name)
 
     if not dest_host:
         dest_host_get_cmd = "ip route | awk '/default/ { print $3 }'"
         dest_host_get_cmd = params.get("dest_host_get_cmd", dest_host_get_cmd)
-        dest_host = utils.system_output(dest_host_get_cmd).split()[-1]
+        dest_host = process.system_output(dest_host_get_cmd).split()[-1]
 
     txt = "Ping dest host %s from " % dest_host
     txt += "localhost with the interface %s" % ifname
-    error.context(txt, logging.info)
+    error_context.context(txt, logging.info)
     status, output = utils_test.ping(dest_host, 10,
                                      interface=ifname, timeout=20)
     ratio = utils_test.get_loss_ratio(output)
@@ -112,7 +113,7 @@ def run(test, params, env):
             if ratio != 100:
                 err = "%s did not lost network connection after " % ifname
                 err += " creating %s mode macvtap on it." % macvtap_mode
-                raise error.TestFail(err)
+                test.fail(err)
         else:
             err = "%s is not the only network device in host" % ifname
             logging.debug(err)
@@ -120,28 +121,27 @@ def run(test, params, env):
         if ratio != 0:
             err = "Package lost during ping %s from %s " % (dest_host, ifname)
             err += "after creating %s mode macvtap on it." % macvtap_mode
-            raise error.TestFail(err)
+            test.fail(err)
 
     for name in macvtaps:
         txt = "Delete macvtap device %s on %s." % (name, ifname)
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         del_cmd = "ip link delete %s" % name
-        utils.system(del_cmd)
+        process.system(del_cmd)
         devices = get_macvtap_device_on_ifname(ifname)
         if name in devices:
             err = "Fail to delete macvtap %s on %s" % (name, ifname)
-            raise error.TestFail(err)
+            test.fail(err)
 
     logging.info("dest_host = %s", dest_host)
     txt = "Ping dest host %s from " % dest_host
     txt += "localhost with the interface %s" % ifname
-    error.context(txt, logging.info)
+    error_context.context(txt, logging.info)
     status, output = utils_test.ping(dest_host, 10,
                                      interface=ifname, timeout=20)
     if status != 0:
-        raise error.TestFail("Ping failed, status: %s,"
-                             " output: %s" % (status, output))
+        test.fail("Ping failed, status: %s, output: %s" % (status, output))
     ratio = utils_test.get_loss_ratio(output)
     if ratio != 0:
         err = "Package lost during ping %s from %s " % (dest_host, ifname)
-        raise error.TestFail(err)
+        test.fail(err)

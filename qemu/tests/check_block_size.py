@@ -1,13 +1,12 @@
 import logging
 import re
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Check physical block size and logical block size for virtio block device:
@@ -23,7 +22,7 @@ def run(test, params, env):
     """
     name = params["main_vm"]
     if params.get("need_install") == "yes":
-        error.context("Install guest with a new image", logging.info)
+        error_context.context("Install guest with a new image", logging.info)
         utils_test.run_virt_sub_test(test, params, env,
                                      sub_type='unattended_install')
         params["cdroms"] = ""
@@ -46,12 +45,12 @@ def run(test, params, env):
         drive_serial = str(params["drive_serial_stg"])
         expect_physical = int(params.get("physical_block_size_stg", 512))
         expect_logical = int(params.get("logical_block_size_stg", 512))
-        error.context("Verify physical/Logical block size", logging.info)
+        error_context.context("Verify physical/Logical block size",
+                              logging.info)
         if params["os_type"] == "linux":
             drive_path = utils_misc.get_linux_drive_path(session, drive_serial)
             if not drive_path:
-                raise error.TestError("Could not find the specified"
-                                      "virtio block device.")
+                test.error("Could not find the specified virtio block device.")
 
             drive_kname = drive_path.split("/")[-1]
             cmd = params.get("chk_phy_blk_cmd") % drive_kname
@@ -69,7 +68,7 @@ def run(test, params, env):
                     target_blk = blk_info
                     break
             else:
-                raise error.TestError("Could not find the specified device")
+                test.error("Could not find the specified device")
             out_physical = int(re.search(r'PhysicalSectorSize\s*:\s*(\d+)', target_blk).group(1))
             out_logical = int(re.search(r'LogicalSectorSize\s*:\s(\d+)', target_blk).group(1))
         if ((out_physical != expect_physical) or
@@ -79,7 +78,7 @@ def run(test, params, env):
             msg += "expect: %s" % expect_physical
             msg += "\nLogical block size in guest: %s, " % out_logical
             msg += "expect: %s" % expect_logical
-            raise error.TestFail(msg)
+            test.fail(msg)
     finally:
         if session:
             session.close()

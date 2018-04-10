@@ -2,16 +2,16 @@ import re
 import logging
 import os
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
 from virttest import env_process
+from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
 
 
 # This decorator makes the test function aware of context strings
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     qemu cdrom block size check test.
@@ -85,7 +85,8 @@ def run(test, params, env):
 
         :return: path to new iso image file.
         """
-        error.context("Creating test iso image '%s'" % name, logging.info)
+        error_context.context("Creating test iso image '%s'" % name,
+                              logging.info)
         if not os.path.isabs(name):
             cdrom_path = utils_misc.get_path(data_dir.get_data_dir(), name)
         else:
@@ -99,19 +100,19 @@ def run(test, params, env):
 
         if prepare:
             cmd = "dd if=/dev/urandom of=%s bs=1M count=%d"
-            utils.run(cmd % (name, file_size))
-            utils.run("mkisofs -o %s %s" % (cdrom_path, name))
-            utils.run("rm -rf %s" % (name))
+            process.run(cmd % (name, file_size))
+            process.run("mkisofs -o %s %s" % (cdrom_path, name))
+            process.run("rm -rf %s" % (name))
         return cdrom_path
 
     def check_cdrom_size(session):
-        error.context("Get the cdrom's size in guest.", logging.info)
+        error_context.context("Get the cdrom's size in guest.", logging.info)
         check_cdrom_size_cmd = params["check_cdrom_size_cmd"]
         output = session.cmd(check_cdrom_size_cmd, timeout=60)
         if not output:
             msg = "Unable to get the cdrom's size in guest."
             msg += " Command: %s\nOutput: %s" % (check_cdrom_size_cmd, output)
-            raise error.TestError(msg)
+            test.error(msg)
         size = output.strip().splitlines()[-1]
         try:
             cdrom_size = int(size)
@@ -123,7 +124,7 @@ def run(test, params, env):
     def mount_cdrom(session, guest_cdrom, mount_point,
                     show_mount_cmd, mount_cmd):
         txt = "Mount the cdrom in guest and check its block size."
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         mounted = session.cmd(show_mount_cmd)
         if mount_point not in mounted:
             mount_cmd = params.get("mount_cdrom_cmd") % (guest_cdrom,
@@ -132,7 +133,7 @@ def run(test, params, env):
             if status:
                 msg = "Unable to mount cdrom. command: %s\n" % mount_cmd
                 msg += " Output: %s" % output
-                raise error.TestError(msg)
+                test.error(msg)
 
     cdroms = params["test_cdroms"]
     params["cdroms"] = cdroms
@@ -141,7 +142,7 @@ def run(test, params, env):
     mount_cmd = params.get("mount_cdrom_cmd")
     umount_cmd = params.get("umount_cdrom_cmd")
     os_type = params["os_type"]
-    error.context("Get the main VM", logging.info)
+    error_context.context("Get the main VM", logging.info)
     main_vm = params["main_vm"]
     env_process.preprocess_vm(test, params, env, main_vm)
     vm = env.get_vm(params["main_vm"])
@@ -159,7 +160,8 @@ def run(test, params, env):
                                   file_size=file_size)
 
     cdrom_device = get_cdrom_device(vm)
-    error.context("Attach a small cd iso file to the cdrom.", logging.info)
+    error_context.context("Attach a small cd iso file to the cdrom.",
+                          logging.info)
     vm.change_media(cdrom_device, orig_cdrom)
     if mount_cmd:
         mount_cdrom(session, guest_cdrom, mount_point,
@@ -168,25 +170,26 @@ def run(test, params, env):
 
     if orig_size == empty_size:
         err = "Get same block size '%s' after new cdrom attached" % orig_size
-        raise error.TestFail(err)
+        test.fail(err)
 
     if umount_cmd:
-        error.context("umount cdrom in guest.", logging.info)
+        error_context.context("umount cdrom in guest.", logging.info)
         umount_cmd = umount_cmd % mount_point
         status, output = session.cmd_status_output(umount_cmd, timeout=360)
         if status:
             msg = "Unable to umount cdrom. command: %s\n" % umount_cmd
             msg += "Output: %s" % output
-            raise error.TestError(msg)
+            test.error(msg)
 
-    error.context("eject the cdrom from monitor.", logging.info)
+    error_context.context("eject the cdrom from monitor.", logging.info)
     vm.eject_cdrom(cdrom_device)
 
     cdrom_name = params.get("final_cdrom", "images/final.iso")
     file_size = params.get("final_cdrom_size", 1000)
     final_cdrom = create_iso_image(params, cdrom_name, prepare=True,
                                    file_size=file_size)
-    error.context("Attach a bigger cd iso file to the cdrom.", logging.info)
+    error_context.context("Attach a bigger cd iso file to the cdrom.",
+                          logging.info)
     vm.change_media(cdrom_device, final_cdrom)
     if mount_cmd:
         mount_cdrom(session, guest_cdrom, mount_point,
@@ -196,7 +199,7 @@ def run(test, params, env):
 
     if final_size == empty_size or final_size == orig_size:
         err = "Get same block size '%s' after new cdrom attached" % final_size
-        raise error.TestFail(err)
+        test.fail(err)
 
     # Check guest's network.
     vm.wait_for_login(timeout=timeout)

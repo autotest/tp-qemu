@@ -1,14 +1,13 @@
 import re
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     change a removable media:
@@ -62,7 +61,7 @@ def run(test, params, env):
     device_name = vm.get_block({"file": cdrom})
     if device_name is None:
         msg = "Unable to detect qemu block device for cdrom %s" % cdrom
-        raise error.TestError(msg)
+        test.error(msg)
     orig_img_name = params.get("orig_img_name")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         orig_img_name)
@@ -73,28 +72,29 @@ def run(test, params, env):
                                           ), timeout=10, first=3)
     if not exists:
         msg = "Fail to insert device %s to guest" % orig_img_name
-        raise error.TestFail(msg)
+        test.fail(msg)
 
     if check_block_locked(device_name):
-        raise error.TestFail("Unused device is locked.")
+        test.fail("Unused device is locked.")
 
     if params.get("os_type") != "windows":
-        error.context("mount cdrom to make status to locked", logging.info)
+        error_context.context("mount cdrom to make status to locked",
+                              logging.info)
         cdroms = utils_misc.wait_for(lambda: (utils_test.get_readable_cdroms(
             params, session)),
             timeout=10)
         if not cdroms:
-            raise error.TestFail("Not readable cdrom found in your guest")
+            test.fail("Not readable cdrom found in your guest")
         cdrom = cdroms[0]
         mount_cmd = params.get("cd_mount_cmd") % cdrom
         (status, output) = session.cmd_status_output(mount_cmd, timeout=360)
         if status:
             msg = "Unable to mount cdrom. "
             msg += "command: %s\nOutput: %s" % (mount_cmd, output)
-            raise error.TestError(msg)
+            test.error(msg)
 
     else:
-        error.context("lock cdrom in guest", logging.info)
+        error_context.context("lock cdrom in guest", logging.info)
         tmp_dir = params.get("tmp_dir", "c:\\")
         eject_tool = utils_misc.get_path(data_dir.get_deps_dir(),
                                          "cdrom/eject.exe")
@@ -106,12 +106,12 @@ def run(test, params, env):
         if status:
             msg = "Unable to lock cdrom. command: %s\n" % lock_cmd
             msg += "Output: %s" % output
-            raise error.TestError(msg)
+            test.error(msg)
 
     if not check_block_locked(device_name):
-        raise error.TestFail("device is not locked after mount it in guest.")
+        test.fail("device is not locked after mount it in guest.")
 
-    error.context("Change media of cdrom", logging.info)
+    error_context.context("Change media of cdrom", logging.info)
     new_img_name = params.get("new_img_name")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         new_img_name)
@@ -121,21 +121,21 @@ def run(test, params, env):
                "after execute command %s "
                "command output: %s " % (
                    device_name, change_insert_cmd, output))
-        raise error.TestFail(msg)
+        test.fail(msg)
 
     blocks_info = monitor.info("block")
     if orig_img_name not in str(blocks_info):
-        raise error.TestFail("Locked device %s is changed!" % orig_img_name)
+        test.fail("Locked device %s is changed!" % orig_img_name)
 
-    error.context("Change no-removable device", logging.info)
+    error_context.context("Change no-removable device", logging.info)
     device_name = vm.get_block({"removable": False})
     if device_name is None:
-        raise error.TestError("VM doesn't have any non-removable devices.")
+        test.error("VM doesn't have any non-removable devices.")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         new_img_name)
     output = change_block(change_insert_cmd)
     if "is not removable" not in output:
-        raise error.TestFail("Could remove non-removable device!")
+        test.fail("Could remove non-removable device!")
     umount_cmd = params.get("cd_umount_cmd")
     if umount_cmd:
         session.cmd(umount_cmd, timeout=360)

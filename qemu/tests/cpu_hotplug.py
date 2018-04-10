@@ -2,13 +2,12 @@ import os
 import logging
 import re
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Runs CPU hotplug test:
@@ -28,8 +27,8 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    error.context("boot the vm, with '-smp X,maxcpus=Y' option,"
-                  "thus allow hotplug vcpu", logging.info)
+    error_context.context("boot the vm, with '-smp X,maxcpus=Y' option,"
+                          "thus allow hotplug vcpu", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -48,13 +47,13 @@ def run(test, params, env):
     else:
         total_cpus = current_cpus + n_cpus_add
 
-    error.context("check if CPUs in guest matches qemu cmd "
-                  "before hot-plug", logging.info)
+    error_context.context("check if CPUs in guest matches qemu cmd "
+                          "before hot-plug", logging.info)
     if not utils_misc.check_if_vm_vcpu_match(current_cpus, vm):
-        raise error.TestError("CPU quantity mismatch cmd before hotplug !")
+        test.error("CPU quantity mismatch cmd before hotplug !")
 
     for cpu in range(current_cpus, total_cpus):
-        error.context("hot-pluging vCPU %s" % cpu, logging.info)
+        error_context.context("hot-pluging vCPU %s" % cpu, logging.info)
         vm.hotplug_vcpu(cpu_id=cpu, plug_command=cpu_hotplug_cmd)
 
     output = vm.monitor.send_args_cmd("info cpus")
@@ -63,27 +62,27 @@ def run(test, params, env):
     cpu_regexp = re.compile("CPU #(\d+)")
     total_cpus_monitor = len(cpu_regexp.findall(output))
     if total_cpus_monitor != total_cpus:
-        raise error.TestFail("Monitor reports %s CPUs, when VM should have"
-                             " %s" % (total_cpus_monitor, total_cpus))
+        test.fail("Monitor reports %s CPUs, when VM should have"
+                  " %s" % (total_cpus_monitor, total_cpus))
     # Windows is a little bit lazy that needs more secs to recognize.
-    error.context("hotplugging finished, let's wait a few sec and"
-                  " check CPUs quantity in guest.", logging.info)
+    error_context.context("hotplugging finished, let's wait a few sec and"
+                          " check CPUs quantity in guest.", logging.info)
     if not utils_misc.wait_for(lambda: utils_misc.check_if_vm_vcpu_match(
                                total_cpus, vm),
                                60 + total_cpus, first=10,
                                step=5.0, text="retry later"):
-        raise error.TestFail("CPU quantity mismatch cmd after hotplug !")
-    error.context("rebooting the vm and check CPU quantity !", logging.info)
+        test.fail("CPU quantity mismatch cmd after hotplug !")
+    error_context.context("rebooting the vm and check CPU quantity !",
+                          logging.info)
     session = vm.reboot()
     if not utils_misc.check_if_vm_vcpu_match(total_cpus, vm):
-        raise error.TestFail("CPU quantity mismatch cmd after hotplug "
-                             "and reboot !")
+        test.fail("CPU quantity mismatch cmd after hotplug and reboot !")
 
     # Window guest doesn't support online/offline test
     if params['os_type'] == "windows":
         return
 
-    error.context("locating online files for guest's new CPUs")
+    error_context.context("locating online files for guest's new CPUs")
     r_cmd = 'find /sys/devices/system/cpu/cpu*/online -maxdepth 0 -type f'
     online_files = session.cmd(r_cmd)
     # Sometimes the return value include command line itself
@@ -94,14 +93,13 @@ def run(test, params, env):
     online_files.sort()
 
     if not online_files:
-        raise error.TestFail("Could not find CPUs that can be "
-                             "enabled/disabled on guest")
+        test.fail("Could not find CPUs that can be enabled/disabled on guest")
 
     control_path = os.path.join(test.virtdir, "control",
                                 "cpu_hotplug.control")
 
     timeout = int(params.get("cpu_hotplug_timeout", 300))
-    error.context("running cpu_hotplug autotest after cpu addition")
+    error_context.context("running cpu_hotplug autotest after cpu addition")
     utils_test.run_autotest(vm, session, control_path, timeout,
                             test.outputdir, params)
 

@@ -4,11 +4,10 @@ import re
 
 from virttest import utils_misc
 from virttest import env_process
+from virttest import error_context
 
-from autotest.client.shared import error
 
-
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM sysprep test:
@@ -40,25 +39,25 @@ def run(test, params, env):
     vms = []
     sids = {}
     sid_same = []
-    error.context("Check guest's System ID.", logging.info)
+    error_context.context("Check guest's System ID.", logging.info)
     output = session.cmd_output(check_sid_cmd, timeout=60)
     try:
         sid = re.findall(re_sid, output)[0]
     except IndexError:
         msg = "Fail to get guest's System ID. "
         msg += "Output from check System ID command: %s" % output
-        raise error.TestFail(msg)
+        test.fail(msg)
     logging.info("VM guest System ID is: %s", sid)
     sids[sid] = ["pre_%s" % vm.name]
     file_dir = tmp_path + unattended_file
     sysprep_cmd = sysprep_cmd % file_dir
-    error.context("Run sysprep command in guest. %s" % sysprep_cmd,
-                  logging.info)
+    error_context.context("Run sysprep command in guest. %s" % sysprep_cmd,
+                          logging.info)
     session.sendline(sysprep_cmd)
-    error.context("Waiting guest power down.....", logging.info)
+    error_context.context("Waiting guest power down.....", logging.info)
     status = utils_misc.wait_for(vm.is_dead, timeout * 3, 3)
     if not status:
-        raise error.TestFail("VM did not shutdown after sysprep command")
+        test.fail("VM did not shutdown after sysprep command")
     params['image_snapshot'] = "yes"
     params['vms'] += extend_vm
     restart_timeout = timeout * len(params['vms'].split()) * 2
@@ -72,14 +71,14 @@ def run(test, params, env):
         session = vm_i.wait_for_login(timeout=restart_timeout)
         vm_i_ip = vm_i.get_address()
         logging.info("VM: %s got IP: %s", vm_i.name, vm_i_ip)
-        error.context("Check guest's System ID.", logging.info)
+        error_context.context("Check guest's System ID.", logging.info)
         output = session.cmd_output(check_sid_cmd, timeout=60)
         try:
             sid = re.findall(re_sid, output)[0]
         except IndexError:
             msg = "Fail to get System ID of %s" % vm_i.name
             msg += "Output from check System ID command: %s" % output
-            raise error.TestError(msg)
+            test.error(msg)
         logging.info("VM:%s System ID is: %s", vm_i.name, sid)
         if sid in sids.keys():
             logging.error("VM: %s have duplicate System ID: %s",
@@ -95,4 +94,4 @@ def run(test, params, env):
         for sid in sid_same:
             msg += "VM(s): %s have duplicate System ID: %s\n" % \
                 (" ".join(sids[sid]), sid)
-        raise error.TestFail(msg)
+        test.fail(msg)

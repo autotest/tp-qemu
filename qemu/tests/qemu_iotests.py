@@ -1,20 +1,20 @@
 import os
 
-from autotest.client.shared import git
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import git
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Fetch from git and run qemu-iotests using the qemu binaries under test.
 
     1) Fetch qemu-io from git
     3) Run test for the file format detected
-    4) Report any errors found to autotest
+    4) Report any errors found to test
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -46,5 +46,6 @@ def run(test, params, env):
     if extra_options:
         cmd += extra_options
 
-    error.context("running qemu-iotests for image format %s" % image_format)
-    utils.system("%s -%s" % (cmd, image_format))
+    error_context.context("running qemu-iotests for image format %s"
+                          % image_format)
+    process.system("%s -%s" % (cmd, image_format))

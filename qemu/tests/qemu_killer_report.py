@@ -2,11 +2,11 @@ import logging
 import os
 import re
 
-from autotest.client.shared import error
+from virttest import error_context
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test that QEMU report the process ID that sent it kill signals.
@@ -41,18 +41,19 @@ def run(test, params, env):
 
     re_str = "terminating on signal 15 from pid ([0-9]+)"
     re_str = params.get("qemu_error_re", re_str)
-    error.context("Kill VM by signal 15", logging.info)
+    error_context.context("Kill VM by signal 15", logging.info)
     thread_pid = kill_vm_by_signal_15()
     # Wait QEMU print error log.
     results = utils_misc.wait_for(lambda: killer_report(re_str),
                                   60, 2, 2)
-    error.context("Check that QEMU can report who killed it", logging.info)
+    error_context.context("Check that QEMU can report who killed it",
+                          logging.info)
     if not results:
-        raise error.TestFail("QEMU did not tell us who killed it")
+        test.fail("QEMU did not tell us who killed it")
     elif int(results[-1]) != thread_pid:
         msg = "QEMU identified the process that killed it incorrectly. "
         msg += "Killer PID: %s, " % thread_pid
         msg += "QEMU reported PID: %s" % int(results[-1])
-        raise error.TestFail(msg)
+        test.fail(msg)
     else:
         logging.info("QEMU identified the process that killed it properly")

@@ -1,8 +1,8 @@
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_netperf
 from virttest import utils_net
 from virttest import env_process
@@ -12,7 +12,7 @@ from virttest import utils_test
 
 
 # This decorator makes the test function aware of context strings
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     QEMU flow caches stress test test
@@ -33,13 +33,13 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     msg = "Make sure nf_conntrack is disabled in host and guest."
-    error.context(msg, logging.info)
-    if "nf_conntrack" in utils.system_output("lsmod"):
+    error_context.context(msg, logging.info)
+    if "nf_conntrack" in process.system_output("lsmod"):
         err = "nf_conntrack load in host, skip this case"
-        raise error.TestNAError(err)
+        test.cancel(err)
 
     params["start_vm"] = "yes"
-    error.context("Boot up guest", logging.info)
+    error_context.context("Boot up guest", logging.info)
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -48,7 +48,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     if "nf_conntrack" in session.cmd_output("lsmod"):
         msg = "Unload nf_conntrack module in guest."
-        error.context(msg, logging.info)
+        error_context.context(msg, logging.info)
         black_str = "#disable nf_conntrack\\nblacklist nf_conntrack\\n" \
                     "blacklist nf_conntrack_ipv6\\nblacklist xt_conntrack\\n" \
                     "blacklist nf_conntrack_ftp\\nblacklist xt_state\\n" \
@@ -59,7 +59,7 @@ def run(test, params, env):
         session = vm.reboot(session, timeout=timeout)
         if "nf_conntrack" in session.cmd_output("lsmod"):
             err = "Fail to unload nf_conntrack module in guest."
-            error.TestError(err)
+            test.error(err)
 
     netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
                                        params["netperf_link"])
@@ -91,14 +91,15 @@ def run(test, params, env):
     compile_option_server = params.get("compile_option_server", "")
 
     if int(params.get("queues", 1)) > 1 and params.get("os_type") == "linux":
-        error.context("Enable multi queues support in guest.", logging.info)
+        error_context.context("Enable multi queues support in guest.",
+                              logging.info)
         guest_mac = vm.get_mac_address()
         ifname = utils_net.get_linux_ifname(session, guest_mac)
         cmd = "ethtool -L %s combined  %s" % (ifname, params.get("queues"))
         status, out = session.cmd_status_output(cmd)
         msg = "Fail to enable multi queues support in guest."
         msg += "Command %s fail output: %s" % (cmd, out)
-        error.TestError(msg)
+        test.error(msg)
 
     if params.get("os_type") == "linux":
         session.cmd("iptables -F", ignore_all_errors=True)
@@ -110,7 +111,7 @@ def run(test, params, env):
         g_client_path = win_netperf_path
         g_md5sum = win_netperf_md5sum
 
-    error.context("Setup netperf in guest and host", logging.info)
+    error_context.context("Setup netperf in guest and host", logging.info)
     netperf_client = utils_netperf.NetperfClient(netperf_client_ip,
                                                  g_client_path,
                                                  g_md5sum, g_client_link,
@@ -132,12 +133,12 @@ def run(test, params, env):
                                                  status_test_command=status_test_command,
                                                  compile_option=compile_option_server)
     try:
-        error.base_context("Run netperf test between host and guest.")
-        error.context("Start netserver in host.", logging.info)
+        error_context.base_context("Run netperf test between host and guest.")
+        error_context.context("Start netserver in host.", logging.info)
         netperf_server.start()
 
-        error.context("Start Netperf in guest for %ss." % netperf_timeout,
-                      logging.info)
+        error_context.context("Start Netperf in guest for %ss."
+                              % netperf_timeout, logging.info)
         test_option = "-t TCP_CRR -l %s -- -b 10 -D" % netperf_timeout
         netperf_client.bg_start(netperf_server_ip, test_option, client_num)
 

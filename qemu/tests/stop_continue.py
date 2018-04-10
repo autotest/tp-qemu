@@ -1,12 +1,11 @@
 import time
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_test
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Suspend a running Virtual Machine and verify its state.
@@ -37,15 +36,15 @@ def run(test, params, env):
     try:
         prepare_op = params.get("prepare_op")
         if prepare_op:
-            error.context("Do preparation operation: '%s'" % prepare_op,
-                          logging.info)
+            error_context.context("Do preparation operation: '%s'"
+                                  % prepare_op, logging.info)
             op_timeout = float(params.get("prepare_op_timeout", 60))
             session.cmd(prepare_op, timeout=op_timeout)
 
         if start_bg_process:
             bg_cmd = params.get("bg_cmd")
-            error.context("Start a background process: '%s'" % bg_cmd,
-                          logging.info)
+            error_context.context("Start a background process: '%s'" % bg_cmd,
+                                  logging.info)
             session_bg = vm.wait_for_login(timeout=login_timeout)
             bg_cmd_timeout = float(params.get("bg_cmd_timeout", 240))
             args = (bg_cmd, bg_cmd_timeout)
@@ -53,24 +52,27 @@ def run(test, params, env):
             bg = utils_test.BackgroundTest(session_bg.cmd, args)
             bg.start()
 
-        error.base_context("Stop the VM", logging.info)
+        error_context.base_context("Stop the VM", logging.info)
         vm.pause()
-        error.context("Verify the status of VM is 'paused'", logging.info)
+        error_context.context("Verify the status of VM is 'paused'",
+                              logging.info)
         vm.verify_status("paused")
 
-        error.context("Verify the session has no response", logging.info)
+        error_context.context("Verify the session has no response",
+                              logging.info)
         if session.is_responsive():
             msg = "Session is still responsive after stop"
             logging.error(msg)
-            raise error.TestFail(msg)
+            test.fail(msg)
         session.close()
         time.sleep(float(params.get("pause_time", 0)))
-        error.base_context("Resume the VM", logging.info)
+        error_context.base_context("Resume the VM", logging.info)
         vm.resume()
-        error.context("Verify the status of VM is 'running'", logging.info)
+        error_context.context("Verify the status of VM is 'running'",
+                              logging.info)
         vm.verify_status("running")
 
-        error.context("Re-login the guest", logging.info)
+        error_context.context("Re-login the guest", logging.info)
         session = vm.wait_for_login(timeout=login_timeout)
 
         if start_bg_process:
@@ -79,17 +81,18 @@ def run(test, params, env):
 
         check_op = params.get("check_op")
         if check_op:
-            error.context("Do check operation: '%s'" % check_op, logging.info)
+            error_context.context("Do check operation: '%s'" % check_op,
+                                  logging.info)
             op_timeout = float(params.get("check_op_timeout", 60))
             s, o = session.cmd_status_output(check_op, timeout=op_timeout)
             if s != 0:
-                raise error.TestFail("Something wrong after stop continue, "
-                                     "check command report: %s" % o)
+                test.fail("Something wrong after stop continue, "
+                          "check command report: %s" % o)
     finally:
         try:
             clean_op = params.get("clean_op")
             if clean_op:
-                error.context(
+                error_context.context(
                     "Do clean operation: '%s'" %
                     clean_op, logging.info)
                 # session close if exception raised, so get renew a session

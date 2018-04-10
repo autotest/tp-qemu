@@ -3,13 +3,13 @@ import time
 
 import aexpect
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_net
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run two vms on one host. Disable network on the second vm and send
@@ -26,9 +26,9 @@ def run(test, params, env):
         """
         qemu_pid = vm.get_pid()
         cmd = "kill -9 %s" % qemu_pid
-        utils.system(cmd)
+        process.system(cmd)
         if not vm.wait_until_dead(timeout=10):
-            raise error.TestFail("VM is not dead, 10s after '%s' sent." % cmd)
+            test.fail("VM is not dead, 10s after '%s' sent." % cmd)
         logging.info("Vm is dead as expected")
 
     def guest_ping(session, dst_ip, count=None):
@@ -54,7 +54,7 @@ def run(test, params, env):
             test_runner(ping_cmd)
         except aexpect.ShellTimeoutError, err:
             if count:
-                raise error.TestError("Error during ping guest ip, %s" % err)
+                test.error("Error during ping guest ip, %s" % err)
 
     def ping_is_alive(session):
         """
@@ -85,7 +85,7 @@ def run(test, params, env):
             else:
                 utils_net.enable_windows_guest_network(session, ifname)
 
-    error.context("Init boot the vms")
+    error_context.context("Init boot the vms")
     login_timeout = int(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -94,7 +94,7 @@ def run(test, params, env):
 
     dsthost = params.get("dsthost", "vm2")
     if dsthost not in params.get("vms"):
-        raise error.TestNAError("This test must boot two vms")
+        test.cancel("This test must boot two vms")
     dst_vm = env.get_vm(dsthost)
     dst_vm.verify_alive()
     dst_vm.wait_for_login(timeout=login_timeout)
@@ -102,10 +102,11 @@ def run(test, params, env):
     session_serial = dst_vm.wait_for_serial_login(timeout=login_timeout)
 
     try:
-        error.context("Ping dst guest", logging.info)
+        error_context.context("Ping dst guest", logging.info)
         guest_ping(session, dst_ip, count=4)
 
-        error.context("Disable the dst guest nic interface", logging.info)
+        error_context.context("Disable the dst guest nic interface",
+                              logging.info)
         macaddress = dst_vm.get_mac_address()
         if params.get("os_type") == "linux":
             ifname = utils_net.get_linux_ifname(session_serial, macaddress)
@@ -114,7 +115,8 @@ def run(test, params, env):
                                                          "macaddress", macaddress, "netconnectionid")
         manage_guest_nic(session_serial, ifname)
 
-        error.context("Ping dst guest after disabling it's nic", logging.info)
+        error_context.context("Ping dst guest after disabling it's nic",
+                              logging.info)
         ping_timeout = float(params.get("ping_timeout", 21600))
         guest_ping(session, dst_ip)
         # This test need do infinite ping for a long time(6h)
@@ -123,13 +125,13 @@ def run(test, params, env):
         while time.time() < end_time:
             try:
                 if not ping_is_alive(check_sess):
-                    raise error.TestNAError("Ping process is not alive")
+                    test.cancel("Ping process is not alive")
             except Exception, err:
-                raise error.TestError("Check ping status error '%s'" % err)
+                test.error("Check ping status error '%s'" % err)
             else:
                 time.sleep(60)
 
-        error.context("Kill the guest after ping", logging.info)
+        error_context.context("Kill the guest after ping", logging.info)
         kill_and_check(vm)
 
     finally:

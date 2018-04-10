@@ -2,16 +2,16 @@ import os
 import time
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import qemu_monitor
 from virttest import env_process
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu guest pxe boot test:
@@ -34,13 +34,13 @@ def run(test, params, env):
                 env.unregister_vm(vm.name)
 
         qemu_bin = os.path.basename(params["qemu_binary"])
-        utils.run("killall -g %s" % qemu_bin, ignore_status=True)
+        process.run("killall -g %s" % qemu_bin, ignore_status=True)
         time.sleep(5)
 
     enable_mmu_cmd = None
     check_mmu_cmd = None
     restore_mmu_cmd = None
-    error.context("Enable ept(npt)", logging.info)
+    error_context.context("Enable ept(npt)", logging.info)
     try:
         flag = filter(lambda x: x in utils_misc.get_cpu_flags(),
                       ['ept', 'npt'])[0]
@@ -49,10 +49,10 @@ def run(test, params, env):
     else:
         enable_mmu_cmd = params["enable_mmu_cmd_%s" % flag]
         check_mmu_cmd = params["check_mmu_cmd_%s" % flag]
-        status = utils.system(check_mmu_cmd, timeout=120, ignore_status=True)
+        status = process.system(check_mmu_cmd, timeout=120, ignore_status=True)
         if status != 0:
             stopVMS(params, env)
-            utils.run(enable_mmu_cmd)
+            process.run(enable_mmu_cmd)
             restore_mmu_cmd = params["restore_mmu_cmd_%s" % flag]
 
     params["start_vm"] = "yes"
@@ -60,13 +60,13 @@ def run(test, params, env):
     params["paused_after_start_vm"] = "yes"
 
     env_process.preprocess_vm(test, params, env, params["main_vm"])
-    bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
-                                 args=(test, params, env,),
-                                 kwargs={"sub_type": "pxe_boot"})
+    bg = utils_misc.InterruptedThread(utils_test.run_virt_sub_test,
+                                      args=(test, params, env,),
+                                      kwargs={"sub_type": "pxe_boot"})
     count = 0
     try:
         bg.start()
-        error.context("Query cpus in loop", logging.info)
+        error_context.context("Query cpus in loop", logging.info)
         vm = env.get_vm(params["main_vm"])
         vm.resume()
         while True:
@@ -77,10 +77,10 @@ def run(test, params, env):
                 if not bg.is_alive():
                     break
             except qemu_monitor.MonitorSocketError:
-                raise error.TestFail("Qemu looks abnormally, please read the log")
+                test.fail("Qemu looks abnormally, please read the log")
         logging.info("Execute info/query cpus %d times", count)
     finally:
         bg.join()
         if restore_mmu_cmd:
             stopVMS(params, env)
-            utils.run(restore_mmu_cmd)
+            process.run(restore_mmu_cmd)

@@ -5,9 +5,9 @@ import os
 
 import aexpect
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import remote
 from virttest import data_dir
 from virttest import utils_net
@@ -15,7 +15,7 @@ from virttest import utils_test
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run Pktgen test between host/guest
@@ -30,16 +30,16 @@ def run(test, params, env):
     """
 
     login_timeout = float(params.get("login_timeout", 360))
-    error.context("Init the VM, and try to login", logging.info)
+    error_context.context("Init the VM, and try to login", logging.info)
     external_host = params.get("external_host")
     if not external_host:
         get_host_cmd = "ip route | awk '/default/ {print $3}'"
-        external_host = utils.system_output(get_host_cmd)
+        external_host = process.system_output(get_host_cmd)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
 
-    error.context("Pktgen server environment prepare", logging.info)
+    error_context.context("Pktgen server environment prepare", logging.info)
     # pktgen server only support linux, since pktgen is a linux kernel module
     pktgen_server = params.get("pktgen_server", "localhost")
     params_server = params.object_params("pktgen_server")
@@ -69,14 +69,14 @@ def run(test, params, env):
         runner = server_session.cmd_output_safe
         server_interface = params.get("server_interface")
         if not server_interface:
-            raise error.TestNAError("Must config server interface before test")
+            test.cancel("Must config server interface before test")
     else:
         # using host as a pktgen server
         server_interface = params.get("netdst", "switch")
         host_nic = utils_net.Interface(server_interface)
         pktgen_ip = host_nic.get_ip()
         pktgen_mac = host_nic.get_mac()
-        runner = utils.system
+        runner = process.system
 
     # copy pktgen_test scipt to the test server.
     local_path = os.path.join(data_dir.get_root_dir(),
@@ -85,7 +85,7 @@ def run(test, params, env):
     remote.scp_to_remote(pktgen_ip, s_shell_port, s_username, s_passwd,
                          local_path, remote_path)
 
-    error.context("Run pktgen test", logging.info)
+    error_context.context("Run pktgen test", logging.info)
     run_threads = params.get("pktgen_threads", 1)
     pktgen_stress_timeout = float(params.get("pktgen_test_timeout", 600))
     exec_cmd = "%s %s %s %s %s" % (remote_path, vm.get_address(),
@@ -107,12 +107,12 @@ def run(test, params, env):
     finally:
         env["pktgen_run"] = False
 
-    error.context("Verify Host and guest kernel no error and call trace",
-                  logging.info)
+    error_context.context("Verify Host and guest kernel no error "
+                          "and call trace", logging.info)
     vm.verify_kernel_crash()
     utils_misc.verify_dmesg()
 
-    error.context("Ping external host after pktgen test", logging.info)
+    error_context.context("Ping external host after pktgen test", logging.info)
     session_ping = vm.wait_for_login(timeout=login_timeout)
     status, output = utils_test.ping(dest=external_host, session=session_ping,
                                      timeout=240, count=20)
@@ -120,8 +120,8 @@ def run(test, params, env):
     if (loss_ratio > int(params.get("packet_lost_ratio", 5)) or
             loss_ratio == -1):
         logging.debug("Ping %s output: %s" % (external_host, output))
-        raise error.TestFail("Guest network connction unusable," +
-                             "packet lost ratio is '%d%%'" % loss_ratio)
+        test.fail("Guest network connction unusable, "
+                  "packet lost ratio is '%d%%'" % loss_ratio)
     if server_session:
         server_session.close()
     if session:

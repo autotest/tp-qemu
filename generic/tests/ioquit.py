@@ -56,6 +56,6 @@ def run(test, params, env):
         error_context.context("Detected cluster leaks, try to repair it",
                               logging.info)
         restore_cmd = params.get("image_restore_cmd") % image.image_filename
-        cmd_status = process.system(restore_cmd)
+        cmd_status = process.system(restore_cmd, shell=True)
         if cmd_status:
             test.fail("Failed to repair cluster leaks on the image")

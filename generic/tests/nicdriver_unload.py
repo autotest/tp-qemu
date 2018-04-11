@@ -157,7 +157,7 @@ def run(test, params, env):
                 err_info.append(err_msg % copied_file)
         for copied_file in host_file_paths:
             if process.system("md5sum %s | grep %s" %
-                              (copied_file, file_checksum)):
+                              (copied_file, file_checksum), shell=True):
                 err_msg = "Host file %s md5sum changed"
                 err_info.append(err_msg % copied_file)
         if err_info:

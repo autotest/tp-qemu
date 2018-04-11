@@ -34,7 +34,7 @@ def run(test, params, env):
 
     def run_host_guest(cmd):
         run_guest(cmd)
-        process.system(cmd, ignore_status=True)
+        process.system(cmd, ignore_status=True, shell=True)
 
     # flush the firewall rules
     cmd_flush = "iptables -F"

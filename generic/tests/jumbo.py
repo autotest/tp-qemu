@@ -56,7 +56,7 @@ def run(test, params, env):
         :param ovs: Ovs bridge name
         '''
         cmd = "ovs-vsctl list-ports %s" % ovs
-        return set(process.system_output(cmd).splitlines())
+        return set(process.system_output(cmd, shell=True).splitlines())
 
     host_mtu_cmd = "ifconfig %s mtu %s"
     netdst = params.get("netdst", "switch")
@@ -70,7 +70,7 @@ def run(test, params, env):
     error_context.context("Change all Bridge NICs MTU to %s" %
                           mtu, logging.info)
     for iface in target_ifaces:
-        process.run(host_mtu_cmd % (iface, mtu))
+        process.run(host_mtu_cmd % (iface, mtu), shell=True)
 
     try:
         error_context.context("Changing the MTU of guest", logging.info)
@@ -113,13 +113,13 @@ def run(test, params, env):
         # Before change macvtap mtu, must set the base interface mtu
         if params.get("nettype") == "macvtap":
             base_if = utils_net.get_macvtap_base_iface(params.get("netdst"))
-            process.run(host_mtu_cmd % (base_if, mtu))
-        process.run(host_mtu_cmd % (ifname, mtu))
+            process.run(host_mtu_cmd % (base_if, mtu), shell=True)
+        process.run(host_mtu_cmd % (ifname, mtu), shell=True)
 
         error_context.context("Add a temporary static ARP entry ...",
                               logging.info)
         arp_add_cmd = "arp -s %s %s -i %s" % (guest_ip, mac, ifname)
-        process.run(arp_add_cmd)
+        process.run(arp_add_cmd, shell=True)
 
         def is_mtu_ok():
             status, _ = utils_test.ping(guest_ip, 1,
@@ -197,10 +197,10 @@ def run(test, params, env):
         if session:
             session.close()
         grep_cmd = "grep '%s.*%s' /proc/net/arp" % (guest_ip, ifname)
-        if process.system(grep_cmd) == '0':
+        if process.system(grep_cmd, shell=True) == '0':
             process.run("arp -d %s -i %s" % (guest_ip, ifname))
             logging.info("Removing the temporary ARP entry successfully")
 
         logging.info("Change back Bridge NICs MTU to %s" % mtu_default)
         for iface in target_ifaces:
-            process.run(host_mtu_cmd % (iface, mtu_default))
+            process.run(host_mtu_cmd % (iface, mtu_default), shell=True)

@@ -76,7 +76,8 @@ def run(test, params, env):
         download.get_file(url_virtio_win, pkg_path)
 
         if re.findall("zip$", url_virtio_win):
-            process.system("cd /tmp/virtio_win; unzip *; rm -f *.zip")
+            process.system("cd /tmp/virtio_win; unzip *; rm -f *.zip",
+                           shell=True)
 
         virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                          params.get("cdrom_virtio",

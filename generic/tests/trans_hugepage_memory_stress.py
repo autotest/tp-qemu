@@ -30,7 +30,8 @@ def run(test, params, env):
         if not os.path.isdir(debugfs_path):
             os.makedirs(debugfs_path)
         try:
-            process.system("mount -t debugfs none %s" % debugfs_path)
+            process.system("mount -t debugfs none %s" % debugfs_path,
+                           shell=True)
         except Exception:
             debugfs_flag = 0
 
@@ -74,6 +75,6 @@ def run(test, params, env):
         fd.write("0")
         fd.close()
         if os.path.ismount(debugfs_path):
-            process.run("umount %s" % debugfs_path)
+            process.run("umount %s" % debugfs_path, shell=True)
         if os.path.isdir(debugfs_path):
             os.removedirs(debugfs_path)

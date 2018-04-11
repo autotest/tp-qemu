@@ -25,7 +25,7 @@ def run(test, params, env):
 
     def valgrind_intall():
         valgrind_install_cmd = params.get("valgrind_install_cmd")
-        s = process.system(valgrind_install_cmd, timeout=3600)
+        s = process.system(valgrind_install_cmd, timeout=3600, shell=True)
         if s != 0:
             test.error("Fail to install valgrind")
         else:
@@ -34,7 +34,8 @@ def run(test, params, env):
     valgring_support_check_cmd = params.get("valgring_support_check_cmd")
     error_context.context("Check valgrind installed in host", logging.info)
     try:
-        process.system(valgring_support_check_cmd, timeout=interval)
+        process.system(valgring_support_check_cmd, timeout=interval,
+                       shell=True)
     except Exception:
         valgrind_intall()
 

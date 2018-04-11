@@ -1799,7 +1799,7 @@ def run(test, params, env):
 
         qemu_version_pattern = params["qemu_version_pattern"]
         qemu_binary = utils_misc.get_qemu_binary(params)
-        output = str(process.run(qemu_binary + " --version"))
+        output = str(process.run(qemu_binary + " --version", shell=True))
         re_comp = re.compile(r'\s\d+\.\d+\.\d+')
         output_list = re_comp.findall(output)
         # high version

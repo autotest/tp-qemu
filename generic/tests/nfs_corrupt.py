@@ -105,15 +105,16 @@ class NFSCorruptConfig(object):
                 self.start_service()
 
         process.run("exportfs %s:%s -o rw,no_root_squash" %
-                    (self.nfs_ip, self.nfs_dir))
+                    (self.nfs_ip, self.nfs_dir), shell=True)
         process.run("mount %s:%s %s -o rw,soft,timeo=30,retrans=1,vers=3" %
-                    (self.nfs_ip, self.nfs_dir, self.mnt_dir))
+                    (self.nfs_ip, self.nfs_dir, self.mnt_dir), shell=True)
 
     @error_context.context_aware
     def cleanup(self, force_stop=False):
         error_context.context("Cleaning up test NFS share", logging.info)
-        process.run("umount %s" % self.mnt_dir)
-        process.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir))
+        process.run("umount %s" % self.mnt_dir, shell=True)
+        process.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir),
+                    shell=True)
         if force_stop:
             self.stop_service()
 
@@ -121,19 +122,19 @@ class NFSCorruptConfig(object):
         """
         Starts the NFS server.
         """
-        process.run(self.start_cmd)
+        process.run(self.start_cmd, shell=True)
 
     def stop_service(self):
         """
         Stops the NFS server.
         """
-        process.run(self.stop_cmd)
+        process.run(self.stop_cmd, shell=True)
 
     def restart_service(self):
         """
         Restarts the NFS server.
         """
-        process.run(self.restart_cmd)
+        process.run(self.restart_cmd, shell=True)
 
     def is_service_active(self):
         """
@@ -142,7 +143,8 @@ class NFSCorruptConfig(object):
         :param chk_re: Regular expression that tells whether NFS is running
                 or not.
         """
-        status = process.system_output(self.status_cmd, ignore_status=True)
+        status = process.system_output(self.status_cmd, ignore_status=True,
+                                       shell=True)
         if re.findall(self.chk_re, status):
             return True
         else:

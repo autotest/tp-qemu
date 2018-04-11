@@ -22,7 +22,7 @@ def run(test, params, env):
 
     cmd = "./kvmctl test/x86/bootstrap test/x86/%s.flat" % case
     try:
-        results = process.system_output(cmd)
+        results = process.system_output(cmd, shell=True)
     except process.CmdError:
         test.fail("Unit test %s failed" % case)
 

@@ -36,7 +36,7 @@ def run(test, params, env):
         params_subtest = params.object_params(subtest_tag)
         cmd_timeout = int(params_subtest.get("cmd_timeout", 240))
         cmd = params_subtest['cmd']
-        process.system(cmd, timeout=cmd_timeout)
+        process.system(cmd, timeout=cmd_timeout, shell=True)
 
     subtests = params["subtests"].split()
 

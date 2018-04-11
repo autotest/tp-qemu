@@ -138,7 +138,8 @@ def run(test, params, env):
         error_context.context("Change all Bridge NICs MTU to %s"
                               % mtu, logging.info)
         for iface in target_ifaces:
-            process.run(host_mtu_cmd % (iface, mtu), ignore_status=False)
+            process.run(host_mtu_cmd % (iface, mtu), ignore_status=False,
+                        shell=True)
 
     def _pin_vm_threads(vm, node):
         if node:
@@ -285,7 +286,7 @@ def run(test, params, env):
         src = os.path.join(test.virtdir, params.get("log_hostinfo_script"))
         path = os.path.join(test.resultsdir, "systeminfo")
         process.system_output(
-            "bash %s %s &> %s" % (src, test.resultsdir, path))
+            "bash %s %s &> %s" % (src, test.resultsdir, path), shell=True)
 
     if params.get("log_guestinfo_script") and params.get("log_guestinfo_exec"):
         src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
@@ -450,7 +451,7 @@ def ssh_cmd(session, cmd, timeout=120, ignore_status=False):
     """
     if session == "localhost":
         o = process.system_output(cmd, timeout=timeout,
-                                  ignore_status=ignore_status)
+                                  ignore_status=ignore_status, shell=True)
     else:
         o = session.cmd(cmd, timeout=timeout, ignore_all_errors=ignore_status)
     return o

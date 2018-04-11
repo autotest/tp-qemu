@@ -83,7 +83,7 @@ def run(test, params, env):
 
     error_context.context("Check usb device %s on host" % device, logging.info)
     try:
-        process.system(lsusb_cmd)
+        process.system(lsusb_cmd, shell=True)
     except:
         test.cancel("Device %s not present on host" % device)
 

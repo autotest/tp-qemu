@@ -40,7 +40,7 @@ def run(test, params, env):
         if params.get("os_type") == "linux":
             pattern = params.get("get_disk_pattern", "^/dev/vd[a-z]*$")
         elif params.get("os_type") == "windows":
-            pattern = "^\d+"
+            pattern = r"^\d+"
             cmd = params.get("get_disk_index", "wmic diskdrive get index")
         else:
             test.cancel("Unsupported OS type '%s'" % params.get("os_type"))

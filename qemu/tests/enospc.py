@@ -140,7 +140,7 @@ def run(test, params, env):
 
     drive_format = params["drive_format"]
     output = session_serial.cmd_output("dir /dev")
-    devname = "/dev/" + re.findall("([shv]db)\s", output)[0]
+    devname = "/dev/" + re.findall(r"([shv]db)\s", output)[0]
     cmd = params["background_cmd"]
     cmd %= devname
 

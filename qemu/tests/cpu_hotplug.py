@@ -59,7 +59,7 @@ def run(test, params, env):
     output = vm.monitor.send_args_cmd("info cpus")
     logging.debug("Output of info CPUs:\n%s", output)
 
-    cpu_regexp = re.compile("CPU #(\d+)")
+    cpu_regexp = re.compile(r"CPU #(\d+)")
     total_cpus_monitor = len(cpu_regexp.findall(output))
     if total_cpus_monitor != total_cpus:
         test.fail("Monitor reports %s CPUs, when VM should have"

@@ -56,7 +56,7 @@ def run(test, params, env):
 
     tmp_dir = data_dir.get_tmp_dir()
     install_path = params["install_path"].rstrip("\\")
-    heavyload_bin = '"%s\heavyload.exe"' % install_path
+    heavyload_bin = r'"%s\heavyload.exe"' % install_path
     start_cmd = "%s /CPU /MEMORY /FILE " % heavyload_bin
     stop_cmd = "taskkill /T /F /IM heavyload.exe"
     stop_cmd = params.get("stop_cmd", stop_cmd)
@@ -98,7 +98,7 @@ def run(test, params, env):
     if params.get("autostress") == "yes":
         free_mem = utils_misc.get_free_mem(session, "windows")
         free_disk = utils_misc.get_free_disk(session, "C:")
-        start_cmd = '"%s\heavyload.exe"' % params["install_path"]
+        start_cmd = r'"%s\heavyload.exe"' % params["install_path"]
         start_cmd = add_option(start_cmd, 'CPU', params["smp"])
         start_cmd = add_option(start_cmd, 'MEMORY', free_mem)
         start_cmd = add_option(start_cmd, 'FILE', free_disk)

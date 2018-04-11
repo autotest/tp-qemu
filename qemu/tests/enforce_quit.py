@@ -25,7 +25,7 @@ def run(test, params, env):
     extra_flags = params.get("cpu_model_flags", " ")
 
     lack_flags = []
-    flags = re.findall("\+(\w+)", extra_flags)
+    flags = re.findall(r"\+(\w+)", extra_flags)
     for flag in flags:
         if flag not in host_flags:
             lack_flags.append(flag)

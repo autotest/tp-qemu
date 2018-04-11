@@ -17,7 +17,7 @@ class BlockStreamTest(blk_stream.BlockStream):
             cmd = "%s info %s" % (qemu_img, image_file)
             logging.info("Try to get image size via qemu-img info")
             info = process.system_output(cmd)
-            size = int(re.findall("(\d+) bytes", info)[0])
+            size = int(re.findall(r"(\d+) bytes", info)[0])
         except process.CmdError:
             logging.info("qemu-img info failed(it happens because later qemu"
                          " distributions prevent it access a running image.)."

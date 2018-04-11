@@ -52,7 +52,7 @@ def run(test, params, env):
         while time.time() < end_time:
             new_line = session.cmd_output(check_cmd)
             for line in re.split("\n+", new_line.strip()):
-                dev_name = re.split("\s+", line.strip())[idx]
+                dev_name = re.split(r"\s+", line.strip())[idx]
                 if dev_name not in device_string:
                     return dev_name
             time.sleep(0.1)
@@ -64,7 +64,7 @@ def run(test, params, env):
         while time.time() < end_time:
             new_line = session.cmd_output(check_cmd)
             for line in re.split("\n+", device_string.strip()):
-                dev_name = re.split("\s+", line.strip())[idx]
+                dev_name = re.split(r"\s+", line.strip())[idx]
                 if dev_name not in new_line:
                     return dev_name
             time.sleep(0.1)
@@ -107,7 +107,7 @@ def run(test, params, env):
         # Probe qemu for a list of supported devices
         probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)
         devices_supported = [j.strip('"') for j in
-                             re.findall('\"[a-z|0-9|\-|\_|\,|\.]*\"',
+                             re.findall(r'\"[a-z|0-9|\-|\_|\,|\.]*\"',
                                         probe_output, re.MULTILINE)]
         logging.debug("QEMU reported the following supported devices for "
                       "PCI hotplug: %s", devices_supported)

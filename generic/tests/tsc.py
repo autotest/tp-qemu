@@ -26,7 +26,7 @@ class TscTest(TimeClientTest):
                     max_delta = 0
                     reason = ''
                     threshold = int(self.args.split()[1])
-                    latencies = re.findall("CPU \d+ - CPU \d+ =\s+-*\d+",
+                    latencies = re.findall(r"CPU \d+ - CPU \d+ =\s+-*\d+",
                                            result)
                     for ln in latencies:
                         cur_delta = int(ln.split('=', 2)[1])

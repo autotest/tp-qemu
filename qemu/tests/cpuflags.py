@@ -133,8 +133,8 @@ def run(test, params, env):
         output = process.run(cmd).stdout
         re.escape(cpumodel)
         pattern = (r".+%s.*\n.*\n +feature_edx .+ \((.*)\)\n +feature_"
-                   "ecx .+ \((.*)\)\n +extfeature_edx .+ \((.*)\)\n +"
-                   "extfeature_ecx .+ \((.*)\)\n" % (cpumodel))
+                   r"ecx .+ \((.*)\)\n +extfeature_edx .+ \((.*)\)\n +"
+                   r"extfeature_ecx .+ \((.*)\)\n" % (cpumodel))
         flags = []
         model = re.search(pattern, output)
         if model is None:

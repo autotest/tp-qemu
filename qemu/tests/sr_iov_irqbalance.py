@@ -113,7 +113,7 @@ def get_guest_irq_info(test, session, devname, cpu_count):
     if status:
         msg = "Command '%s' fail in guest with output:%s" % (cmd, output)
         test.error(msg)
-    irq_info_filter = "([0-9]*):" + "\s*([0-9]*)" * cpu_count
+    irq_info_filter = r"([0-9]*):" + r"\s*([0-9]*)" * cpu_count
     irq_infos = re.findall(irq_info_filter, output)
     if not irq_infos:
         msg = "Fail to get irq information for device %s. " % devname

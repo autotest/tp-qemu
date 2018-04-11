@@ -46,7 +46,7 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
         error.context("Try to login guest via '%s'" % port, logging.info)
         username = self.params.get("username")
         password = self.params.get("password")
-        prompt = self.params.get("shell_prompt", "[\#\$]")
+        prompt = self.params.get("shell_prompt", "[#$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
         for vport in self.get_virtio_ports(self.vm)[1]:
             if vport.name == port:

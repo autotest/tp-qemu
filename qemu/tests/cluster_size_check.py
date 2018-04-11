@@ -83,7 +83,7 @@ def run(test, params, env):
     csize_parttern = params.get("cluster_size_pattern")
     cluster_size_set = params.get("cluster_size_set")
 
-    for cluster_size in re.split("\s+", cluster_size_set.strip()):
+    for cluster_size in re.split(r"\s+", cluster_size_set.strip()):
         if cluster_size == "default":
             params["image_cluster_size"] = None
             csize_expect = params.get("cluster_size_default", "65536")

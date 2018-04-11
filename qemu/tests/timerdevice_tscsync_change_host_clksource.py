@@ -63,7 +63,7 @@ def run(test, params, env):
     cmd = "/tmp/time-warp-test"
     output = session.cmd_status_output(cmd, timeout=(test_run_timeout + 60))[1]
 
-    re_str = "fail:(\d+).*?fail:(\d+).*fail:(\d+)"
+    re_str = r"fail:(\d+).*?fail:(\d+).*fail:(\d+)"
     fail_cnt = re.findall(re_str, output)
     if not fail_cnt:
         test.error("Could not get correct test output. Output: '%s'" % output)

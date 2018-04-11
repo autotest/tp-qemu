@@ -45,7 +45,7 @@ def run(test, params, env):
     session.cmd(ntp_cmd)
 
     error_context.context("inject nmi interrupt in vm", logging.info)
-    target, cmd = re.split("\s*:\s*", nmi_cmd)
+    target, cmd = re.split(r"\s*:\s*", nmi_cmd)
     if target == "monitor":
         vm.monitor.send_args_cmd(cmd)
     else:

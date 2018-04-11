@@ -54,8 +54,8 @@ def run(test, params, env):
     mgroup_count = int(params.get("mgroup_count", 5))
     flood_minutes = float(params.get("flood_minutes", 10))
     ifname = vm.get_ifname()
-    prefix = re.findall("\d+.\d+.\d+", mcast)[0]
-    suffix = int(re.findall("\d+", mcast)[-1])
+    prefix = re.findall(r"\d+.\d+.\d+", mcast)[0]
+    suffix = int(re.findall(r"\d+", mcast)[-1])
     # copy python script to guest for joining guest to multicast groups
     mcast_path = os.path.join(test.virtdir, "scripts/multicast_guest.py")
     vm.copy_files_to(mcast_path, "/tmp")
@@ -64,7 +64,7 @@ def run(test, params, env):
 
     # if success to join multicast, the process will be paused, and return PID.
     try:
-        pid = re.findall("join_mcast_pid:(\d+)", output)[0]
+        pid = re.findall(r"join_mcast_pid:(\d+)", output)[0]
     except IndexError:
         test.fail("Can't join multicast groups,output:%s" % output)
 

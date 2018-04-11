@@ -88,7 +88,7 @@ def run(test, params, env):
         else:
             username = params.get("username", "")
             password = params.get("password", "")
-            prompt = params.get("shell_prompt", "[\#\$]")
+            prompt = params.get("shell_prompt", "[#$]")
             linesep = eval("'%s'" % params.get("shell_linesep", r"\n"))
             client = params.get("shell_client")
             port = int(params.get("shell_port"))
@@ -149,7 +149,7 @@ def run(test, params, env):
         lst = []
         found = False
         for line in fileobj.readlines():
-            o = re.findall("Send buffer size: (\d+)", line)
+            o = re.findall(r"Send buffer size: (\d+)", line)
             if o:
                 bfr = o[0]
             if "Total Throughput(Mbit/s)" in line:

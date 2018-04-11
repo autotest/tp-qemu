@@ -44,7 +44,7 @@ def run(test, params, env):
 
     vm_mem = int(params.get("mem", "512"))
 
-    get_mig_speed = re.compile("^transferred ram: (\d+) kbytes$",
+    get_mig_speed = re.compile(r"^transferred ram: (\d+) kbytes$",
                                re.MULTILINE)
 
     mig_speed = params.get("mig_speed", "1G")

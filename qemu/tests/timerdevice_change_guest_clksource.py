@@ -71,7 +71,7 @@ def run(test, params, env):
                        (kernel_cfg_pattern, detail))
 
         if "clocksource=" in kernel_cfg:
-            kernel_cfg_new = re.sub("clocksource=[a-z\- ]+", " ", kernel_cfg)
+            kernel_cfg_new = re.sub(r"clocksource=[a-z\- ]+", " ", kernel_cfg)
             disk_obj.replace_image_file_content(grub_file, kernel_cfg,
                                                 kernel_cfg_new)
 
@@ -121,7 +121,7 @@ def run(test, params, env):
                            (kernel_cfg_pattern, detail))
 
             if "clocksource=" in kernel_cfg:
-                kernel_cfg_new = re.sub("clocksource=[a-z \-_]+",
+                kernel_cfg_new = re.sub(r"clocksource=[a-z \-_]+",
                                         "clocksource=%s " % clksrc, kernel_cfg)
             else:
                 kernel_cfg_new = "%s %s" % (kernel_cfg,
@@ -166,7 +166,7 @@ def run(test, params, env):
 
             if "clocksource=" in kernel_cfg:
                 kernel_cfg_new = re.sub(
-                    "clocksource=[a-z \-_]+", " ", kernel_cfg)
+                    r"clocksource=[a-z \-_]+", " ", kernel_cfg)
                 disk_obj.replace_image_file_content(grub_file, kernel_cfg,
                                                     kernel_cfg_new)
         except Exception, detail:

@@ -55,7 +55,7 @@ def run(test, params, env):
             list_disk_cmd = params.get("list_disk_cmd")
             status, output = session.cmd_status_output(list_disk_cmd,
                                                        timeout=cmd_timeout)
-            for i in re.findall("Disk*.(\d+)\s+Offline", output):
+            for i in re.findall(r"Disk*.(\d+)\s+Offline", output):
                 error_context.context("Set disk '%s' to online status" % i,
                                       logging.info)
                 set_online_cmd = params.get("set_online_cmd") % i
@@ -149,7 +149,7 @@ def run(test, params, env):
     for line in output.splitlines():
         if "Buffer I/O error" in line:
             io_error_msg.append(line)
-        if re.search("reset \w+ speed USB device", line):
+        if re.search(r"reset \w+ speed USB device", line):
             io_error_msg.append(line)
 
     if io_error_msg:

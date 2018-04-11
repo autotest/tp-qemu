@@ -33,7 +33,7 @@ def run(test, params, env):
         """
         for line in file('/proc/meminfo', 'r').readlines():
             if line.startswith("%s" % param):
-                output = re.split('\s+', line)[1]
+                output = re.split(r'\s+', line)[1]
         return int(output)
 
     def set_libhugetlbfs(number):

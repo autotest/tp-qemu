@@ -92,7 +92,7 @@ def run(test, params, env):
     md5_cmd = params.get("md5_cmd")
 
     snapshot_chain = generate_snapshot_chain(snapshot_chain, snapshot_num)
-    snapshot_chain = re.split("\s+", snapshot_chain)
+    snapshot_chain = re.split(r"\s+", snapshot_chain)
     session = vm.wait_for_login(timeout=timeout)
 
     md5_value = {}

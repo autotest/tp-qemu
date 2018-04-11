@@ -39,7 +39,7 @@ def run(test, params, env):
         :rtype: list
         """
         list_cdrom_cmd = "wmic cdrom get Drive"
-        filter_cdrom_re = "\w:"
+        filter_cdrom_re = r"\w:"
         if params["os_type"] != "windows":
             list_cdrom_cmd = "ls /dev/cdrom*"
             filter_cdrom_re = r"/dev/cdrom-\w+|/dev/cdrom\d*"

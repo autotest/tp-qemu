@@ -156,7 +156,7 @@ def run(test, params, env):
             output = vm.serial_console.get_stripped_output()
         except ValueError:
             output = vm.serial_console.get_output()
-        boot_list = re.findall("^\d+\. (.*)\s", output, re.M)
+        boot_list = re.findall(r"^\d+\. (.*)\s", output, re.M)
 
         if not boot_list:
             cleanup(dev_name)

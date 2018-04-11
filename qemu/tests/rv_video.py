@@ -75,7 +75,7 @@ def launch_totem(test, guest_session, params):
     if pid:
         logging.info("PID: %s" % pid)
 
-        if not re.search("^(\d+)", pid):
+        if not re.search(r"^(\d+)", pid):
             logging.info("Could not find Totem running! Try starting again!")
             # Sometimes totem doesn't start properly; try again
             cmd = "nohup totem %s %s --display=:0.0 &> /dev/null &" \

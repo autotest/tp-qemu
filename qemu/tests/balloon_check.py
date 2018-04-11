@@ -352,10 +352,10 @@ class BallooningTestWin(BallooningTest):
         :param session: shell Object
         :return string: freespace M-bytes
         """
-        cmd = 'typeperf "\Memory\Free & Zero Page List Bytes" -sc 1'
+        cmd = r'typeperf "\Memory\Free & Zero Page List Bytes" -sc 1'
         status, output = session.cmd_status_output(cmd)
         if status == 0:
-            free = "%s" % re.findall("\d+\.\d+", output)[2]
+            free = "%s" % re.findall(r"\d+\.\d+", output)[2]
             free = float(utils_misc.normalize_data_size(free, order_magnitude="M"))
             return int(free)
         else:

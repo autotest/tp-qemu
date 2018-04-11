@@ -86,14 +86,14 @@ def run(test, params, env):
         #        kernel_vesion = re... + hint from configuration file
         #        is there any smart way to fetch the `uname -r` from
         #        brew build?
-        rh_kernel_hint = "[\d+][^\s]+"
+        rh_kernel_hint = r"[\d+][^\s]+"
         kernel_re = params.get("kernel_re")
         tag = params.get("brew_tag")
         kbuild_name = params.get("kernel_build_name", "kernel")
 
         latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
         o = process.system_output(latest_pkg_cmd, timeout=360)
-        build = re.findall("kernel[^\s]+", o)[0]
+        build = re.findall(r"kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %
                       (tag, build))
 
@@ -137,7 +137,7 @@ def run(test, params, env):
 
         latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
         o = process.system_output(latest_pkg_cmd, timeout=360)
-        build = re.findall("kernel[^\s]+", o)[0]
+        build = re.findall(r"kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %
                       (tag, build))
 

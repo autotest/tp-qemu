@@ -80,7 +80,7 @@ def run(test, params, env):
         probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type,
                                                     debug=False)
         devices_supported = [j.strip('"') for j in
-                             re.findall('\"[a-z|0-9|\-|\_|\,|\.]*\"',
+                             re.findall(r'\"[a-z|0-9|\-|\_|\,|\.]*\"',
                                         probe_output, re.MULTILINE)]
         logging.debug("QEMU reported the following supported devices for "
                       "PCI hotplug: %s", devices_supported)

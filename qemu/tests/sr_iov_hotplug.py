@@ -47,7 +47,7 @@ def run(test, params, env):
     def get_active_network_device(session, nic_filter):
         devnames = []
         cmd = "ifconfig -a"
-        nic_reg = "\w+(?=: flags)|\w+(?=\s*Link)"
+        nic_reg = r"\w+(?=: flags)|\w+(?=\s*Link)"
         status, output = session.cmd_status_output(cmd)
         if status:
             test.error("Guest command '%s' fail with output: %s." % (cmd, output))

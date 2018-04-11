@@ -34,7 +34,7 @@ def run(test, params, env):
         for line in results.splitlines():
             line = line.strip()
             if re.match("CPU0", line):
-                cpu_list = re.findall("CPU\d+", line)
+                cpu_list = re.findall(r"CPU\d+", line)
                 cpu_count = len(cpu_list)
                 continue
             if cpu_count > 0:
@@ -42,11 +42,11 @@ def run(test, params, env):
                 if re.findall(irqs_pattern, re.split(":", line)[-1]):
                     results_dict[irq_key] = {}
                     content = line[len(irq_key) + 1:].strip()
-                    if len(re.split("\s+", content)) < cpu_count:
+                    if len(re.split(r"\s+", content)) < cpu_count:
                         continue
                     count = 0
                     irq_des = ""
-                    for irq_item in re.split("\s+", content):
+                    for irq_item in re.split(r"\s+", content):
                         if count < cpu_count:
                             if count == 0:
                                 results_dict[irq_key]["count"] = []
@@ -168,12 +168,12 @@ def run(test, params, env):
     error.context("Load I/O in all targets", logging.info)
     get_dev_cmd = params.get("get_dev_cmd", "ls /dev/[svh]d*")
     output = session.cmd_output(get_dev_cmd)
-    system_dev = re.findall("/dev/[svh]d\w+\d+", output)[0]
+    system_dev = re.findall(r"/dev/[svh]d\w+\d+", output)[0]
     system_dev = system_dev.rstrip(string.digits)
-    dd_timeout = int(re.findall("\d+", extra_image_size)[0])
+    dd_timeout = int(re.findall(r"\d+", extra_image_size)[0])
     fill_cmd = ""
     count = 0
-    for dev in re.split("\s+", output):
+    for dev in re.split(r"\s+", output):
         if not dev:
             continue
         if not re.findall(system_dev, dev):

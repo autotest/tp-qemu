@@ -59,7 +59,7 @@ def run(test, params, env):
             test.error("Can't get device info from qtree result.")
 
         for index, option in enumerate(options):
-            option_regex = "%s\s+=\s+(\w+)" % option
+            option_regex = r"%s\s+=\s+(\w+)" % option
             option_value = re.findall(option_regex, dev_info[0], re.M)
             if not option_value:
                 logging.debug("dev info in qtree: %s" % dev_info[0])

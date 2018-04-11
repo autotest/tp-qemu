@@ -219,9 +219,9 @@ def launch_rv(test, client_vm, guest_vm, params):
             cmd = "export LD_LIBRARY_PATH=" + rv_ld_library_path + ";" + cmd
 
     if rv_parameters_from == "file":
-        print "Generating file"
+        logging.info("Generating file")
         utils_spice.gen_rv_file(params, guest_vm, host_subj, cacert)
-        print "Uploading file to client"
+        logging.info("Uploading file to client")
         client_vm.copy_files_to("rv_file.vv", "~/rv_file.vv")
 
     # Launching the actual set of commands

@@ -169,7 +169,7 @@ def verify_img_paste_success(test, session_to_copy_from, interpreter,
                  " Session ------------")
     img_checksum = output.split()[0]
     if img_checksum == expected_checksum:
-        print "PASS: The image was successfully pasted"
+        logging.info("PASS: The image was successfully pasted")
     else:
         test.fail("The pasting of the image failed")
 
@@ -293,7 +293,7 @@ def verify_txt_paste_success(test, session_to_paste_to, interpreter,
                  " Session ------------")
     file_checksum = output.split()[0]
     if file_checksum == textfile_checksum:
-        print "PASS: The large text file was successfully pasted"
+        logging.info("PASS: The large text file was successfully pasted")
     else:
         test.fail("The pasting of the large text file failed")
 

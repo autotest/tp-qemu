@@ -39,7 +39,8 @@ def run(test, params, env):
             dmidecode_key = dmidecode_key.split()
             for key in dmidecode_key:
                 cmd = (dmidecode_exp % (smbios_type_number, key))
-                default_key_para = process.system_output(cmd).strip()
+                default_key_para = process.system_output(
+                    cmd, shell=True).strip()
                 smbios_key_para_set = params.object_params(sm_type).get(key,
                                                                         default_key_para)
                 smbios += ",%s='%s'" % (key.lower(), smbios_key_para_set)
@@ -86,7 +87,8 @@ def run(test, params, env):
             for key in dmidecode_key:
                 cmd = (dmidecode_exp % (smbios_type_number, key))
                 smbios_get_para = session.cmd(cmd).strip()
-                default_key_para = process.system_output(cmd).strip()
+                default_key_para = process.system_output(
+                    cmd, shell=True).strip()
                 if params.get("smbios_type_disable", "no") == "no":
                     smbios_set_para = params.object_params(sm_type).get(key,
                                                                         default_key_para)

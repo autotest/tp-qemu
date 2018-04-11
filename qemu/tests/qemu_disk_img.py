@@ -78,7 +78,7 @@ class QemuImgTest(qemu_storage.QemuImg):
             return False
         src = self.params["tmp_file_name"]
         cmd = self.params["file_create_cmd"] % src
-        process.run(cmd)
+        process.run(cmd, shell=True)
         self.vm.copy_files_to(src, dst)
         self.trash.append(src)
         return True

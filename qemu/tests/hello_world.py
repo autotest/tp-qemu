@@ -74,7 +74,7 @@ def run(test, params, env):
     error_context.context("Echo 'Hello, world!' in the host using shell",
                           logging.info)
     # If the command fails, it will raise a process.CmdError exception
-    host_cmd_output = process.system_output("echo 'Hello, world!'")
+    host_cmd_output = process.system_output("echo 'Hello, world!'", shell=True)
     logging.info("Host cmd output '%s'", host_cmd_output)
 
     # Here, we will fail a test if the host outputs something unexpected

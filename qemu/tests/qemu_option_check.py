@@ -26,7 +26,7 @@ def run(test, params, env):
         """
         support_device = process.system_output("%s -device ? 2>&1"
                                                % qemu_binary, timeout=10,
-                                               ignore_status=True)
+                                               ignore_status=True, shell=True)
         if not support_device:
             test.cancel("Can not get qemu support device list")
         device_list = re.findall(r'name\s+"(.*)",', support_device)
@@ -45,7 +45,7 @@ def run(test, params, env):
         device_support_option = process.run("%s -device %s,? 2>&1" %
                                             (qemu_binary, device_name),
                                             timeout=10,
-                                            ignore_status=True)
+                                            ignore_status=True, shell=True)
         if device_support_option.exit_status:
             test.error("Oops, output status is wrong")
         if not re.findall(r"%s\.(.*)=(.*)" % device_name,

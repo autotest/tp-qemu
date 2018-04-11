@@ -1,3 +1,4 @@
+import functools
 import logging
 import re
 import os
@@ -10,6 +11,9 @@ from virttest import error_context
 from virttest import utils_net
 from virttest import remote
 from virttest import data_dir
+
+
+_system_output = functools.partial(process.system_output, shell=True)
 
 
 @error_context.context_aware
@@ -48,7 +52,7 @@ def run(test, params, env):
                     remote_src = vm
                     ssh_src_ip = vm.get_address()
                 else:
-                    run_func = process.system_output
+                    run_func = _system_output
                     remote_src = "localhost"
                     ssh_src_ip = host_ip
                 if atgt in vms_tags:
@@ -255,7 +259,7 @@ def run(test, params, env):
     def setup_service(setup_target):
         setup_timeout = int(params.get("setup_timeout", 360))
         if setup_target == "localhost":
-            setup_func = process.system_output
+            setup_func = _system_output
             os_type = "linux"
         else:
             setup_vm = env.get_vm(setup_target)
@@ -281,7 +285,7 @@ def run(test, params, env):
     def stop_service(setup_target):
         setup_timeout = int(params.get("setup_timeout", 360))
         if setup_target == "localhost":
-            setup_func = process.system_output
+            setup_func = _system_output
             os_type = "linux"
         else:
             setup_vm = env.get_vm(setup_target)

@@ -54,7 +54,7 @@ def run(test, params, env):
 
     if params.get("pre_cmd"):
         error_context.context("Fetch data from host", logging.info)
-        process.system(params.get("pre_cmd"))
+        process.system(params.get("pre_cmd"), shell=True)
 
     error_context.context("Read rng device in guest", logging.info)
     utils_test.run_virt_sub_test(test, params, env, sub_test)
@@ -82,6 +82,7 @@ def run(test, params, env):
         while time.time() < end_time:
             s = process.system(
                 params.get("post_cmd"),
-                ignore_status=params.get("ignore_status", "False"))
+                ignore_status=params.get("ignore_status", "False"),
+                shell=True)
             if s == 0:
                 break

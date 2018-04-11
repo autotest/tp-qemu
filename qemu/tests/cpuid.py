@@ -217,7 +217,7 @@ def run(test, params, env):
         vendor = params.get("vendor")
         if vendor is None or vendor == "host":
             cmd = "grep 'vendor_id' /proc/cpuinfo | head -n1 | awk '{print $3}'"
-            cmd_result = process.run(cmd, ignore_status=True)
+            cmd_result = process.run(cmd, ignore_status=True, shell=True)
             vendor = cmd_result.stdout.strip()
 
         ignore_cpus = set(params.get("ignore_cpu_models", "").split(' '))

@@ -25,14 +25,14 @@ def run_drive_mirror_cancel(test, params, env):
         mirror_test.start()
         error_context.context("Block network connection with iptables",
                               logging.info)
-        process.run(params["start_firewall_cmd"])
+        process.run(params["start_firewall_cmd"], shell=True)
         bg = utils_misc.InterruptedThread(mirror_test.cancel)
         bg.start()
         job = mirror_test.get_status()
         if job.get("type", "0") != "mirror":
             test.fail("Job cancel immediacatly")
         error_context.context("Cleanup rules in iptables", logging.info)
-        process.run(params["stop_firewall_cmd"])
+        process.run(params["stop_firewall_cmd"], shell=True)
         bg.join(timeout=int(params["cancel_timeout"]))
     finally:
         mirror_test.vm.destroy()

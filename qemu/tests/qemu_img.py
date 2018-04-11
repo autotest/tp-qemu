@@ -96,7 +96,7 @@ def run(test, params, env):
         create_image_cmd = create_image_cmd % test_image
         msg = " Create image %s by command %s" % (test_image, create_image_cmd)
         error_context.context(msg, logging.info)
-        process.system(create_image_cmd, verbose=False)
+        process.system(create_image_cmd, verbose=False, shell=True)
         status, output = _check(cmd, test_image)
         if not status:
             test.fail("Check image '%s' failed with error: %s" %
@@ -187,7 +187,7 @@ def run(test, params, env):
         while time.time() < end_time:
             time.sleep(1)
             status = process.system("kill -SIGUSR1 `pidof qemu-img`",
-                                    ignore_status=True)
+                                    ignore_status=True, shell=True)
             if status == 0:
                 return None
         logging.info("Fail to get pid of qemu-img")

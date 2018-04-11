@@ -48,4 +48,4 @@ def run(test, params, env):
 
     error_context.context("running qemu-iotests for image format %s"
                           % image_format)
-    process.system("%s -%s" % (cmd, image_format))
+    process.system("%s -%s" % (cmd, image_format), shell=True)

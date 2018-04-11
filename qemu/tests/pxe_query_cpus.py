@@ -49,10 +49,11 @@ def run(test, params, env):
     else:
         enable_mmu_cmd = params["enable_mmu_cmd_%s" % flag]
         check_mmu_cmd = params["check_mmu_cmd_%s" % flag]
-        status = process.system(check_mmu_cmd, timeout=120, ignore_status=True)
+        status = process.system(check_mmu_cmd, timeout=120, ignore_status=True,
+                                shell=True)
         if status != 0:
             stopVMS(params, env)
-            process.run(enable_mmu_cmd)
+            process.run(enable_mmu_cmd, shell=True)
             restore_mmu_cmd = params["restore_mmu_cmd_%s" % flag]
 
     params["start_vm"] = "yes"
@@ -83,4 +84,4 @@ def run(test, params, env):
         bg.join()
         if restore_mmu_cmd:
             stopVMS(params, env)
-            process.run(restore_mmu_cmd)
+            process.run(restore_mmu_cmd, shell=True)

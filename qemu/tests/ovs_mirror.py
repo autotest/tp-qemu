@@ -117,7 +117,7 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", "600"))
 
     error_context.context("Create private ovs switch", logging.info)
-    process.system(ovs_create_cmd)
+    process.system(ovs_create_cmd, shell=True)
     params["start_vm"] = "yes"
     params["netdst"] = ovs_name
     vms_info = {}
@@ -200,4 +200,4 @@ def run(test, params, env):
         for f in glob.glob("/var/log/openvswith/*.log"):
             dst = os.path.join(test.resultsdir, os.path.basename(f))
             shutil.copy(f, dst)
-        process.system(ovs_remove_cmd, ignore_status=False)
+        process.system(ovs_remove_cmd, ignore_status=False, shell=True)

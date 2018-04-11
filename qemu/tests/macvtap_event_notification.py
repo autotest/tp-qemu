@@ -1,3 +1,4 @@
+import functools
 import logging
 import time
 
@@ -7,6 +8,9 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_net
 from virttest import env_process
+
+
+_system_output = functools.partial(process.system_output, shell=True)
 
 
 @error_context.context_aware
@@ -48,7 +52,7 @@ def run(test, params, env):
     session = vm.wait_for_serial_login(timeout=int(params.get("login_timeout",
                                                               360)))
 
-    callback = {"host_cmd": process.system_output,
+    callback = {"host_cmd": _system_output,
                 "guest_cmd": session.get_command_output,
                 "qmp_cmd": vm.get_monitors_by_type("qmp")[0].send_args_cmd}
 

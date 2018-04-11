@@ -63,7 +63,8 @@ def run(test, params, env):
         """
         pid = vm.get_pid()
         cmd = params.get("snapshot_check_cmd") % pid
-        return set(process.system_output(cmd, ignore_status=True).splitlines())
+        return set(process.system_output(cmd, ignore_status=True,
+                                         shell=True).splitlines())
 
     snapshots = map(lambda x: os.path.join(image_dir, x), ["sn1", "sn2"])
     try:

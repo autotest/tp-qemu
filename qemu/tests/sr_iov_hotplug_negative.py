@@ -111,6 +111,7 @@ def run(test, params, env):
         driver = params.get("driver", "igb")
         modprobe_cmd = modprobe_cmd % driver
         try:
-            process.system(modprobe_cmd, timeout=120, ignore_status=True)
+            process.system(modprobe_cmd, timeout=120, ignore_status=True,
+                           shell=True)
         except process.CmdError, err:
             logging.error(err)

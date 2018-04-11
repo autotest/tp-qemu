@@ -42,7 +42,8 @@ def run(test, params, env):
 
     error_context.context("Load bonding module with mode 802.3ad",
                           logging.info)
-    if not process.system("lsmod|grep bonding", ignore_status=True):
+    if not process.system("lsmod|grep bonding", ignore_status=True,
+                          shell=True):
         process.system("modprobe -r bonding")
 
     process.system(
@@ -88,7 +89,7 @@ def run(test, params, env):
     host_bridges.add_port(bond_br_name, bond_iface.name)
 
     error_context.context("Get ip address for bridge", logging.info)
-    process.system("dhclient -r; dhclient %s" % bond_br_name)
+    process.system("dhclient -r; dhclient %s" % bond_br_name, shell=True)
 
     error_context.context("Boot up guest with bridge %s" % bond_br_name,
                           logging.info)

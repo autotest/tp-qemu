@@ -409,16 +409,16 @@ def run(test, params, env):
         process.run("killall ksmtuned")
     new_ksm = False
     if (os.path.exists("/sys/kernel/mm/ksm/run")):
-        process.run("echo 50 > /sys/kernel/mm/ksm/sleep_millisecs")
-        process.run("echo 5000 > /sys/kernel/mm/ksm/pages_to_scan")
-        process.run("echo 1 > /sys/kernel/mm/ksm/run")
+        process.run("echo 50 > /sys/kernel/mm/ksm/sleep_millisecs", shell=True)
+        process.run("echo 5000 > /sys/kernel/mm/ksm/pages_to_scan", shell=True)
+        process.run("echo 1 > /sys/kernel/mm/ksm/run", shell=True)
 
         e_up = "/sys/kernel/mm/transparent_hugepage/enabled"
         e_rh = "/sys/kernel/mm/redhat_transparent_hugepage/enabled"
         if os.path.exists(e_up):
-            process.run("echo 'never' > %s" % e_up)
+            process.run("echo 'never' > %s" % e_up, shell=True)
         if os.path.exists(e_rh):
-            process.run("echo 'never' > %s" % e_rh)
+            process.run("echo 'never' > %s" % e_rh, shell=True)
         new_ksm = True
     else:
         try:

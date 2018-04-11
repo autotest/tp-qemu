@@ -43,10 +43,10 @@ def run(test, params, env):
             test.cancel("This test requires a host that supports EPT")
         elif 'ept' in flags and "no" in need_ept:
             cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=0"
-            process.system(cmd, timeout=100)
+            process.system(cmd, timeout=100, shell=True)
         elif 'ept' in flags and "yes" in need_ept:
             cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=1"
-            process.system(cmd, timeout=100)
+            process.system(cmd, timeout=100, shell=True)
 
     def install_gcc():
         logging.info("Update gcc to request version....")

@@ -42,7 +42,7 @@ def get_tmpfs_write_speed():
     return: The write speed of tmpfs, the unit is kb/s.
     """
     process.run("mkdir -p /tmp/test_speed && "
-                "mount -t tmpfs none /tmp/test_speed")
+                "mount -t tmpfs none /tmp/test_speed", shell=True)
     output = process.run("dd if=/dev/urandom of=/tmp/test_speed/test "
                          "bs=1k count=1024")
     try:
@@ -127,7 +127,7 @@ def run(test, params, env):
             utils_misc.mount("none", tmpfs_path, "tmpfs", perm=mount_fs_size)
             funcatexit.register(env, params.get("type"), utils_misc.umount,
                                 "none", tmpfs_path, "tmpfs")
-            process.system(numa_dd_cmd, timeout=dd_timeout)
+            process.system(numa_dd_cmd, timeout=dd_timeout, shell=True)
         except Exception, error_msg:
             if "No space" in str(error_msg):
                 pass

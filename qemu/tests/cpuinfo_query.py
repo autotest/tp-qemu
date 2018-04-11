@@ -19,7 +19,7 @@ def run(test, params, env):
     if qcmd is None:
         test.error("query cmd is missing, pls check query_cmd in config file")
     cmd = qemu_binary + qcmd
-    output = process.system_output(cmd)
+    output = process.system_output(cmd, shell=True)
 
     error_context.context("check if expected info is included in output of %s"
                           % cmd)

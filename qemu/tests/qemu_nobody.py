@@ -31,7 +31,7 @@ def run(test, params, env):
         return a list[uid,euid,suid,fsuid,gid,egid,sgid,fsgid] of pid
         """
         grep_ugid_cmd = "cat /proc/%s/status | grep -iE '^(U|G)id'"
-        o = process.system_output(grep_ugid_cmd % pid.strip())
+        o = process.system_output(grep_ugid_cmd % pid.strip(), shell=True)
         ugid = re.findall(r"(\d+)", o)
         # real UID, effective UID, saved set UID, and file system UID
         if ugid:

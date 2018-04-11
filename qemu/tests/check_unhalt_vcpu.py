@@ -23,7 +23,7 @@ def run(test, params, env):
 
     cpu_get_usage_cmd = params["cpu_get_usage_cmd"]
     cpu_get_usage_cmd = cpu_get_usage_cmd % pid
-    cpu_usage = process.system_output(cpu_get_usage_cmd)
+    cpu_usage = process.system_output(cpu_get_usage_cmd, shell=True)
 
     try:
         cpu_usage = float(cpu_usage)

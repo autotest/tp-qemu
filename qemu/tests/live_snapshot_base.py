@@ -44,7 +44,7 @@ def run(test, params, env):
         error_context.context("create file on host, copy it to guest",
                               logging.info)
         cmd = params.get("dd_cmd") % src
-        process.system(cmd, timeout=dd_timeout)
+        process.system(cmd, timeout=dd_timeout, shell=True)
         md5 = crypto.hash_file(src, method="md5")
         vm.copy_files_to(src, dst, timeout=copy_timeout)
         process.system("rm -f %s" % src)

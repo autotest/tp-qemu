@@ -117,14 +117,14 @@ def run(test, params, env):
     kvm_userspace_ver_cmd = params.get("kvm_userspace_ver_cmd", "")
     if kvm_userspace_ver_cmd:
         try:
-            cmd_result = process.run(kvm_userspace_ver_cmd)
+            cmd_result = process.run(kvm_userspace_ver_cmd, shell=True)
             qemu_version = cmd_result.stdout.strip()
         except process.CmdError:
             qemu_version = "Unknown"
     else:
         qemu_path = utils_misc.get_qemu_binary(params)
         version_line = process.system_output("%s -help | head -n 1"
-                                             % qemu_path)
+                                             % qemu_path, shell=True)
         matches = re.findall("version .*?,", version_line, re.I)
         if matches:
             qemu_version = " ".join(matches[0].split()[1:]).strip(",")

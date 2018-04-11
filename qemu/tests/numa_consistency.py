@@ -100,7 +100,8 @@ def run(test, params, env):
             numa_hardware_cmd = params.get("numa_hardware_cmd")
             if numa_hardware_cmd:
                 numa_info = process.system_output(numa_hardware_cmd,
-                                                  ignore_status=True)
+                                                  ignore_status=True,
+                                                  shell=True)
             msg = "Expect malloc %sM memory in node %s," % (dd_size,
                                                             node_used_host)
             msg += "but only malloc %sM \n" % memory_allocated

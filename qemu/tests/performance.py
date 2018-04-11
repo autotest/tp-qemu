@@ -283,7 +283,8 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
     category_key = re.split(case_type, category_key)[0]
     category_key = re.sub(r"\.repeat\d+", "", category_key)
 
-    kvm_ver = process.system_output(params.get('ver_cmd', "rpm -q qemu-kvm"))
+    kvm_ver = process.system_output(params.get('ver_cmd', "rpm -q qemu-kvm"),
+                                    shell=True)
     host_ver = os.uname()[2]
     test.write_test_keyval({'kvm-userspace-ver': kvm_ver})
     test.write_test_keyval({'host-kernel-ver': host_ver})

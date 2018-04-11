@@ -88,7 +88,8 @@ def run(test, params, env):
     if not dest_host:
         dest_host_get_cmd = "ip route | awk '/default/ { print $3 }'"
         dest_host_get_cmd = params.get("dest_host_get_cmd", dest_host_get_cmd)
-        dest_host = process.system_output(dest_host_get_cmd).split()[-1]
+        dest_host = process.system_output(
+            dest_host_get_cmd, shell=True).split()[-1]
 
     txt = "Ping dest host %s from " % dest_host
     txt += "localhost with the interface %s" % ifname

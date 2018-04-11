@@ -55,8 +55,8 @@ def run(test, params, env):
 
     def _kill_host_programs(kill_stress_cmd, kill_monitor_cmd):
         logging.info("Kill stress and monitor on host")
-        process.run(kill_stress_cmd, ignore_status=True)
-        process.run(kill_monitor_cmd, ignore_status=True)
+        process.run(kill_stress_cmd, ignore_status=True, shell=True)
+        process.run(kill_monitor_cmd, ignore_status=True, shell=True)
 
     def host():
         logging.info("Setup monitor server on host")
@@ -69,19 +69,21 @@ def run(test, params, env):
         process.run("iptables -F", ignore_status=True)
 
         # Run heartbeat on host
-        process.run(server_setup_cmd % (monitor_dir, threshold,
-                                        monitor_log_file_server, monitor_port))
+        process.run(
+            server_setup_cmd
+            % (monitor_dir, threshold, monitor_log_file_server, monitor_port),
+            shell=True)
 
         if stress_setup_cmd is not None:
             logging.info("Build stress on host")
             # Uncompress and build stress on host
-            process.run(stress_setup_cmd % stress_dir)
+            process.run(stress_setup_cmd % stress_dir, shell=True)
 
         logging.info("Run stress on host")
         # stress_threads = 2 * n_cpus
         threads_host = 2 * cpu.online_cpus_count()
         # Run stress test on host
-        process.run(stress_cmd % (stress_dir, threads_host))
+        process.run(stress_cmd % (stress_dir, threads_host), shell=True)
 
     def guest():
         try:
@@ -145,7 +147,8 @@ def run(test, params, env):
         _kill_host_programs(kill_stress_cmd, kill_monitor_cmd)
 
         # Collect drift
-        drift = process.system_output(drift_cmd % monitor_log_file_server)
+        drift = process.system_output(drift_cmd % monitor_log_file_server,
+                                      shell=True)
         logging.info("Drift noticed: %s", drift)
 
     host()

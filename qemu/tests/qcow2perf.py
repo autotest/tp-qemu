@@ -61,16 +61,16 @@ def run(test, params, env):
                                 write_unit, interval_size, write_unit)
         iocmd0 = iocmd % (writecmd0, io_options, snapshot_file)
         logging.info("writecmd-offset-0: %s", writecmd0)
-        process.run(dropcache)
-        output = process.run(iocmd0)
+        process.run(dropcache, shell=True)
+        output = process.run(iocmd0, shell=True)
     else:
         offset = 1
         writecmd1 = writecmd % (write_round, offset, interval_size,
                                 write_unit, interval_size, write_unit)
         iocmd1 = iocmd % (writecmd1, io_options, snapshot_file)
         logging.info("writecmd-offset-1: %s", writecmd1)
-        process.run(dropcache)
-        output = process.run(iocmd1)
+        process.run(dropcache, shell=True)
+        output = process.run(iocmd1, shell=True)
 
     error_context.context("Do one operations to the image and "
                           "measure the time", logging.info)
@@ -78,12 +78,12 @@ def run(test, params, env):
     if op_type == "read":
         readcmd = opcmd % (io_options, snapshot_file)
         logging.info("read: %s", readcmd)
-        process.run(dropcache)
+        process.run(dropcache, shell=True)
         output = process.run(readcmd)
     elif op_type == "commit":
         commitcmd = opcmd % (cache_mode, snapshot_file)
         logging.info("commit: %s", commitcmd)
-        process.run(dropcache)
+        process.run(dropcache, shell=True)
         output = process.run(commitcmd)
     elif op_type == "rebase":
         new_base_img = QemuImg(params.object_params(new_base), image_dir,
@@ -92,13 +92,13 @@ def run(test, params, env):
         rebasecmd = opcmd % (new_base_img.image_filename,
                              cache_mode, snapshot_file)
         logging.info("rebase: %s", rebasecmd)
-        process.run(dropcache)
+        process.run(dropcache, shell=True)
         output = process.run(rebasecmd)
     elif op_type == "convert":
         convertname = sn_list[test_image][0].image_filename + "_convert"
         convertcmd = opcmd % (snapshot_file, cache_mode, convertname)
         logging.info("convert: %s", convertcmd)
-        process.run(dropcache)
+        process.run(dropcache, shell=True)
         output = process.run(convertcmd)
 
     error_context.context("Result recording", logging.info)

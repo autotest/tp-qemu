@@ -65,7 +65,8 @@ def run(test, params, env):
         app_check_cmd = params.get("linux_app_check_cmd", "false")
         app_check_exit_status = int(params.get("linux_app_check_exit_status",
                                                "0"))
-        exit_status = process.system(app_check_cmd, ignore_status=True)
+        exit_status = process.system(app_check_cmd, ignore_status=True,
+                                     shell=True)
 
         # Install iperf in host if not available
         default_install_cmd = "tar zxvf %s; cd iperf-%s;"
@@ -75,7 +76,8 @@ def run(test, params, env):
             error_context.context("install iperf in host", logging.info)
             download.get_file(iperf_url, host_path)
             iperf_downloaded = 1
-            process.system(install_cmd % (host_path, iperf_version))
+            process.system(install_cmd % (host_path, iperf_version),
+                           shell=True)
 
         # The guest may not be running Linux, see if we should update the
         # app_check variables

@@ -94,7 +94,7 @@ def run(test, params, env):
                               utils_misc.generate_random_string(8))
     cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, filesize)
     process.run(cmd)
-    file_checksum = crypto.hash_file(host_path, "md5")
+    file_checksum = crypto.hash_file(host_path, algorithm="md5")
 
     error_context.context("Guest test file prepare, Copy file %s from host to "
                           "guest" % host_path, logging.info)

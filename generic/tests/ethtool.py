@@ -100,7 +100,7 @@ def run(test, params, env):
     def compare_md5sum(name):
         txt = "Comparing md5sum of the files on guest and host"
         error_context.context(txt, logging.info)
-        host_result = crypto.hash_file(name, method="md5")
+        host_result = crypto.hash_file(name, algorithm="md5")
         try:
             o = session.cmd_output("md5sum %s" % name)
             guest_result = re.findall(r"\w+", o)[0]

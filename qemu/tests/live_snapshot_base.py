@@ -45,7 +45,7 @@ def run(test, params, env):
                               logging.info)
         cmd = params.get("dd_cmd") % src
         process.system(cmd, timeout=dd_timeout, shell=True)
-        md5 = crypto.hash_file(src, method="md5")
+        md5 = crypto.hash_file(src, algorithm="md5")
         vm.copy_files_to(src, dst, timeout=copy_timeout)
         process.system("rm -f %s" % src)
         error_context.context("create live snapshot", logging.info)
@@ -60,7 +60,7 @@ def run(test, params, env):
         error_context.context("copy file to host, check content not changed",
                               logging.info)
         vm.copy_files_from(dst, src, timeout=copy_timeout)
-        if md5 and (md5 != crypto.hash_file(src, method="md5")):
+        if md5 and (md5 != crypto.hash_file(src, algorithm="md5")):
             test.fail("diff md5 before/after create snapshot")
         session.cmd(params.get("alive_check_cmd", "dir"))
     finally:

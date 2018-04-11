@@ -1,14 +1,14 @@
 import logging
 import os
 
-from autotest.client.shared import utils
-from autotest.client.shared import error
-from autotest.client import utils as client_utils
+from avocado.utils import crypto
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM migration test:
@@ -41,8 +41,8 @@ def run(test, params, env):
     migrate_between_vhost_novhost = params.get("migrate_between_vhost_novhost")
 
     try:
-        utils.run("dd if=/dev/urandom of=%s bs=1M count=%s" % (host_path,
-                                                               file_size))
+        process.run("dd if=/dev/urandom of=%s bs=1M count=%s"
+                    % (host_path, file_size))
 
         def run_and_migrate(bg):
             bg.start()
@@ -66,28 +66,30 @@ def run(test, params, env):
             else:
                 bg.join()
 
-        error.context("transferring file to guest while migrating",
-                      logging.info)
-        bg = utils.InterruptedThread(vm.copy_files_to, (host_path, guest_path),
-                                     dict(verbose=True, timeout=transfer_timeout))
+        error_context.context("transferring file to guest while migrating",
+                              logging.info)
+        bg = utils_misc.InterruptedThread(
+            vm.copy_files_to,
+            (host_path, guest_path),
+            dict(verbose=True, timeout=transfer_timeout))
         run_and_migrate(bg)
 
-        error.context("transferring file back to host while migrating",
-                      logging.info)
-        bg = utils.InterruptedThread(vm.copy_files_from,
-                                     (guest_path, host_path_returned),
-                                     dict(verbose=True, timeout=transfer_timeout))
+        error_context.context("transferring file back to host while migrating",
+                              logging.info)
+        bg = utils_misc.InterruptedThread(
+            vm.copy_files_from,
+            (guest_path, host_path_returned),
+            dict(verbose=True, timeout=transfer_timeout))
         run_and_migrate(bg)
 
         # Make sure the returned file is identical to the original one
-        error.context("comparing hashes", logging.info)
-        orig_hash = client_utils.hash_file(host_path)
-        returned_hash = client_utils.hash_file(host_path_returned)
+        error_context.context("comparing hashes", logging.info)
+        orig_hash = crypto.hash_file(host_path)
+        returned_hash = crypto.hash_file(host_path_returned)
         if orig_hash != returned_hash:
-            raise error.TestFail("Returned file hash (%s) differs from "
-                                 "original one (%s)" % (returned_hash,
-                                                        orig_hash))
-        error.context()
+            test.fail("Returned file hash (%s) differs from "
+                      "original one (%s)" % (returned_hash, orig_hash))
+        error_context.context()
 
     finally:
         session.close()

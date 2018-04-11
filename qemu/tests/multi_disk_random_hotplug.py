@@ -8,8 +8,7 @@ import random
 import time
 import threading
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import funcatexit
 from virttest import data_dir
 from virttest import qemu_qtree
@@ -71,7 +70,7 @@ def convert_params(params, args):
     return params
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     This tests the disk hotplug/unplug functionality.
@@ -112,8 +111,8 @@ def run(test, params, env):
             logging.error("info qtree:\n%s", info_qtree)
             logging.error("info block:\n%s", info_block)
             logging.error(qdev.str_bus_long())
-            raise error.TestFail("%s errors occurred while verifying"
-                                 " qtree vs. params" % err)
+            test.fail("%s errors occurred while verifying"
+                      " qtree vs. params" % err)
 
     def insert_into_qdev(qdev, param_matrix, no_disks, params, new_devices):
         """
@@ -143,8 +142,8 @@ def run(test, params, env):
             # Set the format
             if len(formats) < 1:
                 if i == 0:
-                    raise error.TestError("Fail to add any disks, probably bad"
-                                          " configuration.")
+                    test.error("Fail to add any disks, probably bad"
+                               " configuration.")
                 logging.warn("Can't create desired number '%s' of disk types "
                              "'%s'. Using '%d' no disks.", no_disks,
                              _formats, i)
@@ -225,7 +224,7 @@ def run(test, params, env):
             logging.error("%sHotplug status:\nverified %s\nunverified %s\n"
                           "failed %s", prefix, passed, unverif, failed)
             logging.error("qtree:\n%s", monitor.info("qtree", debug=False))
-            raise error.TestFail("%sHotplug of some devices failed." % prefix)
+            test.fail("%sHotplug of some devices failed." % prefix)
 
     def hotplug_serial(new_devices, monitor):
         _hotplug(new_devices[0], monitor)
@@ -324,7 +323,7 @@ def run(test, params, env):
             logging.error("%sUnplug status:\nverified %s\nunverified %s\n"
                           "failed %s", prefix, passed, unverif, failed)
             logging.error("qtree:\n%s", monitor.info("qtree", debug=False))
-            raise error.TestFail("%sUnplug of some devices failed." % prefix)
+            test.fail("%sUnplug of some devices failed." % prefix)
 
     def unplug_serial(new_devices, qdev, monitor):
         _unplug(new_devices[0], qdev, monitor)
@@ -412,31 +411,31 @@ def run(test, params, env):
         unplug = unplug_serial
         monitor = vm.monitor
     context_msg = "Running sub test '%s' %s"
-    error.context("Verify disk before test", logging.info)
+    error_context.context("Verify disk before test", logging.info)
     info_qtree = vm.monitor.info('qtree', False)
     info_block = vm.monitor.info_block(False)
     verify_qtree(params, info_qtree, info_block, qdev)
     for iteration in xrange(rp_times):
-        error.context("Hotplugging/unplugging devices, iteration %d"
-                      % iteration, logging.info)
+        error_context.context("Hotplugging/unplugging devices, iteration %d"
+                              % iteration, logging.info)
         sub_type = params.get("sub_type_before_plug")
         if sub_type:
-            error.context(context_msg % (sub_type, "before hotplug"),
-                          logging.info)
+            error_context.context(context_msg % (sub_type, "before hotplug"),
+                                  logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        error.context("Insert devices into qdev", logging.debug)
+        error_context.context("Insert devices into qdev", logging.debug)
         qdev.set_dirty()
         new_devices = [[] for _ in queues]
         new_devices, params = insert_into_qdev(qdev, param_matrix,
                                                stg_image_num, params,
                                                new_devices)
 
-        error.context("Hotplug the devices", logging.debug)
+        error_context.context("Hotplug the devices", logging.debug)
         hotplug(new_devices, monitor)
         time.sleep(float(params.get('wait_after_hotplug', 0)))
 
-        error.context("Verify disks after hotplug", logging.debug)
+        error_context.context("Verify disks after hotplug", logging.debug)
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
         vm.verify_alive()
@@ -445,17 +444,17 @@ def run(test, params, env):
 
         sub_type = params.get("sub_type_after_plug")
         if sub_type:
-            error.context(context_msg % (sub_type, "after hotplug"),
-                          logging.info)
+            error_context.context(context_msg % (sub_type, "after hotplug"),
+                                  logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
         sub_type = params.get("sub_type_before_unplug")
         if sub_type:
-            error.context(context_msg % (sub_type, "before hotunplug"),
-                          logging.info)
+            error_context.context(context_msg % (sub_type, "before hotunplug"),
+                                  logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        error.context("Unplug and remove the devices", logging.debug)
+        error_context.context("Unplug and remove the devices", logging.debug)
         if stress_cmd:
             session.cmd(params["stress_stop_cmd"])
         unplug(new_devices, qdev, monitor)
@@ -463,7 +462,7 @@ def run(test, params, env):
             session.cmd(params["stress_cont_cmd"])
         _postprocess_images()
 
-        error.context("Verify disks after unplug", logging.debug)
+        error_context.context("Verify disks after unplug", logging.debug)
         time.sleep(float(params.get('wait_after_unplug', 0)))
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
@@ -475,16 +474,16 @@ def run(test, params, env):
 
         sub_type = params.get("sub_type_after_unplug")
         if sub_type:
-            error.context(context_msg % (sub_type, "after hotunplug"),
-                          logging.info)
+            error_context.context(context_msg % (sub_type, "after hotunplug"),
+                                  logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     # Check for various KVM failures
-    error.context("Validating VM after all disk hotplug/unplugs",
-                  logging.debug)
+    error_context.context("Validating VM after all disk hotplug/unplugs",
+                          logging.debug)
     vm.verify_alive()
     out = session.cmd_output('dmesg')
     if "I/O error" in out:
         logging.warn(out)
-        raise error.TestWarn("I/O error messages occured in dmesg, check"
-                             "the log for details.")
+        test.error("I/O error messages occured in dmesg, "
+                   "check the log for details.")

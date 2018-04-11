@@ -10,8 +10,6 @@ import string
 
 from avocado.utils import astring
 
-from autotest.client.shared import error
-
 from virttest import env_process
 from virttest import error_context
 from virttest import qemu_qtree
@@ -165,9 +163,9 @@ def run(test, params, env):
         if _RE_RANGE1.match(parm):
             parm = _range(parm)
             if parm is False:
-                raise error.TestError("Incorrect cfg: stg_params %s looks "
-                                      "like range(..) but doesn't contain "
-                                      "numbers." % cmd)
+                test.error("Incorrect cfg: stg_params %s looks "
+                           "like range(..) but doesn't contain "
+                           "numbers." % cmd)
             param_matrix[cmd] = parm
             if type(parm) is str:
                 # When we know the stg_image_num, substitute it.
@@ -254,8 +252,8 @@ def run(test, params, env):
         err += tmp1 + tmp2
 
         if err:
-            raise error.TestFail("%s errors occurred while verifying"
-                                 " qtree vs. params" % err)
+            test.fail("%s errors occurred while verifying"
+                      " qtree vs. params" % err)
         if params.get('multi_disk_only_qtree') == 'yes':
             return
 
@@ -271,7 +269,7 @@ def run(test, params, env):
             if len(disk_indexs) < stg_image_num:
                 err_msg = "Set disks num: %d" % stg_image_num
                 err_msg += ", Get disks num in guest: %d" % len(disk_indexs)
-                raise error.TestFail("Fail to list all the volumes, %s" % err_msg)
+                test.fail("Fail to list all the volumes, %s" % err_msg)
 
             # Random select one file system from file_system
             index = random.randint(0, (len(file_system) - 1))
@@ -284,8 +282,8 @@ def run(test, params, env):
         cmd = params["list_volume_command"]
         s, output = session.cmd_status_output(cmd, timeout=cmd_timeout)
         if s != 0:
-            raise error.TestFail("List volume command failed with cmd '%s'.\n"
-                                 "Output is: %s\n" % (cmd, output))
+            test.fail("List volume command failed with cmd '%s'.\n"
+                      "Output is: %s\n" % (cmd, output))
 
         output = session.cmd_output(cmd, timeout=cmd_timeout)
         disks = re.findall(re_str, output)
@@ -297,7 +295,7 @@ def run(test, params, env):
         images = params.get("images").split()
         if len(disks) < len(images):
             logging.debug("disks: %s , images: %s", len(disks), len(images))
-            raise error.TestFail("Fail to list all the volumes!")
+            test.fail("Fail to list all the volumes!")
 
         if params.get("os_type") == "linux":
             output = session.cmd_output("mount")
@@ -348,8 +346,7 @@ def run(test, params, env):
                 key_word = params["check_result_key_word"]
                 output = session.cmd_output(cmd)
                 if key_word not in output:
-                    raise error.TestFail("Files on guest os root fs and disk "
-                                         "differ")
+                    test.fail("Files on guest os root fs and disk differ")
 
             if params.get("umount_command"):
                 cmd = params.get("show_mount_cmd")

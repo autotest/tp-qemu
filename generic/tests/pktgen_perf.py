@@ -1,6 +1,7 @@
 import logging
 import os
 import aexpect
+import functools
 
 from avocado.utils import process
 
@@ -9,6 +10,9 @@ from virttest import utils_net
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
+
+
+_system_output = functools.partial(process.system_output, shell=True)
 
 
 def format_result(result, base="12", fbase="2"):
@@ -124,7 +128,7 @@ def run(test, params, env):
                 pktgen_ip = host_nic.get_ip()
                 dsc = vm.wait_for_get_address(0, timeout=5)
                 pktgen_interface = vm.get_ifname(0)
-                runner = process.system_output
+                runner = _system_output
                 pkt_cate_r = run_test(session_serial, runner, remote_path,
                                       pktgen_ip, dsc, pktgen_interface,
                                       run_threads, size, timeout)

@@ -55,7 +55,7 @@ def run(test, params, env):
                 guest_receive = utils_misc.InterruptedThread(receive_data,
                                                              args)
                 guest_receive.start()
-                process.system(send_cmd, timeout=30)
+                process.system(send_cmd, timeout=30, shell=True)
             finally:
                 if guest_receive:
                     guest_receive.join(10)

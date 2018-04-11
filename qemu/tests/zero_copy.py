@@ -41,7 +41,7 @@ def run(test, params, env):
             cmd += "modprobe vhost-net experimental_zcopytx=1"
         else:
             cmd += "modprobe vhost-net experimental_zcopytx=0"
-        if process.system(cmd) or enable != zerocp_enable_status():
+        if process.system(cmd, shell=True) or enable != zerocp_enable_status():
             test.cancel("Set vhost_net zcopytx failed")
 
     error_context.context("Set host vhost_net experimental_zcopytx",

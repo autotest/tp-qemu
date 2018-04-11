@@ -13,6 +13,6 @@ def run(test, params, env):
     dropin_path = os.path.join(data_dir.get_root_dir(), "dropin",
                                dropin_path)
     try:
-        process.system(dropin_path)
+        process.system(dropin_path, shell=True)
     except process.CmdError:
         test.fail("Drop in test %s failed" % dropin_path)

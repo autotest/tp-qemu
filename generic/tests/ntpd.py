@@ -113,15 +113,15 @@ class NTPTest(object):
         # Set the time zone to New_York
         cmd = ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
         try:
-            process.run(cmd, ignore_status=False)
+            process.run(cmd, ignore_status=False, shell=True)
         except process.CmdError, detail:
             self.test.fail("set Zone on host failed.%s" % detail)
         cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
-        process.run(cmd_ln, ignore_status=True)
+        process.run(cmd_ln, ignore_status=True, shell=True)
 
         # Check the cpu info of constant_tsc
         cmd = "cat /proc/cpuinfo | grep constant_tsc"
-        result = process.run(cmd)
+        result = process.run(cmd, shell=True)
         if not result.stdout.strip():
             self.test.fail("constant_tsc not available in this system!!")
 
@@ -142,16 +142,17 @@ class NTPTest(object):
 
         # Delete server of local clock
         result = process.run("grep '^server %s' /etc/ntp.conf" %
-                             self.local_clock, ignore_status=True)
+                             self.local_clock, ignore_status=True, shell=True)
         if result.stdout.strip():
-            process.run("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock)
+            process.run("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock,
+                        shell=True)
         # Check the ntp.conf and add server ip into it
         cmd = "grep '^server %s' /etc/ntp.conf" % self.server_ip
-        result = process.run(cmd, ignore_status=True)
+        result = process.run(cmd, ignore_status=True, shell=True)
         if not result.stdout.strip():
             cmd = "echo 'server %s' >> /etc/ntp.conf" % self.server_ip
             try:
-                process.run(cmd, ignore_status=False)
+                process.run(cmd, ignore_status=False, shell=True)
             except process.CmdError, detail:
                 self.test.fail("config /etc/ntp.conf on host failed!!")
 
@@ -218,8 +219,9 @@ class NTPTest(object):
         cmd_name = ""
         if self.server_hostname:
             cmd_name = "ntpq -p | grep '^*%s'" % self.server_hostname
-        result_ntpq_ip = process.run(cmd_ip, ignore_status=True)
-        result_ntpq_name = process.run(cmd_name, ignore_status=True)
+        result_ntpq_ip = process.run(cmd_ip, ignore_status=True, shell=True)
+        result_ntpq_name = process.run(cmd_name, ignore_status=True,
+                                       shell=True)
         if (not result_ntpq_ip.stdout.strip() and
                 not result_ntpq_name.stdout.strip()):
             self.test.fail("ntpd setting failed of %s host !!" % self.vm_name)

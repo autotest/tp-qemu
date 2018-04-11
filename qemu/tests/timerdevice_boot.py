@@ -1,6 +1,7 @@
 import logging
 import re
 import time
+import functools
 
 from avocado.utils import process
 from virttest import data_dir
@@ -10,6 +11,9 @@ from virttest import utils_test
 from virttest import env_process
 from virttest import funcatexit
 from virttest import error_context
+
+
+_system = functools.partial(process.system, shell=True)
 
 
 @error_context.context_aware
@@ -50,7 +54,7 @@ def run(test, params, env):
         error_context.context("Add some load on host", logging.info)
         process.system(timerdevice_host_load_cmd, shell=True)
         host_load_stop_cmd = params["timerdevice_host_load_stop_cmd"]
-        funcatexit.register(env, params["type"], process.system,
+        funcatexit.register(env, params["type"], _system,
                             host_load_stop_cmd)
 
     error_context.context("Boot a guest with kvm-clock", logging.info)

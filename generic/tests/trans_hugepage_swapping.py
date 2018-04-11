@@ -67,7 +67,7 @@ def run(test, params, env):
             if not os.path.isdir(mem_path):
                 os.makedirs(mem_path)
             process.run("mount -t tmpfs  -o size=%sM none %s" %
-                        (tmpfs_size, mem_path))
+                        (tmpfs_size, mem_path), shell=True)
 
             # Set the memory size of vm
             # To ignore the oom killer set it to the free swap size
@@ -91,7 +91,7 @@ def run(test, params, env):
             error_context.context("making guest to swap memory")
             cmd = ("dd if=/dev/zero of=%s/zero bs=%s000000 count=%s" %
                    (mem_path, hugepage_size, count))
-            process.run(cmd)
+            process.run(cmd, shell=True)
 
             args_dict = get_args(args_dict_check)
             swap_free.append(int(args_dict['swap_free']) / 1024)
@@ -103,7 +103,7 @@ def run(test, params, env):
             session.cmd("find / -name \"*\"", timeout=check_cmd_timeout)
         finally:
             if session is not None:
-                process.run("umount %s" % mem_path)
+                process.run("umount %s" % mem_path, shell=True)
 
         logging.info("Swapping test succeed")
 

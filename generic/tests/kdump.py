@@ -155,7 +155,7 @@ def crash_test(test, vm, vcpu, crash_cmd, timeout):
 
     logging.info("Delete the vmcore file.")
     if kdump_method == "ssh":
-        process.run(vmcore_rm_cmd)
+        process.run(vmcore_rm_cmd, shell=True)
     else:
         session.cmd_output(vmcore_rm_cmd)
 
@@ -201,7 +201,7 @@ def check_vmcore(test, vm, session, timeout):
     try:
         if vm.params.get("kdump_method") == "ssh":
             logging.info("Checking vmcore file on host")
-            process.run(vmcore_chk_cmd)
+            process.run(vmcore_chk_cmd, shell=True)
         else:
             logging.info("Checking vmcore file on guest")
             session.cmd(vmcore_chk_cmd)

@@ -140,7 +140,7 @@ def run(test, params, env):
 
                 top_cmd = r"top -n 1 -p %s -b" % ",".join(map(str,
                                                               vhost_threads))
-                top_info = process.system_output(top_cmd)
+                top_info = process.system_output(top_cmd, shell=True)
                 logging.info("%s", top_info)
                 vhost_re = re.compile(r"S(\s+0.0+){2}.*vhost-\d+[\d|+]")
                 sleep_vhost_thread = len(vhost_re.findall(top_info, re.I))

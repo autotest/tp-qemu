@@ -49,7 +49,7 @@ def run(test, params, env):
     if not os.path.exists(cdrom_whql_dir):
         os.makedirs(cdrom_whql_dir)
     cmd = "mkisofs -J -o %s %s" % (cdrom_whql, src_path)
-    process.system(cmd)
+    process.system(cmd, shell=True)
     params["cdroms"] += " whql"
 
     vm = "vm1"

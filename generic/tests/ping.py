@@ -69,7 +69,7 @@ def run(test, params, env):
         ext_host = params.get("ext_host", "")
         ext_host_get_cmd = params.get("ext_host_get_cmd", "")
         try:
-            ext_host = process.system_output(ext_host_get_cmd)
+            ext_host = process.system_output(ext_host_get_cmd, shell=True)
         except process.CmdError:
             logging.warn("Can't get specified host with cmd '%s',"
                          " Fallback to default host '%s'",

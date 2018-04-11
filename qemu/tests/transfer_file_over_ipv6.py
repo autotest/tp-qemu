@@ -87,7 +87,7 @@ def run(test, params, env):
     host_path = os.path.join(test.tmpdir, "tmp-%s" %
                              utils_misc.generate_random_string(8))
     logging.info("Test setup: Creating %dMB file on host", filesize)
-    process.run(dd_cmd % (host_path, filesize))
+    process.run(dd_cmd % (host_path, filesize), shell=True)
 
     try:
         src_md5 = (crypto.hash_file(host_path, algorithm="md5"))

@@ -139,7 +139,7 @@ def run(test, params, env):
             tcpdump_cmd += " and dst %s" % guest_ip
             copy_files_func = vm.copy_files_to
             try:
-                process.system(dd_cmd)
+                process.system(dd_cmd, shell=True)
             except process.CmdError, e:
                 return failure
 

@@ -111,13 +111,13 @@ def run(test, params, env):
             logging.info("Prepare tmpfs in host")
             if not os.path.isdir(mem_path):
                 os.makedirs(mem_path)
-            process.run("mount -t tmpfs none %s" % mem_path)
+            process.run("mount -t tmpfs none %s" % mem_path, shell=True)
             logging.info("Start using dd to fragment memory in guest")
             cmd = ("for i in `seq 262144`; do dd if=/dev/urandom of=%s/$i "
                    "bs=4K count=1 & done" % mem_path)
-            process.run(cmd)
+            process.run(cmd, shell=True)
         finally:
-            process.run("umount %s" % mem_path)
+            process.run("umount %s" % mem_path, shell=True)
 
     test_config = test_setup.TransparentHugePageConfig(test, params)
     logging.info("Defrag test start")

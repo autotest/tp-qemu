@@ -12,7 +12,7 @@ def cleanup(debugfs_path, session):
     Umount the debugfs and close the session
     """
     if os.path.ismount(debugfs_path):
-        process.run("umount %s" % debugfs_path)
+        process.run("umount %s" % debugfs_path, shell=True)
     if os.path.isdir(debugfs_path):
         os.removedirs(debugfs_path)
     session.close()
@@ -53,7 +53,7 @@ def run(test, params, env):
     if not os.path.ismount(debugfs_path):
         if not os.path.isdir(debugfs_path):
             os.makedirs(debugfs_path)
-        process.run("mount -t debugfs none %s" % debugfs_path)
+        process.run("mount -t debugfs none %s" % debugfs_path, shell=True)
 
     vm = env.get_vm(params.get("main_vm"))
     session = vm.wait_for_login(timeout=login_timeout)

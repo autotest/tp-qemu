@@ -55,7 +55,7 @@ def run(test, params, env):
         firewall_flush = params.get("firewall_flush", "service iptables stop")
         error_context.context("Stop firewall in guest and host.", logging.info)
         try:
-            process.run(firewall_flush)
+            process.run(firewall_flush, shell=True)
         except Exception:
             logging.warning("Could not stop firewall in host")
 

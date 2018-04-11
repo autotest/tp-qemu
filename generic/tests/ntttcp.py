@@ -43,8 +43,10 @@ def run(test, params, env):
     vm_receiver = None
     receiver_addr = params.get("receiver_address")
 
-    logging.debug(process.system("numactl --hardware", ignore_status=True))
-    logging.debug(process.system("numactl --show", ignore_status=True))
+    logging.debug(process.system("numactl --hardware", ignore_status=True,
+                                 shell=True))
+    logging.debug(process.system("numactl --show", ignore_status=True,
+                                 shell=True))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     if params.get('numa_node'):
         numa_node = int(params.get('numa_node'))

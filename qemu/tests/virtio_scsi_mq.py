@@ -3,15 +3,14 @@ import re
 import time
 import string
 
-from autotest.client.shared import error
-from autotest.client import local_host
-
+from avocado.utils import cpu as utils_cpu
 from virttest import utils_misc
 from virttest import env_process
 from virttest import qemu_qtree
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu multiqueue test for virtio-scsi controller:
@@ -60,7 +59,7 @@ def run(test, params, env):
         return results_dict, cpu_list
 
     timeout = float(params.get("login_timeout", 240))
-    host_cpu_num = local_host.LocalHost().get_num_cpu()
+    host_cpu_num = utils_cpu.online_cpus_count()
     while host_cpu_num:
         num_queues = str(host_cpu_num)
         host_cpu_num &= host_cpu_num - 1
@@ -73,9 +72,9 @@ def run(test, params, env):
                                            "virtio")
     params["drive_format_%s" % system_image] = system_image_drive_format
 
-    error.context("Boot up guest with block devcie with num_queues"
-                  " is %s and smp is %s" % (num_queues, params['smp']),
-                  logging.info)
+    error_context.context("Boot up guest with block devcie with num_queues"
+                          " is %s and smp is %s" % (num_queues, params['smp']),
+                          logging.info)
     for vm in env.get_all_vms():
         if vm.is_alive():
             vm.destroy()
@@ -93,17 +92,17 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, vm.name)
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Check irqbalance service status", logging.info)
+    error_context.context("Check irqbalance service status", logging.info)
     output = session.cmd_output("systemctl status irqbalance")
     if not re.findall("Active: active", output):
         session.cmd("systemctl start irqbalance")
         output = session.cmd_output("systemctl status irqbalance")
         output = utils_misc.strip_console_codes(output)
         if not re.findall("Active: active", output):
-            raise error.TestNAError("Can not start irqbalance inside guest. "
-                                    "Skip this test.")
+            test.cancel("Can not start irqbalance inside guest. "
+                        "Skip this test.")
 
-    error.context("Pin vcpus to host cpus", logging.info)
+    error_context.context("Pin vcpus to host cpus", logging.info)
     host_numa_nodes = utils_misc.NumaInfo()
     vcpu_num = 0
     for numa_node_id in host_numa_nodes.nodes:
@@ -117,13 +116,12 @@ def run(test, params, env):
                                     numa_node.pin_cpu(vcpu_tid)))
             vcpu_num += 1
 
-    error.context("Verify num_queues from monitor", logging.info)
+    error_context.context("Verify num_queues from monitor", logging.info)
     qtree = qemu_qtree.QtreeContainer()
     try:
         qtree.parse_info_qtree(vm.monitor.info('qtree'))
     except AttributeError:
-        raise error.TestNAError("Monitor deson't supoort qtree "
-                                "skip this test")
+        test.cancel("Monitor deson't supoort qtree skip this test")
     error_msg = "Number of queues mismatch: expect %s"
     error_msg += " report from monitor: %s(%s)"
     scsi_bus_addr = ""
@@ -143,11 +141,10 @@ def run(test, params, env):
         error_msg = error_msg % (num_queues,
                                  qtree_num_queues,
                                  qtree_num_queues_full)
-        raise error.TestFail(error_msg)
+        test.fail(error_msg)
     if not scsi_bus_addr:
-        raise error.TestError("Didn't find addr from qtree. Please check "
-                              "the log.")
-    error.context("Check device init status in guest", logging.info)
+        test.error("Didn't find addr from qtree. Please check the log.")
+    error_context.context("Check device init status in guest", logging.info)
     irq_check_cmd = params.get("irq_check_cmd", "cat /proc/interrupts")
     output = session.cmd_output(irq_check_cmd)
     irq_name = params.get("irq_regex")
@@ -157,7 +154,7 @@ def run(test, params, env):
         logging.debug('%s : %s %s' % (irq_watch, prev_irq_results[irq_watch]['count'],
                                       prev_irq_results[irq_watch]['irq_des']))
 
-    error.context("Pin the interrupters to vcpus", logging.info)
+    error_context.context("Pin the interrupters to vcpus", logging.info)
     cpu_select = 1
     for irq_id in prev_irq_results.keys():
         bind_cpu_cmd = "echo %s > /proc/irq/%s/smp_affinity" % \
@@ -165,7 +162,7 @@ def run(test, params, env):
         cpu_select = cpu_select << 1
         session.cmd(bind_cpu_cmd)
 
-    error.context("Load I/O in all targets", logging.info)
+    error_context.context("Load I/O in all targets", logging.info)
     get_dev_cmd = params.get("get_dev_cmd", "ls /dev/[svh]d*")
     output = session.cmd_output(get_dev_cmd)
     system_dev = re.findall(r"/dev/[svh]d\w+\d+", output)[0]
@@ -181,8 +178,8 @@ def run(test, params, env):
             fill_cmd += "count=%s oflag=direct &" % dd_timeout
             count += 1
     if count != images_num:
-        raise error.TestError("Disks are not all show up in system. Output "
-                              "from the check command: %s" % output)
+        test.error("Disks are not all show up in system. Output "
+                   "from the check command: %s" % output)
     # As Bug 1177332 exists, mq is not supported completely.
     # So don't considering performance currently, dd_timeout is longer.
     dd_timeout = dd_timeout * images_num * 2
@@ -193,7 +190,7 @@ def run(test, params, env):
         time.sleep(5)
         dd_thread_num = session.cmd_output("pgrep -x dd", timeout=dd_timeout)
 
-    error.context("Check the interrupt queues in guest", logging.info)
+    error_context.context("Check the interrupt queues in guest", logging.info)
     output = session.cmd_output(irq_check_cmd)
     next_irq_results, cpu_list = proc_interrupts_results(output, irq_name)
     logging.debug('The info of interrupters after testing :')
@@ -221,4 +218,4 @@ def run(test, params, env):
             error_msg += " is"
         error_msg += " not used during test. Please check debug log for"
         error_msg += " more information."
-        raise error.TestFail(error_msg)
+        test.fail(error_msg)

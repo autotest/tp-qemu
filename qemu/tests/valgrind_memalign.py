@@ -1,13 +1,12 @@
 import logging
 import time
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from avocado.utils import process
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     This case is from [general operation] Work around valgrind choking on our
@@ -26,31 +25,32 @@ def run(test, params, env):
 
     def valgrind_intall():
         valgrind_install_cmd = params.get("valgrind_install_cmd")
-        s = utils.system(valgrind_install_cmd, timeout=3600)
+        s = process.system(valgrind_install_cmd, timeout=3600)
         if s != 0:
-            raise error.TestError("Fail to install valgrind")
+            test.error("Fail to install valgrind")
         else:
             logging.info("Install valgrind successfully.")
 
     valgring_support_check_cmd = params.get("valgring_support_check_cmd")
-    error.context("Check valgrind installed in host", logging.info)
+    error_context.context("Check valgrind installed in host", logging.info)
     try:
-        utils.system(valgring_support_check_cmd, timeout=interval)
+        process.system(valgring_support_check_cmd, timeout=interval)
     except Exception:
         valgrind_intall()
 
     params['mem'] = 384
     params["start_vm"] = "yes"
-    error.context("Start guest with specific parameters", logging.info)
+    error_context.context("Start guest with specific parameters", logging.info)
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
 
     time.sleep(interval)
-    error.context("Verify guest status is running after cont", logging.info)
+    error_context.context("Verify guest status is running after cont",
+                          logging.info)
     vm.verify_status(params.get("expected_status", "running"))
 
-    error.context("Quit guest and check the process quit normally",
-                  logging.info)
+    error_context.context("Quit guest and check the process quit normally",
+                          logging.info)
     vm.monitor.quit()
     vm.wait_until_dead(5, 0.5, 0.5)
     vm.verify_userspace_crash()

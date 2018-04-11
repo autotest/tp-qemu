@@ -33,7 +33,7 @@ def run(test, params, env):
     shell_client = params.get("shell_client")
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
-    shell_prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
+    shell_prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
     linesep = params.get("shell_linesep", "\n").decode('string_escape')
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
@@ -85,7 +85,7 @@ def run(test, params, env):
             s_info["shell_port"] = params.get("shell_port_%s" % server,
                                               "22")
             s_info["shell_prompt"] = params.get("shell_prompt_%s" % server,
-                                                "^\[.*\][\#\$]\s*$")
+                                                r"^\[.*\][\#\$]\s*$")
             s_info["linesep"] = params.get("linesep_%s" % server,
                                            "\n")
             s_info["status_test_command"] = params.get("status_test_command_%s" % server,
@@ -134,7 +134,7 @@ def run(test, params, env):
             c_info["shell_port"] = params.get("shell_port_%s" % client,
                                               "23")
             c_info["shell_prompt"] = params.get("shell_prompt_%s" % client,
-                                                "^\[.*\][\#\$]\s*$")
+                                                r"^\[.*\][\#\$]\s*$")
             c_info["linesep"] = params.get("linesep_%s" % client,
                                            "\n")
             c_info["status_test_command"] = params.get("status_test_command_%s" % client,

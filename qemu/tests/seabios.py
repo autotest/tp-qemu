@@ -90,7 +90,7 @@ def run(test, params, env):
     error_context.context("Display and check the boot menu order", logging.info)
 
     def get_list():
-        return re.findall("^\d+\. (.*)\s", get_output(seabios_session), re.M)
+        return re.findall(r"^\d+\. (.*)\s", get_output(seabios_session), re.M)
 
     boot_list = utils_misc.wait_for(get_list, timeout, 1)
 

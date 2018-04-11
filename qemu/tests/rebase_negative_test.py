@@ -26,7 +26,7 @@ def run(test, params, env):
                           logging.info)
     for images in rebase_chain:
         output = ""
-        images = re.split("\s*>\s*", images)
+        images = re.split(r"\s*>\s*", images)
         try:
             image = images[0]
             base = images[1]

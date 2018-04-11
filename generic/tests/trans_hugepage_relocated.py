@@ -61,8 +61,8 @@ def run(test, params, env):
     dd_timeout = vmsm * (end_time - start_time) * 2
     nr_hugepages = []
     thp_cfg = params.get("thp_test_config")
-    s_time = int(re.findall("scan_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
-    w_time = int(re.findall("alloc_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
+    s_time = int(re.findall(r"scan_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
+    w_time = int(re.findall(r"alloc_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
 
     try:
         logging.info("Turn off swap in guest")
@@ -70,7 +70,7 @@ def run(test, params, env):
         if s != 0:
             logging.warning("Didn't turn off swap in guest")
         s, o = session.cmd_status_output("cat /proc/meminfo")
-        mem_free_filter = "MemFree:\s+(.\d+)\s+(\w+)"
+        mem_free_filter = r"MemFree:\s+(.\d+)\s+(\w+)"
         guest_mem_free, guest_unit = re.findall(mem_free_filter, o)[0]
         if re.findall("[kK]", guest_unit):
             guest_mem_free = str(int(guest_mem_free) / 1024)
@@ -116,7 +116,7 @@ def run(test, params, env):
 
     if bg:
         bg.join()
-    mem_increase_step = int(re.findall("pages_to_scan:(\d+)",
+    mem_increase_step = int(re.findall(r"pages_to_scan:(\d+)",
                                        thp_cfg)[0]) / 512
     mem_increase = 0
     w_step = w_time / s_time + 1

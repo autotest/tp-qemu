@@ -46,7 +46,7 @@ def get_tmpfs_write_speed():
     output = process.run("dd if=/dev/urandom of=/tmp/test_speed/test "
                          "bs=1k count=1024")
     try:
-        speed = re.search("\s([\w\s\.]+)/s", output.stderr, re.I).group(1)
+        speed = re.search(r"\s([\w\s\.]+)/s", output.stderr, re.I).group(1)
         return float(utils_misc.normalize_data_size(speed, 'K', 1024))
     except Exception:
         return 3072

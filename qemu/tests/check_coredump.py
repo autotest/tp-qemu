@@ -146,7 +146,7 @@ def run(test, params, env):
 
     1) Check all the existing guest images in the image directory.
     2) Mount guest image on the host.
-    3) Check "C:\windows\dump" for Windows and core file for Linux.
+    3) Check "C:\\windows\\dump" for Windows and core file for Linux.
     4) If yes, copy them to working directory.
     """
 

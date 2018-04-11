@@ -29,8 +29,8 @@ def cmd_runner_monitor(test, vm, monitor_cmd, test_cmd,
     def thread_kill(cmd, p_file):
         fd = shelve.open(p_file)
         o = commands.getoutput("pstree -p %s" % fd["pid"])
-        tmp = re.split("\s+", cmd)[0]
-        pid = re.findall("%s.(\d+)" % tmp, o)[0]
+        tmp = re.split(r"\s+", cmd)[0]
+        pid = re.findall(r"%s.(\d+)" % tmp, o)[0]
         s, o = commands.getstatusoutput("kill -9 %s" % pid)
         fd.close()
         return (s, o)
@@ -278,10 +278,10 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
     ignore_cases = params.get("ignore_cases", "").split()
     repeatn = ""
     if "repeat" in test.outputdir:
-        repeatn = re.findall("repeat\d+", test.outputdir)[0]
+        repeatn = re.findall(r"repeat\d+", test.outputdir)[0]
     category_key = re.split("/", test.outputdir)[-1]
     category_key = re.split(case_type, category_key)[0]
-    category_key = re.sub("\.repeat\d+", "", category_key)
+    category_key = re.sub(r"\.repeat\d+", "", category_key)
 
     kvm_ver = process.system_output(params.get('ver_cmd', "rpm -q qemu-kvm"))
     host_ver = os.uname()[2]
@@ -305,15 +305,15 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                         jump_flag = True
                 if jump_flag:
                     continue
-                file_dir_norpt = re.sub("\.repeat\d+", "", files[0])
+                file_dir_norpt = re.sub(r"\.repeat\d+", "", files[0])
                 if (repeatn in files[0] and
                         category_key in file_dir_norpt and
                         case_type in files[0]):
                     for i, pattern in enumerate(file_list):
                         if re.findall(pattern, file):
-                            prefix = re.findall("%s\.[\d\w_\.]+" % case_type,
+                            prefix = re.findall(r"%s\.[\d\w_\.]+" % case_type,
                                                 file_dir_norpt)[0]
-                            prefix = re.sub("\.|_", "--", prefix)
+                            prefix = re.sub(r"\.|_", "--", prefix)
                             if prefix not in results_files.keys():
                                 results_files[prefix] = []
                                 tmp = []

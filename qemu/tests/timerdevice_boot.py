@@ -90,7 +90,7 @@ def run(test, params, env):
                            (kernel_cfg_pattern, detail))
 
             if "clocksource=" in kernel_cfg:
-                kernel_cfg_new = re.sub("clocksource=.*?\s",
+                kernel_cfg_new = re.sub(r"clocksource=.*?\s",
                                         "clocksource=%s" % clksrc, kernel_cfg)
             else:
                 kernel_cfg_new = "%s %s" % (kernel_cfg,

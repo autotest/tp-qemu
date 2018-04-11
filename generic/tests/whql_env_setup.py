@@ -109,18 +109,18 @@ def run(test, params, env):
                 vm_ma_cmd, vm_cmd, dbgview_cmd, qxl_install, disable_firewall,
                 timezone_cmd]
     if nic_cmd:
-        for index, nic in enumerate(re.split("\s+", params.get("nics"))):
+        for index, nic in enumerate(re.split(r"\s+", params.get("nics"))):
             setup_params = params.get("nic_setup_params_%s" % nic, "")
             if params.get("vm_arch_name", "") == "x86_64":
                 nic_cmd = re.sub("set", "set_64", nic_cmd)
             cmd_list.append("%s %s %s" % (nic_cmd, str(index + 1),
                                           setup_params))
     if disk_init_cmd:
-        disk_num = len(re.split("\s+", params.get("images")))
+        disk_num = len(re.split(r"\s+", params.get("images")))
         if disk_driver_install:
             cmd_list.append(disk_driver_install + str(disk_num - 1))
         labels = "IJKLMNOPQRSTUVWXYZ"
-        for index, images in enumerate(re.split("\s+", params.get("images"))):
+        for index, images in enumerate(re.split(r"\s+", params.get("images"))):
             if index > 0:
                 cmd_list.append(disk_init_cmd % (str(index),
                                                  labels[index - 1]))
@@ -140,7 +140,7 @@ def run(test, params, env):
         error_context.context("Update symbol files", logging.info)
         install_check_tool = False
         check_tool_chk = params.get("check_tool_chk",
-                                    "C:\debuggers\symchk.exe")
+                                    "C:\\debuggers\\symchk.exe")
         output = session.cmd_output(check_tool_chk)
         if "cannot find" in output:
             install_check_tool = True

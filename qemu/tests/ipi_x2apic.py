@@ -77,7 +77,7 @@ def run(test, params, env):
         o = session.cmd(pipetest_cmd, timeout=180)
     except aexpect.ShellTimeoutError, e:
         o = e
-    re_str = params.get("usec_re_str", "[0-9]*\.[0-9]+")
+    re_str = params.get("usec_re_str", r"[0-9]*\.[0-9]+")
     val1 = get_re_average(o, re_str)
     session.close()
     vm.destroy()

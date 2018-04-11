@@ -21,7 +21,7 @@ def run(test, params, env):
     msrs = str(params["msrs"]).split()
     dmesg = str(session.cmd_output("dmesg"))
     msrs_catch_re = params.get("msrs_catch_re",
-                               "kvm-clock: Using msrs (\w+) and (\w+)")
+                               r"kvm-clock: Using msrs (\w+) and (\w+)")
     current_msrs = re.search(r"%s" % msrs_catch_re, dmesg, re.M | re.I)
     if current_msrs:
         current_msrs = set(current_msrs.groups())

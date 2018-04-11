@@ -34,7 +34,7 @@ def run(test, params, env):
     cache_mode = params.get("cache_mode")
     image_dir = data_dir.get_data_dir()
 
-    if not re.match("\d+", interval_size[-1]):
+    if not re.match(r"\d+", interval_size[-1]):
         write_unit = interval_size[-1]
         interval_size = int(interval_size[:-1])
     else:
@@ -43,7 +43,7 @@ def run(test, params, env):
 
     error_context.context("Init images for testing", logging.info)
     sn_list = []
-    for img in re.split("\s+", image_chain.strip()):
+    for img in re.split(r"\s+", image_chain.strip()):
         image_params = params.object_params(img)
         sn_tmp = QemuImg(image_params, image_dir, img)
         sn_tmp.create(image_params)

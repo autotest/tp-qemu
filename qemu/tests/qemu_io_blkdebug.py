@@ -35,7 +35,7 @@ def run(test, params, env):
                                                            "blkdebug.cfg"))
     err_command = params["err_command"]
     err_event = params["err_event"]
-    errn_list = re.split("\s+", params["errn_list"].strip())
+    errn_list = re.split(r"\s+", params["errn_list"].strip())
     test_timeout = int(params.get("test_timeout", "60"))
     pre_err_commands = params.get("pre_err_commands")
     image = params.get("images")

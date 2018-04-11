@@ -151,13 +151,11 @@ def launch_rv(test, client_vm, guest_vm, params):
             # generated with the ip address
             hostname = socket.gethostname()
             if ssltype == "invalid_implicit_hs":
-                spice_url = " spice://%s?tls-port=%s\&port=%s" % (hostname,
-                                                                  host_tls_port,
-                                                                  host_port)
+                spice_url = r" spice://%s?tls-port=%s\&port=%s" % (
+                    hostname, host_tls_port, host_port)
             else:
-                spice_url = " spice://%s?tls-port=%s\&port=%s" % (host_ip,
-                                                                  host_tls_port,
-                                                                  host_port)
+                spice_url = r" spice://%s?tls-port=%s\&port=%s" % (
+                    host_ip, host_tls_port, host_port)
 
             if rv_parameters_from == "menu":
                 line = spice_url

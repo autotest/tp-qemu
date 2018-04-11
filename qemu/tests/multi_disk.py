@@ -122,7 +122,7 @@ def run(test, params, env):
         else:
             disk_size = image_size[:-1] + " GB"
 
-        regex_str = 'Disk (\d+).*?%s.*?%s' % (disk_size, disk_size)
+        regex_str = r'Disk (\d+).*?%s.*?%s' % (disk_size, disk_size)
         for disk in disks.splitlines():
             if disk.startswith("  Disk"):
                 o = re.findall(regex_str, disk, re.I | re.M)

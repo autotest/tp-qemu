@@ -45,7 +45,7 @@ def run(test, params, env):
             s, o = session.get_command_status_output(cmd)
         if s != 0:
             test.error("Fail to get tsc of host, ncpu: %d" % i)
-        o = re.findall("(\d+)", o)[0]
+        o = re.findall(r"(\d+)", o)[0]
         return float(o)
 
     vm = env.get_vm(params["main_vm"])

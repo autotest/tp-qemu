@@ -61,7 +61,7 @@ def run(test, params, env):
                 if vm_status['status'] != "shutdown":
                     check_failed = True
             else:
-                if not re.findall("paused\s+\(shutdown\)", vm_status):
+                if not re.findall(r"paused\s+\(shutdown\)", vm_status):
                     check_failed = True
             if check_failed:
                 test.fail("Status check from monitor is: %s" % str(vm_status))

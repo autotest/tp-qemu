@@ -56,7 +56,7 @@ def run(test, params, env):
         logging.info("Get md5sum of the file:'%s'" % file_name)
         try:
             o = session.cmd_output("md5sum %s" % file_name, timeout=timeout)
-            file_md5sum = re.findall("\w+", o)[0]
+            file_md5sum = re.findall(r"\w+", o)[0]
         except IndexError:
             test.error("Could not get file md5sum in guest")
         return file_md5sum

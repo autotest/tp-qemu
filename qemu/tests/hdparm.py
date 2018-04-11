@@ -21,7 +21,7 @@ def run(test, params, env):
     """
     def check_setting_result(set_cmd, timeout):
         params = re.findall("(-[a-zA-Z])([0-9]*)", set_cmd)
-        disk = re.findall("(\/+[a-z]*\/[a-z]*$)", set_cmd)[0]
+        disk = re.findall(r"(\/+[a-z]*\/[a-z]*$)", set_cmd)[0]
         unsupport_param = 0
         for (param, value) in params:
             check_value = True

@@ -360,7 +360,7 @@ def run(test, params, env):
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
         re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
-                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
+                 r'(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")
@@ -605,7 +605,7 @@ def run(test, params, env):
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
         re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
-                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
+                 r'(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")
@@ -1392,10 +1392,10 @@ def run(test, params, env):
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(
-                    ['(\d+)\+\d records out'])[1]
+                    [r'(\d+)\+\d records out'])[1]
                 if len(re.findall(r'(\d+)\+\d records out', out)) < 2:
                     out += sessions[0].read_until_output_matches(
-                        ['(\d+)\+\d records out'])[1]
+                        [r'(\d+)\+\d records out'])[1]
             except ExpectTimeoutError:
                 err = ("dd didn't produce expected output: %s" % out)
 
@@ -2007,10 +2007,10 @@ def run(test, params, env):
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(
-                    ['(\d+)\+\d records out'])[1]
+                    [r'(\d+)\+\d records out'])[1]
                 if len(re.findall(r'(\d+)\+\d records out', out)) < 2:
                     out += sessions[0].read_until_output_matches(
-                        ['(\d+)\+\d records out'])[1]
+                        [r'(\d+)\+\d records out'])[1]
             except ExpectTimeoutError:
                 err = ("dd didn't produce expected output: %s" % out)
 

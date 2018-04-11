@@ -103,7 +103,7 @@ def run(test, params, env):
         host_result = crypto.hash_file(name, method="md5")
         try:
             o = session.cmd_output("md5sum %s" % name)
-            guest_result = re.findall("\w+", o)[0]
+            guest_result = re.findall(r"\w+", o)[0]
         except IndexError:
             logging.error("Could not get file md5sum in guest")
             return False
@@ -145,7 +145,7 @@ def run(test, params, env):
 
         # only capture the new tcp port after offload setup
         original_tcp_ports = re.findall(
-            "tcp.*:(\d+).*%s" % guest_ip,
+            r"tcp.*:(\d+).*%s" % guest_ip,
             process.system_output("/bin/netstat -nap"))
 
         for i in original_tcp_ports:
@@ -197,7 +197,7 @@ def run(test, params, env):
         error_context.context("Check if contained large frame", logging.info)
         # MTU: default IPv4 MTU is 1500 Bytes, ethernet header is 14 Bytes
         return (status == "on") ^ (len([i for i in re.findall(
-                                   "length (\d*):", o) if int(i) > mtu]) == 0)
+                                   r"length (\d*):", o) if int(i) > mtu]) == 0)
 
     def ro_callback(status="on"):
         s, o = transfer_file("host")

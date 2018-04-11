@@ -153,10 +153,10 @@ def run(test, params, env):
         password = params.get("password")
         sessions[0].cmd(prepare_cmd, timeout=timeout)
         ori_md5 = sessions[0].cmd_output(md5_cmd)
-        scp_cmd = ("scp -v -o UserKnownHostsFile=/dev/null "
-                   "-o StrictHostKeyChecking=no "
-                   "-o PreferredAuthentications=password -r "
-                   "-P %s /tmp/copy_file %s@\[%s\]:/tmp/copy_file" %
+        scp_cmd = (r"scp -v -o UserKnownHostsFile=/dev/null "
+                   r"-o StrictHostKeyChecking=no "
+                   r"-o PreferredAuthentications=password -r "
+                   r"-P %s /tmp/copy_file %s@\[%s\]:/tmp/copy_file" %
                    (port, username, addresses[1]))
         sessions[0].sendline(scp_cmd)
         remote.handle_prompts(sessions[0], username, password, prompt, 600)

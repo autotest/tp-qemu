@@ -16,7 +16,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     cygwin_install_cmd = params.get("cygwin_install_cmd")
-    cygwin_prompt = params.get("cygwin_prompt", "\$\s+$")
+    cygwin_prompt = params.get("cygwin_prompt", r"\$\s+$")
     cygwin_start = params.get("cygwin_start")
     cygwin_verify_cmd = params.get("cygwin_verify_cmd", "ls")
     cygwin_install_timeout = float(params.get("cygwin_install_timeout",

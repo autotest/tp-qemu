@@ -29,9 +29,9 @@ def run(test, params, env):
         Create a regular exp using the tracing key, the purpose is checking
         the systemtap output is accord with expected.
         """
-        pattern_reg = ""
+        pattern_reg = r""
         for tracing_key in trace_key.split():
-            pattern_reg += "%s=\d+," % tracing_key
+            pattern_reg += r"%s=\d+," % tracing_key
         return pattern_reg.rstrip(",")
 
     error_context.base_context("Qemu_Tracing Test")

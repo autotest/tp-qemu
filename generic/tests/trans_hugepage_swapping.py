@@ -25,7 +25,7 @@ def run(test, params, env):
         for line in file('/proc/meminfo', 'r').readlines():
             for key in args_list_tmp.keys():
                 if line.startswith("%s" % args_list_tmp[key]):
-                    args_list_tmp[key] = int(re.split('\s+', line)[1])
+                    args_list_tmp[key] = int(re.split(r'\s+', line)[1])
         return args_list_tmp
 
     try:

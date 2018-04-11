@@ -113,7 +113,7 @@ def run(test, params, env):
 
         output = utils_misc.wait_for(_get_output, login_timeout, step=5,
                                      text="Wait for getting USB disk name")
-        devname = re.findall("sd\w", output)
+        devname = re.findall(r"sd\w", output)
         if devname:
             return devname[0]
         return "sda"
@@ -162,7 +162,7 @@ def run(test, params, env):
         error_context.context("Check removable option in monitor",
                               logging.info)
         output = str(vm.monitor.info("qtree"))
-        regex_str = 'usb-storage.*?removable = (.*?)\s'
+        regex_str = r'usb-storage.*?removable = (.*?)\s'
         _verify_string(regex_str, output, [removable], re.S)
 
         error_context.context("Check removable option in guest", logging.info)
@@ -188,7 +188,7 @@ def run(test, params, env):
         error_context.context("Check min/opt io_size option in monitor",
                               logging.info)
         output = str(vm.monitor.info("qtree"))
-        regex_str = "usb-storage.*?min_io_size = (\d+).*?opt_io_size = (\d+)"
+        regex_str = r"usb-storage.*?min_io_size = (\d+).*?opt_io_size = (\d+)"
         _verify_string(regex_str, output, [min_io_size, opt_io_size], re.S)
 
         error_context.context("Check min/opt io_size option in guest",
@@ -204,7 +204,7 @@ def run(test, params, env):
             expected_min_size = min_io_size
         else:
             expected_min_size = "512"
-        _verify_string("(\d+)\n(\d+)", output,
+        _verify_string(r"(\d+)\n(\d+)", output,
                        [expected_min_size, opt_io_size])
         _check_and_umount_usb(session)
         _do_io_test_guest(session)
@@ -236,19 +236,19 @@ def run(test, params, env):
     if params.get("check_serial_option") == "yes":
         error_context.context("Check usb serial option", logging.info)
         serial = str(uuid.uuid4())
-        regex_str = 'usb-storage.*?serial = "(.*?)"\s'
+        regex_str = r'usb-storage.*?serial = "(.*?)"\s'
         _check_serial_option(serial, regex_str, serial)
 
         logging.info("Check this option with some illegal string")
         logging.info("Set usb serial to a empty string")
         # An empty string, ""
         serial = "EMPTY_STRING"
-        regex_str = 'usb-storage.*?serial = (.*?)\s'
+        regex_str = r'usb-storage.*?serial = (.*?)\s'
         _check_serial_option(serial, regex_str, '""')
 
         logging.info("Leave usb serial option blank")
         serial = "NO_EQUAL_STRING"
-        regex_str = 'usb-storage.*?serial = (.*?)\s'
+        regex_str = r'usb-storage.*?serial = (.*?)\s'
         _check_serial_option(serial, regex_str, '"on"')
 
     if params.get("check_removable_option") == "yes":

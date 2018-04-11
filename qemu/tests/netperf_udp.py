@@ -65,7 +65,7 @@ def run(test, params, env):
     host_password = params.get("hostpassword")
     client = params.get("shell_client")
     port = params.get("shell_port")
-    prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
+    prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
     linesep = params.get("shell_linesep", "\n").decode('string_escape')
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
@@ -156,8 +156,8 @@ def run(test, params, env):
             txt = "Run netperf client with protocol: '%s', packet size: '%s'"
             error_context.context(txt % (test_protocol, m_size), logging.info)
             output = netperf_client.start(netserver_ip, test_option)
-            re_str = "[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+"
-            re_str += "\s+[0-9\.]+"
+            re_str = r"[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+"
+            re_str += r"\s+[0-9\.]+"
             try:
                 line_tokens = re.findall(re_str, output)[0].split()
             except IndexError:

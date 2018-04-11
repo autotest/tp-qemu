@@ -11,7 +11,7 @@ from virttest import utils_test
 def get_macvtap_device_on_ifname(ifname):
     macvtaps = []
     ip_link_out = process.system_output("ip -d link show")
-    re_str = "(\S*)@%s" % ifname
+    re_str = r"(\S*)@%s" % ifname
     devices = re.findall(re_str, ip_link_out)
     for device in devices:
         out = process.system_output("ip -d link show %s" % device)

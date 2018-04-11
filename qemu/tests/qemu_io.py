@@ -131,7 +131,7 @@ def run(test, params, env):
                                     logging.debug, timeout=1800)
 
     err_string = {
-        "err_nums": "\d errors were found on the image.",
+        "err_nums": r"\d errors were found on the image.",
         "an_err": "An error occurred during the check",
         "unsupt_err": "This image format does not support checks",
         "mem_err": "Not enough memory",

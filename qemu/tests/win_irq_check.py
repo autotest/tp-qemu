@@ -31,7 +31,7 @@ def run(test, params, env):
                                                          % device_name)
         if status:
             test.fail("Can't get %s's irq info." % device_name)
-        irq_value = re.split('\s+', irq_dev_info)[1]
+        irq_value = re.split(r'\s+', irq_dev_info)[1]
         logging.info("irq number is %s" % irq_value)
         return int(irq_value)
 

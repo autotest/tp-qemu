@@ -183,7 +183,7 @@ def run(test, params, env):
         for machine_type in machine_types.splitlines():
             if not machine_type:
                 continue
-            type_pair = re.findall("([\w\.-]+)\s+([^(]+).*", machine_type)
+            type_pair = re.findall(r"([\w\.-]+)\s+([^(]+).*", machine_type)
             if len(type_pair) == 1 and len(type_pair[0]) == 2:
                 machine_type_map[type_pair[0][0]] = type_pair[0][1]
             else:
@@ -338,7 +338,7 @@ def run(test, params, env):
         fail_log += "info/query monitor command failed (network)"
         n_fail.append(fail_log)
         logging.error(fail_log)
-    found_mac_addresses = re.findall("macaddr=(\S+)", o)
+    found_mac_addresses = re.findall(r"macaddr=(\S+)", o)
     logging.debug("Found MAC adresses: %s", found_mac_addresses)
 
     num_nics = len(params.objects("nics"))

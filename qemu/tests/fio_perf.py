@@ -70,7 +70,7 @@ def get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, type, driv
     if driver_format != "ide":
         result = session.cmd_output(guest_ver_cmd, timeout)
         if type == "windows":
-            guest_ver = re.findall(".*?(\d{2}\.\d{2}\.\d{3}\.\d{4}).*?", result)
+            guest_ver = re.findall(r".*?(\d{2}\.\d{2}\.\d{3}\.\d{4}).*?", result)
             result_file.write("### guest-kernel-ver :Microsoft Windows [Version %s]\n" % guest_ver[0])
         else:
             result_file.write("### guest-kernel-ver :%s" % result)
@@ -197,7 +197,7 @@ def run(test, params, env):
     if os_type == "windows":
         for num in range(1, int(num_disk) + 1):
             disks = check_disk_status(session, cmd_timeout, num)
-            diskstatus = re.findall("Disk\s+\d+\s+(\w+).*?\s+\d+", disks[0])[0]
+            diskstatus = re.findall(r"Disk\s+\d+\s+(\w+).*?\s+\d+", disks[0])[0]
             if diskstatus == "Offline":
                 online_disk_cmd = params.get("online_disk_cmd")
                 online_disk_run = online_disk_cmd % num
@@ -250,12 +250,12 @@ def run(test, params, env):
                     o = process.system_output("egrep '(read|write)' %s" % fio_result_file)
                     results = re.findall(pattern, o)
                     o = process.system_output("egrep 'lat' %s" % fio_result_file)
-                    laten = re.findall("\s{5}lat\s\((\wsec)\).*?avg=[\s]?(\d+(?:[\.][\d]+)?).*?", o)
+                    laten = re.findall(r"\s{5}lat\s\((\wsec)\).*?avg=[\s]?(\d+(?:[\.][\d]+)?).*?", o)
                     bw = float(utils_misc.normalize_data_size(results[0][0]))
                     iops = int(results[0][1])
                     if os_type == "linux":
                         o = process.system_output("egrep 'util' %s" % fio_result_file)
-                        util = float(re.findall(".*?util=(\d+(?:[\.][\d]+))%", o)[0])
+                        util = float(re.findall(r".*?util=(\d+(?:[\.][\d]+))%", o)[0])
 
                     lat = float(laten[0][1]) / 1000 if laten[0][0] == "usec" else float(laten[0][1])
                     if re.findall("rw", io_pattern):

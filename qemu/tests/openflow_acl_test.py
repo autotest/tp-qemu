@@ -207,7 +207,7 @@ def run(test, params, env):
         quit_cmd = params.get("quit_cmd", "exit")
         if host == host_ip:
             # Try to login from guest to host.
-            prompt = "^\[.*\][\#\$]\s*$"
+            prompt = r"^\[.*\][\#\$]\s*$"
             linesep = "\n"
             username = params_login["host_username"]
             password = params_login["host_password"]
@@ -382,7 +382,7 @@ def run(test, params, env):
     access_service(access_sys, access_targets, False, host_ip, ref=True)
     error_context.context("Disable the access in ovs", logging.info)
     br_infos = utils_net.openflow_manager(br_name, "show").stdout
-    if_port = re.findall("(\d+)\(%s\)" % if_name, br_infos)
+    if_port = re.findall(r"(\d+)\(%s\)" % if_name, br_infos)
     if not if_port:
         test.cancel("Can not find %s in bridge %s" % (if_name, br_name))
     if_port = if_port[0]

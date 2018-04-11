@@ -102,7 +102,7 @@ def run(test, params, env):
         driver_install_cmd = params_driver.get("driver_install_cmd")
         if "hwidcmd" in driver_install_cmd:
             pattern_drive = params.get("pattern_drive",
-                                       "\s+\w:(.[^\s]+)\s+hwidcmd")
+                                       r"\s+\w:(.[^\s]+)\s+hwidcmd")
             driver_path = re.findall(pattern_drive, driver_install_cmd)[0]
             driver_path = "/".join(driver_path.split("\\\\")[1:])
             storage_path = utils_misc.get_path(
@@ -137,7 +137,7 @@ def run(test, params, env):
             storage_path = utils_misc.get_path(mount_point, driver_path)
             storage_path = os.path.dirname(storage_path)
             files = " ".join(os.listdir(storage_path))
-            file_name = re.findall("\s+(.*?\.inf)", files)
+            file_name = re.findall(r"\s+(.*?\.inf)", files)
             if file_name:
                 file_name = utils_misc.get_path(storage_path,
                                                 file_name[0])
@@ -173,7 +173,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     cdroms = params.get("cdroms")
-    cdrom_num = len(re.split("\s+", cdroms.strip()))
+    cdrom_num = len(re.split(r"\s+", cdroms.strip()))
     init_timeout = int(params.get("init_timeout", "60"))
     driver_install_timeout = int(params.get('driver_install_timeout', 720))
 
@@ -181,7 +181,7 @@ def run(test, params, env):
     volumes = check_cdrom(init_timeout)
     vol_info = []
     for volume in volumes:
-        vol_info += re.findall("Volume\s+\d+\s+(\w).*?(\d+)\s+\w+", volume)
+        vol_info += re.findall(r"Volume\s+\d+\s+(\w).*?(\d+)\s+\w+", volume)
     if len(volumes) > 1:
         if int(vol_info[0][1]) > int(vol_info[1][1]):
             vol_utils = vol_info[0][0]
@@ -199,7 +199,7 @@ def run(test, params, env):
             kill_cmd = 'tasklist | find /I "rundll32"'
             status, tasks = session.cmd_status_output(kill_cmd)
             if status == 0:
-                for i in re.findall("rundll32.*?(\d+)", tasks):
+                for i in re.findall(r"rundll32.*?(\d+)", tasks):
                     session.cmd('taskkill /PID %s' % i)
         if install_cmds:
             cmd = re.sub("WIN_UTILS", vol_utils, install_cmds[driver])

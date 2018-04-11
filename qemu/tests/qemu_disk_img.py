@@ -95,7 +95,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         if status != 0:
             logging.error("Execute '%s' with failures('%s') " % (cmd, output))
             return None
-        md5 = re.findall("\w{32}", output)[0]
+        md5 = re.findall(r"\w{32}", output)[0]
         return md5
 
     @error_context.context_aware

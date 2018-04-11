@@ -150,7 +150,7 @@ class LiveBackup(block_copy.BlockCopy):
         image_info = qemu_image.info()
         if not image_info:
             self.test.error("Get image info failed.")
-        image_size = re.findall("disk size: (\d\.?\d*?.*)", image_info)[0]
+        image_size = re.findall(r"disk size: (\d\.?\d*?.*)", image_info)[0]
         image_size = int(float(utils_misc.normalize_data_size(image_size, "B")))
         logging.info("Image size of %s is %s" % (image, image_size))
         return image_size

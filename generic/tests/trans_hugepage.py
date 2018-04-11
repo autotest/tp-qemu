@@ -36,7 +36,7 @@ def run(test, params, env):
             info = session.cmd("cat /proc/meminfo")
         for h in re.split("\n+", info):
             if h.startswith("%s" % params):
-                output = re.split('\s+', h)[1]
+                output = re.split(r'\s+', h)[1]
         return output
 
     dd_timeout = float(params.get("dd_timeout", 900))

@@ -121,8 +121,8 @@ def run(test, params, env):
     def check_dma():
         dmesg_pattern = params.get("dmesg_pattern",
                                    "ata.*?configured for PIO")
-        dma_pattern = params.get("dma_pattern", "DMA.*?\(\?\)$")
-        pio_pattern = params.get("pio_pattern", "PIO.*?pio\d+\s+$")
+        dma_pattern = params.get("dma_pattern", r"DMA.*?\(\?\)$")
+        pio_pattern = params.get("pio_pattern", r"PIO.*?pio\d+\s+$")
         hdparm_cmd = params.get("hdparm_cmd",
                                 "i=`ls /dev/[shv]da` ; hdparm -I $i")
         session_dma = vm.wait_for_login()

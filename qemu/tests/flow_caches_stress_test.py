@@ -83,7 +83,7 @@ def run(test, params, env):
     passwd = params.get("hostpasswd", "123456")
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
-    prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
+    prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
     linesep = params.get("shell_linesep", "\n").decode('string_escape')
     status_test_command = params.get("status_test_command", "echo $?")
 

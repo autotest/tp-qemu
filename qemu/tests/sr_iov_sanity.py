@@ -16,9 +16,9 @@ from virttest import utils_misc
 def check_network_interface_ip(interface, ipv6="no"):
     check_cmd = "ifconfig %s" % interface
     output = process.system_output(check_cmd)
-    ip_re = "inet (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+    ip_re = r"inet (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
     if ipv6 == "yes":
-        ip_re = "inet6 (\S+)"
+        ip_re = r"inet6 (\S+)"
     try:
         _ip = re.findall(ip_re, output)[0]
     except IndexError:

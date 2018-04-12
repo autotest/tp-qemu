@@ -212,7 +212,7 @@ def run(test, params, env):
             # Assign static IP to the hotplugged interface
             if params.get("assign_static_ip", "no") == "yes":
                 cmd = "service networking restart"
-                static_ip = ip_gen.next()
+                static_ip = next(ip_gen)
                 net_mask = params.get("static_net_mask", "255.255.255.0")
                 broadcast = params.get("static_broadcast", "10.10.10.255")
                 pci_id = utils_misc.get_pci_id_using_filter(vf_filter,

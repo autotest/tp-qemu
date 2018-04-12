@@ -22,7 +22,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     get_nmi_cmd = params["get_nmi_cmd"]
-    kernel_version = session.get_command_output("uname -r").strip()
+    kernel_version = session.cmd_output("uname -r").strip()
     nmi_watchdog_type = int(params["nmi_watchdog_type"])
     update_kernel_cmd = ("grubby --update-kernel=/boot/vmlinuz-%s "
                          "--args='nmi_watchdog=%d'" %

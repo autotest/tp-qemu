@@ -53,7 +53,7 @@ def run(test, params, env):
                                                               360)))
 
     callback = {"host_cmd": _system_output,
-                "guest_cmd": session.get_command_output,
+                "guest_cmd": session.cmd_output,
                 "qmp_cmd": vm.get_monitors_by_type("qmp")[0].send_args_cmd}
 
     def send_cmd(cmd, cmd_type):

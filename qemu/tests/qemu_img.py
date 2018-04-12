@@ -626,7 +626,7 @@ def run(test, params, env):
         # Run dd in linux guest
         if params.get("os_type") == 'linux':
             cmd = "dd if=/dev/zero of=/mnt/test bs=1000 count=1000"
-            status = session.get_command_status(cmd, timeout=dd_timeout)
+            status = session.cmd_status(cmd, timeout=dd_timeout)
             if status != 0:
                 test.error("dd failed")
 

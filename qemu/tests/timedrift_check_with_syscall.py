@@ -28,7 +28,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     test_cmd = params.get("test_cmd", "./clktest")
-    if session.get_command_status("test -x %s" % test_cmd):
+    if session.cmd_status("test -x %s" % test_cmd):
         src_dir = os.path.join(data_dir.get_deps_dir(), 'timedrift')
         src_file = os.path.join(src_dir, "clktest.c")
         dst_file = os.path.join(tmp_dir, "clktest.c")

@@ -50,7 +50,7 @@ def run(test, params, env):
         # if it is a linux OS,load the floppy module
         if not sleep:
             logging.info("Loading the floppy module...")
-            status = session.get_command_status("modprobe floppy")
+            status = session.cmd_status("modprobe floppy")
             logging.info("Sleep 5 seconds after loading the floppy module")
             time.sleep(5)
             if status:
@@ -64,7 +64,7 @@ def run(test, params, env):
         for floppy_index in range(floppy_count):
             error_context.context("Format the %s floppy disk" % floppy_index,
                                   logging.info)
-            s, o = session.get_command_status_output(
+            s, o = session.cmd_status_output(
                 format_cmd_list[floppy_index],
                 timeout=float(params.get("format_floppy_timeout", 60)))
             if s == 0:

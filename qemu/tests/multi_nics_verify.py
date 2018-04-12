@@ -58,7 +58,7 @@ def run(test, params, env):
         eth_config_path = ifcfg_path % ifname
         eth_config = "DEVICE=%s\\nBOOTPROTO=dhcp\\nONBOOT=yes" % ifname
         cmd = "echo -e '%s' > %s" % (eth_config, eth_config_path)
-        s, o = session.get_command_status_output(cmd)
+        s, o = session.cmd_status_output(cmd)
         if s != 0:
             err_msg = "Failed to create ether config file: %s\nReason is: %s"
             test.error(err_msg % (eth_config_path, o))

@@ -42,7 +42,7 @@ def run(test, params, env):
         if machine == "host":
             s, o = commands.getstatusoutput(cmd)
         else:
-            s, o = session.get_command_status_output(cmd)
+            s, o = session.cmd_status_output(cmd)
         if s != 0:
             test.error("Fail to get tsc of host, ncpu: %d" % i)
         o = re.findall(r"(\d+)", o)[0]
@@ -73,12 +73,12 @@ def run(test, params, env):
         host_freq += delta / ncpu
     logging.info("Average frequency of host's cpus: %s" % host_freq)
 
-    if session.get_command_status("test -x %s" % tsc_cmd_guest):
+    if session.cmd_status("test -x %s" % tsc_cmd_guest):
         vm.copy_files_to(tsc_freq_path, '/tmp/get_tsc.c')
-        if session.get_command_status("gcc /tmp/get_tsc.c") != 0:
+        if session.cmd_status("gcc /tmp/get_tsc.c") != 0:
             test.error("Fail to compile program on guest")
 
-    s, guest_ncpu = session.get_command_status_output(cpu_chk_cmd)
+    s, guest_ncpu = session.cmd_status_output(cpu_chk_cmd)
     if s != 0:
         test.error("Fail to get cpu number of guest")
 

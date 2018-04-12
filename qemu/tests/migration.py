@@ -259,7 +259,7 @@ def run(test, params, env):
                 if bg_kill_cmd is not None:
                     try:
                         session2.cmd(bg_kill_cmd)
-                    except aexpect.ShellCmdError, details:
+                    except aexpect.ShellCmdError as details:
                         # If the migration_bg_kill_command rc differs from
                         # ignore_status, it means the migration_bg_command is
                         # no longer alive. Let's ignore the failure here if

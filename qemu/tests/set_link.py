@@ -42,7 +42,7 @@ def run(test, params, env):
         mq_set_cmd = "ethtool -L %s combined %s" % (ifname, q_number)
         try:
             session.cmd_output_safe(mq_set_cmd)
-        except aexpect.ShellError, err:
+        except aexpect.ShellError as err:
             err_msg = "Change queues number failed"
             err_msg += "Error info: '%s'" % err
             test.fail(err_msg)

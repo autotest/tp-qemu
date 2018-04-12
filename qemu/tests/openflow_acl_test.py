@@ -79,14 +79,14 @@ def run(test, params, env):
                         out = remote_login(access_cmd, target_ip,
                                            remote_src, params, host_ip)
                         stat = 0
-                    except remote.LoginError, err:
+                    except remote.LoginError as err:
                         stat = 1
                         out_err = "Failed to login %s " % atgt
                         out_err += "from %s, err: %s" % (asys, err.output)
                     try:
                         out += remote_login(access_cmd, ssh_src_ip,
                                             target_vm, params, host_ip)
-                    except remote.LoginError, err:
+                    except remote.LoginError as err:
                         stat += 1
                         out_err += "Failed to login %s " % asys
                         out_err += "from %s, err: %s" % (atgt, err.output)
@@ -246,7 +246,7 @@ def run(test, params, env):
         try:
             out = remote.handle_prompts(session, username, password,
                                         prompt, timeout, debug=True)
-        except Exception, err:
+        except Exception as err:
             session.close()
             raise err
         try:

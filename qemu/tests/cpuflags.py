@@ -666,7 +666,7 @@ def run(test, params, env):
                 try:
                     out = process.run(cmd, timeout=5, ignore_status=True).stderr
                     test.fail("Guest not boot with unsupported flags.")
-                except process.CmdError, e:
+                except process.CmdError as e:
                     out = e.result.stderr
             finally:
                 uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)

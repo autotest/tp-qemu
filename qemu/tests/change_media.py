@@ -43,7 +43,7 @@ def run(test, params, env):
     def change_block(cmd=None):
         try:
             output = monitor.send_args_cmd(cmd)
-        except Exception, err:
+        except Exception as err:
             output = str(err)
         return output
 

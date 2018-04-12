@@ -48,7 +48,7 @@ class SparseRange(list):
                     self.append(int(vals[0]))
                 else:               # range
                     self.extend(xrange(int(vals[0]), int(vals[1]) + 1))
-        except ValueError, details:
+        except ValueError as details:
             raise ValueError("Can't parse SparseRange from %s: %s"
                              % (value, details))
 
@@ -102,7 +102,7 @@ def run(test, params, env):
             for pid in process.get_children_pids(vm.get_shell_pid()):
                 try:
                     cgroup.set_cgroup(int(pid), pwd)
-                except Exception, detail:   # Process might not already exist
+                except Exception as detail:   # Process might not already exist
                     if os.path.exists("/proc/%s/" % pid):
                         raise detail
                     else:   # Thread doesn't exist, try it again
@@ -160,7 +160,7 @@ def run(test, params, env):
         try:
             rdev = os.stat(dev).st_rdev
             ret = (os.major(rdev), os.minor(rdev))
-        except Exception, details:
+        except Exception as details:
             raise exceptions.TestFail("get_maj_min(%s) failed: %s" %
                                       (dev, details))
         return ret
@@ -1306,7 +1306,7 @@ def run(test, params, env):
 
             try:
                 vm.verify_alive()
-            except Exception, exc_details:
+            except Exception as exc_details:
                 err += "VM died (no_switches=%s): %s\n" % (i, exc_details)
 
             if err:
@@ -1815,7 +1815,7 @@ def run(test, params, env):
         if memsw:
             try:
                 cgroup.get_property("memory.memsw.limit_in_bytes", 0)
-            except exceptions.TestError, details:
+            except exceptions.TestError as details:
                 logging.error("Can't get memory.memsw.limit_in_bytes info."
                               "Do you have support for memsw? (try passing"
                               "swapaccount=1 parameter to kernel):%s", details)
@@ -1827,7 +1827,7 @@ def run(test, params, env):
         logging.info("Expected VM reload")
         try:
             vm.create()
-        except Exception, failure_detail:
+        except Exception as failure_detail:
             raise exceptions.TestFail("init: Failed to recreate the VM: %s" %
                                       failure_detail)
         assign_vm_into_cgroup(vm, cgroup, 0)
@@ -1869,7 +1869,7 @@ def run(test, params, env):
                     swap = int(re.search(r'VmSwap:[\t ]*(\d+) kB', status)
                                .group(1))
                     max_rssswap = max(rss + swap, max_rssswap)
-                except Exception, details:
+                except Exception as details:
                     if memsw and not vm.is_alive():
                         # VM got SIGTERM as expected, finish the test
                         break
@@ -1881,14 +1881,14 @@ def run(test, params, env):
                 except ExpectTimeoutError:
                     # 0.1s passed, lets begin the next round
                     pass
-                except ShellTimeoutError, details:
+                except ShellTimeoutError as details:
                     if memsw and not vm.is_alive():
                         # VM was killed, finish the test
                         break
                     else:
                         err = details
                         break
-                except ExpectProcessTerminatedError, detail:
+                except ExpectProcessTerminatedError as detail:
                     if memsw:
                         err = ("dd command died (VM should die instead): %s\n"
                                "Output:%s\n" % (detail, out))

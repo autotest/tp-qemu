@@ -38,7 +38,7 @@ def run(test, params, env):
             retry -= 1
             try:
                 return process.system(cmd, shell=True)
-            except process.CmdError, detail:
+            except process.CmdError as detail:
                 msg = "Fail to execute command"
                 logging.error("%s: %s." % (msg, detail))
         raise exceptions.TestError("%s after %s times retry: %s" %

@@ -76,7 +76,7 @@ def run(test, params, env):
         cmd = params["low_status_cmd"] % disk
         try:
             session.cmd(cmd, timeout)
-        except aexpect.ShellCmdError, err:
+        except aexpect.ShellCmdError as err:
             failed_count = len(re.findall("failed:", err.output))
             ignore_count = len(re.findall(ignore_string, err.output))
             if failed_count > ignore_count:
@@ -94,7 +94,7 @@ def run(test, params, env):
         cmd = params["high_status_cmd"] % disk
         try:
             session.cmd(cmd, timeout)
-        except aexpect.ShellCmdError, err:
+        except aexpect.ShellCmdError as err:
             failed_count = len(re.findall("failed:", err.output))
             ignore_count = len(re.findall(ignore_string, err.output))
             if failed_count > ignore_count:

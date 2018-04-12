@@ -344,7 +344,7 @@ def run(test, params, env):
         try:
             guest_worker.cmd("virt.recv('%s', 10, 1024, False)"
                              % port.name, 10)
-        except qemu_virtio_port.VirtioPortException, details:
+        except qemu_virtio_port.VirtioPortException as details:
             if '[Errno 11] Resource temporarily unavailable' in details:
                 # Give the VM second chance
                 time.sleep(0.01)
@@ -384,7 +384,7 @@ def run(test, params, env):
             if ret:
                 try:
                     tmp += recv_port.sock.recv(1024)
-                except IOError, failure_detail:
+                except IOError as failure_detail:
                     logging.warn("Got err while recv: %s", failure_detail)
             if len(tmp) >= len(data):
                 break
@@ -870,16 +870,16 @@ def run(test, params, env):
                         if 'WARNING:' in data:
                             logging.warning('There are warnings in dmesg:\n%s',
                                             data)
-                    except Exception, inst:
+                    except Exception as inst:
                         logging.warn("Can't verify dmesg: %s", inst)
                     try:
                         vm.monitor.info('qtree')
-                    except Exception, inst:
+                    except Exception as inst:
                         logging.warn("Failed to get info from qtree: %s", inst)
                     EXIT_EVENT.set()
                     vm.verify_kernel_crash()
                     test.fail('No data transferred after interruption.')
-        except Exception, inst:
+        except Exception as inst:
             err = "main thread, "
             logging.error('interrupted_loopback failed with exception: %s',
                           inst)
@@ -1094,7 +1094,7 @@ def run(test, params, env):
                 logging.info("Guest -> Host [MB/s] (min/med/max) = %.3f/%.3f/"
                              "%.3f", stats[0], stats[len(stats) / 2],
                              stats[-1])
-            except Exception, inst:
+            except Exception as inst:
                 logging.error("test_perf: Failed with %s, starting virtio_test.cleanup",
                               inst)
                 loads.stop()
@@ -1103,7 +1103,7 @@ def run(test, params, env):
                     EXIT_EVENT.set()
                     thread.join()
                     raise inst
-                except Exception, inst:
+                except Exception as inst:
                     logging.error("test_perf: Critical failure, killing VM %s",
                                   inst)
                     EXIT_EVENT.set()
@@ -1629,7 +1629,7 @@ def run(test, params, env):
             logging.info("Bytes sent to client: %d", sent2)
             logging.info("\n" + loads.get_cpu_status_string()[:-1])
             loads.stop()
-        except Exception, inst:
+        except Exception as inst:
             logging.error('test_rw_notconnect_guest failed: %s', inst)
             if loads:
                 loads.stop()
@@ -1732,7 +1732,7 @@ def run(test, params, env):
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
                       timeout=720)
-        except Exception, details:
+        except Exception as details:
             for process in process:
                 process.terminate()
             for port in vm.virtio_ports:
@@ -1777,7 +1777,7 @@ def run(test, params, env):
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
                       timeout=720)
-        except Exception, details:
+        except Exception as details:
             test.fail("Fail to reboot VM:\n%s" % details)
 
         # TODO: Hotplug ports and verify that they are usable
@@ -1819,7 +1819,7 @@ def run(test, params, env):
         vm = env.get_vm(params["main_vm"])
         try:
             vm.create(params=params)
-        except Exception, details:
+        except Exception as details:
             if exp_error_message in str(details):
                 logging.info("Expected qemu failure. Test PASSED.")
                 return

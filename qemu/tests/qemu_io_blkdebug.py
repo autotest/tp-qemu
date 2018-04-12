@@ -99,7 +99,7 @@ def run(test, params, env):
             try:
                 image_io.snapshot_del(blkdebug_cfg=blkdebug_cfg)
                 output = ""
-            except process.CmdError, err:
+            except process.CmdError as err:
                 output = err.result.stderr
 
         # Remove the snapshot and base image after a round of test

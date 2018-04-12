@@ -94,7 +94,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
                 self.restore_memory(
                     vm, self.env.get_vm(
                         self.params['main_vm']))
-            except Exception, details:
+            except Exception as details:
                 logging.warn("Error happen when restore vm: %s" % details)
             self.close_sessions()
 

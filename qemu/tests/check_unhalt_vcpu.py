@@ -27,7 +27,7 @@ def run(test, params, env):
 
     try:
         cpu_usage = float(cpu_usage)
-    except ValueError, detail:
+    except ValueError as detail:
         test.error("Could not get correct cpu usage value with cmd"
                    " '%s', detail: '%s'" % (cpu_get_usage_cmd, detail))
 

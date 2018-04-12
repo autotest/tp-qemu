@@ -99,7 +99,7 @@ class BlockCopy(object):
         while count < 10:
             try:
                 return self.vm.get_job_status(self.device)
-            except qemu_monitor.MonitorLockError, e:
+            except qemu_monitor.MonitorLockError as e:
                 logging.warn(e)
             time.sleep(random.uniform(1, 5))
             count += 1

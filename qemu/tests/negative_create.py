@@ -27,7 +27,7 @@ def run(test, params, env):
     try:
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params["main_vm"])
-    except (virt_vm.VMError, utils_net.NetError), err:
+    except (virt_vm.VMError, utils_net.NetError) as err:
         logging.debug("VM Failed to create. This was expected. Reason:\n%s",
                       str(err))
     else:

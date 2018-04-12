@@ -59,7 +59,7 @@ def run(test, params, env):
             simple_test.action_before_start()
             try:
                 simple_test.start()
-            except Exception, detail:
+            except Exception as detail:
                 if params.get("negative_test") == "yes":
                     keywords = params.get("error_key_words", "Could not open")
                     if simple_test.get_status():

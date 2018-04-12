@@ -17,7 +17,7 @@ def run(test, params, env):
         timeout=float(params.get("login_timeout", 240)))
     try:
         output = vm.monitor.info("balloon")
-    except qemu_monitor.QMPCmdError, e:
+    except qemu_monitor.QMPCmdError as e:
         output = str(e)
     if not ("has not been activated" in output or
             "No balloon device has been activated" in output):

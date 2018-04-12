@@ -75,7 +75,7 @@ def run(test, params, env):
     error_context.context("Run pipetest script in guest.", logging.info)
     try:
         o = session.cmd(pipetest_cmd, timeout=180)
-    except aexpect.ShellTimeoutError, e:
+    except aexpect.ShellTimeoutError as e:
         o = e
     re_str = params.get("usec_re_str", r"[0-9]*\.[0-9]+")
     val1 = get_re_average(o, re_str)
@@ -98,7 +98,7 @@ def run(test, params, env):
     error_context.context("Run pipetest script in guest again.", logging.info)
     try:
         o = session.cmd(pipetest_cmd, timeout=180)
-    except aexpect.ShellTimeoutError, e:
+    except aexpect.ShellTimeoutError as e:
         o = e
     val2 = get_re_average(o, re_str)
     error_context.context("Compare the output of pipetest script.",

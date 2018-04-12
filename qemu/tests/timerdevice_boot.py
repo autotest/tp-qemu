@@ -88,7 +88,7 @@ def run(test, params, env):
                              " '%s' only" % clksrc)
                 kernel_cfg = re.findall(kernel_cfg_pattern,
                                         kernel_cfg_original)[0]
-            except IndexError, detail:
+            except IndexError as detail:
                 test.error("Couldn't find the kernel config, regex"
                            " pattern is '%s', detail: '%s'" %
                            (kernel_cfg_pattern, detail))

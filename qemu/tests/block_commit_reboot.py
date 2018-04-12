@@ -44,5 +44,5 @@ def run(test, params, env):
     finally:
         try:
             reboot_test.clean()
-        except Exception, e:
+        except Exception as e:
             logging.warn(e)

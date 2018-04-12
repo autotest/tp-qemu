@@ -249,7 +249,7 @@ def run(test, params, env):
                           "output: \n%s" % ifconfig)
             try:
                 session.cmd(params["pci_test_cmd"] % (pci_num + 1))
-            except aexpect.ShellError, e:
+            except aexpect.ShellError as e:
                 test.fail("Check device failed after PCI "
                           "hotplug. Output: %r" % e.output)
 

@@ -65,7 +65,7 @@ def run(test, params, env):
                          " kvm-clock only")
             kernel_cfg = re.findall(kernel_cfg_pattern,
                                     kernel_cfg_original)[0]
-        except IndexError, detail:
+        except IndexError as detail:
             test.error("Couldn't find the kernel config, regex"
                        " pattern is '%s', detail: '%s'" %
                        (kernel_cfg_pattern, detail))
@@ -91,7 +91,7 @@ def run(test, params, env):
     try:
         available_clksrc_list = session.cmd(cmd).splitlines()[-1].split()
         available_clksrc_list = [_.strip() for _ in available_clksrc_list]
-    except Exception, detail:
+    except Exception as detail:
         test.fail("Couldn't get guest available clock source."
                   " Detail: '%s'" % detail)
 
@@ -115,7 +115,7 @@ def run(test, params, env):
                              " '%s' only" % clksrc)
                 kernel_cfg = re.findall(kernel_cfg_pattern,
                                         kernel_cfg_original)[0]
-            except IndexError, detail:
+            except IndexError as detail:
                 test.error("Couldn't find the kernel config, regex"
                            " pattern is '%s', detail: '%s'" %
                            (kernel_cfg_pattern, detail))
@@ -159,7 +159,7 @@ def run(test, params, env):
             try:
                 kernel_cfg = re.findall(kernel_cfg_pattern,
                                         kernel_cfg_original)[0]
-            except IndexError, detail:
+            except IndexError as detail:
                 test.error("Couldn't find the kernel config, regex"
                            " pattern is '%s', detail: '%s'" %
                            (kernel_cfg_pattern, detail))
@@ -169,6 +169,6 @@ def run(test, params, env):
                     r"clocksource=[a-z \-_]+", " ", kernel_cfg)
                 disk_obj.replace_image_file_content(grub_file, kernel_cfg,
                                                     kernel_cfg_new)
-        except Exception, detail:
+        except Exception as detail:
             logging.error("Failed to restore guest kernel cli."
                           " Detail: '%s'" % detail)

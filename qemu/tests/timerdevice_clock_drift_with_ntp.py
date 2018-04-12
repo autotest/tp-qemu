@@ -95,7 +95,7 @@ def run(test, params, env):
     test_run_timeout = float(params["test_run_timeout"])
     try:
         utils_misc.wait_for(_drift_file_exist, test_run_timeout, step=5)
-    except aexpect.ShellCmdError, detail:
+    except aexpect.ShellCmdError as detail:
         test.error("Failed to wait for the creation of"
                    " /var/lib/ntp/drift file. Detail: '%s'" % detail)
 

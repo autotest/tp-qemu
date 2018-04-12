@@ -67,7 +67,7 @@ class QemuIOConfig(object):
         except Exception:
             try:
                 self.cleanup()
-            except Exception, e:
+            except Exception as e:
                 logging.warn(e)
             raise
 
@@ -94,7 +94,7 @@ class QemuIOConfig(object):
             if l in l_result.stdout:
                 try:
                     process.run("losetup -d %s" % l)
-                except process.CmdError, e:
+                except process.CmdError as e:
                     logging.error("Failed to liberate loopback %s, "
                                   "error msg: '%s'", l, e)
 
@@ -150,5 +150,5 @@ def run(test, params, env):
         try:
             if qemu_io_config:
                 qemu_io_config.cleanup()
-        except Exception, e:
+        except Exception as e:
             logging.warn(e)

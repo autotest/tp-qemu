@@ -363,7 +363,7 @@ def run(test, params, env):
 
                 try:
                     session.cmd(format_floppy_cmd)
-                except aexpect.ShellCmdError, e:
+                except aexpect.ShellCmdError as e:
                     if e.status == 1:
                         logging.error("First access to floppy failed, "
                                       " Trying a second time as a workaround")

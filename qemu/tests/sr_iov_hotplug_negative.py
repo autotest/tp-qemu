@@ -85,7 +85,7 @@ def run(test, params, env):
             case_fail = False
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
             case_fail = True
-        except Exception, err:
+        except Exception as err:
             if neg_msg:
                 msg = "Check negative hotplug error message"
                 error_context.context(msg, logging.info)
@@ -113,5 +113,5 @@ def run(test, params, env):
         try:
             process.system(modprobe_cmd, timeout=120, ignore_status=True,
                            shell=True)
-        except process.CmdError, err:
+        except process.CmdError as err:
             logging.error(err)

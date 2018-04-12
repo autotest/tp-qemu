@@ -35,7 +35,7 @@ def run(test, params, env):
             # pylint: disable=E0611
             from qemu.tests import rh_kernel_update
             rh_kernel_update.run_rh_kernel_update(test, params, env)
-        except Exception, detail:
+        except Exception as detail:
             test.error("Failed to install a new kernel in guest: %s" % detail)
 
     vm = env.get_vm(params["main_vm"])

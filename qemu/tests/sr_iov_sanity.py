@@ -126,7 +126,7 @@ def run(test, params, env):
             try:
                 utils_net.create_network_script(ethname, mac, "dhcp",
                                                 "255.255.255.0", on_boot="yes")
-            except Exception, info:
+            except Exception as info:
                 test.error("Network script creation failed - %s" % info)
 
         msg = "Check whether VFs could get ip in host."

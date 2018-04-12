@@ -40,7 +40,7 @@ def run(test, params, env):
         try:
             _ = session.read_until_last_line_matches(["PASS:", "FAIL:"],
                                                      timeout)
-        except aexpect.ExpectProcessTerminatedError, exc:
+        except aexpect.ExpectProcessTerminatedError as exc:
             test.fail("Command guest script on vm '%s' failed: %s" %
                       (vm.name, str(exc)))
 
@@ -63,7 +63,7 @@ def run(test, params, env):
             (match, data) = session.read_until_last_line_matches(
                 ["PASS:", "FAIL:"],
                 timeout)
-        except aexpect.ExpectProcessTerminatedError, exc:
+        except aexpect.ExpectProcessTerminatedError as exc:
             e_str = ("Failed to execute command '%s' on guest script, "
                      "vm '%s': %s" % (command, vm.name, str(exc)))
             test.fail(e_str)

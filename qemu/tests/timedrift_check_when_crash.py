@@ -63,7 +63,7 @@ def run(test, params, env):
     # we generated using sysrq. Ignore one "BUG:" line
     try:
         session = vm.reboot(method="system_reset")
-    except VMDeadKernelCrashError, details:
+    except VMDeadKernelCrashError as details:
         details = str(details)
         if (re.findall(r"Trigger a crash\s.*BUG:", details, re.M) and
                 details.count("BUG:") != 1):
@@ -75,7 +75,7 @@ def run(test, params, env):
         while time.time() < end_time:
             try:
                 session = vm.wait_for_login(timeout=timeout)
-            except VMDeadKernelCrashError, details:
+            except VMDeadKernelCrashError as details:
                 details = str(details)
                 if (re.findall(r"Trigger a crash\s.*BUG:", details,
                                re.M) and details.count("BUG:") != 1):

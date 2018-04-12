@@ -23,7 +23,7 @@ def run(test, params, env):
     def data_mon(session, cmd, timeout):
         try:
             session.cmd(cmd, timeout)
-        except ShellCmdError, e:
+        except ShellCmdError as e:
             if re.findall(catch_date % (addresses[1], addresses[0]), str(e)):
                 test.fail("God! Capture the transfet data:'%s'" % str(e))
             logging.info("Guest3 catch data is '%s'" % str(e))

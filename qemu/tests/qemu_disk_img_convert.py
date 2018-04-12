@@ -50,7 +50,7 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
             image2 = storage.get_image_filename(t_params, self.data_dir)
             try:
                 cmd_result = self.compare_images(image1, image2, is_strict)
-            except (exceptions.TestFail, exceptions.TestError), detail:
+            except (exceptions.TestFail, exceptions.TestError) as detail:
                 if not is_strict:
                     raise
             if is_strict and cmd_result:

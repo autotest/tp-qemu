@@ -75,7 +75,7 @@ def run(test, params, env):
         session.sendline("python /tmp/ksm_overcommit_guest.py")
         try:
             session.read_until_last_line_matches(["PASS:", "FAIL:"], timeout)
-        except aexpect.ExpectProcessTerminatedError, details:
+        except aexpect.ExpectProcessTerminatedError as details:
             e_msg = ("Command ksm_overcommit_guest.py on vm '%s' failed: %s" %
                      (vm.name, str(details)))
             test.fail(e_msg)
@@ -99,7 +99,7 @@ def run(test, params, env):
             (match, data) = session.read_until_last_line_matches(
                 ["PASS:", "FAIL:"],
                 timeout)
-        except aexpect.ExpectProcessTerminatedError, details:
+        except aexpect.ExpectProcessTerminatedError as details:
             e_msg = ("Failed to execute command '%s' on "
                      "ksm_overcommit_guest.py, vm '%s': %s" %
                      (command, vm.name, str(details)))
@@ -424,7 +424,7 @@ def run(test, params, env):
         try:
             process.run("modprobe ksm")
             process.run("ksmctl start 5000 100")
-        except process.CmdError, details:
+        except process.CmdError as details:
             test.fail("Failed to load KSM: %s" % details)
 
     # host_reserve: mem reserve kept for the host system to run

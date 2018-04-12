@@ -128,7 +128,7 @@ def run(test, params, env):
             funcatexit.register(env, params.get("type"), utils_misc.umount,
                                 "none", tmpfs_path, "tmpfs")
             process.system(numa_dd_cmd, timeout=dd_timeout, shell=True)
-        except Exception, error_msg:
+        except Exception as error_msg:
             if "No space" in str(error_msg):
                 pass
             else:

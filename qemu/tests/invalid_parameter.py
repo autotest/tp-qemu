@@ -22,7 +22,7 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.destroy()
-    except Exception, emsg:
+    except Exception as emsg:
         error_context.context("Check guest exit status.")
         if "(core dumped)" in str(emsg):
             test.fail("Guest core dumped with invalid parameters.")

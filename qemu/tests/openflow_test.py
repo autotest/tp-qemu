@@ -141,7 +141,7 @@ def run(test, params, env):
                 return False, out[1]
             else:
                 return True, out[1]
-        except Exception, msg:
+        except Exception as msg:
             return False, msg
 
     def file_transfer(sessions, addresses, timeout):

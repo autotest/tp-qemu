@@ -3,6 +3,7 @@ import os
 import time
 import re
 import sys
+import six
 
 import aexpect
 
@@ -82,7 +83,7 @@ def run(test, params, env):
                         if exc_info is None:
                             raise
                     if exc_info:
-                        raise exc_info[0], exc_info[1], exc_info[2]
+                        six.reraise(exc_info[0], exc_info[1], exc_info[2])
             return ret
 
     def control_service(session, service, init_service, action, timeout=60):

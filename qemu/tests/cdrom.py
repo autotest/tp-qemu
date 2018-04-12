@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 import random
+import six
 
 import aexpect
 
@@ -618,7 +619,7 @@ def run(test, params, env):
                         if exc_info is None:
                             raise
                     if exc_info:
-                        raise exc_info[0], exc_info[1], exc_info[2]
+                        six.reraise(exc_info[0], exc_info[1], exc_info[2])
             return ret
 
     class test_singlehost(MiniSubtest):

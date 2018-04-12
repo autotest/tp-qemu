@@ -69,7 +69,7 @@ class SparseRange(list):
         out = []
         items = iter(self[start:stop:step])
         try:
-            sect_start = items.next()
+            sect_start = next(items)
             sect_stop = sect_start
         except StopIteration:
             return ""

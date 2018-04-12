@@ -27,7 +27,7 @@ def run(test, params, env):
     shutdown_command = params.get("shutdown_command")
     check_from_monitor = params.get("check_from_monitor", "no") == "yes"
 
-    for i in xrange(shutdown_count):
+    for i in range(shutdown_count):
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)

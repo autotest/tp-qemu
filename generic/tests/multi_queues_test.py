@@ -67,7 +67,7 @@ def run(test, params, env):
         cmd = r"cat /proc/interrupts | sed -n '/^\s\+%s:/p'" % irq_number
         online_cpu_number = int(session.cmd_output_safe(online_cpu_number_cmd))
         irq_statics = session.cmd_output(cmd)
-        irq_statics_list = map(int, irq_statics.split()[1:online_cpu_number])
+        irq_statics_list = list(map(int, irq_statics.split()[1:online_cpu_number]))
         if irq_statics_list:
             if cpu_id and cpu_id < len(irq_statics_list):
                 return irq_statics_list[cpu_id]
@@ -177,8 +177,7 @@ def run(test, params, env):
                     irq_cur = get_cpu_irq_statistics(session, irq_number)
                     logging.info("After 10s, cpu irq info: %s" % irq_cur)
 
-                    irq_change_list = map(lambda x: x[0] - x[1],
-                                          zip(irq_cur, irq_ori))
+                    irq_change_list = [x[0] - x[1] for x in zip(irq_cur, irq_ori)]
                     cpu_affinity = irq_change_list.index(max(irq_change_list))
                     if cpu_affinity != int(taskset_cpu):
                         err_msg = "Error, taskset on cpu %s, "

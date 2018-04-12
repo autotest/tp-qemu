@@ -32,7 +32,7 @@ def run(test, params, env):
     else:
         for vm in vms:
             logging.debug("vm %s", vm)
-            if params.has_key(vm):
+            if vm in params:
                 kill_app(vm, app_name, params, env)
 
 

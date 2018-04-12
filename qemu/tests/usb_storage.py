@@ -94,7 +94,7 @@ def run(test, params, env):
         if vm.is_alive():
             vm.destroy()
 
-        for option, value in options.iteritems():
+        for option, value in options.items():
             params[option] = value
         error_context.context("Restarting VM")
         vm.create(params=params)

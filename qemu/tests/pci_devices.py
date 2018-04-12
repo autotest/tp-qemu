@@ -107,11 +107,11 @@ def verify_qdev_vs_qtree(qdev_info, qtree_info):
     qtree_devices, qtree_devices_noid = qtree_info[:2]
 
     errors = ""
-    for dev_id, device in qtree_devices.iteritems():
+    for dev_id, device in qtree_devices.items():
         if dev_id not in qdev_devices:
             errors += "Device %s is in qtree but not in qdev.\n" % dev_id
             continue
-        for key, value in device.iteritems():
+        for key, value in device.items():
             err = ""
             if qdev_devices[dev_id][key] != value:
                 err += "  %s != %s\n" % (qdev_devices[dev_id][key], value)

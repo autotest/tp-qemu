@@ -109,7 +109,7 @@ def run(test, params, env):
                         if key in exception_list:
                             continue
                         if '0x' in val:
-                            val = long(val, 16)
+                            val = int(val, 16)
                             val_str = str(bin(val))
                             com_str = ""
                             for p in range(3, len(val_str)):

@@ -1,9 +1,9 @@
 import logging
 import time
-import commands
 import os
 import re
 
+from avocado.utils import process
 from virttest import utils_test
 from virttest.staging import utils_memory
 
@@ -56,7 +56,7 @@ def run(test, params, env):
     # Get dd speed in host
     start_time = time.time()
     cmd = "dd if=/dev/urandom of=/tmp/speed_test bs=4K count=256"
-    s, o = commands.getstatusoutput(cmd)
+    process.run(cmd, verbose=False, shell=True)
     end_time = time.time()
     dd_timeout = vmsm * (end_time - start_time) * 2
     nr_hugepages = []
@@ -100,11 +100,11 @@ def run(test, params, env):
         cmd = "for i in `seq %s`; do dd if=/dev/urandom of=/space/$i" % count
         cmd += " bs=4K count=1 & done"
         logging.info("Start to make fragment in host")
-        s, o = commands.getstatusoutput(cmd)
+        s = process.system(cmd, verbose=False, shell=True)
         if s != 0:
             test.error("Can not dd in host")
     finally:
-        s, o = commands.getstatusoutput("umount /space")
+        process.run("umount /space", verbose=False, shell=True)
 
     bg = utils_test.BackgroundTest(nr_hugepage_check, (s_time, w_time))
     bg.start()

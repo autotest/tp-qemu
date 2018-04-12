@@ -1,5 +1,4 @@
 import logging
-import commands
 import random
 
 from avocado.utils import process
@@ -177,7 +176,9 @@ def run(test, params, env):
         logging.info("Waiting for the MTU to be OK")
         wait_mtu_ok = 10
         if not utils_misc.wait_for(is_mtu_ok, wait_mtu_ok, 0, 1):
-            logging.debug(commands.getoutput("ifconfig -a"))
+            logging.debug(process.system_output("ifconfig -a",
+                          verbose=False, ignore_status=True,
+                          shell=True))
             test.error("MTU is not as expected even after %s "
                        "seconds" % wait_mtu_ok)
 
@@ -198,7 +199,8 @@ def run(test, params, env):
             session.close()
         grep_cmd = "grep '%s.*%s' /proc/net/arp" % (guest_ip, ifname)
         if process.system(grep_cmd, shell=True) == '0':
-            process.run("arp -d %s -i %s" % (guest_ip, ifname))
+            process.run("arp -d %s -i %s" % (guest_ip, ifname),
+                        shell=True)
             logging.info("Removing the temporary ARP entry successfully")
 
         logging.info("Change back Bridge NICs MTU to %s" % mtu_default)

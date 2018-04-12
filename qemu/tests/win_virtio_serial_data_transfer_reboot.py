@@ -48,7 +48,7 @@ def run(test, params, env):
     def transfer_data(test, session, receive_cmd, send_cmd, data_file, n_time):
         txt = "Transfer data betwwen guest and host for %s times" % n_time
         error_context.context(txt, logging.info)
-        for num in xrange(n_time):
+        for num in range(n_time):
             logging.info("Data transfer repeat %s/%s." % (num + 1, n_time))
             try:
                 args = (test, session, receive_cmd, data_file)

@@ -154,7 +154,7 @@ def run(test, params, env):
 
     rerange = []
     has_name = False
-    for i in xrange(len(stg_params)):
+    for i in range(len(stg_params)):
         if not stg_params[i].strip():
             continue
         (cmd, parm) = stg_params[i].split(':', 1)
@@ -194,7 +194,7 @@ def run(test, params, env):
         param_table_header.append(_)
 
     stg_image_name = params.get('stg_image_name', 'images/%s')
-    for i in xrange(stg_image_num):
+    for i in range(stg_image_num):
         name = "stg%d" % i
         params['images'] += " %s" % name
         param_table.append([])
@@ -274,7 +274,7 @@ def run(test, params, env):
             # Random select one file system from file_system
             index = random.randint(0, (len(file_system) - 1))
             fs_type = file_system[index].strip()
-            for i in xrange(stg_image_num):
+            for i in range(stg_image_num):
                 utils_misc.format_windows_disk(session, disk_indexs[i], None,
                                                None, fs_type)
 

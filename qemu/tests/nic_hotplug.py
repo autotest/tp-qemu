@@ -125,7 +125,7 @@ def run(test, params, env):
     nic_hotplug_count = int(params.get("nic_hotplug_count", 1))
     nic_hotplugged = []
     try:
-        for nic_index in xrange(1, nic_hotplug_count + 1):
+        for nic_index in range(1, nic_hotplug_count + 1):
             # need to reconnect serial port after
             # guest reboot for windows guest
             s_session = vm.wait_for_serial_login(timeout=login_timeout)

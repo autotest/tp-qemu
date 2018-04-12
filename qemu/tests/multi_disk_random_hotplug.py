@@ -231,7 +231,7 @@ def run(test, params, env):
 
     def hotplug_parallel(new_devices, monitors):
         threads = []
-        for i in xrange(len(new_devices)):
+        for i in range(len(new_devices)):
             name = "Th%s: " % i
             logging.debug("%sworks with %s devices", name,
                           [_.str_short() for _ in new_devices[i]])
@@ -302,7 +302,7 @@ def run(test, params, env):
             _out = unplug_outs.pop(0)
             # unplug effect can be delayed as it waits for OS respone before
             # it removes the device form qtree
-            for _ in xrange(50):
+            for _ in range(50):
                 out = device.verify_unplug(_out, monitor)
                 if out is True:
                     break
@@ -330,7 +330,7 @@ def run(test, params, env):
 
     def unplug_parallel(new_devices, qdev, monitors):
         threads = []
-        for i in xrange(len(new_devices)):
+        for i in range(len(new_devices)):
             name = "Th%s: " % i
             logging.debug("%sworks with %s devices", name,
                           [_.str_short() for _ in new_devices[i]])
@@ -369,7 +369,7 @@ def run(test, params, env):
         i += 1
 
     param_matrix = {}
-    for i in xrange(len(stg_params)):
+    for i in range(len(stg_params)):
         if not stg_params[i].strip():
             continue
         (cmd, parm) = stg_params[i].split(':', 1)
@@ -393,20 +393,20 @@ def run(test, params, env):
         funcatexit.register(env, params.get('type'), stop_stresser, vm,
                             params.get('stress_kill_cmd'))
         stress_session = vm.wait_for_login(timeout=10)
-        for _ in xrange(int(params.get('no_stress_cmds', 1))):
+        for _ in range(int(params.get('no_stress_cmds', 1))):
             stress_session.sendline(stress_cmd)
 
     rp_times = int(params.get("repeat_times", 1))
     queues = params.get("multi_disk_type") == "parallel"
     if queues:  # parallel
-        queues = xrange(len(vm.monitors))
+        queues = range(len(vm.monitors))
         hotplug = hotplug_parallel
         unplug = unplug_parallel
         monitor = vm.monitors
         global LOCK
         LOCK = threading.Lock()
     else:   # serial
-        queues = xrange(1)
+        queues = range(1)
         hotplug = hotplug_serial
         unplug = unplug_serial
         monitor = vm.monitor
@@ -415,7 +415,7 @@ def run(test, params, env):
     info_qtree = vm.monitor.info('qtree', False)
     info_block = vm.monitor.info_block(False)
     verify_qtree(params, info_qtree, info_block, qdev)
-    for iteration in xrange(rp_times):
+    for iteration in range(rp_times):
         error_context.context("Hotplugging/unplugging devices, iteration %d"
                               % iteration, logging.info)
         sub_type = params.get("sub_type_before_plug")
@@ -469,7 +469,7 @@ def run(test, params, env):
         vm.verify_alive()
         verify_qtree(params, info_qtree, info_block, qdev)
         # we verified the unplugs, set the state to 0
-        for _ in xrange(qdev.get_state()):
+        for _ in range(qdev.get_state()):
             qdev.set_clean()
 
         sub_type = params.get("sub_type_after_unplug")

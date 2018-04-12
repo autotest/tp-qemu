@@ -53,7 +53,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
-    for repeat in xrange(int(params.get("repeat_times", 1))):
+    for repeat in range(int(params.get("repeat_times", 1))):
         repeat += 1
         session = vm.wait_for_login(timeout=timeout)
         module = params.get("modprobe_module")

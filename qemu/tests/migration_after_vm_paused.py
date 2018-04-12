@@ -131,7 +131,7 @@ class MigrationAfterVmPaused(object):
 
     def ping_pong_migration(self):
 
-        for i in xrange(int(self.ping_pong)):
+        for i in range(int(self.ping_pong)):
             if i % 2 == 0:
                 logging.info("Round %s ping..." % (i / 2))
             else:

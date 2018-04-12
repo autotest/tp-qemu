@@ -54,7 +54,7 @@ def run(test, params, env):
         session = vm.wait_for_serial_login()
         try:
             queues = params.get("queues", 1)
-            change_list = xrange(1, int(queues) + 1)
+            change_list = range(1, int(queues) + 1)
             env["run_change_queues"] = True
             change_queues_number(session, guest_ifname, queues)
             while env["run_change_queues"]:
@@ -131,7 +131,7 @@ def run(test, params, env):
         try:
             if change_queues:
                 queues = params.get("queues", 1)
-                change_list = xrange(1, int(queues) + 1)
+                change_list = range(1, int(queues) + 1)
                 for q_number in change_list:
                     change_queues_number(session, guest_ifname, q_number)
                     operstate_check(session, expect_status, guest_ifname)

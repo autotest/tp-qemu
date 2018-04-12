@@ -57,7 +57,7 @@ def run(test, params, env):
     vm.verify_alive()
 
     error_context.context("Hotplug block device", logging.info)
-    for num in xrange(blk_num):
+    for num in range(blk_num):
         device = qdevices.QDevice(pci_type)
         drive = qdevices.QRHDrive("block%d" % num)
         drive.set_param("file", find_image(img_list[num + 1]))

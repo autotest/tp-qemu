@@ -81,7 +81,7 @@ def run(test, params, env):
     try:
         txt = "Create and up %s macvtap devices in setting mode." % macvtap_num
         error_context.context(txt, logging.info)
-        for num in xrange(macvtap_num):
+        for num in range(macvtap_num):
             mac = utils_net.generate_mac_address_simple()
             ifname = "%s_%s" % (macvtap_mode, num)
             tapfd = utils_net.create_and_open_macvtap(ifname, macvtap_mode,

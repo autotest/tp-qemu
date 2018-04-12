@@ -208,7 +208,7 @@ def run(test, params, env):
 
             # Migrate the VM
             ping_pong = params.get("ping_pong", 1)
-            for i in xrange(int(ping_pong)):
+            for i in range(int(ping_pong)):
                 if i % 2 == 0:
                     logging.info("Round %s ping..." % str(i / 2))
                 else:

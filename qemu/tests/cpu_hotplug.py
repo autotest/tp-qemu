@@ -107,7 +107,7 @@ def run(test, params, env):
     # several times
     irq = 15
     irq_mask = "f0"
-    for i in xrange(onoff_iterations):
+    for i in range(onoff_iterations):
         session.cmd("echo %s > /proc/irq/%s/smp_affinity" % (irq_mask, irq))
         for online_file in online_files:
             session.cmd("echo 0 > %s" % online_file)

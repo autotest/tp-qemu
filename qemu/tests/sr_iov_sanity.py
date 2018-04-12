@@ -94,7 +94,7 @@ def run(test, params, env):
         msg += " Please set device_type to 'vf' or 'pf'."
         test.error(msg)
 
-    for i in xrange(device_num):
+    for i in range(device_num):
         device = {}
         device["type"] = device_type
         if device_type == "vf":
@@ -141,7 +141,7 @@ def run(test, params, env):
                 ips[ethname] = _ip
                 logging.info("Interface '%s' get IP '%s'", ethname, _ip)
 
-    for i in xrange(repeat_time):
+    for i in range(repeat_time):
         msg = "Bind/unbind device from host. Repeat %s/%s" % (i + 1,
                                                               repeat_time)
         error_context.context(msg, logging.info)

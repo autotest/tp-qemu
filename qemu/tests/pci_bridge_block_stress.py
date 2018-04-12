@@ -24,7 +24,7 @@ def run(test, params, env):
     image_parent_bus = params.get("image_parent_bus")
     image_num = int(params.get("image_num", 0))
     if image_num != 0:
-        for index in xrange(image_num):
+        for index in range(image_num):
             image = "stg%s" % index
             params["images"] = ' '.join([params["images"], image])
             params["disk_pci_bus_%s" % image] = image_parent_bus

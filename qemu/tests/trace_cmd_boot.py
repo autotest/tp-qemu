@@ -57,7 +57,7 @@ def run(test, params, env):
         error_context.context("Run stress tool on host.", logging.info)
         stress_job = utils_misc.BgJob(stress_cmd)
         # Reboot the VM
-        for num in xrange(int(params.get("reboot_count", 1))):
+        for num in range(int(params.get("reboot_count", 1))):
             error_context.context("Reboot guest '%s'. Repeat %d" %
                                   (vm.name, num + 1), logging.info)
             trace_job = utils_misc.BgJob(trace_cmd)

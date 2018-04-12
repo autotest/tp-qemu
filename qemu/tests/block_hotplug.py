@@ -86,7 +86,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    for iteration in xrange(repeat_times):
+    for iteration in range(repeat_times):
         device_list = []
         controller_list = []
         controller_device_dict = {}
@@ -99,7 +99,7 @@ def run(test, params, env):
                                   logging.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        for num in xrange(blk_num):
+        for num in range(blk_num):
             device = qdevices.QDevice(pci_type)
             if params.get("need_plug") == "yes":
                 disks_before_plug = find_disk(vm, get_disk_cmd)

@@ -202,7 +202,7 @@ def run(test, params, env):
         if not has_name:
             params["image_name_%s" % name] = stg_image_name % name
             param_table[-1].append(params.get("image_name_%s" % name))
-        for parm in param_matrix.iteritems():
+        for parm in param_matrix.items():
             params['%s_%s' % (parm[0], name)] = str(parm[1][i % len(parm[1])])
             param_table[-1].append(params.get('%s_%s' % (parm[0], name)))
 

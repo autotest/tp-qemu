@@ -65,7 +65,7 @@ def convert_params(params, args):
     params['images'] += " %s" % name
     params['image_name_%s' % name] = args.pop('filename')
     params['image_raw_device_%s' % name] = 'yes'
-    for key, value in args.iteritems():
+    for key, value in args.items():
         params["%s_%s" % (convert.get(key, key), name)] = value
     return params
 
@@ -163,7 +163,7 @@ def run(test, params, env):
             else:
                 args['fmt'] = fmt
             # Other params
-            for key, value in param_matrix.iteritems():
+            for key, value in param_matrix.items():
                 args[key] = random.choice(value)
 
             try:

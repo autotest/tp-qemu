@@ -76,7 +76,7 @@ def run(test, params, env):
         err_msg = "Failed to set offload status for device '%s'" % ethname
         try:
             session.cmd_output_safe(cmd)
-        except aexpect.ShellCmdError, e:
+        except aexpect.ShellCmdError as e:
             logging.error("%s, detail: %s", err_msg, e)
             return False
 
@@ -133,14 +133,14 @@ def run(test, params, env):
             copy_files_func = vm.copy_files_from
             try:
                 sess.cmd_output(dd_cmd, timeout=360)
-            except aexpect.ShellCmdError, e:
+            except aexpect.ShellCmdError as e:
                 return failure
         else:
             tcpdump_cmd += " and dst %s" % guest_ip
             copy_files_func = vm.copy_files_to
             try:
                 process.system(dd_cmd, shell=True)
-            except process.CmdError, e:
+            except process.CmdError as e:
                 return failure
 
         # only capture the new tcp port after offload setup
@@ -162,7 +162,7 @@ def run(test, params, env):
         error_context.context(txt, logging.info)
         try:
             copy_files_func(filename, filename)
-        except remote.SCPError, e:
+        except remote.SCPError as e:
             return (False, "File transfer failed (%s)" % e)
 
         session.cmd("killall tcpdump")
@@ -283,12 +283,12 @@ def run(test, params, env):
         try:
             if session:
                 session.close()
-        except Exception, detail:
+        except Exception as detail:
             logging.error("Fail to close session: '%s'", detail)
 
         try:
             session = vm.wait_for_serial_login(timeout=login_timeout)
             ethtool_restore_params(session, pretest_status)
-        except Exception, detail:
+        except Exception as detail:
             logging.warn("Could not restore parameter of"
                          " eth card: '%s'", detail)

@@ -42,7 +42,7 @@ class NTPTest(object):
                                                         self.server_password,
                                                         r"[\$#]\s*$")
             self.session = self.vm.wait_for_login()
-        except remote.LoginTimeoutError, detail:
+        except remote.LoginTimeoutError as detail:
             self.test.cancel(str(detail))
 
     def close_session(self):
@@ -114,7 +114,7 @@ class NTPTest(object):
         cmd = ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
         try:
             process.run(cmd, ignore_status=False, shell=True)
-        except process.CmdError, detail:
+        except process.CmdError as detail:
             self.test.fail("set Zone on host failed.%s" % detail)
         cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
         process.run(cmd_ln, ignore_status=True, shell=True)
@@ -153,7 +153,7 @@ class NTPTest(object):
             cmd = "echo 'server %s' >> /etc/ntp.conf" % self.server_ip
             try:
                 process.run(cmd, ignore_status=False, shell=True)
-            except process.CmdError, detail:
+            except process.CmdError as detail:
                 self.test.fail("config /etc/ntp.conf on host failed!!")
 
         # Start ntpd service
@@ -269,7 +269,7 @@ def run(test, params, env):
         # Server configuration
         try:
             ntp_test.server_config()
-        except (aexpect.ShellError, remote.LoginTimeoutError), detail:
+        except (aexpect.ShellError, remote.LoginTimeoutError) as detail:
             test.fail("server config failed. %s" % detail)
         logging.info("waiting for ntp server : %s s" % ntp_test.ntpdate_sleep)
         # Host and Guest will use server's ntpd service to set time.
@@ -279,25 +279,25 @@ def run(test, params, env):
         # Host configuration
         try:
             ntp_test.host_config()
-        except (aexpect.ShellError, remote.LoginTimeoutError), detail:
+        except (aexpect.ShellError, remote.LoginTimeoutError) as detail:
             test.fail("host config failed.%s" % detail)
 
         # Guest configuration
         try:
             ntp_test.guest_config()
-        except (aexpect.ShellError, remote.LoginTimeoutError), detail:
+        except (aexpect.ShellError, remote.LoginTimeoutError) as detail:
             test.fail("guest config failed.%s" % detail)
 
         try:
             # Wait 20min for ntpq test
             ntp_test.ntpq_test()
-        except (aexpect.ShellError, remote.LoginTimeoutError), detail:
+        except (aexpect.ShellError, remote.LoginTimeoutError) as detail:
             test.fail("ntpq test failed.%s" % detail)
 
         try:
             # Wait 24h for  test
             ntp_test.long_time_test()
-        except (aexpect.ShellError, remote.LoginTimeoutError), detail:
+        except (aexpect.ShellError, remote.LoginTimeoutError) as detail:
             test.fail("long time test failed.%s" % detail)
     finally:
         ntp_test.close_session()

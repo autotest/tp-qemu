@@ -181,7 +181,7 @@ def run(test, params, env):
             s = 0
             try:
                 s, o = session.cmd_status_output(cmd, timeout=setup_timeout)
-            except Exception, err:
+            except Exception as err:
                 failed_flag += 1
                 utils_misc.log_line(
                     error_log, "Unexpected exception: %s" % err)

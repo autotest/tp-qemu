@@ -52,7 +52,7 @@ def run(test, params, env):
                                           " #%d" % (i + 1), logging.debug)
                     se.cmd(params.get("alive_test_cmd"))
                 num += 1
-        except Exception, emsg:
+        except Exception as emsg:
             test.fail("Expect to boot up %s guests."
                       "Failed to boot up #%d guest with "
                       "error: %s." % (params["max_vms"], num, emsg))

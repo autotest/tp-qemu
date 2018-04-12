@@ -176,7 +176,7 @@ def run(test, params, env):
         # (test_timeout + 300 is used here because the automation program is
         # supposed to terminate cleanly on its own when test_timeout expires)
         done = True
-    except aexpect.ExpectError, e:
+    except aexpect.ExpectError as e:
         o = e.output
         done = False
     server_session.close()

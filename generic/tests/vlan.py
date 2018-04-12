@@ -253,7 +253,7 @@ def run(test, params, env):
         try:
             add_vlan(test, sessions[0], bound, ifname[0], cmd_type)
             test.fail("Maximal ID allow to vlan is %s" % maximal)
-        except aexpect.ShellCmdError, detail:
+        except aexpect.ShellCmdError as detail:
             pattern = params["msg_pattern"]
             if not re.search(pattern, detail.output, re.M | re.I):
                 raise

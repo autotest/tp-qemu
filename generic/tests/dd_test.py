@@ -104,7 +104,7 @@ def run(test, params, env):
         err = ("dd command timed-out (cmd='%s', timeout=%d)"
                % (dd_cmd, dd_timeout))
         test.fail(err)
-    except aexpect.ShellCmdError, details:
+    except aexpect.ShellCmdError as details:
         stat = details.status
         out = details.output
 

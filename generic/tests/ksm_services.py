@@ -44,7 +44,7 @@ def test_setting_params(test, ksmctler, params):
             ksmctler.set_ksm_feature(set_values)
             # Restart ksm service to check
             ksmctler.restart_ksm()
-        except process.CmdError, detail:
+        except process.CmdError as detail:
             test.fail("Set parameters failed:%s" % str(detail))
 
         fail_flag = 0
@@ -75,7 +75,7 @@ def test_ksmtuned_service(test, ksmctler, params):
             fd = open(ksmtuned_conf, 'r')
             contents = fd.readlines()
             fd.close()
-        except IOError, e:
+        except IOError as e:
             test.fail("Open ksmtuned config file failed:%s" % e)
 
         new_contents = []
@@ -90,7 +90,7 @@ def test_ksmtuned_service(test, ksmctler, params):
             fd = open(ksmtuned_conf, 'w')
             fd.writelines(new_contents)
             fd.close()
-        except IOError, e:
+        except IOError as e:
             test.fail("Write options to config file failed:%s" % e)
 
     log_path = params.get("ksmtuned_log_path", "/var/log/test_ksmtuned")

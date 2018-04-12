@@ -82,7 +82,7 @@ def run(test, params, env):
         if autotest_commit:
             install_cmd += " -c %s" % autotest_commit
         session_server.cmd(install_cmd, timeout=autotest_install_timeout)
-    except aexpect.ShellCmdError, e:
+    except aexpect.ShellCmdError as e:
         for line in e.output.splitlines():
             logging.error(line)
         step_failures.append(step1)
@@ -98,7 +98,7 @@ def run(test, params, env):
         top_commit = top_commit.strip()
         logging.info("Autotest top commit for repo %s, branch %s: %s",
                      autotest_repo, autotest_branch, top_commit)
-    except aexpect.ShellCmdError, e:
+    except aexpect.ShellCmdError as e:
         for line in e.output.splitlines():
             logging.error(line)
 
@@ -113,7 +113,7 @@ def run(test, params, env):
             session_server.cmd("cd /usr/local/autotest")
             session_server.cmd("utils/unittest_suite.py %s" % unittests_args,
                                timeout=unittests_run_timeout)
-        except aexpect.ShellCmdError, e:
+        except aexpect.ShellCmdError as e:
             for line in e.output.splitlines():
                 logging.error(line)
             step_failures.append(step2)
@@ -123,7 +123,7 @@ def run(test, params, env):
             session_server.cmd("cd /usr/local/autotest")
             session_server.cmd("utils/check_patch.py --full --yes",
                                timeout=pylint_run_timeout)
-        except aexpect.ShellCmdError, e:
+        except aexpect.ShellCmdError as e:
             for line in e.output.splitlines():
                 logging.error(line)
             step_failures.append(step3)
@@ -134,7 +134,7 @@ def run(test, params, env):
             session_server.cmd("./autotest-local run sleeptest",
                                timeout=pylint_run_timeout)
             session_server.cmd("rm -rf results/default")
-        except aexpect.ShellCmdError, e:
+        except aexpect.ShellCmdError as e:
             for line in e.output.splitlines():
                 logging.error(line)
             step_failures.append(step4)
@@ -150,7 +150,7 @@ def run(test, params, env):
                                    (client_ip, password),
                                    timeout=pylint_run_timeout)
                 session_server.cmd("rm -rf results-*")
-            except aexpect.ShellCmdError, e:
+            except aexpect.ShellCmdError as e:
                 for line in e.output.splitlines():
                     logging.error(line)
                 step_failures.append(step5)
@@ -189,7 +189,7 @@ def run(test, params, env):
                     raise ValueError("No label %s in the output of %s" %
                                      (label_name, create_label_cmd))
 
-            except (aexpect.ShellCmdError, ValueError), e:
+            except (aexpect.ShellCmdError, ValueError) as e:
                 if isinstance(e, aexpect.ShellCmdError):
                     for line in e.output.splitlines():
                         logging.error(line)
@@ -254,7 +254,7 @@ def run(test, params, env):
                     guest_path="/usr/local/autotest/results/*",
                     host_path=test.resultsdir)
 
-            except (aexpect.ShellCmdError, ValueError), e:
+            except (aexpect.ShellCmdError, ValueError) as e:
                 if isinstance(e, aexpect.ShellCmdError):
                     for line in e.output.splitlines():
                         logging.error(line)

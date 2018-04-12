@@ -93,7 +93,7 @@ def run(test, params, env):
             feature_file = open(feature_path, 'w')
             feature_file.write(action)
             feature_file.close()
-        except IOError, e:
+        except IOError as e:
             test.fail("Error writing %s to %s: %s" % (action, feature_path, e))
         time.sleep(1)
 

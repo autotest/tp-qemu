@@ -29,7 +29,7 @@ def run(test, params, env):
         vm = env.get_vm(vm_name)
         vm.destroy()
         test.error("Qemu start up normally, didn't quit as expect")
-    except utils_net.NetError, exp:
+    except utils_net.NetError as exp:
         message = str(exp)
         # clean up tap device when qemu coredump to ensure,
         # to ensure next test has clean network envrioment

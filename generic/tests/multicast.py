@@ -29,7 +29,7 @@ def run(test, params, env):
     def run_guest(cmd):
         try:
             session.cmd(cmd)
-        except aexpect.ShellError, e:
+        except aexpect.ShellError as e:
             logging.warn(e)
 
     def run_host_guest(cmd):

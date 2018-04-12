@@ -69,11 +69,11 @@ def run_autotest_control_background(test, params, env,
         # Launch autotest
         run(test, params, env)
         os.remove(flag_fname)
-    except error.TestFail, message_fail:
+    except error.TestFail as message_fail:
         logging.info("[Autotest Background FAIL] %s" % message_fail)
         os.remove(flag_fname)
         os._exit(1)
-    except error.TestError, message_error:
+    except error.TestError as message_error:
         logging.info("[Autotest Background ERROR] %s" % message_error)
         os.remove(flag_fname)
         os._exit(2)

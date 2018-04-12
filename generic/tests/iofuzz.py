@@ -53,7 +53,7 @@ def run(test, params, env):
                     (oct(data), port))
         try:
             session.cmd(outb_cmd)
-        except aexpect.ShellError, err:
+        except aexpect.ShellError as err:
             logging.debug(err)
 
     def inb(session, port):
@@ -67,7 +67,7 @@ def run(test, params, env):
         inb_cmd = "dd if=/dev/port seek=%d of=/dev/null bs=1 count=1" % port
         try:
             session.cmd(inb_cmd)
-        except aexpect.ShellError, err:
+        except aexpect.ShellError as err:
             logging.debug(err)
 
     def fuzz(test, session, inst_list):
@@ -94,9 +94,9 @@ def run(test, params, env):
                 logging.debug("Session is not responsive")
                 try:
                     vm.verify_alive()
-                except qemu_vm.QemuSegFaultError, err:
+                except qemu_vm.QemuSegFaultError as err:
                     test.fail("Qemu crash, error info: %s" % err)
-                except virt_vm.VMDeadKernelCrashError, err:
+                except virt_vm.VMDeadKernelCrashError as err:
                     test.fail("Guest kernel crash, info: %s" % err)
                 else:
                     logging.warn("Guest is not alive during test")

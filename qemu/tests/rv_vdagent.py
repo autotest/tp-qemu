@@ -5,6 +5,8 @@ and restarting correctly.
 Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
+import logging
+
 from virttest import utils_spice
 
 
@@ -63,7 +65,7 @@ def run(test, params, env):
         if "stopped" in status:
             pass
         else:
-            print "Status: " + status
+            logging.error("Status: " + status)
             test.fail("Vdagent status is not stopped after a stop attempt.")
     # restart test when vdagent service is running
     elif vdagent_test == "restart_start":

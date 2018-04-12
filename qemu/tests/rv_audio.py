@@ -81,8 +81,8 @@ def run(test, params, env):
         timeout=int(params.get("login_timeout", 360)))
 
     if(guest_session.cmd_status("ls %s" % params.get("audio_tgt"))):
-        print params.get("audio_src")
-        print params.get("audio_tgt")
+        logging.info(params.get("audio_src"))
+        logging.info(params.get("audio_tgt"))
         guest_vm.copy_files_to(
             params.get("audio_src"),
             params.get("audio_tgt"))

@@ -65,7 +65,7 @@ def run(test, params, env):
                 test.fail(msg)
 
     pipetest_cmd = params.get("pipetest_cmd")
-    if session.get_command_status("test -x %s" % pipetest_cmd):
+    if session.cmd_status("test -x %s" % pipetest_cmd):
         file_link = os.path.join(test.virtdir, "scripts/pipetest.c")
         vm.copy_files_to(file_link, "/tmp/pipetest.c")
         build_pipetest_cmd = params.get("build_pipetest_cmd")

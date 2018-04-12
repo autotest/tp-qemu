@@ -206,7 +206,7 @@ def run(test, params, env):
     else:
         test.error("Incorrect configuration, no QMP monitor found.")
     callback = {"host_cmd": lambda cmd: process.system_output(cmd, shell=True),
-                "guest_cmd": session.get_command_output,
+                "guest_cmd": session.cmd_output,
                 "monitor_cmd": hmp_port.send_args_cmd,
                 "qmp_cmd": qmp_port.send_args_cmd}
 

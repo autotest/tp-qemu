@@ -54,7 +54,7 @@ def run(test, params, env):
                    "guest_test background")
 
     def is_yonit_benchmark_launched():
-        if session.get_command_status(
+        if session.cmd_status(
                 'tasklist | find /I "compress_benchmark_loop"') != 0:
             logging.debug("yonit bitmap benchmark was not found")
             return False

@@ -158,7 +158,7 @@ def run(test, params, env):
                 umount_cmd = "umount %s" % g_mount_point
                 process.system(umount_cmd, timeout=60)
                 os.rmdir(g_mount_point)
-            except Exception, err:
+            except Exception as err:
                 msg = "Fail to clean up %s" % g_mount_point
                 msg += "Error message %s" % err
                 logging.warn(msg)
@@ -182,14 +182,14 @@ def run(test, params, env):
             try:
                 logging.debug("Remove the file with os.remove().")
                 os.remove("%s" % path)
-            except OSError, err:
+            except OSError as err:
                 logging.warn("Fail to delete %s" % path)
             if "gluster" in path:
                 try:
                     umount_cmd = "umount %s" % g_mount_point
                     process.system(umount_cmd, timeout=60)
                     os.rmdir(g_mount_point)
-                except Exception, err:
+                except Exception as err:
                     msg = "Fail to clean up %s" % g_mount_point
                     msg += "Error message %s" % err
                     logging.warn(msg)
@@ -544,7 +544,7 @@ def run(test, params, env):
         session.cmd(params["lock_cdrom_cmd"] % guest_cdrom_device)
         try:
             session.cmd(params["close_cdrom_cmd"] % guest_cdrom_device)
-        except aexpect.ShellCmdError, e:
+        except aexpect.ShellCmdError as e:
             eject_failed = True
             eject_failed_msg += ", eject command failed: %s" % str(e)
 
@@ -590,7 +590,7 @@ def run(test, params, env):
             try:
                 session.cmd(umount_cmd)
                 session.cmd(mount_cmd)
-            except aexpect.ShellError, detail:
+            except aexpect.ShellError as detail:
                 logging.error("Mount/Unmount fail, detail: '%s'", detail)
                 logging.debug(session.cmd(show_mount_cmd))
                 raise

@@ -91,7 +91,7 @@ def run(test, params, env):
         def install_matching_debuginfo(session):
             try:
                 guest_kernel = session.cmd("uname -r").rstrip()
-            except ShellCmdError, details:
+            except ShellCmdError as details:
                 test.error("guest uname command failed: %s" % details)
             return session.cmd("yum -y install --enablerepo='*debuginfo' "
                                "kernel-debuginfo-%s" % guest_kernel,
@@ -101,7 +101,7 @@ def run(test, params, env):
             output = install_matching_debuginfo(session)
             logging.debug("%s", output)
             new_sess = None
-        except ShellCmdError, details:
+        except ShellCmdError as details:
             if (vm is None):
                 raise
             logging.info("failed to install matching debuginfo, "

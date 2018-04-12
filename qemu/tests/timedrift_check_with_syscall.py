@@ -44,7 +44,7 @@ def run(test, params, env):
     logging.info("set check timeout to %s seconds", check_timeout)
     try:
         session.cmd_output(test_cmd, timeout=check_timeout)
-    except aexpect.ShellTimeoutError, msg:
+    except aexpect.ShellTimeoutError as msg:
         if 'Interval is' in msg.output:
             test.fail(msg.output)
         pass

@@ -91,7 +91,7 @@ def run(test, params, env):
         if session is not None and del_dump_cmd:
             try:
                 session.sendline(del_dump_cmd)
-            except Exception, e:
+            except Exception as e:
                 # Ignore cleanup exception to avoid it overriding
                 # the actual fault.
                 logging.warn("Failed to delete dump files: '%s'", e)

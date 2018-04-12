@@ -96,8 +96,8 @@ def run(test, params, env):
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(("redhat.com", 80))
                 host_ip = s.getsockname()[0]
-            except socket.error, (value, e):
-                test.error("Could not determine host IP: %d %s" % (value, e))
+            except socket.error as e:
+                test.error("Could not determine host IP: %s" % e)
 
         # Now, starting the guest
         vm.verify_alive()

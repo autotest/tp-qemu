@@ -36,7 +36,7 @@ def run(test, params, env):
         o = ""
         try:
             o = vm.monitor.human_monitor_cmd("info %s " % info_cmd)
-        except qemu_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError as e:
             fail_log = str(e) + "\n"
             fail_log += "info/query monitor command failed (%s)" % info_cmd
             f_fail.append(fail_log)
@@ -62,7 +62,7 @@ def run(test, params, env):
             o = ""
             try:
                 o = vm.monitor.human_monitor_cmd("info %s" % info_cmd)
-            except qemu_monitor.MonitorError, e:
+            except qemu_monitor.MonitorError as e:
                 fail_log = str(e) + "\n"
                 fail_log += "info/query monitor command failed (%s)" % info_cmd
                 f_fail.append(fail_log)
@@ -333,7 +333,7 @@ def run(test, params, env):
     o = ""
     try:
         o = vm.monitor.human_monitor_cmd("info network")
-    except qemu_monitor.MonitorError, e:
+    except qemu_monitor.MonitorError as e:
         fail_log = str(e) + "\n"
         fail_log += "info/query monitor command failed (network)"
         n_fail.append(fail_log)

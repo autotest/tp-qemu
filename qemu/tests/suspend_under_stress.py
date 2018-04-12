@@ -55,7 +55,7 @@ def run(test, params, env):
             try:
                 env[bg_stress_run_flag] = False
                 bg.join()
-            except Exception, e:
+            except Exception as e:
                 err_msg = "Run guest suspend: '%s' error!\n" % suspend_type
                 err_msg += "Error info: '%s'" % e
                 test.fail(err_msg)

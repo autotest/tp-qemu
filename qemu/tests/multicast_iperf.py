@@ -34,7 +34,7 @@ def run(test, params, env):
         """
         try:
             process.run(cmd)
-        except process.CmdError, e:
+        except process.CmdError as e:
             if not re.findall(catch_data, str(e)):
                 test.fail("Client not connected '%s'" % str(e))
             logging.info("Client multicast test pass "

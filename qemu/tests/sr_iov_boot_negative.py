@@ -27,7 +27,7 @@ def run(test, params, env):
         case_fail = False
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         case_fail = True
-    except Exception, e:
+    except Exception as e:
         if neg_msg:
             error_context.context("Check qemu-qemu error message",
                                   logging.info)

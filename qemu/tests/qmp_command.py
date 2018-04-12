@@ -235,7 +235,7 @@ def run(test, params, env):
         logging.info("Run qmp command '%s'.", qmp_cmd)
         output = qmp_port.send_args_cmd(qmp_cmd)
         logging.debug("QMP command: '%s' \n Output: '%s'", qmp_cmd, output)
-    except qemu_monitor.QMPCmdError, err:
+    except qemu_monitor.QMPCmdError as err:
         if params.get("negative_test") == 'yes':
             logging.debug("Negative QMP command: '%s'\n output:'%s'", qmp_cmd,
                           err)
@@ -246,9 +246,9 @@ def run(test, params, env):
                               % (check_pattern, err))
         else:
             test.fail(err)
-    except qemu_monitor.MonitorProtocolError, err:
+    except qemu_monitor.MonitorProtocolError as err:
         test.fail(err)
-    except Exception, err:
+    except Exception as err:
         test.fail(err)
 
     # Post command

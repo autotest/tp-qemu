@@ -141,7 +141,7 @@ def run(test, params, env):
                 logging.info("Hot-plug NIC with the netdev already in use")
                 try:
                     add_output = device_add_nic(nic_model, useddevice_id, nic_name)
-                except Exception, err_msg:
+                except Exception as err_msg:
                     match_error = params["devadd_match_string"]
                     if match_error in str(err_msg):
                         s_session.close()

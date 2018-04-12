@@ -74,7 +74,7 @@ def run(test, params, env):
                               % (img, cmd), logging.info)
         try:
             output = process.system_output(cmd, verbose=False)
-        except process.CmdError, err:
+        except process.CmdError as err:
             if "does not support checks" in str(err):
                 return (True, "")
             else:
@@ -297,7 +297,7 @@ def run(test, params, env):
 
         try:
             output = process.system_output(cmd)
-        except process.CmdError, err:
+        except process.CmdError as err:
             logging.error("Get info of image '%s' failed: %s", img, str(err))
             return None
 
@@ -432,7 +432,7 @@ def run(test, params, env):
                 logging.info("Output of %s: %s", file_create_cmd, output)
                 output = session.cmd(file_info_cmd)
                 logging.info("Output of %s: %s", file_info_cmd, output)
-            except Exception, err:
+            except Exception as err:
                 test.fail("Could not create commit_testfile in the "
                           "overlay file %s" % err)
             vm.destroy()

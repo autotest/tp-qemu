@@ -241,7 +241,7 @@ def run(test, params, env):
             # Test the newly added device
             try:
                 session.cmd(params.get("pci_test_cmd") % (pci_num + 1))
-            except aexpect.ShellError, e:
+            except aexpect.ShellError as e:
                 test.fail("Check for %s device failed" % pci_type +
                           "after PCI hotplug." + "Output: %r" % e.output)
 

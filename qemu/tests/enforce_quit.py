@@ -51,7 +51,7 @@ def run(test, params, env):
                               logging.info)
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
-    except Exception, err:
+    except Exception as err:
         tmp_flag = False
         for msg in msg_unavailable:
             if msg in str(err):

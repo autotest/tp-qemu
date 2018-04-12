@@ -75,7 +75,7 @@ def run(test, params, env):
                 controller.params.update(qdevice_params)
             try:
                 controller.hotplug(vm.monitor)
-            except Exception, e:
+            except Exception as e:
                 if "QMP command 'device_add' failed" in str(e):
                     logging.info("Failed to add controller with invalid params")
                     drive_unplug_plug(drive, vm)
@@ -90,7 +90,7 @@ def run(test, params, env):
                 device.set_param(key, value)
             try:
                 device.hotplug(vm.monitor)
-            except Exception, e:
+            except Exception as e:
                 if "QMP command 'device_add' failed" in str(e):
                     logging.info("Failed to add block with invalid params")
                     drive_unplug_plug(drive, vm)

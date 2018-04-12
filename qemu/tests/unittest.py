@@ -136,7 +136,7 @@ def run(test, params, env):
                     tests_failed.append(t)
                     logging.error("Unit test %s failed", t)
 
-            except Exception, e:
+            except Exception as e:
                 nfail += 1
                 tests_failed.append(t)
                 logging.error('Exception happened during %s: %s', t, str(e))

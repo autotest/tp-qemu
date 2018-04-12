@@ -36,7 +36,7 @@ def run(test, params, env):
                 func(*args)
             else:
                 func()
-        except Exception, e:
+        except Exception as e:
             logging.warn("Failed to execute function '%s'."
                          " error message:\n%s", func.__name__, e)
 
@@ -186,7 +186,7 @@ def run(test, params, env):
         result_file.write("### guest-kernel-ver : %s\n" % guest_ver)
         result_file.write("### %s\n" % mnt_cmd_out)
         result_file.write("Category:ALL\n")
-    except (IOError, ValueError), e:
+    except (IOError, ValueError) as e:
         logging.error("Failed to write to result file,"
                       " error message:\n%s", e)
 
@@ -226,7 +226,7 @@ def run(test, params, env):
     finally:
         try:
             result_file.write("\n".join(result_list))
-        except (IOError, ValueError), e:
+        except (IOError, ValueError) as e:
             logging.error("Failed to write to result file,"
                           " error message:\n%s", e)
 

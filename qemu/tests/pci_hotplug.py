@@ -240,7 +240,7 @@ def run(test, params, env):
                     test_cmd = re.sub("PCI_NUM", "%s" % (pci_num + 1),
                                       params.get("pci_test_cmd"))
                     session.cmd(test_cmd, timeout=disk_op_timeout)
-            except aexpect.ShellError, e:
+            except aexpect.ShellError as e:
                 test.fail("Check for %s device failed after PCI "
                           "hotplug. Output: %r" % (pci_type, e.output))
 

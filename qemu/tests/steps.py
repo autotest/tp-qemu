@@ -95,14 +95,14 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
         # Request screendump
         try:
             vm.monitor.screendump(scrdump_filename, debug=False)
-        except qemu_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError as e:
             logging.warn(e)
             continue
 
         # Read image file
         try:
             (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
-        except IOError, e:
+        except IOError as e:
             logging.warn(e)
             continue
 

@@ -52,7 +52,7 @@ def run(test, params, env):
         try:
             logging.debug("Ping dst vm with cmd: '%s'" % ping_cmd)
             test_runner(ping_cmd)
-        except aexpect.ShellTimeoutError, err:
+        except aexpect.ShellTimeoutError as err:
             if count:
                 test.error("Error during ping guest ip, %s" % err)
 
@@ -126,7 +126,7 @@ def run(test, params, env):
             try:
                 if not ping_is_alive(check_sess):
                     test.cancel("Ping process is not alive")
-            except Exception, err:
+            except Exception as err:
                 test.error("Check ping status error '%s'" % err)
             else:
                 time.sleep(60)

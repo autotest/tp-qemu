@@ -103,7 +103,7 @@ class BallooningTest(MemoryBaseTest):
         try:
             self.vm.balloon(new_mem)
             self.env["balloon_test"] = 1
-        except Exception, e:
+        except Exception as e:
             if self.params.get('illegal_value_check', 'no') == 'no' and new_mem != self.get_ballooned_memory():
                 raise exceptions.TestFail("Balloon memory fail with error"
                                           " message: %s" % e)

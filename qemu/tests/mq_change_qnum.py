@@ -199,7 +199,7 @@ def run(test, params, env):
                                       logging.info)
                 try:
                     stress_thread.join()
-                except Exception, err:
+                except Exception as err:
                     err_msg = "Run %s test background error!\n "
                     err_msg += "Error Info: '%s'"
                     test.error(err_msg % (bg_stress_test, err))
@@ -216,7 +216,7 @@ def run(test, params, env):
                                   logging.info)
             try:
                 bg_test.join()
-            except Exception, err:
+            except Exception as err:
                 txt = "Fail to wait background ping test finish. "
                 txt += "Got error message %s" % err
                 test.fail(txt)

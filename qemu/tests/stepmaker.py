@@ -146,7 +146,7 @@ class StepMaker(step_editor.StepMakerWindow):
 
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
-        except qemu_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError as e:
             logging.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)
@@ -300,7 +300,7 @@ class StepMaker(step_editor.StepMakerWindow):
 
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
-        except qemu_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError as e:
             logging.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)

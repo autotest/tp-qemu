@@ -46,7 +46,7 @@ def run(test, params, env):
         default_kernel = ""
         try:
             default_kernel = session.cmd_output("grubby --default-kernel")
-        except Exception, e:
+        except Exception as e:
             logging.warn("Save grub config failed: '%s'" % e)
 
         return default_kernel
@@ -61,14 +61,14 @@ def run(test, params, env):
         cmd = "grubby --set-default=%s" % default_kernel.strip()
         try:
             session.cmd(cmd)
-        except Exception, e:
+        except Exception as e:
             test.error("Restore grub failed: '%s'" % e)
 
     def _clean_up_tmp_files(file_list):
         for f in file_list:
             try:
                 os.unlink(f)
-            except Exception, e:
+            except Exception as e:
                 logging.warn("Could remove tmp file '%s', error message: '%s'",
                              f, e)
 
@@ -148,7 +148,7 @@ def run(test, params, env):
         fd.write(control_str)
         fd.close()
         _tmp_file_list.append(os.path.abspath(test_control_path))
-    except IOError, e:
+    except IOError as e:
         _clean_up_tmp_files(_tmp_file_list)
         test.error("Fail to Generate control file, error message:\n '%s'" % e)
 
@@ -175,7 +175,7 @@ def run(test, params, env):
         try:
             utils_test.run_virt_sub_test(test, params, env,
                                          sub_type=sub_test, tag=tag)
-        except Exception, e:
+        except Exception as e:
             logging.error("Fail to run sub_test '%s', error message: '%s'",
                           sub_test, e)
 
@@ -185,7 +185,7 @@ def run(test, params, env):
         try:
             session = vm.wait_for_login(timeout=timeout)
             _restore_bootloader_config(session, default_kernel)
-        except Exception, e:
+        except Exception as e:
             _clean_up_tmp_files(_tmp_file_list)
             session.close()
             test.fail("Fail to restore to default kernel,"

@@ -122,13 +122,13 @@ def build_install_virtviewer(test, vm_root_session, vm_script_path, params):
     try:
         output = vm_root_session.cmd("killall remote-viewer")
         logging.info(output)
-    except ShellCmdError, err:
+    except ShellCmdError as err:
         logging.error("Could not kill remote-viewer " + err.output)
 
     try:
         output = vm_root_session.cmd("yum -y remove virt-viewer", timeout=120)
         logging.info(output)
-    except ShellCmdError, err:
+    except ShellCmdError as err:
         logging.error("virt-viewer package couldn't be removed! " + err.output)
 
     if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
@@ -151,7 +151,7 @@ def build_install_virtviewer(test, vm_root_session, vm_script_path, params):
                                      "LD_LIBRARY_PATH=/usr/local/lib"
                                      " remote-viewer --version")
         logging.info(output)
-    except ShellCmdError, err:
+    except ShellCmdError as err:
         logging.error("Can't get version number!" + err.output)
 
 

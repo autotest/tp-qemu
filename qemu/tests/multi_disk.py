@@ -369,7 +369,7 @@ def run(test, params, env):
                     error_context.context("Unmounting disk: %s..." % disk)
                     cmd = params["umount_command"] % (disk, disk)
                     session.cmd(cmd)
-            except Exception, err:
+            except Exception as err:
                 logging.warn("Get error when cleanup, '%s'", err)
 
         _do_post_cmd(session)

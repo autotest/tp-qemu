@@ -32,7 +32,7 @@ def run(test, params, env):
         params["start_vm"] = "yes"
         try:
             env_process.preprocess_vm(test, params, env, params.get("main_vm"))
-        except virt_vm.VMError, err:
+        except virt_vm.VMError as err:
             if int(vectors) < 0:
                 txt = "Parameter 'vectors' expects uint32_t"
                 if re.findall(txt, str(err)):

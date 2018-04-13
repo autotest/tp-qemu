@@ -2,7 +2,10 @@ import logging
 import os
 import shutil
 import glob
-import ConfigParser
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
 
 from virttest import utils_misc
 from virttest import env_process
@@ -32,7 +35,7 @@ def run(test, params, env):
     logging.debug('Flat file list: %s', unittest_list)
 
     unittest_cfg = os.path.join(unittest_dir, 'unittests.cfg')
-    parser = ConfigParser.ConfigParser()
+    parser = ConfigParser()
     parser.read(unittest_cfg)
     test_list = parser.sections()
 

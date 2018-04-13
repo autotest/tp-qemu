@@ -1,7 +1,10 @@
 import os
 import re
 import logging
-import ConfigParser
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
 
 from avocado.utils import process
 
@@ -50,7 +53,7 @@ def run(test, params, env):
     image_name, _ = image_io.create(params.object_params(image))
 
     template_name = utils_misc.get_path(test.virtdir, blkdebug_default)
-    template = ConfigParser.ConfigParser()
+    template = ConfigParser()
     template.read(template_name)
 
     for errn in errn_list:

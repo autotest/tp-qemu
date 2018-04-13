@@ -22,10 +22,11 @@ def run(test, params, env):
         Get the memory arguments from system
         """
         args_list_tmp = args_list.copy()
-        for line in file('/proc/meminfo', 'r').readlines():
-            for key in args_list_tmp.keys():
-                if line.startswith("%s" % args_list_tmp[key]):
-                    args_list_tmp[key] = int(re.split(r'\s+', line)[1])
+        with open('/proc/meminfo', 'r') as f:
+            for line in f.readlines():
+                for key in args_list_tmp.keys():
+                    if line.startswith("%s" % args_list_tmp[key]):
+                        args_list_tmp[key] = int(re.split(r'\s+', line)[1])
         return args_list_tmp
 
     try:

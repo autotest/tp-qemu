@@ -1,5 +1,4 @@
 import re
-import string
 import logging
 import random
 
@@ -42,7 +41,7 @@ def run(test, params, env):
             f_fail.append(fail_log)
             logging.error(fail_log)
 
-        actual_num = string.count(o, check_str)
+        actual_num = o.count(check_str)
         if expected_num != actual_num:
             fail_log = "%s number mismatch:\n" % str(devices)
             fail_log += "    Assigned to VM: %d\n" % expected_num
@@ -90,7 +89,7 @@ def run(test, params, env):
             actual = session.cmd_output(verify_cmd)
             if not re.findall(expect, actual, re.I):
                 fail_log = "%s mismatch:\n" % name
-                fail_log += "    Assigned to VM: %s\n" % string.upper(expect)
+                fail_log += "    Assigned to VM: %s\n" % expect.upper()
                 fail_log += "    Reported by OS: %s" % actual
                 f_fail.append(fail_log)
                 logging.error(fail_log)
@@ -121,8 +120,7 @@ def run(test, params, env):
             logging.error(fail_log)
             return -2
 
-        logging.info("CPU %s number: %d",
-                     string.capitalize(chk_type), int(num[-1]))
+        logging.info("CPU %s number: %d", chk_type.capitalize(), int(num[-1]))
         return int(num[-1])
 
     def check_cpu_number(chk_type, actual_n, expected_n):
@@ -149,10 +147,10 @@ def run(test, params, env):
             f_fail.append(fail_log)
             return f_fail
 
-        logging.info("CPU %s number check", string.capitalize(chk_type))
+        logging.info("CPU %s number check", chk_type.capitalize())
 
         if actual_n != expected_n:
-            fail_log = "%s output mismatch:\n" % string.capitalize(chk_type)
+            fail_log = "%s output mismatch:\n" % chk_type.capitalize()
             fail_log += "    Assigned to VM: '%s'\n" % expected_n
             fail_log += "    Reported by OS: '%s'" % actual_n
             f_fail.append(fail_log)
@@ -160,7 +158,7 @@ def run(test, params, env):
             return f_fail
 
         logging.debug("%s check pass. Expected: '%s', Actual: '%s'",
-                      string.capitalize(chk_type), expected_n, actual_n)
+                      chk_type.capitalize(), expected_n, actual_n)
         return f_fail
 
     def verify_machine_type():
@@ -344,7 +342,7 @@ def run(test, params, env):
     num_nics = len(params.objects("nics"))
     for nic_index in range(num_nics):
         mac = vm.get_mac_address(nic_index)
-        if string.lower(mac) not in found_mac_addresses:
+        if mac.lower() not in found_mac_addresses:
             fail_log = "MAC address mismatch:\n"
             fail_log += "    Assigned to VM (not found): %s" % mac
             n_fail.append(fail_log)

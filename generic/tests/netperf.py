@@ -1,6 +1,5 @@
 import logging
 import os
-import commands
 import threading
 import re
 import time
@@ -205,8 +204,12 @@ def run(test, params, env):
                           restart_network=True)
         server_ctl_ip = vm.wait_for_get_address(1, timeout=5)
 
-    logging.debug(commands.getoutput("numactl --hardware"))
-    logging.debug(commands.getoutput("numactl --show"))
+    logging.debug(process.system_output("numactl --hardware",
+                                        verbose=False, ignore_status=True,
+                                        shell=True))
+    logging.debug(process.system_output("numactl --show",
+                                        verbose=False, ignore_status=True,
+                                        shell=True))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     numa_node = _pin_vm_threads(vm, params.get("numa_node"))
 
@@ -339,13 +342,18 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
     test.write_test_keyval({'kvm-userspace-ver':
-                            commands.getoutput(ver_cmd).strip()})
+                            process.system_output(ver_cmd,
+                                                  verbose=False,
+                                                  ignore_status=True,
+                                                  shell=True
+                                                  ).strip()})
     test.write_test_keyval({'guest-kernel-ver': ssh_cmd(server_ctl,
                             guest_ver_cmd).strip()})
     test.write_test_keyval({'session-length': test_duration})
 
     fd.write('### kvm-userspace-ver : %s\n' %
-             commands.getoutput(ver_cmd).strip())
+             process.system_output(ver_cmd, verbose=False,
+                                   ignore_status=True, shell=True).strip())
     fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl,
                                                      guest_ver_cmd).strip())
     fd.write('### kvm_version : %s\n' % os.uname()[2])
@@ -436,7 +444,9 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                 fd.flush()
 
                 logging.debug("Remove temporary files")
-                commands.getoutput("rm -f /tmp/netperf.%s.nf" % ret['pid'])
+                process.system_output("rm -f /tmp/netperf.%s.nf" % ret['pid'],
+                                      verbose=False, ignore_status=True,
+                                      shell=True)
                 logging.info("Netperf thread completed successfully")
     fd.close()
 

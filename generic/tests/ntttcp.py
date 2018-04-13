@@ -2,7 +2,6 @@ import logging
 import os
 import glob
 import re
-import commands
 
 import aexpect
 
@@ -182,8 +181,11 @@ def run(test, params, env):
             raw = "  buf(k)| throughput(Mbit/s)"
             logging.info(raw)
             f.write("#ver# %s\n#ver# host kernel: %s\n" %
-                    (commands.getoutput("rpm -q qemu-kvm"), os.uname()[2]))
-            desc = """#desc# The tests are sessions of "NTttcp", send buf number is %s. 'throughput' was taken from ntttcp's report.
+                    (process.system_output("rpm -q qemu-kvm", shell=True,
+                                           verbose=False, ignore_status=True),
+                     os.uname()[2]))
+            desc = """#desc# The tests are sessions of "NTttcp", send buf"
+" number is %s. 'throughput' was taken from ntttcp's report.
 #desc# How to read the results:
 #desc# - The Throughput is measured in Mbit/sec.
 #desc#

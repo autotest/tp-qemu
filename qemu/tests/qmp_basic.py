@@ -1,3 +1,9 @@
+try:
+    unicode
+except NameError:
+    unicode = str
+
+
 def run(test, params, env):
     """
     QMP Specification test-suite: this checks if the *basic* protocol conforms

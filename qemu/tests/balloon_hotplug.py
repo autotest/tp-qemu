@@ -47,7 +47,7 @@ def run(test, params, env):
 
     error_context.context("Hotplug and unplug balloon device in a loop",
                           logging.info)
-    for i in xrange(int(params.get("balloon_repeats", 3))):
+    for i in range(int(params.get("balloon_repeats", 3))):
         vm.devices.set_dirty()
         new_dev = qdevices.QDevice(balloon_device,
                                    {'id': 'balloon%d' % idx},

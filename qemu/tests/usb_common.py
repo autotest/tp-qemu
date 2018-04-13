@@ -23,7 +23,7 @@ def parse_usb_topology(params):
                               object_pairs_hook=OrderedDict)
     parsed_devs = []
     for key, value in usb_topology.items():
-        for i in xrange(value):
+        for i in range(value):
             params["usb_devices"] += " d%s" % len(parsed_devs)
             usb_type = '{"usb_type_d%s": "%s"}' % (len(parsed_devs), key)
             params.update(json.loads(usb_type))

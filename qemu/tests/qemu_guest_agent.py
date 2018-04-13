@@ -274,7 +274,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.vm.verify_alive()
 
         session = self._get_session(params, self.vm)
-        for i in xrange(repeats):
+        for i in range(repeats):
             error_context.context("Repeat: %s/%s" % (i + 1, repeats),
                                   logging.info)
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
@@ -301,7 +301,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.vm = self.env.get_vm(params["main_vm"])
             self.vm.verify_alive()
         session = self._get_session(params, self.vm)
-        for i in xrange(repeats):
+        for i in range(repeats):
             error_context.context("Repeat: %s/%s" % (i + 1, repeats),
                                   logging.info)
             self.gagent_stop(session, self.vm)

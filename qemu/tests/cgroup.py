@@ -47,7 +47,7 @@ class SparseRange(list):
                 if len(vals) == 1:  # single value
                     self.append(int(vals[0]))
                 else:               # range
-                    self.extend(xrange(int(vals[0]), int(vals[1]) + 1))
+                    self.extend(range(int(vals[0]), int(vals[1]) + 1))
         except ValueError as details:
             raise ValueError("Can't parse SparseRange from %s: %s"
                              % (value, details))
@@ -1032,19 +1032,19 @@ def run(test, params, env):
             if len(cpus) > vm_cpus:
                 cpuset = cpus.str_slice(0, vm_cpus)
                 # all cpus + main_thread
-                cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+                cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             # __OO
             if len(cpus) > vm_cpus:
                 cpuset = cpus.str_slice(len(cpus) - vm_cpus)
-                cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+                cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             # O___
-            cpusets.append([str(cpus[0]) for _ in xrange(len(cpus) + 1)])
+            cpusets.append([str(cpus[0]) for _ in range(len(cpus) + 1)])
             # _OO_
             cpuset = cpus.str_slice(1, 1 + vm_cpus)
-            cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+            cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             # O_O_
             cpuset = cpus.str_slice(0, min(vm_cpus * 2, len(cpus)), 2)
-            cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+            cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             return cpusets
 
         def _generate_verification(cpusets, cpus):
@@ -1058,7 +1058,7 @@ def run(test, params, env):
             verify = []
             # For every scenerio
             for cpuset in cpusets:
-                verify.append([0 for _ in xrange(len(cpus))])
+                verify.append([0 for _ in range(len(cpus))])
                 # For every vcpu (skip main_thread, it doesn't consume much)
                 for vcpu in cpuset[1:]:
                     vcpu = SparseRange(vcpu)
@@ -1163,7 +1163,7 @@ def run(test, params, env):
                                            " no_host_cpus and cgroup_cpuset cpus")
 
         logging.info("Prepare")
-        for i in xrange(len(cpus) + 1):
+        for i in range(len(cpus) + 1):
             cgroup.mk_cgroup()
             cgroup.set_property('cpuset.cpus', cpus.str_slice(), i)
             cgroup.set_property('cpuset.mems', mems.str_slice(), i)
@@ -1178,14 +1178,14 @@ def run(test, params, env):
         serial = vm.wait_for_serial_login(timeout=timeout)
         cmd = "renice -n 10 $$; "   # new ssh login should pass
         cmd += "while [ -e /tmp/cgroup-cpu-lock ]; do :; done"
-        for i in xrange(vm_cpus * 2):
+        for i in range(vm_cpus * 2):
             sessions.append(vm.wait_for_login(timeout=timeout))
             sessions[-1].cmd("touch /tmp/cgroup-cpu-lock")
             sessions[-1].sendline(cmd)
 
         try:
             logging.info("Test")
-            for i in xrange(len(cpusets)):
+            for i in range(len(cpusets)):
                 cpuset = cpusets[i]
                 logging.debug("testing: %s", cpuset)
                 # setup scenario
@@ -1209,7 +1209,7 @@ def run(test, params, env):
             header = ['scen']
             header.extend([' cpu%d' % i for i in cpus])
             matrix = []
-            for i in xrange(len(stats)):
+            for i in range(len(stats)):
                 matrix.append(['%d' % i])
                 for j in range(len(stats[i])):
                     if ((stats[i][j] < (verify[i][j] - limit)) or

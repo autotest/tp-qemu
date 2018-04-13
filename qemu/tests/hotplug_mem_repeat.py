@@ -18,7 +18,7 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
         scalability_test = self.params.get("scalability_test") == "yes"
         repeats = scalability_test and max_slots or self.params["repeats"]
         original_mem = self.get_guest_total_mem(vm)
-        for repeat in xrange(int(repeats)):
+        for repeat in range(int(repeats)):
             extra_params = (scalability_test and
                             [{'slot_dimm': repeat}] or [None])[0]
             error_context.context("Hotplug/unplug loop '%d'" % repeat,

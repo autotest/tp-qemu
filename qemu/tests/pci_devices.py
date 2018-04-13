@@ -185,7 +185,7 @@ def add_devices_all(params, name_idxs, bus, add_device):
     """
     Fill all available slots of certain bus with devices
     """
-    for addr in xrange(bus.first, bus.last):
+    for addr in range(bus.first, bus.last):
         params, name_idxs = add_device(params, name_idxs, bus.name, addr)
     return params, name_idxs
 

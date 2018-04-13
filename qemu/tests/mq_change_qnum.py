@@ -151,14 +151,14 @@ def run(test, params, env):
                 logging.info("Nic with single queue, skip and continue")
                 continue
             ifname = ifnames[nic_index]
-            default_change_list = xrange(1, int(queues + 1))
+            default_change_list = range(1, int(queues + 1))
             change_list = params.get("change_list")
             if change_list:
                 change_list = change_list.split(",")
             else:
                 change_list = default_change_list
 
-            for repeat_num in xrange(1, repeat_counts + 1):
+            for repeat_num in range(1, repeat_counts + 1):
                 error_context.context("Change queues number -- %sth"
                                       % repeat_num, logging.info)
                 try:

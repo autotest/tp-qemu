@@ -92,7 +92,7 @@ def run(test, params, env):
             up_index = 0
             while transfer_thread.isAlive():
                 up_index = up_index % nic_num
-                for num in xrange(nic_num):
+                for num in range(nic_num):
                     device_id = vm.virtnet[num].device_id
                     if not device_id:
                         test.error("Could not find peer device for"

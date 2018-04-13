@@ -263,7 +263,7 @@ def run(test, params, env):
             for irq in irq_cpus_dict:
                 balance_cpu_count = 1
                 cpus = []
-                for cpu in xrange(cpu_count):
+                for cpu in range(cpu_count):
                     if cpu not in irq_cpus_dict[irq]:
                         cpus.append(cpu)
                         if len(cpus) == balance_cpu_count:
@@ -295,7 +295,7 @@ def run(test, params, env):
                     msg = "Different irq detected: '%s' and '%s'." % (irqs,
                                                                       post_irqs)
                     test.error(msg)
-                for cpu in xrange(cpu_count):
+                for cpu in range(cpu_count):
                     if (int(irq_nums_dict[irq][cpu]) >=
                             int(post_irq_nums_dict[irq][cpu])):
                         msg = "'Cpu%s' did not handle more interrupt" % cpu

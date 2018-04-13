@@ -35,7 +35,7 @@ def run(test, params, env):
 
     def prepare_image_params(params):
         pci_num = int(params['pci_num'])
-        for i in xrange(pci_num):
+        for i in range(pci_num):
             image_name = '%s_%s' % ('stg', i)
             params['images'] = ' '.join([params['images'], image_name])
             image_image_name = '%s_%s' % ('image_name', image_name)
@@ -322,7 +322,7 @@ def run(test, params, env):
 
     pci_info = []
     # Add block device into guest
-    for pci_num in xrange(pci_num_range):
+    for pci_num in range(pci_num_range):
         error_context.context("Prepare the %d removable pci device" % pci_num,
                               logging.info)
         add_device(pci_num)

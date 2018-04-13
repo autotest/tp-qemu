@@ -31,7 +31,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     logging.info("The guest bootup successfully.")
 
-    for i in xrange(repeat_times):
+    for i in range(repeat_times):
         error_context.context("Round %s : Send monitor cmd system_powerdown."
                               % str(i + 1), logging.info)
         # Send a system_powerdown monitor command

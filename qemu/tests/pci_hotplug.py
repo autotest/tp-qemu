@@ -343,7 +343,7 @@ def run(test, params, env):
         # pci_info[i][2] == output of device add command
         # pci_info[i][3] == device module name.
         pci_info = []
-        for pci_num in xrange(pci_num_range):
+        for pci_num in range(pci_num_range):
             sub_type = params.get("sub_type_before_plug")
             if sub_type:
                 error_context.context(context_msg
@@ -361,7 +361,7 @@ def run(test, params, env):
                                       % (sub_type, "after hotplug"),
                                       logging.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
-        for pci_num in xrange(pci_num_range):
+        for pci_num in range(pci_num_range):
             sub_type = params.get("sub_type_before_unplug")
             if sub_type:
                 error_context.context(context_msg

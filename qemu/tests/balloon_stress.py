@@ -59,7 +59,7 @@ def run(test, params, env):
 
     error_context.context("balloon vm memory in loop", logging.info)
     try:
-        for i in xrange(1, int(repeat_times+1)):
+        for i in range(1, int(repeat_times+1)):
             logging.info("repeat times: %d" % i)
             balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
             if not bg.is_alive():

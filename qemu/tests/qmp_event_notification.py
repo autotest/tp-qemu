@@ -1,8 +1,13 @@
 import logging
 import time
-import commands
+from functools import partial
+
+from avocado.utils import process
 
 from virttest import utils_misc
+
+
+_system_output = partial(process.system_output, shell=True)
 
 
 def run(test, params, env):
@@ -28,7 +33,7 @@ def run(test, params, env):
     qmp_monitor = list(filter(lambda x: x.protocol == "qmp", vm.monitors))[0]
     humam_monitor = list(
         filter(lambda x: x.protocol == "human", vm.monitors))[0]
-    callback = {"host_cmd": commands.getoutput,
+    callback = {"host_cmd": _system_output,
                 "guest_cmd": session.cmd,
                 "monitor_cmd": humam_monitor.send_args_cmd,
                 "qmp_cmd": qmp_monitor.send_args_cmd}

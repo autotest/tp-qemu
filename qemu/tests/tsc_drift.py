@@ -1,10 +1,11 @@
 import time
 import os
 import logging
-import commands
 import re
 
 from avocado.utils import cpu
+from avocado.utils import process
+
 from virttest import data_dir
 
 
@@ -40,7 +41,8 @@ def run(test, params, env):
             tsc_cmd = tsc_cmd_host
         cmd = "taskset %s %s" % (1 << i, tsc_cmd)
         if machine == "host":
-            s, o = commands.getstatusoutput(cmd)
+            result = process.run(cmd, ignore_status=True)
+            s, o = result.exit_status, result.stdout
         else:
             s, o = session.cmd_status_output(cmd)
         if s != 0:
@@ -54,7 +56,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
     if not os.path.exists(tsc_cmd_guest):
-        commands.getoutput("gcc %s" % tsc_freq_path)
+        process.run("gcc %s" % tsc_freq_path)
 
     ncpu = cpu.online_cpus_count()
 

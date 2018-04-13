@@ -1,6 +1,5 @@
 import os
 import re
-import commands
 import shutil
 import shelve
 import threading
@@ -31,12 +30,14 @@ def cmd_runner_monitor(test, vm, monitor_cmd, test_cmd,
     """
     def thread_kill(cmd, p_file):
         fd = shelve.open(p_file)
-        o = commands.getoutput("pstree -p %s" % fd["pid"])
+        o = process.system_output("pstree -p %s" % fd["pid"], verbose=False,
+                                  ignore_status=True)
         tmp = re.split(r"\s+", cmd)[0]
         pid = re.findall(r"%s.(\d+)" % tmp, o)[0]
-        s, o = commands.getstatusoutput("kill -9 %s" % pid)
+        cmd_result = process.run("kill -9 %s" % pid, verbose=False,
+                                 ignore_status=True)
         fd.close()
-        return (s, o)
+        return (cmd_result.exit_status, cmd_result.stdout)
 
     def monitor_thread(m_cmd, p_file, r_file):
         fd = shelve.open(p_file)

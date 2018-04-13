@@ -1,5 +1,4 @@
 import logging
-import commands
 import os
 import re
 
@@ -32,7 +31,8 @@ def run(test, params, env):
         if "guest" in test_type:
             (s, o) = session.cmd_status_output(cmd, timeout=timeout)
         else:
-            (s, o) = commands.getstatusoutput(cmd)
+            cmd_result = process.run(cmd, ignore_status=True, shell=True)
+            (s, o) = cmd_result.exit_status, cmd_result.stdout
         return (s, o)
 
     def check_ept():

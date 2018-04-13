@@ -2,7 +2,6 @@ import os
 import time
 import re
 import logging
-import commands
 import shutil
 import tempfile
 
@@ -343,13 +342,15 @@ def run(test, params, env):
                                                                    image_name,
                                                                    crtcmd)
             error_context.context(msg, logging.info)
-            status, output = commands.getstatusoutput(crtcmd)
+            cmd_result = process.run(crtcmd, verbose=False, ignore_status=True)
+            status, output = cmd_result.exit_status, cmd_result.stdout
             if status != 0:
                 test.fail("Create snapshot failed via command: %s;"
                           "Output is: %s" % (crtcmd, output))
         listcmd = cmd
         listcmd += " -l %s" % image_name
-        status, out = commands.getstatusoutput(listcmd)
+        cmd_result = process.run(listcmd, verbose=False, ignore_status=True)
+        status, out = cmd_result.exit_status, cmd_result.stdout
         if not ("snapshot0" in out and "snapshot1" in out and status == 0):
             test.fail("Snapshot created failed or missed;"
                       "snapshot list is: \n%s" % out)
@@ -359,7 +360,8 @@ def run(test, params, env):
             delcmd += " -d %s %s" % (sn_name, image_name)
             msg = "Delete snapshot '%s' by command %s" % (sn_name, delcmd)
             error_context.context(msg, logging.info)
-            status, output = commands.getstatusoutput(delcmd)
+            cmd_result = process.run(delcmd, verbose=False, ignore_status=True)
+            status, output = cmd_result.exit_status, cmd_result.stdout
             if status != 0:
                 test.fail("Delete snapshot '%s' failed: %s" %
                           (sn_name, output))

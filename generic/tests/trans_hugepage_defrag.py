@@ -31,10 +31,11 @@ def run(test, params, env):
 
         :param param: Memory parameter.
         """
-        for line in file('/proc/meminfo', 'r').readlines():
-            if line.startswith("%s" % param):
-                output = re.split(r'\s+', line)[1]
-        return int(output)
+        with open('/proc/meminfo', 'r') as f:
+            for line in f.readlines():
+                if line.startswith("%s" % param):
+                    output = re.split(r'\s+', line)[1]
+            return int(output)
 
     def set_libhugetlbfs(number):
         """
@@ -43,17 +44,16 @@ def run(test, params, env):
         :param number: Number of pages (either string or numeric).
         """
         logging.info("Trying to setup %d hugepages on host", number)
-        f = file("/proc/sys/vm/nr_hugepages", "w+")
-        pre_ret = f.read()
-        logging.debug("Number of huge pages on libhugetlbfs (pre-write): %s" %
-                      pre_ret.strip())
-        f.write(str(number))
-        f.seek(0)
-        ret = f.read()
-        logging.debug(
-            "Number of huge pages on libhugetlbfs: (post-write): %s" %
-            ret.strip())
-        return int(ret)
+        with open("/proc/sys/vm/nr_hugepages", "w+") as f:
+            pre_ret = f.read()
+            logging.debug("Number of huge pages on libhugetlbfs"
+                          " (pre-write): %s" % pre_ret.strip())
+            f.write(str(number))
+            f.seek(0)
+            ret = f.read()
+            logging.debug("Number of huge pages on libhugetlbfs:"
+                          " (post-write): %s" % ret.strip())
+            return int(ret)
 
     def change_feature_status(test, status, feature_path, test_config):
         """

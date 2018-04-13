@@ -253,7 +253,7 @@ def run(test, params, env):
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
 
-            txt = "Run callback function %s" % callback.func_name
+            txt = "Run callback function %s" % callback.__name__
             error_context.context(txt, logging.info)
 
             # Some older kernel versions split packets by GSO
@@ -269,7 +269,7 @@ def run(test, params, env):
                 e_msg = "Failed to disable %s" % f_type
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
-            txt = "Run callback function %s" % callback.func_name
+            txt = "Run callback function %s" % callback.__name__
             error_context.context(txt, logging.info)
             if not callback(status="off"):
                 e_msg = "Callback failed after disabling %s" % f_type

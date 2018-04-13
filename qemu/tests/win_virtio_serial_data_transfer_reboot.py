@@ -39,7 +39,8 @@ def run(test, params, env):
 
     def receive_data(test, session, serial_receive_cmd, data_file):
         output = session.cmd_output(serial_receive_cmd, timeout=30)
-        ori_data = file(data_file, "r").read()
+        with open(data_file, "r") as data_file:
+            ori_data = data_file.read()
         if ori_data.strip() != output.strip():
             err = "Data lost during transfer. Origin data is:\n%s" % ori_data
             err += "Guest receive data:\n%s" % output

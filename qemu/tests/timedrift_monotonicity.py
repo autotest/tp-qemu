@@ -38,9 +38,8 @@ def run(test, params, env):
             if float(tv) < float(lasttv):
                 p_tv = "time value = " + tv + "\n"
                 p_lasttv = "last time value = " + lasttv + "\n"
-                time_log = file(host_path, 'a')
-                time_log.write("time went backwards:\n" + p_tv + p_lasttv)
-                time_log.close()
+                with open(host_path, 'a') as time_log:
+                    time_log.write("time went backwards:\n" + p_tv + p_lasttv)
             lasttv = tv
             time.sleep(0.1)
 
@@ -86,12 +85,11 @@ def run(test, params, env):
             log_dir = os.path.join(test.outputdir,
                                    "timedrift-monotonicity-result.txt")
             shutil.copyfile(host_path, log_dir)
-            myfile = file(host_path, 'r')
-            for line in myfile:
-                if "time went backwards" in line:
-                    myfile.close()
-                    test.fail("Failed Time Monotonicity testing, "
-                              "Please check log %s" % host_path)
+            with open(host_path, 'r') as myfile:
+                for line in myfile:
+                    if "time went backwards" in line:
+                        test.fail("Failed Time Monotonicity testing, "
+                                  "Please check log %s" % host_path)
     finally:
         session1.close()
         # remove flags add for this test.

@@ -75,7 +75,8 @@ def run(test, params, env):
                     logging.warn("trace-cmd could not finish after 120s.")
                 trace_job = None
                 process.system(trace_report_cmd, shell=True)
-                report_txt = file(report_file).read()
+                with open(report_file) as report_f:
+                    report_txt = report_f.read()
                 txt = "Check whether the trace.txt includes the error log."
                 error_context.context(txt, logging.info)
                 if re.findall(re_trace, report_txt, re.S):

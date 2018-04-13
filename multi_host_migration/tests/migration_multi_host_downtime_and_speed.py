@@ -121,7 +121,7 @@ def run(test, params, env):
                                     fd, mig_data):
             logging.info("Set downtime after migration.")
             downtime = 0
-            for downtime in xrange(1, self.max_downtime):
+            for downtime in range(1, self.max_downtime):
                 try:
                     vm.wait_for_migration(self.wait_mig_timeout)
                     break

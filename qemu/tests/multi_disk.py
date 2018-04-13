@@ -6,7 +6,6 @@ multi_disk test for Autotest framework.
 import logging
 import re
 import random
-import string
 
 from avocado.utils import astring
 
@@ -287,7 +286,7 @@ def run(test, params, env):
 
         output = session.cmd_output(cmd, timeout=cmd_timeout)
         disks = re.findall(re_str, output)
-        disks = list(map(string.strip, disks))
+        disks = [item.strip() for item in disks]
         disks.sort()
         logging.debug("Volume list that meet regular expressions: %s",
                       " ".join(disks))

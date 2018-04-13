@@ -3,7 +3,6 @@ Group of cpuid tests for X86 CPU
 """
 import re
 import os
-import string
 import logging
 
 from avocado.utils import build
@@ -17,6 +16,16 @@ from virttest import data_dir
 logger = logging.getLogger(__name__)
 dbg = logger.debug
 info = logger.info
+
+
+def isprintable(c):
+    try:
+        import string
+        if c in string.printable:
+            return True
+        return False
+    except ImportError:
+        return c.isprintable()
 
 
 def run(test, params, env):
@@ -446,7 +455,7 @@ def run(test, params, env):
         for i in regs:
             for shift in range(0, 4):
                 c = chr((r[i] >> (shift * 8)) & 0xFF)
-                if c in string.printable:
+                if isprintable(c):
                     signature = signature + c
                 else:
                     signature = "%s\\x%02x" % (signature, ord(c))

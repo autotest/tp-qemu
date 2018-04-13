@@ -9,7 +9,6 @@ Related RHBZ: https://bugzilla.redhat.com/show_bug.cgi?id=990118
 """
 
 import logging
-import string
 import os
 import gzip
 import threading
@@ -138,7 +137,7 @@ def run(test, params, env):
         logging.debug("%s", output)
         output = session.cmd("LC_ALL=C df --portability --block-size=1M .")
         logging.debug("%s", output)
-        df_megs = int(string.split(output)[10])
+        df_megs = int(output.split()[10])
         if (df_megs < REQ_GUEST_DF):
             test.error("insufficient free disk space: %d < %d" %
                        (df_megs, REQ_GUEST_DF))
@@ -259,8 +258,8 @@ def run(test, params, env):
                              "/usr/lib/debug/lib/modules/$(uname -r)/vmlinux "
                              "%s" % (CRASH_SCRIPT, guest_plain))
         logging.debug("%s", output)
-        if (string.find(output, "crash:") >= 0 or
-                string.find(output, "WARNING:") >= 0):
+        if (output.find("crash:") >= 0 or
+                output.find("WARNING:") >= 0):
             test.fail("vmcore corrupt")
 
     vm = env.get_vm(params["main_vm"])

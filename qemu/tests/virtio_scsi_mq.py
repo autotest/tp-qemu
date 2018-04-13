@@ -1,7 +1,6 @@
 import logging
 import re
 import time
-import string
 
 from avocado.utils import cpu as utils_cpu
 from virttest import utils_misc
@@ -165,8 +164,7 @@ def run(test, params, env):
     error_context.context("Load I/O in all targets", logging.info)
     get_dev_cmd = params.get("get_dev_cmd", "ls /dev/[svh]d*")
     output = session.cmd_output(get_dev_cmd)
-    system_dev = re.findall(r"/dev/[svh]d\w+\d+", output)[0]
-    system_dev = system_dev.rstrip(string.digits)
+    system_dev = re.findall(r"/dev/[svh]d\w+(?=\d+)", output)[0]
     dd_timeout = int(re.findall(r"\d+", extra_image_size)[0])
     fill_cmd = ""
     count = 0

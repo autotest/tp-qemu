@@ -2,7 +2,6 @@ import re
 import logging
 import time
 import random
-import string
 
 import aexpect
 
@@ -213,8 +212,8 @@ def run(test, params, env):
             # Define a helper function to catch PCI device string
             def _find_pci():
                 output = session.cmd_output(params.get("find_pci_cmd"))
-                output = map(string.strip, output.splitlines())
-                ref = map(string.strip, reference.splitlines())
+                output = [line.strip() for line in output.splitlines()]
+                ref = [line.strip() for line in reference.splitlines()]
                 output = [_ for _ in output if _ not in ref]
                 output = "\n".join(output)
                 if re.search(params.get("match_string"), output, re.I):

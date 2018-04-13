@@ -1021,8 +1021,8 @@ def run(test, params, env):
                 cpuf_model += ",-" + str(fdel)
 
             smp = int(params["smp"])
-            disable_cpus = map(lambda cpu: int(cpu),
-                               params.get("disable_cpus", "").split())
+            disable_cpus = list(map(lambda cpu: int(cpu),
+                                    params.get("disable_cpus", "").split()))
 
             install_path = "/tmp"
 

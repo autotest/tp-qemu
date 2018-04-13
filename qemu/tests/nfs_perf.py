@@ -151,7 +151,7 @@ def run(test, params, env):
                                     utils_misc.generate_random_string(4))
 
     blk_size_list = params.get("blk_size_list", "8k").split()
-    test_file_list = map(lambda x: test_file_prefix + x, blk_size_list)
+    test_file_list = list(map(lambda x: test_file_prefix + x, blk_size_list))
 
     if (not nfs_server) or (not nfs_path) or (not mnt_point):
         _clean_up(STEP_2)

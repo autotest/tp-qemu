@@ -25,8 +25,9 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
-    qmp_monitor = filter(lambda x: x.protocol == "qmp", vm.monitors)[0]
-    humam_monitor = filter(lambda x: x.protocol == "human", vm.monitors)[0]
+    qmp_monitor = list(filter(lambda x: x.protocol == "qmp", vm.monitors))[0]
+    humam_monitor = list(
+        filter(lambda x: x.protocol == "human", vm.monitors))[0]
     callback = {"host_cmd": commands.getoutput,
                 "guest_cmd": session.cmd,
                 "monitor_cmd": humam_monitor.send_args_cmd,

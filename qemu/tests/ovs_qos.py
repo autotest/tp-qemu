@@ -135,9 +135,9 @@ def run(test, params, env):
                           "username", "password", "shell_client", "shell_port", "os_type"]
             vms_info = []
             for _ in params.get("vms").split():
-                info = map(
+                info = list(map(
                     lambda x: params.object_params(_).get(x),
-                    guest_info)
+                    guest_info))
                 vm = env.get_vm(_)
                 vm.verify_alive()
                 session = vm.wait_for_login(timeout=login_timeout)
@@ -221,7 +221,8 @@ def run(test, params, env):
         test.error("This is a openvswitch only test")
     extra_options = params.get("netperf_client_options", " -l 60")
     rate_brust_pairs = params.get("rate_brust_pairs").split()
-    rate_brust_pairs = map(lambda x: map(int, x.split(',')), rate_brust_pairs)
+    rate_brust_pairs = list(
+        map(lambda x: map(int, x.split(',')), rate_brust_pairs))
     results = []
     try:
         netperf_clients, netperf_servers = setup_netperf_env()

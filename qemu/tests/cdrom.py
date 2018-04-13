@@ -252,8 +252,8 @@ def run(test, params, env):
         else:
             for block in blocks:
                 if block['device'] == qemu_cdrom_device:
-                    key = filter(lambda x: re.match(r"tray.*open", x),
-                                 block.keys())
+                    key = list(filter(lambda x: re.match(r"tray.*open", x),
+                                      block.keys()))
                     # compatible rhel6 and rhel7 diff qmp output
                     if not key:
                         break

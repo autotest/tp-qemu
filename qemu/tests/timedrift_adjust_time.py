@@ -120,12 +120,13 @@ class TimedriftTest(object):
                 timeout=120)
             host_timestr = process.system_output(host_epoch_time_cmd,
                                                  shell=True)
-            epoch_host, epoch_guest = map(lambda x: re.findall(regex, x)[0],
-                                          [host_timestr, guest_timestr])
+            epoch_host, epoch_guest = list(
+                map(lambda x: re.findall(regex, x)[0],
+                    [host_timestr, guest_timestr]))
         except IndexError:
             logging.debug("Host Time: %s," % guest_timestr +
                           "Guest Time: %s" % guest_timestr)
-        return map(float, [epoch_host, epoch_guest])
+        return list(map(float, [epoch_host, epoch_guest]))
 
     @error_context.context_aware
     def verify_clock_source(self, session):

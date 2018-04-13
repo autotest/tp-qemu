@@ -219,14 +219,14 @@ class LiveBackup(block_copy.BlockCopy):
         Create files and record m5 values of them.
         """
         file_names = self.params["file_names"]
-        return map(self.create_file, file_names.split())
+        return list(map(self.create_file, file_names.split()))
 
     def verify_md5s(self):
         """
         Check if the md5 values matches the record ones.
         """
         file_names = self.params["file_names"]
-        return map(self.verify_md5, file_names.split())
+        return list(map(self.verify_md5, file_names.split()))
 
     def verify_efficiency(self):
         """

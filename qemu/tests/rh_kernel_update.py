@@ -274,7 +274,7 @@ def run(test, params, env):
         for url in latest_pkgs_url:
             if "debuginfo" in url and not debuginfo:
                 continue
-            upgrade = bool(filter(lambda x: x in url, pkgs))
+            upgrade = bool(list(filter(lambda x: x in url, pkgs)))
             logging.info("Install packages from: %s" % url)
             install_rpm(session, url, upgrade, nodeps, timeout)
 

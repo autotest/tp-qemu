@@ -73,7 +73,7 @@ def run(test, params, env):
     host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
     host_cpu_num = process.system_output(host_cpu_cnt_cmd, shell=True).strip()
     host_cpu_list = (_ for _ in range(int(host_cpu_num)))
-    cpu_pin_list = zip(vm.vcpu_threads, host_cpu_list)
+    cpu_pin_list = list(zip(vm.vcpu_threads, host_cpu_list))
     if len(cpu_pin_list) < len(vm.vcpu_threads):
         test.cancel("There isn't enough physical cpu to pin all the vcpus")
     for vcpu, pcpu in cpu_pin_list:

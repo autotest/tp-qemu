@@ -26,8 +26,8 @@ class QemuIOConfig(object):
         self.tmpdir = test.tmpdir
         self.qemu_img_binary = utils_misc.get_qemu_img_binary(params)
         self.raw_files = ["stg1.raw", "stg2.raw"]
-        self.raw_files = map(lambda f: os.path.join(self.tmpdir, f),
-                             self.raw_files)
+        self.raw_files = list(map(lambda f: os.path.join(self.tmpdir, f),
+                                  self.raw_files))
         # Here we're trying to choose fairly explanatory names so it's less
         # likely that we run in conflict with other devices in the system
         self.vgtest_name = params.get("vgtest_name", "vg_kvm_test_qemu_io")

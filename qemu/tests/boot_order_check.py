@@ -7,6 +7,13 @@ from avocado.utils import process
 from virttest import error_context
 
 
+try:
+    cmp
+except NameError:
+    def cmp(x, y):
+        return (x > y) - (x < y)
+
+
 @error_context.context_aware
 def run(test, params, env):
     """

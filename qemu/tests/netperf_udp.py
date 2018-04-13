@@ -172,7 +172,8 @@ def run(test, params, env):
     finally:
         netperf_server.stop()
 
-    file(os.path.join(test.debugdir, "udp_results"), "w").write(msg)
+    with open(os.path.join(test.debugdir, "udp_results"), "w") as result_file:
+        result_file.write(msg)
     failratio = float(params.get("failratio", 0.3))
     error_context.context("Compare UDP performance.", logging.info)
     for i in range(len(throughput) - 1):

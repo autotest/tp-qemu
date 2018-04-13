@@ -67,7 +67,7 @@ def run(test, params, env):
     # rebase snapshot image
     rebase_chain = params.get("rebase_list", "").split(";")
     for images in rebase_chain:
-        images = map(lambda x: x.strip(), images.split(">"))
+        images = list(map(lambda x: x.strip(), images.split(">")))
         try:
             image = images[0]
             base = images[1]

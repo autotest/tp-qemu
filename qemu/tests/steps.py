@@ -38,7 +38,7 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
 
     # Parse barrier command line
     _, dx, dy, x1, y1, md5sum, timeout = words[:7]
-    dx, dy, x1, y1, timeout = map(int, [dx, dy, x1, y1, timeout])
+    dx, dy, x1, y1, timeout = list(map(int, [dx, dy, x1, y1, timeout]))
 
     # Define some paths
     scrdump_filename = os.path.join(debug_dir, "scrdump.ppm")

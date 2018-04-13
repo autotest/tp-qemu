@@ -66,7 +66,7 @@ def run(test, params, env):
         return set(process.system_output(cmd, ignore_status=True,
                                          shell=True).splitlines())
 
-    snapshots = map(lambda x: os.path.join(image_dir, x), ["sn1", "sn2"])
+    snapshots = list(map(lambda x: os.path.join(image_dir, x), ["sn1", "sn2"]))
     try:
         error_context.context("Create snapshots-chain(base->sn1->sn2)",
                               logging.info)

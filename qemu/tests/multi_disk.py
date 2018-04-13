@@ -287,7 +287,7 @@ def run(test, params, env):
 
         output = session.cmd_output(cmd, timeout=cmd_timeout)
         disks = re.findall(re_str, output)
-        disks = map(string.strip, disks)
+        disks = list(map(string.strip, disks))
         disks.sort()
         logging.debug("Volume list that meet regular expressions: %s",
                       " ".join(disks))

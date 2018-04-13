@@ -42,8 +42,8 @@ def run(test, params, env):
     restore_mmu_cmd = None
     error_context.context("Enable ept(npt)", logging.info)
     try:
-        flag = filter(lambda x: x in utils_misc.get_cpu_flags(),
-                      ['ept', 'npt'])[0]
+        flag = list(filter(lambda x: x in utils_misc.get_cpu_flags(),
+                           ['ept', 'npt']))[0]
     except IndexError:
         logging.warn("Host doesn't support ept(npt)")
     else:

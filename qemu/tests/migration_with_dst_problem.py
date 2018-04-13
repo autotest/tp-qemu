@@ -174,7 +174,7 @@ def run(test, params, env):
         disk_path = os.path.join("/", "dev", "disk", "by-id")
         disks = session.cmd("ls %s" % disk_path).split("\n")
         session.close()
-        disk = filter(lambda x: x.endswith(disk_serial), disks)
+        disk = list(filter(lambda x: x.endswith(disk_serial), disks))
         if not disk:
             return None
         return os.path.join(disk_path, disk[0])
@@ -255,8 +255,8 @@ def run(test, params, env):
         def find_disk(self):
             disk_path = os.path.join("/", "dev", "disk", "by-path")
             disks = process.run("ls %s" % disk_path).stdout.split("\n")
-            disk = filter(lambda x: self.server_name in x, disks)
-            if disk is []:
+            disk = list(filter(lambda x: self.server_name in x, disks))
+            if not disk:
                 return None
             return os.path.join(disk_path, disk[0].strip())
 

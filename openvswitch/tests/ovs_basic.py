@@ -252,7 +252,7 @@ def run(test, params, env):
                 self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname, [i])
 
             self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname,
-                                    range(4095))
+                                    list(range(4095)))
 
             self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname, [1])
 

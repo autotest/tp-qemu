@@ -260,7 +260,7 @@ def run(test, params, env):
             function, called by utils.InterruptedThread()
             """
 
-            self.parameters_value = map(int, self.parameters_value)
+            self.parameters_value = list(map(int, self.parameters_value))
             vm = self.env.get_vm(self.params["main_vm"])
             while self.migration_timeout:
                 list_item = self.get_mig_cpu_throttling_percentage(vm)

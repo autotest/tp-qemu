@@ -200,7 +200,7 @@ def launch_rv(test, client_vm, guest_vm, params):
     # Check to see if the test is using a smartcard.
     if smartcard == "yes":
         logging.info("remote viewer Set to use a smartcard")
-        if not rv_parameters_from == file:
+        if not rv_parameters_from == "file":
             cmd += " --spice-smartcard"
 
         if certdb is not None:

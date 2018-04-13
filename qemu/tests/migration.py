@@ -4,6 +4,7 @@ import types
 import re
 
 import aexpect
+import ast
 
 from virttest import utils_misc
 from virttest import utils_test
@@ -206,6 +207,9 @@ def run(test, params, env):
                     guest_stress_deamon, ())
                 deamon_thread.start()
 
+            capabilities = ast.literal_eval(params.get("migrate_capabilities", "{}"))
+            inner_funcs = ast.literal_eval(params.get("migrate_inner_funcs", "[]"))
+
             # Migrate the VM
             ping_pong = params.get("ping_pong", 1)
             for i in range(int(ping_pong)):
@@ -216,7 +220,10 @@ def run(test, params, env):
                 vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                            offline, check,
                            migration_exec_cmd_src=mig_exec_cmd_src,
-                           migration_exec_cmd_dst=mig_exec_cmd_dst, env=env)
+                           migration_exec_cmd_dst=mig_exec_cmd_dst,
+                           migrate_capabilities=capabilities,
+                           mig_inner_funcs=inner_funcs,
+                           env=env)
 
             # Set deamon thread action to stop after migrate
             params["action"] = "stop"

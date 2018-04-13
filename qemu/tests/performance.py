@@ -4,7 +4,10 @@ import commands
 import shutil
 import shelve
 import threading
-from Queue import Queue
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
 from avocado.utils import download
 from avocado.utils import process

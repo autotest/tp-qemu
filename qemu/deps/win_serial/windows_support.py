@@ -42,9 +42,9 @@ class WinBufferedReadFile(object):
                 frags = []
                 aux = 0
                 if self.verbose:
-                    print "get %s, | bufs = %s [%s]" % (n, self._n,
+                    print("get %s, | bufs = %s [%s]" % (n, self._n,
                                                         ','.join(map(lambda x: str(len(x)),
-                                                                     self._bufs)))
+                                                                     self._bufs))))
                 while aux < n:
                     frags.append(self._bufs.pop(0))
                     aux += len(frags[-1])
@@ -54,9 +54,9 @@ class WinBufferedReadFile(object):
                 if len(rest) > 0:
                     self._bufs.append(rest)
                 if self.verbose:
-                    print "return %s(%s), | bufs = %s [%s]" % (len(ret), n, self._n,
+                    print("return %s(%s), | bufs = %s [%s]" % (len(ret), n, self._n,
                                                                ','.join(map(lambda x: str(len(x)),
-                                                                            self._bufs)))
+                                                                            self._bufs))))
                 return ret
             try:
                 # 4096 is the largest result viosdev will return right now.
@@ -66,9 +66,9 @@ class WinBufferedReadFile(object):
                     self._bufs.append(b[:nr])
                     self._n += nr
                 if self.verbose:
-                    print "read %s, err %s | bufs = %s [%s]" % (nr, err, self._n,
+                    print("read %s, err %s | bufs = %s [%s]" % (nr, err, self._n,
                                                                 ','.join(map(lambda x: str(len(x)),
-                                                                             self._bufs)))
+                                                                             self._bufs))))
             except:
                 pass
         # Never Reached

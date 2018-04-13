@@ -103,7 +103,7 @@ def test(path):
     else:
         vport_name = '/dev/virtio-ports/' + path
     vio = VirtIoChannel(vport_name)
-    print vio.read()
+    print(vio.read())
 
 
 if __name__ == "__main__":

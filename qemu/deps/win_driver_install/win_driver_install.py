@@ -167,7 +167,7 @@ def show_log_output(result_file):
     :param result_file: File which saves execution logs.
     """
     with open(result_file) as fd:
-        print os.linesep.join(fd.readlines())
+        print(os.linesep.join(fd.readlines()))
 
 
 if __name__ == "__main__":
@@ -229,7 +229,7 @@ if __name__ == "__main__":
         verify_driver_ver(arguments.driver_path, arguments.device_name,
                           arguments.driver_name)
     elif arguments.log_output:
-        print "Execution log:\n"
+        print("Execution log:\n")
         show_log_output(result_file)
-        print "DPINST.log:\n"
+        print("DPINST.log:\n")
         show_log_output(r"C:\Windows\DPINST.log")

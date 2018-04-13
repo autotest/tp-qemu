@@ -14,7 +14,7 @@ import getopt
 def daemonize(output_file):
     try:
         pid = os.fork()
-    except OSError, e:
+    except OSError as e:
         raise Exception("error %d: %s" % (e.strerror, e.errno))
 
     if pid:
@@ -26,12 +26,12 @@ def daemonize(output_file):
     sys.stderr.flush()
 
     if output_file:
-        output_handle = file(output_file, 'a+', 0)
+        output_handle = open(output_file, 'a+', 0)
         # autoflush stdout/stderr
         sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
         sys.stderr = os.fdopen(sys.stderr.fileno(), 'w', 0)
     else:
-        output_handle = file('/dev/null', 'a+')
+        output_handle = open('/dev/null', 'a+')
 
     stdin_handle = open('/dev/null', 'r')
     os.dup2(output_handle.fileno(), sys.stdout.fileno())
@@ -70,9 +70,9 @@ def run_server(host, port, daemon, path, queue_size, threshold, drift):
             prev_check_timestamp = local_timestamp
         if verbose:
             if check_drift:
-                print "%.2f: %s (%s)" % (local_timestamp, heartbeat, drift)
+                print("%.2f: %s (%s)" % (local_timestamp, heartbeat, drift))
             else:
-                print "%.2f: %s" % (local_timestamp, heartbeat)
+                print("%.2f: %s" % (local_timestamp, heartbeat))
 
 
 def run_client(host, port, daemon, path, interval):
@@ -87,9 +87,10 @@ def run_client(host, port, daemon, path, interval):
             sock.sendall(heartbeat)
             sock.close()
             if verbose:
-                print heartbeat
-        except socket.error, (value, message):
-            print "%.2f: ERROR, %d - %s" % (float(time.time()), value, message)
+                print(heartbeat)
+        except socket.error as message:
+            print("%.2f: ERROR - %s"
+                  % (float(time.time()), message))
 
         seq += 1
         time.sleep(interval)
@@ -102,16 +103,16 @@ def get_heartbeat(seq=1):
 def check_heartbeat(heartbeat, local_timestamp, threshold, check_drift):
     hostname, _, timestamp = heartbeat.rsplit()
     timestamp = float(timestamp)
-    if client_prev_timestamp.has_key(hostname):
+    if hostname in client_prev_timestamp:
         delta = local_timestamp - client_prev_timestamp[hostname]
         if delta > threshold:
-            print ("%.2f: ALERT, SLU detected on host %s, delta %ds" %
-                   (float(time.time()), hostname, delta))
+            print("%.2f: ALERT, SLU detected on host %s, delta %ds" %
+                  (float(time.time()), hostname, delta))
 
     client_prev_timestamp[hostname] = local_timestamp
 
     if check_drift:
-        if not client_clock_offset.has_key(hostname):
+        if hostname not in client_clock_offset:
             client_clock_offset[hostname] = timestamp - local_timestamp
             client_prev_drift[hostname] = 0
         drift = timestamp - local_timestamp - client_clock_offset[hostname]
@@ -127,8 +128,8 @@ def check_for_timeouts(threshold, check_drift):
         timestamp = client_prev_timestamp[hostname]
         delta = local_timestamp - timestamp
         if delta > threshold * 2:
-            print ("%.2f: ALERT, SLU detected on host %s, no heartbeat for %ds"
-                   % (local_timestamp, hostname, delta))
+            print("%.2f: ALERT, SLU detected on host %s, no heartbeat for %ds"
+                  % (local_timestamp, hostname, delta))
             del client_prev_timestamp[hostname]
             if check_drift:
                 del client_clock_offset[hostname]
@@ -136,7 +137,7 @@ def check_for_timeouts(threshold, check_drift):
 
 
 def usage():
-    print """
+    print("""
 Usage:
 
     heartbeat_slu.py --server --address <bind_address> --port <bind_port>
@@ -146,7 +147,7 @@ Usage:
     heartbeat_slu.py --client --address <server_address> -p <server_port>
                      [--file output_file] [--no-daemon] [--verbose]
                      [--interval <heartbeat interval in seconds>]
-"""
+""")
 
 
 # host information and global data
@@ -175,8 +176,8 @@ try:
         "server", "client", "no-daemon", "address=", "port=",
         "file=", "server", "interval=", "threshold=", "verbose",
         "check-drift", "help"])
-except getopt.GetoptError, e:
-    print "error: %s" % str(e)
+except getopt.GetoptError as e:
+    print("error: %s" % str(e))
     usage()
     sys.exit(1)
 
@@ -205,7 +206,7 @@ for param, value in opts:
         usage()
         sys.exit(0)
     else:
-        print "error: unrecognized option: %s" % value
+        print("error: unrecognized option: %s" % value)
         usage()
         sys.exit(1)
 

@@ -10,6 +10,7 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_package
 from virttest import error_context
+from virttest import qemu_monitor     # For MonitorNotSupportedMigCapError
 
 
 @error_context.context_aware
@@ -217,13 +218,18 @@ def run(test, params, env):
                     logging.info("Round %s ping..." % str(i / 2))
                 else:
                     logging.info("Round %s pong..." % str(i / 2))
-                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                           offline, check,
-                           migration_exec_cmd_src=mig_exec_cmd_src,
-                           migration_exec_cmd_dst=mig_exec_cmd_dst,
-                           migrate_capabilities=capabilities,
-                           mig_inner_funcs=inner_funcs,
-                           env=env)
+                try:
+                    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                               offline, check,
+                               migration_exec_cmd_src=mig_exec_cmd_src,
+                               migration_exec_cmd_dst=mig_exec_cmd_dst,
+                               migrate_capabilities=capabilities,
+                               mig_inner_funcs=inner_funcs,
+                               env=env)
+                except qemu_monitor.MonitorNotSupportedMigCapError as e:
+                    test.cancel("Unable to access capability: %s" % e)
+                except:
+                    raise
 
             # Set deamon thread action to stop after migrate
             params["action"] = "stop"

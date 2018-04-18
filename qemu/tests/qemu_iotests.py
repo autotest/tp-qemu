@@ -28,7 +28,7 @@ def run(test, params, env):
     commit = params.get("qemu_io_commit", None)
     base_uri = params.get("qemu_io_base_uri", None)
     iotests_dir = params.get("qemu_iotests_dir", "tests/qemu-iotests")
-    destination_dir = os.path.join(test.srcdir, "qemu_io_tests")
+    destination_dir = os.path.join(test.workdir, "qemu_io_tests")
     git.get_repo(uri=uri, branch=branch, lbranch=lbranch, commit=commit,
                  destination_dir=destination_dir, base_uri=base_uri)
 

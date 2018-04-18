@@ -9,8 +9,8 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Test environment.
     """
-    srcdir = params.get("srcdir", test.srcdir)
-    params["srcdir"] = srcdir
+    workdir = params.get("workdir", test.workdir)
+    params["workdir"] = workdir
 
     # Flag if a installer minor failure occurred
     minor_failure = False

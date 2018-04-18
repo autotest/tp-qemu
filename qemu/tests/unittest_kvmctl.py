@@ -14,8 +14,8 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     case = params["case"]
-    srcdir = params.get("srcdir", test.srcdir)
-    unit_dir = os.path.join(srcdir, "kvm_userspace", "kvm", "user")
+    workdir = params.get("workdir", test.workdir)
+    unit_dir = os.path.join(workdir, "kvm_userspace", "kvm", "user")
     if not os.path.isdir(unit_dir):
         os.makedirs(unit_dir)
     os.chdir(unit_dir)

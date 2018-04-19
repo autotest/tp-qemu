@@ -232,7 +232,7 @@ def run(test, params, env):
         for nic in primary_nic:
             vm.set_link(nic.device_id, up=True)
         logging.info("Reboot vm to verify it alive after hotunplug nic(s)")
-        serial = len(vm.virtnet) > 0 and False or True
+        serial = not (len(vm.virtnet) > 0)
         session = vm.reboot(serial=serial)
         vm.verify_alive()
         session.close()

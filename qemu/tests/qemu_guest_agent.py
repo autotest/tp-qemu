@@ -897,6 +897,54 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("The return value of thawing an unfrozen fs is %s,"
                       "it should be zero" % ret)
 
+    def gagent_check_read_write_guestfile(self, test, params, env):
+        """
+        Test guest agent commands "guest-file-open/write/read/close"
+
+        Test steps:
+        1) open file with mode "w+" in guest.
+        2) write "hello world" to file.
+        3) close file.
+        4) open file with mode "r+" in guest.
+        5) read file
+        6) close file
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
+        """
+        agent_file = "/tmp/agentfile"
+        #if file not exist,mode "w+" will create a new file
+        open_cmd = "guest-file-open"
+        open_args_w = {"path": agent_file, "mode": "w+"}
+        #open agent_file and get result
+        ret = int(self.gagent.file_operate(open_args_w, open_cmd))
+
+        #write "hello world" to file
+        write_cmd = "guest-file-write"
+        write_str = "aGVsbG8gd29ybGQhCg=="
+        write_args = {"handle": ret, "buf-b64": write_str}
+        ret_write = self.gagent.file_operate(write_args, write_cmd)
+
+        #close agent file
+        close_cmd = "guest-file-close"
+        close_args_w = {"handle": ret}
+        self.gagent.file_operate(close_args_w, close_cmd)
+        #mode r+ open an exist file only
+        open_args_r = {"path": agent_file, "mode": "r+"}
+        ret = int(self.gagent.file_operate(open_args_r, open_cmd))
+
+        #read agent file's context to match "hello world"
+        read_cmd = "guest-file-read"
+        read_args = {"handle": ret, "count": 1024}
+        ret_read = self.gagent.file_operate(read_args, read_cmd)
+        if not ret_read["buf-b64"] == write_str:
+            test.fail("Read the contents and files do not match")
+        close_args_r = {"handle": ret}
+        self.gagent.file_operate(close_args_r, close_cmd)
+        if os.path.exists(agent_file):
+            os.remove(agent_file)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

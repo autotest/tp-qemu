@@ -38,7 +38,7 @@ def run(test, params, env):
         :return: A dict containing the previous mask for each thread.
         """
         tids = process.system_output("ps -L --pid=%s -o lwp=" % pid,
-                                     verbose=False).split()
+                                     verbose=False, ignore_status=True).split()
         prev_masks = {}
         for tid in tids:
             prev_mask = process.system_output("taskset -p %s" % tid,
@@ -46,7 +46,8 @@ def run(test, params, env):
             prev_masks[tid] = prev_mask
             process.system("taskset -p %s %s" % (mask, tid), verbose=False)
         children = process.system_output("ps --ppid=%s -o pid=" % pid,
-                                         verbose=False).split()
+                                         verbose=False,
+                                         ignore_status=True).split()
         for child in children:
             prev_masks.update(set_cpu_affinity(child, mask))
         return prev_masks

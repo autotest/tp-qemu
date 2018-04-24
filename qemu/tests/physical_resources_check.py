@@ -41,7 +41,8 @@ def run(test, params, env):
             f_fail.append(fail_log)
             logging.error(fail_log)
 
-        actual_num = o.count(check_str)
+        ovmf_fd_num = o.count('%s.fd' % check_str)  # Exclude ovmf fd drive
+        actual_num = o.count(check_str) - ovmf_fd_num
         if expected_num != actual_num:
             fail_log = "%s number mismatch:\n" % str(devices)
             fail_log += "    Assigned to VM: %d\n" % expected_num

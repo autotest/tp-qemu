@@ -74,10 +74,11 @@ def run(test, params, env):
         try:
             output = process.system_output(cmd, verbose=False)
         except process.CmdError as err:
-            if "does not support checks" in str(err):
+            result_stderr = err.result.stderr
+            if "does not support checks" in result_stderr:
                 return (True, "")
             else:
-                return (False, str(err))
+                return (False, result_stderr)
         return (True, output)
 
     def check_test(cmd):

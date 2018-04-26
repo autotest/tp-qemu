@@ -28,6 +28,6 @@ def run(test, params, env):
                             logging.debug, "(pxe capture) ", timeout)[1]
 
     error_context.context("Analyzing the tcpdump result", logging.info)
-    if "tftp" not in output:
+    if "tftp" not in output.decode():
         test.fail("Couldn't find any TFTP packets after %s seconds" % timeout)
     logging.info("Found TFTP packet")

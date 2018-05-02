@@ -174,7 +174,7 @@ class BallooningTest(MemoryBaseTest):
         """
         logging.info("Wait until guest memory don't change")
         is_stable = self._mem_state()
-        utils_misc.wait_for(is_stable.next, timeout, step=10.0)
+        utils_misc.wait_for(lambda: next(is_stable), timeout, step=10.0)
 
     def get_memory_boundary(self, balloon_type=''):
         """

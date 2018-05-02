@@ -79,12 +79,12 @@ def run(test, params, env):
         readcmd = opcmd % (io_options, snapshot_file)
         logging.info("read: %s", readcmd)
         process.run(dropcache, shell=True)
-        output = process.run(readcmd)
+        output = process.run(readcmd, shell=True)
     elif op_type == "commit":
         commitcmd = opcmd % (cache_mode, snapshot_file)
         logging.info("commit: %s", commitcmd)
         process.run(dropcache, shell=True)
-        output = process.run(commitcmd)
+        output = process.run(commitcmd, shell=True)
     elif op_type == "rebase":
         new_base_img = QemuImg(params.object_params(new_base), image_dir,
                                new_base)
@@ -93,13 +93,13 @@ def run(test, params, env):
                              cache_mode, snapshot_file)
         logging.info("rebase: %s", rebasecmd)
         process.run(dropcache, shell=True)
-        output = process.run(rebasecmd)
+        output = process.run(rebasecmd, shell=True)
     elif op_type == "convert":
         convertname = sn_list[test_image][0].image_filename + "_convert"
         convertcmd = opcmd % (snapshot_file, cache_mode, convertname)
         logging.info("convert: %s", convertcmd)
         process.run(dropcache, shell=True)
-        output = process.run(convertcmd)
+        output = process.run(convertcmd, shell=True)
 
     error_context.context("Result recording", logging.info)
     result_file = open("%s/%s_%s_results" %

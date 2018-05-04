@@ -5,6 +5,7 @@ from avocado.utils import process
 from virttest import error_context
 from virttest import utils_misc
 from virttest.staging import utils_memory
+from virttest.compat_52lts import decode_to_text
 
 
 def check_host_numa_node_amount(test):
@@ -66,19 +67,21 @@ def check_memory_in_procfs(test, params, vm):
     policy = params['policy_mem']
     if policy == 'preferred':
         policy = 'prefer'
-    mem_path = params.get("mem-path", None)
     for mem_dev in params['mem_devs'].split():
         memdev_params = params.object_params(mem_dev)
         mem_size = memdev_params['size']
         mem_size = int(float(utils_misc.normalize_data_size(mem_size, "K")))
         smaps = process.system_output("grep -1 %d /proc/%d/smaps"
                                       % (mem_size, qemu_pid))
+        smaps = decode_to_text(smaps).strip()
+        mem_path = memdev_params.get("mem-path")
         if mem_path and (mem_path not in smaps):
             test.fail("memdev = %s: mem-path '%s' is not in smaps '%s'!"
                       % (mem_dev, mem_path, smaps))
         mem_start = smaps.split('-')[0]
         numa_maps = process.system_output("grep %s /proc/%d/numa_maps"
                                           % (mem_start, qemu_pid))
+        numa_maps = decode_to_text(numa_maps).strip()
         if mem_path and (mem_path not in numa_maps):
             test.fail("memdev = %s: mem-path '%s' is not in numa_maps '%s'!"
                       % (mem_dev, mem_path, numa_maps))

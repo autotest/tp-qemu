@@ -59,9 +59,13 @@ def run(test, params, env):
 
     timeout = float(params.get("login_timeout", 240))
     host_cpu_num = utils_cpu.online_cpus_count()
-    while host_cpu_num:
-        num_queues = str(host_cpu_num)
-        host_cpu_num &= host_cpu_num - 1
+    if host_cpu_num < int(params.get("num_queues_min")):
+        logging.debug("Host cpus is %s" % host_cpu_num)
+        test.cancel("Can not run since required minimum cpus is %s."
+                    % params.get("num_queues_min"))
+    if host_cpu_num > int(params.get("num_queues_max")):
+        host_cpu_num = int(params.get("num_queues_max"))
+    num_queues = str(host_cpu_num)
     params['smp'] = num_queues
     params['num_queues'] = num_queues
     images_num = int(num_queues)

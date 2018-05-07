@@ -64,6 +64,20 @@ def run(test, params, env):
         """
         disks_before_unplug = find_disk(vm, get_disk_cmd)
         device.unplug(vm.monitor)
+        event_status = utils_misc.wait_for(
+            lambda: vm.monitor.get_event(params.get('event_name')),
+            params.get('event_timeout'), 0.0,
+            float(params.get('check_interval')))
+
+        if not event_status:
+            test.fail("Can not get event \"%s\" under %s."
+                      % (params.get('event_name'), params.get('event_timeout')))
+        else:
+            logging.debug("Get event \"%s\" info after unplug device: \n%s"
+                          % (params.get('event_name'),
+                             vm.monitor.get_event(params.get('event_name'))))
+            vm.monitor.clear_event(params.get('event_name'))
+
         device.verify_unplug("", vm.monitor)
         unplug_status = utils_misc.wait_for(lambda: len(get_new_disk(find_disk
                                             (vm, get_disk_cmd), disks_before_unplug)) != 0, pause)

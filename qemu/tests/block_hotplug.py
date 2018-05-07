@@ -63,8 +63,7 @@ def run(test, params, env):
         Unplug device
         """
         disks_before_unplug = find_disk(vm, get_disk_cmd)
-        device.unplug(vm.monitor)
-        device.verify_unplug("", vm.monitor)
+        vm.devices.simple_unplug(device, vm.monitor)
         unplug_status = utils_misc.wait_for(lambda: len(get_new_disk(find_disk
                                             (vm, get_disk_cmd), disks_before_unplug)) != 0, pause)
         return unplug_status
@@ -114,8 +113,7 @@ def run(test, params, env):
                             key, value = item.split("=", 1)
                             qdevice_params = {key: value}
                             controller.params.update(qdevice_params)
-                    controller.hotplug(vm.monitor)
-                    ver_out = controller.verify_hotplug("", vm.monitor)
+                    _, ver_out = vm.devices.simple_hotplug(controller, vm.monitor)
                     if not ver_out:
                         err = "%s is not in qtree after hotplug" % controller_model
                         test.fail(err)
@@ -126,7 +124,7 @@ def run(test, params, env):
                 drive.set_param("file", find_image(img_list[num + 1]))
                 drive.set_param("format", img_format_type)
                 drive_id = drive.get_param("id")
-                drive.hotplug(vm.monitor)
+                vm.devices.simple_hotplug(drive, vm.monitor)
 
                 device.set_param("drive", drive_id)
                 device.set_param("id", "block%d" % num)
@@ -137,8 +135,7 @@ def run(test, params, env):
                     for item in blk_extra_param.split():
                         key, value = item.split("=", 1)
                         device.set_param(key, value)
-                device.hotplug(vm.monitor)
-                ver_out = device.verify_hotplug("", vm.monitor)
+                _, ver_out = vm.devices.simple_hotplug(device, vm.monitor)
                 if not ver_out:
                     err = "%s is not in qtree after hotplug" % pci_type
                     test.fail(err)
@@ -227,7 +224,7 @@ def run(test, params, env):
                 if not unplug_status:
                     test.fail("Failed to unplug disks '%s'" % device.get_param("id"))
                 device_list.remove(device)
-            controller.unplug(vm.monitor)
+            vm.devices.simple_unplug(controller, vm.monitor)
         for device in device_list:
             unplug_status = unplug_device(vm, get_disk_cmd, device)
             if not unplug_status:

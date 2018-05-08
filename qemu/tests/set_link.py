@@ -140,6 +140,43 @@ def run(test, params, env):
         finally:
             session.close()
 
+    def check_interface_ip_routine(session, mac_addr):
+        """
+        The routine to check the ip of interface.
+
+        :param session: a session to send check commands
+        :param mac_addr: the interface mac address
+        """
+        ip_addr = utils_net.get_net_if_addrs_win(session, mac_addr)
+        guest_ipv4 = ip_addr["ipv4"]
+        for ip in guest_ipv4:
+            logging.debug("Check address: %s" % ip)
+            if len(ip) != 0 and not ip.startswith("169.254"):
+                return True
+        return False
+
+    def check_interface_ip(timeout=600):
+        """
+        Check whether the vm has got the available ip address.
+
+        The check will be performed repeatedly until a correct ip address
+        is detected or after the specified time is expired.
+
+        :param timeout: total checking time allowed
+        """
+        error_context.context("Start checking guest ip", logging.info)
+        session = vm.wait_for_serial_login()
+        mac_addr = vm.get_mac_address()
+        try:
+            if not utils_misc.wait_for(
+                    lambda: check_interface_ip_routine(session, mac_addr),
+                    timeout,
+                    step=5.0):
+                err_msg = "Can't get valid ip in %s seconds" % timeout
+                test.fail(err_msg)
+        finally:
+            session.close()
+
     def set_link_test(linkid, link_up, expect_status,
                       operstate_always_up=False, change_queues=False):
         """
@@ -165,6 +202,8 @@ def run(test, params, env):
                 expect_status = win_media_connected
         guest_interface_operstate_check(expect_status, guest_ifname,
                                         change_queues)
+        if params.get("os_type") == "windows":
+            check_interface_ip()
 
         error_context.context("Check if guest network connective",
                               logging.info)

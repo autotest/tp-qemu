@@ -14,7 +14,7 @@ except NameError:
         return (x > y) - (x < y)
 
 
-@env_process.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Check smbios table :
@@ -48,7 +48,7 @@ def run(test, params, env):
 
     exec_username = params.get("user_runas", "nobody")
 
-    env_process.base_context("Run QEMU %s test:" % exec_username)
+    error_context.base_context("Run QEMU %s test:" % exec_username)
     error_context.context("Get the user uid and gid,using 'id -u/g username'")
     (exec_uid, exec_gid) = get_user_ugid(exec_username)
 

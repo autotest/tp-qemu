@@ -103,6 +103,8 @@ def run(test, params, env):
             device = qdevices.QDevice(pci_type)
             if params.get("need_plug") == "yes":
                 disks_before_plug = find_disk(vm, get_disk_cmd)
+                #Get pci bus parameter for the device being hotplugged, default None.
+                pci_bus = params.get("pci_bus_%s" % img_list[num + 1])
 
                 if params.get("need_controller", "no") == "yes":
                     controller_model = params.get("controller_model")
@@ -114,6 +116,10 @@ def run(test, params, env):
                             key, value = item.split("=", 1)
                             qdevice_params = {key: value}
                             controller.params.update(qdevice_params)
+                    # Add pci bus parameter for controller if it exists
+                    if pci_bus:
+                        controller.params.update({"bus": pci_bus})
+                        pci_bus = None
                     controller.hotplug(vm.monitor)
                     ver_out = controller.verify_hotplug("", vm.monitor)
                     if not ver_out:
@@ -137,6 +143,9 @@ def run(test, params, env):
                     for item in blk_extra_param.split():
                         key, value = item.split("=", 1)
                         device.set_param(key, value)
+                # Add pci bus parameter for device if it exists and no controller been plugged
+                if pci_bus:
+                    device.params.update({"bus": pci_bus})
                 device.hotplug(vm.monitor)
                 ver_out = device.verify_hotplug("", vm.monitor)
                 if not ver_out:

@@ -62,7 +62,8 @@ def run(test, params, env):
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
     shell_prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
-    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    linesep = params.get(
+        "shell_linesep", "\n").encode().decode('unicode_escape')
     status_test_command = params.get("status_test_command", "echo $?")
     ping_count = int(params.get("ping_count", 10))
     compile_option_client = params.get("compile_option_client", "")

@@ -187,7 +187,7 @@ def run(test, params, env):
                     password=info[-4],
                     username=info[-5],
                     prompt=info[-6],
-                    linesep=info[-7].decode('string_escape'),
+                    linesep=info[-7].encode().decode('unicode_escape'),
                     status_test_command=info[-8],
                     compile_option=compile_option_server)
                 netperf_servers.append((server, vm))
@@ -209,7 +209,7 @@ def run(test, params, env):
                     password=info[-4],
                     username=info[-5],
                     prompt=info[-6],
-                    linesep=info[-7].decode('string_escape'),
+                    linesep=info[-7].encode().decode('unicode_escape'),
                     status_test_command=info[-8],
                     compile_option=compile_option_client)
                 netperf_clients.append((client, vm))

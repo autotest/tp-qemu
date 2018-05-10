@@ -23,9 +23,15 @@ def run(test, params, env):
     vm.verify_alive()
     stress = utils_test.VMStress(vm, 'stress')
     stress.load_stress_tool()
-    stress_time = int(params.get('stress_time'))
-    if stress_time:
-        time.sleep(stress_time)
+    stress_duration = int(params.get('stress_duration', 0))
+    # NOTE: stress_duration = 0 ONLY for some legacy test cases using
+    # autotest stress.control as their sub test.
+    # Please DO define stress_duration to make sure the clean action
+    # being performed, if your case can not be controlled by time,
+    # use utils_test.VMStress() directly
+
+    if stress_duration:
+        time.sleep(stress_duration)
         stress.unload_stress()
         stress.clean()
         vm.verify_kernel_crash()

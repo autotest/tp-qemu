@@ -328,6 +328,12 @@ def run(test, params, env):
             for script in params.get("copy_scripts").split():
                 script_path = os.path.join(script_dir, script)
                 vm.copy_files_to(script_path, tmp_dir)
+        if params.get("os_type") == "windows":
+            curl_win_path = params.get("curl_win_path", "C:\\curl\\")
+            session.cmd("dir {0} || mkdir {0}".format(curl_win_path))
+            for script in params.get("copy_curl").split():
+                curl_win_link = os.path.join(data_dir.get_deps_dir("curl"), script)
+                vm.copy_files_to(curl_win_link, curl_win_path, timeout=60)
         session.close()
 
     vms_tags = params.objects("vms")

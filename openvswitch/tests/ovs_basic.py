@@ -71,7 +71,7 @@ class InfrastructureInit(MiniSubtest):
                                           self.ovs)
 
         logging.debug(self.ovs.status())
-        self.host = ovs_utils.Machine(src=test.srcdir)
+        self.host = ovs_utils.Machine(src=test.workdir)
         self.mvms = [ovs_utils.Machine(vm) for vm in self.vms]
         self.machines = [self.host] + self.mvms
 

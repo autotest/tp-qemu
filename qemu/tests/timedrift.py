@@ -59,7 +59,8 @@ def run(test, params, env):
         :param prev_masks: A dict containing TIDs as keys and masks as values.
         """
         for tid, mask in prev_masks.items():
-            process.system("taskset -p %s %s" % (mask, tid), verbose=False)
+            process.system("taskset -p %s %s" % (mask, tid), verbose=False,
+                           ignore_status=True)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

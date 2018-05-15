@@ -1,10 +1,9 @@
 import logging
 
-from avocado.core import exceptions
-
 from virttest import error_context
 from virttest import env_process
 from virttest import utils_misc
+from virttest import utils_disk
 
 
 @error_context.context_aware
@@ -32,15 +31,31 @@ def run(test, params, env):
         "TEST STEPS 2: Format the disk and copy file to it", logging.info)
     os_type = params["os_type"]
     copy_cmd = params.get("copy_cmd", "copy %s %s")
-    disk_idx = params.get("disk_index", 1)
-    fs_type = params.get("fstype", "ntfs")
-    drive_letter = params.get("drive_letter", "I:")
-    disk_size = params.get("partition_size_data", "200M")
+    fstype = params.get("fstype", "ntfs")
+    data_image_size = params.get("image_size_data", "1G")
+    data_image_num = int(params.get("data_image_num",
+                                    len(params.objects("images")) - 1))
+    error_context.context("Get windows disk index that to "
+                          "be formatted", logging.info)
+    disk_index_list = utils_disk.get_windows_disks_index(session, data_image_size)
+    if len(disk_index_list) < data_image_num:
+        test.fail("Fail to list all data disks. "
+                  "Set disk number: %d, "
+                  "get disk number in guest: %d."
+                  % (data_image_num, len(disk_index_list)))
     src_file = utils_misc.set_winutils_letter(
         session, params["src_file"], label="WIN_UTILS")
-    utils_misc.format_guest_disk(session, disk_idx, drive_letter,
-                                 disk_size, fs_type, os_type)
-    dst_file = params["dst_file"]
+    error_context.context("Clear readonly for all disks and online "
+                          "them in guest.", logging.info)
+    if not utils_disk.update_windows_disk_attributes(session, disk_index_list):
+        test.fail("Failed to update windows disk attributes.")
+    error_context.context("Format disk %s in guest." % disk_index_list[0],
+                          logging.info)
+    drive_letter = utils_disk.configure_empty_disk(
+        session, disk_index_list[0], data_image_size, os_type, fstype=fstype)
+    if not drive_letter:
+        test.fail("Fail to format disks.")
+    dst_file = params["dst_file"] % drive_letter[0]
     session.cmd(copy_cmd % (src_file, dst_file))
 
     msg = "TEST STEPS 3: Stop the guest and boot up again with the data disk"
@@ -60,16 +75,15 @@ def run(test, params, env):
     error_context.context(
         "TEST STEPS 4: Write to the readonly disk expect:"
         "The media is write protected", logging.info)
-    dst_file_readonly = params["dst_file_readonly"]
+    dst_file_readonly = params["dst_file_readonly"] % drive_letter[0]
     o = session.cmd_output(copy_cmd % (src_file, dst_file_readonly))
     if not o.find("write protect"):
-        raise exceptions.TestFail(
-            "Write in readonly disk should failed\n. {}".format(o))
+        test.fail("Write in readonly disk should failed\n. {}".format(o))
 
     error_context.context(
         "TEST STEPS 5: Try to read from the readonly disk", logging.info)
     s, o = session.cmd_status_output(copy_cmd % (dst_file, r"C:\\"))
     if s != 0:
-        raise exceptions.TestFail("Read file failed\n. {}".format(o))
+        test.fail("Read file failed\n. {}".format(o))
 
     session.close()

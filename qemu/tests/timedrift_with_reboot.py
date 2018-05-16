@@ -1,6 +1,7 @@
 import logging
 
 from virttest import utils_test
+from virttest import utils_time
 
 
 def run(test, params, env):
@@ -26,6 +27,11 @@ def run(test, params, env):
         utils_test.update_boot_option(vm,
                                       args_removed=boot_option_removed,
                                       args_added=boot_option_added)
+
+    if params.get("os_type") == 'linux':
+        utils_time.sync_timezone_linux(vm)
+    else:
+        utils_time.sync_timezone_win(vm)
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)

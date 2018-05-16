@@ -66,7 +66,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
 
     def start_test(self):
         operation = self.params["operation"]
-        target_mem = self.params["target_mem"]
+        target_mems = self.params["target_mems"]
         stage = self.params.get("stage", "before")
         sub_test_runner = (
             stage == 'during' and [
@@ -79,11 +79,13 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         try:
             if stage != "after":
                 sub_test = sub_test_runner()
-                func(vm, target_mem)
-                self.check_memory(vm)
+                for target_mem in target_mems.split():
+                    func(vm, target_mem)
+                    self.check_memory(vm)
             else:
-                func(vm, target_mem)
-                self.check_memory(vm)
+                for target_mem in target_mems.split():
+                    func(vm, target_mem)
+                    self.check_memory(vm)
                 sub_test = sub_test_runner()
             if stage == "during":
                 sub_test.join(timeout=3600)

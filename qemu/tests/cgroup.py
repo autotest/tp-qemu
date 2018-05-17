@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import time
+import threading
 
 from avocado.utils import astring
 from avocado.utils import process
@@ -20,11 +21,13 @@ from virttest.env_process import preprocess
 from virttest import qemu_monitor
 from virttest import error_context
 from virttest import utils_misc
+from virttest import env_process
 
 from virttest.staging import utils_memory
 from virttest.staging.utils_cgroup import Cgroup
 from virttest.staging.utils_cgroup import CgroupModules
 from virttest.staging.utils_cgroup import get_load_per_cpu
+from virttest.utils_test import VMStress
 
 
 # Serial ID of the attached disk
@@ -2058,6 +2061,57 @@ def run(test, params, env):
             logging.error(err)
         else:
             return (out)
+
+    def cfs_bandwidth():
+        """
+        CFS bandwidth limit
+        """
+        def stress_thread():
+            session.cmd(stress_cmd, 120)
+
+        logging.info("Setup cgroup subsystem: cpu")
+        modules = CgroupModules()
+        if (modules.init(['cpu']) != 1):
+            test.fail("Can't mount cpu cgroup modules")
+        cgroup = Cgroup('cpu', '')
+        cgroup.initialize(modules)
+
+        # Create VM with smp=1
+        params['smp'] = 1
+        params["vcpu_sockets"] = 1
+        vm_name = params["main_vm"]
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, vm_name)
+        vm = env.get_vm(params["main_vm"])
+        login_timeout = int(params.get("login_timeout", 360))
+        session = vm.wait_for_login(timeout=login_timeout)
+
+        cgroup.mk_cgroup()
+        cgroup.set_property("cpu.cfs_period_us", 100000, 0)
+        cgroup.set_property("cpu.cfs_quota_us", 50000, 0)
+        assign_vm_into_cgroup(vm, cgroup, 0)
+
+        check_install_stress = params["check_install_stress"]
+        if session.cmd_status(check_install_stress):
+            VMStress(vm, "stress").install()
+
+        logging.info("Check the cpu utilization")
+        stress_cmd = params["stress_cmd"]
+        stress_t = threading.Thread(target=stress_thread)
+        stress_t.start()
+        count = 0
+        while count < 6:
+            time.sleep(10)
+            o = process.system_output("top -b -p %s -n 3 | tail -1" % vm.get_pid(),
+                                      shell=True).decode()
+            if 49 <= float(o.split()[-4]) <= 51:
+                count = count + 1
+                logging.debug("CPU utilization of guest is: %.2f%%" %
+                              float(o.split()[-4]))
+            else:
+                test.fail("CPU utilization of guest is: %.2f%%, it should be about "
+                          "50" % float(o.split()[-4]))
+        stress_t.join()
 
     # Main
     # Executes test specified by cgroup_test variable in cfg

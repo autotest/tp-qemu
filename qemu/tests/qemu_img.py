@@ -72,7 +72,7 @@ def run(test, params, env):
         error_context.context("Checking image '%s' by command '%s'"
                               % (img, cmd), logging.info)
         try:
-            output = process.system_output(cmd, verbose=False)
+            output = process.system_output(cmd, verbose=False).decode()
         except process.CmdError as err:
             result_stderr = err.result.stderr
             if "does not support checks" in result_stderr:
@@ -296,7 +296,7 @@ def run(test, params, env):
         cmd += " %s" % img
 
         try:
-            output = process.system_output(cmd)
+            output = process.system_output(cmd).decode()
         except process.CmdError as err:
             logging.error("Get info of image '%s' failed: %s", img, str(err))
             return None
@@ -344,14 +344,14 @@ def run(test, params, env):
                                                                    crtcmd)
             error_context.context(msg, logging.info)
             cmd_result = process.run(crtcmd, verbose=False, ignore_status=True)
-            status, output = cmd_result.exit_status, cmd_result.stdout
+            status, output = cmd_result.exit_status, cmd_result.stdout.decode()
             if status != 0:
                 test.fail("Create snapshot failed via command: %s;"
                           "Output is: %s" % (crtcmd, output))
         listcmd = cmd
         listcmd += " -l %s" % image_name
         cmd_result = process.run(listcmd, verbose=False, ignore_status=True)
-        status, out = cmd_result.exit_status, cmd_result.stdout
+        status, out = cmd_result.exit_status, cmd_result.stdout.decode()
         if not ("snapshot0" in out and "snapshot1" in out and status == 0):
             test.fail("Snapshot created failed or missed;"
                       "snapshot list is: \n%s" % out)
@@ -362,7 +362,7 @@ def run(test, params, env):
             msg = "Delete snapshot '%s' by command %s" % (sn_name, delcmd)
             error_context.context(msg, logging.info)
             cmd_result = process.run(delcmd, verbose=False, ignore_status=True)
-            status, output = cmd_result.exit_status, cmd_result.stdout
+            status, output = cmd_result.exit_status, cmd_result.stdout.decode()
             if status != 0:
                 test.fail("Delete snapshot '%s' failed: %s" %
                           (sn_name, output))

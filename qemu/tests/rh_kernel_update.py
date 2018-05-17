@@ -92,13 +92,13 @@ def run(test, params, env):
         kbuild_name = params.get("kernel_build_name", "kernel")
 
         latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
-        o = process.system_output(latest_pkg_cmd, timeout=360)
+        o = process.system_output(latest_pkg_cmd, timeout=360).decode()
         build = re.findall(r"kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %
                       (tag, build))
 
         buildinfo = process.system_output("brew buildinfo %s" % build,
-                                          timeout=360)
+                                          timeout=360).decode()
 
         # install kernel-firmware
         firmware_url = None
@@ -136,13 +136,13 @@ def run(test, params, env):
         kbuild_name = params.get("kernel_build_name", "kernel")
 
         latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
-        o = process.system_output(latest_pkg_cmd, timeout=360)
+        o = process.system_output(latest_pkg_cmd, timeout=360).decode()
         build = re.findall(r"kernel[^\s]+", o)[0]
         logging.debug("Latest package on brew for tag %s is %s" %
                       (tag, build))
 
         buildinfo = process.system_output("brew buildinfo %s" % build,
-                                          timeout=360)
+                                          timeout=360).decode()
 
         try:
             knl_dbginfo_links = re.findall(knl_dbginfo_re,
@@ -252,7 +252,7 @@ def run(test, params, env):
         latest_pkg_cmd = params.get("latest_pkg_cmd", "brew latest-pkg")
         latest_pkg_cmd = "%s %s %s" % (latest_pkg_cmd, tag, pkg)
         latest_pkg_cmd = "%s --arch=%s --paths" % (latest_pkg_cmd, arch)
-        mnt_paths = process.system_output(latest_pkg_cmd).splitlines()
+        mnt_paths = process.system_output(latest_pkg_cmd).decode().splitlines()
         return [get_brew_url(_, download_root)
                 for _ in mnt_paths if _.endswith(".rpm")]
 

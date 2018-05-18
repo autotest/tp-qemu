@@ -88,9 +88,11 @@ def run(test, params, env):
         #        brew build?
         rh_kernel_hint = r"[\d+][^\s]+"
         kernel_re = params.get("kernel_re")
+        knl_modules_re = params.get("knl_modules_re")
+        knl_core_re = params.get("knl_core_re")
         tag = params.get("brew_tag")
         kbuild_name = params.get("kernel_build_name", "kernel")
-
+  
         latest_pkg_cmd = "brew latest-pkg %s %s" % (tag, kbuild_name)
         o = process.system_output(latest_pkg_cmd, timeout=360).decode()
         build = re.findall(r"kernel[^\s]+", o)[0]
@@ -113,12 +115,31 @@ def run(test, params, env):
             firmware_url = get_brew_url(fw_brew_link, download_root)
 
         knl_pattern = kernel_re % rh_kernel_hint
+        knl_mod_pattern = knl_modules_re
+        knl_core_pattern = knl_core_re
+
         try:
             knl_brew_link = re.findall(knl_pattern, buildinfo, re.I)[0]
         except IndexError:
             test.error("Could not get kernel package brew link"
                        " matching pattern '%s'" % knl_pattern)
+
+        try:
+            knl_mod_brew_link = re.findall(knl_mod_pattern, buildinfo, re.I)[0]
+        except IndexError:
+            test.error("Could not get kernel-modules package brew link"
+                    " matching pattern '%s'" % knl_mod_pattern)
+
+        try:
+            knl_core_brew_link = re.findall(knl_core_pattern, buildinfo,
+                                            re.I)[0]
+        except IndexError:
+            test.error("Could not get kernel-core package brew link"
+                           " matching pattern '%s'" % knl_core_pattern)
+
         kernel_url = get_brew_url(knl_brew_link, download_root)
+        kernel_mod_url = get_brew_url(knl_mod_brew_link, download_root)
+        kernel_core_url = get_brew_url(knl_core_brew_link, download_root)
 
         debug_re = kernel_re % ("(%s)" % rh_kernel_hint)
         try:
@@ -128,7 +149,8 @@ def run(test, params, env):
                        " pattern '%s'" % debug_re)
         kernel_version += "." + params.get("kernel_suffix", "")
 
-        return kernel_version, kernel_url, firmware_url
+        return kernel_version, kernel_url, kernel_mod_url, kernel_core_url, \
+        firmware_url
 
     def get_kernel_debuginfo_rpm_link():
         knl_dbginfo_re = params.get("knl_dbginfo_re")
@@ -291,7 +313,8 @@ def run(test, params, env):
     args_removed = params.get("args_removed", "").split()
     args_added = params.get("args_added", "").split()
     virtio_drivers = params.get("virtio_drivers_list", "").split()
-    kernel_version, kernel_rpm, firmware_rpm = get_kernel_rpm_link()
+    (kernel_version, kernel_rpm, kernel_mod_rpm, kernel_core_rpm, \
+    firmware_rpm) = get_kernel_rpm_link()
     knl_dbginfo_rpm = get_kernel_debuginfo_rpm_link()
     knl_dbginfo_version = "kernel-debuginfo-%s" % kernel_version
 
@@ -331,8 +354,12 @@ def run(test, params, env):
             error_context.context("Install guest kernel firmware",
                                   logging.info)
             rpm_install_func(session, firmware_rpm, upgrade=True)
-        error_context.context("Install guest kernel", logging.info)
-        rpm_install_func(session, kernel_rpm)
+        error_context.context("Install guest kernel packages", logging.info)
+        lists = [kernel_rpm, kernel_mod_rpm, kernel_core_rpm]
+        k_links = ""
+        for k in lists:
+            k_links += " %s" % k
+        rpm_install_func(session, k_links)
 
     kernel_path = "/boot/vmlinuz-%s" % kernel_version
 

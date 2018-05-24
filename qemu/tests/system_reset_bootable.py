@@ -51,7 +51,7 @@ def run(test, params, env):
 
         interval_tmp = interval
         if params.get("fixed_interval", "yes") != "yes":
-            interval_tmp = random.randint(0, interval)
+            interval_tmp = random.randint(0, interval * 1000) / 1000.0
 
         logging.debug("Reset the system by monitor cmd"
                       " after %ssecs" % interval_tmp)

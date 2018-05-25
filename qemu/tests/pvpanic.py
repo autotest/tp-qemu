@@ -1,8 +1,12 @@
 import logging
 import time
+import random
+
+import aexpect
 
 from virttest import error_context
 from virttest import utils_test
+from virttest import utils_misc
 
 
 def setup_test_environment(test, params, vm, session):
@@ -62,13 +66,31 @@ def trigger_crash(test, vm, params):
     :param vm: target vm
     :parma params: test params
     """
-    # to do: will add other crash method
-    crash_method = params.get("crash_method")
+    crash_method = params["crash_method"]
     if crash_method == "nmi":
         vm.monitor.nmi()
+    elif crash_method in ("usb_keyboard", "ps2_keyboard"):
+        crash_key1 = params["crash_key1"]
+        crash_key2 = params["crash_key2"]
+        vm.monitor.press_release_key(crash_key1)
+        vm.send_key(crash_key2)
+        vm.send_key(crash_key2)
+    elif crash_method == "notmyfault_app":
+        timeout = int(params.get("timeout", 360))
+        session = vm.wait_for_login(timeout=timeout)
+        cmd = params["notmyfault_cmd"] % random.randint(1, 8)
+        notmyfault_cmd = utils_misc.set_winutils_letter(session, cmd)
+        try:
+            status, output = session.cmd_status_output(cmd=notmyfault_cmd,
+                                                       timeout=timeout)
+            if status:
+                test.error("Command '%s' failed, status: %s, output: %s" %
+                           (cmd, status, output))
+        except (aexpect.ExpectTimeoutError, aexpect.ExpectProcessTerminatedError):
+            pass
     else:
         test.cancel("Crash trigger method %s not supported, "
-                    "please check cfg file for mistake.", crash_method)
+                    "please check cfg file for mistake." % crash_method)
 
 
 @error_context.context_aware
@@ -80,7 +102,7 @@ def run(test, params, env):
     2) Check if the driver is installed and verified (only for win)
     3) Stop kdump service and modify unknown_nmi_panic(for linux)
        or modify register value(for win)
-    4) Trigger a crash by nmi
+    4) Trigger a crash by nmi, keyboard or notmyfault app
     5) Check the event in qmp
 
     :param test: kvm test object
@@ -102,8 +124,10 @@ def run(test, params, env):
                                                                 test, driver_name,
                                                                 timeout)
 
-    error_context.context("Setup crash evironment for test", logging.info)
-    setup_test_environment(test, params, vm, session)
+    if params["crash_method"] != "notmyfault_app":
+        error_context.context("Setup crash evironment for test", logging.info)
+        setup_test_environment(test, params, vm, session)
+
     error_context.context("Trigger crash", logging.info)
     trigger_crash(test, vm, params)
 

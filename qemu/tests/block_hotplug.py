@@ -9,6 +9,7 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest.qemu_devices import qdevices
 from virttest import qemu_qtree
+from virttest import qemu_monitor
 
 
 @error_context.context_aware
@@ -69,6 +70,18 @@ def run(test, params, env):
                                             (vm, get_disk_cmd), disks_before_unplug)) != 0, pause)
         return unplug_status
 
+    def is_supported_command(cmd1, cmd2):
+        try:
+            vm.monitor.verify_supported_cmd(cmd1)
+            return cmd1
+        except qemu_monitor.MonitorNotSupportedCmdError:
+            try:
+                vm.monitor.verify_supported_cmd(cmd2)
+                return cmd2
+            except qemu_monitor.MonitorNotSupportedCmdError:
+                pass
+        return None
+
     img_list = params.get("images").split()
     img_format_type = params.get("img_format_type", "qcow2")
     pci_type = params.get("pci_type", "virtio-blk-pci")
@@ -85,6 +98,14 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    
+    # Determine syntax of drive hotplug
+    # __com.redhat_drive_add == qemu-kvm-0.12 on RHEL 6
+    # drive_add == qemu-kvm-0.13 onwards
+    drive_cmd_type = is_supported_command("drive_add", "__com.redhat_drive_add")
+    if not drive_cmd_type:
+        test.error("Could find a suitable method for hotplugging"
+                   " drive in this version of qemu")
 
     for iteration in range(repeat_times):
         device_list = []
@@ -121,8 +142,13 @@ def run(test, params, env):
                         test.fail(err)
                     else:
                         controller_list.append(controller)
+                
+                if drive_cmd_type == "drive_add":
+                    drive = qdevices.QHPDrive("block%d" % num)
+                    drive.set_param("if","none")
+                elif drive_cmd_type == "__com.redhat_drive_add":
+                    drive = qdevices.QRHDrive("block%d" % num)
 
-                drive = qdevices.QRHDrive("block%d" % num)
                 drive.set_param("file", find_image(img_list[num + 1]))
                 drive.set_param("format", img_format_type)
                 drive_id = drive.get_param("id")

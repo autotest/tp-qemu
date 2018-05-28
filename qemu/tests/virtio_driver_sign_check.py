@@ -1,17 +1,44 @@
 import logging
-import os
 import re
-import time
 
+from virttest import error_context
 from virttest import utils_misc
+from virttest.utils_windows import virtio_win
 
 
+def get_driver_file_path(session, params):
+    """
+    Get tested driver path and drive_letter,
+    Path like "E:\\vioscsi\\2k8\\x86\\vioscsi.cat/sys/inf"
+    or "A:\\i386\\Win2008\\vioscsi.cat".
+    drive_letter like "E:" or "A:".
+
+    :param session: VM session
+    :param params: Dictionary with the test parameters
+    """
+    driver_path = params["tested_driver"]
+    media_type = params["virtio_win_media_type"]
+    get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
+    drive_letter = get_drive_letter(session)
+    get_product_dirname = getattr(virtio_win,
+                                  "product_dirname_%s" % media_type)
+    guest_name = get_product_dirname(session)
+    get_arch_dirname = getattr(virtio_win, "arch_dirname_%s" % media_type)
+    guest_arch = get_arch_dirname(session)
+    path = ("{letter}\\{driver}\\{name}\\{arch}\\" if media_type == "iso"
+            else "{letter}\\{arch}\\{name}\\{driver}").format(
+                    letter=drive_letter, driver=driver_path,
+                    name=guest_name, arch=guest_arch)
+    return drive_letter, path
+
+
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM windows virtio driver signed status check test:
     1) Start a windows guest with virtio driver iso/floppy
-    2) Install windows SDK in guest.
-    3) use SignTool.exe to verify whether block driver digital signed
+    2) Generate a tested driver file list.
+    3) use SignTool.exe to verify whether all drivers digital signed
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -19,67 +46,33 @@ def run(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-
-    def is_sdksetup_finished():
-        s, o = session.cmd_status_output("tasklist | find \"SDK\"")
-        if s:
-            return True
-        else:
-            return False
-
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
-    signtool_install = params.get("signtool_install")
-    au3_link = params.get("winsdk_au3", "autoit/winsdk.au3")
-    au3_link = os.path.join(test.bindir, au3_link)
-    signtool_cmd = params.get("signtool_cmd")
-    list_files_cmd = params.get("list_files_cmd")
-    drive_list = params.get("drive_list")
-    vm.copy_files_to(au3_link, "c:\\")
-    drivers = {}
-    logging.info("Install sdk in guest if signtool is not available.")
-    session.cmd_status_output(signtool_install, timeout=360)
-    # Wait until guest start install sdk.
-    time.sleep(10)
-    logging.info("Waiting for guest sdk setup ...")
-    utils_misc.wait_for(is_sdksetup_finished, timeout=1800)
-    results_all = """All the signature check log:\n"""
-    fails_log = """Failed signature check log:\n"""
-    fail_num = 0
-    fail_drivers = []
-    logging.info("Running SignTool command in guest...")
+    signtool_cmd = params["signtool_cmd"]
+    list_files_cmd = 'dir /s /b %s | find /i "%s" | find "%s"'
+
     try:
-        for drive in drive_list.split():
-            for type in ['.cat', '.sys']:
-                driver = session.cmd_output(list_files_cmd % (drive, type)).\
-                    splitlines()[1:-1]
-                drivers[type] = driver
-            files = zip(drivers['.cat'], drivers['.sys'])
-            for cat, sys in files:
-                cmd = signtool_cmd % (cat, sys)
-                s, result = session.cmd_status_output(cmd)
-                if s:
-                    msg = "Fail command: %s. Output: %s" % (cmd, result)
-                    test.fail(msg)
-                results_all += result
-                re_suc = "Number of files successfully Verified: ([0-9]*)"
-                try:
-                    suc_num = re.findall(re_suc, result)[0]
-                except IndexError:
-                    msg = "Fail to get Number of files successfully Verified"
-                    test.fail(msg)
-
-                if int(suc_num) != 1:
-                    fails_log += result
-                    fail_num += 1
-                    fail_driver = cat + " " + sys
-                    fail_drivers.append(fail_driver)
-        if fail_num > 0:
-            msg = "Following %s driver(s) signature checked failed." % fail_num
-            msg += " Please refer to fails.log for details error log:\n"
-            msg += "\n".join(fail_drivers)
-            test.fail(msg)
-
+        error_context.context("Running SignTool check test in guest...",
+                              logging.info)
+        file_type = [".cat", ".sys", ".inf", "Wdf"]
+        tested_list = []
+        viowin_letter, path = get_driver_file_path(session, params)
+        for ftype in file_type:
+            cmd = list_files_cmd % (viowin_letter, path, ftype)
+            list_file = session.cmd_output(cmd, timeout)
+            driver_file = re.findall(r".*%s$" % ftype, list_file, re.M)
+            tested_list.extend(driver_file)
+        if (len(tested_list) < 3) or (".cat" not in tested_list[0]):
+            test.fail("The tested files were not included in %s disk"
+                      % viowin_letter)
+        signtool_cmd = utils_misc.set_winutils_letter(session, signtool_cmd)
+        check_info = "Number of files successfully Verified: (1)"
+        for driver_file in tested_list[1:]:
+            test_cmd = signtool_cmd % (tested_list[0], driver_file)
+            status, output = session.cmd_status_output(test_cmd)
+            sign_num = re.findall(check_info, output)[0]
+            if (status != 0) or (int(sign_num) != 1):
+                test.fail("%s signtool verify failed, check the output details:\n %s"
+                          % (driver_file, output))
     finally:
-        open("fails.log", "w").write(fails_log)
-        open("results.log", "w").write(results_all)
+        session.close()

@@ -4,7 +4,6 @@ import time
 from virttest import error_context
 from virttest.qemu_devices import qdevices
 from virttest import utils_test
-from avocado.core import exceptions
 
 
 @error_context.context_aware
@@ -12,15 +11,14 @@ def run(test, params, env):
     """
     Test hotplug/unplug of rng device
     1) Boot up w/ one rng device
-    2) Unplug rng device
-    3) reboot/shutdown guest(optional)
+    2) Run random read test
+    3) Unplug rng device
     4) Hotplug one or more rng devices
     5) Run random read test after hotplug
-    6) Unplug rng devices
-    7) Repeat step 4 ~ step 6 (optional)
-    8) Hotplug one rng device
-    9) Run random read test after hotplug
-    10) Reboot/shutdown guest(optional)
+    6) Reboot/shutdown/migrate guest(optional)
+    7) Unplug rng devices
+    8) Reboot/shutdown/migrate guest(optional)
+    9) Repeat step 4 ~ step 8 (optional)
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -40,7 +38,7 @@ def run(test, params, env):
         out, ver_out = vm.devices.simple_hotplug(dev, vm.monitor)
         if not ver_out:
             msg = "no % device in qtree after hotplug" % dev
-            raise exceptions.TestFail(msg)
+            test.fail(msg)
         logging.info("%s is hotpluged successfully" % dev)
 
     def unplug_rng(vm, dev):
@@ -48,7 +46,7 @@ def run(test, params, env):
         out, ver_out = vm.devices.simple_unplug(dev, vm.monitor)
         if not ver_out:
             msg = "Still get %s in qtree after unplug" % dev
-            raise exceptions.TestFail(msg)
+            test.fail(msg)
         logging.info("%s is unpluged successfully" % dev)
 
     def restart_rngd(vm):
@@ -57,7 +55,7 @@ def run(test, params, env):
             error_context.context("Restart rngd service", logging.info)
             status, output = session.cmd_status_output("service rngd restart")
             if status != 0:
-                raise exceptions.TestError(output)
+                test.error(output)
             session.close()
 
     def stop_rngd(vm):
@@ -67,7 +65,7 @@ def run(test, params, env):
                                   logging.info)
             status, output = session.cmd_status_output(params.get("stop_rngd"))
             if status != 0:
-                raise exceptions.TestError(output)
+                test.error(output)
             session.close()
 
     def run_subtest(sub_test):
@@ -78,12 +76,25 @@ def run(test, params, env):
         error_context.context("Run %s subtest" % sub_test)
         utils_test.run_virt_sub_test(test, params, env, sub_test)
 
+    def unplug_all_rngs(vm):
+        """
+        Hotunplug all attached virtio-rng devices
+
+        :param vm: Virtual machine object.
+        """
+        devices = get_rng_id(vm)
+        if devices:
+            stop_rngd(vm)
+            time.sleep(5)
+            for device in devices:
+                unplug_rng(vm, device)
+
     login_timeout = int(params.get("login_timeout", 360))
     repeat_times = int(params.get("repeat_times", 1))
     rng_num = int(params.get("rng_num", 1))
     rng_basic_test = params.get("rng_basic_test")
-    pm_test_after_plug = params.get("pm_test_after_plug")
-    pm_test_after_unplug = params.get("pm_test_after_unplug")
+    sub_test_after_plug = params.get("sub_test_after_plug")
+    sub_test_after_unplug = params.get("sub_test_after_unplug")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -94,12 +105,9 @@ def run(test, params, env):
     run_subtest(rng_basic_test)
 
     # Unplug attached rng device
-    device_ids = get_rng_id(vm)
-    if device_ids:
-        stop_rngd(vm)
-        time.sleep(5)
-        for device in device_ids:
-            unplug_rng(vm, device)
+    unplug_all_rngs(vm)
+    # temporary workaround for migration
+    vm.params["virtio_rngs"] = ''
 
     for i in range(repeat_times):
         dev_list = []
@@ -112,28 +120,36 @@ def run(test, params, env):
                                        {'id': 'virtio-rng-pci-%d' % num})
             hotplug_rng(vm, new_dev)
             dev_list.append(new_dev)
+            # temporary workaround for migration
+            vm.params["virtio_rngs"] += ' rng%d' % num
+            vm.params["backend_rng%d" % num] = 'rng-random'
 
         # run rng test after hotplug
         restart_rngd(vm)
         run_subtest(rng_basic_test)
 
-        # run reboot/shutdown after hotplug
-        if pm_test_after_plug:
-            run_subtest(pm_test_after_plug)
+        # run reboot/shutdown/migration after hotplug
+        if sub_test_after_plug:
+            run_subtest(sub_test_after_plug)
             # run rng test after reboot,skip followed test if
-            # pm_test_after_plug is shutdown
+            # sub_test_after_plug is shutdown
             if vm.is_alive():
                 run_subtest(rng_basic_test)
             else:
                 return
+        if sub_test_after_plug == 'migration':
+            # Unplug attached rng device
+            unplug_all_rngs(vm)
+            # temporary workaround for migration
+            vm.params["virtio_rngs"] = ''
+        else:
+            stop_rngd(vm)
+            time.sleep(5)
+            for dev in dev_list:
+                unplug_rng(vm, dev)
 
-        stop_rngd(vm)
-        time.sleep(5)
-        for dev in dev_list:
-            unplug_rng(vm, dev)
-
-        # run reboot/shutdown test after hot-unplug
-        if pm_test_after_unplug:
-            run_subtest(pm_test_after_unplug)
+        # run reboot/shutdown/migration test after hot-unplug
+        if sub_test_after_unplug:
+            run_subtest(sub_test_after_unplug)
             if not vm.is_alive():
                 return

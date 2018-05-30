@@ -2,7 +2,6 @@ language: python
 python:
     - "3.6"
     - "2.7"
-    - "2.6"
 
 branches:
     only:
@@ -11,8 +10,7 @@ branches:
 sudo: false
 
 install:
-    - if [ "$TRAVIS_PYTHON_VERSION" = '2.6' ]; then SPHINX_VERSION=1.4.9; fi
-    - pip install sphinx${SPHINX_VERSION:+==$SPHINX_VERSION}
+    - pip install sphinx
     - pip install -r requirements-travis.txt
 
 script:

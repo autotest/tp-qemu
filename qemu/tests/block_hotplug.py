@@ -228,6 +228,7 @@ def run(test, params, env):
                     test.fail("Failed to unplug disks '%s'" % device.get_param("id"))
                 device_list.remove(device)
             controller.unplug(vm.monitor)
+            utils_misc.wait_for(lambda: controller.verify_unplug("", vm.monitor), pause)
         for device in device_list:
             unplug_status = unplug_device(vm, get_disk_cmd, device)
             if not unplug_status:

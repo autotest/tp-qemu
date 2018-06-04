@@ -99,6 +99,11 @@ def run(test, params, env):
                 if smbios_get_para == notset_output:
                     smbios_get_para = default_key_para
 
+                # make UUID check case insensitive
+                if key == "UUID":
+                    smbios_set_para = smbios_set_para.lower()
+                    smbios_get_para = smbios_get_para.lower()
+
                 if (smbios_set_para not in smbios_get_para):
                     e_msg = ("%s.%s mismatch, Set '%s' but guest is : '%s'"
                              % (sm_type, key, smbios_set_para,

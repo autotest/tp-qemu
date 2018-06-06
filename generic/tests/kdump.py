@@ -229,7 +229,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     crash_timeout = float(params.get("crash_timeout", 360))
     def_kernel_param_cmd = ("grubby --update-kernel=`grubby --default-kernel`"
-                            " --args=crashkernel=128M@16M")
+                            " --args=crashkernel=128M")
     kernel_param_cmd = params.get("kernel_param_cmd", def_kernel_param_cmd)
     def_kdump_enable_cmd = "chkconfig kdump on && service kdump restart"
     kdump_enable_cmd = params.get("kdump_enable_cmd", def_kdump_enable_cmd)

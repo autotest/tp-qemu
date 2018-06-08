@@ -759,7 +759,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             by guest agent. return True if find successfully
             """
             for interface in interface_list:
-                if "target_interface" == interface["name"]:
+                if target_interface == interface["name"]:
                     return True
             return False
         session = self._get_session(params, None)

@@ -31,7 +31,7 @@ def run(test, params, env):
                 utils_test.run_virt_sub_test(test, params, env,
                                              params.get("stress_test"))
             else:
-                stress_bg = utils_test.VMStress(vm, "stress")
+                stress_bg = utils_test.VMStress(vm, "stress", params)
                 stress_bg.load_stress_tool()
 
     error_context.context("Boot guest with balloon device", logging.info)

@@ -21,7 +21,7 @@ def run(test, params, env):
 
     vm = env.get_vm(params['main_vm'])
     vm.verify_alive()
-    stress = utils_test.VMStress(vm, 'stress')
+    stress = utils_test.VMStress(vm, 'stress', params)
     stress.load_stress_tool()
     stress_duration = int(params.get('stress_duration', 0))
     # NOTE: stress_duration = 0 ONLY for some legacy test cases using

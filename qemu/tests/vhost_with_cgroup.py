@@ -54,9 +54,10 @@ def run(test, params, env):
     assign_vm_into_cgroup(vm, cgroup, 0)
 
     vhost_pids = process.system_output("pidof vhost-%s" % vm.get_pid(),
-                                       shell=True)
+                                       shell=True,
+                                       ignore_status=True).decode()
     if not vhost_pids:
-        test.error("Vhost process not exise")
+        test.error("Vhost process does not exist")
     logging.info("Vhost have started with pid %s" % vhost_pids)
     for vhost_pid in vhost_pids.strip().split():
         cgroup.set_cgroup(int(vhost_pid))

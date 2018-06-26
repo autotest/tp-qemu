@@ -117,7 +117,7 @@ class TimedriftTest(object):
         try:
             guest_timestr = session.cmd_output(
                 guest_epoch_time_cmd,
-                timeout=120)
+                timeout=240)
             host_timestr = process.system_output(host_epoch_time_cmd,
                                                  shell=True)
             epoch_host, epoch_guest = list(

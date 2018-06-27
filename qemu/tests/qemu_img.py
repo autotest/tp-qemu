@@ -4,6 +4,7 @@ import re
 import logging
 import shutil
 import tempfile
+import signal
 
 from avocado.utils import process
 
@@ -186,11 +187,16 @@ def run(test, params, env):
         end_time = time.time() + timeout
         while time.time() < end_time:
             time.sleep(1)
-            status = process.system("kill -SIGUSR1 `pidof qemu-img`",
-                                    ignore_status=True, shell=True)
-            if status == 0:
-                return None
-        logging.info("Fail to get pid of qemu-img")
+            pid = process.system_output("pidof qemu-img",
+                                        ignore_status=True,
+                                        verbose=False).decode().strip()
+            if bool(pid):
+                break
+        try:
+            os.kill(int(pid), signal.SIGUSR1)
+        except Exception as error:
+            logging.info("Failed to send signal to qemu-img")
+            test.error(str(error))
 
     def check_command_output(CmdResult):
         """
@@ -201,7 +207,7 @@ def run(test, params, env):
         check_output = params.get("check_output", "exit_status")
         if not hasattr(CmdResult, check_output):
             test.error("Unknown check output '%s'" % check_output)
-        output = getattr(CmdResult, check_output)
+        output = getattr(CmdResult, check_output).decode()
         if check_output == "exit_status" and output == 0:
             return None
         if check_output == "exit_status" and output != 0:

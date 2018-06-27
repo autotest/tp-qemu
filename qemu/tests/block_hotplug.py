@@ -151,7 +151,7 @@ def run(test, params, env):
             ret = vm.devices.simple_unplug(device, vm.monitor)
             if ret[1] is False:
                 test.fail("Failed to unplug device '%s'."
-                          "Ouptut:\n%s" % (dev, ret[0]))
+                          "Output:\n%s" % (device, ret[0]))
 
         unplug_disks = utils_misc.wait_for(lambda: get_new_disk(find_disk(vm, get_disk_cmd),
                                            disks_before_unplug), pause)

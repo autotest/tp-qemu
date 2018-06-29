@@ -116,14 +116,14 @@ def run(test, params, env):
                               logging.info)
         crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
         if crash_cmd == "nmi":
-            kdump.crash_test(vm, None, crash_cmd, timeout)
+            kdump.crash_test(test, vm, None, crash_cmd, timeout)
         else:
             # trigger crash for each vcpu
             nvcpu = int(params.get("smp", 1))
             for i in range(nvcpu):
-                kdump.crash_test(vm, i, crash_cmd, timeout)
+                kdump.crash_test(test, vm, i, crash_cmd, timeout)
 
-        kdump.check_vmcore(vm, session, crash_timeout)
+        kdump.check_vmcore(test, vm, session, crash_timeout)
     finally:
         session.close()
         vm.destroy()

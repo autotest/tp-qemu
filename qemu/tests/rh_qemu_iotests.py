@@ -100,6 +100,7 @@ def run(test, params, env):
         os.environ["QEMU_PROG"] = utils_misc.get_qemu_binary(params)
         os.environ["QEMU_IMG_PROG"] = utils_misc.get_qemu_img_binary(params)
         os.environ["QEMU_IO_PROG"] = utils_misc.get_qemu_io_binary(params)
+        os.environ["QEMU_NBD_PROG"] = utils_misc.get_binary('qemu-nbd', params)
         os.chdir(os.path.join(qemu_src_dir, iotests_root))
         cmd = './check'
         if extra_options:

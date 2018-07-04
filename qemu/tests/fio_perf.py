@@ -61,7 +61,7 @@ def get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, type, driv
     :param timeout: Timeout in seconds
     """
 
-    kvm_ver = process.system_output(kvm_ver_chk_cmd)
+    kvm_ver = process.system_output(kvm_ver_chk_cmd, shell=True)
     host_ver = os.uname()[2]
 
     result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)

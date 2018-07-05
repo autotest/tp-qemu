@@ -1,5 +1,4 @@
 import logging
-import time
 import re
 
 from virttest.qemu_devices import qdevices
@@ -60,11 +59,9 @@ def run(test, params, env):
             test.error("Ballooon service status is not running")
         session.close()
 
-    pause = float(params.get("virtio_balloon_pause", 3.0))
     pm_test_after_plug = params.get("pm_test_after_plug")
     pm_test_after_unplug = params.get("pm_test_after_unplug")
     idx = 0
-    err = ""
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     balloon_device = params.get("ballon_device", "virtio-balloon-pci")
@@ -79,20 +76,17 @@ def run(test, params, env):
 
         error_context.context("Hotplug balloon device for %d times" % (i+1),
                               logging.info)
-        out = new_dev.hotplug(vm.monitor)
-        if out:
-            err += "\nHotplug monitor output: %s" % out
-        # Pause
-        time.sleep(pause)
-        ver_out = new_dev.verify_hotplug(out, vm.monitor)
-        if not ver_out:
-            err += ("\nDevice is not in qtree %ss after hotplug:\n%s"
-                    % (pause, vm.monitor.info("qtree")))
+        out = vm.devices.simple_hotplug(new_dev, vm.monitor)
+        if out[1] is False:
+            test.fail("Failed to hotplug balloon in iteration %s, %s"
+                      % (i, out[0]))
 
         # temporary workaround for migration
         vm.params["balloon"] = "balloon%d" % idx
         vm.params["balloon_dev_devid"] = "balloon%d" % idx
         vm.params["balloon_dev_add_bus"] = "yes"
+        devs = vm.devices.get_by_params({"id": 'balloon%d' % idx})
+        vm.params["balloon_pci_bus"] = devs[0]["bus"]
 
         enable_balloon_service()
 
@@ -111,34 +105,26 @@ def run(test, params, env):
 
         error_context.context("Unplug balloon device for %d times" % (i+1),
                               logging.info)
-        out = new_dev.unplug(vm.monitor)
-        if out:
-            err += "\nUnplug monitor output: %s" % out
-        # Pause
-        time.sleep(pause)
-        ver_out = new_dev.verify_unplug(out, vm.monitor)
-        if not ver_out:
-            err += ("\nDevice is still in qtree %ss after unplug:\n%s"
-                    % (pause, vm.monitor.info("qtree")))
-        if err:
-            logging.error(vm.monitor.info("qtree"))
-            test.fail("Error occurred while hotpluging "
-                      "virtio-pci. Iteration %s, monitor "
-                      "output:%s" % (i, err))
-        else:
-            if params.get("migrate_after_unplug", "no") == "yes":
-                error_context.context("Migrate after hotunplug balloon device",
-                                      logging.info)
-                # temporary workaround for migration
-                del vm.params["balloon"]
-                del vm.params["balloon_dev_devid"]
-                del vm.params["balloon_dev_add_bus"]
-                vm.migrate(float(params.get("mig_timeout", "3600")))
 
-            if pm_test_after_unplug:
-                run_pm_test(pm_test_after_unplug, "hot-unplug")
-                if not vm.is_alive():
-                    return
+        out = vm.devices.simple_unplug(devs[0].get_aid(), vm.monitor)
+        if out[1] is False:
+            test.fail("Failed to hotplug balloon in iteration %s, %s"
+                      % (i, out[0]))
+
+        if params.get("migrate_after_unplug", "no") == "yes":
+            error_context.context("Migrate after hotunplug balloon device",
+                                  logging.info)
+            # temporary workaround for migration
+            del vm.params["balloon"]
+            del vm.params["balloon_dev_devid"]
+            del vm.params["balloon_dev_add_bus"]
+            del vm.params["balloon_pci_bus"]
+            vm.migrate(float(params.get("mig_timeout", "3600")))
+
+        if pm_test_after_unplug:
+            run_pm_test(pm_test_after_unplug, "hot-unplug")
+            if not vm.is_alive():
+                return
 
     error_context.context("Verify guest alive!", logging.info)
     vm.verify_kernel_crash()

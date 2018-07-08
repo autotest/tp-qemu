@@ -189,7 +189,7 @@ def run(test, params, env):
             time.sleep(1)
             pid = process.system_output("pidof qemu-img",
                                         ignore_status=True,
-                                        verbose=False).decode().strip()
+                                        verbose=False).strip()
             if bool(pid):
                 break
         try:
@@ -207,7 +207,7 @@ def run(test, params, env):
         check_output = params.get("check_output", "exit_status")
         if not hasattr(CmdResult, check_output):
             test.error("Unknown check output '%s'" % check_output)
-        output = getattr(CmdResult, check_output).decode()
+        output = getattr(CmdResult, check_output)
         if check_output == "exit_status" and output == 0:
             return None
         if check_output == "exit_status" and output != 0:

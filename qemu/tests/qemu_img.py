@@ -207,14 +207,14 @@ def run(test, params, env):
         check_output = params.get("check_output", "exit_status")
         if not hasattr(CmdResult, check_output):
             test.error("Unknown check output '%s'" % check_output)
-        output = getattr(CmdResult, check_output).decode()
+        output = getattr(CmdResult, check_output)
         if check_output == "exit_status" and output == 0:
             return None
         if check_output == "exit_status" and output != 0:
             err_msg = "Get nonzero exit status(%d) '%s'"
             test.fail(err_msg % (output, CmdResult.command))
         pattern = params.get("command_result_pattern")
-        if not re.findall(pattern, output):
+        if not re.findall(pattern, output.decode()):
             err_msg = "Fail to get expected result!"
             err_msg += "Output: %s, expected pattern: %s" % (output, pattern)
             test.fail(err_msg)

@@ -74,7 +74,7 @@ def run(test, params, env):
         elif dev_name == "iscsi-dev":
             postprocess_remote_storage()
 
-    def check_boot_result(boot_entry_info, boot_fail_info, device_name):
+    def check_boot_result(boot_entry_info, boot_fail_info, device_name, bootable="yes"):
         """
         Check boot result, and logout from iscsi device if boot from iscsi.
         """
@@ -86,12 +86,18 @@ def run(test, params, env):
                 output = vm.serial_console.get_stripped_output()
             except ValueError:
                 output = vm.serial_console.get_output()
-            if boot_fail_info in output:
-                test.fail("Could not boot from"
-                          " '%s'" % device_name)
-            elif boot_entry_info in output:
-                break
+            if (bootable == "no") and (boot_fail_info in output):
+                cleanup(device_name)
+                return
+            else:
+                if boot_fail_info in output:
+                    cleanup(device_name)
+                    test.fail("Could not boot from"
+                              " '%s'" % device_name)
+                elif boot_entry_info in output:
+                    break
             if time.time() > start + timeout:
+                cleanup(device_name)
                 test.fail("No device for boot after %s" % timeout)
             time.sleep(1)
         logging.info("Try to boot from '%s'" % device_name)
@@ -114,6 +120,8 @@ def run(test, params, env):
     boot_fail_info = params.get("boot_fail_info")
     boot_device = params.get("boot_device")
     dev_name = params.get("dev_name")
+    bootable = params.get("is_bootable", "yes")
+
     if dev_name == "scsi-cd":
         create_cdroms()
         params["start_vm"] = "yes"
@@ -129,6 +137,7 @@ def run(test, params, env):
     else:
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
+
     if boot_device:
         match = False
         start = time.time()
@@ -169,7 +178,8 @@ def run(test, params, env):
                 vm.send_key(str(i))
                 break
         else:
+            cleanup(dev_name)
             test.fail("Could not get any boot entry match "
                       "pattern '%s'" % boot_device)
 
-    check_boot_result(boot_entry_info, boot_fail_info, dev_name)
+    check_boot_result(boot_entry_info, boot_fail_info, dev_name, bootable)

@@ -87,6 +87,7 @@ def run(test, params, env):
         plug_tag = "before_plug"
         run_sub_test(params, plug_tag)
 
+        session = vm.wait_for_login(timeout=timeout)
         for num in range(blk_num):
             image_name = img_list[num + 1]
             image_params = params.object_params(image_name)
@@ -105,7 +106,6 @@ def run(test, params, env):
                     test.fail("Failed to hotplug device to guest")
                 disk = plug_disks[0]
 
-                session = vm.wait_for_login(timeout=timeout)
                 if params.get("os_type") == "windows":
                     if iteration == 0:
                         error_context.context("Format disk", logging.info)
@@ -135,6 +135,7 @@ def run(test, params, env):
                 for device in vm.devices:
                     if device.get_param("id") == img_list[num + 1]:
                         device_list.append(device)
+        session.close()
 
         plug_tag = "after_plug"
         vm_switched_off = run_sub_test(params, plug_tag)

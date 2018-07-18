@@ -12,6 +12,7 @@ from virttest import utils_misc
 def setup_test_environment(test, params, vm, session):
     """
     Setup environment configuration modification.
+
     Operation includds disable kdumpservice, configure
     unknown_nmi_panic for linux, or modify the register value for
     windows, in order to trigger crash.
@@ -46,7 +47,6 @@ def check_qmp_events(vm, event_name, timeout=360):
     :param event_name: target event name, such as 'GUEST_PANICKED'
     :param timeout: check time
     """
-
     end_time = time.time() + timeout
     logging.info("Try to get qmp events %s in %s seconds!" %
                  (event_name, timeout))
@@ -61,7 +61,7 @@ def check_qmp_events(vm, event_name, timeout=360):
 
 def trigger_crash(test, vm, params):
     """
-    Trigger system crash with certain method
+    Trigger system crash with certain method.
 
     :param vm: target vm
     :parma params: test params
@@ -86,7 +86,11 @@ def trigger_crash(test, vm, params):
             if status:
                 test.error("Command '%s' failed, status: %s, output: %s" %
                            (cmd, status, output))
-        except (aexpect.ExpectTimeoutError, aexpect.ExpectProcessTerminatedError):
+        # notmyfault_app triggers BSOD of the guest, and it terminates
+        # qemu process, so sometimes, it can not get the status of the cmd.
+        except (aexpect.ShellTimeoutError,
+                aexpect.ShellProcessTerminatedError,
+                aexpect.ShellStatusError):
             pass
     else:
         test.cancel("Crash trigger method %s not supported, "
@@ -96,7 +100,7 @@ def trigger_crash(test, vm, params):
 @error_context.context_aware
 def run(test, params, env):
     """
-    pvpanic test
+    Pvpanic test.
 
     1) Log into the guest
     2) Check if the driver is installed and verified (only for win)
@@ -109,7 +113,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-
     timeout = int(params.get("timeout", 360))
     event_check = params.get("event_check", "GUEST_PANICKED")
     error_context.context("Boot guest with pvpanic device", logging.info)
@@ -121,7 +124,8 @@ def run(test, params, env):
                               "verified", logging.info)
         driver_name = params.get("driver_name", "pvpanic")
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test, driver_name,
+                                                                test,
+                                                                driver_name,
                                                                 timeout)
 
     if params["crash_method"] != "notmyfault_app":

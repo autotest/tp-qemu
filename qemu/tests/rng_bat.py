@@ -34,7 +34,7 @@ def run(test, params, env):
         :return: Match objects or None.
         """
         lsof_cmd = "lsof %s" % dev_file
-        output = process.system_output(lsof_cmd, ignore_status=True)
+        output = process.system_output(lsof_cmd, ignore_status=True).decode()
         return re.search(r"\s+%s\s+" % vm_pid, output, re.M)
 
     def check_driver_status(session, check_cmd, driver_id):

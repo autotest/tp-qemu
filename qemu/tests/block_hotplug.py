@@ -128,6 +128,7 @@ def run(test, params, env):
                     if status:
                         test.fail("Check for block device failed."
                                   "Output: %s" % output)
+                session.close()
 
                 devs = [dev for dev in devs if not isinstance(dev, qdevices.QDrive)]
                 device_list.extend(devs)

@@ -488,12 +488,14 @@ class BlockCopy(object):
         """
         Create files and record m5 values of them.
         """
-        file_names = self.params["file_names"]
-        map(self.create_file, file_names.split())
+        file_names = self.params["file_names"].split()
+        for name in file_names:
+            self.create_file(name)
 
     def verify_md5s(self):
         """
         Check if the md5 values matches the record ones.
         """
-        file_names = self.params["file_names"]
-        map(self.verify_md5, file_names.split())
+        file_names = self.params["file_names"].split()
+        for name in file_names:
+            self.verify_md5(name)

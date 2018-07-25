@@ -150,14 +150,14 @@ def run(test, params, env):
             for index, line in enumerate(output):
                 if sar_cpu_str in line:
                     cpu_average = output[index + 1].split()[2:]
-                    cpu_average = map(float, cpu_average)
+                    cpu_average = list(map(float, cpu_average))
                 if sar_memory_str in line:
                     memory_average_raw = output[index + 1].split()
                     memory_average = []
                     for j in range(len(memory_average_raw)):
                         if j in [3, 7]:
                             memory_average.append(memory_average_raw[j])
-                    memory_average = map(float, memory_average)
+                    memory_average = list(map(float, memory_average))
                     break
             all_items = set(vars())
             interested_items = set(["cpu_average", "memory_average"])

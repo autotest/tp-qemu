@@ -108,4 +108,5 @@ def run(test, params, env):
         session = vm.reboot(session=session, timeout=timeout)
         session.cmd(alive_check_cmd)
     finally:
-        map(lambda x: process.system("rm -rf %s" % x), snapshots)
+        for sn in snapshots:
+            process.system("rm -rf %s" % sn)

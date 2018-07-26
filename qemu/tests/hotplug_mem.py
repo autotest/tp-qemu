@@ -45,7 +45,8 @@ class MemoryHotplugSimple(MemoryHotplugTest):
             mem_devs = mem_devs_post - mem_devs_origin
             vm, operation = pre_vm, "unplug"
         func = getattr(self, "%s_memory" % operation)
-        map(lambda x: func(vm, x), mem_devs)
+        for mem_dev in mem_devs:
+            func(vm, mem_dev)
 
     def get_mem_by_name(self, vm, name):
         """

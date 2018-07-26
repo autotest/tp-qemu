@@ -205,15 +205,12 @@ def run(test, params, env):
 
     def cpuid_to_vendor(cpuid_dump, idx):
         dst = []
-        map(lambda i:
-            dst.append((chr(cpuid_dump[idx, 0, 'ebx'] >> (8 * i) & 0xff))),
-            range(0, 4))
-        map(lambda i:
-            dst.append((chr(cpuid_dump[idx, 0, 'edx'] >> (8 * i) & 0xff))),
-            range(0, 4))
-        map(lambda i:
-            dst.append((chr(cpuid_dump[idx, 0, 'ecx'] >> (8 * i) & 0xff))),
-            range(0, 4))
+        for i in range(0, 4):
+            dst.append((chr(cpuid_dump[idx, 0, 'ebx'] >> (8 * i) & 0xff)))
+        for i in range(0, 4):
+            dst.append((chr(cpuid_dump[idx, 0, 'edx'] >> (8 * i) & 0xff)))
+        for i in range(0, 4):
+            dst.append((chr(cpuid_dump[idx, 0, 'ecx'] >> (8 * i) & 0xff)))
         return ''.join(dst)
 
     def default_vendor(self):

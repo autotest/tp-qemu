@@ -72,7 +72,8 @@ class TimedriftTest(object):
         """
         logging.info("Close useless session after test")
         open_sessions = [s for s in self.open_sessions if s]
-        return map(lambda x: x.close(), open_sessions)
+        for session in open_sessions:
+            session.close()
 
     def execute(self, cmd, session=None):
         """

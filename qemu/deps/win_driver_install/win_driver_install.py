@@ -88,7 +88,8 @@ def get_inf_files(driver_path, driver_name):
     inf_files = []
     for root, dirs, files in os.walk(driver_path):
         files_path = map(lambda x: os.path.join(root, x), files)
-        inf_files += filter(lambda x: x.lower().endswith(inf_name), files_path)
+        inf_files += list(
+            filter(lambda x: x.lower().endswith(inf_name), files_path))
     return inf_files
 
 
@@ -107,7 +108,8 @@ def uninstall_driver(driver_name):
         sys.exit(1)
     logger.info("Uninstall driver !")
     inf_files = get_inf_files(driver_store, driver_name)
-    map(lambda x: cmd_output(uninstall_driver_cmd % x), inf_files)
+    for ini_file in inf_files:
+        cmd_output(uninstall_driver_cmd % ini_file)
 
 
 def get_current_driver_ver(device_name):

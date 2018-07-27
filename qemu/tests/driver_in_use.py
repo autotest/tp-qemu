@@ -68,7 +68,7 @@ def run(test, params, env):
 
         for event in params.get("check_setup_events", "").strip().split():
             if not utils_misc.wait_for(lambda: params.get(event),
-                                       240, 0, 1):
+                                       600, 0, 1):
                 test.error("Background test not in ready state since haven't "
                            "received event %s" % event)
             # Clear event

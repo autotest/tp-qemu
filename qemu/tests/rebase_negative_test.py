@@ -47,7 +47,7 @@ def run(test, params, env):
                 msg = "Fail to trigger negative image('%s') rebase" % image
                 test.fail(msg)
         except process.CmdError as err:
-            output = err.result.stderr
+            output = err.result.stderr.decode()
             logging.info("Rebase image('%s') failed: %s." %
                          (image, output))
             if negtive_test == "no":

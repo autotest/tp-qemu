@@ -75,7 +75,7 @@ def run(test, params, env):
         try:
             output = process.system_output(cmd, verbose=False).decode()
         except process.CmdError as err:
-            result_stderr = err.result.stderr
+            result_stderr = err.result.stderr.decode()
             if "does not support checks" in result_stderr:
                 return (True, "")
             else:
@@ -304,7 +304,8 @@ def run(test, params, env):
         try:
             output = process.system_output(cmd).decode()
         except process.CmdError as err:
-            logging.error("Get info of image '%s' failed: %s", img, str(err))
+            logging.error("Get info of image '%s' failed: %s",
+                          img, err.result.stderr.decode())
             return None
 
         if not sub_info:
@@ -516,7 +517,7 @@ def run(test, params, env):
         :param cmd: qemu-img base command.
         """
         if 'rebase' not in process.system_output(cmd + ' --help',
-                                                 ignore_status=True):
+                                                 ignore_status=True).decode():
             test.cancel("Current kvm user space version does not"
                         " support 'rebase' subcommand")
         sn_fmt = params.get("snapshot_format", "qcow2")

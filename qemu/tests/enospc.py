@@ -56,7 +56,7 @@ class EnospcConfig(object):
             # it with the raw file as quickly as possible
             l_result = process.run("losetup -f")
             process.run("losetup -f %s" % self.raw_file_path)
-            self.loopback = l_result.stdout.strip()
+            self.loopback = l_result.stdout.decode().strip()
             # Add the loopback device configured to the list of pvs
             # recognized by LVM
             process.run("pvcreate %s" % self.loopback)
@@ -85,11 +85,11 @@ class EnospcConfig(object):
             time.sleep(2)
         l_result = process.run("lvdisplay")
         # Let's remove all volumes inside the volume group created
-        if self.lvtest_name in l_result.stdout:
+        if self.lvtest_name in l_result.stdout.decode():
             process.run("lvremove -f %s" % self.lvtest_device)
         # Now, removing the volume group itself
         v_result = process.run("vgdisplay")
-        if self.vgtest_name in v_result.stdout:
+        if self.vgtest_name in v_result.stdout.decode():
             process.run("vgremove -f %s" % self.vgtest_name)
         # Now, if we can, let's remove the physical volume from lvm list
         if self.loopback:
@@ -97,7 +97,7 @@ class EnospcConfig(object):
             if self.loopback in p_result.stdout:
                 process.run("pvremove -f %s" % self.loopback)
         l_result = process.run('losetup -a')
-        if self.loopback and (self.loopback in l_result.stdout):
+        if self.loopback and (self.loopback in l_result.stdout.decode()):
             try:
                 process.run("losetup -d %s" % self.loopback)
             except process.CmdError:
@@ -169,7 +169,7 @@ def run(test, params, env):
             try:
                 process.run("lvextend -L +200M %s" % logical_volume)
             except process.CmdError as e:
-                logging.debug(e.result.stdout)
+                logging.debug(e.result.stdout.decode())
             error_context.context("Continue paused guest", logging.info)
             vm.resume()
         elif not vm.monitor.verify_status("running"):

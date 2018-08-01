@@ -8,7 +8,7 @@ from virttest import utils_misc
 @error_context.context_aware
 def run(test, params, env):
     """
-    This simply stop updates services in Windows guests.
+    Simply stop updates services in Windows guests.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -21,7 +21,7 @@ def run(test, params, env):
 
         :return: return True if scname has been disabled.
         """
-        session.sendline("sc config %s start= disabled" % scname)
+        session.cmd("sc config %s start= disabled" % scname)
         output = session.cmd("sc qc %s" % scname)
         return re.search("disabled", output, re.M | re.I)
 
@@ -36,8 +36,9 @@ def run(test, params, env):
     error_context.context("Turned off windows updates service.",
                           logging.info)
     try:
-        status = utils_misc.wait_for(lambda: disable_win_service(session, scname),
-                                     timeout=cmd_timeout)
+        status = utils_misc.wait_for(
+            lambda: disable_win_service(session, scname),
+            timeout=cmd_timeout)
         if not status:
             test.fail("Turn off updates service failed.")
         session = vm.reboot(session)

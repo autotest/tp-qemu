@@ -88,7 +88,6 @@ def run(test, params, env):
                                                                 test, driver_name,
                                                                 timeout)
         error_context.context("Check driver status", logging.info)
-        session = vm.wait_for_login(timeout=timeout)
         driver_id_cmd = utils_misc.set_winutils_letter(
             session, params["driver_id_cmd"])
         driver_id = get_driver_id(session, driver_id_cmd,

@@ -627,7 +627,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             Return the device name and the id in host
             """
             scsi_disk_info = process.system_output(
-                avo_path.find_command('lsscsi'), shell=True).splitlines()
+                avo_path.find_command('lsscsi'), shell=True)
+            scsi_disk_info = scsi_disk_info.decode().splitlines()
             scsi_debug = [_ for _ in scsi_disk_info if 'scsi_debug' in _][-1]
             scsi_debug = scsi_debug.split()
             host_id = scsi_debug[0][1:-1]

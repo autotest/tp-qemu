@@ -103,7 +103,7 @@ def run(test, params, env):
     chardev_add(vm, "chardev-file", "file", args)
     chardev_use(vm, "chardev-file")
     chardev_del(vm, "chardev-file")
-    output = process.system_output("cat %s" % filename)
+    output = process.system_output("cat %s" % filename).decode()
     if output.find("Hello virttest world") == -1:
         test.fail("Guest message not found [%s]" % output)
 

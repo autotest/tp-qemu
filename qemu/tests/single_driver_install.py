@@ -133,11 +133,21 @@ def run(test, params, env):
         _add_cert(session, cert, store)
 
     error_context.context("Installing target driver", logging.info)
-    inst_cmd = "%s updateni %s %s" % (devcon_path, inf_path, device_hwid)
-    status, output = session.cmd_status_output(inst_cmd, inst_timeout)
-    if status > 1:
-        test.fail("Failed to install driver '%s', "
-                  "details:\n%s" % (driver_name, output))
+    installed_any = False
+    for hwid in device_hwid.split():
+        output = session.cmd_output("%s find %s" % (devcon_path, hwid))
+        if re.search("No matching devices found", output, re.I):
+            continue
+        inst_cmd = "%s updateni %s %s" % (devcon_path, inf_path, hwid)
+        status, output = session.cmd_status_output(inst_cmd, inst_timeout)
+        # acceptable status: OK(0), REBOOT(1)
+        if status > 1:
+            test.fail("Failed to install driver '%s', "
+                      "details:\n%s" % (driver_name, output))
+        installed_any |= True
+    if not installed_any:
+        test.error("Failed to find target devices "
+                   "by hwids: '%s'" % device_hwid)
 
     error_context.context("Verifying target driver", logging.info)
     session = vm.reboot(session)

@@ -7,6 +7,7 @@ This is a virt-test test for testing PCI devices in various PCI setups
 import logging
 import random
 import re
+import six
 import time
 
 from virttest import env_process
@@ -41,7 +42,7 @@ def process_qdev(qdev):
     qdev_devices_noid = []
     for bus in qdev.get_buses({'type': ('PCI', 'PCIE')}):
         for device in bus:
-            if isinstance(device, str):
+            if isinstance(device, six.string_types):
                 logging.error("Not a device %s (bus %s)", device, bus)
                 continue
             dev_id = device.get_param('id')

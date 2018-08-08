@@ -202,7 +202,7 @@ def run(test, params, env):
         """
         blocks = vm.monitor.info("block")
         cdfile = None
-        if isinstance(blocks, str):
+        if isinstance(blocks, six.string_types):
             tmp_re_str = r'%s: .*file=(\S*) ' % qemu_cdrom_device
             file_list = re.findall(tmp_re_str, blocks)
             if file_list:
@@ -230,7 +230,7 @@ def run(test, params, env):
         is_open, checked = (None, False)
 
         blocks = vm.monitor.info("block")
-        if isinstance(blocks, str):
+        if isinstance(blocks, six.string_types):
             for block in blocks.splitlines():
                 if qemu_cdrom_device in block:
                     if "tray-open=1" in block:
@@ -307,7 +307,7 @@ def run(test, params, env):
         """
         error_context.context("Check cdrom state of locing.")
         blocks = vm.monitor.info("block")
-        if isinstance(blocks, str):
+        if isinstance(blocks, six.string_types):
             for block in blocks.splitlines():
                 if cdrom in block:
                     if "locked=1" in block:
@@ -435,7 +435,7 @@ def run(test, params, env):
         """
         device = None
         blocks = vm.monitor.info("block")
-        if isinstance(blocks, str):
+        if isinstance(blocks, six.string_types):
             for block in blocks.strip().split('\n'):
                 if 'not inserted' in block:
                     device = block.split(':')[0]

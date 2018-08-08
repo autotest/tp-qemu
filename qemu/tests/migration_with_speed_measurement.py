@@ -1,5 +1,6 @@
 import os
 import re
+import six
 import logging
 import time
 
@@ -93,7 +94,7 @@ def run(test, params, env):
                            " filling its memory.")
             fail_msg = ("Could not determine the transferred memory from"
                         " monitor data: %s" % o)
-            if isinstance(o, str):
+            if isinstance(o, six.string_types):
                 if "status: active" not in o:
                     test.error(warning_msg)
                 try:

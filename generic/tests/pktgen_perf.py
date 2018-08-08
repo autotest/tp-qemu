@@ -1,5 +1,6 @@
 import logging
 import os
+import six
 import aexpect
 import functools
 
@@ -23,7 +24,7 @@ def format_result(result, base="12", fbase="2"):
     :param base: the length of converted string
     :param fbase: the decimal digit for float
     """
-    if isinstance(result, str):
+    if isinstance(result, six.string_types):
         value = "%" + base + "s"
     elif isinstance(result, int):
         value = "%" + base + "d"

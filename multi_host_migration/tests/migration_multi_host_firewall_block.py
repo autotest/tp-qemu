@@ -1,5 +1,6 @@
 import logging
 import os
+import six
 import time
 from autotest.client.shared import error
 from autotest.client import utils
@@ -39,12 +40,12 @@ def run(test, params, env):
             if (vm.params["display"] == "spice" and
                     vm.get_spice_var("spice_seamless_migration") == "on"):
                 s = vm.monitor.info("spice")
-                if isinstance(s, str):
+                if isinstance(s, six.string_types):
                     ret = "migrated: true" in s
                 else:
                     ret = s.get("migrated") == "true"
             o = vm.monitor.info("migrate")
-            if isinstance(o, str):
+            if isinstance(o, six.string_types):
                 return ret and ("status: active" not in o)
             else:
                 return ret and (o.get("status") != "active")
@@ -93,7 +94,7 @@ def run(test, params, env):
             else:
                 for _ in range(self.mig_fir_timeout):
                     state = vm.monitor.info("migrate")
-                    if type(state) is str:
+                    if isinstance(state, six.string_types):
                         if "failed" in state:
                             break
                     else:

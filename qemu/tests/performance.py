@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 import shelve
+import six
 import threading
 try:
     from queue import Queue
@@ -251,7 +252,7 @@ def format_result(result, base="20", fbase="2"):
     :param base: the length of converted string
     :param fbase: the decimal digit for float
     """
-    if isinstance(result, str):
+    if isinstance(result, six.string_types):
         value = "%" + base + "s"
     elif isinstance(result, int):
         value = "%" + base + "d"

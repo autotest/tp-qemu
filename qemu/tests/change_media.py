@@ -1,4 +1,5 @@
 import re
+import six
 import logging
 
 from virttest import error_context
@@ -29,7 +30,7 @@ def run(test, params, env):
     def check_block_locked(block_name):
         blocks_info = monitor.info("block")
 
-        if isinstance(blocks_info, str):
+        if isinstance(blocks_info, six.string_types):
             lock_str = "locked=1"
             for block in blocks_info.splitlines():
                 if block_name in block and lock_str in block:

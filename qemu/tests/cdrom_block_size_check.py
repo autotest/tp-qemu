@@ -1,6 +1,7 @@
 import re
 import logging
 import os
+import six
 
 from avocado.utils import process
 
@@ -63,7 +64,7 @@ def run(test, params, env):
         """
         device = None
         blocks = vm.monitor.info("block")
-        if isinstance(blocks, str):
+        if isinstance(blocks, six.string_types):
             for block in blocks.strip().split('\n'):
                 if 'not inserted' in block:
                     device = block.split(':')[0]

@@ -11,7 +11,16 @@ import time
 import os
 import logging
 
-import pygtk
+try:
+    from gi import pygtkcompat as pygtk
+except ImportError:
+    pygtk = None
+if pygtk is not None:
+    pygtk.enable()
+    pygtk.enable_gtk(version='3.0')
+else:
+    import pygtk
+    pygtk.require('2.0')
 import gtk
 import gobject
 
@@ -21,8 +30,6 @@ from virttest import utils_misc
 from virttest import ppm_utils
 from virttest import step_editor
 from virttest import qemu_monitor
-
-pygtk.require('2.0')
 
 
 class StepMaker(step_editor.StepMakerWindow):

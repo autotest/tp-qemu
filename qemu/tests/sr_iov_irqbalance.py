@@ -7,9 +7,6 @@ from virttest import utils_test
 from virttest import utils_net
 from virttest import utils_misc
 
-# The backports module will take care of using the builtin if available
-from virttest.staging.backports import bin
-
 
 @error_context.context_aware
 def get_first_network_devname(test, session, nic_interface_filter):

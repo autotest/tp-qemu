@@ -1,4 +1,5 @@
 import logging
+import os
 
 from avocado.utils import process
 from virttest import utils_test
@@ -9,8 +10,12 @@ from virttest import error_context
 def _ping_with_params(test, params, dest, interface=None,
                       packet_size=None, interval=None,
                       count=0, session=None, flood=False):
+
+    if os.getuid() != 0 and not interval:
+        interval = 0.2  # minimal allowed interval for ping without root priveleges
     if flood:
         cmd = "ping " + dest + " -f -q"
+        cmd += " -i %s" % str(interval)
         if interface:
             cmd += " -S %s" % interface
         flood_minutes = float(params.get("flood_minutes", 10))

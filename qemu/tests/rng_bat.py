@@ -6,7 +6,6 @@ import time
 from virttest import utils_misc
 from virttest import error_context
 from virttest import utils_test
-from avocado.core import exceptions
 from avocado.utils import process
 
 
@@ -46,7 +45,7 @@ def run(test, params, env):
         check_cmd = check_cmd.replace("DRIVER_ID", driver_id)
         status, output = session.cmd_status_output(check_cmd)
         if "disabled" in output:
-            raise exceptions.TestFail("Driver is disable")
+            test.fail("Driver is disable")
 
     def get_driver_id(session, cmd, pattern):
         """
@@ -57,8 +56,7 @@ def run(test, params, env):
         output = session.cmd_output(cmd)
         driver_id = re.findall(pattern, output)
         if not driver_id:
-            raise exceptions.TestFail("Didn't find driver info from guest %s"
-                                      % output)
+            test.fail("Didn't find driver info from guest %s" % output)
         driver_id = driver_id[0]
         driver_id = '^&'.join(driver_id.split('&'))
         return driver_id
@@ -70,6 +68,7 @@ def run(test, params, env):
     read_rng_timeout = float(params.get("read_rng_timeout", "360"))
     cmd_timeout = float(params.get("session_cmd_timeout", "360"))
     driver_name = params["driver_name"]
+    os_type = params["os_type"]
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm_pid = vm.get_pid()
@@ -80,10 +79,10 @@ def run(test, params, env):
         if not is_dev_used_by_qemu(dev_file, vm_pid):
             msg = "Qemu (pid=%d) not using host passthrough " % vm_pid
             msg += "device '%s'" % dev_file
-            raise exceptions.TestFail(msg)
+            test.fail(msg)
     session = vm.wait_for_login(timeout=timeout)
 
-    if params["os_type"] == "windows":
+    if os_type == "windows":
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test, driver_name,
                                                                 timeout)
@@ -103,13 +102,13 @@ def run(test, params, env):
             output = session.cmd_output_safe(verify_cmd, timeout=cmd_timeout)
         except aexpect.ShellTimeoutError:
             err = "%s timeout, pls check if it's a product bug" % verify_cmd
-            raise exceptions.TestFail(err)
+            test.fail(err)
 
         if not re.search(r"%s" % driver_name, output, re.M):
             msg = "Verify device driver failed, "
             msg += "guest report driver is %s, " % output
             msg += "expect is '%s'" % driver_name
-            raise exceptions.TestFail(msg)
+            test.fail(msg)
 
     error_context.context("Read virtio-rng device to get random number",
                           logging.info)
@@ -120,17 +119,26 @@ def run(test, params, env):
         logging.info("register 'viorngum.dll' into system")
         session.cmd(rng_dll_register_cmd, timeout=120)
 
+    if os_type == "linux":
+        check_rngd_service = params.get("check_rngd_service")
+        if check_rngd_service:
+            output = session.cmd_output(check_rngd_service)
+            if 'running' not in output:
+                start_rngd_service = params["start_rngd_service"]
+                status, output = session.cmd_status_output(start_rngd_service)
+                if status:
+                    test.error(output)
+
     if params.get("test_duration"):
         start_time = time.time()
         while (time.time() - start_time) < float(params.get("test_duration")):
             output = session.cmd_output(read_rng_cmd,
                                         timeout=read_rng_timeout)
             if len(re.findall(rng_data_rex, output, re.M)) < 2:
-                raise exceptions.TestFail("Unable to read random numbers from"
-                                          "guest: %s" % output)
+                test.fail("Unable to read random numbers from guest: %s"
+                          % output)
     else:
         output = session.cmd_output(read_rng_cmd, timeout=read_rng_timeout)
         if len(re.findall(rng_data_rex, output, re.M)) < 2:
-            raise exceptions.TestFail("Unable to read random numbers from"
-                                      "guest: %s" % output)
+            test.fail("Unable to read random numbers from guest: %s" % output)
     session.close()

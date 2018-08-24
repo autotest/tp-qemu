@@ -2,7 +2,7 @@ import logging
 import time
 
 from virttest import error_context
-from virttest import utils_misc
+from qemu.lib.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
 
 
 @error_context.context_aware
@@ -23,18 +23,15 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
 
-    qemu_binary = utils_misc.get_qemu_binary(params)
-    if not utils_misc.qemu_has_option("qmp", qemu_binary):
-        logging.warn("qemu does not support qmp. Human monitor will be used.")
-    qmp_used = False
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     logging.info("Wait until device is ready")
     time.sleep(10)
-    if vm.monitor.protocol == "qmp":
-        qmp_used = True
+
+    def check_block(block):
+        return True if block in str(vm.monitor.info("block")) else False
 
     orig_img_name = params.get("cdrom_cd1")
     p_dict = {"file": orig_img_name}
@@ -42,72 +39,73 @@ def run(test, params, env):
     if device_name is None:
         msg = "Fail to get device using image %s" % orig_img_name
         test.fail(msg)
-    error_context.context("Eject original device.")
-    eject_cmd = "eject device=%s" % device_name
-    vm.monitor.send_args_cmd(eject_cmd)
-    logging.info("Wait until device is ejected")
-    time.sleep(10)
-    blocks_info = vm.monitor.info("block")
-    if orig_img_name in str(blocks_info):
+
+    eject_check = QMPEventCheckCDEject(vm, device_name)
+    change_check = QMPEventCheckCDChange(vm, device_name)
+
+    # eject first time
+    error_context.context("Eject original device.", logging.info)
+    with eject_check:
+        vm.eject_cdrom(device_name)
+    if check_block(orig_img_name):
         test.fail("Fail to eject cdrom %s. " % orig_img_name)
 
-    error_context.context("Eject original device for second time")
-    vm.monitor.send_args_cmd(eject_cmd)
+    # eject second time
+    error_context.context("Eject original device for second time",
+                          logging.info)
+    with eject_check:
+        vm.eject_cdrom(device_name)
 
+    # change media
     new_img_name = params.get("new_img_name")
-    error_context.context("Insert new image to device.")
-    change_cmd = "change device=%s,target=%s" % (device_name, new_img_name)
-    vm.monitor.send_args_cmd(change_cmd)
-    logging.info("Wait until device changed")
-    time.sleep(10)
-    blocks_info = vm.monitor.info("block")
-    if new_img_name not in str(blocks_info):
-        test.fail("Fail to chang cdrom to %s." % new_img_name)
-    if qmp_used:
-        eject_cmd = "eject device=%s, force=True" % device_name
-    else:
-        eject_cmd = "eject device=%s" % device_name
-    error_context.context("Eject device after add new image by change command")
-    vm.monitor.send_args_cmd(eject_cmd)
-    logging.info("Wait until new image is ejected")
-    time.sleep(10)
+    error_context.context("Insert new image to device.", logging.info)
+    with change_check:
+        vm.change_media(device_name, new_img_name)
+    if not check_block(new_img_name):
+        test.fail("Fail to change cdrom to %s." % new_img_name)
 
-    blocks_info = vm.monitor.info("block")
-    if new_img_name in str(blocks_info):
+    # eject after change
+    error_context.context("Eject device after add new image by change command",
+                          logging.info)
+    with eject_check:
+        vm.eject_cdrom(device_name)
+    if check_block(new_img_name):
         test.fail("Fail to eject cdrom %s." % orig_img_name)
 
-    error_context.context("Insert %s to device %s"
-                          % (orig_img_name, device_name))
-    change_cmd = "change device=%s,target=%s" % (device_name, orig_img_name)
-    vm.monitor.send_args_cmd(change_cmd)
-    logging.info("Wait until device changed")
-    time.sleep(10)
-    blocks_info = vm.monitor.info("block")
-    if orig_img_name not in str(blocks_info):
+    # change back to orig_img_name
+    error_context.context("Insert %s to device %s" % (orig_img_name,
+                                                      device_name),
+                          logging.info)
+    with change_check:
+        vm.change_media(device_name, orig_img_name)
+    if not check_block(orig_img_name):
         test.fail("Fail to change cdrom to %s." % orig_img_name)
 
-    error_context.context("Try to eject non-removable device")
+    # change again
+    error_context.context("Insert %s to device %s" % (new_img_name,
+                                                      device_name),
+                          logging.info)
+    with change_check:
+        vm.change_media(device_name, new_img_name)
+    if not check_block(new_img_name):
+        test.fail("Fail to change cdrom to %s." % new_img_name)
+
+    # eject non-removable
+    error_context.context("Try to eject non-removable device", logging.info)
     p_dict = {"removable": False}
     device_name = vm.get_block(p_dict)
     if device_name is None:
-        test.fail("Could not find non-removable device")
-    if params.get("force_eject", "no") == "yes":
-        if not qmp_used:
-            eject_cmd = "eject -f %s " % device_name
-        else:
-            eject_cmd = "eject device=%s, force=True" % device_name
-    else:
-        eject_cmd = "eject device=%s," % device_name
+        test.error("Could not find non-removable device")
     try:
-        vm.monitor.send_args_cmd(eject_cmd)
+        if params.get("force_eject", "no") == "yes":
+            vm.eject_cdrom(device_name, force=True)
+        else:
+            vm.eject_cdrom(device_name)
     except Exception as e:
         if "is not removable" not in str(e):
             test.fail(e)
         logging.debug("Catch exception message: %s" % e)
-    logging.info("Wait until device is ejected")
-    time.sleep(10)
-    blocks_info = vm.monitor.info("block")
-    if device_name not in str(blocks_info):
+    if not check_block(device_name):
         test.fail("Could remove non-removable device!")
 
     session.close()

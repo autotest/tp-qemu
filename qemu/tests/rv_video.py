@@ -12,12 +12,11 @@ import os
 import time
 import re
 
-from autotest.client.shared import error
 from virttest import utils_misc
 from virttest import remote
 
 
-def launch_totem(guest_session, params):
+def launch_totem(test, guest_session, params):
     """
     Launch Totem player
 
@@ -37,8 +36,8 @@ def launch_totem(guest_session, params):
         release = guest_session.cmd("cat /etc/redhat-release")
         logging.info("Redhat Release: %s" % release)
     except:
-        raise error.TestNAError("Test is only currently supported on "
-                                "RHEL and Fedora operating systems")
+        test.cancel("Test is only currently supported on "
+                    "RHEL and Fedora operating systems")
 
     cmd = "export DISPLAY=:0.0"
     guest_session.cmd(cmd)
@@ -76,7 +75,7 @@ def launch_totem(guest_session, params):
     if pid:
         logging.info("PID: %s" % pid)
 
-        if not re.search("^(\d+)", pid):
+        if not re.search(r"^(\d+)", pid):
             logging.info("Could not find Totem running! Try starting again!")
             # Sometimes totem doesn't start properly; try again
             cmd = "nohup totem %s %s --display=:0.0 &> /dev/null &" \
@@ -120,5 +119,5 @@ def run(test, params, env):
         timeout=int(params.get("login_timeout", 360)))
     deploy_video_file(test, guest_vm, params)
 
-    launch_totem(guest_session, params)
+    launch_totem(test, guest_session, params)
     guest_session.close()

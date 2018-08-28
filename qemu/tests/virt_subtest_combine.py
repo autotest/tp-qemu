@@ -1,12 +1,11 @@
 import logging
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import utils_test
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu combine test:
@@ -26,8 +25,8 @@ def run(test, params, env):
             params_vm = params.object_params(vm.name)
             params_vm_subtest = params_vm.object_params(subtest_tag)
             if params_vm_subtest.get('cmd'):
-                error.context("Try to log into guest '%s'." % vm.name,
-                              logging.info)
+                error_context.context("Try to log into guest '%s'." % vm.name,
+                                      logging.info)
                 session = vm.wait_for_login(timeout=timeout)
                 cmd_timeout = int(params_vm_subtest.get("cmd_timeout", 240))
                 cmd = params_vm_subtest['cmd']
@@ -37,13 +36,13 @@ def run(test, params, env):
         params_subtest = params.object_params(subtest_tag)
         cmd_timeout = int(params_subtest.get("cmd_timeout", 240))
         cmd = params_subtest['cmd']
-        utils.system(cmd, timeout=cmd_timeout)
+        process.system(cmd, timeout=cmd_timeout, shell=True)
 
     subtests = params["subtests"].split()
 
     for subtest in subtests:
         params_subtest = params.object_params(subtest)
-        error.context("Run test %s" % subtest, logging.info)
+        error_context.context("Run test %s" % subtest, logging.info)
         if params_subtest.get("subtest_type") == "guests":
             exe_cmd_in_guests(subtest)
         elif params_subtest.get("subtest_type") == "host":
@@ -54,7 +53,8 @@ def run(test, params, env):
         if params_subtest.get("check_vm_status_after_test", "yes") == "yes":
             vms = env.get_all_vms()
             for vm in vms:
-                error.context("Check %s status" % vm.name, logging.info)
+                error_context.context("Check %s status" % vm.name,
+                                      logging.info)
                 vm.verify_userspace_crash()
                 vm.verify_kernel_crash()
                 vm.verify_kvm_internal_error()

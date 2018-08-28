@@ -1,8 +1,6 @@
 import logging
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import utils_test
 from virttest import utils_net
 from virttest import error_context
@@ -71,8 +69,9 @@ def run(test, params, env):
         ext_host = params.get("ext_host", "")
         ext_host_get_cmd = params.get("ext_host_get_cmd", "")
         try:
-            ext_host = utils.system_output(ext_host_get_cmd)
-        except error.CmdError:
+            ext_host = process.system_output(ext_host_get_cmd, shell=True)
+            ext_host = ext_host.decode()
+        except process.CmdError:
             logging.warn("Can't get specified host with cmd '%s',"
                          " Fallback to default host '%s'",
                          ext_host_get_cmd, ext_host)

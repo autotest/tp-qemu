@@ -4,11 +4,9 @@ import random
 
 import aexpect
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
 from virttest import utils_test
 from virttest import utils_net
+from virttest import utils_misc
 
 
 def run(test, params, env):
@@ -65,16 +63,16 @@ def run(test, params, env):
         utils_test.run_file_transfer(test, params, env)
 
         logging.info("Failover test with file transfer")
-        transfer_thread = utils.InterruptedThread(utils_test.run_file_transfer,
-                                                  (test, params, env))
+        transfer_thread = utils_misc.InterruptedThread(
+            utils_test.run_file_transfer, (test, params, env))
         transfer_thread.start()
         try:
             while transfer_thread.isAlive():
                 for vlan, nic in enumerate(vm.virtnet):
                     device_id = nic.device_id
                     if not device_id:
-                        raise error.TestError("Could not find peer device for"
-                                              " nic device %s" % nic)
+                        test.error("Could not find peer device for"
+                                   " nic device %s" % nic)
                     vm.set_link(device_id, up=False)
                     time.sleep(random.randint(1, 30))
                     vm.set_link(device_id, up=True)
@@ -86,19 +84,19 @@ def run(test, params, env):
             transfer_thread.join()
 
         logging.info("Failover test 2 with file transfer")
-        transfer_thread = utils.InterruptedThread(utils_test.run_file_transfer,
-                                                  (test, params, env))
+        transfer_thread = utils_misc.InterruptedThread(
+            utils_test.run_file_transfer, (test, params, env))
         transfer_thread.start()
         try:
             nic_num = len(vm.virtnet)
             up_index = 0
             while transfer_thread.isAlive():
                 up_index = up_index % nic_num
-                for num in xrange(nic_num):
+                for num in range(nic_num):
                     device_id = vm.virtnet[num].device_id
                     if not device_id:
-                        raise error.TestError("Could not find peer device for"
-                                              " nic device %s" % nic)
+                        test.error("Could not find peer device for"
+                                   " nic device %s" % nic)
                     if num == up_index:
                         vm.set_link(device_id, up=True)
                     else:

@@ -1,8 +1,7 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_test
+from virttest import utils_time
 
 
 def run(test, params, env):
@@ -28,6 +27,11 @@ def run(test, params, env):
         utils_test.update_boot_option(vm,
                                       args_removed=boot_option_removed,
                                       args_added=boot_option_added)
+
+    if params.get("os_type") == 'linux':
+        utils_time.sync_timezone_linux(vm)
+    else:
+        utils_time.sync_timezone_win(vm)
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
@@ -73,8 +77,8 @@ def run(test, params, env):
                          (i + 1), drift)
             # Fail if necessary
             if drift > drift_threshold_single:
-                raise error.TestFail("Time drift too large at iteration %d: "
-                                     "%.2f seconds" % (i + 1, drift))
+                test.fail("Time drift too large at iteration %d: "
+                          "%.2f seconds" % (i + 1, drift))
 
         # Get final time
         (ht1, gt1) = utils_test.get_time(session, time_command,
@@ -102,5 +106,5 @@ def run(test, params, env):
 
     # Fail if necessary
     if drift > drift_threshold:
-        raise error.TestFail("Time drift too large after %d reboots: "
-                             "%.2f seconds" % (reboot_iterations, drift))
+        test.fail("Time drift too large after %d reboots: "
+                  "%.2f seconds" % (reboot_iterations, drift))

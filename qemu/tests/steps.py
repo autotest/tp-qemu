@@ -9,8 +9,6 @@ import time
 import shutil
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import ppm_utils
 from virttest import qemu_monitor
@@ -32,7 +30,7 @@ def handle_var(vm, params, varname):
     return True
 
 
-def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
+def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
               current_step_num):
     if len(words) < 7:
         logging.error("Bad barrier_2 command line")
@@ -40,7 +38,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
 
     # Parse barrier command line
     _, dx, dy, x1, y1, md5sum, timeout = words[:7]
-    dx, dy, x1, y1, timeout = map(int, [dx, dy, x1, y1, timeout])
+    dx, dy, x1, y1, timeout = list(map(int, [dx, dy, x1, y1, timeout]))
 
     # Define some paths
     scrdump_filename = os.path.join(debug_dir, "scrdump.ppm")
@@ -97,14 +95,14 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         # Request screendump
         try:
             vm.monitor.screendump(scrdump_filename, debug=False)
-        except qemu_monitor.MonitorError, e:
+        except qemu_monitor.MonitorError as e:
             logging.warn(e)
             continue
 
         # Read image file
         try:
             (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
-        except IOError, e:
+        except IOError as e:
             logging.warn(e)
             continue
 
@@ -191,7 +189,7 @@ def barrier_2(vm, words, params, debug_dir, data_scrdump_filename,
         # Print error messages and fail the test
         long_message = message + "\n(see analysis at %s)" % debug_dir
         logging.error(long_message)
-        raise error.TestFail(message)
+        test.fail(message)
 
 
 def run(test, params, env):
@@ -205,7 +203,7 @@ def run(test, params, env):
 
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
     if not os.path.exists(steps_filename):
-        raise error.TestError("Steps file not found: %s" % steps_filename)
+        test.error("Steps file not found: %s" % steps_filename)
 
     sf = open(steps_filename, "r")
     lines = sf.readlines()
@@ -251,7 +249,7 @@ def run(test, params, env):
                     current_screendump)
             else:
                 scrdump_filename = None
-            if not barrier_2(vm, words, params, test.debugdir,
+            if not barrier_2(test, vm, words, params, test.debugdir,
                              scrdump_filename, current_step_num):
                 skip_current_step = True
         else:

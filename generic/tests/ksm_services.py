@@ -3,12 +3,11 @@ import os
 import logging
 import shutil
 
-from autotest.client.shared import error
-
+from avocado.utils import process
 from virttest import utils_misc
 
 
-def test_setting_params(ksmctler, params):
+def test_setting_params(test, ksmctler, params):
     """
     Test setting writable params.
 
@@ -45,8 +44,8 @@ def test_setting_params(ksmctler, params):
             ksmctler.set_ksm_feature(set_values)
             # Restart ksm service to check
             ksmctler.restart_ksm()
-        except error.CmdError, detail:
-            raise error.TestFail("Set parameters failed:%s" % str(detail))
+        except process.CmdError as detail:
+            test.fail("Set parameters failed:%s" % str(detail))
 
         fail_flag = 0
         for key, value in set_values.items():
@@ -54,13 +53,13 @@ def test_setting_params(ksmctler, params):
                 logging.error("Set value do not match:%s - %s", key, value)
                 fail_flag = 1
         if fail_flag:
-            raise error.TestFail("Set writable parameters failed.")
+            test.fail("Set writable parameters failed.")
     finally:
         logging.debug("Recover parameters' default value...")
         ksmctler.set_ksm_feature(default_values)
 
 
-def test_ksmtuned_service(ksmctler, params):
+def test_ksmtuned_service(test, ksmctler, params):
     """
     Test if ksmtuned service works well.
 
@@ -76,8 +75,8 @@ def test_ksmtuned_service(ksmctler, params):
             fd = open(ksmtuned_conf, 'r')
             contents = fd.readlines()
             fd.close()
-        except IOError, e:
-            raise error.TestFail("Open ksmtuned config file failed:%s" % e)
+        except IOError as e:
+            test.fail("Open ksmtuned config file failed:%s" % e)
 
         new_contents = []
         for con in contents:
@@ -91,8 +90,8 @@ def test_ksmtuned_service(ksmctler, params):
             fd = open(ksmtuned_conf, 'w')
             fd.writelines(new_contents)
             fd.close()
-        except IOError, e:
-            raise error.TestFail("Write options to config file failed:%s" % e)
+        except IOError as e:
+            test.fail("Write options to config file failed:%s" % e)
 
     log_path = params.get("ksmtuned_log_path", "/var/log/test_ksmtuned")
     debug = params.get("ksmtuned_debug", 1)
@@ -107,7 +106,7 @@ def test_ksmtuned_service(ksmctler, params):
         debug_ksmtuned(log_path, debug)
         ksmctler.restart_ksmtuned()
         if not os.path.isfile(log_path):
-            raise error.TestFail("Debug file of ksmtuned is not created.")
+            test.fail("Debug file of ksmtuned is not created.")
     finally:
         try:
             shutil.move(ksmtuned_backup, ksmtuned_conf)
@@ -126,6 +125,6 @@ def run(test, params, env):
     ksm_ref = params.get("ksm_ref")
     ksmctler = utils_misc.KSMController()
     if ksm_ref == "set_params":
-        test_setting_params(ksmctler, params)
+        test_setting_params(test, ksmctler, params)
     elif ksm_ref == "ksmtuned":
-        test_ksmtuned_service(ksmctler, params)
+        test_ksmtuned_service(test, ksmctler, params)

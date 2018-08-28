@@ -3,16 +3,16 @@ import os
 import re
 import logging
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
+from avocado.utils import download as utils_download
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import env_process
 from virttest import data_dir
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM whql env setup test:
@@ -31,14 +31,16 @@ def run(test, params, env):
     """
     log_path = "%s/../debug" % test.resultsdir
     # Prepare the tools iso
-    error.context("Prepare the tools iso", logging.info)
+    error_context.context("Prepare the tools iso", logging.info)
     src_list = params.get("src_list")
     src_path = params.get("src_path", "%s/whql_src" % test.tmpdir)
     if not os.path.exists(src_path):
         os.makedirs(src_path)
     if src_list is not None:
         for i in re.split(",", src_list):
-            utils.unmap_url(src_path, i, src_path)
+            pkg_name = os.path.basename(i)
+            pkg_path = os.path.join(src_path, pkg_name)
+            utils_download.get_file(i, pkg_path)
 
     # Make iso for src
     cdrom_whql = params.get("cdrom_whql")
@@ -47,7 +49,7 @@ def run(test, params, env):
     if not os.path.exists(cdrom_whql_dir):
         os.makedirs(cdrom_whql_dir)
     cmd = "mkisofs -J -o %s %s" % (cdrom_whql, src_path)
-    utils.system(cmd)
+    process.system(cmd, shell=True)
     params["cdroms"] += " whql"
 
     vm = "vm1"
@@ -62,7 +64,7 @@ def run(test, params, env):
         "run_guest_log", "%s/whql_qemu_comman" % test.tmpdir)
 
     # Record qmmu command line in a log file
-    error.context("Record qemu command line", logging.info)
+    error_context.context("Record qemu command line", logging.info)
     if os.path.isfile(run_guest_log):
         fd = open(run_guest_log, "r+")
         fd.read()
@@ -102,23 +104,23 @@ def run(test, params, env):
         symbol_cmd = ""
     wmic_prepare_cmd = "echo exit > cmd && cmd /s wmic"
 
-    error.context("Configure guest system", logging.info)
+    error_context.context("Configure guest system", logging.info)
     cmd_list = [wmic_prepare_cmd, auto_restart, disable_uas, symbol_cmd,
                 vm_ma_cmd, vm_cmd, dbgview_cmd, qxl_install, disable_firewall,
                 timezone_cmd]
     if nic_cmd:
-        for index, nic in enumerate(re.split("\s+", params.get("nics"))):
+        for index, nic in enumerate(re.split(r"\s+", params.get("nics"))):
             setup_params = params.get("nic_setup_params_%s" % nic, "")
             if params.get("vm_arch_name", "") == "x86_64":
                 nic_cmd = re.sub("set", "set_64", nic_cmd)
             cmd_list.append("%s %s %s" % (nic_cmd, str(index + 1),
                                           setup_params))
     if disk_init_cmd:
-        disk_num = len(re.split("\s+", params.get("images")))
+        disk_num = len(re.split(r"\s+", params.get("images")))
         if disk_driver_install:
             cmd_list.append(disk_driver_install + str(disk_num - 1))
         labels = "IJKLMNOPQRSTUVWXYZ"
-        for index, images in enumerate(re.split("\s+", params.get("images"))):
+        for index, images in enumerate(re.split(r"\s+", params.get("images"))):
             if index > 0:
                 cmd_list.append(disk_init_cmd % (str(index),
                                                  labels[index - 1]))
@@ -135,10 +137,10 @@ def run(test, params, env):
 
     # Check symbol files in guest
     if symbol_files:
-        error.context("Update symbol files", logging.info)
+        error_context.context("Update symbol files", logging.info)
         install_check_tool = False
         check_tool_chk = params.get("check_tool_chk",
-                                    "C:\debuggers\symchk.exe")
+                                    "C:\\debuggers\\symchk.exe")
         output = session.cmd_output(check_tool_chk)
         if "cannot find" in output:
             install_check_tool = True
@@ -179,7 +181,7 @@ def run(test, params, env):
             s = 0
             try:
                 s, o = session.cmd_status_output(cmd, timeout=setup_timeout)
-            except Exception, err:
+            except Exception as err:
                 failed_flag += 1
                 utils_misc.log_line(
                     error_log, "Unexpected exception: %s" % err)
@@ -188,5 +190,4 @@ def run(test, params, env):
                 utils_misc.log_line(error_log, o)
 
     if failed_flag != 0:
-        raise error.TestFail("Have %s setup fialed. Please check the log."
-                             % failed_flag)
+        test.fail("Have %s setup fialed. Please check the log." % failed_flag)

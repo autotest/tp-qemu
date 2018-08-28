@@ -1,12 +1,11 @@
 import logging
 import time
-import commands
 
 import aexpect
 
-from virttest import utils_test
+from avocado.utils import process
 
-from autotest.client.shared import error
+from virttest import utils_test
 
 
 def run(test, params, env):
@@ -38,13 +37,17 @@ def run(test, params, env):
         :param mask: The CPU affinity mask.
         :return: A dict containing the previous mask for each thread.
         """
-        tids = commands.getoutput("ps -L --pid=%s -o lwp=" % pid).split()
+        tids = process.system_output("ps -L --pid=%s -o lwp=" % pid,
+                                     verbose=False, ignore_status=True).split()
         prev_masks = {}
         for tid in tids:
-            prev_mask = commands.getoutput("taskset -p %s" % tid).split()[-1]
+            prev_mask = process.system_output("taskset -p %s" % tid,
+                                              verbose=False).split()[-1]
             prev_masks[tid] = prev_mask
-            commands.getoutput("taskset -p %s %s" % (mask, tid))
-        children = commands.getoutput("ps --ppid=%s -o pid=" % pid).split()
+            process.system("taskset -p %s %s" % (mask, tid), verbose=False)
+        children = process.system_output("ps --ppid=%s -o pid=" % pid,
+                                         verbose=False,
+                                         ignore_status=True).split()
         for child in children:
             prev_masks.update(set_cpu_affinity(child, mask))
         return prev_masks
@@ -56,7 +59,8 @@ def run(test, params, env):
         :param prev_masks: A dict containing TIDs as keys and masks as values.
         """
         for tid, mask in prev_masks.items():
-            commands.getoutput("taskset -p %s %s" % (mask, tid))
+            process.system("taskset -p %s %s" % (mask, tid), verbose=False,
+                           ignore_status=True)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -199,7 +203,7 @@ def run(test, params, env):
 
     # Fail the test if necessary
     if abs(drift) > drift_threshold:
-        raise error.TestFail("Time drift too large: %.2f%%" % drift)
+        test.fail("Time drift too large: %.2f%%" % drift)
     if abs(drift_total) > drift_threshold_after_rest:
-        raise error.TestFail("Time drift too large after rest period: %.2f%%"
-                             % drift_total)
+        test.fail("Time drift too large after rest period: %.2f%%"
+                  % drift_total)

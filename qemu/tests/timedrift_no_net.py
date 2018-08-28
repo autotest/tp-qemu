@@ -1,27 +1,27 @@
 import logging
 import time
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import path, process
 from virttest import utils_test
+from virttest import error_context
 
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 
 
 class GuestSuspendSerialConsole(GuestSuspendBaseTest):
 
-    def __init__(self, params, vm, session):
-        super(GuestSuspendSerialConsole, self).__init__(params, vm)
+    def __init__(self, test, params, vm, session):
+        super(GuestSuspendSerialConsole, self).__init__(test, params, vm)
 
     def _get_session(self):
         self.vm.verify_alive()
         session = self.vm.wait_for_serial_login(timeout=self.login_timeout)
         return session
 
-    @error.context_aware
+    @error_context.context_aware
     def action_during_suspend(self, **args):
-        error.context("Sleep a while before resuming guest", logging.info)
+        error_context.context("Sleep a while before resuming guest",
+                              logging.info)
 
         time.sleep(float(self.params.get("wait_timeout", "1800")))
         if self.os_type == "windows":
@@ -31,31 +31,31 @@ class GuestSuspendSerialConsole(GuestSuspendBaseTest):
             time.sleep(50)
 
 
-def subw_guest_suspend(params, vm, session):
-    gs = GuestSuspendSerialConsole(params, vm, session)
+def subw_guest_suspend(test, params, vm, session):
+    gs = GuestSuspendSerialConsole(test, params, vm, session)
 
     suspend_type = params.get("guest_suspend_type")
     if suspend_type == gs.SUSPEND_TYPE_MEM:
-        error.context("Suspend vm to mem", logging.info)
+        error_context.context("Suspend vm to mem", logging.info)
         gs.guest_suspend_mem(params)
     elif suspend_type == gs.SUSPEND_TYPE_DISK:
-        error.context("Suspend vm to disk", logging.info)
+        error_context.context("Suspend vm to disk", logging.info)
         gs.guest_suspend_disk(params)
     else:
-        raise error.TestError("Unknown guest suspend type, Check your"
-                              " 'guest_suspend_type' config.")
+        test.error("Unknown guest suspend type, Check your"
+                   " 'guest_suspend_type' config.")
 
 
-def subw_guest_pause_resume(params, vm, session):
+def subw_guest_pause_resume(test, params, vm, session):
     vm.monitor.cmd("stop")
     if not vm.monitor.verify_status("paused"):
-        raise error.TestError("VM is not paused Current status: %s" %
-                              vm.monitor.get_status())
+        test.error("VM is not paused Current status: %s" %
+                   vm.monitor.get_status())
     time.sleep(float(params.get("wait_timeout", "1800")))
     vm.monitor.cmd("cont")
     if not vm.monitor.verify_status("running"):
-        raise error.TestError("VM is not running. Current status: %s" %
-                              vm.monitor.get_status())
+        test.error("VM is not running. Current status: %s" %
+                   vm.monitor.get_status())
 
 
 def time_diff(host_guest_time_before,
@@ -77,7 +77,7 @@ def time_diff(host_guest_time_before,
     return before_diff - after_diff
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test suspend commands in qemu guest agent.
@@ -108,26 +108,27 @@ def run(test, params, env):
 
     vm_name = params.get("vms")
     vm = env.get_vm(vm_name)
-    error.context("Check if ntp utils are host in system.", logging.info)
+    error_context.context("Check if ntp utils are host in system.",
+                          logging.info)
     try:
-        utils.find_command("ntpdate")
-    except ValueError:
-        error.context("Install ntp utils `%s`." % (ntputil_install),
-                      logging.info)
-        utils.run(ntputil_install)
-    error.context("Sync host machine with clock server %s" % (clock_server),
-                  logging.info)
-    utils.run("ntpdate %s" % (clock_server))
-    error.context("Check clock source on guest VM", logging.info)
+        path.find_command("ntpdate")
+    except path.CmdNotFoundError:
+        error_context.context("Install ntp utils `%s`." % (ntputil_install),
+                              logging.info)
+        process.run(ntputil_install, shell=True)
+    error_context.context("Sync host machine with clock server %s" %
+                          (clock_server), logging.info)
+    process.run("ntpdate %s" % (clock_server))
+    error_context.context("Check clock source on guest VM", logging.info)
     session = vm.wait_for_serial_login(timeout=login_timeout)
     out = session.cmd_output("cat /sys/devices/system/clocksource/"
                              "clocksource0/current_clocksource")
     if guest_clock_source not in out:
-        raise error.TestFail("Clock source %s missing in guest clock "
-                             "sources %s." % (guest_clock_source, out))
+        test.fail("Clock source %s missing in guest clock "
+                  "sources %s." % (guest_clock_source, out))
 
-    error.context("Get clock from host and guest VM using `date`",
-                  logging.info)
+    error_context.context("Get clock from host and guest VM using `date`",
+                          logging.info)
     before_date = utils_test.get_time(session,
                                       date_time_command,
                                       date_time_filter_re,
@@ -135,8 +136,8 @@ def run(test, params, env):
     logging.debug("date: host time=%ss guest time=%ss",
                   *before_date)
 
-    error.context("Get clock from host and guest VM using `hwclock`",
-                  logging.info)
+    error_context.context("Get clock from host and guest VM using `hwclock`",
+                          logging.info)
     before_hwclock = utils_test.get_time(session,
                                          hwclock_time_command,
                                          hwclock_time_filter_re,
@@ -147,14 +148,14 @@ def run(test, params, env):
     session.close()
 
     if sub_work in globals():  # Try to find sub work function.
-        globals()[sub_work](params, vm, session)
+        globals()[sub_work](test, params, vm, session)
     else:
-        raise error.TestNAError("Unable to found subwork %s in %s test file." %
-                                (sub_work, __file__))
+        test.cancel("Unable to found subwork %s in %s test file." %
+                    (sub_work, __file__))
 
     session = vm.wait_for_serial_login(timeout=login_timeout)
-    error.context("Get clock from host and guest VM using `date`",
-                  logging.info)
+    error_context.context("Get clock from host and guest VM using `date`",
+                          logging.info)
     after_date = utils_test.get_time(session,
                                      date_time_command,
                                      date_time_filter_re,
@@ -162,8 +163,8 @@ def run(test, params, env):
     logging.debug("date: host time=%ss guest time=%ss",
                   *after_date)
 
-    error.context("Get clock from host and guest VM using `hwclock`",
-                  logging.info)
+    error_context.context("Get clock from host and guest VM using `hwclock`",
+                          logging.info)
     after_hwclock = utils_test.get_time(session,
                                         hwclock_time_command,
                                         hwclock_time_filter_re,
@@ -175,25 +176,25 @@ def run(test, params, env):
         date_diff = time_diff(before_date, after_date)
         hwclock_diff = time_diff(before_hwclock, after_hwclock)
         if date_diff > tolerance and hwclock_diff > tolerance:
-            raise error.TestFail("hwclock %ss and date %ss difference is "
-                                 "'guest_diff_time != host_diff_time'"
-                                 " out of tolerance %ss" % (hwclock_diff,
-                                                            date_diff,
-                                                            tolerance))
+            test.fail("hwclock %ss and date %ss difference is "
+                      "'guest_diff_time != host_diff_time'"
+                      " out of tolerance %ss" % (hwclock_diff,
+                                                 date_diff,
+                                                 tolerance))
         elif date_diff > tolerance:
-            raise error.TestFail("date %ss difference is "
-                                 "'guest_diff_time != host_diff_time'"
-                                 " out of tolerance %ss" % (date_diff,
-                                                            tolerance))
+            test.fail("date %ss difference is "
+                      "'guest_diff_time != host_diff_time'"
+                      " out of tolerance %ss" % (date_diff,
+                                                 tolerance))
         elif hwclock_diff > tolerance:
-            raise error.TestFail("hwclock %ss difference is "
-                                 "'guest_diff_time != host_diff_time'"
-                                 " out of tolerance %ss" % (hwclock_diff,
-                                                            tolerance))
+            test.fail("hwclock %ss difference is "
+                      "'guest_diff_time != host_diff_time'"
+                      " out of tolerance %ss" % (hwclock_diff,
+                                                 tolerance))
     elif test_type == "guest_pause_resume":
         date_diff = time_diff(before_date, after_date)
         if date_diff > tolerance:
-            raise error.TestFail("date %ss difference is"
-                                 "'guest_time_after-guest_time_before'"
-                                 " out of tolerance %ss" % (date_diff,
-                                                            tolerance))
+            test.fail("date %ss difference is"
+                      "'guest_time_after-guest_time_before'"
+                      " out of tolerance %ss" % (date_diff,
+                                                 tolerance))

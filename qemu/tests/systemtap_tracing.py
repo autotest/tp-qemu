@@ -3,15 +3,15 @@ import re
 import os
 import time
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 from virttest import env_process
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     TestStep:
@@ -29,13 +29,13 @@ def run(test, params, env):
         Create a regular exp using the tracing key, the purpose is checking
         the systemtap output is accord with expected.
         """
-        pattern_reg = ""
+        pattern_reg = r""
         for tracing_key in trace_key.split():
-            pattern_reg += "%s=\d+," % tracing_key
+            pattern_reg += r"%s=\d+," % tracing_key
         return pattern_reg.rstrip(",")
 
-    error.base_context("Qemu_Tracing Test")
-    error.context("Test start ...")
+    error_context.base_context("Qemu_Tracing Test")
+    error_context.context("Test start ...")
 
     probe_var_key = params.get("probe_var_key")
     checking_pattern_re = create_patterns_reg(probe_var_key)
@@ -49,8 +49,8 @@ def run(test, params, env):
     if params.get("boot_with_cdrom") == 'yes':
         iso_path = "%s/test.iso" % data_dir.get_tmp_dir()
         create_cmd = "dd if=/dev/zero of=%s bs=1M count=10" % iso_path
-        if utils.system(create_cmd, ignore_status=True) != 0:
-            raise error.TestNAError("Create test iso failed")
+        if process.system(create_cmd, ignore_status=True) != 0:
+            test.cancel("Create test iso failed")
         params["cdrom_cd1"] = iso_path
 
     if params.get("start_vm", "yes") == "no":
@@ -70,14 +70,14 @@ def run(test, params, env):
                 exec_cmds = cmd
             for cmd_exec in exec_cmds.split(";"):
                 msg = "Execute %s cmd '%s'" % (cmd_type, cmd_exec)
-                error.context(msg, logging.info)
+                error_context.context(msg, logging.info)
                 if cmd_type == "monitor":
                     vm.monitor.send_args_cmd(cmd_exec)
                 elif cmd_type == "bash":
                     guest_session = vm.wait_for_login(timeout=timeout)
                     guest_session.cmd(cmd_exec)
 
-    error.context("Get the output of stap script", logging.info)
+    error_context.context("Get the output of stap script", logging.info)
     stap_log_file = utils_misc.get_path(test.profdir, "systemtap.log")
 
     start_time = time.time()
@@ -98,4 +98,4 @@ def run(test, params, env):
         else:
             time.sleep(time_inter)
     else:
-        raise error.TestError("Timeout for capature the stap log data")
+        test.error("Timeout for capature the stap log data")

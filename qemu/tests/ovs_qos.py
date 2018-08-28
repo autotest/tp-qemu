@@ -5,15 +5,15 @@ import glob
 import shutil
 import logging
 
-from autotest.client import os_dep
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import process
+from avocado.utils import path as utils_path
 
+from virttest import error_context
 from virttest import utils_netperf
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
      Test Qos between guests in one ovs backend
@@ -37,12 +37,12 @@ def run(test, params, env):
         """
         cmd = "ovs-vsctl set interface %s %s=%s" % (iface, attribute, value)
         logging.info("execute host command: %s" % cmd)
-        status = utils.system(cmd, ignore_status=True)
+        status = process.system(cmd, ignore_status=True)
         if status != 0:
             err_msg = "set %s to %s for interface '%s' " % (
                 attribute, value, iface)
             err_msg += "exited with nozero statu '%d'" % status
-            error.TestError(err_msg)
+            test.error(err_msg)
 
     def set_port_qos(vm, rate, burst):
         """
@@ -54,8 +54,8 @@ def run(test, params, env):
         :param brust: value of ingress_policing_brust
         """
         iface = vm.get_ifname()
-        error.context("Set QoS for tap '%s' use by vm '%s'" % (iface, vm.name),
-                      logging.info)
+        error_context.context("Set QoS for tap '%s' use by vm '%s'"
+                              % (iface, vm.name), logging.info)
         attributes = zip(['ingress_policing_rate',
                           'ingress_policing_burst'],
                          [rate, burst])
@@ -75,13 +75,13 @@ def run(test, params, env):
 
         :return: float type throughout Kbps.
         """
-        error.context("Set '%s' as netperf server" % server_vm.name,
-                      logging.info)
+        error_context.context("Set '%s' as netperf server" % server_vm.name,
+                              logging.info)
         if not netperf_server.is_server_running():
             netperf_server.start()
 
-        error.context("Set '%s' as netperf client" % client_vm.name,
-                      logging.info)
+        error_context.context("Set '%s' as netperf client" % client_vm.name,
+                              logging.info)
         server_ip = server_vm.get_address()
         output = netperf_client.start(server_ip, client_options)
         logging.debug("netperf client output: %s" % output)
@@ -90,7 +90,7 @@ def run(test, params, env):
             throughout = float(re.search(regex, output, re.M).groups()[0])
             return throughout * 1000
         except Exception:
-            raise error.TestError("Invaild output format of netperf client!")
+            test.error("Invaild output format of netperf client!")
         finally:
             netperf_client.stop()
 
@@ -104,7 +104,7 @@ def run(test, params, env):
         """
         Report failed test scenarios.
         """
-        error.context("Analyze guest throughout", logging.info)
+        error_context.context("Analyze guest throughout", logging.info)
         fails = [_ for _ in datas if not is_test_pass(_)]
         if fails:
             msg = "OVS Qos test failed, "
@@ -112,13 +112,13 @@ def run(test, params, env):
                 msg += "netperf throughout(%s) on '%s' " % (throughout, tap)
                 msg += "should be near ingress_policing_rate(%s), " % rate
                 msg += "ingress_policing_burst is %s;\n" % burst
-            raise error.TestFail(msg)
+            test.fail(msg)
 
     def clear_qos_setting(iface):
-        error.context("Clear qos setting for ovs port '%s'" % iface,
-                      logging.info)
+        error_context.context("Clear qos setting for ovs port '%s'" % iface,
+                              logging.info)
         clear_cmd = "ovs-vsctl clear Port %s qos" % iface
-        utils.system(clear_cmd)
+        process.system(clear_cmd)
         logging.info("Clear ovs command: %s" % clear_cmd)
 
     def setup_netperf_env():
@@ -135,9 +135,9 @@ def run(test, params, env):
                           "username", "password", "shell_client", "shell_port", "os_type"]
             vms_info = []
             for _ in params.get("vms").split():
-                info = map(
+                info = list(map(
                     lambda x: params.object_params(_).get(x),
-                    guest_info)
+                    guest_info))
                 vm = env.get_vm(_)
                 vm.verify_alive()
                 session = vm.wait_for_login(timeout=login_timeout)
@@ -187,7 +187,7 @@ def run(test, params, env):
                     password=info[-4],
                     username=info[-5],
                     prompt=info[-6],
-                    linesep=info[-7].decode('string_escape'),
+                    linesep=info[-7].encode().decode('unicode_escape'),
                     status_test_command=info[-8],
                     compile_option=compile_option_server)
                 netperf_servers.append((server, vm))
@@ -209,19 +209,20 @@ def run(test, params, env):
                     password=info[-4],
                     username=info[-5],
                     prompt=info[-6],
-                    linesep=info[-7].decode('string_escape'),
+                    linesep=info[-7].encode().decode('unicode_escape'),
                     status_test_command=info[-8],
                     compile_option=compile_option_client)
                 netperf_clients.append((client, vm))
                 continue
         return netperf_clients, netperf_servers
 
-    os_dep.command("ovs-vsctl")
-    if params.get("netdst") not in utils.system_output("ovs-vsctl show"):
-        raise error.TestError("This is a openvswitch only test")
+    utils_path.find_command("ovs-vsctl")
+    if params.get("netdst") not in process.system_output("ovs-vsctl show"):
+        test.error("This is a openvswitch only test")
     extra_options = params.get("netperf_client_options", " -l 60")
     rate_brust_pairs = params.get("rate_brust_pairs").split()
-    rate_brust_pairs = map(lambda x: map(int, x.split(',')), rate_brust_pairs)
+    rate_brust_pairs = list(
+        map(lambda x: map(int, x.split(',')), rate_brust_pairs))
     results = []
     try:
         netperf_clients, netperf_servers = setup_netperf_env()

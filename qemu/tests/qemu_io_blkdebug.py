@@ -1,18 +1,21 @@
 import os
 import re
 import logging
-import ConfigParser
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
 
-from autotest.client.shared import error
 from avocado.utils import process
 
+from virttest import error_context
 from virttest import qemu_io
 from virttest import data_dir
 from virttest import utils_misc
 from virttest.qemu_storage import QemuImg
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run qemu-io blkdebug tests:
@@ -35,7 +38,7 @@ def run(test, params, env):
                                                            "blkdebug.cfg"))
     err_command = params["err_command"]
     err_event = params["err_event"]
-    errn_list = re.split("\s+", params["errn_list"].strip())
+    errn_list = re.split(r"\s+", params["errn_list"].strip())
     test_timeout = int(params.get("test_timeout", "60"))
     pre_err_commands = params.get("pre_err_commands")
     image = params.get("images")
@@ -44,23 +47,23 @@ def run(test, params, env):
     pre_snapshot = params.get("pre_snapshot", "no") == "yes"
     del_snapshot = params.get("del_snapshot", "no") == "yes"
 
-    error.context("Create image", logging.info)
+    error_context.context("Create image", logging.info)
     image_io = QemuImg(
         params.object_params(image), data_dir.get_data_dir(), image)
     image_name, _ = image_io.create(params.object_params(image))
 
     template_name = utils_misc.get_path(test.virtdir, blkdebug_default)
-    template = ConfigParser.ConfigParser()
+    template = ConfigParser()
     template.read(template_name)
 
     for errn in errn_list:
         log_filename = utils_misc.get_path(test.outputdir,
                                            "qemu-io-log-%s" % errn)
-        error.context("Write the blkdebug config file", logging.info)
+        error_context.context("Write the blkdebug config file", logging.info)
         template.set("inject-error", "event", '"%s"' % err_event)
         template.set("inject-error", "errno", '"%s"' % errn)
 
-        error.context("Write blkdebug config file", logging.info)
+        error_context.context("Write blkdebug config file", logging.info)
         blkdebug = None
         try:
             blkdebug = open(blkdebug_cfg, 'w')
@@ -69,12 +72,13 @@ def run(test, params, env):
             if blkdebug is not None:
                 blkdebug.close()
 
-        error.context("Create image", logging.info)
+        error_context.context("Create image", logging.info)
         image_io = QemuImg(params.object_params(
             image), data_dir.get_data_dir(), image)
         image_name = image_io.create(params.object_params(image))[0]
 
-        error.context("Operate in qemu-io to trigger the error", logging.info)
+        error_context.context("Operate in qemu-io to trigger the error",
+                              logging.info)
         session = qemu_io.QemuIOShellSession(test, params, image_name,
                                              blkdebug_cfg=blkdebug_cfg,
                                              log_filename=log_filename)
@@ -98,7 +102,7 @@ def run(test, params, env):
             try:
                 image_io.snapshot_del(blkdebug_cfg=blkdebug_cfg)
                 output = ""
-            except process.CmdError, err:
+            except process.CmdError as err:
                 output = err.result.stderr
 
         # Remove the snapshot and base image after a round of test
@@ -109,19 +113,19 @@ def run(test, params, env):
                 params_sn, data_dir.get_data_dir(), image_sn)
             image_snapshot.remove()
 
-        error.context("Get error message", logging.info)
+        error_context.context("Get error message", logging.info)
         try:
             std_msg = os.strerror(int(errn))
         except ValueError:
-            raise error.TestError("Can not find error message:\n"
-                                  "    error code is %s" % errn)
+            test.error("Can not find error message:\n"
+                       "    error code is %s" % errn)
 
         session.close()
-        error.context("Compare the error message", logging.info)
+        error_context.context("Compare the error message", logging.info)
         if std_msg in output:
             logging.info("Error message is correct in qemu-io")
         else:
             fail_log = "The error message is mismatch:\n"
             fail_log += "    qemu-io reports: '%s',\n" % output
             fail_log += "    os.strerror reports: '%s'" % std_msg
-            raise error.TestFail(fail_log)
+            test.fail(fail_log)

@@ -10,7 +10,6 @@ if application is running when it should .
 """
 import logging
 import os
-from autotest.client.shared import error
 
 
 def run(test, params, env):
@@ -29,11 +28,11 @@ def run(test, params, env):
     app_name = params.get("kill_app_name", None)
     logging.debug("vms %s", vms)
     if not vms:
-        raise error.TestFail("Kill app test launched without any VM parameter")
+        test.fail("Kill app test launched without any VM parameter")
     else:
         for vm in vms:
             logging.debug("vm %s", vm)
-            if params.has_key(vm):
+            if vm in params:
                 kill_app(vm, app_name, params, env)
 
 

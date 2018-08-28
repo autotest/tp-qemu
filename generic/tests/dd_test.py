@@ -1,5 +1,6 @@
 """
 Configurable on-guest dd test.
+
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2012 Red Hat, Inc.
 """
@@ -7,11 +8,11 @@ import logging
 
 import aexpect
 
-from autotest.client.shared import error
+from virttest import error_context
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Executes dd with defined parameters and checks the return number and output
@@ -21,7 +22,7 @@ def run(test, params, env):
     2). run dd command in guest with special params(eg. oflag, bs and so on)
     3). check command exit stauts and output
     """
-    def _get_file(filename, select):
+    def _get_file(filename, select, test=test):
         """ Picks the actual file based on select value """
         if filename == "NULL":
             return "/dev/null"
@@ -36,7 +37,7 @@ def run(test, params, env):
             drive_path = utils_misc.get_linux_drive_path(session, drive_id)
             if drive_path:
                 return drive_path
-            raise error.TestError("Failed to get '%s' drive path" % filename)
+            test.error("Failed to get '%s' drive path" % filename)
         else:
             # get all matching filenames
             try:
@@ -51,12 +52,12 @@ def run(test, params, env):
                 err = ("Incorrect cfg: dd_select out of the range (disks=%s,"
                        " select=%s)" % (disks, select))
                 logging.error(err)
-                raise error.TestError(err)
+                test.error(err)
 
     vm = env.get_vm(params['main_vm'])
     timeout = int(params.get("login_timeout", 360))
 
-    error.context("Wait guest boot up", logging.info)
+    error_context.context("Wait guest boot up", logging.info)
     session = vm.wait_for_login(timeout=timeout)
 
     dd_if = params.get("dd_if")
@@ -96,28 +97,25 @@ def run(test, params, env):
         dd_cmd += " seek=%s" % dd_seek
     logging.info("Using '%s' cmd", dd_cmd)
 
-    error.context("Execute dd in guest", logging.info)
+    error_context.context("Execute dd in guest", logging.info)
     try:
         (stat, out) = session.cmd_status_output(dd_cmd, timeout=dd_timeout)
     except aexpect.ShellTimeoutError:
         err = ("dd command timed-out (cmd='%s', timeout=%d)"
                % (dd_cmd, dd_timeout))
-        logging.error(err)
-        raise error.TestFail(err)
-    except aexpect.ShellCmdError, details:
+        test.fail(err)
+    except aexpect.ShellCmdError as details:
         stat = details.status
         out = details.output
 
-    error.context("Check command exit status and output", logging.info)
+    error_context.context("Check command exit status and output", logging.info)
     logging.debug("Returned dd_status: %s\nReturned output:\n%s", stat, out)
     if stat != dd_stat:
         err = ("Return code doesn't match (expected=%s, actual=%s)\n"
                "Output:\n%s" % (dd_stat, stat, out))
-        logging.error(err)
-        raise error.TestFail(err)
+        test.fail(err)
     if dd_output not in out:
         err = ("Output doesn't match:\nExpected:\n%s\nActual:\n%s"
                % (dd_output, out))
-        raise error.TestFail(err)
+        test.fail(err)
     logging.info("dd test succeeded.")
-    return

@@ -3,8 +3,6 @@ import os
 import re
 import time
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 
 
@@ -62,14 +60,14 @@ def run(test, params, env):
                 s, result = session.cmd_status_output(cmd)
                 if s:
                     msg = "Fail command: %s. Output: %s" % (cmd, result)
-                    raise error.TestFail(msg)
+                    test.fail(msg)
                 results_all += result
                 re_suc = "Number of files successfully Verified: ([0-9]*)"
                 try:
                     suc_num = re.findall(re_suc, result)[0]
                 except IndexError:
                     msg = "Fail to get Number of files successfully Verified"
-                    raise error.TestFail(msg)
+                    test.fail(msg)
 
                 if int(suc_num) != 1:
                     fails_log += result
@@ -80,7 +78,7 @@ def run(test, params, env):
             msg = "Following %s driver(s) signature checked failed." % fail_num
             msg += " Please refer to fails.log for details error log:\n"
             msg += "\n".join(fail_drivers)
-            raise error.TestFail(msg)
+            test.fail(msg)
 
     finally:
         open("fails.log", "w").write(fails_log)

@@ -1,12 +1,49 @@
 import os
 import re
+import six
 import logging
 import time
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from virttest import utils_misc
 
 from provider import cpuflags
+
+
+class Statistic(object):
+
+    """
+    Class to display and collect average,
+    max and min values of a given data set.
+    """
+
+    def __init__(self):
+        self._sum = 0
+        self._count = 0
+        self._max = None
+        self._min = None
+
+    def get_average(self):
+        if self._count != 0:
+            return self._sum / self._count
+        else:
+            return None
+
+    def get_min(self):
+        return self._min
+
+    def get_max(self):
+        return self._max
+
+    def record(self, value):
+        """
+        Record new value to statistic.
+        """
+        self._count += 1
+        self._sum += value
+        if not self._max or self._max < value:
+            self._max = value
+        if not self._min or self._min > value:
+            self._min = value
 
 
 def run(test, params, env):
@@ -39,7 +76,7 @@ def run(test, params, env):
 
     vm_mem = int(params.get("mem", "512"))
 
-    get_mig_speed = re.compile("^transferred ram: (\d+) kbytes$",
+    get_mig_speed = re.compile(r"^transferred ram: (\d+) kbytes$",
                                re.MULTILINE)
 
     mig_speed = params.get("mig_speed", "1G")
@@ -49,7 +86,7 @@ def run(test, params, env):
     def get_migration_statistic(vm):
         last_transfer_mem = 0
         transfered_mem = 0
-        mig_stat = utils.Statistic()
+        mig_stat = Statistic()
         for _ in range(30):
             o = vm.monitor.info("migrate")
             warning_msg = ("Migration already ended. Migration speed is"
@@ -57,20 +94,20 @@ def run(test, params, env):
                            " filling its memory.")
             fail_msg = ("Could not determine the transferred memory from"
                         " monitor data: %s" % o)
-            if isinstance(o, str):
+            if isinstance(o, six.string_types):
                 if "status: active" not in o:
-                    raise error.TestWarn(warning_msg)
+                    test.error(warning_msg)
                 try:
                     transfered_mem = int(get_mig_speed.search(o).groups()[0])
                 except (IndexError, ValueError):
-                    raise error.TestFail(fail_msg)
+                    test.fail(fail_msg)
             else:
                 if o.get("status") != "active":
-                    raise error.TestWarn(warning_msg)
+                    test.error(warning_msg)
                 try:
                     transfered_mem = o.get("ram").get("transferred") / (1024)
                 except (IndexError, ValueError):
-                    raise error.TestFail(fail_msg)
+                    test.fail(fail_msg)
 
             real_mig_speed = (transfered_mem - last_transfer_mem) / 1024
 
@@ -100,11 +137,10 @@ def run(test, params, env):
         clonevm = vm.migrate(mig_timeout, mig_protocol,
                              not_wait_for_migration=True, env=env)
 
-        mig_speed = utils.convert_data_size(mig_speed, "M")
+        mig_speed = int(utils_misc.normalize_data_size(mig_speed, "M"))
 
         mig_stat = get_migration_statistic(vm)
 
-        mig_speed = mig_speed / (1024 * 1024)
         real_speed = mig_stat.get_average()
         ack_speed = mig_speed * mig_speed_accuracy
 
@@ -119,15 +155,15 @@ def run(test, params, env):
 
         if real_speed < mig_speed - ack_speed:
             divergence = (1 - float(real_speed) / float(mig_speed)) * 100
-            raise error.TestWarn("Average migration speed (%s MB/s) "
-                                 "is %3.1f%% lower than target (%s MB/s)" %
-                                 (real_speed, divergence, mig_speed))
+            test.error("Average migration speed (%s MB/s) "
+                       "is %3.1f%% lower than target (%s MB/s)" %
+                       (real_speed, divergence, mig_speed))
 
         if real_speed > mig_speed + ack_speed:
             divergence = (1 - float(mig_speed) / float(real_speed)) * 100
-            raise error.TestWarn("Average migration speed (%s MB/s) "
-                                 "is %3.1f%% higher than target (%s MB/s)" %
-                                 (real_speed, divergence, mig_speed))
+            test.error("Average migration speed (%s MB/s) "
+                       "is %3.1f%% higher than target (%s MB/s)" %
+                       (real_speed, divergence, mig_speed))
 
     finally:
         session.close()

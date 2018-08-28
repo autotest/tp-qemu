@@ -8,8 +8,6 @@ the same setup will result in them having the same resolution.
 """
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_spice
 
 
@@ -92,7 +90,7 @@ def run(test, params, env):
     logging.info("Current Resolution of Guest: " + currentGuestRes)
 
     if (newClientResolution == currentGuestRes):
-        raise error.TestFail("Client resolution is same as guest resolution!")
+        test.fail("Client resolution is same as guest resolution!")
 
     # Start vdagent daemon
     utils_spice.start_vdagent(guest_root_session, test_timeout)

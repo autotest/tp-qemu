@@ -1,11 +1,10 @@
 import time
 import os
 import logging
-import commands
 import re
 
-from autotest.client.shared import error
-from autotest.client import local_host
+from avocado.utils import cpu
+from avocado.utils import process
 
 from virttest import data_dir
 
@@ -42,12 +41,13 @@ def run(test, params, env):
             tsc_cmd = tsc_cmd_host
         cmd = "taskset %s %s" % (1 << i, tsc_cmd)
         if machine == "host":
-            s, o = commands.getstatusoutput(cmd)
+            result = process.run(cmd, ignore_status=True)
+            s, o = result.exit_status, result.stdout
         else:
-            s, o = session.get_command_status_output(cmd)
+            s, o = session.cmd_status_output(cmd)
         if s != 0:
-            raise error.TestError("Fail to get tsc of host, ncpu: %d" % i)
-        o = re.findall("(\d+)", o)[0]
+            test.error("Fail to get tsc of host, ncpu: %d" % i)
+        o = re.findall(r"(\d+)", o)[0]
         return float(o)
 
     vm = env.get_vm(params["main_vm"])
@@ -56,9 +56,9 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
     if not os.path.exists(tsc_cmd_guest):
-        commands.getoutput("gcc %s" % tsc_freq_path)
+        process.run("gcc %s" % tsc_freq_path)
 
-    ncpu = local_host.LocalHost().get_num_cpu()
+    ncpu = cpu.online_cpus_count()
 
     logging.info("Interval is %s" % interval)
     logging.info("Determine the TSC frequency in the host")
@@ -70,19 +70,19 @@ def run(test, params, env):
         delta = tsc2 - tsc1
         logging.info("Host TSC delta for cpu %s is %s" % (i, delta))
         if delta < 0:
-            raise error.TestError("Host TSC for cpu %s warps %s" % (i, delta))
+            test.error("Host TSC for cpu %s warps %s" % (i, delta))
 
         host_freq += delta / ncpu
     logging.info("Average frequency of host's cpus: %s" % host_freq)
 
-    if session.get_command_status("test -x %s" % tsc_cmd_guest):
+    if session.cmd_status("test -x %s" % tsc_cmd_guest):
         vm.copy_files_to(tsc_freq_path, '/tmp/get_tsc.c')
-        if session.get_command_status("gcc /tmp/get_tsc.c") != 0:
-            raise error.TestError("Fail to compile program on guest")
+        if session.cmd_status("gcc /tmp/get_tsc.c") != 0:
+            test.error("Fail to compile program on guest")
 
-    s, guest_ncpu = session.get_command_status_output(cpu_chk_cmd)
+    s, guest_ncpu = session.cmd_status_output(cpu_chk_cmd)
     if s != 0:
-        raise error.TestError("Fail to get cpu number of guest")
+        test.error("Fail to get cpu number of guest")
 
     success = True
     for i in range(int(guest_ncpu)):
@@ -102,7 +102,7 @@ def run(test, params, env):
             success = False
 
     if not success:
-        raise error.TestFail("TSC drift found for the guest, please check the "
-                             "log for details")
+        test.fail("TSC drift found for the guest, please check the "
+                  "log for details")
 
     session.close()

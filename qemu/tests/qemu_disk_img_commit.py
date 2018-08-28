@@ -1,7 +1,10 @@
 import logging
-from autotest.client.shared import error
+
+from avocado.utils import process
+
+from virttest import error_context
+
 from qemu.tests import qemu_disk_img
-from autotest.client import utils
 
 
 class CommitTest(qemu_disk_img.QemuImgTest):
@@ -11,12 +14,12 @@ class CommitTest(qemu_disk_img.QemuImgTest):
         t_params = params.object_params(self.tag)
         super(CommitTest, self).__init__(test, t_params, env, self.tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def commit(self, t_params=None):
         """
         commit snapshot to backing file;
         """
-        error.context("commit snapshot to backingfile", logging.info)
+        error_context.context("commit snapshot to backingfile", logging.info)
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)
@@ -24,7 +27,7 @@ class CommitTest(qemu_disk_img.QemuImgTest):
         return super(CommitTest, self).commit(params, cache_mode)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     'qemu-img' commit functions test:
@@ -46,15 +49,15 @@ def run(test, params, env):
     # save file md5sum before commit
     md5 = commit_test.save_file(t_file)
     if not md5:
-        raise error.TestError("Fail to save tmp file")
+        test.error("Fail to save tmp file")
     commit_test.destroy_vm()
     commit_test.commit()
-    error.context("sync host data after commit", logging.info)
-    utils.system("sync")
+    error_context.context("sync host data after commit", logging.info)
+    process.system("sync")
     commit_test.start_vm(params)
 
     # check md5sum after commit
     ret = commit_test.check_file(t_file, md5)
     if not ret:
-        raise error.TestError("image content changed after commit")
+        test.error("image content changed after commit")
     commit_test.clean()

@@ -3,16 +3,15 @@ import re
 import logging
 import os
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from avocado.utils import process, download
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import data_dir
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Update virtio driver:
@@ -51,7 +50,8 @@ def run(test, params, env):
         return vols
 
     if params.get("case_type") == "driver_install":
-        error.context("Update the device type to default.", logging.info)
+        error_context.context("Update the device type to default.",
+                              logging.info)
         default_drive_format = params.get("default_drive_format", "ide")
         default_nic_model = params.get("default_nic_model", "rtl8139")
         default_display = params.get("default_display", "vnc")
@@ -65,21 +65,24 @@ def run(test, params, env):
             params[key[8:]] = default_parameters[key]
 
     if params.get("prewhql_install") == "yes":
-        error.context("Prepare the prewhql virtio_win driver iso")
+        error_context.context("Prepare the prewhql virtio_win driver iso")
         url_virtio_win = params.get("url_virtio_win")
         if os.path.isdir("/tmp/virtio_win"):
-            utils.system("rm -rf /tmp/virtio_win")
-        utils.system("mkdir /tmp/virtio_win")
+            process.system("rm -rf /tmp/virtio_win")
+        process.system("mkdir /tmp/virtio_win")
 
-        virtio_win = utils.unmap_url("/tmp/virtio_win", url_virtio_win,
-                                     "/tmp/virtio_win")
+        pkg_name = os.path.basename(url_virtio_win)
+        pkg_path = os.path.join("/tmp/virtio_win", pkg_name)
+        download.get_file(url_virtio_win, pkg_path)
+
         if re.findall("zip$", url_virtio_win):
-            utils.system("cd /tmp/virtio_win; unzip *; rm -f *.zip")
+            process.system("cd /tmp/virtio_win; unzip *; rm -f *.zip",
+                           shell=True)
 
         virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                          params.get("cdrom_virtio",
                                                     "/tmp/prewhql.iso"))
-        utils.system("mkisofs -J -o %s /tmp/virtio_win" % virtio_iso)
+        process.system("mkisofs -J -o %s /tmp/virtio_win" % virtio_iso)
 
     drivers_install = re.split(";", params.get("drivers_install"))
 
@@ -91,7 +94,7 @@ def run(test, params, env):
     op_cmds = {}
     setup_ps = False
 
-    error.context("Fill up driver install command line", logging.info)
+    error_context.context("Fill up driver install command line", logging.info)
     for driver in drivers_install:
         params_driver = params.object_params(driver)
         mount_point = params_driver.get("mount_point")
@@ -100,7 +103,7 @@ def run(test, params, env):
         driver_install_cmd = params_driver.get("driver_install_cmd")
         if "hwidcmd" in driver_install_cmd:
             pattern_drive = params.get("pattern_drive",
-                                       "\s+\w:(.[^\s]+)\s+hwidcmd")
+                                       r"\s+\w:(.[^\s]+)\s+hwidcmd")
             driver_path = re.findall(pattern_drive, driver_install_cmd)[0]
             driver_path = "/".join(driver_path.split("\\\\")[1:])
             storage_path = utils_misc.get_path(
@@ -127,7 +130,7 @@ def run(test, params, env):
                                      "/tmp/virtio_win")
             iso_path = utils_misc.get_path(data_dir.get_data_dir(),
                                            params.get("cdrom_virtio"))
-            utils.system("mount -o loop %s %s" % (iso_path, mount_point))
+            process.system("mount -o loop %s %s" % (iso_path, mount_point))
             pattern_driver = params_driver.get("pattern_driver")
             driver_path = re.findall(pattern_driver,
                                      driver_install_cmd)[0]
@@ -135,16 +138,16 @@ def run(test, params, env):
             storage_path = utils_misc.get_path(mount_point, driver_path)
             storage_path = os.path.dirname(storage_path)
             files = " ".join(os.listdir(storage_path))
-            file_name = re.findall("\s+(.*?\.inf)", files)
+            file_name = re.findall(r"\s+(.*?\.inf)", files)
             if file_name:
                 file_name = utils_misc.get_path(storage_path,
                                                 file_name[0])
             else:
-                raise error.TestError("Can not find .inf file.")
+                test.error("Can not find .inf file.")
             inf = open(file_name)
             inf_context = inf.read()
             inf.close()
-            utils.system("umount %s" % mount_point)
+            process.system("umount %s" % mount_point)
             patterns_check_str = params_driver.get("check_str")
             check_str[driver] = {}
             for i in patterns_check_str.split(";"):
@@ -163,7 +166,7 @@ def run(test, params, env):
                                cmd_c)
                 check_cmds[driver][cmd_n] = cmd_c
 
-    error.context("Boot up guest with setup parameters", logging.info)
+    error_context.context("Boot up guest with setup parameters", logging.info)
     params["start_vm"] = "yes"
     vm_name = params['main_vm']
     env_process.preprocess_vm(test, params, env, vm_name)
@@ -171,15 +174,15 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     cdroms = params.get("cdroms")
-    cdrom_num = len(re.split("\s+", cdroms.strip()))
+    cdrom_num = len(re.split(r"\s+", cdroms.strip()))
     init_timeout = int(params.get("init_timeout", "60"))
     driver_install_timeout = int(params.get('driver_install_timeout', 720))
 
-    error.context("Check the cdrom is available")
+    error_context.context("Check the cdrom is available")
     volumes = check_cdrom(init_timeout)
     vol_info = []
     for volume in volumes:
-        vol_info += re.findall("Volume\s+\d+\s+(\w).*?(\d+)\s+\w+", volume)
+        vol_info += re.findall(r"Volume\s+\d+\s+(\w).*?(\d+)\s+\w+", volume)
     if len(volumes) > 1:
         if int(vol_info[0][1]) > int(vol_info[1][1]):
             vol_utils = vol_info[0][0]
@@ -190,14 +193,14 @@ def run(test, params, env):
     else:
         vol_utils = vol_info[0][0]
 
-    error.context("Install drivers", logging.info)
+    error_context.context("Install drivers", logging.info)
     for driver in drivers_install:
-        error.context("Install drivers %s" % driver, logging.info)
+        error_context.context("Install drivers %s" % driver, logging.info)
         if params.get("kill_rundll", "no") == "yes":
             kill_cmd = 'tasklist | find /I "rundll32"'
             status, tasks = session.cmd_status_output(kill_cmd)
             if status == 0:
-                for i in re.findall("rundll32.*?(\d+)", tasks):
+                for i in re.findall(r"rundll32.*?(\d+)", tasks):
                     session.cmd('taskkill /PID %s' % i)
         if install_cmds:
             cmd = re.sub("WIN_UTILS", vol_utils, install_cmds[driver])
@@ -212,7 +215,7 @@ def run(test, params, env):
         fail_log = "Failed to install:"
     error_log = open("%s/error_log" % test.resultsdir, "w")
     fail_flag = False
-    error.context("Check driver available in guest", logging.info)
+    error_context.context("Check driver available in guest", logging.info)
     if setup_ps:
         setup_cmd = params.get("python_scripts")
         session.cmd(setup_cmd)
@@ -236,11 +239,11 @@ def run(test, params, env):
                 error_log.write("Check command output: %s\n" % output)
 
     if fail_flag:
-        raise error.TestFail(fail_log)
+        test.fail(fail_log)
 
     if op_cmds:
-        error.context("Do more operates in guest to check the driver",
-                      logging.info)
+        error_context.context("Do more operates in guest to check the driver",
+                              logging.info)
         for driver in drivers_install:
             if driver not in op_cmds:
                 continue

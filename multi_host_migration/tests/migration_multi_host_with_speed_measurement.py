@@ -3,6 +3,7 @@ import re
 import logging
 import time
 import socket
+import six
 from autotest.client.shared import error, utils
 from autotest.client.shared.barrier import listen_server
 from autotest.client.shared.syncdata import SyncData
@@ -44,7 +45,7 @@ def run(test, params, env):
 
     vm_mem = int(params.get("mem", "512"))
 
-    get_mig_speed = re.compile("^transferred ram: (\d+) kbytes$",
+    get_mig_speed = re.compile(r"^transferred ram: (\d+) kbytes$",
                                re.MULTILINE)
 
     mig_speed = params.get("mig_speed", "1G")
@@ -61,7 +62,7 @@ def run(test, params, env):
                            " filling its memory.")
             fail_msg = ("Could not determine the transferred memory from"
                         " monitor data: %s" % o)
-            if isinstance(o, str):
+            if isinstance(o, six.string_types):
                 if "status: active" not in o:
                     raise error.TestWarn(warning_msg)
                 try:

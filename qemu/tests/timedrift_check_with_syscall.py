@@ -2,13 +2,11 @@ import os
 import logging
 
 import aexpect
-
-from autotest.client.shared import error
-
 from virttest import data_dir
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Time clock offset check test (only for Linux guest):
@@ -30,23 +28,23 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     test_cmd = params.get("test_cmd", "./clktest")
-    if session.get_command_status("test -x %s" % test_cmd):
+    if session.cmd_status("test -x %s" % test_cmd):
         src_dir = os.path.join(data_dir.get_deps_dir(), 'timedrift')
         src_file = os.path.join(src_dir, "clktest.c")
         dst_file = os.path.join(tmp_dir, "clktest.c")
-        error.context("transfer '%s' to guest('%s')" % (src_file, dst_file),
-                      logging.info)
+        error_context.context("transfer '%s' to guest('%s')" %
+                              (src_file, dst_file), logging.info)
         vm.copy_files_to(src_file, tmp_dir, timeout=120)
 
         build_cmd = params.get("build_cmd", "gcc -lrt clktest.c -o clktest")
-        error.context("build binary file 'clktest'", logging.info)
+        error_context.context("build binary file 'clktest'", logging.info)
         session.cmd(build_cmd)
 
-    error.context("check clock offset via `clktest`", logging.info)
+    error_context.context("check clock offset via `clktest`", logging.info)
     logging.info("set check timeout to %s seconds", check_timeout)
     try:
         session.cmd_output(test_cmd, timeout=check_timeout)
-    except aexpect.ShellTimeoutError, msg:
+    except aexpect.ShellTimeoutError as msg:
         if 'Interval is' in msg.output:
-            raise error.TestFail(msg.output)
+            test.fail(msg.output)
         pass

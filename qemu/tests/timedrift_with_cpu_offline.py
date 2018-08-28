@@ -1,12 +1,11 @@
 import logging
 import time
 
-from autotest.client.shared import error
-
 from virttest import utils_test
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Time drift test with vm's cpu offline/online:
@@ -52,29 +51,29 @@ def run(test, params, env):
     try:
         # Get time before set cpu offline
         # (ht stands for host time, gt stands for guest time)
-        error.context("get time before set cpu offline")
+        error_context.context("get time before set cpu offline")
         (ht0, gt0) = utils_test.get_time(session, time_command,
                                          time_filter_re, time_format)
         # Check cpu number
-        error.context("check guest cpu number")
+        error_context.context("check guest cpu number")
         smp = int(params.get("smp"))
         if smp < 2:
-            raise error.TestError("The guest only has %d vcpu,"
-                                  "unsupport cpu offline" % smp)
+            test.error("The guest only has %d vcpu,"
+                       "unsupport cpu offline" % smp)
 
         # Set cpu offline
-        error.context("set cpu offline ")
+        error_context.context("set cpu offline ")
         offline_cpu_cmd = params.get("offline_cpu_cmd")
         s, o = session.cmd_status_output(offline_cpu_cmd)
         if s != 0:
             logging.error(o)
-            raise error.TestError("Failed set guest cpu offline")
+            test.error("Failed set guest cpu offline")
 
         # Sleep for a while after set cpu offline
         time.sleep(stop_time)
 
         # Get time after set cpu offline
-        error.context("get time after set cpu offline")
+        error_context.context("get time after set cpu offline")
         (ht1, gt1) = utils_test.get_time(session, time_command,
                                          time_filter_re, time_format)
         # Report results
@@ -85,17 +84,17 @@ def run(test, params, env):
         logging.info("Guest duration: %.2f", guest_delta)
         logging.info("Drift: %.2f%%", drift)
         if abs(drift) > drift_threshold:
-            raise error.TestFail("Time drift too large: %.2f%%" % drift)
+            test.fail("Time drift too large: %.2f%%" % drift)
 
         # Set cpu online again
-        error.context("set cpu online")
+        error_context.context("set cpu online")
         online_cpu_cmd = params.get("online_cpu_cmd")
         s, o = session.cmd_status_output(online_cpu_cmd)
         if s != 0:
             logging.error(o)
-            raise error.TestError("Failed set guest cpu online")
+            test.error("Failed set guest cpu online")
 
-        error.context("get time after set cpu online")
+        error_context.context("get time after set cpu online")
         start_time = time.time()
         while (time.time() - start_time) < test_duration:
             # Get time delta after set cpu online
@@ -111,7 +110,7 @@ def run(test, params, env):
             logging.info("Drift: %.2f%%", drift)
             time.sleep(interval_gettime)
         if abs(drift) > drift_threshold:
-            raise error.TestFail("Time drift too large: %.2f%%" % drift)
+            test.fail("Time drift too large: %.2f%%" % drift)
     finally:
         session.close()
         # remove flags add for this test.

@@ -2,8 +2,6 @@ import logging
 import time
 import os
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import remote
@@ -121,8 +119,7 @@ def run(test, params, env):
             pass
         time.sleep(5)
     else:
-        raise error.TestError("Could not access server share from client "
-                              "machine")
+        test.error("Could not access server share from client machine")
 
     # Install
     logging.info("Installing DTM client (timeout=%ds)", install_timeout)

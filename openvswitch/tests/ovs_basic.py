@@ -4,14 +4,14 @@ import os
 
 import aexpect
 
-from autotest.client.shared import error
-
+from avocado.utils import process
 from virttest import utils_misc
 from virttest import utils_net
 from virttest import openvswitch
 from virttest import ovs_utils
 from virttest import versionable_class
 from virttest import data_dir
+from virttest import error_context
 
 
 def allow_iperf_firewall(machine):
@@ -47,23 +47,23 @@ class InfrastructureInit(MiniSubtest):
 
         self.ovs = None
 
-        error.context("Try to log into guest.")
+        error_context.context("Try to log into guest.")
         self.vms = [env.get_vm(vm) for vm in params.get("vms").split()]
         for vm in self.vms:
             vm.verify_alive()
 
-        error.context("Start OpenVSwitch.")
+        error_context.context("Start OpenVSwitch.")
         self.ovs = versionable_class.factory(openvswitch.OpenVSwitchSystem)()
         self.ovs.init_system()
         self.ovs.check()
-        error.context("Add new bridge %s." % (self.br0_name))
+        error_context.context("Add new bridge %s." % (self.br0_name))
         self.ovs.add_br(self.br0_name)
         utils_net.set_net_if_ip(self.br0_name, self.br0_ip)
         utils_net.bring_up_ifname(self.br0_name)
         self.dns_pidf = (utils_net.check_add_dnsmasq_to_br(self.br0_name,
                                                            test.tmpdir))
-        error.context("Add new ports from vms %s to bridge %s." %
-                      (self.vms, self.br0_name))
+        error_context.context("Add new ports from vms %s to bridge %s." %
+                              (self.vms, self.br0_name))
 
         for vm in self.vms:
             utils_net.change_iface_bridge(vm.virtnet[1],
@@ -71,7 +71,7 @@ class InfrastructureInit(MiniSubtest):
                                           self.ovs)
 
         logging.debug(self.ovs.status())
-        self.host = ovs_utils.Machine(src=test.srcdir)
+        self.host = ovs_utils.Machine(src=test.workdir)
         self.mvms = [ovs_utils.Machine(vm) for vm in self.vms]
         self.machines = [self.host] + self.mvms
 
@@ -96,7 +96,7 @@ class InfrastructureInit(MiniSubtest):
                 self.ovs.clean()
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run basic test of OpenVSwitch driver.
@@ -161,7 +161,7 @@ def run(test, params, env):
             iperf_src_path = os.path.join(data_dir.get_deps_dir(), "iperf")
             self.iperf_b_path = os.path.join("iperf-2.0.4", "src", "iperf")
 
-            error.context("Install iperf to vms machine.")
+            error_context.context("Install iperf to vms machine.")
             utils_misc.ForAllP(
                 self.machines).compile_autotools_app_tar(iperf_src_path,
                                                          "iperf-2.0.4.tar.gz")
@@ -172,14 +172,14 @@ def run(test, params, env):
             self.start_servers()
 
             # Test TCP bandwidth
-            error.context("Test iperf bandwidth tcp.")
+            error_context.context("Test iperf bandwidth tcp.")
             speeds = self.test_bandwidth()
             logging.info("TCP Bandwidth from vm->host: %s", speeds[0])
             logging.info("TCP Bandwidth from host->vm: %s", speeds[1])
             logging.info("TCP Bandwidth from vm->vm: %s", speeds[2])
 
             # test udp bandwidth limited to 1Gb
-            error.context("Test iperf bandwidth udp.")
+            error_context.context("Test iperf bandwidth udp.")
             speeds = self.test_bandwidth("-u -b 1G")
             logging.info("UDP Bandwidth from vm->host: %s", speeds[0])
             logging.info("UDP Bandwidth from host->vm: %s", speeds[1])
@@ -198,16 +198,16 @@ def run(test, params, env):
                 1, count)
             for ret, vm in zip(ret, self.mvms):
                 if "exception" in ret:
-                    raise error.TestError("VM %s can't ping host:\n %s" %
-                                          (vm.name, ret.exception))
+                    test.error("VM %s can't ping host:\n %s" %
+                               (vm.name, ret.exception))
 
-            error.context("Add OpenVSwitch device to vlan.")
+            error_context.context("Add OpenVSwitch device to vlan.")
             self.ovs.add_port_tag(self.mvms[0].virtnet[1].ifname, "1")
             self.ovs.add_port_tag(self.mvms[1].virtnet[1].ifname, "1")
             self.ovs.add_port_tag(self.mvms[2].virtnet[1].ifname, "2")
             self.ovs.add_port_tag(self.mvms[3].virtnet[1].ifname, "2")
 
-            error.context("Ping all devices in vlan.")
+            error_context.context("Ping all devices in vlan.")
             self.mvms[2].ping(self.mvms[3].virtnet[1].ip["ipv6"][0], 1, 2)
             self.mvms[3].ping(self.mvms[2].virtnet[1].ip["ipv6"][0], 1, 2)
 
@@ -217,9 +217,9 @@ def run(test, params, env):
             try:
                 self.mvms[0].ping(self.mvms[2].virtnet[1].ip["ipv6"][0],
                                   1, 2)
-                raise error.TestError("VM %s can't ping host:\n %s" %
-                                      (vm.name, ret.exception))
-            except (error.CmdError, aexpect.ShellError):
+                test.error("VM %s can't ping host:\n %s" %
+                           (vm.name, ret.exception))
+            except (process.CmdError, aexpect.ShellError):
                 pass
 
             self.mvms[0].add_vlan_iface(self.mvms[0].virtnet[1].g_nic_name, 1)
@@ -229,7 +229,7 @@ def run(test, params, env):
             self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname, [1, 2])
 
             time.sleep(1)
-            error.context("Ping all devices in vlan.")
+            error_context.context("Ping all devices in vlan.")
             self.mvms[0].ping(self.mvms[1].virtnet[1].ip["ipv6"][0], 1,
                               count, vlan=1)
             self.mvms[0].ping(self.mvms[2].virtnet[1].ip["ipv6"][0], 1,
@@ -242,9 +242,9 @@ def run(test, params, env):
             try:
                 self.mvms[0].ping(self.mvms[2].virtnet[1].ip["ipv6"][0],
                                   1, 2)
-                raise error.TestError("VM %s shouldn't be able to ping"
-                                      " host:\n %s" % (vm.name, ret.exception))
-            except (error.CmdError, aexpect.ShellError):
+                test.error("VM %s shouldn't be able to ping"
+                           " host:\n %s" % (vm.name, ret.exception))
+            except (process.CmdError, aexpect.ShellError):
                 pass
 
             for i in range(0, 4095, 10):
@@ -252,7 +252,7 @@ def run(test, params, env):
                 self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname, [i])
 
             self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname,
-                                    range(4095))
+                                    list(range(4095)))
 
             self.ovs.add_port_trunk(self.mvms[0].virtnet[1].ifname, [1])
 
@@ -264,5 +264,5 @@ def run(test, params, env):
         tests_group = locals()[test_type]
         tests_group(test, params, env)
     else:
-        raise error.TestFail("Test type '%s' is not defined in"
-                             " OpenVSwitch basic test" % test_type)
+        test.fail("Test type '%s' is not defined in"
+                  " OpenVSwitch basic test" % test_type)

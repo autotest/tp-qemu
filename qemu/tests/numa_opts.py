@@ -1,6 +1,5 @@
 import logging
 
-from autotest.client.shared import error
 
 logger = logging.getLogger(__name__)
 dbg = logger.debug
@@ -37,7 +36,7 @@ def run(test, params, env):
     if numa_nodes:
         numa_nodes = int(params.get("numa_nodes"))
         if len(numa) != numa_nodes:
-            raise error.TestFail(
+            test.fail(
                 "Wrong number of numa nodes: %d. Expected: %d" %
                 (len(numa), numa_nodes))
 
@@ -46,7 +45,7 @@ def run(test, params, env):
         if size is not None:
             size = int(size)
             if size != numa[nodenr][0]:
-                raise error.TestFail(
+                test.fail(
                     "Wrong size of numa node %d: %d. Expected: %d" %
                     (nodenr, numa[nodenr][0], size))
 
@@ -54,6 +53,6 @@ def run(test, params, env):
         if cpus is not None:
             cpus = set([int(v) for v in cpus.split()])
             if cpus != numa[nodenr][1]:
-                raise error.TestFail(
+                test.fail(
                     "Wrong CPU set on numa node %d: %s. Expected: %s" %
                     (nodenr, numa[nodenr][1], cpus))

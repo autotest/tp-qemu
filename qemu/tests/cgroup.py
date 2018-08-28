@@ -1,5 +1,5 @@
 """
-cgroup autotest test (on KVM guest)
+cgroup test (on KVM guest)
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2011 Red Hat, Inc.
 """
@@ -19,6 +19,7 @@ from aexpect import ShellTimeoutError
 from virttest.env_process import preprocess
 from virttest import qemu_monitor
 from virttest import error_context
+from virttest import utils_misc
 
 from virttest.staging import utils_memory
 from virttest.staging.utils_cgroup import Cgroup
@@ -47,8 +48,8 @@ class SparseRange(list):
                 if len(vals) == 1:  # single value
                     self.append(int(vals[0]))
                 else:               # range
-                    self.extend(xrange(int(vals[0]), int(vals[1]) + 1))
-        except ValueError, details:
+                    self.extend(range(int(vals[0]), int(vals[1]) + 1))
+        except ValueError as details:
             raise ValueError("Can't parse SparseRange from %s: %s"
                              % (value, details))
 
@@ -69,7 +70,7 @@ class SparseRange(list):
         out = []
         items = iter(self[start:stop:step])
         try:
-            sect_start = items.next()
+            sect_start = next(items)
             sect_stop = sect_start
         except StopIteration:
             return ""
@@ -102,7 +103,7 @@ def run(test, params, env):
             for pid in process.get_children_pids(vm.get_shell_pid()):
                 try:
                     cgroup.set_cgroup(int(pid), pwd)
-                except Exception, detail:   # Process might not already exist
+                except Exception as detail:   # Process might not already exist
                     if os.path.exists("/proc/%s/" % pid):
                         raise detail
                     else:   # Thread doesn't exist, try it again
@@ -160,7 +161,7 @@ def run(test, params, env):
         try:
             rdev = os.stat(dev).st_rdev
             ret = (os.major(rdev), os.minor(rdev))
-        except Exception, details:
+        except Exception as details:
             raise exceptions.TestFail("get_maj_min(%s) failed: %s" %
                                       (dev, details))
         return ret
@@ -360,7 +361,7 @@ def run(test, params, env):
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
         re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
-                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
+                 r'(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")
@@ -605,7 +606,7 @@ def run(test, params, env):
         kill_cmd = "rm -f /tmp/cgroup_lock; killall -9 dd; true"
         stat_cmd = "killall -SIGUSR1 dd; true"
         re_dd = (r'(\d+) bytes \(\d+\.*\d* \w*(, \d+\.*\d* \w*)?\) copied, '
-                 '(\d+\.*\d*) s, \d+\.*\d* \w./s')
+                 r'(\d+\.*\d*) s, \d+\.*\d* \w./s')
         err = ""
         try:
             logging.info("Read test")
@@ -1032,19 +1033,19 @@ def run(test, params, env):
             if len(cpus) > vm_cpus:
                 cpuset = cpus.str_slice(0, vm_cpus)
                 # all cpus + main_thread
-                cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+                cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             # __OO
             if len(cpus) > vm_cpus:
                 cpuset = cpus.str_slice(len(cpus) - vm_cpus)
-                cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+                cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             # O___
-            cpusets.append([str(cpus[0]) for _ in xrange(len(cpus) + 1)])
+            cpusets.append([str(cpus[0]) for _ in range(len(cpus) + 1)])
             # _OO_
             cpuset = cpus.str_slice(1, 1 + vm_cpus)
-            cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+            cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             # O_O_
             cpuset = cpus.str_slice(0, min(vm_cpus * 2, len(cpus)), 2)
-            cpusets.append([cpuset for _ in xrange(len(cpus) + 1)])
+            cpusets.append([cpuset for _ in range(len(cpus) + 1)])
             return cpusets
 
         def _generate_verification(cpusets, cpus):
@@ -1058,7 +1059,7 @@ def run(test, params, env):
             verify = []
             # For every scenerio
             for cpuset in cpusets:
-                verify.append([0 for _ in xrange(len(cpus))])
+                verify.append([0 for _ in range(len(cpus))])
                 # For every vcpu (skip main_thread, it doesn't consume much)
                 for vcpu in cpuset[1:]:
                     vcpu = SparseRange(vcpu)
@@ -1163,7 +1164,7 @@ def run(test, params, env):
                                            " no_host_cpus and cgroup_cpuset cpus")
 
         logging.info("Prepare")
-        for i in xrange(len(cpus) + 1):
+        for i in range(len(cpus) + 1):
             cgroup.mk_cgroup()
             cgroup.set_property('cpuset.cpus', cpus.str_slice(), i)
             cgroup.set_property('cpuset.mems', mems.str_slice(), i)
@@ -1178,14 +1179,14 @@ def run(test, params, env):
         serial = vm.wait_for_serial_login(timeout=timeout)
         cmd = "renice -n 10 $$; "   # new ssh login should pass
         cmd += "while [ -e /tmp/cgroup-cpu-lock ]; do :; done"
-        for i in xrange(vm_cpus * 2):
+        for i in range(vm_cpus * 2):
             sessions.append(vm.wait_for_login(timeout=timeout))
             sessions[-1].cmd("touch /tmp/cgroup-cpu-lock")
             sessions[-1].sendline(cmd)
 
         try:
             logging.info("Test")
-            for i in xrange(len(cpusets)):
+            for i in range(len(cpusets)):
                 cpuset = cpusets[i]
                 logging.debug("testing: %s", cpuset)
                 # setup scenario
@@ -1209,7 +1210,7 @@ def run(test, params, env):
             header = ['scen']
             header.extend([' cpu%d' % i for i in cpus])
             matrix = []
-            for i in xrange(len(stats)):
+            for i in range(len(stats)):
                 matrix.append(['%d' % i])
                 for j in range(len(stats[i])):
                     if ((stats[i][j] < (verify[i][j] - limit)) or
@@ -1306,7 +1307,7 @@ def run(test, params, env):
 
             try:
                 vm.verify_alive()
-            except Exception, exc_details:
+            except Exception as exc_details:
                 err += "VM died (no_switches=%s): %s\n" % (i, exc_details)
 
             if err:
@@ -1392,10 +1393,10 @@ def run(test, params, env):
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(
-                    ['(\d+)\+\d records out'])[1]
+                    [r'(\d+)\+\d records out'])[1]
                 if len(re.findall(r'(\d+)\+\d records out', out)) < 2:
                     out += sessions[0].read_until_output_matches(
-                        ['(\d+)\+\d records out'])[1]
+                        [r'(\d+)\+\d records out'])[1]
             except ExpectTimeoutError:
                 err = ("dd didn't produce expected output: %s" % out)
 
@@ -1503,6 +1504,18 @@ def run(test, params, env):
 
             return True
 
+        def _get_scsi_debug_disk():
+            cmd = ("ls -1 /sys/bus/pseudo/drivers/scsi_debug/adapter*/"
+                   "host*/target*/*/block | grep ^sd | head -1")
+            name = process.system_output(cmd, shell=True, verbose=False,
+                                         ignore_status=True).decode()
+            if not name:
+                return None
+            node_path = "/dev/%s" % name
+            if not os.path.exists(node_path):
+                return None
+            return node_path
+
         logging.info("Setup test")
         vm = env.get_all_vms()[0]
         # Try to find suitable monitor
@@ -1549,8 +1562,9 @@ def run(test, params, env):
             process.system("modprobe scsi_debug dev_size_mb=8 add_host=0")
         process.system("echo 1 > /sys/bus/pseudo/drivers/scsi_debug/add_host",
                        shell=True)
-        time.sleep(0.1)
-        disk = process.system_output("ls /dev/sd* | tail -n 1", shell=True)
+        disk = utils_misc.wait_for(_get_scsi_debug_disk, 5)
+        if not disk:
+            test.error("Could not get the device node generated by scsi_debug")
         dev = "%s:%s" % get_maj_min(disk)
         permissions = [
             {'property': 'deny',
@@ -1815,7 +1829,7 @@ def run(test, params, env):
         if memsw:
             try:
                 cgroup.get_property("memory.memsw.limit_in_bytes", 0)
-            except exceptions.TestError, details:
+            except exceptions.TestError as details:
                 logging.error("Can't get memory.memsw.limit_in_bytes info."
                               "Do you have support for memsw? (try passing"
                               "swapaccount=1 parameter to kernel):%s", details)
@@ -1827,7 +1841,7 @@ def run(test, params, env):
         logging.info("Expected VM reload")
         try:
             vm.create()
-        except Exception, failure_detail:
+        except Exception as failure_detail:
             raise exceptions.TestFail("init: Failed to recreate the VM: %s" %
                                       failure_detail)
         assign_vm_into_cgroup(vm, cgroup, 0)
@@ -1869,7 +1883,7 @@ def run(test, params, env):
                     swap = int(re.search(r'VmSwap:[\t ]*(\d+) kB', status)
                                .group(1))
                     max_rssswap = max(rss + swap, max_rssswap)
-                except Exception, details:
+                except Exception as details:
                     if memsw and not vm.is_alive():
                         # VM got SIGTERM as expected, finish the test
                         break
@@ -1881,14 +1895,14 @@ def run(test, params, env):
                 except ExpectTimeoutError:
                     # 0.1s passed, lets begin the next round
                     pass
-                except ShellTimeoutError, details:
+                except ShellTimeoutError as details:
                     if memsw and not vm.is_alive():
                         # VM was killed, finish the test
                         break
                     else:
                         err = details
                         break
-                except ExpectProcessTerminatedError, detail:
+                except ExpectProcessTerminatedError as detail:
                     if memsw:
                         err = ("dd command died (VM should die instead): %s\n"
                                "Output:%s\n" % (detail, out))
@@ -2007,10 +2021,10 @@ def run(test, params, env):
             sessions[1].cmd('killall -SIGUSR1 dd; true')
             try:
                 out = sessions[0].read_until_output_matches(
-                    ['(\d+)\+\d records out'])[1]
+                    [r'(\d+)\+\d records out'])[1]
                 if len(re.findall(r'(\d+)\+\d records out', out)) < 2:
                     out += sessions[0].read_until_output_matches(
-                        ['(\d+)\+\d records out'])[1]
+                        [r'(\d+)\+\d records out'])[1]
             except ExpectTimeoutError:
                 err = ("dd didn't produce expected output: %s" % out)
 

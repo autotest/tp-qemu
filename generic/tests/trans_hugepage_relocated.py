@@ -1,11 +1,9 @@
 import logging
 import time
-import commands
 import os
 import re
 
-from autotest.client.shared import error
-
+from avocado.utils import process
 from virttest import utils_test
 from virttest.staging import utils_memory
 
@@ -58,13 +56,13 @@ def run(test, params, env):
     # Get dd speed in host
     start_time = time.time()
     cmd = "dd if=/dev/urandom of=/tmp/speed_test bs=4K count=256"
-    s, o = commands.getstatusoutput(cmd)
+    process.run(cmd, verbose=False, shell=True)
     end_time = time.time()
     dd_timeout = vmsm * (end_time - start_time) * 2
     nr_hugepages = []
     thp_cfg = params.get("thp_test_config")
-    s_time = int(re.findall("scan_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
-    w_time = int(re.findall("alloc_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
+    s_time = int(re.findall(r"scan_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
+    w_time = int(re.findall(r"alloc_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
 
     try:
         logging.info("Turn off swap in guest")
@@ -72,7 +70,7 @@ def run(test, params, env):
         if s != 0:
             logging.warning("Didn't turn off swap in guest")
         s, o = session.cmd_status_output("cat /proc/meminfo")
-        mem_free_filter = "MemFree:\s+(.\d+)\s+(\w+)"
+        mem_free_filter = r"MemFree:\s+(.\d+)\s+(\w+)"
         guest_mem_free, guest_unit = re.findall(mem_free_filter, o)[0]
         if re.findall("[kK]", guest_unit):
             guest_mem_free = str(int(guest_mem_free) / 1024)
@@ -94,7 +92,7 @@ def run(test, params, env):
         if not os.path.isdir('/space'):
             os.makedirs('/space')
         if os.system("mount -t tmpfs -o size=%sM none /space" % vmsm):
-            raise error.TestError("Can not mount tmpfs")
+            test.error("Can not mount tmpfs")
 
         # Try to make some fragment in memory
         # The total size of fragments is vmsm
@@ -102,11 +100,11 @@ def run(test, params, env):
         cmd = "for i in `seq %s`; do dd if=/dev/urandom of=/space/$i" % count
         cmd += " bs=4K count=1 & done"
         logging.info("Start to make fragment in host")
-        s, o = commands.getstatusoutput(cmd)
+        s = process.system(cmd, verbose=False, shell=True)
         if s != 0:
-            raise error.TestError("Can not dd in host")
+            test.error("Can not dd in host")
     finally:
-        s, o = commands.getstatusoutput("umount /space")
+        process.run("umount /space", verbose=False, shell=True)
 
     bg = utils_test.BackgroundTest(nr_hugepage_check, (s_time, w_time))
     bg.start()
@@ -118,7 +116,7 @@ def run(test, params, env):
 
     if bg:
         bg.join()
-    mem_increase_step = int(re.findall("pages_to_scan:(\d+)",
+    mem_increase_step = int(re.findall(r"pages_to_scan:(\d+)",
                                        thp_cfg)[0]) / 512
     mem_increase = 0
     w_step = w_time / s_time + 1
@@ -130,14 +128,14 @@ def run(test, params, env):
             count += 1
         elif current < last_value:
             if last_value - current < mem_increase_step * 0.95:
-                raise error.TestError("Hugepage memory increased too slow")
+                test.error("Hugepage memory increased too slow")
             mem_increase += last_value - current
             count = 0
         if count > w_step:
             logging.warning("Memory didn't increase in %s s" % (count *
                                                                 s_time))
     if mem_increase < file_size * 0.5:
-        raise error.TestError("Hugepages allocated can not reach a half: %s/%s"
-                              % (mem_increase, file_size))
+        test.error("Hugepages allocated can not reach a half: %s/%s"
+                   % (mem_increase, file_size))
     session.close()
     logging.info("Relocated test succeed")

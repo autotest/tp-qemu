@@ -9,14 +9,12 @@ Related RHBZ: https://bugzilla.redhat.com/show_bug.cgi?id=990118
 """
 
 import logging
-import string
 import os
 import gzip
 import threading
 
 from aexpect import ShellCmdError
 
-from autotest.client.shared import error
 
 REQ_GUEST_MEM = 4096        # exact size of guest RAM required
 REQ_GUEST_ARCH = "x86_64"    # the only supported guest arch
@@ -51,13 +49,13 @@ def run(test, params, env):
         """
         mem_size = vm.get_memory_size()
         if (mem_size != REQ_GUEST_MEM):
-            raise error.TestError("the guest must have %d MB RAM exactly "
-                                  "(current: %d MB)" % (REQ_GUEST_MEM,
-                                                        mem_size))
+            test.error("the guest must have %d MB RAM exactly "
+                       "(current: %d MB)" % (REQ_GUEST_MEM,
+                                             mem_size))
         arch = session.cmd("uname -m").rstrip()
         if (arch != REQ_GUEST_ARCH):
-            raise error.TestError("this test only supports %s guests "
-                                  "(current: %s)" % (REQ_GUEST_ARCH, arch))
+            test.error("this test only supports %s guests "
+                       "(current: %s)" % (REQ_GUEST_ARCH, arch))
 
     def install_kernel_debuginfo(vm, session, login_timeout):
         """
@@ -92,9 +90,8 @@ def run(test, params, env):
         def install_matching_debuginfo(session):
             try:
                 guest_kernel = session.cmd("uname -r").rstrip()
-            except ShellCmdError, details:
-                raise error.TestError("guest uname command failed: %s" %
-                                      details)
+            except ShellCmdError as details:
+                test.error("guest uname command failed: %s" % details)
             return session.cmd("yum -y install --enablerepo='*debuginfo' "
                                "kernel-debuginfo-%s" % guest_kernel,
                                timeout=LONG_TIMEOUT)
@@ -103,7 +100,7 @@ def run(test, params, env):
             output = install_matching_debuginfo(session)
             logging.debug("%s", output)
             new_sess = None
-        except ShellCmdError, details:
+        except ShellCmdError as details:
             if (vm is None):
                 raise
             logging.info("failed to install matching debuginfo, "
@@ -140,10 +137,10 @@ def run(test, params, env):
         logging.debug("%s", output)
         output = session.cmd("LC_ALL=C df --portability --block-size=1M .")
         logging.debug("%s", output)
-        df_megs = int(string.split(output)[10])
+        df_megs = int(output.split()[10])
         if (df_megs < REQ_GUEST_DF):
-            raise error.TestError("insufficient free disk space: %d < %d" %
-                                  (df_megs, REQ_GUEST_DF))
+            test.error("insufficient free disk space: %d < %d" %
+                       (df_megs, REQ_GUEST_DF))
 
     def dump_and_compress(qmp_monitor, vmcore_host):
         """
@@ -261,9 +258,9 @@ def run(test, params, env):
                              "/usr/lib/debug/lib/modules/$(uname -r)/vmlinux "
                              "%s" % (CRASH_SCRIPT, guest_plain))
         logging.debug("%s", output)
-        if (string.find(output, "crash:") >= 0 or
-                string.find(output, "WARNING:") >= 0):
-            raise error.TestFail("vmcore corrupt")
+        if (output.find("crash:") >= 0 or
+                output.find("WARNING:") >= 0):
+            test.fail("vmcore corrupt")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -272,7 +269,7 @@ def run(test, params, env):
     if qmp_monitor:
         qmp_monitor = qmp_monitor[0]
     else:
-        raise error.TestError('Could not find a QMP monitor, aborting test')
+        test.error('Could not find a QMP monitor, aborting test')
 
     login_timeout = int(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=login_timeout)

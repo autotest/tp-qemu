@@ -4,9 +4,7 @@ import re
 
 import aexpect
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import utils_test
 
 
@@ -31,12 +29,12 @@ def run(test, params, env):
     def run_guest(cmd):
         try:
             session.cmd(cmd)
-        except aexpect.ShellError, e:
+        except aexpect.ShellError as e:
             logging.warn(e)
 
     def run_host_guest(cmd):
         run_guest(cmd)
-        utils.system(cmd, ignore_status=True)
+        process.system(cmd, ignore_status=True, shell=True)
 
     # flush the firewall rules
     cmd_flush = "iptables -F"
@@ -56,8 +54,8 @@ def run(test, params, env):
     mgroup_count = int(params.get("mgroup_count", 5))
     flood_minutes = float(params.get("flood_minutes", 10))
     ifname = vm.get_ifname()
-    prefix = re.findall("\d+.\d+.\d+", mcast)[0]
-    suffix = int(re.findall("\d+", mcast)[-1])
+    prefix = re.findall(r"\d+.\d+.\d+", mcast)[0]
+    suffix = int(re.findall(r"\d+", mcast)[-1])
     # copy python script to guest for joining guest to multicast groups
     mcast_path = os.path.join(test.virtdir, "scripts/multicast_guest.py")
     vm.copy_files_to(mcast_path, "/tmp")
@@ -66,9 +64,9 @@ def run(test, params, env):
 
     # if success to join multicast, the process will be paused, and return PID.
     try:
-        pid = re.findall("join_mcast_pid:(\d+)", output)[0]
+        pid = re.findall(r"join_mcast_pid:(\d+)", output)[0]
     except IndexError:
-        raise error.TestFail("Can't join multicast groups,output:%s" % output)
+        test.fail("Can't join multicast groups,output:%s" % output)
 
     try:
         for i in range(mgroup_count):
@@ -78,7 +76,7 @@ def run(test, params, env):
             logging.info("Initial ping test, mcast: %s", mcast)
             s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)
             if s != 0:
-                raise error.TestFail(" Ping return non-zero value %s" % o)
+                test.fail(" Ping return non-zero value %s" % o)
 
             logging.info("Flood ping test, mcast: %s", mcast)
             utils_test.ping(mcast, None, interface=ifname, flood=True,
@@ -87,8 +85,7 @@ def run(test, params, env):
             logging.info("Final ping test, mcast: %s", mcast)
             s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)
             if s != 0:
-                raise error.TestFail("Ping failed, status: %s, output: %s" %
-                                     (s, o))
+                test.fail("Ping failed, status: %s, output: %s" % (s, o))
 
     finally:
         logging.debug(session.cmd_output("ipmaddr show"))

@@ -2,14 +2,13 @@ import logging
 import os
 import re
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_netperf
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run netperf on server and client side, we need run this case on two
@@ -39,7 +38,7 @@ def run(test, params, env):
     main_vm_ip = vm.get_address()
     session.cmd("iptables -F", ignore_all_errors=True)
 
-    error.context("Test env prepare", logging.info)
+    error_context.context("Test env prepare", logging.info)
     netperf_link = params.get("netperf_link")
     if netperf_link:
         netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
@@ -66,8 +65,9 @@ def run(test, params, env):
     host_password = params.get("hostpassword")
     client = params.get("shell_client")
     port = params.get("shell_port")
-    prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
-    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
+    linesep = params.get(
+        "shell_linesep", "\n").encode().decode('unicode_escape')
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
@@ -147,7 +147,7 @@ def run(test, params, env):
     throughput = []
 
     try:
-        error.context("Start netperf_server", logging.info)
+        error_context.context("Start netperf_server", logging.info)
         netperf_server.start()
         # Run netperf with message size defined in range.
         msg = "Detail result of netperf test with different packet size.\n"
@@ -155,37 +155,38 @@ def run(test, params, env):
             test_protocol = params.get("test_protocol", "UDP_STREAM")
             test_option = "-t %s -- -m %s" % (test_protocol, m_size)
             txt = "Run netperf client with protocol: '%s', packet size: '%s'"
-            error.context(txt % (test_protocol, m_size), logging.info)
+            error_context.context(txt % (test_protocol, m_size), logging.info)
             output = netperf_client.start(netserver_ip, test_option)
-            re_str = "[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+"
-            re_str += "\s+[0-9\.]+"
+            re_str = r"[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+"
+            re_str += r"\s+[0-9\.]+"
             try:
                 line_tokens = re.findall(re_str, output)[0].split()
             except IndexError:
                 txt = "Fail to get Throughput for %s." % m_size
                 txt += " netprf client output: %s" % output
-                raise error.TestError(txt)
+                test.error(txt)
             if not line_tokens:
-                raise error.TestError("Output format is not expected")
+                test.error("Output format is not expected")
             throughput.append(float(line_tokens[5]))
             msg += output
             m_size += step
     finally:
         netperf_server.stop()
 
-    file(os.path.join(test.debugdir, "udp_results"), "w").write(msg)
+    with open(os.path.join(test.debugdir, "udp_results"), "w") as result_file:
+        result_file.write(msg)
     failratio = float(params.get("failratio", 0.3))
-    error.context("Compare UDP performance.", logging.info)
+    error_context.context("Compare UDP performance.", logging.info)
     for i in range(len(throughput) - 1):
         if abs(throughput[i] - throughput[i + 1]) > throughput[i] * failratio:
             txt = "The gap between adjacent throughput is greater than"
             txt += "%f." % failratio
             txt += "Please refer to log file for details:\n %s" % msg
-            raise error.TestFail(txt)
+            test.fail(txt)
     logging.info("The UDP performance as measured via netperf is ok.")
     logging.info("Throughput of netperf command: %s" % throughput)
     logging.debug("Output of netperf command:\n %s" % msg)
-    error.context("Kill netperf server on server (dsthost).")
+    error_context.context("Kill netperf server on server (dsthost).")
 
     try:
         if session:

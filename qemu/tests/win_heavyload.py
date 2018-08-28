@@ -1,14 +1,10 @@
+import os
 import re
 import logging
 import time
 
-try:
-    import aexpect
-except ImportError:
-    from virttest import aexpect
-
-from autotest.client import utils
-
+import aexpect
+from avocado.utils import download
 from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
@@ -60,7 +56,7 @@ def run(test, params, env):
 
     tmp_dir = data_dir.get_tmp_dir()
     install_path = params["install_path"].rstrip("\\")
-    heavyload_bin = '"%s\heavyload.exe"' % install_path
+    heavyload_bin = r'"%s\heavyload.exe"' % install_path
     start_cmd = "%s /CPU /MEMORY /FILE " % heavyload_bin
     stop_cmd = "taskkill /T /F /IM heavyload.exe"
     stop_cmd = params.get("stop_cmd", stop_cmd)
@@ -82,9 +78,10 @@ def run(test, params, env):
             dst = r"c:\\"
             pkg_md5sum = params["pkg_md5sum"]
             error_context.context("Download HeavyLoadSetup.exe", logging.info)
-            pkg = utils.unmap_url_cache(tmp_dir,
-                                        download_url, pkg_md5sum)
-            vm.copy_files_to(pkg, dst)
+            pkg_name = os.path.basename(download_url)
+            pkg_path = os.path.join(tmp_dir, pkg_name)
+            download.get_file(download_url, pkg_path, hash_expected=pkg_md5sum)
+            vm.copy_files_to(pkg_path, dst)
         else:
             dst = r"%s:\\" % utils_misc.get_winutils_vol(session)
 
@@ -101,7 +98,7 @@ def run(test, params, env):
     if params.get("autostress") == "yes":
         free_mem = utils_misc.get_free_mem(session, "windows")
         free_disk = utils_misc.get_free_disk(session, "C:")
-        start_cmd = '"%s\heavyload.exe"' % params["install_path"]
+        start_cmd = r'"%s\heavyload.exe"' % params["install_path"]
         start_cmd = add_option(start_cmd, 'CPU', params["smp"])
         start_cmd = add_option(start_cmd, 'MEMORY', free_mem)
         start_cmd = add_option(start_cmd, 'FILE', free_disk)

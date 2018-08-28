@@ -9,8 +9,6 @@ Requires: connected binaries remote-viewer, Xorg, gnome session
 import logging
 import os
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import utils_spice
 
@@ -68,8 +66,8 @@ def run(test, params, env):
             release = guest_session.cmd("cat /etc/redhat-release")
             logging.info("Redhat Release: %s" % release)
         except:
-            raise error.TestNAError("Test is only currently supported on "
-                                    "RHEL and Fedora operating systems")
+            test.cancel("Test is only currently supported on "
+                        "RHEL and Fedora operating systems")
 
         if "release 7." in release:
             spice_vdagent_loginfo_cmd = "journalctl" \
@@ -115,10 +113,9 @@ def run(test, params, env):
             if "The text has been placed into the clipboard." in output:
                 logging.info("Copying of text was successful")
             else:
-                raise error.TestFail("Copying to the clipboard failed. %s" % output)
+                test.fail("Copying to the clipboard failed. %s" % output)
         except:
-            raise error.TestFail("Copying to the clipboard failed try" +
-                                 " block failed")
+            test.fail("Copying to the clipboard failed try block failed")
 
         logging.debug("------------ End of script output of the Copying"
                       " Session ------------")
@@ -130,6 +127,5 @@ def run(test, params, env):
         # Couldn't find the right test to run
         guest_session.close()
         guest_root_session.close()
-        raise error.TestFail("Couldn't find the right test to run,"
-                             " check cfg files.")
+        test.fail("Couldn't find the right test to run, check cfg files.")
     guest_session.close()

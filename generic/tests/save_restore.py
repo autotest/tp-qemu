@@ -2,7 +2,6 @@ import logging
 import time
 import tempfile
 import os.path
-from autotest.client.shared import error
 
 
 def run(test, params, env):
@@ -45,7 +44,7 @@ def run(test, params, env):
         except OSError:
             pass
 
-    def check_system(vm, timeout):
+    def check_system(test, vm, timeout):
         """
         Raise TestFail if system is not in expected state
         """
@@ -59,8 +58,7 @@ def run(test, params, env):
                         "Login session established, but non-responsive")
                     # assume guest is just busy with stuff
             except:
-                raise error.TestFail(
-                    "VM check timed out and/or VM non-responsive")
+                test.fail("VM check timed out and/or VM non-responsive")
         finally:
             del session
 
@@ -95,7 +93,7 @@ def run(test, params, env):
     while True:
         try:
             vm.verify_kernel_crash()
-            check_system(vm, 120)  # networking needs time to recover
+            check_system(test, vm, 120)  # networking needs time to recover
             logging.info("Save/restores left: %d (or %0.4f more seconds)" %
                          (repeat, (time_to_stop - time.time())))
             if start_delay:
@@ -126,7 +124,7 @@ def run(test, params, env):
             break
         save_file = get_save_filename(path, file_pfx)
     # Check the final save/restore cycle
-    check_system(vm, 120)  # networking needs time to recover
+    check_system(test, vm, 120)  # networking needs time to recover
     logging.info("Save/Restore itteration(s) complete.")
     if save_restore_bg_command and bg_command_pid:
         session = vm.wait_for_login(timeout=120)
@@ -136,6 +134,6 @@ def run(test, params, env):
                             bg_command_pid)
         del session
     if repeat > 0:  # time_to_stop reached but itterations didn't complete
-        raise error.TestFail("Save/Restore save_restore_duration"
-                             " exceeded by %0.4f seconds with %d itterations"
-                             " remaining." % (now - time_to_stop, repeat + 1))
+        test.fail("Save/Restore save_restore_duration"
+                  " exceeded by %0.4f seconds with %d itterations"
+                  " remaining." % (now - time_to_stop, repeat + 1))

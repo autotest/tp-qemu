@@ -86,7 +86,7 @@ def run(test, params, env):
                     index = None
                 image_bootindex = None
                 image_boot = image_params.get("image_boot")
-                if not re.search("boot=on\|off", devices.get_help_text(),
+                if not re.search(r"boot=on\|off", devices.get_help_text(),
                                  re.MULTILINE):
                     if image_boot in ['yes', 'on', True]:
                         image_bootindex = str(vm.last_boot_index)

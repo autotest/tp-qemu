@@ -1,5 +1,4 @@
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
 from virttest import storage
 
@@ -18,7 +17,7 @@ class InfoTest(qemu_disk_img.QemuImgTest):
         for sn in params.get("image_chain").split()[1:]:
             _params = params.object_params(sn)
             _image = storage.get_image_filename(_params, self.data_dir)
-            utils.run("rm -f %s" % _image)
+            process.run("rm -f %s" % _image)
 
 
 def run(test, params, env):
@@ -45,12 +44,12 @@ def run(test, params, env):
         for _file in check_files:
             ret = info_test.check_file(_file, md5_dict[_file])
             if not ret:
-                raise error.TestError("Check md5sum fail (file:%s)" % _file)
+                test.error("Check md5sum fail (file:%s)" % _file)
         #save file in guest
         t_file = params["guest_file_name_%s" % tag]
         md5 = info_test.save_file(t_file)
         if not md5:
-            raise error.TestError("Fail to save tmp file")
+            test.error("Fail to save tmp file")
         check_files.append(t_file)
         md5_dict[t_file] = md5
         info_test.destroy_vm()

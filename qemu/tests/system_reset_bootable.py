@@ -2,12 +2,11 @@ import logging
 import time
 import random
 
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM reset test:
@@ -30,7 +29,7 @@ def run(test, params, env):
     params["start_vm"] = "yes"
 
     if params.get("get_boot_time") == "yes":
-        error.context("Check guest boot up time", logging.info)
+        error_context.context("Check guest boot up time", logging.info)
         env_process.preprocess_vm(test, params, env, vm.name)
         vm.wait_for_login(timeout=timeout)
         bootup_time = time.time() - vm.start_time
@@ -39,23 +38,24 @@ def run(test, params, env):
             wait_time = random.randint(0, int(bootup_time))
         vm.destroy()
 
-    error.context("Boot the guest", logging.info)
+    error_context.context("Boot the guest", logging.info)
     env_process.preprocess_vm(test, params, env, vm.name)
     logging.info("Wait for %d seconds before reset" % wait_time)
     time.sleep(wait_time)
 
     for i in range(1, reset_times + 1):
-        error.context("Reset guest system for %s times" % i, logging.info)
+        error_context.context("Reset guest system for %s times" % i,
+                              logging.info)
 
         vm.monitor.cmd("system_reset")
 
         interval_tmp = interval
         if params.get("fixed_interval", "yes") != "yes":
-            interval_tmp = random.randint(0, interval)
+            interval_tmp = random.randint(0, interval * 1000) / 1000.0
 
         logging.debug("Reset the system by monitor cmd"
                       " after %ssecs" % interval_tmp)
         time.sleep(interval_tmp)
 
-    error.context("Try to login guest after reset", logging.info)
+    error_context.context("Try to login guest after reset", logging.info)
     vm.wait_for_login(timeout=timeout)

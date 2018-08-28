@@ -1,11 +1,10 @@
 import logging
 import os
 
-from autotest.client import utils
-from autotest.client.shared import error
-
+from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_net
+from virttest import error_context as error
 
 
 @error.context_aware
@@ -44,8 +43,8 @@ def run(test, params, env):
         vm.copy_files_to(script_path, "C:\\")
 
     try:
-        transfer_thread = utils.InterruptedThread(utils_test.run_file_transfer,
-                                                  (test, params, env))
+        transfer_thread = utils_misc.InterruptedThread(
+            utils_test.run_file_transfer, (test, params, env))
 
         error.context("Run utils_test.file_transfer ...", logging.info)
         transfer_thread.start()

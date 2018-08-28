@@ -1,11 +1,10 @@
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import qemu_monitor
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     monitor_cmds_check test:
@@ -33,10 +32,10 @@ def run(test, params, env):
     protocol = vm.monitor.protocol
 
     black_cmds = params.get("black_cmds", "").split()
-    error.context("Verify black commands are unavaliable in '%s' monitor"
-                  % protocol, logging.info)
+    error_context.context("Verify black commands are unavaliable in "
+                          "'%s' monitor" % protocol, logging.info)
     logging.info("Black commands: %s" % black_cmds)
     cmds = [cmd for cmd in black_cmds if is_supported(cmd)]
     if cmds:
         msg = "Unexpected commands %s found in %s monitor" % (cmds, protocol)
-        raise error.TestFail(msg)
+        test.fail(msg)

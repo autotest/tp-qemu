@@ -1,46 +1,20 @@
 import time
 import random
-from autotest.client.shared import error, utils
+from virttest import error_context
 from qemu.tests import blk_stream
 
 
 class BlockStreamReboot(blk_stream.BlockStream):
 
-    process = []
-
-    def __init__(self, test, params, env, tag):
-        super(BlockStreamReboot, self).__init__(test, params, env, tag)
-
-    @error.context_aware
+    @error_context.context_aware
     def reboot(self):
         """
         Reset guest with system_reset;
         """
         params = self.parser_test_args()
         method = params.get("reboot_method", "system_reset")
-        return super(BlockStreamReboot, self).reboot(method=method)
-
-    def action_before_start(self):
-        """
-        start pre-action in new threads;
-        """
-        params = self.parser_test_args()
-        for param in params.get("before_start").split():
-            if hasattr(self, param):
-                fun = getattr(self, param)
-                bg = utils.InterruptedThread(fun)
-                bg.start()
-                if bg.isAlive():
-                    self.process.append(bg)
-            time.sleep(random.randint(25, 100))
-
-    def clean(self):
-        """
-        clean up sub-process and trash files
-        """
-        for bg in self.process:
-            bg.join()
-        super(BlockStreamReboot, self).clean()
+        super(BlockStreamReboot, self).reboot(method=method)
+        time.sleep(random.randint(0, 20))
 
 
 def run(test, params, env):

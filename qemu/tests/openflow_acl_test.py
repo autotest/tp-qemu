@@ -1,18 +1,22 @@
+import functools
 import logging
 import re
 import os
 
 import aexpect
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_net
 from virttest import remote
 from virttest import data_dir
 
 
-@error.context_aware
+_system_output = functools.partial(process.system_output, shell=True)
+
+
+@error_context.context_aware
 def run(test, params, env):
     """
     Test Step:
@@ -48,7 +52,7 @@ def run(test, params, env):
                     remote_src = vm
                     ssh_src_ip = vm.get_address()
                 else:
-                    run_func = utils.system_output
+                    run_func = _system_output
                     remote_src = "localhost"
                     ssh_src_ip = host_ip
                 if atgt in vms_tags:
@@ -75,14 +79,14 @@ def run(test, params, env):
                         out = remote_login(access_cmd, target_ip,
                                            remote_src, params, host_ip)
                         stat = 0
-                    except remote.LoginError, err:
+                    except remote.LoginError as err:
                         stat = 1
                         out_err = "Failed to login %s " % atgt
                         out_err += "from %s, err: %s" % (asys, err.output)
                     try:
                         out += remote_login(access_cmd, ssh_src_ip,
                                             target_vm, params, host_ip)
-                    except remote.LoginError, err:
+                    except remote.LoginError as err:
                         stat += 1
                         out_err += "Failed to login %s " % asys
                         out_err += "from %s, err: %s" % (atgt, err.output)
@@ -95,20 +99,19 @@ def run(test, params, env):
                         check_string = access_params.get("check_from_output")
                         if check_string and check_string in out:
                             stat = 1
-                    except (aexpect.ShellCmdError, error.CmdError,
-                            aexpect.ShellTimeoutError), err:
-                        if isinstance(err, error.CmdError):
-                            out = err.result_obj.stderr
-                            stat = err.result_obj.exit_status
-                        else:
-                            out = err.output
-                            if isinstance(err, aexpect.ShellTimeoutError):
-                                stat = 1
-                                session.close()
-                                session = vm.wait_for_login(timeout=timeout)
-                                run_func = session.cmd
-                            else:
-                                stat = err.status
+                    except aexpect.ShellCmdError as err:
+                        out = err.output
+                        stat = err.status
+                    except aexpect.ShellTimeoutError as err:
+                        out = err.output
+                        stat = 1
+                        session.close()
+                        session = vm.wait_for_login(timeout=timeout)
+                        run_func = session.cmd
+                    except process.CmdError as err:
+                        out = err.result.stderr
+                        stat = err.result.exit_status
+
                     if access_params.get("clean_cmd"):
                         try:
                             run_func(access_params['clean_cmd'])
@@ -135,8 +138,8 @@ def run(test, params, env):
                 if err_msg:
                     session.close()
                     if err_type == "ref":
-                        raise error.TestNAError(err_msg)
-                    raise error.TestFail(err_msg)
+                        test.cancel(err_msg)
+                    test.fail(err_msg)
 
                 if not ref_cmd:
                     session.close()
@@ -145,17 +148,15 @@ def run(test, params, env):
                 try:
                     out = run_func(ref_cmd, timeout=op_timeout)
                     stat = 0
-                except (aexpect.ShellCmdError, error.CmdError,
-                        aexpect.ShellTimeoutError), err:
-                    if isinstance(err, error.CmdError):
-                        out = err.result_obj.stderr
-                        stat = err.result_obj.exit_status
-                    else:
-                        out = err.output
-                        if isinstance(err, aexpect.ShellTimeoutError):
-                            stat = 1
-                        else:
-                            stat = err.status
+                except aexpect.ShellCmdError as err:
+                    out = err.output
+                    stat = err.status
+                except aexpect.ShellTimeoutError as err:
+                    out = err.output
+                    stat = 1
+                except process.CmdError as err:
+                    out = err.result.stderr
+                    stat = err.result.exit_status
 
                 if stat != 0:
                     if ref:
@@ -169,8 +170,8 @@ def run(test, params, env):
                 if err_msg:
                     session.close()
                     if err_type == "ref":
-                        raise error.TestNAError(err_msg)
-                    raise error.TestFail(err_msg)
+                        test.cancel(err_msg)
+                    test.fail(err_msg)
                 session.close()
 
     def get_acl_cmd(protocol, in_port, action, extra_options):
@@ -210,7 +211,7 @@ def run(test, params, env):
         quit_cmd = params.get("quit_cmd", "exit")
         if host == host_ip:
             # Try to login from guest to host.
-            prompt = "^\[.*\][\#\$]\s*$"
+            prompt = r"^\[.*\][\#\$]\s*$"
             linesep = "\n"
             username = params_login["host_username"]
             password = params_login["host_password"]
@@ -245,7 +246,7 @@ def run(test, params, env):
         try:
             out = remote.handle_prompts(session, username, password,
                                         prompt, timeout, debug=True)
-        except Exception, err:
+        except Exception as err:
             session.close()
             raise err
         try:
@@ -258,7 +259,7 @@ def run(test, params, env):
     def setup_service(setup_target):
         setup_timeout = int(params.get("setup_timeout", 360))
         if setup_target == "localhost":
-            setup_func = utils.system_output
+            setup_func = _system_output
             os_type = "linux"
         else:
             setup_vm = env.get_vm(setup_target)
@@ -272,9 +273,9 @@ def run(test, params, env):
         setup_cmd = re.sub("SERVICE", setup_params.get("service", ""),
                            setup_cmd)
 
-        error.context("Set up %s service in %s" % (setup_params.get("service"),
-                                                   setup_target),
-                      logging.info)
+        error_context.context("Set up %s service in %s"
+                              % (setup_params.get("service"), setup_target),
+                              logging.info)
         if prepare_cmd:
             setup_func(prepare_cmd, timeout=setup_timeout)
         setup_func(setup_cmd, timeout=setup_timeout)
@@ -284,7 +285,7 @@ def run(test, params, env):
     def stop_service(setup_target):
         setup_timeout = int(params.get("setup_timeout", 360))
         if setup_target == "localhost":
-            setup_func = utils.system_output
+            setup_func = _system_output
             os_type = "linux"
         else:
             setup_vm = env.get_vm(setup_target)
@@ -298,9 +299,9 @@ def run(test, params, env):
         stop_cmd = re.sub("SERVICE", setup_params.get("service", ""),
                           stop_cmd)
 
-        error.context("Stop %s service in %s" % (setup_params.get("service"),
-                                                 setup_target),
-                      logging.info)
+        error_context.context("Stop %s service in %s"
+                              % (setup_params.get("service"), setup_target),
+                              logging.info)
         if stop_cmd:
             setup_func(stop_cmd, timeout=setup_timeout)
 
@@ -327,6 +328,12 @@ def run(test, params, env):
             for script in params.get("copy_scripts").split():
                 script_path = os.path.join(script_dir, script)
                 vm.copy_files_to(script_path, tmp_dir)
+        if params.get("os_type") == "windows":
+            curl_win_path = params.get("curl_win_path", "C:\\curl\\")
+            session.cmd("dir {0} || mkdir {0}".format(curl_win_path))
+            for script in params.get("copy_curl").split():
+                curl_win_link = os.path.join(data_dir.get_deps_dir("curl"), script)
+                vm.copy_files_to(curl_win_link, curl_win_path, timeout=60)
         session.close()
 
     vms_tags = params.objects("vms")
@@ -380,45 +387,42 @@ def run(test, params, env):
                 acl_disabled = tgt_param.get("acl_disabled") == "yes"
                 access_sys[target]['disabled_%s' % tgt] = acl_disabled
 
-    error.context("Try to access target before setup the rules", logging.info)
+    error_context.context("Try to access target before setup the rules",
+                          logging.info)
     access_service(access_sys, access_targets, False, host_ip, ref=True)
-    error.context("Disable the access in ovs", logging.info)
+    error_context.context("Disable the access in ovs", logging.info)
     br_infos = utils_net.openflow_manager(br_name, "show").stdout
-    if_port = re.findall("(\d+)\(%s\)" % if_name, br_infos)
+    if_port = re.findall(r"(\d+)\(%s\)" % if_name, br_infos)
     if not if_port:
-        raise error.TestNAError("Can not find %s in bridge %s" % (if_name,
-                                                                  br_name))
+        test.cancel("Can not find %s in bridge %s" % (if_name, br_name))
     if_port = if_port[0]
 
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "drop", acl_extra_options)
     utils_net.openflow_manager(br_name, "add-flow", acl_cmd)
     acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
     if not acl_rules_check(acl_rules, acl_cmd):
-        raise error.TestFail("Can not find the rules from"
-                             " ovs-ofctl: %s" % acl_rules)
+        test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
-    error.context("Try to acess target to exam the disable rules",
-                  logging.info)
+    error_context.context("Try to acess target to exam the disable rules",
+                          logging.info)
     access_service(access_sys, access_targets, True, host_ip)
-    error.context("Enable the access in ovs", logging.info)
+    error_context.context("Enable the access in ovs", logging.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "normal", acl_extra_options)
     utils_net.openflow_manager(br_name, "mod-flows", acl_cmd)
     acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
     if not acl_rules_check(acl_rules, acl_cmd):
-        raise error.TestFail("Can not find the rules from"
-                             " ovs-ofctl: %s" % acl_rules)
-    error.context("Try to acess target to exam the enable rules",
-                  logging.info)
+        test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
+    error_context.context("Try to acess target to exam the enable rules",
+                          logging.info)
     access_service(access_sys, access_targets, False, host_ip)
-    error.context("Delete the access rules in ovs", logging.info)
+    error_context.context("Delete the access rules in ovs", logging.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "", acl_extra_options)
     utils_net.openflow_manager(br_name, "del-flows", acl_cmd)
     acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
     if acl_rules_check(acl_rules, acl_cmd):
-        raise error.TestFail("Still can find the rules from"
-                             " ovs-ofctl: %s" % acl_rules)
-    error.context("Try to acess target to exam after delete the rules",
-                  logging.info)
+        test.fail("Still can find the rules from ovs-ofctl: %s" % acl_rules)
+    error_context.context("Try to acess target to exam after delete the rules",
+                          logging.info)
     access_service(access_sys, access_targets, False, host_ip)
 
     for setup_target in params.get("setup_targets", "").split():

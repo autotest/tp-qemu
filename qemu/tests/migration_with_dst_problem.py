@@ -3,18 +3,21 @@ import os
 import time
 import re
 import sys
+import six
 
 import aexpect
 
-from autotest.client.shared import utils, error
+from avocado.utils import data_factory
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import env_process
 from virttest import utils_misc
 from virttest import qemu_storage
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def process_output_check(process, exp_str):
     """
     Check whether the output of process match regular expression.
@@ -27,7 +30,7 @@ def process_output_check(process, exp_str):
     return re.search(exp_str, output)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM migration with destination problems.
@@ -49,7 +52,7 @@ def run(test, params, env):
     test_rand = None
     mount_path = None
     while mount_path is None or os.path.exists(mount_path):
-        test_rand = utils.generate_random_string(3)
+        test_rand = data_factory.generate_random_string(3)
         mount_path = ("%s/ni_mount_%s" %
                       (data_dir.get_data_dir(), test_rand))
 
@@ -80,7 +83,7 @@ def run(test, params, env):
                         if exc_info is None:
                             raise
                     if exc_info:
-                        raise exc_info[0], exc_info[1], exc_info[2]
+                        six.reraise(exc_info[0], exc_info[1], exc_info[2])
             return ret
 
     def control_service(session, service, init_service, action, timeout=60):
@@ -130,7 +133,7 @@ def run(test, params, env):
 
         :param mount_path: path where nfs dir will be placed.
         """
-        utils.run("umount -f %s" % (mount_path))
+        process.run("umount -f %s" % (mount_path))
 
     def create_file_disk(dst_path, size):
         """
@@ -139,8 +142,8 @@ def run(test, params, env):
         :param dst_path: Path to file.
         :param size: Size of file in MB
         """
-        utils.run("dd if=/dev/zero of=%s bs=1M count=%s" % (dst_path, size))
-        utils.run("mkfs.ext3 -F %s" % (dst_path))
+        process.run("dd if=/dev/zero of=%s bs=1M count=%s" % (dst_path, size))
+        process.run("mkfs.ext3 -F %s" % (dst_path))
 
     def mount(disk_path, mount_path, options=None):
         """
@@ -155,7 +158,7 @@ def run(test, params, env):
         else:
             options = "%s" % options
 
-        utils.run("mount %s %s %s" % (options, disk_path, mount_path))
+        process.run("mount %s %s %s" % (options, disk_path, mount_path))
 
     def find_disk_vm(vm, disk_serial):
         """
@@ -171,7 +174,7 @@ def run(test, params, env):
         disk_path = os.path.join("/", "dev", "disk", "by-id")
         disks = session.cmd("ls %s" % disk_path).split("\n")
         session.close()
-        disk = filter(lambda x: x.endswith(disk_serial), disks)
+        disk = list(filter(lambda x: x.endswith(disk_serial), disks))
         if not disk:
             return None
         return os.path.join(disk_path, disk[0])
@@ -251,9 +254,9 @@ def run(test, params, env):
 
         def find_disk(self):
             disk_path = os.path.join("/", "dev", "disk", "by-path")
-            disks = utils.run("ls %s" % disk_path).stdout.split("\n")
-            disk = filter(lambda x: self.server_name in x, disks)
-            if disk is []:
+            disks = process.run("ls %s" % disk_path).stdout.split("\n")
+            disk = list(filter(lambda x: self.server_name in x, disks))
+            if not disk:
                 return None
             return os.path.join(disk_path, disk[0].strip())
 
@@ -266,24 +269,24 @@ def run(test, params, env):
             :return: path where disk is connected.
             """
             ip_dst = vm_ds.get_address()
-            utils.run("iscsiadm -m discovery -t st -p %s" % (ip_dst))
+            process.run("iscsiadm -m discovery -t st -p %s" % (ip_dst))
 
             server_ident = ('iscsiadm -m node --targetname "%s:dev01"'
                             ' --portal %s' % (self.server_name, ip_dst))
-            utils.run("%s --op update --name node.session.auth.authmethod"
-                      " --value CHAP" % (server_ident))
-            utils.run("%s --op update --name node.session.auth.username"
-                      " --value %s" % (server_ident, self.user))
-            utils.run("%s --op update --name node.session.auth.password"
-                      " --value %s" % (server_ident, self.passwd))
-            utils.run("%s --login" % (server_ident))
+            process.run("%s --op update --name node.session.auth.authmethod"
+                        " --value CHAP" % (server_ident))
+            process.run("%s --op update --name node.session.auth.username"
+                        " --value %s" % (server_ident, self.user))
+            process.run("%s --op update --name node.session.auth.password"
+                        " --value %s" % (server_ident, self.passwd))
+            process.run("%s --login" % (server_ident))
             time.sleep(1.0)
             return self.find_disk()
 
         def disconnect(self):
             server_ident = ('iscsiadm -m node --targetname "%s:dev01"' %
                             (self.server_name))
-            utils.run("%s --logout" % (server_ident))
+            process.run("%s --logout" % (server_ident))
 
     class IscsiServer(object):
 
@@ -317,14 +320,13 @@ def run(test, params, env):
 
         def test(self):
             if params.get("nettype") != "bridge":
-                raise error.TestNAError("Unable start test without params"
-                                        " nettype=bridge.")
+                test.cancel("Unable start test without params nettype=bridge.")
 
             vm_ds = env.get_vm("virt_test_vm2_data_server")
             vm_guest = env.get_vm("virt_test_vm1_guest")
             ro_timeout = int(params.get("read_only_timeout", "480"))
             exp_str = r".*Read-only file system.*"
-            utils.run("mkdir -p %s" % (mount_path))
+            process.run("mkdir -p %s" % (mount_path))
 
             vm_ds.verify_alive()
             vm_guest.create()
@@ -343,8 +345,8 @@ def run(test, params, env):
             if not utils_misc.wait_for(lambda: process_output_check(
                                        vm_guest.process, exp_str),
                                        timeout=ro_timeout, first=2):
-                raise error.TestFail("The Read-only file system warning not"
-                                     " come in time limit.")
+                test.fail("The Read-only file system warning not"
+                          " come in time limit.")
 
         def clean(self):
             if os.path.exists(mig_dst):
@@ -368,16 +370,16 @@ def run(test, params, env):
         def test(self):
             self.disk_path = None
             while self.disk_path is None or os.path.exists(self.disk_path):
-                self.disk_path = ("%s/disk_%s" %
-                                  (test.tmpdir, utils.generate_random_string(3)))
+                self.disk_path = (
+                    "%s/disk_%s" %
+                    (test.tmpdir, data_factory.generate_random_string(3)))
 
-            disk_size = utils.convert_data_size(params.get("disk_size", "10M"),
-                                                default_sufix='M')
-            disk_size /= 1024 * 1024    # To MB.
+            disk_size = int(utils_misc.normalize_data_size(
+                params.get("disk_size", "10M"), "M"))
 
             exp_str = r".*gzip: stdout: No space left on device.*"
             vm_guest = env.get_vm("virt_test_vm1_guest")
-            utils.run("mkdir -p %s" % (mount_path))
+            process.run("mkdir -p %s" % (mount_path))
 
             vm_guest.verify_alive()
             vm_guest.wait_for_login(timeout=login_timeout)
@@ -393,8 +395,8 @@ def run(test, params, env):
             if not utils_misc.wait_for(lambda: process_output_check(
                                        vm_guest.process, exp_str),
                                        timeout=60, first=1):
-                raise error.TestFail("The migration to destination with low "
-                                     "storage space didn't fail as it should.")
+                test.fail("The migration to destination with low "
+                          "storage space didn't fail as it should.")
 
         def clean(self):
             if os.path.exists(mount_path):
@@ -426,8 +428,7 @@ def run(test, params, env):
         def test(self):
             self.copier_pid = None
             if params.get("nettype") != "bridge":
-                raise error.TestNAError("Unable start test without params"
-                                        " nettype=bridge.")
+                test.cancel("Unable start test without params nettype=bridge.")
 
             self.disk_serial = params.get("drive_serial_image2_vm1",
                                           "nfs-disk-image2-vm1")
@@ -436,17 +437,14 @@ def run(test, params, env):
             self.guest_mount_path = params.get("guest_disk_mount_path", "/mnt")
             self.copy_timeout = int(params.get("copy_timeout", "1024"))
 
-            self.copy_block_size = params.get("copy_block_size", "100M")
-            self.copy_block_size = utils.convert_data_size(
-                self.copy_block_size,
-                "M")
-            self.disk_size = "%s" % (self.copy_block_size * 1.4)
-            self.copy_block_size /= 1024 * 1024
+            self.copy_block_size = int(utils_misc.normalize_data_size(
+                params.get("copy_block_size", "100M"), "M"))
+            self.disk_size = "%sM" % int(self.copy_block_size * 1.4)
 
             self.server_recover_timeout = (
                 int(params.get("server_recover_timeout", "240")))
 
-            utils.run("mkdir -p %s" % (mount_path))
+            process.run("mkdir -p %s" % (mount_path))
 
             self.test_params()
             self.config()
@@ -476,7 +474,7 @@ def run(test, params, env):
                 self.vm_guest.verify_alive()
                 self.vm_guest.wait_for_login(timeout=login_timeout)
             except aexpect.ExpectTimeoutError:
-                raise error.TestFail("Migration should be successful.")
+                test.fail("Migration should be successful.")
 
         def test_params(self):
             """
@@ -493,7 +491,7 @@ def run(test, params, env):
         def workload(self):
             disk_path = find_disk_vm(self.vm_guest, self.disk_serial)
             if disk_path is None:
-                raise error.TestFail("It was impossible to find disk on VM")
+                test.fail("It was impossible to find disk on VM")
 
             prepare_disk(self.vm_guest, disk_path, self.guest_mount_path)
 
@@ -585,8 +583,8 @@ def run(test, params, env):
             qemu_img = qemu_storage.QemuImg(self.image2_vm_guest_params,
                                             mount_path,
                                             None)
-            utils.run("touch %s" % (qemu_img.image_filename),
-                      self.server_recover_timeout)
+            process.run("touch %s" % (qemu_img.image_filename),
+                        self.server_recover_timeout)
 
         def clean_test(self):
             if os.path.exists(mount_path):
@@ -634,7 +632,7 @@ def run(test, params, env):
                                               (int(float(self.disk_size) * 1.1) / (1024 * 1024)))
             self.host_disk_path = self.isci_server.connect(vm_ds)
 
-            utils.run("mkfs.ext3 -F %s" % (self.host_disk_path))
+            process.run("mkfs.ext3 -F %s" % (self.host_disk_path))
             mount(self.host_disk_path, mount_path)
 
         def restart_server(self):
@@ -652,8 +650,8 @@ def run(test, params, env):
             qemu_img = qemu_storage.QemuImg(self.image2_vm_guest_params,
                                             mount_path,
                                             None)
-            utils.run("touch %s" % (qemu_img.image_filename),
-                      self.server_recover_timeout)
+            process.run("touch %s" % (qemu_img.image_filename),
+                        self.server_recover_timeout)
 
         def clean_test(self):
             if os.path.exists(mount_path):
@@ -667,5 +665,5 @@ def run(test, params, env):
         tests_group = locals()[test_type]
         tests_group()
     else:
-        raise error.TestFail("Test group '%s' is not defined in"
-                             " migration_with_dst_problem test" % test_type)
+        test.fail("Test group '%s' is not defined in"
+                  " migration_with_dst_problem test" % test_type)

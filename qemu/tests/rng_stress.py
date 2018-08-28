@@ -3,12 +3,11 @@ import aexpect
 import time
 import re
 
-from autotest.client import utils
+from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_test
 from virttest.qemu_devices import qdevices
-from avocado.core import exceptions
 
 
 @error_context.context_aware
@@ -44,7 +43,7 @@ def run(test, params, env):
             rng_devices = re.findall(r"virtio_rng.\d+", output)
         except aexpect.ShellTimeoutError:
             err = "%s timeout, pls check if it's a product bug" % verify_cmd
-            raise exceptions.TestFail(err)
+            test.fail(err)
         return rng_devices
 
     login_timeout = int(params.get("login_timeout", 360))
@@ -55,7 +54,8 @@ def run(test, params, env):
 
     if params.get("pre_cmd"):
         error_context.context("Fetch data from host", logging.info)
-        utils.system(params.get("pre_cmd"))
+        process.system(params.get("pre_cmd"), shell=True,
+                       ignore_bg_processes=True)
 
     error_context.context("Read rng device in guest", logging.info)
     utils_test.run_virt_sub_test(test, params, env, sub_test)
@@ -66,8 +66,8 @@ def run(test, params, env):
         rng_devices = get_available_rng(session)
         rng_attached = get_rng_list(vm)
         if len(rng_devices) != len(rng_attached):
-            raise exceptions.TestFail("The devices get from rng_arriable"
-                                      " don't match the rng devices attached")
+            test.fail("The devices get from rng_arriable"
+                      " don't match the rng devices attached")
 
         if len(rng_devices) > 1:
             for rng_device in rng_devices:
@@ -81,8 +81,9 @@ def run(test, params, env):
     if params.get("post_cmd"):
         end_time = time.time() + 20
         while time.time() < end_time:
-            s = utils.system(params.get("post_cmd"),
-                             ignore_status=params.get("ignore_status",
-                                                      "False"))
+            s = process.system(
+                params.get("post_cmd"),
+                ignore_status=(params.get("ignore_status") == "yes"),
+                shell=True)
             if s == 0:
                 break

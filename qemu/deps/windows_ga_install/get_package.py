@@ -70,7 +70,7 @@ class GuestAgentPkg(object):
             if status:
                 raise Exception("the download from %s didn't run successfully"
                                 % url)
-            print ("\033[32m %s download successfully\033[0m" % url)
+            print("\033[32m %s download successfully\033[0m" % url)
 
 
 def parse_params(program):

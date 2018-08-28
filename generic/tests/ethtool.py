@@ -2,16 +2,15 @@ import logging
 import re
 
 import aexpect
-
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import crypto, process
 
 from virttest import utils_net
 from virttest import utils_misc
 from virttest import remote
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test offload functions of ethernet device using ethtool
@@ -70,14 +69,14 @@ def run(test, params, env):
         """
         txt = "Set offload status for device "
         txt += "'%s': %s" % (ethname, str(status))
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
 
         cmd = "ethtool -K %s " % ethname
         cmd += " ".join([o + ' ' + s for o, s in status.items()])
         err_msg = "Failed to set offload status for device '%s'" % ethname
         try:
             session.cmd_output_safe(cmd)
-        except aexpect.ShellCmdError, e:
+        except aexpect.ShellCmdError as e:
             logging.error("%s, detail: %s", err_msg, e)
             return False
 
@@ -91,20 +90,20 @@ def run(test, params, env):
         return True
 
     def ethtool_save_params(session):
-        error.context("Saving ethtool configuration", logging.info)
+        error_context.context("Saving ethtool configuration", logging.info)
         return ethtool_get(session)
 
     def ethtool_restore_params(session, status):
-        error.context("Restoring ethtool configuration", logging.info)
+        error_context.context("Restoring ethtool configuration", logging.info)
         ethtool_set(session, status)
 
     def compare_md5sum(name):
         txt = "Comparing md5sum of the files on guest and host"
-        error.context(txt, logging.info)
-        host_result = utils.hash_file(name, method="md5")
+        error_context.context(txt, logging.info)
+        host_result = crypto.hash_file(name, algorithm="md5")
         try:
             o = session.cmd_output("md5sum %s" % name)
-            guest_result = re.findall("\w+", o)[0]
+            guest_result = re.findall(r"\w+", o)[0]
         except IndexError:
             logging.error("Could not get file md5sum in guest")
             return False
@@ -125,7 +124,7 @@ def run(test, params, env):
                   (filename, params.get("filesize")))
         failure = (False, "Failed to create file using dd, cmd: %s" % dd_cmd)
         txt = "Creating file in source host, cmd: %s" % dd_cmd
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         ethname = utils_net.get_linux_ifname(session,
                                              vm.get_mac_address(0))
         tcpdump_cmd = "tcpdump -lep -i %s -s 0 tcp -vv port ssh" % ethname
@@ -134,35 +133,36 @@ def run(test, params, env):
             copy_files_func = vm.copy_files_from
             try:
                 sess.cmd_output(dd_cmd, timeout=360)
-            except aexpect.ShellCmdError, e:
+            except aexpect.ShellCmdError as e:
                 return failure
         else:
             tcpdump_cmd += " and dst %s" % guest_ip
             copy_files_func = vm.copy_files_to
             try:
-                utils.system(dd_cmd)
-            except error.CmdError, e:
+                process.system(dd_cmd, shell=True)
+            except process.CmdError as e:
                 return failure
 
         # only capture the new tcp port after offload setup
-        original_tcp_ports = re.findall("tcp.*:(\d+).*%s" % guest_ip,
-                                        utils.system_output("/bin/netstat -nap"))
+        original_tcp_ports = re.findall(
+            r"tcp.*:(\d+).*%s" % guest_ip,
+            process.system_output("/bin/netstat -nap"))
 
         for i in original_tcp_ports:
             tcpdump_cmd += " and not port %s" % i
 
         txt = "Listening traffic using command: %s" % tcpdump_cmd
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         sess.sendline(tcpdump_cmd)
         if not utils_misc.wait_for(
                 lambda: session.cmd_status("pgrep tcpdump") == 0, 30):
             return (False, "Tcpdump process wasn't launched")
 
         txt = "Transferring file %s from %s" % (filename, src)
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         try:
             copy_files_func(filename, filename)
-        except remote.SCPError, e:
+        except remote.SCPError as e:
             return (False, "File transfer failed (%s)" % e)
 
         session.cmd("killall tcpdump")
@@ -194,10 +194,10 @@ def run(test, params, env):
         if not s:
             logging.error(o)
             return False
-        error.context("Check if contained large frame", logging.info)
+        error_context.context("Check if contained large frame", logging.info)
         # MTU: default IPv4 MTU is 1500 Bytes, ethernet header is 14 Bytes
         return (status == "on") ^ (len([i for i in re.findall(
-                                   "length (\d*):", o) if int(i) > mtu]) == 0)
+                                   r"length (\d*):", o) if int(i) > mtu]) == 0)
 
     def ro_callback(status="on"):
         s, o = transfer_file("host")
@@ -208,26 +208,26 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    error.context("Log into a guest.", logging.info)
+    error_context.context("Log into a guest.", logging.info)
     login_timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
 
     # Let's just error the test if we identify that there's no ethtool
     # installed
-    error.context("Check whether ethtool installed in guest.")
+    error_context.context("Check whether ethtool installed in guest.")
     session.cmd("ethtool -h")
     mtu = 1514
     pretest_status = {}
     filename = "/tmp/ethtool.dd"
     guest_ip = vm.get_address()
-    error.context("Try to get ethernet device name in guest.")
+    error_context.context("Try to get ethernet device name in guest.")
     ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
 
     supported_features = params.get("supported_features")
     if supported_features:
         supported_features = supported_features.split()
     else:
-        raise error.TestError("No supported features set on the parameters")
+        test.error("No supported features set on the parameters")
 
     test_matrix = {
         # type:(callback,    (dependence), (exclude)
@@ -253,8 +253,8 @@ def run(test, params, env):
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
 
-            txt = "Run callback function %s" % callback.func_name
-            error.context(txt, logging.info)
+            txt = "Run callback function %s" % callback.__name__
+            error_context.context(txt, logging.info)
 
             # Some older kernel versions split packets by GSO
             # before tcpdump can capture the big packet, which
@@ -269,26 +269,26 @@ def run(test, params, env):
                 e_msg = "Failed to disable %s" % f_type
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
-            txt = "Run callback function %s" % callback.func_name
-            error.context(txt, logging.info)
+            txt = "Run callback function %s" % callback.__name__
+            error_context.context(txt, logging.info)
             if not callback(status="off"):
                 e_msg = "Callback failed after disabling %s" % f_type
                 logging.error(e_msg)
                 failed_tests.append(e_msg)
 
         if failed_tests:
-            raise error.TestFail("Failed tests: %s" % failed_tests)
+            test.fail("Failed tests: %s" % failed_tests)
 
     finally:
         try:
             if session:
                 session.close()
-        except Exception, detail:
+        except Exception as detail:
             logging.error("Fail to close session: '%s'", detail)
 
         try:
             session = vm.wait_for_serial_login(timeout=login_timeout)
             ethtool_restore_params(session, pretest_status)
-        except Exception, detail:
+        except Exception as detail:
             logging.warn("Could not restore parameter of"
                          " eth card: '%s'", detail)

@@ -12,8 +12,6 @@ from aexpect import ShellStatusError
 from aexpect import ShellCmdError
 from aexpect import ShellProcessTerminatedError
 
-from autotest.client.shared import error
-
 from virttest import utils_net
 from virttest import utils_spice
 from virttest import remote
@@ -53,7 +51,7 @@ def print_rv_version(client_session, rv_binary):
                  client_session.cmd(rv_binary + " --spice-gtk-version"))
 
 
-def launch_rv(client_vm, guest_vm, params):
+def launch_rv(test, client_vm, guest_vm, params):
     """
     Launches rv_binary with args based on spice configuration
     inside client_session on background.
@@ -72,7 +70,7 @@ def launch_rv(client_vm, guest_vm, params):
         try:
             socket.inet_aton(params.get("proxy_ip", None))
         except socket.error:
-            raise error.TestNAError('Parameter proxy_ip not changed from default values')
+            test.cancel('Parameter proxy_ip not changed from default values')
 
     host_ip = utils_net.get_host_ip_address(params)
     host_port = None
@@ -153,13 +151,11 @@ def launch_rv(client_vm, guest_vm, params):
             # generated with the ip address
             hostname = socket.gethostname()
             if ssltype == "invalid_implicit_hs":
-                spice_url = " spice://%s?tls-port=%s\&port=%s" % (hostname,
-                                                                  host_tls_port,
-                                                                  host_port)
+                spice_url = r" spice://%s?tls-port=%s\&port=%s" % (
+                    hostname, host_tls_port, host_port)
             else:
-                spice_url = " spice://%s?tls-port=%s\&port=%s" % (host_ip,
-                                                                  host_tls_port,
-                                                                  host_port)
+                spice_url = r" spice://%s?tls-port=%s\&port=%s" % (
+                    host_ip, host_tls_port, host_port)
 
             if rv_parameters_from == "menu":
                 line = spice_url
@@ -204,7 +200,7 @@ def launch_rv(client_vm, guest_vm, params):
     # Check to see if the test is using a smartcard.
     if smartcard == "yes":
         logging.info("remote viewer Set to use a smartcard")
-        if not rv_parameters_from == file:
+        if not rv_parameters_from == "file":
             cmd += " --spice-smartcard"
 
         if certdb is not None:
@@ -223,9 +219,9 @@ def launch_rv(client_vm, guest_vm, params):
             cmd = "export LD_LIBRARY_PATH=" + rv_ld_library_path + ";" + cmd
 
     if rv_parameters_from == "file":
-        print "Generating file"
+        logging.info("Generating file")
         utils_spice.gen_rv_file(params, guest_vm, host_subj, cacert)
-        print "Uploading file to client"
+        logging.info("Uploading file to client")
         client_vm.copy_files_to("rv_file.vv", "~/rv_file.vv")
 
     # Launching the actual set of commands
@@ -300,15 +296,15 @@ def launch_rv(client_vm, guest_vm, params):
                 if "SSL_accept failed" in qemulog:
                     return
                 else:
-                    raise error.TestFail("SSL_accept failed not shown in qemu" +
-                                         "process as expected.")
+                    test.fail("SSL_accept failed not shown in qemu"
+                              "process as expected.")
             is_rv_connected = False
         else:
-            raise error.TestFail("remote-viewer connection failed")
+            test.fail("remote-viewer connection failed")
 
     if test_type == "negative" and is_rv_connected:
-        raise error.TestFail("remote-viewer connection was established when" +
-                             " it was supposed to be unsuccessful")
+        test.fail("remote-viewer connection was established when"
+                  " it was supposed to be unsuccessful")
 
     # Get spice info
     output = guest_vm.monitor.cmd("info spice")
@@ -324,8 +320,8 @@ def launch_rv(client_vm, guest_vm, params):
             logging.info("Reported ipv6 address found in output from"
                          " 'info spice'")
         else:
-            raise error.TestFail("ipv6 address not found from qemu monitor"
-                                 " command: 'info spice'")
+            test.fail("ipv6 address not found from qemu monitor"
+                      " command: 'info spice'")
     else:
         logging.info("Not checking the value of 'info spice'"
                      " from the qemu monitor")
@@ -371,8 +367,8 @@ def run(test, params, env):
                 output = session.cmd('cat /etc/redhat-release')
                 logging.info(output)
             except ShellCmdError:
-                raise error.TestNAError("Test is only currently supported on "
-                                        "RHEL and Fedora operating systems")
+                test.cancel("Test is only currently supported on "
+                            "RHEL and Fedora operating systems")
             if "release 6." in output:
                 waittime = 15
             else:
@@ -382,7 +378,7 @@ def run(test, params, env):
 
         utils_spice.wait_timeout(waittime)
 
-    launch_rv(client_vm, guest_vm, params)
+    launch_rv(test, client_vm, guest_vm, params)
 
     client_session.close()
     guest_session.close()

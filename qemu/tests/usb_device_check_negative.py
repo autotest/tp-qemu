@@ -28,6 +28,6 @@ def run(test, params, env):
         env_process.process(test, params, env,
                             env_process.preprocess_image,
                             env_process.preprocess_vm)
-    except virt_vm.VMCreateError, e:
+    except virt_vm.VMCreateError as e:
         if error_info not in e.output:
             test.fail("%s is not reported by QEMU" % error_info)

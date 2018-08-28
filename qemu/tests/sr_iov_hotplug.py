@@ -47,7 +47,7 @@ def run(test, params, env):
     def get_active_network_device(session, nic_filter):
         devnames = []
         cmd = "ifconfig -a"
-        nic_reg = "\w+(?=: flags)|\w+(?=\s*Link)"
+        nic_reg = r"\w+(?=: flags)|\w+(?=\s*Link)"
         status, output = session.cmd_status_output(cmd)
         if status:
             test.error("Guest command '%s' fail with output: %s." % (cmd, output))
@@ -212,7 +212,7 @@ def run(test, params, env):
             # Assign static IP to the hotplugged interface
             if params.get("assign_static_ip", "no") == "yes":
                 cmd = "service networking restart"
-                static_ip = ip_gen.next()
+                static_ip = next(ip_gen)
                 net_mask = params.get("static_net_mask", "255.255.255.0")
                 broadcast = params.get("static_broadcast", "10.10.10.255")
                 pci_id = utils_misc.get_pci_id_using_filter(vf_filter,
@@ -249,7 +249,7 @@ def run(test, params, env):
                           "output: \n%s" % ifconfig)
             try:
                 session.cmd(params["pci_test_cmd"] % (pci_num + 1))
-            except aexpect.ShellError, e:
+            except aexpect.ShellError as e:
                 test.fail("Check device failed after PCI "
                           "hotplug. Output: %r" % e.output)
 
@@ -292,7 +292,7 @@ def run(test, params, env):
     nic_filter = params["nic_interface_filter"]
     devices = []
     device_type = params.get("hotplug_device_type", "vf")
-    for i in xrange(pci_num_range):
+    for i in range(pci_num_range):
         device = {}
         device["type"] = device_type
         if generate_mac == "yes":
@@ -358,7 +358,7 @@ def run(test, params, env):
                         if status:
                             test.error("Failed to backup in guest: %s" %
                                        output)
-            for pci_num in xrange(pci_num_range):
+            for pci_num in range(pci_num_range):
                 msg = "Start hot-adding %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
                 error_context.context(msg, logging.info)
@@ -372,7 +372,7 @@ def run(test, params, env):
                     # Hotpluged device have been released after guest suspend,
                     # so do not need unpluged step.
                     break
-            for pci_num in xrange(pci_num_range):
+            for pci_num in range(pci_num_range):
                 msg = "start hot-deleting %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
                 error_context.context(msg, logging.info)

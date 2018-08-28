@@ -1,14 +1,13 @@
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_netperf
 from virttest import utils_misc
 from virttest import data_dir
 from virttest import utils_net
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM migration test:
@@ -57,8 +56,9 @@ def run(test, params, env):
     passwd = params.get("hostpassword", "redhat")
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
-    prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
-    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
+    linesep = params.get(
+        "shell_linesep", "\n").encode().decode('unicode_escape')
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client_h = params.get("compile_option_client_h", "")
     compile_option_server_h = params.get("compile_option_server_h", "")
@@ -125,25 +125,25 @@ def run(test, params, env):
                                                        linesep=linesep,
                                                        status_test_command=status_test_command,
                                                        compile_option=compile_option_server_g)
-        error.base_context("Run netperf test between host and guest")
-        error.context("Start netserver in guest.", logging.info)
+        error_context.base_context("Run netperf test between host and guest")
+        error_context.context("Start netserver in guest.", logging.info)
         netperf_server_g.start()
         if netperf_server_h:
-            error.context("Start netserver in host.", logging.info)
+            error_context.context("Start netserver in host.", logging.info)
             netperf_server_h.start()
 
-        error.context("Start Netperf in host", logging.info)
+        error_context.context("Start Netperf in host", logging.info)
         test_option = "-l %s" % netperf_timeout
         netperf_client_h.bg_start(guest_address, test_option, client_num)
         if netperf_client_g:
-            error.context("Start Netperf in guest", logging.info)
+            error_context.context("Start Netperf in guest", logging.info)
             netperf_client_g.bg_start(host_address, test_option, client_num)
 
         m_count = 0
         while netperf_client_h.is_netperf_running():
             m_count += 1
-            error.context("Start migration iterations: %s " % m_count,
-                          logging.info)
+            error_context.context("Start migration iterations: %s " % m_count,
+                                  logging.info)
             vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
     finally:
         if netperf_server_g:

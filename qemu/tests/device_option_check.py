@@ -72,7 +72,7 @@ def run(test, params, env):
 
                 qtree_value = None
                 for node in qemu_qtree.traverse(qdev):
-                    if node.qtree.has_key(qtree_check_option):
+                    if qtree_check_option in node.qtree:
                         qtree_value = str(node.qtree.get(qtree_check_option))
                         break
 

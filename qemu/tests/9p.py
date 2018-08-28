@@ -1,8 +1,6 @@
 import os
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_test
 
 
@@ -41,11 +39,11 @@ def run(test, params, env):
 
         logging.info("Mounting 9p mount point with options %s" % mount_option)
         cmd = "mount -t 9p -o %s autotest_tag %s" % (mount_option, mount_dir)
-        mount_status = session.get_command_status(cmd)
+        mount_status = session.cmd_status(cmd)
 
         if (mount_status != 0):
             logging.error("mount failed")
-            raise error.TestFail('mount failed.')
+            test.fail('mount failed.')
 
         # Collect test parameters
         timeout = int(params.get("test_timeout", 14400))

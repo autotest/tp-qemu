@@ -1,11 +1,10 @@
 import re
 import time
 import logging
+
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
-from autotest.client.shared import utils
-from avocado.core import exceptions
 
 
 @error_context.context_aware
@@ -62,20 +61,28 @@ def run(test, params, env):
                 session, bg_stress_test)
             session.sendline(bg_stress_test)
         else:
-            stress_thread = utils.InterruptedThread(
+            stress_thread = utils_misc.InterruptedThread(
                 utils_test.run_virt_sub_test, (test, params, env),
                 {"sub_type": bg_stress_test})
             stress_thread.start()
+
+        for event in params.get("check_setup_events", "").strip().split():
+            if not utils_misc.wait_for(lambda: params.get(event),
+                                       600, 0, 1):
+                test.error("Background test not in ready state since haven't "
+                           "received event %s" % event)
+            # Clear event
+            params[event] = False
+
         if not utils_misc.wait_for(lambda: check_bg_running(target_process),
                                    120, 0, 1):
-            raise exceptions.TestFail("Backgroud test %s is not "
-                                      "alive!" % bg_stress_test)
+            test.fail("Backgroud test %s is not alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
             logging.info("Wait %s test start" % bg_stress_test)
             if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
                                        wait_time, 0, 0.5):
                 err = "Fail to start %s test" % bg_stress_test
-                raise exceptions.TestError(err)
+                test.error(err)
         env["bg_status"] = 1
         return stress_thread
 
@@ -104,8 +111,11 @@ def run(test, params, env):
     error_context.context("Boot guest with %s device" % driver, logging.info)
 
     if params["os_type"] == "windows":
-        utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
-
+        session = vm.wait_for_login(timeout=timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver,
+                                                                timeout)
+        session.close()
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")
     main_test = params["sub_test"]

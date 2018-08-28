@@ -1,11 +1,20 @@
 import logging
 import os
 import re
-from autotest.client import utils
-from autotest.client.shared import error
+
+from avocado.utils import download
+from avocado.utils import process
+
+from virttest import error_context
+from virttest import utils_misc
 
 
-@error.context_aware
+def _process_is_alive(name_pattern):
+    return process.system("pgrep -f '^([^ /]*/)*(%s)([ ]|$)'" % name_pattern,
+                          ignore_status=True, verbose=False) == 0
+
+
+@error_context.context_aware
 def run(test, params, env):
     """
     Multicast test using iperf.
@@ -24,10 +33,10 @@ def run(test, params, env):
         this server through multicast address of the server
         """
         try:
-            utils.run(cmd)
-        except error.CmdError, e:
-            if not re.findall(catch_data, str(e)):
-                raise error.TestFail("Client not connected '%s'" % str(e))
+            process.run(cmd)
+        except process.CmdError as e:
+            if not re.findall(catch_data, e.result.stdout):
+                test.fail("Client not connected '%s'" % str(e))
             logging.info("Client multicast test pass "
                          % re.findall(catch_data, str(e)))
 
@@ -49,24 +58,26 @@ def run(test, params, env):
     client_ip = vm.get_address(0)
 
     try:
-        error.context("Test Env setup")
+        error_context.context("Test Env setup")
         iperf_downloaded = 0
         iperf_url = linux_iperf_url
 
         app_check_cmd = params.get("linux_app_check_cmd", "false")
         app_check_exit_status = int(params.get("linux_app_check_exit_status",
                                                "0"))
-        exit_status = utils.system(app_check_cmd, ignore_status=True)
+        exit_status = process.system(app_check_cmd, ignore_status=True,
+                                     shell=True)
 
         # Install iperf in host if not available
         default_install_cmd = "tar zxvf %s; cd iperf-%s;"
         default_install_cmd += " ./configure; make; make install"
         install_cmd = params.get("linux_install_cmd", default_install_cmd)
         if not exit_status == app_check_exit_status:
-            error.context("install iperf in host", logging.info)
-            utils.get_file(iperf_url, host_path)
+            error_context.context("install iperf in host", logging.info)
+            download.get_file(iperf_url, host_path)
             iperf_downloaded = 1
-            utils.system(install_cmd % (host_path, iperf_version))
+            process.system(install_cmd % (host_path, iperf_version),
+                           shell=True)
 
         # The guest may not be running Linux, see if we should update the
         # app_check variables
@@ -77,16 +88,16 @@ def run(test, params, env):
 
         # Install iperf in guest if not available
         if not session.cmd_status(app_check_cmd) == app_check_exit_status:
-            error.context("install iperf in guest", logging.info)
+            error_context.context("install iperf in guest", logging.info)
             if not iperf_downloaded:
-                utils.get_file(iperf_url, host_path)
+                download.get_file(iperf_url, host_path)
             if os_type == "linux":
                 guest_path = (tmp_dir + "iperf.tgz")
                 clean_cmd = "rm -rf %s iperf-%s" % (guest_path, iperf_version)
             else:
                 guest_path = (tmp_dir + "iperf.exe")
                 iperf_url = win_iperf_url
-                utils.get_file(iperf_url, host_path)
+                download.get_file(iperf_url, host_path)
                 clean_cmd = "del %s" % guest_path
             vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
 
@@ -97,7 +108,7 @@ def run(test, params, env):
         multicast_port = params.get("multicast_port", "5001")
 
         step_msg = "Start iperf server, bind host to multicast address %s "
-        error.context(step_msg % muliticast_addr, logging.info)
+        error_context.context(step_msg % muliticast_addr, logging.info)
         server_start_cmd = ("iperf -s -u -B %s -p %s " %
                             (muliticast_addr, multicast_port))
 
@@ -105,17 +116,16 @@ def run(test, params, env):
         connected_flag = params.get("connected_flag", default_flag)
         catch_data = connected_flag % (muliticast_addr, multicast_port,
                                        client_ip)
-        t = utils.InterruptedThread(server_start, (server_start_cmd,
-                                                   catch_data))
+        t = utils_misc.InterruptedThread(server_start,
+                                         (server_start_cmd, catch_data))
         t.start()
-        if not utils.process_is_alive("iperf"):
-            raise error.TestError("Start iperf server failed cmd: %s"
-                                  % server_start_cmd)
+        if not _process_is_alive("iperf"):
+            test.error("Start iperf server failed cmd: %s" % server_start_cmd)
         logging.info("Server start successfully")
 
         step_msg = "In client try to connect server and transfer file "
         step_msg += " through multicast address %s"
-        error.context(step_msg % muliticast_addr, logging.info)
+        error_context.context(step_msg % muliticast_addr, logging.info)
         if os_type == "linux":
             client_cmd = "iperf"
         else:
@@ -126,14 +136,14 @@ def run(test, params, env):
         session.cmd(start_client_cmd)
         logging.info("Client start successfully")
 
-        error.context("Test finish, check the result", logging.info)
-        utils.system("pkill -2 iperf")
+        error_context.context("Test finish, check the result", logging.info)
+        process.system("pkill -2 iperf")
         t.join()
 
     finally:
-        if utils.process_is_alive("iperf"):
-            utils.system("killall -9 iperf")
-        utils.system("rm -rf %s" % host_path)
+        if _process_is_alive("iperf"):
+            process.system("killall -9 iperf")
+        process.system("rm -rf %s" % host_path)
         if session:
             if clean_cmd:
                 session.cmd(clean_cmd)

@@ -80,7 +80,7 @@ parser.add_option("--tarball", dest="tarballLocation",
 (options, args) = parser.parse_args()
 
 if not options.pkgName:
-    print "Missing required arguments"
+    print("Missing required arguments")
     parser.print_help()
     sys.exit(1)
 
@@ -98,7 +98,7 @@ if options.gitRepo:
 
 f = open("/etc/redhat-release", "r")
 rhelVersion = f.read()
-print "OS: %s" % rhelVersion
+print("OS: %s" % rhelVersion)
 if re.findall("release 6", rhelVersion):
     if pkgName in ("spice-gtk", "virt-viewer"):
         autogen_options[pkgName] += " --with-gtk=2.0"
@@ -113,7 +113,7 @@ if not tarballLocation:
 
     ret = os.system("which git")
     if ret != 0:
-        print "Missing git command!"
+        print("Missing git command!")
         sys.exit(1)
 
     # Create destination directory
@@ -121,12 +121,12 @@ if not tarballLocation:
         basename = git_repo[pkgName].split("/")[-1]
         destDir = os.path.join("/tmp", basename)
         if os.path.exists(destDir):
-            print "Deleting existing destination directory"
+            print("Deleting existing destination directory")
             subprocess.check_call(("rm -rf %s" % destDir).split())
 
     # If destination directory doesn't exist, create it
     if not os.path.exists(destDir):
-        print "Creating directory %s for git repo %s" % (destDir, git_repo[pkgName])
+        print("Creating directory %s for git repo %s" % (destDir, git_repo[pkgName]))
         os.makedirs(destDir)
 
     # Switch to the directory
@@ -134,46 +134,46 @@ if not tarballLocation:
 
     # If git repo already exists, reset. If not, initialize
     if os.path.exists('.git'):
-        print "Resetting previously existing git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName])
+        print("Resetting previously existing git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName]))
         subprocess.check_call("git reset --hard".split())
     else:
-        print "Initializing new git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName])
+        print("Initializing new git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName]))
         subprocess.check_call("git init".split())
 
     # Fetch the contents of the repo
-    print "Fetching git [REP '%s' BRANCH '%s'] -> %s" % (git_repo[pkgName], branch, destDir)
+    print("Fetching git [REP '%s' BRANCH '%s'] -> %s" % (git_repo[pkgName], branch, destDir))
     subprocess.check_call(("git fetch -q -f -u -t %s %s:%s" %
                            (git_repo[pkgName], branch, branch)).split())
 
     # checkout the branch specified, master by default
-    print "Checking out branch %s" % branch
+    print("Checking out branch %s" % branch)
     subprocess.check_call(("git checkout %s" % branch).split())
 
     # If a certain commit is specified, checkout that commit
     if commit is not None:
-        print "Checking out commit %s" % commit
+        print("Checking out commit %s" % commit)
         subprocess.check_call(("git checkout %s" % commit).split())
     else:
-        print "Specific commit not specified"
+        print("Specific commit not specified")
 
     # Adding remote origin
-    print "Adding remote origin"
+    print("Adding remote origin")
     args = ("git remote add origin %s" % git_repo[pkgName]).split()
     output = run_subprocess_cmd(args)
 
     # Get the commit and tag which repo is at
     args = 'git log --pretty=format:%H -1'.split()
-    print "Running 'git log --pretty=format:%H -1' to get top commit"
+    print("Running 'git log --pretty=format:%H -1' to get top commit")
     top_commit = run_subprocess_cmd(args)
 
     args = 'git describe'.split()
-    print "Running 'git describe' to get top tag"
+    print("Running 'git describe' to get top tag")
     top_tag = run_subprocess_cmd(args)
     if top_tag is None:
         top_tag_desc = 'no tag found'
     else:
         top_tag_desc = 'tag %s' % top_tag
-    print "git commit ID is %s (%s)" % (top_commit, top_tag_desc)
+    print("git commit ID is %s (%s)" % (top_commit, top_tag_desc))
 
 # If tarball is not specified
 else:
@@ -211,7 +211,7 @@ cmd = destDir + "/autogen.sh"
 if not os.path.exists(cmd):
     cmd = destDir + "/configure"
     if not os.path.exists(cmd):
-        print "%s doesn't exist! Something's wrong!" % cmd
+        print("%s doesn't exist! Something's wrong!" % cmd)
         sys.exit(1)
 
 if prefix is not None:
@@ -219,10 +219,10 @@ if prefix is not None:
 if pkgName in autogen_options.keys():
     cmd += " " + autogen_options[pkgName]
 
-print "Running '%s %s'" % (env_vars, cmd)
+print("Running '%s %s'" % (env_vars, cmd))
 ret = os.system(env_vars + " " + cmd)
 if ret != 0:
-    print "Return code: %s! Autogen.sh failed! Exiting!" % ret
+    print("Return code: %s! Autogen.sh failed! Exiting!" % ret)
     sys.exit(1)
 
 # Temporary workaround for building spice-vdagent
@@ -232,16 +232,16 @@ if pkgName == "spice-vd-agent":
 
 # Running 'make' to build and using os.system again
 cmd = "make"
-print "Running '%s %s'" % (env_vars, cmd)
+print("Running '%s %s'" % (env_vars, cmd))
 ret = os.system("%s %s" % (env_vars, cmd))
 if ret != 0:
-    print "Return code: %s! make failed! Exiting!" % ret
+    print("Return code: %s! make failed! Exiting!" % ret)
     sys.exit(1)
 
 # Running 'make install' to install the built libraries/binaries
 cmd = "make install"
-print "Running '%s %s'" % (env_vars, cmd)
+print("Running '%s %s'" % (env_vars, cmd))
 ret = os.system("%s %s" % (env_vars, cmd))
 if ret != 0:
-    print "Return code: %s! make install failed! Exiting!" % ret
+    print("Return code: %s! make install failed! Exiting!" % ret)
     sys.exit(ret)

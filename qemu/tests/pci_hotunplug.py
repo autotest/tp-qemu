@@ -1,13 +1,12 @@
 import re
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test hot unplug of PCI devices.
@@ -38,13 +37,12 @@ def run(test, params, env):
             cmd = "device_del id=%s" % device
             vm.monitor.send_args_cmd(cmd)
         else:
-            raise error.TestFail("device_del command is not supported")
+            test.fail("device_del command is not supported")
 
         if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1) and
                 not ignore_failure):
-            raise error.TestFail("Failed to hot remove PCI device: %s. "
-                                 "Monitor command: %s" %
-                                 (pci_model, cmd))
+            test.fail("Failed to hot remove PCI device: %s. "
+                      "Monitor command: %s" % (pci_model, cmd))
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -62,7 +60,7 @@ def run(test, params, env):
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
     if module:
-        error.context("modprobe the module %s" % module, logging.info)
+        error_context.context("modprobe the module %s" % module, logging.info)
         session.cmd("modprobe %s" % module)
 
     # Probe qemu to verify what is the supported syntax for PCI hotplug
@@ -71,7 +69,7 @@ def run(test, params, env):
     else:
         cmd_o = vm.monitor.send_args_cmd("help")
     if not cmd_o:
-        raise error.TestError("Unknown version of qemu")
+        test.error("Unknown version of qemu")
 
     cmd_type = utils_misc.find_substring(str(cmd_o), "device_del")
 
@@ -79,19 +77,20 @@ def run(test, params, env):
     context_msg = "Running sub test '%s' %s"
     sub_type = params.get("sub_type_before_unplug")
     if sub_type:
-        error.context(context_msg % (sub_type, "before unplug"),
-                      logging.info)
+        error_context.context(context_msg % (sub_type, "before unplug"),
+                              logging.info)
         utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     if devices:
         for device in devices[:pci_num]:
             # (lmr) I think here is the place where pci_info should go
             pci_info = []
-            error.context("Hot unplug device %s" % device, logging.info)
+            error_context.context("Hot unplug device %s" % device,
+                                  logging.info)
             pci_del(device)
 
     sub_type = params.get("sub_type_after_unplug")
     if sub_type:
-        error.context(context_msg % (sub_type, "after hotunplug"),
-                      logging.info)
+        error_context.context(context_msg % (sub_type, "after hotunplug"),
+                              logging.info)
         utils_test.run_virt_sub_test(test, params, env, sub_type)

@@ -2,10 +2,9 @@ import logging
 import os
 import re
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from avocado.utils import process
 from virttest import funcatexit
+from virttest import error_context
 
 
 def cleanup(debugfs_path, session):
@@ -13,13 +12,13 @@ def cleanup(debugfs_path, session):
     Umount the debugfs and close the session
     """
     if os.path.ismount(debugfs_path):
-        utils.run("umount %s" % debugfs_path)
+        process.run("umount %s" % debugfs_path, shell=True)
     if os.path.isdir(debugfs_path):
         os.removedirs(debugfs_path)
     session.close()
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM kernel hugepages user side test:
@@ -32,12 +31,12 @@ def run(test, params, env):
     """
     def get_mem_status(params, role):
         if role == "host":
-            info = utils.system_output("cat /proc/meminfo")
+            info = process.system_output("cat /proc/meminfo")
         else:
             info = session.cmd("cat /proc/meminfo")
         for h in re.split("\n+", info):
             if h.startswith("%s" % params):
-                output = re.split('\s+', h)[1]
+                output = re.split(r'\s+', h)[1]
         return output
 
     dd_timeout = float(params.get("dd_timeout", 900))
@@ -50,11 +49,11 @@ def run(test, params, env):
 
     login_timeout = float(params.get("login_timeout", "3600"))
 
-    error.context("smoke test setup")
+    error_context.context("smoke test setup")
     if not os.path.ismount(debugfs_path):
         if not os.path.isdir(debugfs_path):
             os.makedirs(debugfs_path)
-        utils.run("mount -t debugfs none %s" % debugfs_path)
+        process.run("mount -t debugfs none %s" % debugfs_path, shell=True)
 
     vm = env.get_vm(params.get("main_vm"))
     session = vm.wait_for_login(timeout=login_timeout)
@@ -63,7 +62,7 @@ def run(test, params, env):
                         session)
 
     logging.info("Smoke test start")
-    error.context("smoke test")
+    error_context.context("smoke test")
 
     nr_ah_before = int(get_mem_status('AnonHugePages', 'host'))
     if nr_ah_before <= 0:
@@ -101,7 +100,7 @@ def run(test, params, env):
     # Use parallel dd as stress for memory
     count = count / 3
     logging.info("Stress test start")
-    error.context("stress test")
+    error_context.context("stress test")
     cmd = "rm -rf %s/*; for i in `seq %s`; do dd " % (mem_path, count)
     cmd += "if=/dev/zero of=%s/$i bs=4000000 count=1& done;wait" % mem_path
     output = session.cmd_output(cmd, timeout=dd_timeout)
@@ -124,7 +123,7 @@ def run(test, params, env):
 
     logging.info("Stress test finished")
 
-    error.context("")
+    error_context.context("")
     if failures:
-        raise error.TestFail("THP base test reported %s failures:\n%s" %
-                             (len(failures), "\n".join(failures)))
+        test.fail("THP base test reported %s failures:\n%s" %
+                  (len(failures), "\n".join(failures)))

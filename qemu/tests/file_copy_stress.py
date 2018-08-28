@@ -1,13 +1,12 @@
 import time
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Transfer a file back and forth between host and guest.
@@ -26,14 +25,15 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error.context("Login to guest", logging.info)
+    error_context.context("Login to guest", logging.info)
     session = vm.wait_for_login(timeout=login_timeout)
 
     scp_sessions = int(params.get("scp_para_sessions", 1))
 
     try:
         stress_timeout = float(params.get("stress_timeout", "3600"))
-        error.context("Do file transfer between host and guest", logging.info)
+        error_context.context("Do file transfer between host and guest",
+                              logging.info)
         start_time = time.time()
         stop_time = start_time + stress_timeout
         # here when set a run flag, when other case call this case as a

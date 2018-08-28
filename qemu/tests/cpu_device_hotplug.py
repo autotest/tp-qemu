@@ -2,12 +2,11 @@ import logging
 import re
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Runs vCPU hotplug tests based on CPU device:
@@ -15,14 +14,14 @@ def run(test, params, env):
 
     def hotplug(vm, current_cpus, total_cpus, vcpu_threads):
         for cpu in range(current_cpus, total_cpus):
-            error.context("hot-pluging vCPU %s" % cpu, logging.info)
+            error_context.context("hot-pluging vCPU %s" % cpu, logging.info)
             vm.hotplug_vcpu(cpu_id=cpu, plug_command=hotplug_cmd)
             time.sleep(0.1)
         time.sleep(5)
 
     def hotunplug(vm, current_cpus, total_cpus, vcpu_threads):
         for cpu in range(current_cpus, total_cpus):
-            error.context("hot-unpluging vCPU %s" % cpu, logging.info)
+            error_context.context("hot-unpluging vCPU %s" % cpu, logging.info)
             vm.hotplug_vcpu(cpu_id=cpu, plug_command=unplug_cmd, unplug="yes")
             time.sleep(0.1)
         # Need more time to unplug, so sleeping more than hotplug.
@@ -32,27 +31,26 @@ def run(test, params, env):
         output = vm.monitor.send_args_cmd("info cpus")
         logging.debug("Output of info CPUs:\n%s", output)
 
-        cpu_regexp = re.compile("CPU #(\d+)")
+        cpu_regexp = re.compile(r"CPU #(\d+)")
         total_cpus_monitor = len(cpu_regexp.findall(output))
         if total_cpus_monitor != total_cpus:
-            raise error.TestFail("Monitor reports %s CPUs, when VM should have"
-                                 " %s" % (total_cpus_monitor, total_cpus))
-        error.context("hotplugging finished, let's wait a few sec and"
-                      " check CPUs quantity in guest.", logging.info)
+            test.fail("Monitor reports %s CPUs, when VM should have"
+                      " %s" % (total_cpus_monitor, total_cpus))
+        error_context.context("hotplugging finished, let's wait a few sec and"
+                              " check CPUs quantity in guest.", logging.info)
         if not utils_misc.wait_for(lambda: utils_misc.check_if_vm_vcpu_match(
                                    total_cpus, vm),
                                    60 + total_cpus, first=10,
                                    step=5.0, text="retry later"):
-            raise error.TestFail("CPU quantity mismatch cmd after hotplug !")
-        error.context("rebooting the vm and check CPU quantity !",
-                      logging.info)
+            test.fail("CPU quantity mismatch cmd after hotplug !")
+        error_context.context("rebooting the vm and check CPU quantity !",
+                              logging.info)
         session = vm.reboot()
         if not utils_misc.check_if_vm_vcpu_match(total_cpus, vm):
-            raise error.TestFail("CPU quantity mismatch cmd after hotplug "
-                                 "and reboot !")
+            test.fail("CPU quantity mismatch cmd after hotplug and reboot !")
 
-    error.context("boot the vm, with '-smp X,maxcpus=Y' option,"
-                  "thus allow hotplug vcpu", logging.info)
+    error_context.context("boot the vm, with '-smp X,maxcpus=Y' option,"
+                          "thus allow hotplug vcpu", logging.info)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -85,10 +83,10 @@ def run(test, params, env):
         total_cpus = current_cpus + (n_cpus_add * vcpu_threads)
 
     logging.info("current_cpus=%s, total_cpus=%s", current_cpus, total_cpus)
-    error.context("check if CPUs in guest matches qemu cmd "
-                  "before hot-plug", logging.info)
+    error_context.context("check if CPUs in guest matches qemu cmd "
+                          "before hot-plug", logging.info)
     if not utils_misc.check_if_vm_vcpu_match(current_cpus, vm):
-        raise error.TestError("CPU quantity mismatch cmd before hotplug !")
+        test.error("CPU quantity mismatch cmd before hotplug !")
     hotplug(vm, current_cpus, total_cpus, vcpu_threads)
     verify(vm, total_cpus)
 

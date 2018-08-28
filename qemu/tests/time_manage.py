@@ -2,14 +2,12 @@ import logging
 import time
 
 import aexpect
-
-from autotest.client.shared import error
-
 from virttest import utils_test
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Time manage test:
@@ -78,7 +76,8 @@ def run(test, params, env):
             logging.info("Guest #%d booted up successfully", num)
 
             # Check whether all previous shell sessions are responsive
-            error.context("checking responsiveness of the booted guest")
+            error_context.context("checking responsiveness of the booted"
+                                  " guest")
             for se in sessions:
                 se.cmd(params["alive_test_cmd"])
             num += 1
@@ -93,7 +92,7 @@ def run(test, params, env):
                 se = vm.reboot(se, timeout=timeout)
                 # Remember the current changed session
                 sessions[vmid] = se
-                error.context("checking responsiveness of guest")
+                error_context.context("checking responsiveness of guest")
                 se.cmd(params["alive_test_cmd"])
                 if itr == 0:
                     (ht0, gt0) = utils_test.get_time(se, time_command,

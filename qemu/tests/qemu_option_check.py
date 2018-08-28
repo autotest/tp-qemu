@@ -1,13 +1,13 @@
 import re
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     QEMU support options check test
@@ -24,11 +24,11 @@ def run(test, params, env):
         """
         Get qemu support device list
         """
-        support_device = utils.system_output("%s -device ? 2>&1"
-                                             % qemu_binary, timeout=10,
-                                             ignore_status=True)
+        support_device = process.system_output("%s -device ? 2>&1"
+                                               % qemu_binary, timeout=10,
+                                               ignore_status=True, shell=True)
         if not support_device:
-            raise error.TestNAError("Can not get qemu support device list")
+            test.cancel("Can not get qemu support device list")
         device_list = re.findall(r'name\s+"(.*)",', support_device)
         device_list_alias = re.findall(r'alias\s+"(.*?)"', support_device)
         device_list.extend(device_list_alias)
@@ -41,22 +41,22 @@ def run(test, params, env):
         if device_name not in get_qemu_support_device(qemu_binary):
             err_msg = "Oops, Your qemu version doesn't support devic '%s', "
             err_msg += "make sure you have inputted a correct device name"
-            raise error.TestNAError(err_msg % device_name)
-        device_support_option = utils.run("%s -device %s,? 2>&1" %
-                                          (qemu_binary, device_name),
-                                          timeout=10,
-                                          ignore_status=True)
+            test.cancel(err_msg % device_name)
+        device_support_option = process.run("%s -device %s,? 2>&1" %
+                                            (qemu_binary, device_name),
+                                            timeout=10,
+                                            ignore_status=True, shell=True)
         if device_support_option.exit_status:
-            raise error.TestError("Oops, output status is wrong")
+            test.error("Oops, output status is wrong")
         if not re.findall(r"%s\.(.*)=(.*)" % device_name,
                           device_support_option.stdout):
-            raise error.TestFail("Qemu option check Failed")
+            test.fail("Qemu option check Failed")
         logging.info("Qemu options check successful. output is:\n%s" %
                      device_support_option.stdout)
 
     device_name = params.get("device_name")
     qemu_binary = utils_misc.get_qemu_binary(params)
 
-    error.context("Get qemu support %s device options" % device_name,
-                  logging.info)
+    error_context.context("Get qemu support %s device options" % device_name,
+                          logging.info)
     get_device_option(qemu_binary, device_name)

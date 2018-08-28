@@ -1,12 +1,11 @@
 import os
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Verify guest NIC numbers again whats provided in test config file.
@@ -25,7 +24,7 @@ def run(test, params, env):
     """
     def check_nics_num(expect_c, session):
         txt = "Check whether guest NICs info match with params setting."
-        error.context(txt, logging.info)
+        error_context.context(txt, logging.info)
         nics_list = utils_net.get_linux_ifname(session)
         actual_c = len(nics_list)
         msg = "Expected NICs count is: %d\n" % expect_c
@@ -52,23 +51,23 @@ def run(test, params, env):
     # Pre-judgement for the ethernet interface
     logging.debug(check_nics_num(nics_num, session)[1])
     txt = "Create configure file for every NIC interface in guest."
-    error.context(txt, logging.info)
+    error_context.context(txt, logging.info)
     ifname_list = utils_net.get_linux_ifname(session)
     ifcfg_path = "/etc/sysconfig/network-scripts/ifcfg-%s"
     for ifname in ifname_list:
         eth_config_path = ifcfg_path % ifname
         eth_config = "DEVICE=%s\\nBOOTPROTO=dhcp\\nONBOOT=yes" % ifname
         cmd = "echo -e '%s' > %s" % (eth_config, eth_config_path)
-        s, o = session.get_command_status_output(cmd)
+        s, o = session.cmd_status_output(cmd)
         if s != 0:
             err_msg = "Failed to create ether config file: %s\nReason is: %s"
-            raise error.TestError(err_msg % (eth_config_path, o))
+            test.error(err_msg % (eth_config_path, o))
 
     # Reboot and check the configurations.
     new_session = vm.reboot(session)
     s, msg = check_nics_num(nics_num, new_session)
     if not s:
-        raise error.TestFail(msg)
+        test.fail(msg)
 
     # NICs matched.
     logging.info(msg)

@@ -1,7 +1,7 @@
 import logging
 import random
 
-from autotest.client.shared import utils
+from avocado.utils import process
 
 from virttest import utils_test
 from virttest import utils_net
@@ -74,7 +74,7 @@ def run(test, params, env):
         if nic_ip:
             return nic_ip
         cached_ip = vm.address_cache.get(nic["mac"])
-        arps = utils.system_output("arp -aen")
+        arps = process.system_output("arp -aen")
         logging.debug("Can't get IP address:")
         logging.debug("\tCached IP: %s", cached_ip)
         logging.debug("\tARP table: %s", arps)
@@ -125,7 +125,7 @@ def run(test, params, env):
     nic_hotplug_count = int(params.get("nic_hotplug_count", 1))
     nic_hotplugged = []
     try:
-        for nic_index in xrange(1, nic_hotplug_count + 1):
+        for nic_index in range(1, nic_hotplug_count + 1):
             # need to reconnect serial port after
             # guest reboot for windows guest
             s_session = vm.wait_for_serial_login(timeout=login_timeout)
@@ -141,7 +141,7 @@ def run(test, params, env):
                 logging.info("Hot-plug NIC with the netdev already in use")
                 try:
                     add_output = device_add_nic(nic_model, useddevice_id, nic_name)
-                except Exception, err_msg:
+                except Exception as err_msg:
                     match_error = params["devadd_match_string"]
                     if match_error in str(err_msg):
                         s_session.close()
@@ -232,7 +232,7 @@ def run(test, params, env):
         for nic in primary_nic:
             vm.set_link(nic.device_id, up=True)
         logging.info("Reboot vm to verify it alive after hotunplug nic(s)")
-        serial = len(vm.virtnet) > 0 and False or True
+        serial = not (len(vm.virtnet) > 0)
         session = vm.reboot(serial=serial)
         vm.verify_alive()
         session.close()

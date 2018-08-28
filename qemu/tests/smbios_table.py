@@ -1,13 +1,13 @@
 import logging
 
-from autotest.client.shared import utils
-from autotest.client.shared import error
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import env_process
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Check smbios table :
@@ -39,7 +39,8 @@ def run(test, params, env):
             dmidecode_key = dmidecode_key.split()
             for key in dmidecode_key:
                 cmd = (dmidecode_exp % (smbios_type_number, key))
-                default_key_para = utils.system_output(cmd).strip()
+                default_key_para = process.system_output(
+                    cmd, shell=True).strip()
                 smbios_key_para_set = params.object_params(sm_type).get(key,
                                                                         default_key_para)
                 smbios += ",%s='%s'" % (key.lower(), smbios_key_para_set)
@@ -67,13 +68,14 @@ def run(test, params, env):
         params["machine_type"] = m_type
         params["start_vm"] = "yes"
 
-        error.context("Boot the vm using -M option:'-M %s',smbios para:'%s' "
-                      % (m_type, smbios), logging.info)
+        error_context.context("Boot the vm using -M option:'-M %s', smbios "
+                              "para: '%s'" % (m_type, smbios), logging.info)
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         vm1 = env.get_vm(params["main_vm"])
         session = vm1.wait_for_login(timeout=login_timeout)
 
-        error.context("Check smbios info on guest is setted as expected")
+        error_context.context("Check smbios info on guest "
+                              "is setted as expected")
 
         for sm_type in smbios_type.split():
             if sm_type == "Bios":
@@ -85,7 +87,8 @@ def run(test, params, env):
             for key in dmidecode_key:
                 cmd = (dmidecode_exp % (smbios_type_number, key))
                 smbios_get_para = session.cmd(cmd).strip()
-                default_key_para = utils.system_output(cmd).strip()
+                default_key_para = process.system_output(
+                    cmd, shell=True).strip()
                 if params.get("smbios_type_disable", "no") == "no":
                     smbios_set_para = params.object_params(sm_type).get(key,
                                                                         default_key_para)
@@ -95,6 +98,11 @@ def run(test, params, env):
 
                 if smbios_get_para == notset_output:
                     smbios_get_para = default_key_para
+
+                # make UUID check case insensitive
+                if key == "UUID":
+                    smbios_set_para = smbios_set_para.lower()
+                    smbios_get_para = smbios_get_para.lower()
 
                 if (smbios_set_para not in smbios_get_para):
                     e_msg = ("%s.%s mismatch, Set '%s' but guest is : '%s'"
@@ -106,7 +114,7 @@ def run(test, params, env):
         if params.get("traversal_machine_emulated", "no") == "yes":
             vm1.destroy(gracefully=False)
 
-    error.context("")
+    error_context.context("")
     if failures:
-        raise error.TestFail("smbios table test reported %s failures:\n%s" %
-                             (len(failures), "\n".join(failures)))
+        test.fail("smbios table test reported %s failures:\n%s" %
+                  (len(failures), "\n".join(failures)))

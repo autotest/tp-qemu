@@ -1,14 +1,10 @@
 import logging
 import re
-import random
 
-from virttest import data_dir
-from virttest import storage
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest.qemu_devices import qdevices
-from virttest import qemu_qtree
 
 
 @error_context.context_aware
@@ -25,14 +21,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
-    def find_image(image_name):
-        """
-        Find the path of the iamge.
-        """
-        image_params = params.object_params(image_name)
-        o = storage.get_image_filename(image_params, data_dir.get_data_dir())
-        return o
-
     def find_disk(vm, cmd):
         """
         Find all disks in guest.
@@ -40,7 +28,7 @@ def run(test, params, env):
         if params.get("os_type") == "linux":
             pattern = params.get("get_disk_pattern", "^/dev/vd[a-z]*$")
         elif params.get("os_type") == "windows":
-            pattern = "^\d+"
+            pattern = r"^\d+"
             cmd = params.get("get_disk_index", "wmic diskdrive get index")
         else:
             test.cancel("Unsupported OS type '%s'" % params.get("os_type"))
@@ -58,20 +46,25 @@ def run(test, params, env):
         disk = list(set(disk2).difference(set(disk1)))
         return disk
 
-    def unplug_device(vm, get_disk_cmd, device):
+    def run_sub_test(params, plug_tag):
         """
-        Unplug device
+        Run subtest before/after hotplug/unplug device.
+
+        :param plug_tag: identify when to run subtest,
+                         ex, before_hotplug.
+        :return: whether vm was successfully shut-down
+                 if needed
         """
-        disks_before_unplug = find_disk(vm, get_disk_cmd)
-        device.unplug(vm.monitor)
-        device.verify_unplug("", vm.monitor)
-        unplug_status = utils_misc.wait_for(lambda: len(get_new_disk(find_disk
-                                            (vm, get_disk_cmd), disks_before_unplug)) != 0, pause)
-        return unplug_status
+        sub_type = params.get("sub_type_%s" % plug_tag)
+        if sub_type:
+            error_context.context(context_msg % (sub_type, plug_tag),
+                                  logging.info)
+            utils_test.run_virt_sub_test(test, params, env, sub_type)
+            if sub_type == "shutdown" and vm.is_dead():
+                return True
+        return None
 
     img_list = params.get("images").split()
-    img_format_type = params.get("img_format_type", "qcow2")
-    pci_type = params.get("pci_type", "virtio-blk-pci")
     #sometimes, ppc can't get new plugged disk in 5s, so time to 10s
     pause = float(params.get("virtio_block_pause", 10.0))
     blk_num = int(params.get("blk_num", 1))
@@ -86,155 +79,86 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    for iteration in xrange(repeat_times):
+    for iteration in range(repeat_times):
         device_list = []
-        controller_list = []
-        controller_device_dict = {}
         error_context.context("Hotplug block device (iteration %d)" % iteration,
                               logging.info)
 
-        sub_type = params.get("sub_type_before_plug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "before hotplug"),
-                                  logging.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
+        plug_tag = "before_plug"
+        run_sub_test(params, plug_tag)
 
-        for num in xrange(blk_num):
-            device = qdevices.QDevice(pci_type)
+        for num in range(blk_num):
+            image_name = img_list[num + 1]
+            image_params = params.object_params(image_name)
             if params.get("need_plug") == "yes":
                 disks_before_plug = find_disk(vm, get_disk_cmd)
+                devs = vm.devices.images_define_by_params(image_name,
+                                                          image_params, 'disk')
+                for dev in devs:
+                    ret = vm.devices.simple_hotplug(dev, vm.monitor)
+                    if ret[1] is False:
+                        test.fail("Failed to hotplug device '%s'."
+                                  "Output:\n%s" % (dev, ret[0]))
+                plug_disks = utils_misc.wait_for(lambda: get_new_disk(disks_before_plug,
+                                                 find_disk(vm, get_disk_cmd)), pause)
+                if not plug_disks:
+                    test.fail("Failed to hotplug device to guest")
+                disk = plug_disks[0]
 
-                if params.get("need_controller", "no") == "yes":
-                    controller_model = params.get("controller_model")
-                    controller = qdevices.QDevice(controller_model, params={"id":
-                                                  "hotadded_scsi%s" % num})
-                    bus_extra_param = params.get("bus_extra_params_%s" % img_list[num + 1])
-                    if bus_extra_param:
-                        for item in bus_extra_param.split():
-                            key, value = item.split("=", 1)
-                            qdevice_params = {key: value}
-                            controller.params.update(qdevice_params)
-                    controller.hotplug(vm.monitor)
-                    ver_out = controller.verify_hotplug("", vm.monitor)
-                    if not ver_out:
-                        err = "%s is not in qtree after hotplug" % controller_model
-                        test.fail(err)
+                session = vm.wait_for_login(timeout=timeout)
+                if params.get("os_type") == "windows":
+                    if iteration == 0:
+                        error_context.context("Format disk", logging.info)
+                        utils_misc.format_windows_disk(session, disk_index[num],
+                                                       mountpoint=disk_letter[num])
+                error_context.context("Check block device after hotplug.",
+                                      logging.info)
+                if params.get("disk_op_cmd"):
+                    if params.get("os_type") == "linux":
+                        test_cmd = params.get("disk_op_cmd") % (disk, disk)
+                    elif params.get("os_type") == "windows":
+                        test_cmd = params.get("disk_op_cmd") % (disk_letter[num],
+                                                                disk_letter[num])
+                        test_cmd = utils_misc.set_winutils_letter(session, test_cmd)
                     else:
-                        controller_list.append(controller)
+                        test.cancel("Unsupported OS type '%s'" % params.get("os_type"))
 
-                drive = qdevices.QRHDrive("block%d" % num)
-                drive.set_param("file", find_image(img_list[num + 1]))
-                drive.set_param("format", img_format_type)
-                drive_id = drive.get_param("id")
-                drive.hotplug(vm.monitor)
+                    status, output = session.cmd_status_output(test_cmd,
+                                                               timeout=disk_op_timeout)
+                    if status:
+                        test.fail("Check for block device failed."
+                                  "Output: %s" % output)
+                session.close()
 
-                device.set_param("drive", drive_id)
-                device.set_param("id", "block%d" % num)
-                if params.get("need_controller", "no") == "yes" and bool(random.randrange(2)):
-                    device.set_param("bus", controller.get_param("id")+'.0')
-                blk_extra_param = params.get("blk_extra_params_%s" % img_list[num + 1])
-                if blk_extra_param:
-                    for item in blk_extra_param.split():
-                        key, value = item.split("=", 1)
-                        device.set_param(key, value)
-                device.hotplug(vm.monitor)
-                ver_out = device.verify_hotplug("", vm.monitor)
-                if not ver_out:
-                    err = "%s is not in qtree after hotplug" % pci_type
-                    test.fail(err)
-                plug_status = utils_misc.wait_for(lambda: len(get_new_disk(disks_before_plug,
-                                                  find_disk(vm, get_disk_cmd))) != 0, pause)
-                if plug_status:
-                    disks_after_plug = find_disk(vm, get_disk_cmd)
-                    new_disks = get_new_disk(disks_before_plug, disks_after_plug)
-                else:
-                    test.fail("Can't get new disks")
-                if params.get("need_controller", "no") == "yes":
-                    info_qtree = vm.monitor.info('qtree', False)
-                    qtree = qemu_qtree.QtreeContainer()
-                    qtree.parse_info_qtree(info_qtree)
-                    for node in qtree.get_nodes():
-                        if node.qtree.get("id") == device.get_param("id"):
-                            try:
-                                controller_id = node.parent.qtree.get("id").split(".")[0]
-                            except AttributeError:
-                                test.fail("can't get parent of:\n%s" % node)
-                            controller_device_dict.setdefault(controller_id, []).append(device)
-                            break
-                    else:
-                        test.fail("Can't find device '%s' in qtree" % device.get_param("id"))
+                devs = [dev for dev in devs if not isinstance(dev, qdevices.QDrive)]
+                device_list.extend(devs)
             else:
-                if params.get("drive_format") in pci_type:
-                    get_disk_cmd += " | egrep -v '^/dev/[hsv]da[0-9]*$'"
+                for device in vm.devices:
+                    if device.get_param("id") == img_list[num + 1]:
+                        device_list.append(device)
 
-                device.set_param("id", img_list[num + 1])
-                new_disks = find_disk(vm, get_disk_cmd)
+        plug_tag = "after_plug"
+        vm_switched_off = run_sub_test(params, plug_tag)
+        if vm_switched_off:
+            return
 
-            device_list.append(device)
-            if not new_disks:
-                test.fail("Cannot find new disk after hotplug.")
-
-            if params.get("need_plug") == "yes":
-                disk = new_disks[0]
-            else:
-                disk = new_disks[num]
-
-            session = vm.wait_for_login(timeout=timeout)
-            if params.get("os_type") == "windows":
-                if iteration == 0:
-                    error_context.context("Format disk", logging.info)
-                    utils_misc.format_windows_disk(session, disk_index[num],
-                                                   mountpoint=disk_letter[num])
-            error_context.context("Check block device after hotplug.",
-                                  logging.info)
-            if params.get("disk_op_cmd"):
-                if params.get("os_type") == "linux":
-                    test_cmd = params.get("disk_op_cmd") % (disk, disk)
-                elif params.get("os_type") == "windows":
-                    test_cmd = params.get("disk_op_cmd") % (disk_letter[num],
-                                                            disk_letter[num])
-                    test_cmd = utils_misc.set_winutils_letter(session, test_cmd)
-                else:
-                    test.cancel("Unsupported OS type '%s'" % params.get("os_type"))
-
-                status, output = session.cmd_status_output(test_cmd,
-                                                           timeout=disk_op_timeout)
-                if status:
-                    test.fail("Check for block device failed "
-                              "after hotplug, Output: %r" % output)
-            session.close()
-
-        sub_type = params.get("sub_type_after_plug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "after hotplug"),
-                                  logging.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
-            if sub_type == "shutdown" and vm.is_dead():
-                return
-
-        sub_type = params.get("sub_type_before_unplug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "before unplug"),
-                                  logging.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
+        plug_tag = "before_unplug"
+        run_sub_test(params, plug_tag)
 
         error_context.context("Unplug block device (iteration %d)" % iteration,
                               logging.info)
-        for controller in controller_list:
-            controller_id = controller.get_param("id")
-            for device in controller_device_dict.get(controller_id, []):
-                unplug_status = unplug_device(vm, get_disk_cmd, device)
-                if not unplug_status:
-                    test.fail("Failed to unplug disks '%s'" % device.get_param("id"))
-                device_list.remove(device)
-            controller.unplug(vm.monitor)
-        for device in device_list:
-            unplug_status = unplug_device(vm, get_disk_cmd, device)
-            if not unplug_status:
-                test.fail("Failed to unplug disks '%s'" % device.get_param("id"))
+        disks_before_unplug = find_disk(vm, get_disk_cmd)
+        for device in reversed(device_list):
+            ret = vm.devices.simple_unplug(device, vm.monitor)
+            if ret[1] is False:
+                test.fail("Failed to unplug device '%s'."
+                          "Output:\n%s" % (device, ret[0]))
 
-        sub_type = params.get("sub_type_after_unplug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "after unplug"),
-                                  logging.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
+        unplug_disks = utils_misc.wait_for(lambda: get_new_disk(find_disk(vm, get_disk_cmd),
+                                           disks_before_unplug), pause)
+        if len(unplug_disks) != blk_num:
+            test.fail("Failed to unplug devices from guest, need to unplug: %d,"
+                      "actual unplug: %d" % (blk_num, len(unplug_disks)))
+
+        plug_tag = "after_unplug"
+        run_sub_test(params, plug_tag)

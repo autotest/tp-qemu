@@ -16,9 +16,9 @@ from virttest import utils_misc
 def check_network_interface_ip(interface, ipv6="no"):
     check_cmd = "ifconfig %s" % interface
     output = process.system_output(check_cmd)
-    ip_re = "inet (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+    ip_re = r"inet (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
     if ipv6 == "yes":
-        ip_re = "inet6 (\S+)"
+        ip_re = r"inet6 (\S+)"
     try:
         _ip = re.findall(ip_re, output)[0]
     except IndexError:
@@ -94,7 +94,7 @@ def run(test, params, env):
         msg += " Please set device_type to 'vf' or 'pf'."
         test.error(msg)
 
-    for i in xrange(device_num):
+    for i in range(device_num):
         device = {}
         device["type"] = device_type
         if device_type == "vf":
@@ -126,7 +126,7 @@ def run(test, params, env):
             try:
                 utils_net.create_network_script(ethname, mac, "dhcp",
                                                 "255.255.255.0", on_boot="yes")
-            except Exception, info:
+            except Exception as info:
                 test.error("Network script creation failed - %s" % info)
 
         msg = "Check whether VFs could get ip in host."
@@ -141,7 +141,7 @@ def run(test, params, env):
                 ips[ethname] = _ip
                 logging.info("Interface '%s' get IP '%s'", ethname, _ip)
 
-    for i in xrange(repeat_time):
+    for i in range(repeat_time):
         msg = "Bind/unbind device from host. Repeat %s/%s" % (i + 1,
                                                               repeat_time)
         error_context.context(msg, logging.info)

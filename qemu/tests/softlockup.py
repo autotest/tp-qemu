@@ -3,7 +3,8 @@ import os
 import socket
 import time
 
-from autotest.client import utils
+from avocado.utils import cpu
+from avocado.utils import process
 
 from virttest import data_dir
 
@@ -54,8 +55,8 @@ def run(test, params, env):
 
     def _kill_host_programs(kill_stress_cmd, kill_monitor_cmd):
         logging.info("Kill stress and monitor on host")
-        utils.run(kill_stress_cmd, ignore_status=True)
-        utils.run(kill_monitor_cmd, ignore_status=True)
+        process.run(kill_stress_cmd, ignore_status=True, shell=True)
+        process.run(kill_monitor_cmd, ignore_status=True, shell=True)
 
     def host():
         logging.info("Setup monitor server on host")
@@ -65,22 +66,24 @@ def run(test, params, env):
         if os.path.isfile(monitor_log_file_server):
             os.remove(monitor_log_file_server)
         # Opening firewall ports on host
-        utils.run("iptables -F", ignore_status=True)
+        process.run("iptables -F", ignore_status=True)
 
         # Run heartbeat on host
-        utils.run(server_setup_cmd % (monitor_dir, threshold,
-                                      monitor_log_file_server, monitor_port))
+        process.run(
+            server_setup_cmd
+            % (monitor_dir, threshold, monitor_log_file_server, monitor_port),
+            shell=True)
 
         if stress_setup_cmd is not None:
             logging.info("Build stress on host")
             # Uncompress and build stress on host
-            utils.run(stress_setup_cmd % stress_dir)
+            process.run(stress_setup_cmd % stress_dir, shell=True)
 
         logging.info("Run stress on host")
         # stress_threads = 2 * n_cpus
-        threads_host = 2 * utils.count_cpus()
+        threads_host = 2 * cpu.online_cpus_count()
         # Run stress test on host
-        utils.run(stress_cmd % (stress_dir, threads_host))
+        process.run(stress_cmd % (stress_dir, threads_host), shell=True)
 
     def guest():
         try:
@@ -93,8 +96,8 @@ def run(test, params, env):
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(("redhat.com", 80))
                 host_ip = s.getsockname()[0]
-            except socket.error, (value, e):
-                test.error("Could not determine host IP: %d %s" % (value, e))
+            except socket.error as e:
+                test.error("Could not determine host IP: %s" % e)
 
         # Now, starting the guest
         vm.verify_alive()
@@ -144,7 +147,8 @@ def run(test, params, env):
         _kill_host_programs(kill_stress_cmd, kill_monitor_cmd)
 
         # Collect drift
-        drift = utils.system_output(drift_cmd % monitor_log_file_server)
+        drift = process.system_output(drift_cmd % monitor_log_file_server,
+                                      shell=True)
         logging.info("Drift noticed: %s", drift)
 
     host()

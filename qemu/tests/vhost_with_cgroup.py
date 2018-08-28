@@ -1,16 +1,12 @@
 import logging
-from autotest.client.shared import error
-from autotest.client import utils
+
+from avocado.utils import process
 from virttest.env_process import preprocess
-
-try:
-    from virttest.staging.utils_cgroup import Cgroup, CgroupModules
-except ImportError:
-    # TODO: Obsoleted path used prior autotest-0.15.2/virttest-2013.06.24
-    from autotest.client.shared.utils_cgroup import Cgroup, CgroupModules
+from virttest.staging.utils_cgroup import Cgroup, CgroupModules
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test Step:
@@ -30,22 +26,23 @@ def run(test, params, env):
         :param pwd: desired cgroup's pwd, cgroup index or None for root cgroup
         """
         cgroup.set_cgroup(vm.get_shell_pid(), pwd)
-        for pid in utils.get_children_pids(vm.get_shell_pid()):
+        for pid in process.get_children_pids(vm.get_shell_pid()):
             try:
                 cgroup.set_cgroup(int(pid), pwd)
             except Exception:   # Process might not already exist
-                raise error.TestFail("Failed to move all VM threads to cgroup")
+                test.fail("Failed to move all VM threads to cgroup")
 
-    error.context("Test Setup: Cgroup initialize in host", logging.info)
+    error_context.context("Test Setup: Cgroup initialize in host",
+                          logging.info)
     modules = CgroupModules()
     if (modules.init(['cpu']) != 1):
-        raise error.TestFail("Can't mount cpu cgroup modules")
+        test.fail("Can't mount cpu cgroup modules")
 
     cgroup = Cgroup('cpu', '')
     cgroup.initialize(modules)
 
-    error.context("Boot guest and attach vhost to cgroup your setting(cpu)",
-                  logging.info)
+    error_context.context("Boot guest and attach vhost to cgroup your"
+                          " setting(cpu)", logging.info)
     params["start_vm"] = "yes"
     preprocess(test, params, env)
     vm = env.get_vm(params["main_vm"])
@@ -56,18 +53,20 @@ def run(test, params, env):
     cgroup.set_property("cpu.cfs_period_us", 100000, 0)
     assign_vm_into_cgroup(vm, cgroup, 0)
 
-    vhost_pids = utils.system_output("pidof vhost-%s" % vm.get_pid())
+    vhost_pids = process.system_output("pidof vhost-%s" % vm.get_pid(),
+                                       shell=True,
+                                       ignore_status=True).decode()
     if not vhost_pids:
-        raise error.TestError("Vhost process not exise")
+        test.error("Vhost process does not exist")
     logging.info("Vhost have started with pid %s" % vhost_pids)
     for vhost_pid in vhost_pids.strip().split():
         cgroup.set_cgroup(int(vhost_pid))
 
-    error.context("Check whether vhost attached to cgroup successfully",
-                  logging.info)
+    error_context.context("Check whether vhost attached to"
+                          " cgroup successfully", logging.info)
     cgroup_tasks = " ".join(cgroup.get_property("tasks"))
     for vhost_pid in vhost_pids.strip().split():
         if vhost_pid not in cgroup_tasks:
-            raise error.TestError("vhost process attach to cgroup FAILED!"
-                                  " Tasks in cgroup is:%s" % cgroup_tasks)
+            test.error("vhost process attach to cgroup FAILED!"
+                       " Tasks in cgroup is:%s" % cgroup_tasks)
     logging.info("Vhost process attach to cgroup successfully")

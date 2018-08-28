@@ -6,11 +6,8 @@ multi_disk test for Autotest framework.
 import logging
 import re
 import random
-import string
 
 from avocado.utils import astring
-
-from autotest.client.shared import error
 
 from virttest import env_process
 from virttest import error_context
@@ -122,7 +119,7 @@ def run(test, params, env):
         else:
             disk_size = image_size[:-1] + " GB"
 
-        regex_str = 'Disk (\d+).*?%s.*?%s' % (disk_size, disk_size)
+        regex_str = r'Disk (\d+).*?%s.*?%s' % (disk_size, disk_size)
         for disk in disks.splitlines():
             if disk.startswith("  Disk"):
                 o = re.findall(regex_str, disk, re.I | re.M)
@@ -156,7 +153,7 @@ def run(test, params, env):
 
     rerange = []
     has_name = False
-    for i in xrange(len(stg_params)):
+    for i in range(len(stg_params)):
         if not stg_params[i].strip():
             continue
         (cmd, parm) = stg_params[i].split(':', 1)
@@ -165,9 +162,9 @@ def run(test, params, env):
         if _RE_RANGE1.match(parm):
             parm = _range(parm)
             if parm is False:
-                raise error.TestError("Incorrect cfg: stg_params %s looks "
-                                      "like range(..) but doesn't contain "
-                                      "numbers." % cmd)
+                test.error("Incorrect cfg: stg_params %s looks "
+                           "like range(..) but doesn't contain "
+                           "numbers." % cmd)
             param_matrix[cmd] = parm
             if type(parm) is str:
                 # When we know the stg_image_num, substitute it.
@@ -196,7 +193,7 @@ def run(test, params, env):
         param_table_header.append(_)
 
     stg_image_name = params.get('stg_image_name', 'images/%s')
-    for i in xrange(stg_image_num):
+    for i in range(stg_image_num):
         name = "stg%d" % i
         params['images'] += " %s" % name
         param_table.append([])
@@ -204,7 +201,7 @@ def run(test, params, env):
         if not has_name:
             params["image_name_%s" % name] = stg_image_name % name
             param_table[-1].append(params.get("image_name_%s" % name))
-        for parm in param_matrix.iteritems():
+        for parm in param_matrix.items():
             params['%s_%s' % (parm[0], name)] = str(parm[1][i % len(parm[1])])
             param_table[-1].append(params.get('%s_%s' % (parm[0], name)))
 
@@ -254,8 +251,8 @@ def run(test, params, env):
         err += tmp1 + tmp2
 
         if err:
-            raise error.TestFail("%s errors occurred while verifying"
-                                 " qtree vs. params" % err)
+            test.fail("%s errors occurred while verifying"
+                      " qtree vs. params" % err)
         if params.get('multi_disk_only_qtree') == 'yes':
             return
 
@@ -271,12 +268,12 @@ def run(test, params, env):
             if len(disk_indexs) < stg_image_num:
                 err_msg = "Set disks num: %d" % stg_image_num
                 err_msg += ", Get disks num in guest: %d" % len(disk_indexs)
-                raise error.TestFail("Fail to list all the volumes, %s" % err_msg)
+                test.fail("Fail to list all the volumes, %s" % err_msg)
 
             # Random select one file system from file_system
             index = random.randint(0, (len(file_system) - 1))
             fs_type = file_system[index].strip()
-            for i in xrange(stg_image_num):
+            for i in range(stg_image_num):
                 utils_misc.format_windows_disk(session, disk_indexs[i], None,
                                                None, fs_type)
 
@@ -284,12 +281,12 @@ def run(test, params, env):
         cmd = params["list_volume_command"]
         s, output = session.cmd_status_output(cmd, timeout=cmd_timeout)
         if s != 0:
-            raise error.TestFail("List volume command failed with cmd '%s'.\n"
-                                 "Output is: %s\n" % (cmd, output))
+            test.fail("List volume command failed with cmd '%s'.\n"
+                      "Output is: %s\n" % (cmd, output))
 
         output = session.cmd_output(cmd, timeout=cmd_timeout)
         disks = re.findall(re_str, output)
-        disks = map(string.strip, disks)
+        disks = [item.strip() for item in disks]
         disks.sort()
         logging.debug("Volume list that meet regular expressions: %s",
                       " ".join(disks))
@@ -297,7 +294,7 @@ def run(test, params, env):
         images = params.get("images").split()
         if len(disks) < len(images):
             logging.debug("disks: %s , images: %s", len(disks), len(images))
-            raise error.TestFail("Fail to list all the volumes!")
+            test.fail("Fail to list all the volumes!")
 
         if params.get("os_type") == "linux":
             output = session.cmd_output("mount")
@@ -348,8 +345,7 @@ def run(test, params, env):
                 key_word = params["check_result_key_word"]
                 output = session.cmd_output(cmd)
                 if key_word not in output:
-                    raise error.TestFail("Files on guest os root fs and disk "
-                                         "differ")
+                    test.fail("Files on guest os root fs and disk differ")
 
             if params.get("umount_command"):
                 cmd = params.get("show_mount_cmd")
@@ -372,7 +368,7 @@ def run(test, params, env):
                     error_context.context("Unmounting disk: %s..." % disk)
                     cmd = params["umount_command"] % (disk, disk)
                     session.cmd(cmd)
-            except Exception, err:
+            except Exception as err:
                 logging.warn("Get error when cleanup, '%s'", err)
 
         _do_post_cmd(session)

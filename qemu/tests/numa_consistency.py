@@ -1,16 +1,16 @@
 import logging
 import resource
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
+from avocado.utils import process
 
 from virttest import env_process
+from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest.staging import utils_memory
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu numa consistency test:
@@ -33,13 +33,12 @@ def run(test, params, env):
                            in numa_node_info.nodes[_].cpus][0])
         return node_used_host
 
-    error.context("Get host numa topological structure", logging.info)
+    error_context.context("Get host numa topological structure", logging.info)
     timeout = float(params.get("login_timeout", 240))
     host_numa_node = utils_misc.NumaInfo()
     node_list = host_numa_node.online_nodes
     if len(node_list) < 2:
-        raise error.TestNAError("This host only has one NUMA node, "
-                                "skipping test...")
+        test.cancel("This host only has one NUMA node, skipping test...")
     node_list.sort()
     params['smp'] = len(node_list)
     params['vcpu_cores'] = 1
@@ -69,20 +68,22 @@ def run(test, params, env):
     qemu_pid = vm.get_pid()
     drop = 0
     for cpuid in range(len(vcpu_threads)):
-        error.context("Get vcpu %s used numa node." % cpuid, logging.info)
+        error_context.context("Get vcpu %s used numa node." % cpuid,
+                              logging.info)
         memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            qemu_pid)
         node_used_host = get_vcpu_used_node(host_numa_node,
                                             vcpu_threads[cpuid])
         node_used_host_index = node_list.index(node_used_host)
         memory_used_before = memory_status[node_used_host_index]
-        error.context("Allocate memory in guest", logging.info)
+        error_context.context("Allocate memory in guest", logging.info)
         session.cmd(mount_cmd)
         binded_dd_cmd = "taskset %s" % str(2 ** int(cpuid))
         binded_dd_cmd += " dd if=/dev/urandom of=/tmp/%s" % cpuid
         binded_dd_cmd += " bs=1M count=%s" % dd_size
         session.cmd(binded_dd_cmd)
-        error.context("Check qemu process memory use status", logging.info)
+        error_context.context("Check qemu process memory use status",
+                              logging.info)
         node_after = get_vcpu_used_node(host_numa_node, vcpu_threads[cpuid])
         if node_after != node_used_host:
             logging.warn("Node used by vcpu thread changed. So drop the"
@@ -98,15 +99,15 @@ def run(test, params, env):
         if 1 - float(memory_allocated) / float(dd_size) > 0.05:
             numa_hardware_cmd = params.get("numa_hardware_cmd")
             if numa_hardware_cmd:
-                numa_info = utils.system_output(numa_hardware_cmd,
-                                                ignore_status=True)
+                numa_info = process.system_output(numa_hardware_cmd,
+                                                  ignore_status=True,
+                                                  shell=True)
             msg = "Expect malloc %sM memory in node %s," % (dd_size,
                                                             node_used_host)
             msg += "but only malloc %sM \n" % memory_allocated
             msg += "Please check more details of the numa node: %s" % numa_info
-            raise error.TestFail(msg)
+            test.fail(msg)
     session.close()
 
     if drop == len(vcpu_threads):
-        raise error.TestError("All test rounds are dropped."
-                              " Please test it again.")
+        test.error("All test rounds are dropped. Please test it again.")

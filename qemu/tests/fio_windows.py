@@ -59,7 +59,7 @@ def run(test, params, env):
         error_context.context("Copy fio log from guest to host.", logging.info)
         try:
             vm.copy_files_from(fio_log_file, test.resultsdir)
-        except Exception, err:
+        except Exception as err:
             logging.warn("Log file copy failed: %s" % err)
         if session:
             session.close()

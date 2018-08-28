@@ -7,7 +7,7 @@ from virttest import utils_test
 
 @error_context.context_aware
 def mount_lv(lv_path, session):
-    error_context.context("mounting ext3 filesystem made on logical volume %s"
+    error_context.context("mounting filesystem made on logical volume %s"
                           % os.path.basename(lv_path), logging.info)
     session.cmd("mkdir -p /mnt/kvm_test_lvm")
     session.cmd("mount %s /mnt/kvm_test_lvm" % lv_path)
@@ -15,7 +15,7 @@ def mount_lv(lv_path, session):
 
 @error_context.context_aware
 def umount_lv(lv_path, session):
-    error_context.context("umounting ext3 filesystem made on logical volume "
+    error_context.context("umounting filesystem made on logical volume "
                           "%s" % os.path.basename(lv_path), logging.info)
     session.cmd("umount %s" % lv_path)
     session.cmd("rm -rf /mnt/kvm_test_lvm")
@@ -57,6 +57,7 @@ def run(test, params, env):
     timeout = params.get("lvm_timeout", "600")
     check_mount = params.get("check_mount", "mountpoint /mnt/kvm_test_lvm")
     sub_type = params.get("sub_type", "lvm_create")
+    fs_type = params.get("fs_type", "ext4")
     try:
         if sub_type == "lvm_create":
             disk_list = []
@@ -79,13 +80,13 @@ def run(test, params, env):
             error_context.context("creating logical volume on volume group %s"
                                   % vg_name, logging.info)
             session.cmd("lvcreate -L2000 -n %s %s" % (lv_name, vg_name))
-            error_context.context("creating ext3 filesystem on logical volume"
-                                  " %s" % lv_name, logging.info)
-            session.cmd("yes | mkfs.ext3 %s" % lv_path, timeout=int(timeout))
+            error_context.context("creating %s filesystem on logical volume"
+                                  " %s" % (fs_type, lv_name), logging.info)
+            session.cmd("yes | mkfs.%s %s" % (fs_type, lv_path), timeout=int(timeout))
             mount_lv(lv_path, session)
             umount_lv(lv_path, session)
-            error_context.context("checking ext3 filesystem made on logical "
-                                  "volume %s" % lv_name, logging.info)
+            error_context.context("checking %s filesystem made on logical "
+                                  "volume %s" % (fs_type, lv_name), logging.info)
             session.cmd("fsck %s" % lv_path, timeout=int(timeout))
             if clean == "no":
                 mount_lv(lv_path, session)

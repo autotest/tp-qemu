@@ -2,12 +2,12 @@ import time
 import logging
 import re
 
-from autotest.client.shared import error
 from virttest import utils_test
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM shutdown test:
@@ -27,32 +27,32 @@ def run(test, params, env):
     shutdown_command = params.get("shutdown_command")
     check_from_monitor = params.get("check_from_monitor", "no") == "yes"
 
-    for i in xrange(shutdown_count):
+    for i in range(shutdown_count):
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
-        error.base_context("shutting down the VM %s/%s" % (i + 1,
-                                                           shutdown_count),
-                           logging.info)
+        error_context.base_context("shutting down the VM %s/%s" % (i + 1,
+                                   shutdown_count), logging.info)
         if params.get("setup_runlevel") == "yes":
-            error.context("Setup the runlevel for guest", logging.info)
+            error_context.context("Setup the runlevel for guest", logging.info)
             utils_test.qemu.setup_runlevel(params, session)
 
         if shutdown_method == "shell":
             # Send a shutdown command to the guest's shell
             session.sendline(shutdown_command)
-            error.context("waiting VM to go down (shutdown shell cmd)",
-                          logging.info)
+            error_context.context("waiting VM to go down (shutdown shell cmd)",
+                                  logging.info)
         elif shutdown_method == "system_powerdown":
             # Sleep for a while -- give the guest a chance to finish booting
             time.sleep(sleep_time)
             # Send a system_powerdown monitor command
             vm.monitor.system_powerdown()
-            error.context("waiting VM to go down "
-                          "(system_powerdown monitor cmd)", logging.info)
+            error_context.context("waiting VM to go down "
+                                  "(system_powerdown monitor cmd)",
+                                  logging.info)
 
         if not vm.wait_for_shutdown(360):
-            raise error.TestFail("Guest refuses to go down")
+            test.fail("Guest refuses to go down")
 
         if check_from_monitor and params.get("disable_shutdown") == "yes":
             check_failed = False
@@ -61,11 +61,10 @@ def run(test, params, env):
                 if vm_status['status'] != "shutdown":
                     check_failed = True
             else:
-                if not re.findall("paused\s+\(shutdown\)", vm_status):
+                if not re.findall(r"paused\s+\(shutdown\)", vm_status):
                     check_failed = True
             if check_failed:
-                raise error.TestFail("Status check from monitor "
-                                     "is: %s" % str(vm_status))
+                test.fail("Status check from monitor is: %s" % str(vm_status))
         if params.get("disable_shutdown") == "yes":
             # Quit the qemu process
             vm.destroy(gracefully=False)

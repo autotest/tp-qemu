@@ -1,7 +1,5 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_test
 from virttest import env_process
 from virttest import error_context
@@ -26,7 +24,7 @@ def run(test, params, env):
     image_parent_bus = params.get("image_parent_bus")
     image_num = int(params.get("image_num", 0))
     if image_num != 0:
-        for index in xrange(image_num):
+        for index in range(image_num):
             image = "stg%s" % index
             params["images"] = ' '.join([params["images"], image])
             params["disk_pci_bus_%s" % image] = image_parent_bus
@@ -49,7 +47,7 @@ def run(test, params, env):
     error_context.context("Check 'info block'!", logging.info)
     monitor_info_block = vm.monitor.info_block(False)
     if image_num + 1 != len(monitor_info_block.keys()):
-        raise error.TestFail("Check 'info block' failed!")
+        test.fail("Check 'info block' failed!")
     logging.info("Check 'info block' succeed!")
 
     error_context.context("Read and write data on all disks!", logging.info)

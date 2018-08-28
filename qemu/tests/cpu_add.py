@@ -2,13 +2,12 @@ import logging
 import re
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Runs CPU hotplug test:
@@ -59,7 +58,7 @@ def run(test, params, env):
         err_msg += "there shoule be %s vcpus exist, " % total_cpus_expected
         err_msg += "in qemu %s vcpus threads works, " % len(vm.vcpu_threads)
         err_msg += "in guest %s cpus works." % vm.get_cpu_count()
-        raise error.TestFail(err_msg)
+        test.fail(err_msg)
 
     def cpu_online_offline(session, cpu_id, online=""):
         """
@@ -99,7 +98,8 @@ def run(test, params, env):
     ntp_sync_cmd = params.get("ntp_sync_cmd", "")
     ntp_service_stop_cmd = params.get("ntp_service_stop_cmd")
 
-    error.context("Boot the vm, with '-smp X,maxcpus=Y' option", logging.info)
+    error_context.context("Boot the vm, with '-smp X,maxcpus=Y' option",
+                          logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
@@ -108,23 +108,24 @@ def run(test, params, env):
         vcpu_need_hotplug = vcpu_need_hotplug - vm.cpuinfo.smp
 
     if ntp_sync_cmd:
-        error.context("sync guest time via ntp server", logging.info)
+        error_context.context("sync guest time via ntp server", logging.info)
         session.cmd(ntp_sync_cmd)
     if ntp_service_stop_cmd:
         logging.info("stop ntp service in guest")
         session.cmd(ntp_service_stop_cmd)
 
-    error.context("Check if cpus in guest match qemu cmd before hotplug",
-                  logging.info)
+    error_context.context("Check if cpus in guest match qemu "
+                          "cmd before hotplug", logging.info)
     qemu_guest_cpu_match(vm)
 
     # do pre_operation like stop, before vcpu Hotplug
     stop_before_hotplug = params.get("stop_before_hotplug", "no")
     if stop_before_hotplug == 'yes':
-        error.context("Stop the guest before hotplug vcpu", logging.info)
+        error_context.context("Stop the guest before hotplug vcpu",
+                              logging.info)
         vm.pause()
 
-    error.context("Do cpu hotplug", logging.info)
+    error_context.context("Do cpu hotplug", logging.info)
     if vm.monitor.protocol == 'human':
         human_check_info = params.get("human_error_recheck", None)
         qmp_check_info = None
@@ -154,11 +155,11 @@ def run(test, params, env):
                 continue
             else:
                 err_msg = "Qemu should report error, but hotplug successfully"
-                raise error.TestFail(err_msg)
+                test.fail(err_msg)
         else:
             if not output:
                 warn_msg = "Qemu should report some warning information"
-                raise error.TestWarn(warn_msg)
+                test.error(warn_msg)
             if qmp_check_info and re.findall(qmp_check_info, output, re.I):
                 msg = "Hotplug vcpu(id:'%s') error, qemu report the error."
                 logging.info(msg % plug_cpu_id)
@@ -176,22 +177,23 @@ def run(test, params, env):
                 err_msg += "the maxcpus allowed is: '%s', " % maxcpus
                 err_msg += "qemu cpu list is:'%s'" % vm.monitor.info("cpus")
                 logging.debug("The error info is:\n '%s'" % output)
-                raise error.TestFail(err_msg)
+                test.fail(err_msg)
 
     if stop_before_hotplug == "yes":
-        error.context("Resume the guest after cpu hotplug", logging.info)
+        error_context.context("Resume the guest after cpu hotplug",
+                              logging.info)
         vm.resume()
 
     if params.get("reboot_after_hotplug", False):
-        error.context("Reboot guest after hotplug vcpu", logging.info)
+        error_context.context("Reboot guest after hotplug vcpu", logging.info)
         vm.reboot()
 
     if vcpu_been_pluged != 0:
-        error.context("Check whether cpus are match after hotplug",
-                      logging.info)
+        error_context.context("Check whether cpus are match after hotplug",
+                              logging.info)
         qemu_guest_cpu_match(vm, vcpu_been_pluged)
 
-    error.context("Do cpu online/offline in guest", logging.info)
+    error_context.context("Do cpu online/offline in guest", logging.info)
     # Window guest doesn't support online/offline test
     if params['os_type'] == "windows":
         logging.info("For windows guest not do online/offline test")
@@ -216,32 +218,30 @@ def run(test, params, env):
             logging.info("sleep %s seconds", onoff_iterations)
             time.sleep(onoff_iterations)
             if ntp_query_cmd:
-                error.context("Check guest clock after online cpu",
-                              logging.info)
+                error_context.context("Check guest clock after online cpu",
+                                      logging.info)
                 current_offset = get_clock_offset(session, ntp_query_cmd)
                 if current_offset > acceptable_offset:
-                    raise error.TestFail("time drift(%ss)" % current_offset +
-                                         "after online cpu(%s)"
-                                         % offline_cpu)
+                    test.fail("time drift(%ss)" % current_offset +
+                              "after online cpu(%s)" % offline_cpu)
         for online_cpu in online_list:
             cpu_online_offline(session, online_cpu, "online")
             logging.info("sleep %s seconds", onoff_iterations)
             time.sleep(onoff_iterations)
             if ntp_query_cmd:
-                error.context("Check guest clock after offline cpu",
-                              logging.info)
+                error_context.context("Check guest clock after offline cpu",
+                                      logging.info)
                 current_offset = get_clock_offset(session, ntp_query_cmd)
                 if current_offset > acceptable_offset:
-                    raise error.TestFail("time drift(%s)" % current_offset +
-                                         "after offline cpu(%s)"
-                                         % online_cpu)
+                    test.fail("time drift(%s)" % current_offset +
+                              "after offline cpu(%s)" % online_cpu)
 
     # do sub test after cpu hotplug
     if (params.get("run_sub_test", "no") == "yes" and
             'sub_test_name' in params):
         sub_test = params['sub_test_name']
-        error.context("Run subtest %s after cpu hotplug" % sub_test,
-                      logging.info)
+        error_context.context("Run subtest %s after cpu hotplug" % sub_test,
+                              logging.info)
         if (sub_test == "guest_suspend" and
                 params["guest_suspend_type"] == "disk"):
             vm.params["smp"] = int(vm.cpuinfo.smp) + vcpu_been_pluged
@@ -254,7 +254,8 @@ def run(test, params, env):
             session = vm.wait_for_login(timeout=timeout)
 
     if params.get("vcpu_num_rechek", "yes") == "yes":
-        error.context("Recheck cpu numbers after operation", logging.info)
+        error_context.context("Recheck cpu numbers after operation",
+                              logging.info)
         qemu_guest_cpu_match(vm, vcpu_been_pluged)
 
     if session:

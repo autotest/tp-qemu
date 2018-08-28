@@ -56,7 +56,7 @@ class EnospcConfig(object):
             # it with the raw file as quickly as possible
             l_result = process.run("losetup -f")
             process.run("losetup -f %s" % self.raw_file_path)
-            self.loopback = l_result.stdout.strip()
+            self.loopback = l_result.stdout.decode().strip()
             # Add the loopback device configured to the list of pvs
             # recognized by LVM
             process.run("pvcreate %s" % self.loopback)
@@ -73,7 +73,7 @@ class EnospcConfig(object):
         except Exception:
             try:
                 self.cleanup()
-            except Exception, e:
+            except Exception as e:
                 logging.warn(e)
             raise
 
@@ -85,11 +85,11 @@ class EnospcConfig(object):
             time.sleep(2)
         l_result = process.run("lvdisplay")
         # Let's remove all volumes inside the volume group created
-        if self.lvtest_name in l_result.stdout:
+        if self.lvtest_name in l_result.stdout.decode():
             process.run("lvremove -f %s" % self.lvtest_device)
         # Now, removing the volume group itself
         v_result = process.run("vgdisplay")
-        if self.vgtest_name in v_result.stdout:
+        if self.vgtest_name in v_result.stdout.decode():
             process.run("vgremove -f %s" % self.vgtest_name)
         # Now, if we can, let's remove the physical volume from lvm list
         if self.loopback:
@@ -97,7 +97,7 @@ class EnospcConfig(object):
             if self.loopback in p_result.stdout:
                 process.run("pvremove -f %s" % self.loopback)
         l_result = process.run('losetup -a')
-        if self.loopback and (self.loopback in l_result.stdout):
+        if self.loopback and (self.loopback in l_result.stdout.decode()):
             try:
                 process.run("losetup -d %s" % self.loopback)
             except process.CmdError:
@@ -140,7 +140,7 @@ def run(test, params, env):
 
     drive_format = params["drive_format"]
     output = session_serial.cmd_output("dir /dev")
-    devname = "/dev/" + re.findall("([shv]db)\s", output)[0]
+    devname = "/dev/" + re.findall(r"([shv]db)\s", output)[0]
     cmd = params["background_cmd"]
     cmd %= devname
 
@@ -162,14 +162,14 @@ def run(test, params, env):
                     image = qemu_storage.QemuImg(image_params,
                                                  data_dir.get_data_dir(), image_name)
                     image.check_image(image_params, data_dir.get_data_dir(), force_share=True)
-                except virt_vm.VMError, e:
+                except virt_vm.VMError as e:
                     logging.error(e)
             error_context.context("Guest paused, extending Logical Volume size",
                                   logging.info)
             try:
                 process.run("lvextend -L +200M %s" % logical_volume)
-            except process.CmdError, e:
-                logging.debug(e.result_obj.stdout)
+            except process.CmdError as e:
+                logging.debug(e.result.stdout.decode())
             error_context.context("Continue paused guest", logging.info)
             vm.resume()
         elif not vm.monitor.verify_status("running"):
@@ -183,7 +183,7 @@ def run(test, params, env):
     vm.destroy(gracefully=vm.monitor.verify_status("running"))
     try:
         enospc_config.cleanup()
-    except Exception, e:
+    except Exception as e:
         logging.warn(e)
 
     if pause_n == 0:

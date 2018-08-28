@@ -2,15 +2,16 @@ import time
 import os
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import crypto
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import remote
 from virttest import utils_misc
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Transfer a file back and forth between multi VMs for long time.
@@ -31,17 +32,17 @@ def run(test, params, env):
     """
     def md5_check(session, orig_md5):
         msg = "Compare copied file's md5 with original file."
-        error.context(msg, logging.info)
+        error_context.context(msg, logging.info)
         md5_cmd = "md5sum %s | awk '{print $1}'" % guest_path
         s, o = session.cmd_status_output(md5_cmd)
         if s:
             msg = "Fail to get md5 value from guest. Output is %s" % o
-            raise error.TestError(msg)
+            test.error(msg)
         new_md5 = o.splitlines()[-1]
         if new_md5 != orig_md5:
             msg = "File changed after transfer host -> VM1. Original md5 value"
             msg += " is %s. Current md5 value is %s" % (orig_md5, new_md5)
-            raise error.TestFail(msg)
+            test.fail(msg)
 
     vm1 = env.get_vm(params["main_vm"])
     vm1.verify_alive()
@@ -71,11 +72,12 @@ def run(test, params, env):
     guest_path = os.path.join(tmp_dir_guest, "file_transfer-%s" %
                               utils_misc.generate_random_string(8))
     try:
-        error.context("Creating %dMB file on host" % filesize, logging.info)
-        utils.run(cmd)
-        orig_md5 = utils.hash_file(host_path, method="md5")
-        error.context("Transferring file host -> VM1, timeout: %ss" %
-                      transfer_timeout, logging.info)
+        error_context.context("Creating %dMB file on host" % filesize,
+                              logging.info)
+        process.run(cmd)
+        orig_md5 = crypto.hash_file(host_path, algorithm="md5")
+        error_context.context("Transferring file host -> VM1, timeout: %ss" %
+                              transfer_timeout, logging.info)
         t_begin = time.time()
         vm1.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
         t_end = time.time()
@@ -94,7 +96,7 @@ def run(test, params, env):
 
             msg = "Transferring file VM1 -> VM2, timeout: %ss." % transfer_timeout
             msg += " Repeat: %s/%s" % (i + 1, repeat_time)
-            error.context(msg, logging.info)
+            error_context.context(msg, logging.info)
             t_begin = time.time()
             s = remote.scp_between_remotes(src=ip_vm1, dst=ip_vm2, port=port,
                                            s_passwd=password, d_passwd=password,
@@ -112,7 +114,7 @@ def run(test, params, env):
             msg = "Transferring file VM2 -> VM1, timeout: %ss." % transfer_timeout
             msg += " Repeat: %s/%s" % (i + 1, repeat_time)
 
-            error.context(msg, logging.info)
+            error_context.context(msg, logging.info)
             t_begin = time.time()
             remote.scp_between_remotes(src=ip_vm2, dst=ip_vm1, port=port,
                                        s_passwd=password, d_passwd=password,

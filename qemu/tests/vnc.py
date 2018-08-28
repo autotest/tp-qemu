@@ -4,10 +4,9 @@ import socket
 import struct
 import random
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest.RFBDes import Des
+from virttest import error_context
 
 
 class VNC(object):
@@ -98,7 +97,7 @@ class VNC(object):
         self.sock.close()
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Base test for vnc, mainly focus on handshaking during vnc connection setup.
@@ -126,7 +125,8 @@ def run(test, params, env):
     change_passwd_cmd = params.get("change_passwd_cmd", default_cmd)
     rfb_version_list = params.get("rfb_version").strip().split()
     for rfb_version in rfb_version_list:
-        error.base_context("Test with guest RFB version %s" % rfb_version)
+        error_context.base_context("Test with guest RFB version %s" %
+                                   rfb_version)
         rand = random.SystemRandom()
         rand.seed()
         password = utils_misc.generate_random_string(rand.randint(1, 8))
@@ -135,23 +135,23 @@ def run(test, params, env):
         logging.info("VNC password timeout is: %s", timeout)
         vm.monitor.send_args_cmd(change_passwd_cmd % (password, timeout))
 
-        error.context("Connect to VNC server after setting password"
-                      " to '%s'" % password)
+        error_context.context("Connect to VNC server after setting password"
+                              " to '%s'" % password)
         vnc = VNC(port=port, rfb_version=rfb_version)
         status = vnc.hand_shake(password)
         vnc.initialize()
         vnc.close()
         if not status:
-            raise error.TestFail("VNC Authentication failed.")
+            test.fail("VNC Authentication failed.")
 
         logging.info("VNC Authentication pass")
         logging.info("Waiting for vnc password timeout.")
         time.sleep(timeout + 5)
-        error.context("Connect to VNC server after password expires")
+        error_context.context("Connect to VNC server after password expires")
         vnc = VNC(port=port, rfb_version=rfb_version)
         status = vnc.hand_shake(password)
         vnc.close()
         if status:
             # Should not handshake succeffully.
-            raise error.TestFail("VNC connected with Timeout password, The"
-                                 " cmd of setting expire time doesn't work.")
+            test.fail("VNC connected with Timeout password, The"
+                      " cmd of setting expire time doesn't work.")

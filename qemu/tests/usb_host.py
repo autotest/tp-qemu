@@ -1,9 +1,10 @@
 import logging
-from autotest.client.shared import error
-from autotest.client import utils
+
+from avocado.utils import process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test usb host device passthrough
@@ -12,9 +13,9 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    @error.context_aware
+    @error_context.context_aware
     def usb_dev_hotplug():
-        error.context("Plugin usb device", logging.info)
+        error_context.context("Plugin usb device", logging.info)
         session.cmd_status("dmesg -c")
         vm.monitor.cmd(monitor_add)
         session.cmd_status("sleep 2")
@@ -23,23 +24,24 @@ def run(test, params, env):
         for line in messages_add.splitlines():
             logging.debug("[dmesg add] %s" % line)
         if messages_add.find(match_add) == -1:
-            raise error.TestFail("kernel didn't detect plugin")
+            test.fail("kernel didn't detect plugin")
 
-    @error.context_aware
+    @error_context.context_aware
     def usb_dev_verify():
-        error.context("Check usb device %s in guest" % device, logging.info)
+        error_context.context("Check usb device %s in guest" % device,
+                              logging.info)
         session.cmd(lsusb_cmd)
 
-    @error.context_aware
+    @error_context.context_aware
     def usb_dev_unplug():
-        error.context("Unplug usb device", logging.info)
+        error_context.context("Unplug usb device", logging.info)
         vm.monitor.cmd(monitor_del)
         session.cmd_status("sleep 2")
         messages_del = session.cmd("dmesg -c")
         for line in messages_del.splitlines():
             logging.debug("[dmesg del] %s" % line)
         if messages_del.find(match_del) == -1:
-            raise error.TestFail("kernel didn't detect unplug")
+            test.fail("kernel didn't detect unplug")
 
     if params.get("usb_negative_test", "no") != "no":
         # Negative test.
@@ -60,9 +62,9 @@ def run(test, params, env):
                     negative_flag = True
                     break
             if not negative_flag:
-                raise error.TestFail("Could not get expected warning"
-                                     " msg in negative test, monitor"
-                                     " returns: '%s'" % reply)
+                test.fail("Could not get expected warning"
+                          " msg in negative test, monitor"
+                          " returns: '%s'" % reply)
         vm.reboot()
         return
 
@@ -79,13 +81,13 @@ def run(test, params, env):
     match_add += "idVendor=%s, idProduct=%s" % (vendorid, productid)
     match_del = "USB disconnect"
 
-    error.context("Check usb device %s on host" % device, logging.info)
+    error_context.context("Check usb device %s on host" % device, logging.info)
     try:
-        utils.system(lsusb_cmd)
+        process.system(lsusb_cmd, shell=True)
     except:
-        raise error.TestNAError("Device %s not present on host" % device)
+        test.cancel("Device %s not present on host" % device)
 
-    error.context("Log into guest", logging.info)
+    error_context.context("Log into guest", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
@@ -93,7 +95,8 @@ def run(test, params, env):
     repeat_times = int(params.get("usb_repeat_times", "1"))
     for i in range(repeat_times):
         if params.get("usb_check_isobufs", "no") == "no":
-            error.context("Hotplug (iteration %i)" % (i + 1), logging.info)
+            error_context.context("Hotplug (iteration %i)" % (i + 1),
+                                  logging.info)
         else:
             # The value of isobufs could only be in '4, 8, 16'
             isobufs = (2 << (i % 3 + 1))
@@ -101,8 +104,9 @@ def run(test, params, env):
             monitor_add += ",vendorid=0x%s" % vendorid
             monitor_add += ",productid=0x%s" % productid
             monitor_add += ",isobufs=%d" % isobufs
-            error.context("Hotplug (iteration %i), with 'isobufs' option"
-                          " set to %d" % ((i + 1), isobufs), logging.info)
+            error_context.context("Hotplug (iteration %i), with 'isobufs'"
+                                  " option set to %d" % ((i + 1), isobufs),
+                                  logging.info)
         usb_dev_hotplug()
         usb_dev_verify()
         usb_dev_unplug()

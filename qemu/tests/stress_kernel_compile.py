@@ -1,7 +1,5 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_test, env_process
 from virttest.staging import utils_memory
 
@@ -30,8 +28,7 @@ def run(test, params, env):
                                                        timeout=240)
             if status != 0:
                 logging.error(output)
-                raise error.TestFail("Fail to download the kernel"
-                                     " in %s" % vm_name)
+                test.fail("Fail to download the kernel in %s" % vm_name)
             else:
                 logging.info("Completed download the kernel src"
                              " in %s" % vm_name)
@@ -42,7 +39,7 @@ def run(test, params, env):
         finally:
             status, _ = utils_test.ping(ip, count=10, timeout=30)
             if status != 0:
-                raise error.TestFail("vm no response, pls check serial log")
+                test.fail("vm no response, pls check serial log")
 
     over_c = float(params.get("overcommit", 1.5))
     guest_number = int(params.get("guest_number", "1"))
@@ -59,9 +56,9 @@ def run(test, params, env):
     vmem = int(mem_host * over_c / guest_number)
 
     if vmem < 256:
-        raise error.TestNAError("The memory size set for guest is too small."
-                                " Please try less than %s guests"
-                                " in this host." % guest_number)
+        test.cancel("The memory size set for guest is too small."
+                    " Please try less than %s guests"
+                    " in this host." % guest_number)
     params["mem"] = vmem
     params["start_vm"] = "yes"
     login_timeout = int(params.get("login_timeout", 360))
@@ -74,7 +71,7 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=login_timeout)
         if not session:
-            raise error.TestFail("Could not log into guest %s" % vm_name)
+            test.fail("Could not log into guest %s" % vm_name)
 
         sessions_info.append([session, vm_name])
 

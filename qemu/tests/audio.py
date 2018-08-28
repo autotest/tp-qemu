@@ -1,7 +1,7 @@
-from autotest.client.shared import error
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test guest audio:
@@ -19,8 +19,8 @@ def run(test, params, env):
     random_content_size = params.get("random_content_size")
     audio_device = params.get("audio_device")
 
-    error.context("Verifying whether /dev/dsp is present")
+    error_context.context("Verifying whether /dev/dsp is present")
     session.cmd("test -c %s" % audio_device)
-    error.context("Trying to write to the device")
+    error_context.context("Trying to write to the device")
     session.cmd("dd if=/dev/urandom of=%s bs=%s count=1" %
                 (audio_device, random_content_size))

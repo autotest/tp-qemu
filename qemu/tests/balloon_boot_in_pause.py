@@ -60,7 +60,7 @@ class BallooningTestPause(BallooningTest):
         error_context.context("Change VM memory to %s" % new_mem, logging.info)
         try:
             self.vm.balloon(new_mem)
-        except Exception, e:
+        except Exception as e:
             if self.vm.monitor.verify_status('paused'):
                 # Make sure memory not changed before the guest resumed
                 if self.get_ballooned_memory() != self.ori_mem:

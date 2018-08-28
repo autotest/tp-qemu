@@ -31,7 +31,7 @@ def run(test, params, env):
                                                          % device_name)
         if status:
             test.fail("Can't get %s's irq info." % device_name)
-        irq_value = re.split('\s+', irq_dev_info)[1]
+        irq_value = re.split(r'\s+', irq_dev_info)[1]
         logging.info("irq number is %s" % irq_value)
         return int(irq_value)
 
@@ -42,9 +42,9 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
-
-    utils_test.qemu.windrv_verify_running(session, test, driver, timeout)
-    utils_test.qemu.setup_win_driver_verifier(driver, vm, timeout)
+    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                            test, driver,
+                                                            timeout)
 
     error_context.context("Check %s's irq number" % device_name, logging.info)
     irq_num = irq_check(session, device_name)

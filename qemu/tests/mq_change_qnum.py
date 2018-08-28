@@ -3,15 +3,13 @@ import re
 
 import aexpect
 
-from autotest.client import utils
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_test
 from virttest import utils_misc
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     MULTI_QUEUE chang queues number test
@@ -50,11 +48,11 @@ def run(test, params, env):
             err_msg += "when run cmd: '%s', " % mq_set_cmd
             err_msg += "expect exit status is: %s, " % expect_status
             err_msg += "output: '%s'" % output
-            raise error.TestFail(err_msg)
+            test.fail(err_msg)
         if not status and cur_queues_status == queues_status:
-            raise error.TestFail("params is right, but change queues failed")
+            test.fail("params is right, but change queues failed")
         elif status and cur_queues_status != queues_status:
-            raise error.TestFail("No need change queues number")
+            test.fail("No need change queues number")
         return [int(_) for _ in cur_queues_status]
 
     def get_queues_status(session, ifname, timeout=240):
@@ -71,12 +69,12 @@ def run(test, params, env):
             err_msg += "make sure your guest support MQ.\n"
             err_msg += "Check cmd is: '%s', " % mq_get_cmd
             err_msg += "Command output is: '%s'." % nic_mq_info
-            raise error.TestNAError(err_msg)
+            test.cancel(err_msg)
         return [int(x) for x in queues_info]
 
     def enable_multi_queues(vm):
         sess = vm.wait_for_serial_login(timeout=login_timeout)
-        error.context("Enable multi queues in guest.", logging.info)
+        error_context.context("Enable multi queues in guest.", logging.info)
         for nic_index, nic in enumerate(vm.virtnet):
             ifname = utils_net.get_linux_ifname(sess, nic.mac)
             queues = int(nic.queues)
@@ -89,9 +87,9 @@ def run(test, params, env):
         if packets_lost > lost_raito:
             err = " %s%% packages lost during ping. " % packets_lost
             err += "Ping command log:\n %s" % "\n".join(output.splitlines()[-3:])
-            raise error.TestFail(err)
+            test.fail(err)
 
-    error.context("Init guest and try to login", logging.info)
+    error_context.context("Init guest and try to login", logging.info)
     login_timeout = int(params.get("login_timeout", 360))
     bg_stress_test = params.get("run_bgstress")
     bg_stress_run_flag = params.get("bg_stress_run_flag")
@@ -100,7 +98,7 @@ def run(test, params, env):
     vm.wait_for_login(timeout=login_timeout)
 
     if params.get("pci_nomsi", "no") == "yes":
-        error.context("Disable pci msi in guest", logging.info)
+        error_context.context("Disable pci msi in guest", logging.info)
         utils_test.update_boot_option(vm, args_added="pci=nomsi")
         vm.wait_for_login(timeout=login_timeout)
 
@@ -124,12 +122,12 @@ def run(test, params, env):
             ifnames.append(ifname)
 
         if bg_stress_test:
-            error.context("Run test %s background" % bg_stress_test,
-                          logging.info)
+            error_context.context("Run test %s background" % bg_stress_test,
+                                  logging.info)
             stress_thread = ""
             wait_time = float(params.get("wait_bg_time", 60))
             env[bg_stress_run_flag] = False
-            stress_thread = utils.InterruptedThread(
+            stress_thread = utils_misc.InterruptedThread(
                 utils_test.run_virt_sub_test, (test, params, env),
                 {"sub_type": bg_stress_test})
             stress_thread.start()
@@ -138,12 +136,12 @@ def run(test, params, env):
                                     wait_time, 0, 5,
                                     "Wait %s start background" % bg_stress_test)
         if bg_ping == "yes":
-            error.context("Ping guest from host", logging.info)
+            error_context.context("Ping guest from host", logging.info)
             args = (guest_ip, b_ping_time, b_ping_lost_ratio)
-            bg_test = utils.InterruptedThread(ping_test, args)
+            bg_test = utils_misc.InterruptedThread(ping_test, args)
             bg_test.start()
 
-        error.context("Change queues number repeatly", logging.info)
+        error_context.context("Change queues number repeatly", logging.info)
         repeat_counts = int(params.get("repeat_counts", 10))
         for nic_index, nic in enumerate(vm.virtnet):
             if "virtio" not in nic['nic_model']:
@@ -153,16 +151,16 @@ def run(test, params, env):
                 logging.info("Nic with single queue, skip and continue")
                 continue
             ifname = ifnames[nic_index]
-            default_change_list = xrange(1, int(queues + 1))
+            default_change_list = range(1, int(queues + 1))
             change_list = params.get("change_list")
             if change_list:
                 change_list = change_list.split(",")
             else:
                 change_list = default_change_list
 
-            for repeat_num in xrange(1, repeat_counts + 1):
-                error.context("Change queues number -- %sth" % repeat_num,
-                              logging.info)
+            for repeat_num in range(1, repeat_counts + 1):
+                error_context.context("Change queues number -- %sth"
+                                      % repeat_num, logging.info)
                 try:
                     queues_status = get_queues_status(session_serial, ifname)
                     for q_number in change_list:
@@ -183,30 +181,28 @@ def run(test, params, env):
 
         if params.get("ping_after_changing_queues", "yes") == "yes":
             default_host = "www.redhat.com"
-            try:
-                ext_host = utils_net.get_host_default_gateway()
-            except error.CmdError:
+            ext_host = utils_net.get_host_default_gateway()
+            if not ext_host:
+                # Fallback to a hardcode host, eg:
                 logging.warn("Can't get specified host,"
                              " Fallback to default host '%s'", default_host)
                 ext_host = default_host
-            if not ext_host:
-                # Fallback to a hardcode host, eg:
-                ext_host = default_host
             s_session = vm.wait_for_login(timeout=login_timeout)
             txt = "ping %s after changing queues in guest."
-            error.context(txt, logging.info)
+            error_context.context(txt, logging.info)
             ping_test(ext_host, f_ping_time, f_ping_lost_ratio, s_session)
 
         if bg_stress_test:
             env[bg_stress_run_flag] = False
             if stress_thread:
-                error.context("wait for background test finish", logging.info)
+                error_context.context("wait for background test finish",
+                                      logging.info)
                 try:
                     stress_thread.join()
-                except Exception, err:
+                except Exception as err:
                     err_msg = "Run %s test background error!\n "
                     err_msg += "Error Info: '%s'"
-                    raise error.TestError(err_msg % (bg_stress_test, err))
+                    test.error(err_msg % (bg_stress_test, err))
 
     finally:
         if bg_stress_test:
@@ -216,11 +212,11 @@ def run(test, params, env):
         if s_session:
             s_session.close()
         if bg_test:
-            error.context("Wait for background ping test finish.",
-                          logging.info)
+            error_context.context("Wait for background ping test finish.",
+                                  logging.info)
             try:
                 bg_test.join()
-            except Exception, err:
+            except Exception as err:
                 txt = "Fail to wait background ping test finish. "
                 txt += "Got error message %s" % err
-                raise error.TestFail(txt)
+                test.fail(txt)

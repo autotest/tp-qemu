@@ -102,6 +102,25 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
             config_con = config_line.strip()
             session.cmd(config_cmd % (config_con, kdump_cfg_path))
 
+    if kdump_method == "ssh":
+        host_pwd = vm.params.get("host_pwd", "redhat")
+        guest_pwd = vm.params.get("guest_pwd", "redhat")
+        guest_ip = vm.get_address()
+
+        error_context.context("Setup ssh login without password...",
+                              logging.info)
+        session.cmd("rm -rf /root/.ssh/*")
+
+        ssh_connection = utils_conn.SSHConnection(server_ip=host_ip,
+                                                  server_pwd=host_pwd,
+                                                  client_ip=guest_ip,
+                                                  client_pwd=guest_pwd)
+        try:
+            ssh_connection.conn_check()
+        except utils_conn.ConnectionError:
+            ssh_connection.conn_setup()
+            ssh_connection.conn_check()
+
         logging.info("Trying to propagate with command '%s'" %
                      kdump_propagate_cmd)
         session.cmd(kdump_propagate_cmd, timeout=120)
@@ -137,10 +156,6 @@ def crash_test(test, vm, vcpu, crash_cmd, timeout):
 
     logging.info("Delete the vmcore file.")
     if kdump_method == "ssh":
-        session.cmd("rm -rf /root/.ssh/kdump*")
-        logging.info("Trying to propagate with command '%s'" %
-                     kdump_propagate_cmd)
-        session.cmd(kdump_propagate_cmd, timeout=120)
         process.run(vmcore_rm_cmd, shell=True)
     else:
         session.cmd_output(vmcore_rm_cmd)
@@ -281,17 +296,16 @@ def run(test, params, env):
                                             "kdump.conf-%s-test" % vm.name))
             if crash_cmd == "nmi":
                 crash_test(test, vm, None, crash_cmd, timeout)
-                error_context.context("Check the vmcore file after triggering"
-                                      " a crash", logging.info)
-                check_vmcore(test, vm, session, crash_timeout)
             else:
                 # trigger crash for each vcpu
                 nvcpu = int(params.get("smp", 1))
                 for i in range(nvcpu):
                     crash_test(test, vm, i, crash_cmd, timeout)
-                    error_context.context("Check the vmcore file after triggering"
-                                          " a crash", logging.info)
-                    check_vmcore(test, vm, session, crash_timeout)
+
+        for i in range(len(vm_list)):
+            error_context.context("Check the vmcore file after triggering"
+                                  " a crash", logging.info)
+            check_vmcore(test, vm_list[i], session_list[i], crash_timeout)
 
     finally:
         for s in session_list:

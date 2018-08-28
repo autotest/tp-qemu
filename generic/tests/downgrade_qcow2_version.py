@@ -1,7 +1,5 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_test
 from virttest import error_context
 from virttest import qemu_storage
@@ -33,4 +31,4 @@ def run(test, params, env):
     if actual_compat != ver_to:
         err_msg = "Fail to downgrade qcow2 image version!"
         err_msg += "Actual: %s, expect: %s" % (actual_compat, ver_to)
-        raise error.TestFail(err_msg)
+        test.fail(err_msg)

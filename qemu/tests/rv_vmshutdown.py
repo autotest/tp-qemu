@@ -8,8 +8,6 @@ import logging
 
 from aexpect import ShellCmdError
 
-from autotest.client.shared import error
-
 from virttest.virt_vm import VMDeadError
 from virttest import utils_spice
 from virttest import utils_misc
@@ -69,8 +67,8 @@ def run(test, params, env):
         output = guest_vm.monitor.cmd(cmd_qemu_shutdown)
         logging.debug("Output of %s: %s" % (cmd_qemu_shutdown, output))
     else:
-        raise error.TestFail("shutdownfrom var not set, valid values are"
-                             " cmd or qemu_monitor")
+        test.fail("shutdownfrom var not set, valid values are"
+                  " cmd or qemu_monitor")
 
     # wait for the guest vm to be shutoff
     logging.info("Waiting for the guest VM to be shutoff")
@@ -83,26 +81,25 @@ def run(test, params, env):
     #(3)Verify the remote-viewer process is not running
     try:
         guest_vm.verify_alive()
-        raise error.TestFail("Guest VM is still alive, shutdown failed.")
+        test.fail("Guest VM is still alive, shutdown failed.")
     except VMDeadError:
         logging.info("Guest VM is verified to be shutdown")
 
     try:
         utils_spice.verify_established(
             client_vm, host_ip, host_port, rv_binary)
-        raise error.TestFail("Remote-Viewer connection to guest"
-                             "is still established.")
+        test.fail("Remote-Viewer connection to guest is still established.")
     except utils_spice.RVConnectError:
         logging.info("There is no remote-viewer connection as expected")
     else:
-        raise error.TestFail("Unexpected error while trying to see if there"
-                             " was no spice connection to the guest")
+        test.fail("Unexpected error while trying to see if there"
+                  " was no spice connection to the guest")
 
     # Verify the remote-viewer process is not running
     logging.info("Checking to see if remote-viewer process is still running on"
                  " client after VM has been shutdown")
     try:
         pidoutput = str(client_session.cmd("pgrep remote-viewer"))
-        raise error.TestFail("Remote-viewer is still running on the client.")
+        test.fail("Remote-viewer is still running on the client.")
     except ShellCmdError:
         logging.info("Remote-viewer process is not running as expected.")

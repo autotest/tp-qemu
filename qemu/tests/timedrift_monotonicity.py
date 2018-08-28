@@ -4,10 +4,8 @@ import time
 import re
 import shutil
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
 from virttest import utils_test
+from virttest import utils_misc
 
 
 def run(test, params, env):
@@ -40,9 +38,8 @@ def run(test, params, env):
             if float(tv) < float(lasttv):
                 p_tv = "time value = " + tv + "\n"
                 p_lasttv = "last time value = " + lasttv + "\n"
-                time_log = file(host_path, 'a')
-                time_log.write("time went backwards:\n" + p_tv + p_lasttv)
-                time_log.close()
+                with open(host_path, 'a') as time_log:
+                    time_log.write("time went backwards:\n" + p_tv + p_lasttv)
             lasttv = tv
             time.sleep(0.1)
 
@@ -66,7 +63,7 @@ def run(test, params, env):
     try:
         # take time
         logging.info("Start take guest time")
-        bg = utils.InterruptedThread(get_time, (cmd, test_time, session1))
+        bg = utils_misc.InterruptedThread(get_time, (cmd, test_time, session1))
         bg.start()
 
         # migration
@@ -77,7 +74,7 @@ def run(test, params, env):
         logging.info("Logging in after migration...")
         session2 = vm.wait_for_login(timeout=timeout)
         if not session2:
-            raise error.TestFail("Could not log in after migration")
+            test.fail("Could not log in after migration")
         logging.info("Logged in after migration")
 
         # linger a while
@@ -88,12 +85,11 @@ def run(test, params, env):
             log_dir = os.path.join(test.outputdir,
                                    "timedrift-monotonicity-result.txt")
             shutil.copyfile(host_path, log_dir)
-            myfile = file(host_path, 'r')
-            for line in myfile:
-                if "time went backwards" in line:
-                    myfile.close()
-                    raise error.TestFail("Failed Time Monotonicity testing, "
-                                         "Please check log %s" % host_path)
+            with open(host_path, 'r') as myfile:
+                for line in myfile:
+                    if "time went backwards" in line:
+                        test.fail("Failed Time Monotonicity testing, "
+                                  "Please check log %s" % host_path)
     finally:
         session1.close()
         # remove flags add for this test.

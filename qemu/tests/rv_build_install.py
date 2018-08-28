@@ -12,8 +12,6 @@ import re
 
 from aexpect import ShellCmdError
 
-from autotest.client.shared import error
-
 from virttest import utils_spice
 from virttest import data_dir
 
@@ -59,7 +57,7 @@ def install_req_pkgs(pkgsRequired, vm_root_session, params):
                 logging.info("Could not install %s" % pkgName)
 
 
-def build_install_spiceprotocol(vm_root_session, vm_script_path, params):
+def build_install_spiceprotocol(test, vm_root_session, vm_script_path, params):
     """
     Build and install spice-protocol in the VM
 
@@ -84,10 +82,10 @@ def build_install_spiceprotocol(vm_root_session, vm_script_path, params):
     output = vm_root_session.cmd("%s -p spice-protocol" % (vm_script_path))
     logging.info(output)
     if re.search("Return code", output):
-        raise error.TestFail("spice-protocol was not installed properly")
+        test.fail("spice-protocol was not installed properly")
 
 
-def build_install_qxl(vm_root_session, vm_script_path, params):
+def build_install_qxl(test, vm_root_session, vm_script_path, params):
     """
     Build and install QXL in the VM
 
@@ -106,10 +104,10 @@ def build_install_qxl(vm_root_session, vm_script_path, params):
                                  timeout=600)
     logging.info(output)
     if re.search("Return code", output):
-        raise error.TestFail("qxl was not installed properly")
+        test.fail("qxl was not installed properly")
 
 
-def build_install_virtviewer(vm_root_session, vm_script_path, params):
+def build_install_virtviewer(test, vm_root_session, vm_script_path, params):
     """
     Build and install virt-viewer in the VM
 
@@ -119,18 +117,18 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
     """
 
     # Building spice-gtk from tarball before building virt-viewer
-    build_install_spicegtk(vm_root_session, vm_script_path, params)
+    build_install_spicegtk(test, vm_root_session, vm_script_path, params)
 
     try:
         output = vm_root_session.cmd("killall remote-viewer")
         logging.info(output)
-    except ShellCmdError, err:
+    except ShellCmdError as err:
         logging.error("Could not kill remote-viewer " + err.output)
 
     try:
         output = vm_root_session.cmd("yum -y remove virt-viewer", timeout=120)
         logging.info(output)
-    except ShellCmdError, err:
+    except ShellCmdError as err:
         logging.error("virt-viewer package couldn't be removed! " + err.output)
 
     if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
@@ -145,7 +143,7 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
                                  timeout=600)
     logging.info(output)
     if re.search("Return code", output):
-        raise error.TestFail("virt-viewer was not installed properly")
+        test.fail("virt-viewer was not installed properly")
 
     # Get version of remote-viewer after install
     try:
@@ -153,11 +151,11 @@ def build_install_virtviewer(vm_root_session, vm_script_path, params):
                                      "LD_LIBRARY_PATH=/usr/local/lib"
                                      " remote-viewer --version")
         logging.info(output)
-    except ShellCmdError, err:
+    except ShellCmdError as err:
         logging.error("Can't get version number!" + err.output)
 
 
-def build_install_spicegtk(vm_root_session, vm_script_path, params):
+def build_install_spicegtk(test, vm_root_session, vm_script_path, params):
     """
     Build and install spice-gtk in the VM
 
@@ -198,7 +196,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
         output = vm_root_session.cmd(cmd, timeout=600)
         logging.info(output)
         if re.search("Return code", output):
-            raise error.TestFail("spice-gtk was not installed properly")
+            test.fail("spice-gtk was not installed properly")
         else:
             logging.info("spice-gtk was installed")
 
@@ -207,7 +205,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
                                      timeout=600)
         logging.info(output)
         if re.search("Return code", output):
-            raise error.TestFail("spice-gtk was not installed properly")
+            test.fail("spice-gtk was not installed properly")
 
     # Get version of spice-gtk after install
     try:
@@ -218,7 +216,7 @@ def build_install_spicegtk(vm_root_session, vm_script_path, params):
         logging.error(output)
 
 
-def build_install_vdagent(vm_root_session, vm_script_path, params):
+def build_install_vdagent(test, vm_root_session, vm_script_path, params):
     """
     Build and install spice-vdagent in the VM
 
@@ -241,16 +239,16 @@ def build_install_vdagent(vm_root_session, vm_script_path, params):
                                  timeout=600)
     logging.info(output)
     if re.search("Return code", output):
-        raise error.TestFail("spice-vd-agent was not installed properly")
+        test.fail("spice-vd-agent was not installed properly")
 
     # Restart vdagent
     try:
         output = vm_root_session.cmd("service spice-vdagentd restart")
         logging.info(output)
         if re.search("fail", output, re.IGNORECASE):
-            raise error.TestFail("spice-vd-agent was not started properly")
+            test.fail("spice-vd-agent was not started properly")
     except:
-        raise error.TestFail("spice-vd-agent was not started properly")
+        test.fail("spice-vd-agent was not started properly")
 
     # Get version number of spice-vdagent
     try:
@@ -295,19 +293,19 @@ def run(test, params, env):
     time.sleep(5)
 
     # All packages require spice-protocol
-    build_install_spiceprotocol(vm_root_session, vm_script_path, params)
+    build_install_spiceprotocol(test, vm_root_session, vm_script_path, params)
 
     # Run build_install.py script
     if pkgName == "xf86-video-qxl":
-        build_install_qxl(vm_root_session, vm_script_path, params)
+        build_install_qxl(test, vm_root_session, vm_script_path, params)
     elif pkgName == "spice-vd-agent":
-        build_install_vdagent(vm_root_session, vm_script_path, params)
+        build_install_vdagent(test, vm_root_session, vm_script_path, params)
     elif pkgName == "spice-gtk":
-        build_install_spicegtk(vm_root_session, vm_script_path, params)
+        build_install_spicegtk(test, vm_root_session, vm_script_path, params)
     elif pkgName == "virt-viewer":
-        build_install_virtviewer(vm_root_session, vm_script_path, params)
+        build_install_virtviewer(test, vm_root_session, vm_script_path, params)
     else:
         logging.info("Not supported right now")
-        raise error.TestFail("Incorrect Test_Setup")
+        test.fail("Incorrect Test_Setup")
 
     utils_spice.clear_interface(vm)

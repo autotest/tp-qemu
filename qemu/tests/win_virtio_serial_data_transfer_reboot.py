@@ -1,15 +1,15 @@
 import os
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
-
+from avocado.utils import process
 from virttest import data_dir
 from virttest import qemu_virtio_port
+from virttest import error_context
+from virttest import utils_misc
 
 
 # This decorator makes the test function aware of context strings
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     QEMU 'Windows virtio-serial data transfer' test
@@ -37,24 +37,26 @@ def run(test, params, env):
                 if port.name == port_name:
                     return port.hostfile
 
-    def receive_data(session, serial_receive_cmd, data_file):
+    def receive_data(test, session, serial_receive_cmd, data_file):
         output = session.cmd_output(serial_receive_cmd, timeout=30)
-        ori_data = file(data_file, "r").read()
+        with open(data_file, "r") as data_file:
+            ori_data = data_file.read()
         if ori_data.strip() != output.strip():
             err = "Data lost during transfer. Origin data is:\n%s" % ori_data
             err += "Guest receive data:\n%s" % output
-            raise error.TestFail(err)
+            test.fail(err)
 
-    def transfer_data(session, receive_cmd, send_cmd, data_file, n_time):
+    def transfer_data(test, session, receive_cmd, send_cmd, data_file, n_time):
         txt = "Transfer data betwwen guest and host for %s times" % n_time
-        error.context(txt, logging.info)
-        for num in xrange(n_time):
+        error_context.context(txt, logging.info)
+        for num in range(n_time):
             logging.info("Data transfer repeat %s/%s." % (num + 1, n_time))
             try:
-                args = (session, receive_cmd, data_file)
-                guest_receive = utils.InterruptedThread(receive_data, args)
+                args = (test, session, receive_cmd, data_file)
+                guest_receive = utils_misc.InterruptedThread(receive_data,
+                                                             args)
                 guest_receive.start()
-                utils.system(send_cmd, timeout=30)
+                process.system(send_cmd, timeout=30, shell=True)
             finally:
                 if guest_receive:
                     guest_receive.join(10)
@@ -67,8 +69,8 @@ def run(test, params, env):
     check_cmd = params.get("check_vioser_status_cmd",
                            "verifier /querysettings")
     output = session.cmd(check_cmd, timeout=360)
-    error.context("Make sure vioser.sys verifier enabled in guest.",
-                  logging.info)
+    error_context.context("Make sure vioser.sys verifier enabled in guest.",
+                          logging.info)
     if "vioser.sys" not in output:
         verify_cmd = params.get("vioser_verify_cmd",
                                 "verifier.exe /standard /driver vioser.sys")
@@ -76,10 +78,10 @@ def run(test, params, env):
         session = vm.reboot(session=session, timeout=timeout)
         output = session.cmd(check_cmd, timeout=360)
         if "vioser.sys" not in output:
-            error.TestError("Fail to veirfy vioser.sys driver.")
+            test.error("Fail to veirfy vioser.sys driver.")
     guest_scripts = params["guest_scripts"]
     guest_path = params.get("guest_script_folder", "C:\\")
-    error.context("Copy test scripts to guest.", logging.info)
+    error_context.context("Copy test scripts to guest.", logging.info)
     for script in guest_scripts.split(";"):
         link = os.path.join(data_dir.get_deps_dir("win_serial"), script)
         vm.copy_files_to(link, guest_path, timeout=60)
@@ -98,13 +100,14 @@ def run(test, params, env):
     serial_receive_cmd = "python %s %s " % (receive_script, port_name)
     n_time = int(params.get("repeat_times", 20))
 
-    transfer_data(session, serial_receive_cmd, serial_send_cmd,
+    transfer_data(test, session, serial_receive_cmd, serial_send_cmd,
                   data_file, n_time)
-    error.context("Reboot guest.", logging.info)
+    error_context.context("Reboot guest.", logging.info)
     session = vm.reboot(session=session, timeout=timeout)
-    transfer_data(session, serial_receive_cmd, serial_send_cmd,
+    transfer_data(test, session, serial_receive_cmd, serial_send_cmd,
                   data_file, n_time)
-    error.context("Reboot guest by system_reset qmp command.", logging.info)
+    error_context.context("Reboot guest by system_reset qmp command.",
+                          logging.info)
     session = vm.reboot(session=session, method="system_reset",
                         timeout=timeout)
     if session:

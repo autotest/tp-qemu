@@ -89,13 +89,13 @@ def run(test, params, env):
             """
 
             vm = mig_data.vms[0]
-            kdump.preprocess_kdump(vm, login_timeout)
+            kdump.preprocess_kdump(test, vm, login_timeout)
             kdump.kdump_enable(vm, vm.name, crash_kernel_prob_cmd,
                                kernel_param_cmd, kdump_enable_cmd,
                                login_timeout)
             error.context("Kdump Testing, force the Linux kernel to crash",
                           logging.info)
-            kdump.crash_test(vm, nvcpu, crash_cmd, login_timeout)
+            kdump.crash_test(test, vm, nvcpu, crash_cmd, login_timeout)
 
         @error.context_aware
         def check_worker_kdump(self, mig_data, vmcore_chk_cmd, vmcore_incomplete):
@@ -125,7 +125,7 @@ def run(test, params, env):
                         self.stop_migrate = True
                     output = session.cmd_output(vmcore_chk_cmd)
                     session.close()
-                    kdump.postprocess_kdump(vm, self.login_timeout)
+                    kdump.postprocess_kdump(test, vm, self.login_timeout)
                     if not output:
                         raise error.TestFail("Could not found vmcore file")
                     elif vmcore_incomplete in output.split("\n"):

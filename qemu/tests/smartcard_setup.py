@@ -10,8 +10,6 @@ to be generated.
 """
 import logging
 
-from autotest.client.shared import error
-
 from virttest import utils_misc
 from virttest import utils_spice
 
@@ -75,6 +73,6 @@ def run(test, params, env):
     # Verify that all the certs have been generated on the client
     for cert in cert_list:
         if not(cert in output):
-            raise error.TestFail("Certificate %s not found" % cert)
+            test.fail("Certificate %s not found" % cert)
 
     client_session.close()

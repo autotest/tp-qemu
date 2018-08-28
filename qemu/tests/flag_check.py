@@ -2,14 +2,16 @@ import re
 import logging
 import os.path
 
-from autotest.client.shared import utils, error
+from avocado.utils import download
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
 from virttest import virt_vm
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     flag_check test:
@@ -83,7 +85,7 @@ def run(test, params, env):
         """
         qemu_binary = utils_misc.get_qemu_binary(params)
         cmd = qemu_binary + params.get("query_cmd", " -cpu ?")
-        output = utils.system_output(cmd)
+        output = process.system_output(cmd)
         flags_re = re.compile(params.get("pattern", "flags:(.*)"))
         flag_list = flags_re.search(output)
         flags = []
@@ -131,15 +133,17 @@ def run(test, params, env):
     dump_file = params.get("dump_file")
     default_dump_path = os.path.join(data_dir.get_deps_dir(), "cpuid")
     dump_path = params.get("dump_path", default_dump_path)
-    cpuinfo_file = utils.unmap_url(dump_path, dump_file, dump_path)
+    dump_file_path = os.path.join(dump_path, dump_file)
+    cpuinfo_file = os.path.join(default_dump_path, dump_file)
+    download.get_file(dump_file_path, dump_file)
     host_flags = utils_misc.get_cpu_flags()
 
     vm = env.get_vm(params["main_vm"])
     guest_cpumodel = vm.cpuinfo.model
     extra_flags = params.get("cpu_model_flags", " ")
 
-    error.context("Boot guest with -cpu %s,%s" %
-                  (guest_cpumodel, extra_flags), logging.info)
+    error_context.context("Boot guest with -cpu %s,%s" %
+                          (guest_cpumodel, extra_flags), logging.info)
 
     if params.get("start_vm") == "no" and "unknown,check" in extra_flags:
         params["start_vm"] = "yes"
@@ -151,7 +155,7 @@ def run(test, params, env):
         except virt_vm.VMCreateError as detail:
             output = str(detail)
         if params["qemu_output"] not in output:
-            raise error.TestFail("no qemu output: %s" % params["qemu_output"])
+            test.fail("no qemu output: %s" % params["qemu_output"])
     else:
         vm.verify_alive()
         timeout = float(params.get("login_timeout", 240))
@@ -163,10 +167,12 @@ def run(test, params, env):
             qemu_model = host_cpumodel[0]
         else:
             qemu_model = guest_cpumodel
-        error.context("Get model %s support flags" % qemu_model, logging.info)
+        error_context.context("Get model %s support flags" % qemu_model,
+                              logging.info)
 
         # Get flags for every reg from model's info
-        models_info = utils.system_output("cat %s" % cpuinfo_file).split("x86")
+        models_info = process.system_output(
+            "cat %s" % cpuinfo_file).split("x86")
         model_info = qemu_model_info(models_info, qemu_model)
         reg_list = params.get("reg_list", "feature_edx ").split()
         model_support_flags = " "
@@ -178,10 +184,10 @@ def run(test, params, env):
         model_support_flags = set(map(utils_misc.Flag,
                                       model_support_flags.split()))
 
-        error.context("Get guest flags", logging.info)
+        error_context.context("Get guest flags", logging.info)
         guest_flags = get_guest_cpuflags(session)
 
-        error.context("Get expected flag list", logging.info)
+        error_context.context("Get expected flag list", logging.info)
 
         # out_flags is definded in dump file, but not in guest
         out_flags = params.get("out_flags", " ").split()
@@ -208,7 +214,7 @@ def run(test, params, env):
         lack_flags = set(expected_flags | check_flags) - host_flags
 
         if "check" in extra_flags and "unknown" not in extra_flags:
-            error.context("Check lack flag in host", logging.info)
+            error_context.context("Check lack flag in host", logging.info)
             process_output = vm.process.get_output()
             miss_warn = []
             if lack_flags:
@@ -216,17 +222,18 @@ def run(test, params, env):
                     if flag not in process_output:
                         miss_warn.extend(flag.split())
             if miss_warn:
-                raise error.TestFail("no warning for lack flag %s" % miss_warn)
+                test.fail("no warning for lack flag %s" % miss_warn)
 
-        error.context("Compare guest flags with expected flags", logging.info)
+        error_context.context("Compare guest flags with expected flags",
+                              logging.info)
         all_support_flags = get_all_support_flags()
         missing_flags = expected_flags - guest_flags
         unexpect_flags = (guest_flags - expected_flags -
                           all_support_flags - option_flags)
         if missing_flags or unexpect_flags:
-            raise error.TestFail("missing flags:\n %s\n"
-                                 "more flags than expected:\n %s\n"
-                                 "expected flags:\n %s\n"
-                                 "guest flags:\n %s\n"
-                                 % (missing_flags, unexpect_flags, expected_flags,
-                                    guest_flags))
+            test.fail("missing flags:\n %s\n"
+                      "more flags than expected:\n %s\n"
+                      "expected flags:\n %s\n"
+                      "guest flags:\n %s\n"
+                      % (missing_flags, unexpect_flags, expected_flags,
+                         guest_flags))

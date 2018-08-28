@@ -3,10 +3,10 @@ import logging
 
 import aexpect
 
-from autotest.client.shared import error
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Test hdparm setting on linux guest os. This case will:
@@ -21,7 +21,7 @@ def run(test, params, env):
     """
     def check_setting_result(set_cmd, timeout):
         params = re.findall("(-[a-zA-Z])([0-9]*)", set_cmd)
-        disk = re.findall("(\/+[a-z]*\/[a-z]*$)", set_cmd)[0]
+        disk = re.findall(r"(\/+[a-z]*\/[a-z]*$)", set_cmd)[0]
         unsupport_param = 0
         for (param, value) in params:
             check_value = True
@@ -30,20 +30,18 @@ def run(test, params, env):
             failed_count = len(re.findall("failed:", output))
             ignore_count = len(re.findall(ignore_string, output))
             if failed_count > ignore_count:
-                raise error.TestError("Fail to get %s parameter value. "
-                                      "Output is:\n%s" % (param,
-                                                          output.strip()))
+                test.error("Fail to get %s parameter value. "
+                           "Output is:\n%s" % (param, output.strip()))
             else:
                 check_value = False
                 unsupport_param += 1
                 logging.warn("Disk %s not support parameter %s" % (disk,
                                                                    param))
             if check_value and value not in output:
-                raise error.TestFail("Fail to set %s parameter to value: %s"
-                                     % (param, value))
+                test.fail("Fail to set %s parameter to value: %s"
+                          % (param, value))
         if len(params) == unsupport_param:
-            raise error.TestNAError("All parameters are not supported."
-                                    " Skip the test")
+            test.cancel("All parameters are not supported. Skip the test")
 
     def perform_read_timing(disk, timeout, num=5):
         results = 0
@@ -51,8 +49,8 @@ def run(test, params, env):
             cmd = params["device_cache_read_cmd"] % disk
             (s, output) = session.cmd_status_output(cmd, timeout)
             if s != 0:
-                raise error.TestFail("Fail to perform device/cache read"
-                                     " timings \nOutput is: %s\n" % output)
+                test.fail("Fail to perform device/cache read"
+                          " timings \nOutput is: %s\n" % output)
             logging.info("Output of device/cache read timing check (%s of %s):"
                          % (i + 1, num))
             for line in output.strip().splitlines():
@@ -74,45 +72,44 @@ def run(test, params, env):
         output = session.cmd(cmd)
         disk = output.strip()
 
-        error.context("Setting hard disk to lower performance")
+        error_context.context("Setting hard disk to lower performance")
         cmd = params["low_status_cmd"] % disk
         try:
             session.cmd(cmd, timeout)
-        except aexpect.ShellCmdError, err:
+        except aexpect.ShellCmdError as err:
             failed_count = len(re.findall("failed:", err.output))
             ignore_count = len(re.findall(ignore_string, err.output))
             if failed_count > ignore_count:
-                raise error.TestError("Fail to setting hard disk to lower "
-                                      "performance. Output is:%s", err.output)
+                test.error("Fail to setting hard disk to lower "
+                           "performance. Output is:%s", err.output)
 
-        error.context("Checking hard disk keyval under lower performance "
-                      "settings")
+        error_context.context("Checking hard disk keyval under "
+                              "lower performance settings")
         check_setting_result(cmd, timeout)
         low_result = perform_read_timing(disk, timeout)
         logging.info("Average buffered disk read speed under low performance "
                      "settings: %.2f MB/sec" % low_result)
 
-        error.context("Setting hard disk to higher performance")
+        error_context.context("Setting hard disk to higher performance")
         cmd = params["high_status_cmd"] % disk
         try:
             session.cmd(cmd, timeout)
-        except aexpect.ShellCmdError, err:
+        except aexpect.ShellCmdError as err:
             failed_count = len(re.findall("failed:", err.output))
             ignore_count = len(re.findall(ignore_string, err.output))
             if failed_count > ignore_count:
-                raise error.TestError("Fail to setting hard disk to higher "
-                                      "performance. Output is:%s", err.output)
+                test.error("Fail to setting hard disk to higher "
+                           "performance. Output is:%s", err.output)
 
-        error.context("Checking hard disk keyval under higher performance "
-                      "settings")
+        error_context.context("Checking hard disk keyval under "
+                              "higher performance settings")
         check_setting_result(cmd, timeout)
         high_result = perform_read_timing(disk, timeout)
         logging.info("Average buffered disk read speed under high performance "
                      "settings: %.2f MB/sec" % high_result)
 
         if not float(high_result) > float(low_result):
-            raise error.TestFail("High performance setting does not "
-                                 "increase read speed\n")
+            test.fail("High performance setting does not increase read speed")
 
     finally:
         if session:

@@ -34,6 +34,7 @@ def run(test, params, env):
         format_postfix = ".%s" % params["image_format"]
         snapshot = stress_test.snapshot_file.replace(format_postfix, '')
         stress_test.reopen(snapshot)
-        map(stress_test.verify_md5, file_names)
+        for name in file_names:
+            stress_test.verify_md5(name)
     finally:
         stress_test.clean()

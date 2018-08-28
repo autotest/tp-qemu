@@ -1,14 +1,15 @@
 import logging
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import crypto
+from avocado.utils import process
 
+from virttest import error_context
 from virttest import utils_misc
 from virttest import storage
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     live_snapshot_base test:
@@ -40,28 +41,29 @@ def run(test, params, env):
         dst = "c:\\users\\public\\%s" % tmp_name
 
     try:
-        error.context("create file on host, copy it to guest", logging.info)
+        error_context.context("create file on host, copy it to guest",
+                              logging.info)
         cmd = params.get("dd_cmd") % src
-        utils.system(cmd, timeout=dd_timeout)
-        md5 = utils.hash_file(src, method="md5")
+        process.system(cmd, timeout=dd_timeout, shell=True)
+        md5 = crypto.hash_file(src, algorithm="md5")
         vm.copy_files_to(src, dst, timeout=copy_timeout)
-        utils.system("rm -f %s" % src)
-        error.context("create live snapshot", logging.info)
+        process.system("rm -f %s" % src)
+        error_context.context("create live snapshot", logging.info)
         if vm.live_snapshot(base_file, snapshot_file,
                             snapshot_format) != device:
-            raise error.TestFail("Fail to create snapshot")
+            test.fail("Fail to create snapshot")
         backing_file = vm.monitor.get_backingfile(device)
         if backing_file != base_file:
             logging.error(
                 "backing file: %s, base file: %s", backing_file, base_file)
-            raise error.TestFail("Got incorrect backing file")
-        error.context("copy file to host, check content not changed",
-                      logging.info)
+            test.fail("Got incorrect backing file")
+        error_context.context("copy file to host, check content not changed",
+                              logging.info)
         vm.copy_files_from(dst, src, timeout=copy_timeout)
-        if md5 and (md5 != utils.hash_file(src, method="md5")):
-            raise error.TestFail("diff md5 before/after create snapshot")
+        if md5 and (md5 != crypto.hash_file(src, algorithm="md5")):
+            test.fail("diff md5 before/after create snapshot")
         session.cmd(params.get("alive_check_cmd", "dir"))
     finally:
         if session:
             session.close()
-        utils.system("rm -f %s %s" % (snapshot_file, src))
+        process.system("rm -f %s %s" % (snapshot_file, src))

@@ -1,5 +1,6 @@
-from autotest.client.shared import utils
-from autotest.client.shared import error
+from virttest import error_context
+from virttest import utils_misc
+
 from qemu.tests import live_snapshot_basic
 
 
@@ -8,7 +9,7 @@ class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
     def __init__(self, test, params, env, tag):
         super(LiveSnapshotRuntime, self).__init__(test, params, env, tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def reboot(self):
         """
         Reset guest with system_reset;
@@ -16,7 +17,7 @@ class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
         method = self.params.get("reboot_method", "system_reset")
         return super(LiveSnapshotRuntime, self).reboot(method=method, boot_check=False)
 
-    @error.context_aware
+    @error_context.context_aware
     def action_when_start(self):
         """
         start pre-action in new threads;
@@ -26,7 +27,7 @@ class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
         for test in self.params.get("when_start").split():
             if hasattr(self, test):
                 fun = getattr(self, test)
-                bg = utils.InterruptedThread(fun)
+                bg = utils_misc.InterruptedThread(fun)
                 bg.start()
                 if bg.isAlive():
                     self.create_snapshot()

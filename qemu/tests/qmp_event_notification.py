@@ -1,10 +1,13 @@
 import logging
 import time
-import commands
+from functools import partial
 
-from autotest.client.shared import error
+from avocado.utils import process
 
 from virttest import utils_misc
+
+
+_system_output = partial(process.system_output, shell=True)
 
 
 def run(test, params, env):
@@ -21,15 +24,16 @@ def run(test, params, env):
 
     qemu_binary = utils_misc.get_qemu_binary(params)
     if not utils_misc.qemu_has_option("qmp", qemu_binary):
-        error.TestNAError("This test case requires a host QEMU with QMP "
-                          "monitor support")
+        test.cancel("This test case requires a host QEMU with QMP "
+                    "monitor support")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
-    qmp_monitor = filter(lambda x: x.protocol == "qmp", vm.monitors)[0]
-    humam_monitor = filter(lambda x: x.protocol == "human", vm.monitors)[0]
-    callback = {"host_cmd": commands.getoutput,
+    qmp_monitor = list(filter(lambda x: x.protocol == "qmp", vm.monitors))[0]
+    humam_monitor = list(
+        filter(lambda x: x.protocol == "human", vm.monitors))[0]
+    callback = {"host_cmd": _system_output,
                 "guest_cmd": session.cmd,
                 "monitor_cmd": humam_monitor.send_args_cmd,
                 "qmp_cmd": qmp_monitor.send_args_cmd}
@@ -38,7 +42,7 @@ def run(test, params, env):
         if cmd_type in callback.keys():
             return callback[cmd_type](cmd, **options)
         else:
-            raise error.TestError("cmd_type is not supported")
+            test.error("cmd_type is not supported")
 
     cmd_type = params["event_cmd_type"]
     pre_event_cmd = params.get("pre_event_cmd", "")
@@ -86,8 +90,7 @@ def run(test, params, env):
             break
 
     if qmp_num > 0:
-        raise error.TestFail("Did not receive qmp %s event notification"
-                             % event_check)
+        test.fail("Did not receive qmp %s event notification" % event_check)
 
     if post_event_cmd:
         send_cmd(post_event_cmd, post_event_cmd_type,

@@ -57,7 +57,7 @@ def run(test, params, env):
     vm.verify_alive()
 
     error_context.context("Hotplug block device", logging.info)
-    for num in xrange(blk_num):
+    for num in range(blk_num):
         device = qdevices.QDevice(pci_type)
         drive = qdevices.QRHDrive("block%d" % num)
         drive.set_param("file", find_image(img_list[num + 1]))
@@ -75,7 +75,7 @@ def run(test, params, env):
                 controller.params.update(qdevice_params)
             try:
                 controller.hotplug(vm.monitor)
-            except Exception, e:
+            except Exception as e:
                 if "QMP command 'device_add' failed" in str(e):
                     logging.info("Failed to add controller with invalid params")
                     drive_unplug_plug(drive, vm)
@@ -90,7 +90,7 @@ def run(test, params, env):
                 device.set_param(key, value)
             try:
                 device.hotplug(vm.monitor)
-            except Exception, e:
+            except Exception as e:
                 if "QMP command 'device_add' failed" in str(e):
                     logging.info("Failed to add block with invalid params")
                     drive_unplug_plug(drive, vm)

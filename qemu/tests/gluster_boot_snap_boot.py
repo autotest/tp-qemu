@@ -1,13 +1,12 @@
 import logging
 
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 from virttest import qemu_storage
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run an gluster test.
@@ -30,13 +29,13 @@ def run(test, params, env):
     params['image_format_backing_file_snapshot'] = params.get("image_format")
     params['image_name_snapshot'] = params.get("image_name") + "-snap"
 
-    error.context("boot guest over glusterfs", logging.info)
+    error_context.context("boot guest over glusterfs", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login(timeout=timeout)
-    error.context("shutdown VM", logging.info)
+    error_context.context("shutdown VM", logging.info)
     vm.destroy()
-    error.context("create snapshot of vm disk", logging.info)
+    error_context.context("create snapshot of vm disk", logging.info)
 
     snapshot_params = params.object_params("snapshot")
 

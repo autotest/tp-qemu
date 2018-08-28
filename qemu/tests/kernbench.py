@@ -1,10 +1,9 @@
 import logging
-import commands
 import os
 import re
 
-from autotest.client import utils
-from autotest.client.shared import error
+from avocado.utils import cpu
+from avocado.utils import process
 
 from virttest import env_process
 
@@ -24,7 +23,7 @@ def run(test, params, env):
     def download_if_not_exists():
         if not os.path.exists(file_name):
             cmd = "wget -t 10 -c -P %s %s" % (tmp_dir, file_link)
-            utils.system(cmd)
+            process.system(cmd)
 
     def cmd_status_output(cmd, timeout=360):
         s = 0
@@ -32,22 +31,22 @@ def run(test, params, env):
         if "guest" in test_type:
             (s, o) = session.cmd_status_output(cmd, timeout=timeout)
         else:
-            (s, o) = commands.getstatusoutput(cmd)
+            cmd_result = process.run(cmd, ignore_status=True, shell=True)
+            (s, o) = cmd_result.exit_status, cmd_result.stdout
         return (s, o)
 
     def check_ept():
-        output = utils.system_output("grep 'flags' /proc/cpuinfo")
+        output = process.system_output("grep 'flags' /proc/cpuinfo")
         flags = output.splitlines()[0].split(':')[1].split()
         need_ept = params.get("need_ept", "no")
         if 'ept' not in flags and "yes" in need_ept:
-            raise error.TestNAError(
-                "This test requires a host that supports EPT")
+            test.cancel("This test requires a host that supports EPT")
         elif 'ept' in flags and "no" in need_ept:
             cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=0"
-            utils.system(cmd, timeout=100)
+            process.system(cmd, timeout=100, shell=True)
         elif 'ept' in flags and "yes" in need_ept:
             cmd = "modprobe -r kvm_intel && modprobe kvm_intel ept=1"
-            utils.system(cmd, timeout=100)
+            process.system(cmd, timeout=100, shell=True)
 
     def install_gcc():
         logging.info("Update gcc to request version....")
@@ -105,7 +104,7 @@ def run(test, params, env):
 
     # Create tmp folder and download files if need.
     if not os.path.exists(tmp_dir):
-        utils.system("mkdir %s" % tmp_dir)
+        process.system("mkdir %s" % tmp_dir)
     files = params.get("files_need").split()
     for file in files:
         file_link = params.get("%s_link" % file)
@@ -123,18 +122,17 @@ def run(test, params, env):
         pre_cmd = params.get("pre_cmd")
         (s, o) = cmd_status_output(pre_cmd, timeout=cmd_timeout)
         if s:
-            raise error.TestError("Fail command:%s\nOutput: %s" % (pre_cmd, o))
+            test.error("Fail command:%s\nOutput: %s" % (pre_cmd, o))
 
         if "guest" in test_type:
             cpu_num = params.get("smp")
         else:
-            cpu_num = utils.count_cpus()
+            cpu_num = cpu.online_cpus_count()
         test_cmd = params.get("test_cmd") % (int(cpu_num) * cpu_multiplier)
         logging.info("Start making the kernel ....")
         (s, o) = cmd_status_output(test_cmd, timeout=cmd_timeout)
         if s:
-            raise error.TestError(
-                "Fail command:%s\n Output:%s" % (test_cmd, o))
+            test.error("Fail command:%s\n Output:%s" % (test_cmd, o))
         else:
             logging.info("Output for command %s is:\n %s" % (test_cmd, o))
             record_result(o)

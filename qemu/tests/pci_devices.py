@@ -1,5 +1,5 @@
 """
-This is a autotest/virt-test test for testing PCI devices in various PCI setups
+This is a virt-test test for testing PCI devices in various PCI setups
 
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2013 Red Hat, Inc.
@@ -7,11 +7,11 @@ This is a autotest/virt-test test for testing PCI devices in various PCI setups
 import logging
 import random
 import re
+import six
 import time
 
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 from virttest import qemu_qtree
 
 
@@ -42,7 +42,7 @@ def process_qdev(qdev):
     qdev_devices_noid = []
     for bus in qdev.get_buses({'type': ('PCI', 'PCIE')}):
         for device in bus:
-            if isinstance(device, str):
+            if isinstance(device, six.string_types):
                 logging.error("Not a device %s (bus %s)", device, bus)
                 continue
             dev_id = device.get_param('id')
@@ -108,11 +108,11 @@ def verify_qdev_vs_qtree(qdev_info, qtree_info):
     qtree_devices, qtree_devices_noid = qtree_info[:2]
 
     errors = ""
-    for dev_id, device in qtree_devices.iteritems():
+    for dev_id, device in qtree_devices.items():
         if dev_id not in qdev_devices:
             errors += "Device %s is in qtree but not in qdev.\n" % dev_id
             continue
-        for key, value in device.iteritems():
+        for key, value in device.items():
             err = ""
             if qdev_devices[dev_id][key] != value:
                 err += "  %s != %s\n" % (qdev_devices[dev_id][key], value)
@@ -186,7 +186,7 @@ def add_devices_all(params, name_idxs, bus, add_device):
     """
     Fill all available slots of certain bus with devices
     """
-    for addr in xrange(bus.first, bus.last):
+    for addr in range(bus.first, bus.last):
         params, name_idxs = add_device(params, name_idxs, bus.name, addr)
     return params, name_idxs
 
@@ -278,7 +278,7 @@ def add_device_random(params, name_idxs, parent_bus, addr):
     return random.choice(variants)(params, name_idxs, parent_bus, addr)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     PCI Devices test
@@ -292,16 +292,16 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    error.context("Creating early names representation")
+    error_context.context("Creating early names representation")
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     qdev = vm.make_create_command()    # parse params into qdev
     if isinstance(qdev, tuple):
         qdev = qdev[0]
 
-    error.context("Getting main PCI bus info")
+    error_context.context("Getting main PCI bus info")
 
-    error.context("Processing test params")
+    error_context.context("Processing test params")
     test_params = params['test_setup']
     test_devices = params['test_devices']
     test_device_type = params['test_device_type']
@@ -360,7 +360,7 @@ def run(test, params, env):
     time.sleep(5)
     qtree = qemu_qtree.QtreeContainer()
 
-    error.context("Verify qtree vs. qemu devices", logging.info)
+    error_context.context("Verify qtree vs. qemu devices", logging.info)
     _info_qtree = vm.monitor.info('qtree', False)
     qtree.parse_info_qtree(_info_qtree)
     info_qdev = process_qdev(vm.devices)
@@ -374,10 +374,10 @@ def run(test, params, env):
         logging.error(err)
         errors += "qdev vs. qtree, "
 
-    error.context("Verify VM booted properly.", logging.info)
+    error_context.context("Verify VM booted properly.", logging.info)
     session = vm.wait_for_login()
 
-    error.context("Verify lspci vs. qtree", logging.info)
+    error_context.context("Verify lspci vs. qtree", logging.info)
     if params.get('lspci_cmd'):
         _info_lspci = session.cmd_output(params['lspci_cmd'])
         info_lspci = process_lspci(_info_lspci)
@@ -388,7 +388,7 @@ def run(test, params, env):
             logging.error(err)
             errors += "qtree vs. lspci, "
 
-    error.context("Results")
+    error_context.context("Results")
     if errors:
-        raise error.TestFail("Errors occurred while comparing %s. Please check"
-                             " the log for details." % errors[:-2])
+        test.fail("Errors occurred while comparing %s. Please check"
+                  " the log for details." % errors[:-2])

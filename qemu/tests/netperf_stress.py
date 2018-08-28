@@ -2,15 +2,14 @@ import os
 import logging
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_netperf
 from virttest import utils_misc
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run netperf stress on server and client side.
@@ -34,8 +33,9 @@ def run(test, params, env):
     shell_client = params.get("shell_client")
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
-    shell_prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
-    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    shell_prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
+    linesep = params.get(
+        "shell_linesep", "\n").encode().decode('unicode_escape')
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
@@ -86,7 +86,7 @@ def run(test, params, env):
             s_info["shell_port"] = params.get("shell_port_%s" % server,
                                               "22")
             s_info["shell_prompt"] = params.get("shell_prompt_%s" % server,
-                                                "^\[.*\][\#\$]\s*$")
+                                                r"^\[.*\][\#\$]\s*$")
             s_info["linesep"] = params.get("linesep_%s" % server,
                                            "\n")
             s_info["status_test_command"] = params.get("status_test_command_%s" % server,
@@ -135,7 +135,7 @@ def run(test, params, env):
             c_info["shell_port"] = params.get("shell_port_%s" % client,
                                               "23")
             c_info["shell_prompt"] = params.get("shell_prompt_%s" % client,
-                                                "^\[.*\][\#\$]\s*$")
+                                                r"^\[.*\][\#\$]\s*$")
             c_info["linesep"] = params.get("linesep_%s" % client,
                                            "\n")
             c_info["status_test_command"] = params.get("status_test_command_%s" % client,
@@ -227,7 +227,8 @@ def run(test, params, env):
         num = 0
         s_len = len(server_infos)
         for protocol in test_protocols.split():
-            error.context("Testing %s protocol" % protocol, logging.info)
+            error_context.context("Testing %s protocol" % protocol,
+                                  logging.info)
             t_option = "%s -t %s" % (test_option, protocol)
             for n_client in netperf_clients:
                 index = num % s_len
@@ -239,7 +240,7 @@ def run(test, params, env):
                                        "Wait netperf test start"):
                     logging.info("Netperf test start successfully.")
                 else:
-                    raise error.TestError("Can not start netperf client.")
+                    test.error("Can not start netperf client.")
                 num += 1
             # here when set a run flag, when other case call this case as a
             # subprocess backgroundly, can set this run flag to False to stop

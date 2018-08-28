@@ -2,19 +2,14 @@ import re
 import time
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
+from virttest import error_context
 from virttest import utils_test
 from virttest import utils_net
 from virttest import utils_misc
 
-# The backports module will take care of using the builtin if available
-from virttest.staging.backports import bin
 
-
-@error.context_aware
-def get_first_network_devname(session, nic_interface_filter):
+@error_context.context_aware
+def get_first_network_devname(test, session, nic_interface_filter):
     """
     Get first active network interface in guest.
 
@@ -30,17 +25,17 @@ def get_first_network_devname(session, nic_interface_filter):
     status, output = session.cmd_status_output(cmd)
     if status:
         msg = "Guest command '%s' fail with output: %s." % (cmd, output)
-        raise error.TestError(msg)
+        test.error(msg)
     devnames = re.findall(nic_interface_filter, output, re.S)
     if not devnames:
         msg = "Fail to get network interface name in guest."
         msg += "ifconfig output in guest: %s" % output
-        raise error.TestError(msg)
+        test.error(msg)
     return devnames[0]
 
 
-@error.context_aware
-def get_irq_smp_affinity(session, irq):
+@error_context.context_aware
+def get_irq_smp_affinity(test, session, irq):
     """
     Get irq's affinity cpu in guest.
 
@@ -55,7 +50,7 @@ def get_irq_smp_affinity(session, irq):
     status, output = session.cmd_status_output(cmd)
     if status:
         msg = "Fail to get affinity cpu for IRQ '%s'" % irq
-        raise error.TestError(msg)
+        test.error(msg)
     cpus = []
     bit_list = list(bin(int(output.strip(), 16)))
     bit_list.reverse()
@@ -69,8 +64,8 @@ def get_irq_smp_affinity(session, irq):
         return cpus
 
 
-@error.context_aware
-def set_irq_smp_affinity(session, irq, cpus):
+@error_context.context_aware
+def set_irq_smp_affinity(test, session, irq, cpus):
     """
     Set irq's affinity cpu in guest.
 
@@ -85,16 +80,16 @@ def set_irq_smp_affinity(session, irq, cpus):
     for cpu in cpus:
         num += 2 ** cpu
     if num == 0:
-        raise error.TestError("Please set available cpus")
+        test.error("Please set available cpus")
     cmd = "echo %s > /proc/irq/%s/smp_affinity" % (num, irq)
     status = session.cmd_status(cmd)
     if status:
         msg = "Fail to set affinity cpu to %s for IRQ '%s'" % (cpus, irq)
-        raise error.TestFail(msg)
+        test.fail(msg)
 
 
-@error.context_aware
-def get_guest_irq_info(session, devname, cpu_count):
+@error_context.context_aware
+def get_guest_irq_info(test, session, devname, cpu_count):
     """
     Get irq balance information by reading /proc/interrupts in guest.
 
@@ -114,13 +109,13 @@ def get_guest_irq_info(session, devname, cpu_count):
     status, output = session.cmd_status_output(cmd)
     if status:
         msg = "Command '%s' fail in guest with output:%s" % (cmd, output)
-        raise error.TestError(msg)
-    irq_info_filter = "([0-9]*):" + "\s*([0-9]*)" * cpu_count
+        test.error(msg)
+    irq_info_filter = r"([0-9]*):" + r"\s*([0-9]*)" * cpu_count
     irq_infos = re.findall(irq_info_filter, output)
     if not irq_infos:
         msg = "Fail to get irq information for device %s. " % devname
         msg += "Command output: %s" % output
-        raise error.TestError(msg)
+        test.error(msg)
     for irq_info in irq_infos:
         irq_info = list(irq_info)
         irq = irq_info.pop(0)
@@ -128,8 +123,8 @@ def get_guest_irq_info(session, devname, cpu_count):
     return irq_num_dict
 
 
-@error.context_aware
-def check_irqbalance(session, devname, cpu_count, irqs, count=6,
+@error_context.context_aware
+def check_irqbalance(test, session, devname, cpu_count, irqs, count=6,
                      interval=10):
     """
     Check that whether irqbalance works. Make sure specified irqs is handled in
@@ -150,14 +145,14 @@ def check_irqbalance(session, devname, cpu_count, irqs, count=6,
     """
     irq_cpus_dict = {}
     for irq in irqs:
-        cpus = get_irq_smp_affinity(session, irq)
+        cpus = get_irq_smp_affinity(test, session, irq)
         irq_cpus_dict[irq] = cpus
 
-    pre_irq_num_dict = get_guest_irq_info(session, devname, cpu_count)
+    pre_irq_num_dict = get_guest_irq_info(test, session, devname, cpu_count)
     num = 0
     while num < count:
         time.sleep(interval)
-        irq_num_dict = get_guest_irq_info(session, devname, cpu_count)
+        irq_num_dict = get_guest_irq_info(test, session, devname, cpu_count)
         for irq in irqs:
             for cpu in irq_cpus_dict[irq]:
                 if (int(pre_irq_num_dict[irq][cpu]) >=
@@ -168,12 +163,12 @@ def check_irqbalance(session, devname, cpu_count, irqs, count=6,
                     msg += "%s second ago: %s\n" % (interval,
                                                     pre_irq_num_dict[irq])
                     msg += "Just now: %s" % irq_num_dict[irq]
-                    raise error.TestFail(msg)
+                    test.fail(msg)
         num += 1
         pre_irq_num_dict = irq_num_dict
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Qemu guest irqbalance inactive/active test:
@@ -204,13 +199,14 @@ def run(test, params, env):
     irqbalance_check_count = int(params.get("irqbalance_check_count", 36))
     nic_interface_filter = params["nic_interface_filter"]
 
-    error.context("Make sure that guest have at least 2 vCPUs.", logging.info)
+    error_context.context("Make sure that guest have at least 2 vCPUs.",
+                          logging.info)
     cpu_count = vm.get_cpu_count()
     if cpu_count < 2:
-        raise error.TestNAError("Test requires at least 2 vCPUs.")
+        test.cancel("Test requires at least 2 vCPUs.")
 
     msg = "Update irqbalance service status in guest if not match request."
-    error.context(msg, logging.info)
+    error_context.context(msg, logging.info)
     irqbalance_status = params.get("irqbalance_status", "active")
     status = utils_misc.get_guest_service_status(session=session,
                                                  service="irqbalance")
@@ -224,76 +220,79 @@ def run(test, params, env):
         if status:
             msg = "Fail to update irqbalance service status in guest."
             msg += " Command output in guest: %s" % output
-            raise error.TestError(msg)
+            test.error(msg)
 
-    error.context("Get first network interface name in guest.", logging.info)
-    devname = get_first_network_devname(session, nic_interface_filter)
+    error_context.context("Get first network interface name in guest.",
+                          logging.info)
+    devname = get_first_network_devname(test, session, nic_interface_filter)
 
-    error.context("Start background network stress in guest.", logging.info)
+    error_context.context("Start background network stress in guest.",
+                          logging.info)
     host_ip = utils_net.get_ip_address_by_interface(params.get('netdst'))
     ping_cmd = "ping %s  -f -q" % host_ip
     ping_timeout = irqbalance_check_count * 10 + 100
     ping_session = vm.wait_for_login(timeout=timeout)
-    bg_stress = utils.InterruptedThread(utils_test.raw_ping,
-                                        kwargs={'command': ping_cmd,
-                                                'timeout': ping_timeout,
-                                                'session': ping_session,
-                                                'output_func': None})
+    bg_stress = utils_misc.InterruptedThread(utils_test.raw_ping,
+                                             kwargs={'command': ping_cmd,
+                                                     'timeout': ping_timeout,
+                                                     'session': ping_session,
+                                                     'output_func': None})
     bg_stress.start()
     try:
-        error.context("Get irq number assigned to attached VF/PF in guest",
-                      logging.info)
-        irq_nums_dict = get_guest_irq_info(session, devname, cpu_count)
+        error_context.context("Get irq number assigned to attached "
+                              "VF/PF in guest", logging.info)
+        irq_nums_dict = get_guest_irq_info(test, session, devname, cpu_count)
         if irq_nums_dict:
             irqs = irq_nums_dict.keys()
 
         msg = "Check specified IRQ count grow on specified cpu."
-        error.context(msg, logging.info)
-        check_irqbalance(session, devname, cpu_count, irqs)
+        error_context.context(msg, logging.info)
+        check_irqbalance(test, session, devname, cpu_count, irqs)
         irq_cpus_dict = {}
         for irq in irqs:
-            cpus = get_irq_smp_affinity(session, irq)
+            cpus = get_irq_smp_affinity(test, session, irq)
             irq_cpus_dict[irq] = cpus
 
         if irqbalance_status == "inactive":
             msg = "balance IRQs generated by vfs/pfs to different vcpus."
-            error.context(msg, logging.info)
+            error_context.context(msg, logging.info)
             post_irq_cpus_dict = {}
             for irq in irq_cpus_dict:
                 balance_cpu_count = 1
                 cpus = []
-                for cpu in xrange(cpu_count):
+                for cpu in range(cpu_count):
                     if cpu not in irq_cpus_dict[irq]:
                         cpus.append(cpu)
                         if len(cpus) == balance_cpu_count:
                             break
-                set_irq_smp_affinity(session, irq, cpus)
+                set_irq_smp_affinity(test, session, irq, cpus)
                 post_irq_cpus_dict[irq] = cpus
 
             for irq in irqs:
-                cpus = get_irq_smp_affinity(session, irq)
+                cpus = get_irq_smp_affinity(test, session, irq)
                 msg = "Fail to balance IRQs generated by vf/pf to different cpu"
                 if cpus != post_irq_cpus_dict[irq]:
-                    raise error.TestFail(msg)
+                    test.fail(msg)
 
         msg = "Check specified IRQ count grow on specified cpu."
-        error.context(msg, logging.info)
-        check_irqbalance(session, devname,
+        error_context.context(msg, logging.info)
+        check_irqbalance(test, session, devname,
                          cpu_count, irqs,
                          count=irqbalance_check_count)
 
         if irqbalance_status == "active":
             msg = "Check that specified IRQ count grow on every cpu."
-            error.context(msg, logging.info)
-            post_irq_nums_dict = get_guest_irq_info(session, devname, cpu_count)
+            error_context.context(msg, logging.info)
+            post_irq_nums_dict = get_guest_irq_info(test, session, devname,
+                                                    cpu_count)
 
             for irq in irqs:
                 if irq not in post_irq_nums_dict.keys():
                     post_irqs = post_irq_nums_dict.keys()
                     msg = "Different irq detected: '%s' and '%s'." % (irqs,
                                                                       post_irqs)
-                    raise error.TestError(msg)
-                for cpu in xrange(cpu_count):
+                    test.error(msg)
+                for cpu in range(cpu_count):
                     if (int(irq_nums_dict[irq][cpu]) >=
                             int(post_irq_nums_dict[irq][cpu])):
                         msg = "'Cpu%s' did not handle more interrupt" % cpu
@@ -301,7 +300,7 @@ def run(test, params, env):
                         msg += "IRQ balance information for IRQ '%s'\n" % irq
                         msg += "First time: %s\n" % irq_nums_dict
                         msg += "Just now: %s" % post_irq_nums_dict
-                        raise error.TestFail(msg)
+                        test.fail(msg)
     finally:
         if bg_stress.isAlive():
             bg_stress.join(suppress_exception=True)

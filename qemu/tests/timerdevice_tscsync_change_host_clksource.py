@@ -2,13 +2,12 @@ import logging
 import os
 import re
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import data_dir
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Timer device check TSC synchronity after change host clocksource:
@@ -26,90 +25,89 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    error.context("Check for an appropriate clocksource on host", logging.info)
+    error_context.context("Check for an appropriate clocksource on host",
+                          logging.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
-    if "tsc" not in utils.system_output(host_cmd):
-        raise error.TestNAError("Host must use 'tsc' clocksource")
+    if "tsc" not in process.system_output(host_cmd):
+        test.cancel("Host must use 'tsc' clocksource")
 
-    error.context("Boot the guest with one cpu socket", logging.info)
+    error_context.context("Boot the guest with one cpu socket", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error.context("Check the guest is using vsyscall", logging.info)
+    error_context.context("Check the guest is using vsyscall", logging.info)
     date_cmd = "strace date 2>&1|egrep 'clock_gettime|gettimeofday'|wc -l"
     output = session.cmd(date_cmd)
     if '0' not in output:
-        raise error.TestFail("Failed to check vsyscall. Output: '%s'" % output)
+        test.fail("Failed to check vsyscall. Output: '%s'" % output)
 
-    error.context("Copy time-warp-test.c to guest", logging.info)
+    error_context.context("Copy time-warp-test.c to guest", logging.info)
     src_file_name = os.path.join(data_dir.get_deps_dir(), "tsc_sync",
                                  "time-warp-test.c")
     vm.copy_files_to(src_file_name, "/tmp")
 
-    error.context("Compile the time-warp-test.c", logging.info)
+    error_context.context("Compile the time-warp-test.c", logging.info)
     cmd = "cd /tmp/;"
     cmd += " yum install -y popt-devel;"
     cmd += " rm -f time-warp-test;"
     cmd += " gcc -Wall -o time-warp-test time-warp-test.c -lrt"
     session.cmd(cmd)
 
-    error.context("Run time-warp-test", logging.info)
+    error_context.context("Run time-warp-test", logging.info)
     test_run_timeout = int(params.get("test_run_timeout", 10))
     session.sendline("$(sleep %d; pkill time-warp-test) &" % test_run_timeout)
     cmd = "/tmp/time-warp-test"
-    _, output = session.cmd_status_output(cmd, timeout=(test_run_timeout + 60))
+    output = session.cmd_status_output(cmd, timeout=(test_run_timeout + 60))[1]
 
-    re_str = "fail:(\d+).*?fail:(\d+).*fail:(\d+)"
+    re_str = r"fail:(\d+).*?fail:(\d+).*fail:(\d+)"
     fail_cnt = re.findall(re_str, output)
     if not fail_cnt:
-        raise error.TestError("Could not get correct test output."
-                              " Output: '%s'" % output)
+        test.error("Could not get correct test output. Output: '%s'" % output)
 
     tsc_cnt, tod_cnt, clk_cnt = [int(_) for _ in fail_cnt[-1]]
     if tsc_cnt or tod_cnt or clk_cnt:
         msg = output.splitlines()[-5:]
-        raise error.TestFail("Get error when running time-warp-test."
-                             " Output (last 5 lines): '%s'" % msg)
+        test.fail("Get error when running time-warp-test."
+                  " Output (last 5 lines): '%s'" % msg)
 
     try:
-        error.context("Switch host to hpet clocksource", logging.info)
+        error_context.context("Switch host to hpet clocksource", logging.info)
         cmd = "echo hpet > /sys/devices/system/clocksource/"
         cmd += "clocksource0/current_clocksource"
-        utils.system(cmd)
+        process.system(cmd, shell=True)
 
-        error.context("Run time-warp-test after change the host clock source",
-                      logging.info)
+        error_context.context("Run time-warp-test after change the host"
+                              " clock source", logging.info)
         cmd = "$(sleep %d; pkill time-warp-test) &"
         session.sendline(cmd % test_run_timeout)
         cmd = "/tmp/time-warp-test"
-        _, output = session.cmd_status_output(cmd,
-                                              timeout=(test_run_timeout + 60))
+        output = session.cmd_status_output(cmd,
+                                           timeout=(test_run_timeout + 60))[1]
 
         fail_cnt = re.findall(re_str, output)
         if not fail_cnt:
-            raise error.TestError("Could not get correct test output."
-                                  " Output: '%s'" % output)
+            test.error("Could not get correct test output."
+                       " Output: '%s'" % output)
 
         tsc_cnt, tod_cnt, clk_cnt = [int(_) for _ in fail_cnt[-1]]
         if tsc_cnt or tod_cnt or clk_cnt:
             msg = output.splitlines()[-5:]
-            raise error.TestFail("Get error when running time-warp-test."
-                                 " Output (last 5 lines): '%s'" % msg)
+            test.fail("Get error when running time-warp-test."
+                      " Output (last 5 lines): '%s'" % msg)
 
         output = session.cmd(date_cmd)
         if "1" not in output:
-            raise error.TestFail("Failed to check vsyscall."
-                                 " Output: '%s'" % output)
+            test.fail("Failed to check vsyscall. Output: '%s'" % output)
     finally:
-        error.context("Restore host to tsc clocksource", logging.info)
+        error_context.context("Restore host to tsc clocksource", logging.info)
         cmd = "echo tsc > /sys/devices/system/clocksource/"
         cmd += "clocksource0/current_clocksource"
         try:
-            utils.system(cmd)
-        except Exception, detail:
+            process.system(cmd, shell=True)
+        except Exception as detail:
             logging.error("Failed to restore host clocksource."
                           "Detail: %s" % detail)

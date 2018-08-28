@@ -111,12 +111,12 @@ def run(test, params, env):
         for device in device_ids:
             unplug_rng(vm, device)
 
-    for i in xrange(repeat_times):
+    for i in range(repeat_times):
         dev_list = []
         error_context.context("Hotplug/unplug rng devices the %s time"
                               % (i+1), logging.info)
 
-        for num in xrange(rng_num):
+        for num in range(rng_num):
             vm.devices.set_dirty()
             new_dev = qdevices.QDevice("virtio-rng-pci",
                                        {'id': 'virtio-rng-pci-%d' % num})

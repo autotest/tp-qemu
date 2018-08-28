@@ -1,20 +1,24 @@
 import os
 import re
-import commands
 import shutil
 import shelve
+import six
 import threading
-from Queue import Queue
+try:
+    from queue import Queue
+except ImportError:
+    from Queue import Queue
 
-from autotest.client.shared import error
-from autotest.client import utils
+from avocado.utils import download
+from avocado.utils import process
 
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import data_dir
 
 
-def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
+def cmd_runner_monitor(test, vm, monitor_cmd, test_cmd,
+                       guest_path, timeout=300):
     """
     For record the env information such as cpu utilization, meminfo while
     run guest test in guest.
@@ -27,12 +31,14 @@ def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
     """
     def thread_kill(cmd, p_file):
         fd = shelve.open(p_file)
-        o = commands.getoutput("pstree -p %s" % fd["pid"])
-        tmp = re.split("\s+", cmd)[0]
-        pid = re.findall("%s.(\d+)" % tmp, o)[0]
-        s, o = commands.getstatusoutput("kill -9 %s" % pid)
+        o = process.system_output("pstree -p %s" % fd["pid"], verbose=False,
+                                  ignore_status=True)
+        tmp = re.split(r"\s+", cmd)[0]
+        pid = re.findall(r"%s.(\d+)" % tmp, o)[0]
+        cmd_result = process.run("kill -9 %s" % pid, verbose=False,
+                                 ignore_status=True)
         fd.close()
-        return (s, o)
+        return (cmd_result.exit_status, cmd_result.stdout)
 
     def monitor_thread(m_cmd, p_file, r_file):
         fd = shelve.open(p_file)
@@ -44,7 +50,7 @@ def cmd_runner_monitor(vm, monitor_cmd, test_cmd, guest_path, timeout=300):
         flag.put(True)
         s, o = session.cmd_status_output(t_cmd, timeout)
         if s != 0:
-            raise error.TestFail("Test failed or timeout: %s" % o)
+            test.fail("Test failed or timeout: %s" % o)
         if not flag.empty():
             flag.get()
             thread_kill(m_cmd, p_file)
@@ -115,13 +121,14 @@ def run(test, params, env):
     vm.copy_files_to(guest_launcher, "/tmp")
     md5value = params.get("md5value")
 
-    tarball = utils.unmap_url_cache(test.tmpdir, test_src, md5value)
-    test_src = re.split("/", test_src)[-1]
+    tar_name = os.path.basename(test_src)
+    tarball = os.path.join(test.tmpdir, tar_name)
+    download.get_file(test_src, tarball, hash_expected=md5value)
     vm.copy_files_to(tarball, "/tmp")
 
     session.cmd("rm -rf /tmp/src*")
     session.cmd("mkdir -p /tmp/src_tmp")
-    session.cmd("tar -xf /tmp/%s -C %s" % (test_src, "/tmp/src_tmp"))
+    session.cmd("tar -xf /tmp/%s -C %s" % (tar_name, "/tmp/src_tmp"))
 
     # Find the newest file in src tmp directory
     cmd = "ls -rt /tmp/src_tmp"
@@ -129,7 +136,7 @@ def run(test, params, env):
     if len(o) > 0:
         new_file = re.findall("(.*)\n", o)[-1]
     else:
-        raise error.TestError("Can not decompress test file in guest")
+        test.error("Can not decompress test file in guest")
     session.cmd("mv /tmp/src_tmp/%s /tmp/src" % new_file)
 
     if test_patch:
@@ -146,7 +153,7 @@ def run(test, params, env):
     if prepare_cmd:
         s, o = session.cmd_status_output(prepare_cmd, test_timeout)
         if s != 0:
-            raise error.TestError("Fail to prepare test env in guest")
+            test.error("Fail to prepare test env in guest")
 
     cmd = "cd /tmp/src && python /tmp/cmd_runner.py \"%s &> " % monitor_cmd
     cmd += "/tmp/guest_result_monitor\"  \"/tmp/src/%s" % test_cmd
@@ -155,7 +162,7 @@ def run(test, params, env):
 
     test_cmd = cmd
     # Run guest test with monitor
-    tag = cmd_runner_monitor(vm, monitor_cmd, test_cmd,
+    tag = cmd_runner_monitor(test, vm, monitor_cmd, test_cmd,
                              guest_path, timeout=test_timeout)
 
     # Result collecting
@@ -245,7 +252,7 @@ def format_result(result, base="20", fbase="2"):
     :param base: the length of converted string
     :param fbase: the decimal digit for float
     """
-    if isinstance(result, str):
+    if isinstance(result, six.string_types):
         value = "%" + base + "s"
     elif isinstance(result, int):
         value = "%" + base + "d"
@@ -276,12 +283,13 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
     ignore_cases = params.get("ignore_cases", "").split()
     repeatn = ""
     if "repeat" in test.outputdir:
-        repeatn = re.findall("repeat\d+", test.outputdir)[0]
+        repeatn = re.findall(r"repeat\d+", test.outputdir)[0]
     category_key = re.split("/", test.outputdir)[-1]
     category_key = re.split(case_type, category_key)[0]
-    category_key = re.sub("\.repeat\d+", "", category_key)
+    category_key = re.sub(r"\.repeat\d+", "", category_key)
 
-    kvm_ver = utils.system_output(params.get('ver_cmd', "rpm -q qemu-kvm"))
+    kvm_ver = process.system_output(params.get('ver_cmd', "rpm -q qemu-kvm"),
+                                    shell=True)
     host_ver = os.uname()[2]
     test.write_test_keyval({'kvm-userspace-ver': kvm_ver})
     test.write_test_keyval({'host-kernel-ver': host_ver})
@@ -303,15 +311,15 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                         jump_flag = True
                 if jump_flag:
                     continue
-                file_dir_norpt = re.sub("\.repeat\d+", "", files[0])
+                file_dir_norpt = re.sub(r"\.repeat\d+", "", files[0])
                 if (repeatn in files[0] and
                         category_key in file_dir_norpt and
                         case_type in files[0]):
                     for i, pattern in enumerate(file_list):
                         if re.findall(pattern, file):
-                            prefix = re.findall("%s\.[\d\w_\.]+" % case_type,
+                            prefix = re.findall(r"%s\.[\d\w_\.]+" % case_type,
                                                 file_dir_norpt)[0]
-                            prefix = re.sub("\.|_", "--", prefix)
+                            prefix = re.sub(r"\.|_", "--", prefix)
                             if prefix not in results_files.keys():
                                 results_files[prefix] = []
                                 tmp = []
@@ -385,8 +393,8 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                     tmp_dic[mark_tag] = utils_misc.aton(data)
                     perf_value = tmp_dic[mark_tag]
             else:
-                raise error.TestError("Can not get the right data from result."
-                                      "Please check the debug file.")
+                test.error("Can not get the right data from result."
+                           "Please check the debug file.")
             if mark_tag not in no_table_list and mark_tag not in order_list:
                 order_list.append(mark_tag)
             test.write_perf_keyval({'%s-%s' % (prefix_perf, mark_tag):

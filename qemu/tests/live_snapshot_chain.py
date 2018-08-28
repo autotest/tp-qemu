@@ -3,14 +3,13 @@ import re
 import logging
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import storage
 from virttest import qemu_storage
 from virttest import data_dir
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     live_snapshot chain test:
@@ -93,7 +92,7 @@ def run(test, params, env):
     md5_cmd = params.get("md5_cmd")
 
     snapshot_chain = generate_snapshot_chain(snapshot_chain, snapshot_num)
-    snapshot_chain = re.split("\s+", snapshot_chain)
+    snapshot_chain = re.split(r"\s+", snapshot_chain)
     session = vm.wait_for_login(timeout=timeout)
 
     md5_value = {}
@@ -112,14 +111,15 @@ def run(test, params, env):
                                                        data_dir.get_data_dir())
                 snapshot_format = image_params.get("image_format")
 
-                error.context("Do pre snapshot operates", logging.info)
+                error_context.context("Do pre snapshot operates", logging.info)
                 if image_params.get("pre_snapshot_cmd"):
                     do_operate(image_params, "pre_snapshot_cmd")
 
-                error.context("Do live snapshot ", logging.info)
+                error_context.context("Do live snapshot ", logging.info)
                 vm.live_snapshot(base_file, snapshot_file, snapshot_format)
 
-                error.context("Do post snapshot operates", logging.info)
+                error_context.context("Do post snapshot operates",
+                                      logging.info)
                 if image_params.get("post_snapshot_cmd"):
                     do_operate(image_params, "post_snapshot_cmd")
                 md5 = ""
@@ -141,12 +141,12 @@ def run(test, params, env):
                 files_in_guest[image] = files_check
         session.close()
 
-        error.context("Reboot guest", logging.info)
+        error_context.context("Reboot guest", logging.info)
         if image_params.get("need_reboot", "no") == "yes":
             vm.monitor.cmd("system_reset")
             vm.verify_alive()
 
-        error.context("Do base files check", logging.info)
+        error_context.context("Do base files check", logging.info)
         snapshot_chain_backward = snapshot_chain[:]
         snapshot_chain_backward.reverse()
 
@@ -166,7 +166,7 @@ def run(test, params, env):
                                             (file, image)
                             error_message += "from '%s' to '%s'(md5)" %\
                                              (md5_value[image][file], md5)
-                            raise error.TestFail(error_message)
+                            test.fail(error_message)
                     files_check = session.cmd(file_check_cmd % file_dir)
                     if files_check != files_in_guest[image]:
                         error_message = "Files in image %s is not as expect:" %\
@@ -174,22 +174,22 @@ def run(test, params, env):
                         error_message += "Before shut down: %s" %\
                             files_in_guest[image]
                         error_message += "Now: %s" % files_check
-                        raise error.TestFail(error_message)
+                        test.fail(error_message)
                 if image_params.get("image_check"):
                     image = qemu_storage.QemuImg(
                         image_params, data_dir.get_data_dir(), image)
                     image.check_image(image_params, data_dir.get_data_dir())
                 session.close()
 
-        error.context("Remove snapshot images", logging.info)
+        error_context.context("Remove snapshot images", logging.info)
         if vm.is_alive():
             vm.destroy()
         errs = cleanup_images(snapshot_chain, params)
         test.assertFalse(errs, "Errors occurred while removing images:\n%s"
                          % "\n".join(errs))
     except Exception as details:
-        error.context("Force-cleaning after exception: %s" % details,
-                      logging.error)
+        error_context.context("Force-cleaning after exception: %s" % details,
+                              logging.error)
         if vm.is_alive():
             vm.destroy()
         cleanup_images(snapshot_chain, params)

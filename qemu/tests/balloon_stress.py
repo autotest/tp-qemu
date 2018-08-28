@@ -31,7 +31,7 @@ def run(test, params, env):
                 utils_test.run_virt_sub_test(test, params, env,
                                              params.get("stress_test"))
             else:
-                stress_bg = utils_test.VMStress(vm, "stress")
+                stress_bg = utils_test.VMStress(vm, "stress", params)
                 stress_bg.load_stress_tool()
 
     error_context.context("Boot guest with balloon device", logging.info)
@@ -43,8 +43,9 @@ def run(test, params, env):
 
     if params['os_type'] == 'windows':
         driver_name = params["driver_name"]
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
         balloon_test = BallooningTestWin(test, params, env)
     else:
         balloon_test = BallooningTestLinux(test, params, env)
@@ -58,7 +59,7 @@ def run(test, params, env):
 
     error_context.context("balloon vm memory in loop", logging.info)
     try:
-        for i in xrange(1, int(repeat_times+1)):
+        for i in range(1, int(repeat_times+1)):
             logging.info("repeat times: %d" % i)
             balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
             if not bg.is_alive():

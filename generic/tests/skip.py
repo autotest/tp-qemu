@@ -1,8 +1,5 @@
-from autotest.client.shared import error
-
-
 def run(test, params, env):
     """
-    Raise TestNAError exception (should trigger SKIP in simple harness)
+    Cancel test (should trigger SKIP in simple harness)
     """
-    raise error.TestNAError("Skip test is raising a test NA Error!")
+    test.cancel("Skip test is canceling a test!")

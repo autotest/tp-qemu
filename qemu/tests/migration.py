@@ -4,11 +4,13 @@ import types
 import re
 
 import aexpect
+import ast
 
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_package
 from virttest import error_context
+from virttest import qemu_monitor     # For MonitorNotSupportedMigCapError
 
 
 @error_context.context_aware
@@ -121,8 +123,8 @@ def run(test, params, env):
     def check_dma():
         dmesg_pattern = params.get("dmesg_pattern",
                                    "ata.*?configured for PIO")
-        dma_pattern = params.get("dma_pattern", "DMA.*?\(\?\)$")
-        pio_pattern = params.get("pio_pattern", "PIO.*?pio\d+\s+$")
+        dma_pattern = params.get("dma_pattern", r"DMA.*?\(\?\)$")
+        pio_pattern = params.get("pio_pattern", r"PIO.*?pio\d+\s+$")
         hdparm_cmd = params.get("hdparm_cmd",
                                 "i=`ls /dev/[shv]da` ; hdparm -I $i")
         session_dma = vm.wait_for_login()
@@ -206,17 +208,28 @@ def run(test, params, env):
                     guest_stress_deamon, ())
                 deamon_thread.start()
 
+            capabilities = ast.literal_eval(params.get("migrate_capabilities", "{}"))
+            inner_funcs = ast.literal_eval(params.get("migrate_inner_funcs", "[]"))
+
             # Migrate the VM
             ping_pong = params.get("ping_pong", 1)
-            for i in xrange(int(ping_pong)):
+            for i in range(int(ping_pong)):
                 if i % 2 == 0:
                     logging.info("Round %s ping..." % str(i / 2))
                 else:
                     logging.info("Round %s pong..." % str(i / 2))
-                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                           offline, check,
-                           migration_exec_cmd_src=mig_exec_cmd_src,
-                           migration_exec_cmd_dst=mig_exec_cmd_dst, env=env)
+                try:
+                    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                               offline, check,
+                               migration_exec_cmd_src=mig_exec_cmd_src,
+                               migration_exec_cmd_dst=mig_exec_cmd_dst,
+                               migrate_capabilities=capabilities,
+                               mig_inner_funcs=inner_funcs,
+                               env=env)
+                except qemu_monitor.MonitorNotSupportedMigCapError as e:
+                    test.cancel("Unable to access capability: %s" % e)
+                except:
+                    raise
 
             # Set deamon thread action to stop after migrate
             params["action"] = "stop"
@@ -259,7 +272,7 @@ def run(test, params, env):
                 if bg_kill_cmd is not None:
                     try:
                         session2.cmd(bg_kill_cmd)
-                    except aexpect.ShellCmdError, details:
+                    except aexpect.ShellCmdError as details:
                         # If the migration_bg_kill_command rc differs from
                         # ignore_status, it means the migration_bg_command is
                         # no longer alive. Let's ignore the failure here if

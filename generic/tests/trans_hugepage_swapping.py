@@ -2,13 +2,12 @@ import logging
 import os
 import re
 
-from autotest.client.shared import error
-from autotest.client import utils
-
+from avocado.utils import process
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM khugepage user side test:
@@ -23,10 +22,11 @@ def run(test, params, env):
         Get the memory arguments from system
         """
         args_list_tmp = args_list.copy()
-        for line in file('/proc/meminfo', 'r').readlines():
-            for key in args_list_tmp.keys():
-                if line.startswith("%s" % args_list_tmp[key]):
-                    args_list_tmp[key] = int(re.split('\s+', line)[1])
+        with open('/proc/meminfo', 'r') as f:
+            for line in f.readlines():
+                for key in args_list_tmp.keys():
+                    if line.startswith("%s" % args_list_tmp[key]):
+                        args_list_tmp[key] = int(re.split(r'\s+', line)[1])
         return args_list_tmp
 
     try:
@@ -67,8 +67,8 @@ def run(test, params, env):
         try:
             if not os.path.isdir(mem_path):
                 os.makedirs(mem_path)
-            utils.run("mount -t tmpfs  -o size=%sM none %s" % (tmpfs_size,
-                                                               mem_path))
+            process.run("mount -t tmpfs  -o size=%sM none %s" %
+                        (tmpfs_size, mem_path), shell=True)
 
             # Set the memory size of vm
             # To ignore the oom killer set it to the free swap size
@@ -89,22 +89,22 @@ def run(test, params, env):
             else:
                 session = vm.wait_for_login(timeout=login_timeout)
 
-            error.context("making guest to swap memory")
+            error_context.context("making guest to swap memory")
             cmd = ("dd if=/dev/zero of=%s/zero bs=%s000000 count=%s" %
                    (mem_path, hugepage_size, count))
-            utils.run(cmd)
+            process.run(cmd, shell=True)
 
             args_dict = get_args(args_dict_check)
             swap_free.append(int(args_dict['swap_free']) / 1024)
 
             if swap_free[1] - swap_free[0] >= 0:
-                raise error.TestFail("No data was swapped to memory")
+                test.fail("No data was swapped to memory")
 
             # Try harder to make guest memory to be swapped
             session.cmd("find / -name \"*\"", timeout=check_cmd_timeout)
         finally:
             if session is not None:
-                utils.run("umount %s" % mem_path)
+                process.run("umount %s" % mem_path, shell=True)
 
         logging.info("Swapping test succeed")
 

@@ -1,9 +1,8 @@
-from autotest.client.shared import error
-
 from virttest import env_process
+from virttest import error_context
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Run an gluster test.
@@ -19,7 +18,7 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    error.context("Create gluster fs image")
+    error_context.context("Create gluster fs image")
     gluster_params = params.object_params("gluster")
     image_name = gluster_params.get("image_name")
 

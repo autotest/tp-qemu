@@ -1,5 +1,4 @@
 import os
-from autotest.client.shared import error
 
 
 def run(test, params, env):
@@ -38,7 +37,7 @@ def run(test, params, env):
 
     pid = vm.get_pid()
     if pid is None:
-        raise error.TestError("Fail to get process id for VM")
+        test.error("Fail to get process id for VM")
 
     # directory for storing temporary files
     fdfiles_dir = os.path.join(test.tmpdir, 'fdfiles')
@@ -55,11 +54,11 @@ def run(test, params, env):
         os.close(fd)
         # getfd is supposed to generate no output
         if response:
-            raise error.TestError("getfd returned error: %s" % response)
+            test.error("getfd returned error: %s" % response)
         # check if qemu process has a copy of the fd
         if not has_fd(pid, path):
-            raise error.TestError("QEMU process does not seem to have a file "
-                                  "descriptor pointing to file %s" % path)
+            test.error("QEMU process does not seem to have a file "
+                       "descriptor pointing to file %s" % path)
 
     # clean up files
     for n in range(nofiles):

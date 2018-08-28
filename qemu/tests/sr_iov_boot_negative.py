@@ -1,11 +1,10 @@
 import logging
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import env_process
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     KVM boot with negative parameter test:
@@ -20,20 +19,22 @@ def run(test, params, env):
 
     neg_msg = params.get("negative_msg")
     if params.get("start_vm") == "yes":
-        raise error.TestError("Please set start_vm to no")
+        test.error("Please set start_vm to no")
     params["start_vm"] = "yes"
     try:
-        error.context("Try to boot VM with negative parameters", logging.info)
+        error_context.context("Try to boot VM with negative parameters",
+                              logging.info)
         case_fail = False
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         case_fail = True
-    except Exception, e:
+    except Exception as e:
         if neg_msg:
-            error.context("Check qemu-qemu error message", logging.info)
+            error_context.context("Check qemu-qemu error message",
+                                  logging.info)
             if neg_msg not in str(e):
                 msg = "Could not find '%s' in error message '%s'" % (
                     neg_msg, e)
-                raise error.TestFail(msg)
+                test.fail(msg)
         logging.debug("Could not boot up vm, %s" % e)
     if case_fail:
-        raise error.TestFail("Did not raise exception during vm boot up")
+        test.fail("Did not raise exception during vm boot up")

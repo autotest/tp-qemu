@@ -2,8 +2,7 @@ import os
 import logging
 import time
 
-from autotest.client.shared import error
-
+from virttest import error_context
 from virttest import utils_net
 from virttest import utils_netperf
 from virttest import utils_misc
@@ -11,7 +10,7 @@ from virttest import data_dir
 from virttest import utils_test
 
 
-def launch_netperf_client(server_ips, netperf_clients, test_option,
+def launch_netperf_client(test, server_ips, netperf_clients, test_option,
                           test_duration, netperf_para_sess,
                           netperf_cmd_prefix):
     """
@@ -28,7 +27,7 @@ def launch_netperf_client(server_ips, netperf_clients, test_option,
                                    "Wait netperf test start"):
                 logging.info("Netperf test start successfully.")
             else:
-                raise error.TestError("Can not start netperf client.")
+                test.error("Can not start netperf client.")
 
     for n_client in netperf_clients:
         if n_client.is_netperf_running():
@@ -39,7 +38,7 @@ def launch_netperf_client(server_ips, netperf_clients, test_option,
                                 "Wait netperf test finish %ss" % left_time)
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     Network stress with multi nics test with netperf.
@@ -62,8 +61,9 @@ def run(test, params, env):
     shell_client = params.get("shell_client")
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
-    shell_prompt = params.get("shell_prompt", "^root@.*[\#\$]\s*$|#")
-    linesep = params.get("shell_linesep", "\n").decode('string_escape')
+    shell_prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
+    linesep = params.get(
+        "shell_linesep", "\n").encode().decode('unicode_escape')
     status_test_command = params.get("status_test_command", "echo $?")
     ping_count = int(params.get("ping_count", 10))
     compile_option_client = params.get("compile_option_client", "")
@@ -80,8 +80,8 @@ def run(test, params, env):
             server_vm = env.get_vm(server)
             server_vm.verify_alive()
             server_ctl = server_vm.wait_for_login(timeout=login_timeout)
-            error.context("Stop fireware on netperf server guest.",
-                          logging.info)
+            error_context.context("Stop fireware on netperf server guest.",
+                                  logging.info)
             server_ctl.cmd("service iptables stop; iptables -F",
                            ignore_all_errors=True)
             server_ip = server_vm.get_address()
@@ -104,7 +104,7 @@ def run(test, params, env):
                                                        status_test_command)
         else:
             err = "Only support setup netperf server in guest."
-            raise error.TestError(err)
+            test.error(err)
         server_infos.append(s_info)
 
     client = netperf_client.strip()
@@ -118,8 +118,8 @@ def run(test, params, env):
             if status:
                 logging.warn("Failed to execute dhcp-command, output:\n %s" %
                              output)
-        error.context("Stop fireware on netperf client guest.",
-                      logging.info)
+        error_context.context("Stop fireware on netperf client guest.",
+                              logging.info)
         client_ctl.cmd("service iptables stop; iptables -F",
                        ignore_all_errors=True)
 
@@ -150,12 +150,12 @@ def run(test, params, env):
                                                    status_test_command)
     else:
         err = "Only support setup netperf client in guest."
-        raise error.TestError(err)
+        test.error(err)
     client_infos.append(c_info)
 
     if params.get("os_type") == "linux":
-        error.context("Config static route in netperf server guest.",
-                      logging.info)
+        error_context.context("Config static route in netperf server guest.",
+                              logging.info)
         nics_list = utils_net.get_linux_ifname(client_ctl)
         for ip in server_ips:
             index = server_ips.index(ip) % len(nics_list)
@@ -180,7 +180,7 @@ def run(test, params, env):
 
     netperf_clients = []
     netperf_servers = []
-    error.context("Setup netperf guest.", logging.info)
+    error_context.context("Setup netperf guest.", logging.info)
     for c_info in client_infos:
         if c_info["os_type"] == "windows":
             netperf_link_c = netperf_client_link
@@ -201,7 +201,7 @@ def run(test, params, env):
                                                status_test_command=c_info["status_test_command"],
                                                compile_option=compile_option_client)
         netperf_clients.append(n_client)
-    error.context("Setup netperf server.", logging.info)
+    error_context.context("Setup netperf server.", logging.info)
     for s_info in server_infos:
         if s_info["os_type"] == "windows":
             netperf_link_s = netperf_server_link
@@ -224,7 +224,7 @@ def run(test, params, env):
         netperf_servers.append(n_server)
 
     try:
-        error.context("Start netperf server.", logging.info)
+        error_context.context("Start netperf server.", logging.info)
         for n_server in netperf_servers:
             n_server.start()
         test_duration = int(params.get("netperf_test_duration", 60))
@@ -232,9 +232,10 @@ def run(test, params, env):
         netperf_sessions = params.get("netperf_sessions", "1")
         p_sizes = params.get("package_sizes")
         netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
-        error.context("Start netperf clients.", logging.info)
+        error_context.context("Start netperf clients.", logging.info)
         for protocol in test_protocols.split():
-            error.context("Testing %s protocol" % protocol, logging.info)
+            error_context.context("Testing %s protocol" % protocol,
+                                  logging.info)
             sessions_test = netperf_sessions.split()
             sizes_test = p_sizes.split()
             for size in sizes_test:
@@ -242,19 +243,20 @@ def run(test, params, env):
                     test_option = params.get("test_option", "")
                     test_option += " -t %s -l %s " % (protocol, test_duration)
                     test_option += " -- -m %s" % size
-                    launch_netperf_client(server_ips, netperf_clients, test_option,
-                                          test_duration, sess, netperf_cmd_prefix)
-        error.context("Ping test after netperf testing.", logging.info)
+                    launch_netperf_client(test, server_ips, netperf_clients,
+                                          test_option, test_duration, sess,
+                                          netperf_cmd_prefix)
+        error_context.context("Ping test after netperf testing.", logging.info)
         for s_ip in server_ips:
             status, output = utils_test.ping(s_ip, ping_count,
                                              timeout=float(ping_count) * 1.5)
             if status != 0:
-                raise error.TestFail("Ping returns non-zero value %s" % output)
+                test.fail("Ping returns non-zero value %s" % output)
 
             package_lost = utils_test.get_loss_ratio(output)
             if package_lost != 0:
-                raise error.TestFail("%s packeage lost when ping server ip %s " %
-                                     (package_lost, server))
+                test.fail("%s packeage lost when ping server ip %s " %
+                          (package_lost, server))
     finally:
         for n_server in netperf_servers:
             if n_server:

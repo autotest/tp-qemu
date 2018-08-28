@@ -1,13 +1,10 @@
 import os
 import logging
 
-from autotest.client import utils
-
 from virttest import postprocess_iozone
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
-from avocado.core import exceptions
 
 
 @error_context.context_aware
@@ -63,12 +60,12 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-
+    session = vm.wait_for_login(timeout=timeout)
     driver_name = get_driver()
     if driver_name:
-        utils_test.qemu.setup_win_driver_verifier(driver_name, vm, timeout)
-
-    session = vm.wait_for_login(timeout=timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                test, driver_name,
+                                                                timeout)
     if params.get("format_disk", "no") == "yes":
         error_context.context("Format disk", logging.info)
         utils_misc.format_windows_disk(session, disk_index,
@@ -82,8 +79,10 @@ def run(test, params, env):
                                                 timeout=iozone_timeout)
     error_context.context("Write results to %s" % results_path, logging.info)
     if status != 0:
-        raise exceptions.TestFail("iozone test failed: %s" % results)
-    utils.open_write_close(results_path, results)
+        test.fail("iozone test failed: %s" % results)
+
+    with open(results_path, 'w') as file:
+        file.write(results)
 
     if params.get("post_result", "no") == "yes":
         error_context.context("Generate graph of test result", logging.info)

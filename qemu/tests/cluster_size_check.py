@@ -1,12 +1,12 @@
 import re
 import logging
 
-from autotest.client.shared import error
+from virttest import error_context
 
 from qemu.tests import qemu_disk_img
 
 
-@error.context_aware
+@error_context.context_aware
 def run(test, params, env):
     """
     qemu-img cluster size check test:
@@ -59,7 +59,8 @@ def run(test, params, env):
                 fail_log += "Succeed in creating image unexpectedly.\n"
         else:
             output = image.info()
-            error.context("Check the cluster size from output", logging.info)
+            error_context.context("Check the cluster size from output",
+                                  logging.info)
             cluster_size = re.findall(parttern, output)
             if cluster_size:
                 if cluster_size[0] != expect:
@@ -82,7 +83,7 @@ def run(test, params, env):
     csize_parttern = params.get("cluster_size_pattern")
     cluster_size_set = params.get("cluster_size_set")
 
-    for cluster_size in re.split("\s+", cluster_size_set.strip()):
+    for cluster_size in re.split(r"\s+", cluster_size_set.strip()):
         if cluster_size == "default":
             params["image_cluster_size"] = None
             csize_expect = params.get("cluster_size_default", "65536")
@@ -91,15 +92,14 @@ def run(test, params, env):
             params["image_cluster_size"] = cluster_size
             csize_expect = str(memory_size(cluster_size))
             csize_set = cluster_size
-        error.context("Check cluster size as cluster size set to %s"
-                      % cluster_size)
+        error_context.context("Check cluster size as cluster size set to %s"
+                              % cluster_size)
 
         c_fail, log = check_cluster_size(csize_parttern, csize_expect,
                                          csize_set)
         fail += c_fail
         fail_log += log
 
-    error.context("Finally result check")
+    error_context.context("Finally result check")
     if fail > 0:
-        raise error.TestFail("Cluster size check failed %s times:\n%s"
-                             % (fail, fail_log))
+        test.fail("Cluster size check failed %s times:\n%s" % (fail, fail_log))

@@ -1,5 +1,7 @@
 import logging
-from autotest.client.shared import error
+
+from virttest import error_context
+
 from qemu.tests import blk_stream
 
 
@@ -8,14 +10,14 @@ class BlockStreamSimple(blk_stream.BlockStream):
     def __init__(self, test, params, env, tag):
         super(BlockStreamSimple, self).__init__(test, params, env, tag)
 
-    @error.context_aware
+    @error_context.context_aware
     def query_status(self):
         """
         query running block streaming job info;
         """
-        error.context("query job status", logging.info)
+        error_context.context("query job status", logging.info)
         if not self.get_status():
-            raise error.TestFail("No active job")
+            self.test.fail("No active job")
 
 
 def run(test, params, env):
@@ -34,6 +36,7 @@ def run(test, params, env):
     tag = params.get("source_image", "image1")
     simple_test = BlockStreamSimple(test, params, env, tag)
     try:
+        simple_test.action_before_start()
         simple_test.create_snapshots()
         simple_test.start()
         simple_test.action_when_streaming()

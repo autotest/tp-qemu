@@ -1,13 +1,11 @@
 import os
 import re
+import six
 import time
 import threading
 import logging
 
-from autotest.client import utils
-
 from avocado.utils import process
-from avocado.core import exceptions
 
 from virttest import utils_misc, utils_test
 from virttest import data_dir
@@ -21,7 +19,7 @@ def format_result(result, base="12", fbase="2"):
     :param base: the length of converted string
     :param fbase: the decimal digit for float
     """
-    if isinstance(result, str):
+    if isinstance(result, six.string_types):
         value = "%" + base + "s"
     elif isinstance(result, int):
         value = "%" + base + "d"
@@ -64,7 +62,7 @@ def get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, type, driv
     :param timeout: Timeout in seconds
     """
 
-    kvm_ver = utils.system_output(kvm_ver_chk_cmd)
+    kvm_ver = process.system_output(kvm_ver_chk_cmd, shell=True)
     host_ver = os.uname()[2]
 
     result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
@@ -73,7 +71,7 @@ def get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, type, driv
     if driver_format != "ide":
         result = session.cmd_output(guest_ver_cmd, timeout)
         if type == "windows":
-            guest_ver = re.findall(".*?(\d{2}\.\d{2}\.\d{3}\.\d{4}).*?", result)
+            guest_ver = re.findall(r".*?(\d{2}\.\d{2}\.\d{3}\.\d{4}).*?", result)
             result_file.write("### guest-kernel-ver :Microsoft Windows [Version %s]\n" % guest_ver[0])
         else:
             result_file.write("### guest-kernel-ver :%s" % result)
@@ -200,14 +198,14 @@ def run(test, params, env):
     if os_type == "windows":
         for num in range(1, int(num_disk) + 1):
             disks = check_disk_status(session, cmd_timeout, num)
-            diskstatus = re.findall("Disk\s+\d+\s+(\w+).*?\s+\d+", disks[0])[0]
+            diskstatus = re.findall(r"Disk\s+\d+\s+(\w+).*?\s+\d+", disks[0])[0]
             if diskstatus == "Offline":
                 online_disk_cmd = params.get("online_disk_cmd")
                 online_disk_run = online_disk_cmd % num
                 (s, o) = session.cmd_status_output(online_disk_run,
                                                    timeout=cmd_timeout)
                 if s:
-                    raise exceptions.TestFail("Failed to online disk: %s" % o)
+                    test.fail("Failed to online disk: %s" % o)
     # format disk
     if format == "True":
         session.cmd(pre_cmd, cmd_timeout)
@@ -239,7 +237,7 @@ def run(test, params, env):
                         (s, o) = session.cmd_status_output(drop_cache,
                                                            timeout=cmd_timeout)
                         if s:
-                            raise exceptions.TestFail("Failed to free memory: %s" % o)
+                            test.fail("Failed to free memory: %s" % o)
                     cpu_file = os.path.join(data_dir.get_tmp_dir(), "cpus")
                     io_exits_b = int(process.system_output("cat /sys/kernel/debug/kvm/exits"))
                     fio_t = threading.Thread(target=fio_thread)
@@ -253,12 +251,12 @@ def run(test, params, env):
                     o = process.system_output("egrep '(read|write)' %s" % fio_result_file)
                     results = re.findall(pattern, o)
                     o = process.system_output("egrep 'lat' %s" % fio_result_file)
-                    laten = re.findall("\s{5}lat\s\((\wsec)\).*?avg=[\s]?(\d+(?:[\.][\d]+)?).*?", o)
+                    laten = re.findall(r"\s{5}lat\s\((\wsec)\).*?avg=[\s]?(\d+(?:[\.][\d]+)?).*?", o)
                     bw = float(utils_misc.normalize_data_size(results[0][0]))
                     iops = int(results[0][1])
                     if os_type == "linux":
                         o = process.system_output("egrep 'util' %s" % fio_result_file)
-                        util = float(re.findall(".*?util=(\d+(?:[\.][\d]+))%", o)[0])
+                        util = float(re.findall(r".*?util=(\d+(?:[\.][\d]+))%", o)[0])
 
                     lat = float(laten[0][1]) / 1000 if laten[0][0] == "usec" else float(laten[0][1])
                     if re.findall("rw", io_pattern):

@@ -15,9 +15,7 @@ import time
 import re
 from subprocess import Popen
 
-from autotest.client import utils
 from avocado.utils import process
-
 from virttest import error_context
 from virttest import qemu_virtio_port
 from virttest import env_process
@@ -346,7 +344,7 @@ def run(test, params, env):
         try:
             guest_worker.cmd("virt.recv('%s', 10, 1024, False)"
                              % port.name, 10)
-        except qemu_virtio_port.VirtioPortException, details:
+        except qemu_virtio_port.VirtioPortException as details:
             if '[Errno 11] Resource temporarily unavailable' in details:
                 # Give the VM second chance
                 time.sleep(0.01)
@@ -386,7 +384,7 @@ def run(test, params, env):
             if ret:
                 try:
                     tmp += recv_port.sock.recv(1024)
-                except IOError, failure_detail:
+                except IOError as failure_detail:
                     logging.warn("Got err while recv: %s", failure_detail)
             if len(tmp) >= len(data):
                 break
@@ -476,7 +474,7 @@ def run(test, params, env):
 
             threads = []
             queues = []
-            for i in xrange(0, len(recv_pts)):
+            for i in range(0, len(recv_pts)):
                 queues.append(deque())
 
             # Start loopback
@@ -495,7 +493,7 @@ def run(test, params, env):
             thread.start()
             threads.append(thread)
 
-            for i in xrange(len(recv_pts)):
+            for i in range(len(recv_pts)):
                 thread = qemu_virtio_port.ThRecvCheck(recv_pts[i], queues[i],
                                                       EXIT_EVENT,
                                                       buf_len[i + 1])
@@ -510,7 +508,7 @@ def run(test, params, env):
                 if not vm.is_alive():
                     err += "main(vmdied), "
                 _transfered = []
-                for i in xrange(no_threads):
+                for i in range(no_threads):
                     if not threads[i].isAlive():
                         err += "main(th%s died), " % threads[i]
                     _transfered.append(threads[i].idx)
@@ -685,7 +683,7 @@ def run(test, params, env):
                 test.fail("VM refuses to go down. Suspend failed.")
             time.sleep(intr_time)
             vm.create()
-            for _ in xrange(10):    # Wait until new ports are created
+            for _ in range(10):    # Wait until new ports are created
                 try:
                     if (vm.virtio_ports[0] != oldport and
                             len(vm.virtio_ports) == portslen):
@@ -706,7 +704,7 @@ def run(test, params, env):
             threads[1].migrate_event.set()
             guest_worker.reconnect(vm, 360)
             logging.debug("S4: watch 1s for initial data loss stabilization.")
-            for _ in xrange(10):
+            for _ in range(10):
                 time.sleep(0.1)
                 loss = threads[1].sendidx
                 count = threads[1].idx
@@ -837,19 +835,19 @@ def run(test, params, env):
         if params.get('virtio_console_micro_repeats'):
             error_context.context("Micro interruptions", logging.info)
             threads[1].sendidx = acceptable_loss
-            for i in xrange(int(params.get('virtio_console_micro_repeats'))):
+            for i in range(int(params.get('virtio_console_micro_repeats'))):
                 interruption()
 
         error_context.context("Normal interruptions", logging.info)
         try:
-            for i in xrange(no_repeats):
+            for i in range(no_repeats):
                 error_context.context("Interruption nr. %s" % i)
                 threads[1].sendidx = acceptable_loss
                 interruption()
                 count = threads[1].idx
                 logging.debug('Transfered data: %s', count)
                 # Be friendly to very short test_time values
-                for _ in xrange(10):
+                for _ in range(10):
                     time.sleep(test_time)
                     logging.debug('Transfered data2: %s', threads[1].idx)
                     if count == threads[1].idx and threads[1].isAlive():
@@ -872,16 +870,16 @@ def run(test, params, env):
                         if 'WARNING:' in data:
                             logging.warning('There are warnings in dmesg:\n%s',
                                             data)
-                    except Exception, inst:
+                    except Exception as inst:
                         logging.warn("Can't verify dmesg: %s", inst)
                     try:
                         vm.monitor.info('qtree')
-                    except Exception, inst:
+                    except Exception as inst:
                         logging.warn("Failed to get info from qtree: %s", inst)
                     EXIT_EVENT.set()
                     vm.verify_kernel_crash()
                     test.fail('No data transferred after interruption.')
-        except Exception, inst:
+        except Exception as inst:
             err = "main thread, "
             logging.error('interrupted_loopback failed with exception: %s',
                           inst)
@@ -942,7 +940,7 @@ def run(test, params, env):
         """
         if not stats:
             return None
-        for i in xrange((len(stats) - 1), 0, -1):
+        for i in range((len(stats) - 1), 0, -1):
             stats[i] = stats[i] - stats[i - 1]
             stats[i] /= scale
         stats[0] /= scale
@@ -961,6 +959,7 @@ def run(test, params, env):
         :param cfg: virtio_console_test_time - default test_duration time
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
+        from autotest.client import utils
         test_params = params['virtio_console_params']
         test_time = int(params.get('virtio_console_test_time', 60))
         no_serialports = 0
@@ -998,7 +997,7 @@ def run(test, params, env):
             port.open()
 
             data = ""
-            for _ in xrange(buf_len):
+            for _ in range(buf_len):
                 data += "%c" % random.randrange(255)
 
             funcatexit.register(env, params.get('type'), __set_exit_event)
@@ -1016,7 +1015,7 @@ def run(test, params, env):
                 loads.start()
                 _time = time.time()
                 thread.start()
-                for _ in xrange(100):
+                for _ in range(100):
                     stats.append(thread.idx)
                     time.sleep(time_slice)
                 _time = time.time() - _time - duration
@@ -1033,7 +1032,7 @@ def run(test, params, env):
                     logging.error("test_perf: no data sent (H2G)")
 
                 # Let the guest read-out all the remaining data
-                for _ in xrange(60):
+                for _ in range(60):
                     if guest_worker._cmd("virt.poll('%s', %s)"
                                          % (port.name, select.POLLIN), 10)[0]:
                         break
@@ -1068,7 +1067,7 @@ def run(test, params, env):
                 loads.start()
                 guest_worker.cmd("virt.send_loop()", 10)
                 _time = time.time()
-                for _ in xrange(100):
+                for _ in range(100):
                     stats.append(thread.idx)
                     time.sleep(time_slice)
                 _time = time.time() - _time - duration
@@ -1095,7 +1094,7 @@ def run(test, params, env):
                 logging.info("Guest -> Host [MB/s] (min/med/max) = %.3f/%.3f/"
                              "%.3f", stats[0], stats[len(stats) / 2],
                              stats[-1])
-            except Exception, inst:
+            except Exception as inst:
                 logging.error("test_perf: Failed with %s, starting virtio_test.cleanup",
                               inst)
                 loads.stop()
@@ -1104,7 +1103,7 @@ def run(test, params, env):
                     EXIT_EVENT.set()
                     thread.join()
                     raise inst
-                except Exception, inst:
+                except Exception as inst:
                     logging.error("test_perf: Critical failure, killing VM %s",
                                   inst)
                     EXIT_EVENT.set()
@@ -1158,7 +1157,7 @@ def run(test, params, env):
         threads = []
         queues = []
         verified = []
-        for i in xrange(0, len(ports[1:])):
+        for i in range(0, len(ports[1:])):
             queues.append(deque())
             verified.append(0)
 
@@ -1177,7 +1176,7 @@ def run(test, params, env):
         thread.start()
         threads.append(thread)
 
-        for i in xrange(len(ports[1:])):
+        for i in range(len(ports[1:])):
             _ = threading.Event()
             thread = qemu_virtio_port.ThRecvCheck(ports[1:][i], queues[i],
                                                   EXIT_EVENT, blocklen,
@@ -1196,7 +1195,7 @@ def run(test, params, env):
             i += 1
             time.sleep(2)
 
-        for j in xrange(no_migrations):
+        for j in range(no_migrations):
             error_context.context("Performing migration number %s/%s"
                                   % (j, no_migrations))
             vm = migration.migrate(vm, env, 3600, "exec", 0, offline)
@@ -1209,7 +1208,7 @@ def run(test, params, env):
                 ports = virtio_test.get_virtio_ports(vm)[1]
             else:
                 ports = virtio_test.get_virtio_ports(vm)[0]
-            for i in xrange(len(threads)):
+            for i in range(len(threads)):
                 threads[i].port = ports[i]
                 threads[i].migrate_event.set()
 
@@ -1233,7 +1232,7 @@ def run(test, params, env):
                     EXIT_EVENT.set()
                     test.fail("Send thread died unexpectedly in "
                               "migration %d" % (j + 1))
-            for i in xrange(0, len(ports[1:])):
+            for i in range(0, len(ports[1:])):
                 if not threads[i + 1].isAlive():
                     EXIT_EVENT.set()
                     test.fail("Recv thread %d died unexpectedly in "
@@ -1404,12 +1403,12 @@ def run(test, params, env):
         consoles[0][0].sock.setblocking(0)
         consoles[1][0].sock.setblocking(0)
         logging.info("Test correct initialization of hotplug ports")
-        for bus_id in xrange(1, 5):  # count of pci device
+        for bus_id in range(1, 5):  # count of pci device
             ret = vm.monitors[0].cmd("device_add %s,id=virtio_serial_pci%d"
                                      % (get_virtio_serial_name(), bus_id))
             if ret != "":
                 logging.error(ret)
-            for i in xrange(bus_id * 5 + 5):     # max ports 30
+            for i in range(bus_id * 5 + 5):     # max ports 30
                 _virtio_dev_add(vm, bus_id, i, console)
                 time.sleep(pause)
         # Test correct initialization of hotplug ports
@@ -1447,7 +1446,7 @@ def run(test, params, env):
 
         logging.info("Trying to add maximum count of ports to one pci device")
         # Try to add ports
-        for i in xrange(30):     # max port 30
+        for i in range(30):     # max port 30
             _virtio_dev_add(vm, 0, i, console)
             time.sleep(pause)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
@@ -1455,14 +1454,14 @@ def run(test, params, env):
 
         logging.info("Trying delete and add again part of ports")
         # Try to delete ports
-        for i in xrange(25):     # max port 30
+        for i in range(25):     # max port 30
             _virtio_dev_del(vm, 0, i)
             time.sleep(pause)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
         guest_worker.cmd('guest_exit()', 10)
 
         # Try to add ports
-        for i in xrange(5):      # max port 30
+        for i in range(5):      # max port 30
             _virtio_dev_add(vm, 0, i, console)
             time.sleep(pause)
         guest_worker = qemu_virtio_port.GuestWorker(vm)
@@ -1470,7 +1469,7 @@ def run(test, params, env):
 
         logging.info("Trying to add and delete one port 100 times")
         # Try 100 times add and delete one port.
-        for i in xrange(100):
+        for i in range(100):
             _virtio_dev_del(vm, 0, 0)
             time.sleep(pause)
             _virtio_dev_add(vm, 0, 0, console)
@@ -1501,7 +1500,7 @@ def run(test, params, env):
             vio_parent_bus = {'aobject': 'pci.0'}
         else:
             vio_parent_bus = None
-        for i in xrange(int(params.get("virtio_console_loops", 10))):
+        for i in range(int(params.get("virtio_console_loops", 10))):
             error_context.context("Hotpluging virtio_pci (iteration %d)" % i)
             vm.devices.set_dirty()
             new_dev = qdevices.QDevice(vio_type,
@@ -1579,6 +1578,7 @@ def run(test, params, env):
         :param cfg: virtio_console_params - which type of virtio port to test
         :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
+        from autotest.client import utils
         vm = env.get_vm(params["main_vm"])
         use_serialport = params.get('virtio_console_params') == "serialport"
         if use_serialport:
@@ -1604,7 +1604,7 @@ def run(test, params, env):
 
             try:
                 sent1 = 0
-                for _ in xrange(1000000):
+                for _ in range(1000000):
                     sent1 += port.sock.send("a")
             except socket.timeout:
                 logging.info("Data sending to closed port timed out.")
@@ -1621,7 +1621,7 @@ def run(test, params, env):
             loads.start()
             try:
                 sent2 = 0
-                for _ in xrange(40000):
+                for _ in range(40000):
                     sent2 = port.sock.send("a")
             except socket.timeout:
                 logging.info("Data sending to closed port timed out.")
@@ -1629,7 +1629,7 @@ def run(test, params, env):
             logging.info("Bytes sent to client: %d", sent2)
             logging.info("\n" + loads.get_cpu_status_string()[:-1])
             loads.stop()
-        except Exception, inst:
+        except Exception as inst:
             logging.error('test_rw_notconnect_guest failed: %s', inst)
             if loads:
                 loads.stop()
@@ -1732,7 +1732,7 @@ def run(test, params, env):
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
                       timeout=720)
-        except Exception, details:
+        except Exception as details:
             for process in process:
                 process.terminate()
             for port in vm.virtio_ports:
@@ -1777,7 +1777,7 @@ def run(test, params, env):
             vm.reboot(session=session,
                       method=params.get('virtio_console_method', 'shell'),
                       timeout=720)
-        except Exception, details:
+        except Exception as details:
             test.fail("Fail to reboot VM:\n%s" % details)
 
         # TODO: Hotplug ports and verify that they are usable
@@ -1799,7 +1799,7 @@ def run(test, params, env):
 
         qemu_version_pattern = params["qemu_version_pattern"]
         qemu_binary = utils_misc.get_qemu_binary(params)
-        output = str(process.run(qemu_binary + " --version"))
+        output = str(process.run(qemu_binary + " --version", shell=True))
         re_comp = re.compile(r'\s\d+\.\d+\.\d+')
         output_list = re_comp.findall(output)
         # high version
@@ -1819,7 +1819,7 @@ def run(test, params, env):
         vm = env.get_vm(params["main_vm"])
         try:
             vm.create(params=params)
-        except Exception, details:
+        except Exception as details:
             if exp_error_message in str(details):
                 logging.info("Expected qemu failure. Test PASSED.")
                 return

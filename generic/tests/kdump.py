@@ -148,6 +148,7 @@ def crash_test(test, vm, vcpu, crash_cmd, timeout):
     vmcore_rm_cmd = vmcore_rm_cmd % vmcore_path
     kdump_restart_cmd = vm.params.get("kdump_restart_cmd",
                                       "service kdump restart")
+    kdump_propagate_cmd = vm.params.get("kdump_propagate_cmd")
     kdump_status_cmd = vm.params.get("kdump_status_cmd",
                                      "systemctl status kdump.service")
 
@@ -253,10 +254,36 @@ def run(test, params, env):
                                os.path.join(test.debugdir,
                                             "kdump.conf-%s" % vm_name))
 
-            session = kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
-                                   kernel_param_cmd, kdump_enable_cmd, timeout)
+            kdump_method = vm.params.get("kdump_method", "basic")
+            vmcore_path = vm.params.get("vmcore_path", "/var/crash")
+            kdump_config = vm.params.get("kdump_config")
 
-            session_list.append(session)
+            if kdump_method == "ssh":
+                host_pwd = vm.params.get("host_pwd", "redhat")
+                guest_pwd = vm.params.get("guest_pwd", "redhat")
+                host_ip = utils_net.get_ip_address_by_interface(
+                    vm.params.get('netdst'))
+                guest_ip = vm.get_address()
+                session = vm.wait_for_login(timeout=timeout)
+
+                error_context.context("Setup ssh login without password...",
+                                      logging.info)
+                session.cmd("rm -rf /root/.ssh/*")
+
+                ssh_connection = utils_conn.SSHConnection(server_ip=host_ip,
+                                                          server_pwd=host_pwd,
+                                                          client_ip=guest_ip,
+                                                          client_pwd=guest_pwd)
+                try:
+                    ssh_connection.conn_check()
+                except utils_conn.ConnectionError:
+                    ssh_connection.conn_setup()
+                    ssh_connection.conn_check()
+
+                session = kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
+                                       kernel_param_cmd, kdump_enable_cmd, timeout)
+
+                session_list.append(session)
 
         for vm in vm_list:
             error_context.context("Kdump Testing, force the Linux kernel"
@@ -279,6 +306,7 @@ def run(test, params, env):
             error_context.context("Check the vmcore file after triggering"
                                   " a crash", logging.info)
             check_vmcore(test, vm_list[i], session_list[i], crash_timeout)
+
     finally:
         for s in session_list:
             s.close()

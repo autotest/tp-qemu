@@ -252,7 +252,7 @@ def run(test, params, env):
 
         port.open()
 
-        if (port.sock.recv(1024) < 10):
+        if (len(port.sock.recv(1024)) < 10):
             test.fail("Didn't received data from guest")
         # Now the cmd("virt.send('%s'... command should be finished
         guest_worker.cmd("print('PASS: nothing')", 10)

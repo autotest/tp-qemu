@@ -79,19 +79,6 @@ def run(test, params, env):
         port.open()
         virtio_test.cleanup(vm, guest_worker)
 
-    def test_check_zero_sym():
-        """
-        Check if port /dev/vport0p0 was created.
-        :param cfg: virtio_console_params - which type of virtio port to test
-        :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
-        """
-        if params.get('virtio_console_params') == 'serialport':
-            vm, guest_worker = virtio_test.get_vm_with_worker(no_serialports=1)
-        else:
-            vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=1)
-        guest_worker.cmd("virt.check_zero_sym()", 10)
-        virtio_test.cleanup(vm, guest_worker)
-
     def test_multi_open():
         """
         Try to open the same port twice.

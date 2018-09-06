@@ -191,7 +191,8 @@ def run(test, params, env):
             check_command = params.get("migration_bg_check_command", "")
             error_context.context("Checking the background command in the "
                                   "guest pre migration", logging.info)
-            session2.cmd(check_command, timeout=30)
+            if session2.cmd_status(check_command, timeout=30) != 0:
+                test.error("migration bg check command failed")
             session2.close()
 
             # run some functions before migrate start.
@@ -210,6 +211,14 @@ def run(test, params, env):
 
             capabilities = ast.literal_eval(params.get("migrate_capabilities", "{}"))
             inner_funcs = ast.literal_eval(params.get("migrate_inner_funcs", "[]"))
+            mig_parameters = ast.literal_eval(params.get("migrate_parameters", "{}"))
+            target_mig_parameters = params.get("target_migrate_parameters", "{}")
+            target_mig_parameters = ast.literal_eval(target_mig_parameters)
+            migrate_parameters = ()
+            if mig_parameters:
+                migrate_parameters += (mig_parameters,)
+            if target_mig_parameters:
+                migrate_parameters += (target_mig_parameters,)
 
             # Migrate the VM
             ping_pong = params.get("ping_pong", 1)
@@ -225,7 +234,7 @@ def run(test, params, env):
                                migration_exec_cmd_dst=mig_exec_cmd_dst,
                                migrate_capabilities=capabilities,
                                mig_inner_funcs=inner_funcs,
-                               env=env)
+                               env=env, migrate_parameters=migrate_parameters)
                 except qemu_monitor.MonitorNotSupportedMigCapError as e:
                     test.cancel("Unable to access capability: %s" % e)
                 except:
@@ -291,4 +300,5 @@ def run(test, params, env):
         # Just migrate without depending on a living guest OS
         vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline,
                    check, migration_exec_cmd_src=mig_exec_cmd_src,
-                   migration_exec_cmd_dst=mig_exec_cmd_dst)
+                   migration_exec_cmd_dst=mig_exec_cmd_dst,
+                   migrate_parameters=migrate_parameters)

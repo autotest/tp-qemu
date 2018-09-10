@@ -211,14 +211,10 @@ def run(test, params, env):
 
             capabilities = ast.literal_eval(params.get("migrate_capabilities", "{}"))
             inner_funcs = ast.literal_eval(params.get("migrate_inner_funcs", "[]"))
-            mig_parameters = ast.literal_eval(params.get("migrate_parameters", "{}"))
-            target_mig_parameters = params.get("target_migrate_parameters", "{}")
+            mig_parameters = ast.literal_eval(params.get("migrate_parameters", "None"))
+            target_mig_parameters = params.get("target_migrate_parameters", "None")
             target_mig_parameters = ast.literal_eval(target_mig_parameters)
-            migrate_parameters = ()
-            if mig_parameters:
-                migrate_parameters += (mig_parameters,)
-            if target_mig_parameters:
-                migrate_parameters += (target_mig_parameters,)
+            migrate_parameters = (mig_parameters, target_mig_parameters)
 
             # Migrate the VM
             ping_pong = params.get("ping_pong", 1)

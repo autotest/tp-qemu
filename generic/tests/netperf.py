@@ -130,6 +130,13 @@ def run(test, params, env):
         if netdst in br_in_use:
             ifaces_in_use = host_bridges.list_iface()
             target_ifaces = list(ifaces_in_use + br_in_use)
+        if params.get("netdst_nic1") in process.system_output(
+                "ovs-vsctl list-br", ignore_status=True, shell=True).decode():
+            ovs_list = "ovs-vsctl list-ports %s" % params["netdst_nic1"]
+            ovs_port = process.system_output(ovs_list,
+                                             shell=True).decode().splitlines()
+            target_ifaces = target_ifaces + \
+                params.objects("netdst_nic1") + ovs_port
         if vm.virtnet[0].nettype == "macvtap":
             target_ifaces.extend([vm.virtnet[0].netdst, vm.get_ifname(0)])
         error_context.context("Change all Bridge NICs MTU to %s"

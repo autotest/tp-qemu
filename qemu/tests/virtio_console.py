@@ -130,7 +130,7 @@ def run(test, params, env):
                          2)
 
         # Poll (IN, OUT)
-        port.sock.sendall("test")
+        port.sock.sendall(b"test")
         for test in [select.POLLIN, select.POLLOUT]:
             guest_worker.cmd("virt.poll('%s', %s)" % (port.name, test), 10)
 
@@ -179,7 +179,7 @@ def run(test, params, env):
         # Test sigio when port receive data
         guest_worker.cmd("virt.set_pool_want_return('%s', select.POLLOUT |"
                          " select.POLLIN)" % (port.name), 10)
-        port.sock.sendall("0123456789")
+        port.sock.sendall(b"0123456789")
         guest_worker.cmd("virt.get_sigio_poll_return('%s')" % (port.name), 10)
 
         # Test sigio port close event
@@ -299,7 +299,7 @@ def run(test, params, env):
                       "Data:\n%s" % tmp)
         elif match is not None:
             test.fail("Unexpected fail\nMatch: %s\nData:\n%s" % (match, tmp))
-        port.sock.sendall("1234567890")
+        port.sock.sendall(b"1234567890")
         # Now guest received the data end escaped from the recv()
         guest_worker.cmd("print('PASS: nothing')", 10)
         virtio_test.cleanup(vm, guest_worker)
@@ -326,7 +326,7 @@ def run(test, params, env):
                       "Data:\n%s" % tmp)
         elif match != 1:
             test.fail("Unexpected fail\nMatch: %s\nData:\n%s" % (match, tmp))
-        port.sock.sendall("1234567890")
+        port.sock.sendall(b"1234567890")
         time.sleep(0.01)
         try:
             guest_worker.cmd("virt.recv('%s', 10, 1024, False)"
@@ -354,7 +354,7 @@ def run(test, params, env):
             vm, guest_worker = virtio_test.get_vm_with_worker(no_consoles=2)
             send_port, recv_port = virtio_test.get_virtio_ports(vm)[0][:2]
 
-        data = "Smoke test data"
+        data = b"Smoke test data"
         send_port.open()
         recv_port.open()
         # Set nonblocking mode
@@ -363,7 +363,7 @@ def run(test, params, env):
         guest_worker.cmd("virt.loopback(['%s'], ['%s'], 1024, virt.LOOP_NONE)"
                          % (send_port.name, recv_port.name), 10)
         send_port.sock.sendall(data)
-        tmp = ""
+        tmp = b""
         i = 0
         while i <= 10:
             i += 1
@@ -983,9 +983,9 @@ def run(test, params, env):
 
             port.open()
 
-            data = ""
+            data = b""
             for _ in range(buf_len):
-                data += "%c" % random.randrange(255)
+                data += b"%c" % random.randrange(255)
 
             funcatexit.register(env, params.get('type'), __set_exit_event)
 
@@ -1592,7 +1592,7 @@ def run(test, params, env):
             try:
                 sent1 = 0
                 for _ in range(1000000):
-                    sent1 += port.sock.send("a")
+                    sent1 += port.sock.send(b"a")
             except socket.timeout:
                 logging.info("Data sending to closed port timed out.")
 
@@ -1609,7 +1609,7 @@ def run(test, params, env):
             try:
                 sent2 = 0
                 for _ in range(40000):
-                    sent2 = port.sock.send("a")
+                    sent2 = port.sock.send(b"a")
             except socket.timeout:
                 logging.info("Data sending to closed port timed out.")
 

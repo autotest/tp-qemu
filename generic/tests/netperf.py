@@ -88,12 +88,8 @@ def run(test, params, env):
     """
     def env_setup(session, ip, user, port, password):
         error_context.context("Setup env for %s" % ip)
-        ssh_cmd(session, "iptables -F", ignore_status=True)
-        ssh_cmd(session, "service iptables stop", ignore_status=True)
-        ssh_cmd(session, "systemctl stop firewalld.service",
-                ignore_status=True)
-        ssh_cmd(session, "echo 2 > /proc/sys/net/ipv4/conf/all/arp_ignore")
-        ssh_cmd(session, "echo 0 > /sys/kernel/mm/ksm/run", ignore_status=True)
+        if params.get("env_setup_cmd"):
+            ssh_cmd(session, params.get("env_setup_cmd"), ignore_status=True)
 
         pkg = params["netperf_pkg"]
         pkg = os.path.join(data_dir.get_deps_dir(), pkg)
@@ -140,6 +136,27 @@ def run(test, params, env):
         for iface in target_ifaces:
             process.run(host_mtu_cmd % (iface, mtu), ignore_status=False,
                         shell=True)
+
+    def tweak_tuned_profile():
+        """
+
+        Tweak configuration with truned profile
+
+        """
+
+        client_tuned_profile = params.get("client_tuned_profile")
+        server_tuned_profile = params.get("server_tuned_profile")
+        host_tuned_profile = params.get("host_tuned_profile")
+        error_context.context("Changing tune profile of guest", logging.info)
+        if params.get("os_type") == "linux" and server_tuned_profile:
+            ssh_cmd(server_ctl, server_tuned_profile)
+
+        error_context.context("Changing tune profile of client/host",
+                              logging.info)
+        if client_tuned_profile:
+            ssh_cmd(client, client_tuned_profile)
+        if host_tuned_profile:
+            ssh_cmd(host, host_tuned_profile)
 
     def _pin_vm_threads(vm, node):
         if node:
@@ -269,6 +286,7 @@ def run(test, params, env):
             password = params_tmp["password"]
             username = params_tmp["username"]
             env_setup(i, ip_dict[i], username, shell_port, password)
+    tweak_tuned_profile()
     mtu = int(params.get("mtu", "1500"))
     mtu_set(mtu)
 

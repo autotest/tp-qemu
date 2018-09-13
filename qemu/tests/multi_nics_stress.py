@@ -23,7 +23,7 @@ def launch_netperf_client(test, server_ips, netperf_clients, test_option,
         for n_client in netperf_clients:
             n_client.bg_start(s_ip, test_option,
                               netperf_para_sess, netperf_cmd_prefix)
-            if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
+            if utils_misc.wait_for(n_client.is_netperf_running, 30, 0, 1,
                                    "Wait netperf test start"):
                 logging.info("Netperf test start successfully.")
             else:
@@ -62,6 +62,8 @@ def run(test, params, env):
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
     shell_prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
+    disable_firewall = params.get("disable_firewall", "service iptables stop;"
+                                  " iptables -F")
     linesep = params.get(
         "shell_linesep", "\n").encode().decode('unicode_escape')
     status_test_command = params.get("status_test_command", "echo $?")
@@ -82,8 +84,7 @@ def run(test, params, env):
             server_ctl = server_vm.wait_for_login(timeout=login_timeout)
             error_context.context("Stop fireware on netperf server guest.",
                                   logging.info)
-            server_ctl.cmd("service iptables stop; iptables -F",
-                           ignore_all_errors=True)
+            server_ctl.cmd(disable_firewall, ignore_all_errors=True)
             server_ip = server_vm.get_address()
             server_ips.append(server_ip)
             s_info["ip"] = server_ip
@@ -120,8 +121,7 @@ def run(test, params, env):
                              output)
         error_context.context("Stop fireware on netperf client guest.",
                               logging.info)
-        client_ctl.cmd("service iptables stop; iptables -F",
-                       ignore_all_errors=True)
+        client_ctl.cmd(disable_firewall, ignore_all_errors=True)
 
         client_ip = client_vm.get_address()
         client_ips.append(client_ip)

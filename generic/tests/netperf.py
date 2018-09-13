@@ -6,6 +6,7 @@ import six
 import time
 
 from avocado.utils import process
+
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import utils_net
@@ -138,8 +139,13 @@ def run(test, params, env):
         error_context.context("Change all Bridge NICs MTU to %s"
                               % mtu, logging.info)
         for iface in target_ifaces:
-            process.run(host_mtu_cmd % (iface, mtu), ignore_status=False,
-                        shell=True)
+            try:
+                process.run(host_mtu_cmd % (iface, mtu), ignore_status=False,
+                            shell=True)
+            except process.CmdError as err:
+                if "SIOCSIFMTU" in err.result.stderr.decode():
+                    test.cancel("The ethenet device does not support jumbo,"
+                                "cancel test")
 
     def _pin_vm_threads(vm, node):
         if node:

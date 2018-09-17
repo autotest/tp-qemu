@@ -75,7 +75,7 @@ def run(test, params, env):
         try:
             build = re.findall(r"%s[^\s]+" % build_name, o)[0]
         except IndexError:
-            test.error("Could not get the latest kernel build name: %s", o)
+            test.error("Could not get the latest kernel build name: %s" % o)
         logging.info("The latest build for tag '%s' is '%s'", tag, build)
         info_cmd = "brew --topdir='%s' buildinfo %s" % (download_root, build)
         buildinfo = process.system_output(info_cmd,

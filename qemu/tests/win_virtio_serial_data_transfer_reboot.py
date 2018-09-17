@@ -85,7 +85,7 @@ def run(test, params, env):
     for script in guest_scripts.split(";"):
         link = os.path.join(data_dir.get_deps_dir("win_serial"), script)
         vm.copy_files_to(link, guest_path, timeout=60)
-    port_name = params["virtio_ports"].split()[0]
+    port_name = vm.virtio_ports[0].qemu_id
     host_file = get_virtio_port_host_file(vm, port_name)
     data_file = params["data_file"]
     data_file = os.path.join(data_dir.get_deps_dir("win_serial"),

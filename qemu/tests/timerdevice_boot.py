@@ -1,19 +1,16 @@
 import logging
-import re
 import time
-import functools
+import re
 
 from avocado.utils import process
-from virttest import data_dir
-from virttest import storage
-from virttest import utils_disk
 from virttest import utils_test
-from virttest import env_process
 from virttest import funcatexit
 from virttest import error_context
 
 
-_system = functools.partial(process.system, shell=True)
+def _system(*args, **kwargs):
+    kwargs["shell"] = True
+    return process.system(*args, **kwargs)
 
 
 @error_context.context_aware
@@ -21,31 +18,84 @@ def run(test, params, env):
     """
     Timer device boot guest:
 
-    1) Sync the host system time with ntp server
+    1) Check host clock's sync status with chronyd
     2) Add some load on host (Optional)
     3) Boot the guest with specific clock source
     4) Check the clock source currently used on guest
     5) Do some file operation on guest (Optional)
     6) Check the system time on guest and host (Optional)
-    7) Check the hardware time on guest and host (Optional)
+    7) Check the hardware time on guest (linux only)
     8) Sleep period of time before reboot (Optional)
     9) Reboot guest (Optional)
     10) Check the system time on guest and host (Optional)
-    11) Check the hardware time on guest and host (Optional)
+    11) Check the hardware time on guest (Optional)
+    12) Restore guest's clock source
 
     :param test: QEMU test object.
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    def verify_guest_clock_source(session, expected):
-        error_context.context("Check the current clocksource in guest",
-                              logging.info)
+
+    def get_hwtime(session):
+        """
+        Get guest's hardware clock.
+
+        :param session: VM session.
+        """
+        hwclock_time_command = params.get("hwclock_time_command",
+                                          "hwclock -u")
+        hwclock_time_filter_re = params.get("hwclock_time_filter_re",
+                                            r"(\d+-\d+-\d+ \d+:\d+:\d+)")
+        hwclock_time_format = params.get("hwclock_time_format",
+                                         "%Y-%m-%d %H:%M:%S")
+        output = session.cmd_output_safe(hwclock_time_command)
+        try:
+            str_time = re.findall(hwclock_time_filter_re, output)[0]
+            guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
+        except Exception as err:
+            logging.debug(
+                "(time_format, time_string): (%s, %s)", hwclock_time_format, str_time)
+            raise err
+        return guest_time
+
+    def get_current_clksrc(session):
         cmd = "cat /sys/devices/system/clocksource/"
         cmd += "clocksource0/current_clocksource"
-        if expected not in session.cmd(cmd):
-            test.fail("Guest didn't use '%s' clocksource" % expected)
+        current_clksrc = session.cmd_output(cmd)
+        if "kvm-clock" in current_clksrc:
+            return "kvm-clock"
+        elif "tsc" in current_clksrc:
+            return "tsc"
+        elif "timebase" in current_clksrc:
+            return "timebase"
+        elif "acpi_pm" in current_clksrc:
+            return "acpi_pm"
+        return current_clksrc
 
-    error_context.context("Sync the host system time with ntp server",
+    def update_clksrc(session, clksrc):
+        """
+        Update guest's clocksource, this func can work when not login
+        into guest with ssh.
+
+        :param session: VM session.
+        :param clksrc: expected guest's clocksource.
+        """
+        avail_cmd = "cat /sys/devices/system/clocksource/clocksource0/"
+        avail_cmd += "available_clocksource"
+        avail_clksrc = session.cmd_output(avail_cmd)
+        if clksrc in avail_clksrc:
+            clksrc_cmd = "echo %s > /sys/devices/system/clocksource/" % clksrc
+            clksrc_cmd += "clocksource0/current_clocksource"
+            status, output = session.cmd_status_output(clksrc_cmd)
+            if status:
+                test.fail("fail to update guest's clocksource to %s,"
+                          "details: %s" % clksrc, output)
+        else:
+            test.error("please check the clocksource you want to set, "
+                       "it's not supported by current guest, current "
+                       "available clocksources: %s" % avail_clksrc)
+
+    error_context.context("sync host time with NTP server",
                           logging.info)
     clock_sync_command = params["clock_sync_command"]
     process.system(clock_sync_command, shell=True)
@@ -53,77 +103,28 @@ def run(test, params, env):
     timerdevice_host_load_cmd = params.get("timerdevice_host_load_cmd")
     if timerdevice_host_load_cmd:
         error_context.context("Add some load on host", logging.info)
-        process.system(timerdevice_host_load_cmd, shell=True)
-        host_load_stop_cmd = params["timerdevice_host_load_stop_cmd"]
+        process.system(timerdevice_host_load_cmd, shell=True,
+                       ignore_bg_processes=True)
+        host_load_stop_cmd = params.get("timerdevice_host_load_stop_cmd",
+                                        "pkill -f 'do X=1'")
         funcatexit.register(env, params["type"], _system,
                             host_load_stop_cmd)
 
-    error_context.context("Boot a guest with kvm-clock", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=timeout)
+    session = vm.wait_for_serial_login(timeout=timeout)
 
     timerdevice_clksource = params.get("timerdevice_clksource")
+    need_restore_clksrc = False
     if timerdevice_clksource:
-        try:
-            verify_guest_clock_source(session, timerdevice_clksource)
-        except Exception:
-            clksrc = timerdevice_clksource
-            error_context.context("Shutdown guest")
-            vm.destroy()
-            env.unregister_vm(vm.name)
-            error_context.context("Update guest kernel cli to '%s'" % clksrc,
-                                  logging.info)
-            image_filename = storage.get_image_filename(params,
-                                                        data_dir.get_data_dir())
-            grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
-            kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                            r".*vmlinuz-\d+.*")
+        origin_clksrc = get_current_clksrc(session)
+        logging.info("guest is booted with %s" % origin_clksrc)
 
-            disk_obj = utils_disk.GuestFSModiDisk(image_filename)
-            kernel_cfg_original = disk_obj.read_file(grub_file)
-            try:
-                logging.warn("Update the first kernel entry to"
-                             " '%s' only" % clksrc)
-                kernel_cfg = re.findall(kernel_cfg_pattern,
-                                        kernel_cfg_original)[0]
-            except IndexError as detail:
-                test.error("Couldn't find the kernel config, regex"
-                           " pattern is '%s', detail: '%s'" %
-                           (kernel_cfg_pattern, detail))
-
-            if "clocksource=" in kernel_cfg:
-                kernel_cfg_new = re.sub(r"clocksource=.*?\s",
-                                        "clocksource=%s" % clksrc, kernel_cfg)
-            else:
-                kernel_cfg_new = "%s %s" % (kernel_cfg,
-                                            "clocksource=%s" % clksrc)
-
-            disk_obj.replace_image_file_content(grub_file, kernel_cfg,
-                                                kernel_cfg_new)
-
-            error_context.context("Boot the guest", logging.info)
-            vm_name = params["main_vm"]
-            cpu_model_flags = params.get("cpu_model_flags")
-            params["cpu_model_flags"] = cpu_model_flags + ",-kvmclock"
-            env_process.preprocess_vm(test, params, env, vm_name)
-            vm = env.get_vm(vm_name)
-            vm.verify_alive()
-            session = vm.wait_for_login(timeout=timeout)
-
-            error_context.context("Check the current clocksource in guest",
-                                  logging.info)
-            verify_guest_clock_source(session, clksrc)
-
-        error_context.context("Kill all ntp related processes")
-        session.cmd("pkill ntp; true")
-
-    if params.get("timerdevice_file_operation") == "yes":
-        error_context.context("Do some file operation on guest", logging.info)
-        session.cmd("dd if=/dev/zero of=/tmp/timer-test-file bs=1M count=100")
-        return
+        if timerdevice_clksource != origin_clksrc:
+            update_clksrc(session, timerdevice_clksource)
+            need_restore_clksrc = True
 
     # Command to run to get the current time
     time_command = params["time_command"]
@@ -131,29 +132,27 @@ def run(test, params, env):
     time_filter_re = params["time_filter_re"]
     # Time format for time.strptime()
     time_format = params["time_format"]
-    timerdevice_drift_threshold = params.get("timerdevice_drift_threshold", 3)
+    timerdevice_drift_threshold = float(params.get("timerdevice_drift_threshold", 3))
 
     error_context.context("Check the system time on guest and host",
                           logging.info)
     (host_time, guest_time) = utils_test.get_time(session, time_command,
                                                   time_filter_re, time_format)
+    if params["os_type"] == "linux":
+        error_context.context("Check the hardware time on guest", logging.info)
+        guest_hwtime = get_hwtime(session)
+
     drift = abs(float(host_time) - float(guest_time))
     if drift > timerdevice_drift_threshold:
         test.fail("The guest's system time is different with"
                   " host's. Host time: '%s', guest time:"
                   " '%s'" % (host_time, guest_time))
 
-    get_hw_time_cmd = params.get("get_hw_time_cmd")
-    if get_hw_time_cmd:
-        error_context.context(
-            "Check the hardware time on guest and host", logging.info)
-        host_time = process.system_output(get_hw_time_cmd, shell=True)
-        guest_time = session.cmd(get_hw_time_cmd)
-        drift = abs(float(host_time) - float(guest_time))
-        if drift > timerdevice_drift_threshold:
-            test.fail("The guest's hardware time is different with"
-                      " host's. Host time: '%s', guest time:"
-                      " '%s'" % (host_time, guest_time))
+    drift = abs(float(host_time) - float(guest_hwtime))
+    if drift > timerdevice_drift_threshold:
+        test.fail("The guest's hardware time is different with"
+                  " host's system time. Host time: '%s', guest time:"
+                  " '%s'" % (host_time, guest_hwtime))
 
     if params.get("timerdevice_reboot_test") == "yes":
         sleep_time = params.get("timerdevice_sleep_time")
@@ -163,7 +162,7 @@ def run(test, params, env):
             sleep_time = int(sleep_time)
             time.sleep(sleep_time)
 
-        session = vm.reboot()
+        session = vm.reboot(timeout=timeout)
         error_context.context("Check the system time on guest and host",
                               logging.info)
         (host_time, guest_time) = utils_test.get_time(session, time_command,
@@ -174,14 +173,15 @@ def run(test, params, env):
                       " host's. Host time: '%s', guest time:"
                       " '%s'" % (host_time, guest_time))
 
-        get_hw_time_cmd = params.get("get_hw_time_cmd")
-        if get_hw_time_cmd:
+        if params["os_type"] == "linux":
             error_context.context(
-                "Check the hardware time on guest and host", logging.info)
-            host_time = process.system_output(get_hw_time_cmd, shell=True)
-            guest_time = session.cmd(get_hw_time_cmd)
-            drift = abs(float(host_time) - float(guest_time))
+                "Check the hardware time on guest", logging.info)
+            guest_hwtime = get_hwtime(session)
+            drift = abs(float(host_time) - float(guest_hwtime))
             if drift > timerdevice_drift_threshold:
                 test.fail("The guest's hardware time is different with"
                           " host's. Host time: '%s', guest time:"
-                          " '%s'" % (host_time, guest_time))
+                          " '%s'" % (host_time, guest_hwtime))
+    session.close()
+    if need_restore_clksrc:
+        update_clksrc(session, origin_clksrc)

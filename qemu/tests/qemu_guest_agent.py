@@ -898,6 +898,31 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("The return value of thawing an unfrozen fs is %s,"
                       "it should be zero" % ret)
 
+    @error_context.context_aware
+    def gagent_check_freeze_frozen(self, test, params, env):
+        """
+        Freeze the frozen fs
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        self.gagent.fsfreeze()
+        error_context.context("Freeze the frozen FS", logging.info)
+        try:
+            self.gagent.fsfreeze(check_status=False)
+        except guest_agent.VAgentCmdError as e:
+            expected = ("The command guest-fsfreeze-freeze has been disabled "
+                        "for this instance")
+            if expected not in e.edata["desc"]:
+                test.fail(e)
+        else:
+            test.fail("Cmd 'guest-fsfreeze-freeze' is executed successfully "
+                      "after freezing FS! But it should return error.")
+        finally:
+            if self.gagent.get_fsfreeze_status() == self.gagent.FSFREEZE_STATUS_FROZEN:
+                self.gagent.fsthaw(check_status=False)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

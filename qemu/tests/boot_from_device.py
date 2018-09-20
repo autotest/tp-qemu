@@ -108,7 +108,7 @@ def run(test, params, env):
             cleanup(device_name)
 
     timeout = int(params.get("login_timeout", 360))
-    boot_menu_key = params.get("boot_menu_key", 'f12')
+    boot_menu_key = 'esc '
     boot_menu_hint = params.get("boot_menu_hint")
     boot_entry_info = params.get("boot_entry_info")
     boot_fail_info = params.get("boot_fail_info")

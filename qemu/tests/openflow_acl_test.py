@@ -83,13 +83,14 @@ def run(test, params, env):
                         stat = 1
                         out_err = "Failed to login %s " % atgt
                         out_err += "from %s, err: %s" % (asys, err.output)
-                    try:
-                        out += remote_login(access_cmd, ssh_src_ip,
-                                            target_vm, params, host_ip)
-                    except remote.LoginError as err:
-                        stat += 1
-                        out_err += "Failed to login %s " % asys
-                        out_err += "from %s, err: %s" % (atgt, err.output)
+                    if "TelnetServer" in params.get("setup_cmd_windows"):
+                        try:
+                            out += remote_login(access_cmd, ssh_src_ip,
+                                                target_vm, params, host_ip)
+                        except remote.LoginError as err:
+                            stat += 1
+                            out_err += "Failed to login %s " % asys
+                            out_err += "from %s, err: %s" % (atgt, err.output)
                     if out_err:
                         out = out_err
                 else:

@@ -146,7 +146,7 @@ def run(test, params, env):
         error_context.context("Checking whether or not the host support"
                               " WDT '%s'" % watchdog_device_type, logging.info)
         watchdog_device = process.system_output("%s 2>&1" % qemu_cmd,
-                                                shell=True)
+                                                shell=True).decode()
         if watchdog_device:
             if re.findall(watchdog_device_type, watchdog_device, re.I):
                 logging.info("The host support '%s' type watchdog device" %

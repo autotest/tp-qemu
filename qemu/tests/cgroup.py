@@ -1941,9 +1941,10 @@ def run(test, params, env):
                     logging.info(out)
             else:   # only RSS limit
                 exit_nr = session.cmd_output("echo $?")[:-1]
-                if max_rss > mem_limit:
-                    err = ("The limit was broken: max_rss=%s, limit=%s" %
-                           (max_rss, mem_limit))
+                if max_rss > mem_limit * 1.05:
+                    # Allow 5% pages to be in-progress of swapping out
+                    err = ("The limit was broken: max_rss=%s, limit=%s (+5%%)"
+                           % (max_rss, mem_limit))
                 elif exit_nr != '0':
                     err = ("dd command failed(%s) output: %s" % (exit_nr, out))
                 elif (max_rssswap) < mem_limit:

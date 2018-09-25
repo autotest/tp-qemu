@@ -1775,6 +1775,19 @@ def run(test, params, env):
         else:
             return ("Freezer works fine")
 
+    def _get_rss(status):
+        """
+        Get VmRSS without RssShmem from /proc/$PID/status output
+
+        The RssShmem can be accounted to different process making the
+        overall sum of VmRSS greater than set in limit_in_bytes
+        """
+        rss = int(re.search(r'VmRSS:[\t ]*(\d+) kB', status)
+                  .group(1))
+        shmem = int(re.search(r'RssShmem:[\t ]*(\d+) kB', status)
+                    .group(1))
+        return rss - shmem
+
     @error_context.context_aware
     def memory_limit(memsw=False):
         """
@@ -1850,7 +1863,7 @@ def run(test, params, env):
 
         # VM already eat-up more than allowed by this cgroup
         fstats = open('/proc/%s/status' % vm.get_pid(), 'r')
-        rss = int(re.search(r'VmRSS:[\t ]*(\d+) kB', fstats.read()).group(1))
+        rss = _get_rss(fstats.read())
         if rss > mem_limit:
             raise exceptions.TestFail("Init failed to move VM into cgroup, VmRss"
                                       "=%s, expected=%s" % (rss, mem_limit))
@@ -1877,8 +1890,7 @@ def run(test, params, env):
                 try:
                     fstats.seek(0)
                     status = fstats.read()
-                    rss = int(re.search(r'VmRSS:[\t ]*(\d+) kB', status)
-                              .group(1))
+                    rss = _get_rss(status)
                     max_rss = max(rss, max_rss)
                     swap = int(re.search(r'VmSwap:[\t ]*(\d+) kB', status)
                                .group(1))

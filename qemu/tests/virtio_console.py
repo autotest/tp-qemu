@@ -605,10 +605,13 @@ def run(test, params, env):
             # when replugging port from pci to different pci. We should
             # either use symlinks (as in Windows) or replug with the busname
             port = ports[port_idx]
-            vm.monitor.cmd('device_del %s' % port.qemu_id)
+            vm.monitor.cmd('device_del', args={'id': '%s' % port.qemu_id})
             time.sleep(intr_time)
-            vm.monitor.cmd('device_add %s,id=%s,chardev=dev%s,name=%s'
-                           % (device, port.qemu_id, port.qemu_id, port.name))
+            vm.monitor.cmd('device_add',
+                           args={'driver': '%s' % device,
+                                 'id': '%s' % port.qemu_id,
+                                 'chardev': '%s' % port.chardev_id,
+                                 'name': '%s' % port.name})
 
         def _serialport_send_replug():
             """ hepler for executing replug of the sender port """

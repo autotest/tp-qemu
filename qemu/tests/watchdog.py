@@ -282,6 +282,30 @@ def run(test, params, env):
                 test.fail("Oops, find watchdog pci, unplug failed")
             logging.info("The WDT remove successfully")
 
+    def stop_cont_test():
+        """
+        Check if the emulated watchdog devices work properly with the stop/
+        continue operation
+        """
+
+        response_timeout = int(params.get("response_timeout", '240'))
+        _watchdog_device_check(test, session, watchdog_device_type)
+        vm.monitor.clear_event("WATCHDOG")
+        _trigger_watchdog(session, trigger_cmd)
+        vm.pause()
+        if utils_misc.wait_for(lambda: vm.monitor.get_event("WATCHDOG"),
+                               timeout=response_timeout):
+            test.fail("Watchdog action '%s' still took effect after pausing "
+                      "VM." % watchdog_action)
+        logging.info("Watchdog action '%s' didn't take effect after pausing "
+                     "VM, it is expected." % watchdog_action)
+        vm.resume()
+        if not utils_misc.wait_for(lambda: vm.monitor.get_event("WATCHDOG"),
+                                   timeout=response_timeout):
+            test.fail("Watchodg action '%s' didn't take effect after resuming "
+                      "VM." % watchdog_action)
+        _action_check(test, session, watchdog_action)
+
     # main procedure
     test_type = params.get("test_type")
     check_watchdog_support()

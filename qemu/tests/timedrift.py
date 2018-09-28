@@ -4,8 +4,10 @@ import time
 import aexpect
 
 from avocado.utils import process
+from avocado.utils import cpu
 
 from virttest import utils_test
+from virttest.compat_52lts import decode_to_text
 
 
 def run(test, params, env):
@@ -37,17 +39,17 @@ def run(test, params, env):
         :param mask: The CPU affinity mask.
         :return: A dict containing the previous mask for each thread.
         """
-        tids = process.system_output("ps -L --pid=%s -o lwp=" % pid,
-                                     verbose=False, ignore_status=True).split()
+        tids = decode_to_text(process.system_output("ps -L --pid=%s -o lwp=" % pid,
+                              verbose=False, ignore_status=True)).split()
         prev_masks = {}
         for tid in tids:
-            prev_mask = process.system_output("taskset -p %s" % tid,
-                                              verbose=False).split()[-1]
+            prev_mask = decode_to_text(process.system_output("taskset -p %s" % tid,
+                                       verbose=False)).split()[-1]
             prev_masks[tid] = prev_mask
             process.system("taskset -p %s %s" % (mask, tid), verbose=False)
-        children = process.system_output("ps --ppid=%s -o pid=" % pid,
-                                         verbose=False,
-                                         ignore_status=True).split()
+        children = decode_to_text(process.system_output("ps --ppid=%s -o pid=" % pid,
+                                  verbose=False,
+                                  ignore_status=True)).split()
         for child in children:
             prev_masks.update(set_cpu_affinity(child, mask))
         return prev_masks
@@ -73,7 +75,7 @@ def run(test, params, env):
                                       args_added=boot_option_added)
 
     timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=timeout)
+    session = vm.wait_for_serial_login(timeout=timeout)
 
     # Collect test parameters:
     # Command to run to get the current time
@@ -85,10 +87,16 @@ def run(test, params, env):
     guest_load_command = params["guest_load_command"]
     guest_load_stop_command = params["guest_load_stop_command"]
     host_load_command = params["host_load_command"]
-    guest_load_instances = int(params.get("guest_load_instances", "1"))
-    host_load_instances = int(params.get("host_load_instances", "0"))
+    guest_load_instances = params["guest_load_instances"]
+    host_load_instances = params["host_load_instances"]
+    if not guest_load_instances and not host_load_instances:
+        host_load_instances = cpu.total_cpus_count()
+        guest_load_instances = vm.get_cpu_count()
+    else:
+        host_load_instances = int(host_load_instances)
+        guest_load_instances = int(guest_load_instances)
     # CPU affinity mask for taskset
-    cpu_mask = params.get("cpu_mask", "0xFF")
+    cpu_mask = int(params.get("cpu_mask", "0xFF"), 16)
     load_duration = float(params.get("load_duration", "30"))
     rest_duration = float(params.get("rest_duration", "10"))
     drift_threshold = float(params.get("drift_threshold", "200"))
@@ -107,7 +115,7 @@ def run(test, params, env):
             # Open shell sessions with the guest
             logging.info("Starting load on guest...")
             for i in range(guest_load_instances):
-                load_session = vm.login()
+                load_session = vm.wait_for_login(timeout=timeout)
                 # Set output func to None to stop it from being called so we
                 # can change the callback function and the parameters it takes
                 # with no problems
@@ -125,8 +133,12 @@ def run(test, params, env):
                                              time_format)
 
             # Run some load on the guest
-            for load_session in guest_load_sessions:
-                load_session.sendline(guest_load_command)
+            if params["os_type"] == "linux":
+                for i, load_session in enumerate(guest_load_sessions):
+                    load_session.sendline(guest_load_command % i)
+            else:
+                for load_session in guest_load_sessions:
+                    load_session.sendline(guest_load_command)
 
             # Run some load on the host
             logging.info("Starting load on host...")
@@ -138,7 +150,7 @@ def run(test, params, env):
                 host_load_sessions.append(load_cmd)
                 # Set the CPU affinity of the load process
                 pid = load_cmd.get_pid()
-                set_cpu_affinity(pid, cpu_mask)
+                set_cpu_affinity(pid, cpu_mask << i)
 
             # Sleep for a while (during load)
             logging.info("Sleeping for %s seconds...", load_duration)

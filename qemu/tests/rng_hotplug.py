@@ -37,26 +37,16 @@ def run(test, params, env):
 
     def hotplug_rng(vm, dev):
         error_context.context("Hotplug %s" % dev, logging.info)
-        output = dev.hotplug(vm.monitor)
-        time.sleep(5)
-
-        error_context.context("Check %s from qtree after hotplug" % dev,
-                              logging.info)
-        qtree_output = dev.verify_hotplug(output, vm.monitor)
-        if not qtree_output:
+        out, ver_out = vm.devices.simple_hotplug(dev, vm.monitor)
+        if not ver_out:
             msg = "no % device in qtree after hotplug" % dev
             raise exceptions.TestFail(msg)
         logging.info("%s is hotpluged successfully" % dev)
 
     def unplug_rng(vm, dev):
         error_context.context("Hot-unplug %s" % dev, logging.info)
-        output = dev.unplug(vm.monitor)
-        time.sleep(5)
-
-        error_context.context("Check %s from qtree after unplug" % dev,
-                              logging.info)
-        qtree_output = dev.verify_unplug(output, vm.monitor)
-        if not qtree_output:
+        out, ver_out = vm.devices.simple_unplug(dev, vm.monitor)
+        if not ver_out:
             msg = "Still get %s in qtree after unplug" % dev
             raise exceptions.TestFail(msg)
         logging.info("%s is unpluged successfully" % dev)

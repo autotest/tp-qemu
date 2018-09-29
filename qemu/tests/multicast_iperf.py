@@ -7,6 +7,7 @@ from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_package
 
 
 def _process_is_alive(name_pattern):
@@ -67,6 +68,13 @@ def run(test, params, env):
                                                "0"))
         exit_status = process.system(app_check_cmd, ignore_status=True,
                                      shell=True)
+
+        # Install gcc-c++ to compile iperf
+        gcc_cpp_chk_cmd = params.get("gcc_cpp_chk_cmd")
+        gcc_cpp = process.system_output(gcc_cpp_chk_cmd, shell=True)
+        if not gcc_cpp:
+            if not utils_package.package_install("gcc-c++", session):
+                test.cancel("Please install gcc-c++ to proceed")
 
         # Install iperf in host if not available
         default_install_cmd = "tar zxvf %s; cd iperf-%s;"

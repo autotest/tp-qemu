@@ -923,6 +923,25 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             if self.gagent.get_fsfreeze_status() == self.gagent.FSFREEZE_STATUS_FROZEN:
                 self.gagent.fsthaw(check_status=False)
 
+    @error_context.context_aware
+    def gagent_check_after_init(self, test, params, env):
+        """
+        Check guest agent service status after running the init command
+        :param test: Kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        error_context.context("Run init 3 in guest", logging.info)
+        session = self._get_session(params, self.vm)
+        session.cmd("init 3")
+        error_context.context("Check guest agent status after running init 3",
+                              logging.info)
+        if self._check_ga_service(session, params.get("gagent_status_cmd")):
+            logging.info("Guest agent service is still running after init 3.")
+        else:
+            test.fail("Guest agent service is stopped after running init 3! It "
+                      "should be running.")
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

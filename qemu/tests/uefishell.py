@@ -104,10 +104,17 @@ class UEFIShellTest(object):
         """
         logging.info("Send uefishell command: %s" % command)
         output = self.session.cmd_output_safe(command)
+        #Judge if cmd is run successfully via environment variable 'lasterror'
+        last_error = self.params["last_error"]
+        env_var = self.session.cmd_output_safe("set")
+        if not re.search(last_error, env_var):
+            self.test.fail("Following errors appear %s when running command %s"
+                           % (output, command))
         if check_result:
-            if not re.search(check_result, output):
-                self.test.fail("The command result is: %s, which does not"
-                               " match the expectation: %s" % (output, check_result))
+            for result in check_result.split(", "):
+                if not re.search(result, output):
+                    self.test.fail("The command result is: %s, which does not"
+                                   " match the expectation: %s" % (output, result))
 
     def post_test(self):
         """

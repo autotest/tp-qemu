@@ -12,11 +12,12 @@ from virttest import error_context
 @error_context.context_aware
 def run(test, params, env):
     """
-    Test 802.1Q vlan of NIC, config it by vconfig/ip command.
+    Test 802.1Q vlan of NIC.
 
+    For Linux guest:
     1) Create two VMs.
     2) load 8021q module in guest.
-    3) Setup vlans by vconfig/ip in guest and using hard-coded ip address.
+    3) Setup vlans by ip in guest and using hard-coded ip address.
     4) Enable arp_ignore for all ipv4 device in guest.
     5) Repeat steps 2 - 4 in every guest.
     6) Test by ping between same and different vlans of two VMs.
@@ -24,6 +25,12 @@ def run(test, params, env):
     8) Test by TCP data transfer between same vlan of two VMs.
     9) Remove the named vlan-device.
     10) Test maximal plumb/unplumb vlans.
+
+    For Windows guest:
+    1) Create two VMs.
+    2) Set vlan tag in every guest and guest will get subnet ip(169.254)
+       automatically.
+    3) Test by ping between same vlan of two VMs.
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -155,6 +162,25 @@ def run(test, params, env):
         vm_.verify_alive()
 
     for vm_index, vm in enumerate(vms):
+        if params["os_type"] == "windows":
+            session = vm.wait_for_serial_login(timeout=login_timeout)
+            win_vlan_id = int(params.get("win_vlan_id", 900))
+            set_vlan_cmd = params.get("set_vlan_cmd")
+            nicid = utils_net.get_windows_nic_attribute(session=session,
+                                                        key="netenabled", value=True,
+                                                        target="netconnectionID")
+            set_vlan_cmd = set_vlan_cmd % nicid
+            session.cmd(set_vlan_cmd, timeout=240)
+            time.sleep(10)
+            ifname.append(nicid)
+            dev_mac = vm.virtnet[0].mac
+            vm_ip.append(utils_net.get_guest_ip_addr(session, dev_mac,
+                                                     os_type="windows",
+                                                     linklocal=True))
+            logging.debug("IP address is %s in %s" % (vm_ip, vm.name))
+            session_ctl.append(session)
+            continue
+
         error_context.base_context("Prepare test env on %s" % vm.name)
         session = vm.wait_for_login(timeout=login_timeout)
         if not session:
@@ -167,6 +193,7 @@ def run(test, params, env):
                                                  vm.get_mac_address()))
         # get guest ip
         vm_ip.append(vm.get_address())
+        logging.debug("IP address is %s in %s" % (vm_ip, vm.name))
         # produce sized file in vm
         dd_cmd = "dd if=/dev/urandom of=file bs=1M count=%s"
         session.cmd(dd_cmd % file_size)
@@ -187,6 +214,23 @@ def run(test, params, env):
             v_ip = "%s.%s.%s" % (subnet, vlan_i, ip_unit[vm_index])
             set_ip_vlan(session, vlan_i, v_ip, ifname[vm_index])
         set_arp_ignore(session)
+
+    if params["os_type"] == "windows":
+        for vm_index, vm in enumerate(vms):
+            status, output = utils_test.ping(dest=vm_ip[(vm_index + 1) % 2], count=10,
+                                             session=session_ctl[vm_index],
+                                             timeout=30)
+            loss = utils_test.get_loss_ratio(output)
+            if not loss and ("TTL=" in output):
+                pass
+            # window get loss=0 when ping fail sometimes, need further check
+            else:
+                test.fail("Guests ping test hit unexpected loss, error info: %s" % output)
+
+        for sess in session_ctl:
+            if sess:
+                sess.close()
+        return
 
     try:
         for vlan in range(1, vlan_num + 1):

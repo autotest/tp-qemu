@@ -47,7 +47,8 @@ def run(test, params, env):
 
     error_context.context("Sync the host system time with ntp server",
                           logging.info)
-    process.system("ntpdate clock.redhat.com")
+    clock_sync_command = params["clock_sync_command"]
+    process.system(clock_sync_command, shell=True)
 
     timerdevice_host_load_cmd = params.get("timerdevice_host_load_cmd")
     if timerdevice_host_load_cmd:

@@ -11,18 +11,18 @@ from virttest import error_context
 @error_context.context_aware
 def run(test, params, env):
     """
-    Timer device check clock frequency offset using NTP on CPU starved guest:
+    Timer device check clock frequency offset using chrony on CPU starved guest:
 
     1) Check for an appropriate clocksource on host.
     2) Boot the guest.
     3) Copy time-warp-test.c to guest.
     4) Compile the time-warp-test.c.
-    5) Stop ntpd and apply load on guest.
+    5) Stop chronyd and apply load on guest.
     6) Pin every vcpu to a physical cpu.
     7) Verify each vcpu is pinned on host.
     8) Run time-warp-test on guest.
-    9) Start ntpd on guest.
-    10) Check the drift in /var/lib/ntp/drift file on guest after hours
+    9) Start chronyd on guest.
+    10) Check the drift in /var/lib/chrony/drift file on guest after hours
         of running.
 
     :param test: QEMU test object.
@@ -31,7 +31,7 @@ def run(test, params, env):
     """
     def _drift_file_exist():
         try:
-            session.cmd("test -f /var/lib/ntp/drift")
+            session.cmd("test -f /var/lib/chrony/drift")
             return True
         except Exception:
             return False
@@ -62,8 +62,8 @@ def run(test, params, env):
     cmd += " gcc -Wall -o time-warp-test time-warp-test.c -lrt"
     sess_guest_load.cmd(cmd)
 
-    error_context.context("Stop ntpd and apply load on guest", logging.info)
-    sess_guest_load.cmd("yum install -y ntp; service ntpd stop")
+    error_context.context("Stop chronyd and apply load on guest", logging.info)
+    sess_guest_load.cmd("systemctl stop chronyd")
     load_cmd = "for ((I=0; I<`grep 'processor id' /proc/cpuinfo| wc -l`; I++));"
     load_cmd += " do taskset $(( 1 << $I )) /bin/bash -c 'for ((;;)); do X=1; done &';"
     load_cmd += " done"
@@ -86,8 +86,8 @@ def run(test, params, env):
     cmd = "/tmp/time-warp-test > /dev/null &"
     session.sendline(cmd)
 
-    error_context.context("Start ntpd on guest", logging.info)
-    cmd = "service ntpd start; sleep 1; echo"
+    error_context.context("Start chronyd on guest", logging.info)
+    cmd = "systemctl start chronyd; sleep 1; echo"
     session.cmd(cmd)
 
     error_context.context("Check if the drift file exists on guest",
@@ -97,10 +97,10 @@ def run(test, params, env):
         utils_misc.wait_for(_drift_file_exist, test_run_timeout, step=5)
     except aexpect.ShellCmdError as detail:
         test.error("Failed to wait for the creation of"
-                   " /var/lib/ntp/drift file. Detail: '%s'" % detail)
+                   " /var/lib/chronyd/drift file. Detail: '%s'" % detail)
 
     error_context.context("Verify the drift file content on guest",
                           logging.info)
-    output = session.cmd("cat /var/lib/ntp/drift")
+    output = session.cmd("cat /var/lib/chrony/drift").strip().split()[0]
     if int(abs(float(output))) > 20:
-        test.fail("Failed to check the ntp drift. Output: '%s'" % output)
+        test.fail("Failed to check the chrony drift. Output: '%s'" % output)

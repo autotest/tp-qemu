@@ -17,14 +17,13 @@ def run(test, params, env):
     2) After logged into the vm, check CPUs number
     3) Stop the guest if config 'stop_before_hotplug'
     4) sync guest clock via ntp server if config ntp_sync_cmd
-    5) stop ntp service in guest if config ntp_service_stop_cmd
-    6) Do cpu hotplug
-    7) Resume the guest if config 'stop_before_hotplug'
-    8) Recheck guest get hot-pluged CPUs
-    9) Do cpu online/offline in guest and check clock
+    5) Do cpu hotplug
+    6) Resume the guest if config 'stop_before_hotplug'
+    7) Recheck guest get hot-pluged CPUs
+    8) Do cpu online/offline in guest and check clock
        offset via ntp server if config online/offline_cpus
-    10) Run sub test after CPU Hotplug if run_sub_test is 'yes'
-    11) Recheck guest cpus after sub test if vcpu_num_rechek is 'yes'
+    9) Run sub test after CPU Hotplug if run_sub_test is 'yes'
+    10) Recheck guest cpus after sub test if vcpu_num_rechek is 'yes'
 
     :param test: QEMU test object.
     :param params: Dictionary with test parameters.
@@ -96,7 +95,6 @@ def run(test, params, env):
     acceptable_offset = float(params.get("acceptable_offset", 5))
     ntp_query_cmd = params.get("ntp_query_cmd", "")
     ntp_sync_cmd = params.get("ntp_sync_cmd", "")
-    ntp_service_stop_cmd = params.get("ntp_service_stop_cmd")
 
     error_context.context("Boot the vm, with '-smp X,maxcpus=Y' option",
                           logging.info)
@@ -110,9 +108,6 @@ def run(test, params, env):
     if ntp_sync_cmd:
         error_context.context("sync guest time via ntp server", logging.info)
         session.cmd(ntp_sync_cmd)
-    if ntp_service_stop_cmd:
-        logging.info("stop ntp service in guest")
-        session.cmd(ntp_service_stop_cmd)
 
     error_context.context("Check if cpus in guest match qemu "
                           "cmd before hotplug", logging.info)

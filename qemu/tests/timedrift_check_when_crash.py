@@ -14,7 +14,7 @@ def run(test, params, env):
     Time clock offset check when guest crash/bsod test:
 
     1) boot guest with '-rtc base=utc,clock=host,driftfix=slew';
-    2) sync host system time with "ntpdate clock.redhat.com";
+    2) sync host system time with ntp server;
     3) inject nmi to guest/ make linux kernel crash;
     4) sleep long time, then reset vm via system_reset;
     5) query clock offset from ntp server;
@@ -23,7 +23,7 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    ntp_server = params.get("ntp_server", "clock.redhat.com")
+    clock_sync_command = params["clock_sync_command"]
     ntp_cmd = params["ntp_cmd"]
     ntp_query_cmd = params["ntp_query_cmd"]
     nmi_cmd = params.get("nmi_cmd", "inject-nmi")
@@ -31,7 +31,7 @@ def run(test, params, env):
     deviation = float(params.get("deviation", 5))
 
     error_context.context("sync host time with ntp server", logging.info)
-    process.system("ntpdate %s" % ntp_server)
+    process.system(clock_sync_command, shell=True)
 
     error_context.context("start guest", logging.info)
     params["start_vm"] = "yes"

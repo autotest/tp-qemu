@@ -1,7 +1,7 @@
 import logging
 import time
 
-from avocado.utils import path, process
+from avocado.utils import process
 from virttest import utils_test
 from virttest import error_context
 
@@ -86,8 +86,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environmen.
     """
-    clock_server = params.get("clock_server", "clock.redhat.com")
-    ntputil_install = params.get("ntputil_install", "yum install -y ntpdate")
     login_timeout = int(params.get("login_timeout", "240"))
     guest_clock_source = params.get("guest_clock_source", "kvm-clock")
     date_time_command = params.get("date_time_command",
@@ -108,17 +106,11 @@ def run(test, params, env):
 
     vm_name = params.get("vms")
     vm = env.get_vm(vm_name)
-    error_context.context("Check if ntp utils are host in system.",
-                          logging.info)
-    try:
-        path.find_command("ntpdate")
-    except path.CmdNotFoundError:
-        error_context.context("Install ntp utils `%s`." % (ntputil_install),
-                              logging.info)
-        process.run(ntputil_install, shell=True)
-    error_context.context("Sync host machine with clock server %s" %
-                          (clock_server), logging.info)
-    process.run("ntpdate %s" % (clock_server))
+
+    error_context.context("Sync host machine with clock server %s", logging.info)
+    clock_sync_command = params["clock_sync_command"]
+    process.system(clock_sync_command, shell=True)
+
     error_context.context("Check clock source on guest VM", logging.info)
     session = vm.wait_for_serial_login(timeout=login_timeout)
     out = session.cmd_output("cat /sys/devices/system/clocksource/"

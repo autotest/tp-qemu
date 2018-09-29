@@ -89,7 +89,7 @@ class TimedriftTest(object):
             timeout = int(self.params.get("execute_timeout", 360))
             ret = session.cmd_output(cmd, timeout=timeout)
         else:
-            ret = process.system_output(cmd, shell=True)
+            ret = process.system_output(cmd, shell=True).decode()
         target = session and "guest" or "host"
         logging.debug("(%s) Execute command('%s')" % (target, cmd))
         return ret
@@ -101,7 +101,7 @@ class TimedriftTest(object):
         calibrate guest time else calibrate host time;
 
         :param session: ShellSession object or None
-        :return: ntpdate command output;
+        :return: sync command output;
         :rtype: str
         """
         error_context.context("Sync host time from ntp server", logging.info)
@@ -120,7 +120,7 @@ class TimedriftTest(object):
                 guest_epoch_time_cmd,
                 timeout=240)
             host_timestr = process.system_output(host_epoch_time_cmd,
-                                                 shell=True)
+                                                 shell=True).decode()
             epoch_host, epoch_guest = list(
                 map(lambda x: re.findall(regex, x)[0],
                     [host_timestr, guest_timestr]))

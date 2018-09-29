@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from avocado.utils import process
 from virttest import utils_test
@@ -24,6 +25,7 @@ def run(test, params, env):
     mem = int(params.get("mem"))
     qemu_mem = int(params.get("qemu_mem", "64"))
     hugetlbfs_path = params.get("hugetlbfs_path", "/proc/sys/vm/nr_hugepages")
+    vm = env.get_vm(params["main_vm"])
 
     error_context.context("smoke test setup")
     if not os.path.ismount(debugfs_path):
@@ -53,10 +55,11 @@ def run(test, params, env):
             test.fail("VM is not using transparent hugepage")
 
         # Run stress memory heavy in guest
-        memory_stress_test = params['thp_memory_stress']
-        utils_test.run_virt_sub_test(test, params, env,
-                                     sub_type=memory_stress_test)
-
+        test_mem = float(mem)*float(params.get("mem_ratio", 0.8))
+        stress_args = "--cpu 4 --io 4 --vm 2 --vm-bytes %sM" % int(test_mem / 2)
+        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
+        stress_test.load_stress_tool()
+        time.sleep(int(params.get("stress_time", 120)))
         nr_ah.append(int(utils_memory.read_from_meminfo('AnonHugePages')))
         logging.debug("The huge page using for guest is: %s" % nr_ah)
 
@@ -69,6 +72,8 @@ def run(test, params, env):
                 test.fail("KVM doesn't use transparenthugepage")
 
         logging.info("memory stress test finished")
+        stress_test.unload_stress()
+        stress_test.clean()
     finally:
         error_context.context("all tests cleanup")
         fd = open(hugetlbfs_path, "w")

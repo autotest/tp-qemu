@@ -34,7 +34,7 @@ def run(test, params, env):
     external_host = params.get("external_host")
     if not external_host:
         get_host_cmd = "ip route | awk '/default/ {print $3}'"
-        external_host = process.system_output(get_host_cmd, shell=True)
+        external_host = process.system_output(get_host_cmd, shell=True).decode()
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)

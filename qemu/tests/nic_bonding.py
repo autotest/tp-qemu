@@ -32,6 +32,11 @@ def run(test, params, env):
                                           vm.get_mac_address(vlan))
                for vlan, nic in enumerate(vm.virtnet)]
 
+    ssh_login_cmd = (
+        "echo LoginGraceTime 5m  >> /etc/ssh/sshd_config &&"
+        " systemctl restart sshd.service || service sshd restart")
+    session_serial.cmd_output_safe(ssh_login_cmd)
+
     # get params of bonding
     nm_stop_cmd = "pidof NetworkManager && service NetworkManager stop; true"
     session_serial.cmd_output_safe(nm_stop_cmd)
@@ -57,7 +62,7 @@ def run(test, params, env):
 
     session_serial.cmd_output_safe("dhclient bond0")
 
-    #get_bonding_nic_mac and ip
+    # get_bonding_nic_mac and ip
     try:
         logging.info("Test file transferring:")
         utils_test.run_file_transfer(test, params, env)
@@ -111,3 +116,4 @@ def run(test, params, env):
     finally:
         session_serial.sendline("ifenslave -d bond0 " + " ".join(ifnames))
         session_serial.sendline("kill -9 `pgrep dhclient`")
+        session_serial.sendline("sed -i '$ d' /etc/ssh/sshd_config")

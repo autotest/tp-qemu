@@ -1,0 +1,42 @@
+This is a simple framework for testing the qemu watchdog virtual
+device.  It's easier to use this framework than running the whole
+watchdog daemon.
+
+Written by Richard W.M. Jones <rjones@redhat.com>.
+
+License: GPLv2+
+
+Instructions for use:
+
+(1) Compile this program.  It creates a statically linked Linux binary
+called 'watchdog-test'.
+
+(2) You will need an existing Linux guest.
+
+(3) Change the configuration of the Linux guest to add a watchdog
+device.
+
+If using libvirt, add a clause in the <devices> section:
+
+    <watchdog model='i6300esb' action='poweroff' />
+
+If using qemu directly, use the following command line options:
+
+  qemu-kvm ... -watchdog i6300esb -watchdog-action poweroff
+
+model can be either 'i6300esb' or 'ib700'.
+
+action can be: 'reset', 'shutdown', 'poweroff', 'pause',
+'none' or 'dump'
+
+(4) Install the statically linked watchdog-test binary in the Linux
+guest.
+
+(5) Boot up the guest.  Log into the guest.
+
+(6) [ib700 only] You have to load the ib700wdt kernel module manually
+since it's an ISA device:
+
+  sudo modprobe ib700wdt
+
+(7) Run the watchdog-test binary (as root), and follow instructions.

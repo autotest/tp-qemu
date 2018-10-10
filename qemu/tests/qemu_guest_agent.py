@@ -13,6 +13,7 @@ from avocado.core import exceptions
 from virttest import error_context
 from virttest import guest_agent
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import env_process
 
 
@@ -941,6 +942,72 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         else:
             test.fail("Guest agent service is stopped after running init 3! It "
                       "should be running.")
+
+    @error_context.context_aware
+    def gagent_check_hotplug_frozen(self, test, params, env):
+        """
+        hotplug device with frozen fs
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        def get_new_disk(disks_before_plug, disks_after_plug):
+            """
+            Get the new added disks by comparing two disk lists.
+            """
+            disk = list(set(disks_after_plug).difference(set(disks_before_plug)))
+            return disk
+
+        session = self._get_session(params, self.vm)
+        image_size_stg0 = params["image_size_stg0"]
+        try:
+            if params.get("os_type") == "linux":
+                disks_before_plug = utils_disk.get_linux_disks(session, True)
+            error_context.context("Freeze guest fs", logging.info)
+            self.gagent.fsfreeze()
+            # For linux guest, waiting for it to be frozen, for windows guest,
+            # waiting for it to be automatically thawed.
+            time.sleep(20)
+            error_context.context("Hotplug a disk to guest", logging.info)
+            image_name_plug = params["images"].split()[1]
+            image_params_plug = params.object_params(image_name_plug)
+            devs = self.vm.devices.images_define_by_params(image_name_plug,
+                                                           image_params_plug,
+                                                           'disk')
+            for dev in devs:
+                self.vm.devices.simple_hotplug(dev, self.vm.monitor)
+            disk_write_cmd = params["disk_write_cmd"]
+            pause = float(params.get("virtio_block_pause", 10.0))
+            error_context.context("Format and write disk", logging.info)
+            if params.get("os_type") == "linux":
+                new_disks = utils_misc.wait_for(lambda: get_new_disk(disks_before_plug.keys(),
+                                                utils_disk.get_linux_disks(session, True).keys()), pause)
+                if not new_disks:
+                    test.fail("Can't detect the new hotplugged disks in guest")
+                try:
+                    mnt_point = utils_disk.configure_empty_disk(
+                        session, new_disks[0], image_size_stg0, "linux", labeltype="msdos")
+                except aexpect.ShellTimeoutError:
+                    self.gagent.fsthaw()
+                    mnt_point = utils_disk.configure_empty_disk(
+                        session, new_disks[0], image_size_stg0, "linux", labeltype="msdos")
+            elif params.get("os_type") == "windows":
+                disk_index = utils_misc.wait_for(
+                    lambda: utils_disk.get_windows_disks_index(session, image_size_stg0), 120)
+                if disk_index:
+                    mnt_point = utils_disk.configure_empty_disk(
+                        session, disk_index[0], image_size_stg0, "windows", labeltype="msdos")
+            session.cmd(disk_write_cmd % mnt_point[0])
+            error_context.context("Unplug the added disk", logging.info)
+            self.vm.devices.simple_unplug(devs[0], self.vm.monitor)
+        finally:
+            if self.gagent.get_fsfreeze_status() == self.gagent.FSFREEZE_STATUS_FROZEN:
+                self.gagent.fsthaw(check_status=False)
+            self.vm.verify_alive()
+            if params.get("os_type") == "linux":
+                utils_disk.umount(new_disks[0], mnt_point[0], session=session)
+            session.close()
 
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)

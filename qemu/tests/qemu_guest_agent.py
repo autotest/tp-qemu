@@ -1009,6 +1009,34 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 utils_disk.umount(new_disks[0], mnt_point[0], session=session)
             session.close()
 
+    @error_context.context_aware
+    def gagent_check_path_fsfreeze_hook(self, test, params, env):
+        """
+        Check if the default path of fsfreeze-hook is correct
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        session = self._get_session(params, self.vm)
+        self.gagent_stop(session, self.vm)
+        error_context.context("Start gagent with -F option", logging.info)
+        self.gagent_start(session, self.vm)
+        gagent_path_cmd = params["gagent_path_cmd"]
+        error_context.context("Check if default path of fsfreeze-hook is in "
+                              "output of %s" % gagent_path_cmd, logging.info)
+        s, o = session.cmd_status_output(params["gagent_help_cmd"])
+        help_cmd_output = o.strip().replace(')', '').split()[-1]
+        s, o = session.cmd_status_output(gagent_path_cmd)
+        if help_cmd_output in o:
+            logging.info("The default path for script 'fsfreeze-hook' is "
+                         "in output of %s." % gagent_path_cmd)
+            error_context.context("Execute 'guest-fsfreeze-freeze'", logging.info)
+            self.gagent.fsfreeze()
+            self.gagent.fsthaw()
+        else:
+            test.fail("The default path of fsfreeze-hook doesn't match with expectation.")
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

@@ -1037,6 +1037,41 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         else:
             test.fail("The default path of fsfreeze-hook doesn't match with expectation.")
 
+    @error_context.context_aware
+    def gagent_check_query_chardev(self, test, params, env):
+        """
+        Check guest agent service status through QMP 'query-chardev'
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        def check_value_frontend_open(out, expected):
+            """
+            Get value of 'frontend-open' after executing 'query-chardev'
+            :param out: output of executing 'query-chardev'
+            :param expected: expected value of 'frontend-open'
+            """
+            for chardev_dict in out:
+                if "org.qemu.guest_agent.0" in chardev_dict["filename"]:
+                    ret = chardev_dict["frontend-open"]
+                    if ret is expected:
+                        break
+                    else:
+                        test.fail("The value of parameter 'frontend-open' "
+                                  "is %s, it should be %s" % (ret, expected))
+        error_context.context("Execute query-chardev when guest agent service "
+                              "is on", logging.info)
+        out = self.vm.monitor.query("chardev")
+        check_value_frontend_open(out, True)
+        session = self._get_session(params, self.vm)
+        self.gagent_stop(session, self.vm)
+        error_context.context("Execute query-chardev when guest agent service "
+                              "is off", logging.info)
+        out = self.vm.monitor.query("chardev")
+        check_value_frontend_open(out, False)
+        session.close()
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

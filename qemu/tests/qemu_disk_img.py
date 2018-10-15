@@ -209,3 +209,18 @@ class QemuImgTest(qemu_storage.QemuImg):
 
 def run(test, params, env):
     pass
+
+
+def generate_base_snapshot_pair(image_chain):
+    """
+    Generate base and snapshot pairs according to param["image_chain"].
+
+    :param image_chain: param["image_chain"]
+    """
+    image_chain = image_chain.split()
+    n = len(image_chain)
+    if n < 2:
+        raise ValueError("Image_chain should contain at"
+                         "least 2 items, got %s." % n)
+    for i in range(1, n):
+        yield [image_chain[i - 1], image_chain[i]]

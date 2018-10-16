@@ -2,7 +2,7 @@ import logging
 import time
 
 from virttest import error_context
-from qemu.lib.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
+from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
 
 
 @error_context.context_aware

@@ -15,7 +15,7 @@ from virttest import utils_test
 @error_context.context_aware
 def run(test, params, env):
     """
-    QEMU flow caches stress test test
+    QEMU flow caches stress test case, only for linux
 
     1) Make sure nf_conntrack is disabled in host and guest.
        If nf_conntrack is enabled in host, skip this case.
@@ -32,11 +32,23 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
+    def get_if_queues(ifname):
+        """
+        Query interface queues with 'ethtool -l'
+
+        :param ifname: interface name
+        """
+        cmd = "ethtool -l %s" % ifname
+        out = session.cmd_output(cmd)
+        logging.info("%s" % out)
+
+    nf_conntrack_max_set_cmd = params.get("nf_conntrack_max_set")
+    logging.info("nf_conntrack_max_set_cmd is %s" % nf_conntrack_max_set_cmd)
     msg = "Make sure nf_conntrack is disabled in host and guest."
     error_context.context(msg, logging.info)
-    if "nf_conntrack" in process.system_output("lsmod"):
-        err = "nf_conntrack load in host, skip this case"
-        test.cancel(err)
+    if str.encode("nf_conntrack") in process.system_output("lsmod"):
+        process.system_output(nf_conntrack_max_set_cmd)
 
     params["start_vm"] = "yes"
     error_context.context("Boot up guest", logging.info)
@@ -58,64 +70,53 @@ def run(test, params, env):
         session.cmd(cmd)
         session = vm.reboot(session, timeout=timeout)
         if "nf_conntrack" in session.cmd_output("lsmod"):
-            err = "Fail to unload nf_conntrack module in guest."
-            test.error(err)
+            err = "nf_conntrack module still running in guest, "
+            err += "set nf_conntrack_max instead."
+            error_context.context(err, logging.info)
+            session.cmd(nf_conntrack_max_set_cmd)
 
     netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
                                        params["netperf_link"])
     md5sum = params.get("pkg_md5sum")
-    win_netperf_link = params.get("win_netperf_link")
-    if win_netperf_link:
-        win_netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                               win_netperf_link)
-    win_netperf_md5sum = params.get("win_netperf_md5sum")
-    server_path = params.get("server_path", "/var/tmp/")
-    client_path = params.get("client_path", "/var/tmp/")
-    win_netperf_path = params.get("win_netperf_path", "c:\\")
     client_num = params.get("netperf_client_num", 520)
     netperf_timeout = int(params.get("netperf_timeout", 600))
-    netperf_client_ip = vm.get_address()
-    host_ip = utils_net.get_host_ip_address(params)
-    netperf_server_ip = params.get("netperf_server_ip", host_ip)
-
-    username = params.get("username", "root")
-    password = params.get("password", "123456")
-    passwd = params.get("hostpasswd", "123456")
-    client = params.get("shell_client", "ssh")
-    port = params.get("shell_port", "22")
-    prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
-    linesep = params.get(
-        "shell_linesep", "\n").encode().decode('unicode_escape')
-    status_test_command = params.get("status_test_command", "echo $?")
-
-    compile_option_client = params.get("compile_option_client", "")
-    compile_option_server = params.get("compile_option_server", "")
 
     if int(params.get("queues", 1)) > 1 and params.get("os_type") == "linux":
         error_context.context("Enable multi queues support in guest.",
                               logging.info)
         guest_mac = vm.get_mac_address()
         ifname = utils_net.get_linux_ifname(session, guest_mac)
-        cmd = "ethtool -L %s combined  %s" % (ifname, params.get("queues"))
-        status, out = session.cmd_status_output(cmd)
-        msg = "Fail to enable multi queues support in guest."
-        msg += "Command %s fail output: %s" % (cmd, out)
-        test.error(msg)
+        get_if_queues(ifname)
 
+        try:
+            cmd = "ethtool -L %s combined %s" % (ifname, params.get("queues"))
+            status, out = session.cmd_status_output(cmd)
+        except Exception:
+            get_if_queues(ifname)
+            msg = "Fail to enable multi queues support in guest."
+            msg += "Command %s fail output: %s" % (cmd, out)
+            test.error(msg)
+        logging.info("Command %s set queues succeed" % cmd)
+
+    error_context.context("Setup netperf in guest", logging.info)
     if params.get("os_type") == "linux":
         session.cmd("iptables -F", ignore_all_errors=True)
         g_client_link = netperf_link
-        g_client_path = client_path
-        g_md5sum = md5sum
-    elif params.get("os_type") == "windows":
-        g_client_link = win_netperf_link
-        g_client_path = win_netperf_path
-        g_md5sum = win_netperf_md5sum
-
-    error_context.context("Setup netperf in guest and host", logging.info)
+        g_client_path = params.get("client_path", "/var/tmp/")
+    netperf_client_ip = vm.get_address()
+    username = params.get("username", "root")
+    password = params.get("password", "123456")
+    client = params.get("shell_client", "ssh")
+    port = params.get("shell_port", "22")
+    prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
+    linesep = params.get(
+        "shell_linesep", "\n").encode().decode('unicode_escape')
+    status_test_command = params.get("status_test_command", "echo $?")
+    compile_option_client = params.get("compile_option_client", "")
     netperf_client = utils_netperf.NetperfClient(netperf_client_ip,
                                                  g_client_path,
-                                                 g_md5sum, g_client_link,
+                                                 md5sum, g_client_link,
+                                                 client, port,
                                                  username=username,
                                                  password=password,
                                                  prompt=prompt,
@@ -123,12 +124,21 @@ def run(test, params, env):
                                                  status_test_command=status_test_command,
                                                  compile_option=compile_option_client)
 
-    netperf_server = utils_netperf.NetperfServer(netperf_server_ip,
+    error_context.context("Setup netperf in host", logging.info)
+    host_ip = utils_net.get_host_ip_address(params)
+    server_path = params.get("server_path", "/var/tmp/")
+    server_shell_client = params.get("server_shell_client", "ssh")
+    server_shell_port = params.get("server_shell_port", "22")
+    server_passwd = params["hostpasswd"]
+    server_username = params.get("host_username", "root")
+    compile_option_server = params.get("compile_option_server", "")
+    netperf_server = utils_netperf.NetperfServer(host_ip,
                                                  server_path,
                                                  md5sum,
                                                  netperf_link,
-                                                 client, port,
-                                                 password=passwd,
+                                                 server_shell_client, server_shell_port,
+                                                 username=server_username,
+                                                 password=server_passwd,
                                                  prompt=prompt,
                                                  linesep=linesep,
                                                  status_test_command=status_test_command,
@@ -141,7 +151,7 @@ def run(test, params, env):
         error_context.context("Start Netperf in guest for %ss."
                               % netperf_timeout, logging.info)
         test_option = "-t TCP_CRR -l %s -- -b 10 -D" % netperf_timeout
-        netperf_client.bg_start(netperf_server_ip, test_option, client_num)
+        netperf_client.bg_start(host_ip, test_option, client_num)
 
         utils_misc.wait_for(lambda: not netperf_client.is_netperf_running(),
                             timeout=netperf_timeout, first=590, step=2)

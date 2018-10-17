@@ -1,3 +1,4 @@
+import os
 import re
 import time
 import logging
@@ -7,6 +8,9 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import env_process
 from virttest import utils_test
+from virttest import data_dir
+
+from aexpect.exceptions import ShellTimeoutError
 
 
 @error_context.context_aware
@@ -305,6 +309,42 @@ def run(test, params, env):
             test.fail("Watchodg action '%s' didn't take effect after resuming "
                       "VM." % watchdog_action)
         _action_check(test, session, watchdog_action)
+
+    def watchdog_test_suit():
+        """
+        Run watchdog-test-framework to verify the function of emulated watchdog
+        devices.
+        Test steps of the framework are as follows:
+        1) Set up the watchdog with a 30 second timeout.
+        2) Ping the watchdog for 60 seconds.  During this time the guest should
+        run normally.
+        3) Stop pinging the watchdog and just count up.  If the virtual watchdog
+        device is set correctly, then the watchdog action (eg. pause) should
+        happen around the 30 second mark.
+        """
+
+        _watchdog_device_check(test, session, watchdog_device_type)
+        watchdog_test_lib = params["watchdog_test_lib"]
+        src_path = os.path.join(data_dir.get_deps_dir(), watchdog_test_lib)
+        test_dir = os.path.basename(watchdog_test_lib)
+        session.cmd_output("rm -rf /home/%s" % test_dir)
+        vm.copy_files_to(src_path, "/home")
+        session.cmd_output("cd /home/%s && make" % test_dir)
+        try:
+            session.cmd_output("./watchdog-test --yes &", timeout=130)
+        except ShellTimeoutError:
+            # To judge if watchdog action happens after 30s
+            o = session.get_output().splitlines()[-1]
+            if 27 <= int(o.rstrip("...")) <= 32:
+                _action_check(test, session, watchdog_action)
+            else:
+                test.fail("Watchdog action doesn't happen after 30s.")
+        else:
+            test.fail("Watchdog test suit doesn't run successfully.")
+        finally:
+            vm.resume()
+            session.cmd_output("pkill watchdog-test")
+            session.cmd_output("rm -rf /home/%s" % test_dir)
 
     # main procedure
     test_type = params.get("test_type")

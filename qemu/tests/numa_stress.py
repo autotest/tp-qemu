@@ -11,8 +11,6 @@ from virttest import utils_test
 from virttest import data_dir
 from virttest.staging import utils_memory
 
-from generic.tests import autotest_control
-
 
 def max_mem_map_node(host_numa_node, qemu_pid):
     """
@@ -107,7 +105,8 @@ def run(test, params, env):
     if not os.path.isdir(tmpfs_path):
         os.mkdir(tmpfs_path)
 
-    numa_node_malloc = -1
+    test_mem = float(params.get("mem"))*float(params.get("mem_ratio", 0.8))
+    stress_args = "--cpu 4 --io 4 --vm 2 --vm-bytes %sM" % int(test_mem / 2)
     most_used_node, memory_used = max_mem_map_node(host_numa_node, qemu_pid)
 
     for test_round in range(test_count):
@@ -136,7 +135,8 @@ def run(test, params, env):
                           " Error message:%s" % (numa_node_malloc,
                                                  str(error_msg)))
         error_context.context("Run memory heavy stress in guest", logging.info)
-        autotest_control.run(test, params, env)
+        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
+        stress_test.load_stress_tool()
         error_context.context("Get the qemu process memory use status",
                               logging.info)
         node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
@@ -145,6 +145,8 @@ def run(test, params, env):
         else:
             most_used_node = node_after
             memory_used = memory_after
+        stress_test.unload_stress()
+        stress_test.clean()
         utils_misc.umount("none", tmpfs_path, "tmpfs")
         funcatexit.unregister(env, params.get("type"), utils_misc.umount,
                               "none", tmpfs_path, "tmpfs")

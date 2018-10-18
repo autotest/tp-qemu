@@ -2,6 +2,7 @@ import os
 import re
 import time
 import logging
+import random
 
 from avocado.utils import process
 from virttest import error_context
@@ -345,6 +346,66 @@ def run(test, params, env):
             vm.resume()
             session.cmd_output("pkill watchdog-test")
             session.cmd_output("rm -rf /home/%s" % test_dir)
+
+    def heartbeat_test():
+        """
+        Heartbeat test for i6300esb
+        Test steps:
+        1.Start VM with "-watchdog-action pause" CLI option
+        2.Set heartbeat value and reload the i6300esb module
+        3.Trigger wathchdog action through open /dev/watchdog
+        4.Ensure watchdog_action takes effect after $heartbeat.
+        """
+        del_module_cmd = params["del_module_cmd"]
+        reload_module_cmd = params["reload_module_cmd"]
+        _watchdog_device_check(test, session, watchdog_device_type)
+        error_context.context("set heartbeat value and reload the i6300esb "
+                              "module", logging.info)
+        session.cmd(del_module_cmd)
+        heartbeat = params["heartbeat"]
+        if heartbeat == "random_value":
+            heartbeat = random.randint(1, 20)
+        else:
+            heartbeat = eval(heartbeat)
+        dmesg_cmd = params["dmesg_cmd"]
+        session.cmd(dmesg_cmd)
+        session.cmd_output(reload_module_cmd % heartbeat)
+        if heartbeat < -2147483648 or heartbeat > 2147483647:
+            o = session.cmd_output("dmesg | grep -i 'i6300esb.*invalid'")
+            if o:
+                logging.info("Heartbeat value %s is out of range, it is "
+                             "expected." % heartbeat)
+            else:
+                test.fail("No invalid heartbeat info in dmesg.")
+        elif -2147483648 <= heartbeat < 1 or 2046 < heartbeat <= 2147483647:
+            o = session.cmd_output("dmesg | grep -i 'heartbeat=30'")
+            if not o:
+                test.fail("Heartbeat value isn't default 30 sec in dmesg, it "
+                          "should be.")
+            heartbeat = 30
+        elif 1 <= heartbeat <= 2046:
+            o = session.cmd_output("dmesg | grep -i 'heartbeat=%s'" % heartbeat)
+            if not o:
+                test.fail("Heartbeat value isn't %s sec in dmesg" % heartbeat)
+        if heartbeat <= 2147483647 and heartbeat > -2147483648:
+            _watchdog_device_check(test, session, watchdog_device_type)
+            _trigger_watchdog(session, trigger_cmd)
+            error_context.context("Watchdog will fire after %s s" % heartbeat,
+                                  logging.info)
+            start_time = time.time()
+            end_time = start_time + float(heartbeat) + 2
+            while not vm.monitor.verify_status("paused"):
+                if time.time() > end_time:
+                    test.fail("Monitor status is:%s, watchdog action '%s' didn't take"
+                              "effect" % (vm.monitor.get_status(), watchdog_action))
+                time.sleep(1)
+            guest_pause_time = time.time() - start_time
+            if abs(guest_pause_time - float(heartbeat)) <= 2:
+                logging.info("Watchdog action '%s' took effect after '%s's." %
+                             (watchdog_action, guest_pause_time))
+            else:
+                test.fail("Watchdog action '%s' took effect after '%s's, it is earlier"
+                          " than expected." % (watchdog_action, guest_pause_time))
 
     # main procedure
     test_type = params.get("test_type")

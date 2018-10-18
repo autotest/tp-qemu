@@ -39,7 +39,11 @@ def run(test, params, env):
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
-    host_ip = utils_net.get_host_ip_address(params)
+    if (params.get("netperf_vlan_test", "no") == "yes" and
+            params.get("host_vlan_ip")):
+        host_ip = params.get("host_vlan_ip")
+    else:
+        host_ip = utils_net.get_host_ip_address(params)
 
     vms = params.get("vms")
     server_infos = []
@@ -52,7 +56,12 @@ def run(test, params, env):
             session = server_vm.wait_for_login(timeout=login_timeout)
             session.cmd("service iptables stop; iptables -F",
                         ignore_all_errors=True)
-            server_ip = server_vm.get_address()
+            if params.get("netperf_vlan_test", "no") == "yes":
+                vlan_nic = params.get("vlan_nic")
+                server_ip = utils_net.get_linux_ipaddr(session, vlan_nic)[0]
+            else:
+                server_ip = server_vm.get_address()
+
             s_info["ip"] = server_ip
             s_info["os_type"] = params.get("os_type_%s" % server, os_type)
             s_info["username"] = params.get("username_%s" % server,
@@ -101,7 +110,11 @@ def run(test, params, env):
             session = client_vm.wait_for_login(timeout=login_timeout)
             session.cmd("service iptables stop; iptables -F",
                         ignore_all_errors=True)
-            client_ip = client_vm.get_address()
+            if params.get("netperf_vlan_test", "no") == "yes":
+                vlan_nic = params.get("vlan_nic")
+                client_ip = utils_net.get_linux_ipaddr(session, vlan_nic)[0]
+            else:
+                client_ip = client_vm.get_address()
             c_info["ip"] = client_ip
             c_info["os_type"] = params.get("os_type_%s" % client, os_type)
             c_info["username"] = params.get("username_%s" % client,

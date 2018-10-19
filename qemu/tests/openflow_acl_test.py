@@ -276,9 +276,14 @@ def run(test, params, env):
         error_context.context("Set up %s service in %s"
                               % (setup_params.get("service"), setup_target),
                               logging.info)
+        setup_func(setup_cmd, timeout=setup_timeout)
+        if params.get("copy_ftp_site") and setup_target != "localhost":
+            ftp_site = os.path.join(data_dir.get_deps_dir(), params.get("copy_ftp_site"))
+            ftp_dir = params.get("ftp_dir")
+            setup_vm.copy_files_to(ftp_site, ftp_dir)
+
         if prepare_cmd:
             setup_func(prepare_cmd, timeout=setup_timeout)
-        setup_func(setup_cmd, timeout=setup_timeout)
         if setup_target != "localhost":
             setup_session.close()
 
@@ -328,7 +333,7 @@ def run(test, params, env):
             for script in params.get("copy_scripts").split():
                 script_path = os.path.join(script_dir, script)
                 vm.copy_files_to(script_path, tmp_dir)
-        if params.get("os_type") == "windows":
+        if params.get("copy_curl") and params.get("os_type") == "windows":
             curl_win_path = params.get("curl_win_path", "C:\\curl\\")
             session.cmd("dir {0} || mkdir {0}".format(curl_win_path))
             for script in params.get("copy_curl").split():
@@ -339,7 +344,7 @@ def run(test, params, env):
     vms_tags = params.objects("vms")
     br_name = params.get("netdst")
     if br_name == "private":
-        br_name = params.get("priv_brname", 'autotest-prbr0')
+        br_name = params.get("priv_brname", 'atbr0')
 
     for setup_target in params.get("setup_targets", "").split():
         setup_service(setup_target)

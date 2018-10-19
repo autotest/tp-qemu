@@ -37,15 +37,16 @@ def run(test, params, env):
         output = session.cmd_output(get_time_cmd, timeout=timeout)
 
         times_list = output.splitlines()[1:]
-        times_list = [_ for _ in times_list if _ > 10.0 or _ < 11.0]
+        times_list = [_ for _ in times_list if float(_) < 10.0 or float(_) > 11.0]
 
         if times_list:
-            test.fail("Unexpected time drift found: Detail: '%s'" % output)
+            test.fail("Unexpected time drift found: Detail: '%s' \n timeslist: %s"
+                      % (output, times_list))
 
     error_context.context("Sync the host system time with ntp server",
                           logging.info)
-    process.system("yum install -y ntpdate; ntpdate clock.redhat.com",
-                   shell=True)
+    ntp_sync_cmd = params.get("ntp_sync_cmd")
+    process.system(ntp_sync_cmd, shell=True)
 
     error_context.context("Boot the guest", logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -104,8 +105,7 @@ def run(test, params, env):
     session.cmd_status_output(cmd)
 
     error_context.context("Sync time from guest to ntpserver", logging.info)
-    session.cmd("yum install -y ntpdate; ntpdate clock.redhat.com",
-                timeout=timeout)
+    session.cmd(ntp_sync_cmd, timeout=timeout)
 
     error_context.context("Sleep a while and check the time drift on guest"
                           " (without any pinned vcpu)", logging.info)

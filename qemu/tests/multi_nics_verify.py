@@ -79,14 +79,13 @@ def run(test, params, env):
             if s != 0:
                 err_msg = "Failed to create ether config file: %s\nReason is: %s"
                 test.error(err_msg % (eth_config_path, o))
-        session.close()
 
         # Reboot and check the configurations.
-        new_session = vm.reboot(session)
-        s, msg = check_nics_num(nics_num, new_session)
+        session = vm.reboot(session)
+        s, msg = check_nics_num(nics_num, session)
         if not s:
             test.fail(msg)
-        new_session.close()
+        session.close()
 
         # NICs matched.
         logging.info(msg)

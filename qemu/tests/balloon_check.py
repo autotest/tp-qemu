@@ -452,6 +452,8 @@ class BallooningTestLinux(BallooningTest):
         """
         Get Memory status inside guest.
         """
+        if self.params.get("balloon_opt_deflate_on_oom") == "yes":
+            return int(self.get_used_mem())
         return int(self.get_total_mem())
 
 
@@ -473,6 +475,9 @@ def run(test, params, env):
     else:
         balloon_test = BallooningTestLinux(test, params, env)
 
+    if params.get("balloon_opt_deflate_on_oom") == "yes":
+        guest_ori_mem = balloon_test.get_total_mem()
+
     for tag in params.objects('test_tags'):
         error_context.context("Running %s test" % tag, logging.info)
         params_tag = params.object_params(tag)
@@ -493,6 +498,13 @@ def run(test, params, env):
             expect_mem = int(random.uniform(min_sz, max_sz))
 
         quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
+        if params.get("balloon_opt_deflate_on_oom") == "yes":
+            guest_curr_mem = balloon_test.get_total_mem()
+            if guest_ori_mem != guest_curr_mem:
+                balloon_test.error_report("after %s memory" % tag,
+                                          expect_value=guest_ori_mem,
+                                          guest_value=guest_curr_mem)
+                test.fail("Balloon test failed %s" % tag)
         if quit_after_test:
             return
     try:

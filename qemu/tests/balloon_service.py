@@ -132,7 +132,7 @@ def run(test, params, env):
                                                                    tag)
                 time.sleep(20)
                 get_polling_output = vm.monitor.qom_get(device_path,
-                                                        get_balloon_property)
+                                                        stats_property)
                 time.sleep(20)
                 if mem_check == "yes":
                     memory_check(vm, get_polling_output, 'stat-free-memory')
@@ -152,9 +152,9 @@ def run(test, params, env):
     base_path = params.get("base_path", "/machine/peripheral/")
     device = params.get("balloon", "balloon0")
     device_path = os.path.join(base_path, device)
-    set_balloon_property = params.get("set_balloon_property",
-                                      "guest-stats-polling-interval")
-    get_balloon_property = params.get("get_balloon_property", "guest-stats")
+    polling_property = params.get("polling_property",
+                                  "guest-stats-polling-interval")
+    stats_property = params.get("stats_property", "guest-stats")
     polling_interval = int(params.get("polling_interval", 2))
 
     session = vm.wait_for_login(timeout=timeout)
@@ -171,12 +171,25 @@ def run(test, params, env):
 
     try:
         error_context.context("Enable polling in qemu", logging.info)
-        vm.monitor.qom_set(device_path, set_balloon_property, polling_interval)
+        try:
+            vm.monitor.qom_set(device_path, polling_property,
+                               polling_interval)
+        except Exception as e:
+            match_str = params.get("match_str")
+            if match_str:
+                if match_str not in str(e):
+                    test.fail("Fail to get expected result. Expect"
+                              "'%s' when set polling-interval to %s" %
+                              (match_str, polling_interval))
+                return
         time.sleep(sleep_time)
-        get_polling_output = vm.monitor.qom_get(device_path,
-                                                get_balloon_property)
+        get_polling_interval = vm.monitor.qom_get(device_path, polling_property)
+        if get_polling_interval != polling_interval:
+            test.fail("polling interval is not expected, expected "
+                      "%s, but it is %s actually." %
+                      (polling_interval, get_polling_interval))
+        get_polling_output = vm.monitor.qom_get(device_path, stats_property)
         memory_check(vm, get_polling_output, 'stat-total-memory')
-
         error_context.context("Balloon vm memory in loop", logging.info)
         balloon_memory(vm, device_path, mem_check)
 

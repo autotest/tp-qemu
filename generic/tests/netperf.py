@@ -170,26 +170,11 @@ def run(test, params, env):
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
 
-    server_ip = vm.wait_for_get_address(0, timeout=5)
+    vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
     if len(params.get("nics", "").split()) > 1:
-        vm.wait_for_serial_login(timeout=30, restart_network=True).close()
-        server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
-        server_ctl_ip = vm.wait_for_get_address(1, timeout=5)
-        session = vm.wait_for_login(nic_index=1, timeout=30)
+        session = vm.wait_for_login(nic_index=1, timeout=login_timeout)
     else:
-        server_ctl = vm.wait_for_login(timeout=login_timeout)
-        server_ctl_ip = server_ip
         session = vm.wait_for_login(timeout=login_timeout)
-
-    mac = vm.get_mac_address(0)
-    queues = int(params.get("queues", 1))
-    if queues > 1:
-        if params.get("os_type") == "linux":
-            ethname = utils_net.get_linux_ifname(session, mac)
-            session.cmd_status_output("ethtool -L %s combined %s" %
-                                      (ethname, queues))
-        else:
-            logging.info("FIXME: support to enable MQ for Windows guest!")
 
     config_cmds = params.get("config_cmds")
     if config_cmds:
@@ -202,6 +187,25 @@ def run(test, params, env):
                     test.error(msg)
         if params.get("reboot_after_config", "yes") == "yes":
             session = vm.reboot(session=session, timeout=login_timeout)
+            vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
+
+    server_ip = vm.wait_for_get_address(0, timeout=90)
+    if len(params.get("nics", "").split()) > 1:
+        server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
+        server_ctl_ip = vm.wait_for_get_address(1, timeout=90)
+    else:
+        server_ctl = vm.wait_for_login(timeout=login_timeout)
+        server_ctl_ip = server_ip
+
+    mac = vm.get_mac_address(0)
+    queues = int(params.get("queues", 1))
+    if queues > 1:
+        if params.get("os_type") == "linux":
+            ethname = utils_net.get_linux_ifname(session, mac)
+            session.cmd_status_output("ethtool -L %s combined %s" %
+                                      (ethname, queues))
+        else:
+            logging.info("FIXME: support to enable MQ for Windows guest!")
 
     if params.get("rh_perf_envsetup_script"):
         utils_test.service_setup(vm, session, test.virtdir)
@@ -217,17 +221,12 @@ def run(test, params, env):
     else:
         server_cyg = None
 
-    if len(params.get("nics", "").split()) > 1:
-        vm.wait_for_login(nic_index=1, timeout=login_timeout,
-                          restart_network=True)
-        server_ctl_ip = vm.wait_for_get_address(1, timeout=5)
-
     logging.debug(process.system_output("numactl --hardware",
                                         verbose=False, ignore_status=True,
-                                        shell=True))
+                                        shell=True).decode())
     logging.debug(process.system_output("numactl --show",
                                         verbose=False, ignore_status=True,
-                                        shell=True))
+                                        shell=True).decode())
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     numa_node = _pin_vm_threads(vm, params.get("numa_node"))
 
@@ -360,19 +359,14 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
-    test.write_test_keyval({'kvm-userspace-ver':
-                            process.system_output(ver_cmd,
-                                                  verbose=False,
-                                                  ignore_status=True,
-                                                  shell=True
-                                                  ).strip()})
+    test.write_test_keyval({'kvm-userspace-ver': ssh_cmd(host,
+                            ver_cmd).strip()})
     test.write_test_keyval({'guest-kernel-ver': ssh_cmd(server_ctl,
                             guest_ver_cmd).strip()})
     test.write_test_keyval({'session-length': test_duration})
 
-    fd.write('### kvm-userspace-ver : %s\n' %
-             process.system_output(ver_cmd, verbose=False,
-                                   ignore_status=True, shell=True).strip())
+    fd.write('### kvm-userspace-ver : %s\n' % ssh_cmd(host,
+                                                      ver_cmd).strip())
     fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(server_ctl,
                                                      guest_ver_cmd).strip())
     fd.write('### kvm_version : %s\n' % os.uname()[2])
@@ -480,7 +474,8 @@ def ssh_cmd(session, cmd, timeout=120, ignore_status=False):
     """
     if session == "localhost":
         o = process.system_output(cmd, timeout=timeout,
-                                  ignore_status=ignore_status, shell=True)
+                                  ignore_status=ignore_status,
+                                  shell=True).decode()
     else:
         o = session.cmd(cmd, timeout=timeout, ignore_all_errors=ignore_status)
     return o
@@ -623,8 +618,9 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         if numa_enable:
             n = abs(int(params.get("numa_node"))) - 1
             cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
+        cmd += "`command -v python python3 ` "
         cmd += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (
-            i, client_path, server, int(l) * 1.5, nf_args)
+               i, client_path, server, int(l) * 1.5, nf_args)
         cmd += " >> %s" % fname
         logging.info("Start netperf thread by cmd '%s'" % cmd)
         ssh_cmd(client_s, cmd)
@@ -659,7 +655,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             test.error("We couldn't expect this parallism, expect %s get %s"
                        % (sessions, nresult))
 
-        niteration = nresult / sessions
+        niteration = nresult // sessions
         result = 0.0
         for this in lines[-sessions * niteration:]:
             if "Interim" in this:
@@ -711,7 +707,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             msg += "  end state: %s\n" % end_state
             logging.warn(msg)
         else:
-            for i in range(len(end_state) / 2):
+            for i in range(len(end_state) // 2):
                 ret[end_state[i * 2]] = (end_state[i * 2 + 1] -
                                          start_state[i * 2 + 1])
 

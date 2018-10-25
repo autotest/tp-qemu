@@ -7,7 +7,7 @@ import logging
 
 from avocado.utils import process
 
-from virttest import utils_misc, utils_test
+from virttest import utils_misc, utils_test, utils_numeric
 from virttest import data_dir
 
 
@@ -248,20 +248,25 @@ def run(test, params, env):
                     io_exits_a = int(process.system_output("cat /sys/kernel/debug/kvm/exits"))
                     vm.copy_files_from(guest_result_file, data_dir.get_tmp_dir())
                     fio_result_file = os.path.join(data_dir.get_tmp_dir(), "fio_result")
-                    o = process.system_output("egrep '(read|write)' %s" % fio_result_file)
+                    o = process.system_output("egrep '(read|write)' %s" %
+                                              fio_result_file).decode()
                     results = re.findall(pattern, o)
-                    o = process.system_output("egrep 'lat' %s" % fio_result_file)
+                    o = process.system_output("egrep 'lat' %s" %
+                                              fio_result_file).decode()
                     laten = re.findall(r"\s{5}lat\s\((\wsec)\).*?avg=[\s]?(\d+(?:[\.][\d]+)?).*?", o)
-                    bw = float(utils_misc.normalize_data_size(results[0][0]))
-                    iops = int(results[0][1])
+                    bw = float(utils_numeric.normalize_data_size(results[0][1]))
+                    iops = float(utils_numeric.normalize_data_size(results[0][0],
+                                 order_magnitude="B", factor=1000))
                     if os_type == "linux":
-                        o = process.system_output("egrep 'util' %s" % fio_result_file)
+                        o = process.system_output("egrep 'util' %s" %
+                                                  fio_result_file).decode()
                         util = float(re.findall(r".*?util=(\d+(?:[\.][\d]+))%", o)[0])
 
                     lat = float(laten[0][1]) / 1000 if laten[0][0] == "usec" else float(laten[0][1])
                     if re.findall("rw", io_pattern):
-                        bw = bw + float(utils_misc.normalize_data_size(results[1][0]))
-                        iops = iops + int(results[1][1])
+                        bw = bw + float(utils_numeric.normalize_data_size(results[1][1]))
+                        iops = iops + float(utils_numeric.normalize_data_size(results[1][0],
+                                            order_magnitude="B", factor=1000))
                         lat1 = float(laten[1][1]) / 1000 if laten[1][0] == "usec" else float(laten[1][1])
                         lat = lat + lat1
 

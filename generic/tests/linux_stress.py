@@ -11,8 +11,8 @@ def run(test, params, env):
     General stress test for linux:
        1). Install stress if need
        2). Start stress process
-       3). If no stress_time defined, keep stress until test_timeout;
-       otherwise execute below steps after sleeping stress_time long
+       3). If no stress_duration defined, keep stress until test_timeout;
+       otherwise execute below steps after sleeping stress_duration long
        4). Stop stress process
        5). Uninstall stress
        6). Verify guest kernel crash
@@ -45,24 +45,23 @@ def run(test, params, env):
 
     if stress_duration:
         time.sleep(stress_duration)
-
-    for vm in vms:
-        try:
-            s_ping, o_ping = utils_test.ping(vm.get_address(), count=5, timeout=20)
-            if s_ping != 0:
+        for vm in vms:
+            try:
+                s_ping, o_ping = utils_test.ping(vm.get_address(), count=5, timeout=20)
+                if s_ping != 0:
+                    error = True
+                    logging.error("%s seem to have gone out of network", vm.name)
+                    continue
+                uptime = vm.uptime()
+                if up_time[vm.name] > uptime:
+                    error = True
+                    logging.error("%s seem to have rebooted during the stress run", vm.name)
+                stress_server[vm.name].unload_stress()
+                stress_server[vm.name].clean()
+                vm.verify_dmesg()
+            except exceptions.TestError as err_msg:
                 error = True
-                logging.error("%s seem to have gone out of network", vm.name)
-                continue
-            uptime = vm.uptime()
-            if up_time[vm.name] > uptime:
-                error = True
-                logging.error("%s seem to have rebooted during the stress run", vm.name)
-            stress_server[vm.name].unload_stress()
-            stress_server[vm.name].clean()
-            vm.verify_dmesg()
-        except exceptions.TestError as err_msg:
-            error = True
-            logging.error(err_msg)
+                logging.error(err_msg)
 
     if error:
         test.fail("Run failed: see error messages above")

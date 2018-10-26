@@ -99,11 +99,6 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Stop auto sync service in guest", logging.info)
-    cmd = "(service chronyd status | grep 'Loaded: loaded')"
-    cmd += " && service chronyd stop"
-    session.cmd_status_output(cmd)
-
     error_context.context("Sync time from guest to ntpserver", logging.info)
     session.cmd(ntp_sync_cmd, timeout=timeout)
 

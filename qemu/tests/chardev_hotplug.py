@@ -113,7 +113,7 @@ def run(test, params, env):
     logging.info("host pty device is '%s'" % filename)
     fd_dst = os.open(filename, os.O_RDWR | os.O_NONBLOCK)
     chardev_use(vm, "chardev-pty")
-    output = os.read(fd_dst, 256)
+    output = os.read(fd_dst, 256).decode()
     os.close(fd_dst)
     if output.find("Hello virttest world") == -1:
         test.fail("Guest message not found [%s]" % output)

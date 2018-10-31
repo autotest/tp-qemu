@@ -4,12 +4,20 @@ Configurable on-guest dd test.
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2012 Red Hat, Inc.
 """
+import os
+import re
 import logging
-
 import aexpect
 
-from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
+from virttest import utils_numeric
+from virttest import error_context
+
+try:
+    from itertools import zip_longest as zip_longest
+except Exception:
+    from itertools import izip_longest as zip_longest
 
 
 @error_context.context_aware
@@ -60,62 +68,105 @@ def run(test, params, env):
     error_context.context("Wait guest boot up", logging.info)
     session = vm.wait_for_login(timeout=timeout)
 
-    dd_if = params.get("dd_if")
-    dd_if_select = int(params.get("dd_if_select", '-1'))
-    dd_of = params.get("dd_of")
-    dd_of_select = int(params.get("dd_of_select", '-1'))
-    dd_bs = params.get("dd_bs")
-    dd_count = params.get("dd_count")
-    dd_iflag = params.get("dd_iflag")
-    dd_oflag = params.get("dd_oflag")
-    dd_skip = params.get("dd_skip")
-    dd_seek = params.get("dd_seek")
+    dd_keys = ['dd_if', 'dd_of', 'dd_bs', 'dd_count', 'dd_iflag',
+               'dd_oflag', 'dd_skip', 'dd_seek']
 
-    dd_timeout = int(params.get("dd_timeout", 60))
+    dd_params = {key: params.get(key, None) for key in dd_keys}
+    if dd_params['dd_bs'] is None:
+        dd_params['dd_bs'] = '512'
+    dd_params['dd_bs'] = dd_params['dd_bs'].split()
+    bs_count = len(dd_params['dd_bs'])
 
+    dd_timeout = int(params.get("dd_timeout", 180))
     dd_output = params.get("dd_output", "")
     dd_stat = int(params.get("dd_stat", 0))
 
-    dd_cmd = "dd"
-    if dd_if:
-        dd_if = _get_file(dd_if, dd_if_select)
-        dd_cmd += " if=%s" % dd_if
-    if dd_of:
-        dd_of = _get_file(dd_of, dd_of_select)
-        dd_cmd += " of=%s" % dd_of
-    if dd_bs:
-        dd_cmd += " bs=%s" % dd_bs
-    if dd_count:
-        dd_cmd += " count=%s" % dd_count
-    if dd_iflag:
-        dd_cmd += " iflag=%s" % dd_iflag
-    if dd_oflag:
-        dd_cmd += " oflag=%s" % dd_oflag
-    if dd_skip:
-        dd_cmd += " skip=%s" % dd_skip
-    if dd_seek:
-        dd_cmd += " seek=%s" % dd_seek
-    logging.info("Using '%s' cmd", dd_cmd)
+    dev_partitioned = []
+    for arg in ['dd_if', 'dd_of']:
+        filename = dd_params[arg]
+        path = _get_file(filename,
+                         int(params.get('%s_select' % arg, '-1')))
+        if (bs_count > 1
+                and filename in params.objects('images')):
+            psize = float(
+                utils_numeric.normalize_data_size(
+                    params.get("partition_size", '2G')
+                    )
+                )
+            start = 0.0
+            dev_id = os.path.split(path)[-1]
+            dev_partitioned.append(dev_id)
 
-    error_context.context("Execute dd in guest", logging.info)
+            utils_disk.create_partition_table_linux(session, dev_id, 'gpt')
+            for i in range(bs_count):
+                utils_disk.create_partition_linux(session, dev_id,
+                                                  '%fM' % psize,
+                                                  '%fM' % start)
+                start += psize
+
+            disks = utils_disk.get_linux_disks(session, partition=True)
+            partitions = [key for key in disks if
+                          re.match(r'%s\d+$' % dev_id, key)]
+            partitions.sort()
+            dd_params[arg] = [path.replace(dev_id, part)
+                              for part in partitions]
+        else:
+            dd_params[arg] = [path]
+
+    if bs_count > 1 and not dev_partitioned:
+        test.error('with multiple bs, either dd_if or \
+                   dd_of must be a block device')
+
+    dd_cmd = ['dd']
+    for key in dd_keys:
+        value = dd_params[key]
+        if value is None:
+            continue
+        arg = key.split('_')[-1]
+        if key in ['dd_if', 'dd_of', 'dd_bs']:
+            part = '%s=%s' % (arg, '{}')
+        else:
+            part = '%s=%s' % (arg, value)
+        dd_cmd.append(part)
+    dd_cmd = ' '.join(dd_cmd)
+
+    remaining = [dd_params[key] for key in ['dd_if', 'dd_of', 'dd_bs']]
+    if len(dd_params['dd_if']) != bs_count:
+        fillvalue = dd_params['dd_if'][-1]
+    else:
+        fillvalue = dd_params['dd_of'][-1]
+    cmd = [dd_cmd.format(*t) for t in
+           zip_longest(*remaining, fillvalue=fillvalue)]
+    cmd = ' & '.join(cmd)
+    logging.info("Using '%s' cmd", cmd)
+
     try:
-        (stat, out) = session.cmd_status_output(dd_cmd, timeout=dd_timeout)
-    except aexpect.ShellTimeoutError:
-        err = ("dd command timed-out (cmd='%s', timeout=%d)"
-               % (dd_cmd, dd_timeout))
-        test.fail(err)
-    except aexpect.ShellCmdError as details:
-        stat = details.status
-        out = details.output
+        error_context.context("Execute dd in guest", logging.info)
+        try:
+            (stat, out) = session.cmd_status_output(cmd, timeout=dd_timeout)
+        except aexpect.ShellTimeoutError:
+            err = ("dd command timed-out (cmd='%s', timeout=%d)"
+                   % (cmd, dd_timeout))
+            test.fail(err)
+        except aexpect.ShellCmdError as details:
+            stat = details.status
+            out = details.output
 
-    error_context.context("Check command exit status and output", logging.info)
-    logging.debug("Returned dd_status: %s\nReturned output:\n%s", stat, out)
-    if stat != dd_stat:
-        err = ("Return code doesn't match (expected=%s, actual=%s)\n"
-               "Output:\n%s" % (dd_stat, stat, out))
-        test.fail(err)
-    if dd_output not in out:
-        err = ("Output doesn't match:\nExpected:\n%s\nActual:\n%s"
-               % (dd_output, out))
-        test.fail(err)
-    logging.info("dd test succeeded.")
+        error_context.context("Check command exit status and output",
+                              logging.info)
+        logging.debug("Returned dd_status: %s\nReturned output:\n%s",
+                      stat, out)
+        if stat != dd_stat:
+            err = ("Return code doesn't match (expected=%s, actual=%s)\n"
+                   "Output:\n%s" % (dd_stat, stat, out))
+            test.fail(err)
+        if dd_output not in out:
+            err = ("Output doesn't match:\nExpected:\n%s\nActual:\n%s"
+                   % (dd_output, out))
+            test.fail(err)
+        logging.info("dd test succeeded.")
+    finally:
+        for dev_id in dev_partitioned:
+            utils_disk.clean_partition_linux(session, dev_id)
+        session.close()
+        vm.destroy(gracefully=True)

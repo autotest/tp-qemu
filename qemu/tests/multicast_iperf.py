@@ -44,7 +44,7 @@ def run(test, params, env):
     os_type = params.get("os_type")
     win_iperf_url = params.get("win_iperf_url")
     linux_iperf_url = params.get("linux_iperf_url")
-    iperf_version = params.get("iperf_version", "2.0.5")
+    iperf_version = params.get("iperf_version", "2.0.12")
     transfer_timeout = int(params.get("transfer_timeout", 360))
     login_timeout = int(params.get("login_timeout", 360))
 
@@ -146,7 +146,7 @@ def run(test, params, env):
 
         error_context.context("Test finish, check the result", logging.info)
         process.system("pkill -2 iperf")
-        t.join()
+        t.join(timeout=60)
 
     finally:
         if _process_is_alive("iperf"):

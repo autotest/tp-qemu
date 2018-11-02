@@ -811,6 +811,33 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         else:
             self.test.fail("FS is not frozen,still can write in guest.")
 
+    def gagent_check_reboot_shutdown(self, test, params, env):
+        """
+        Send "shutdown,reboot" command to guest agent
+        after FS freezed
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        vm = env.get_vm(params["main_vm"])
+        vm.verify_alive()
+        gagent = self.gagent
+        gagent.fsfreeze()
+        try:
+            for mode in (gagent.SHUTDOWN_MODE_POWERDOWN, gagent.SHUTDOWN_MODE_REBOOT):
+                try:
+                    gagent.shutdown(mode)
+                except guest_agent.VAgentCmdError as detail:
+                    if not re.search('guest-shutdown has been disabled', str(detail)):
+                        test.fail("This is not the desired information: ('%s')" % str(detail))
+                else:
+                    test.fail("agent shutdown command shouldn't succeed for freeze FS")
+        finally:
+            try:
+                gagent.fsthaw(check_status=False)
+            except Exception:
+                pass
+
     @error_context.context_aware
     def _action_before_fsthaw(self, *args):
         pass

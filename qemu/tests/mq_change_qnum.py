@@ -29,30 +29,35 @@ def run(test, params, env):
         """
         Change queues number
         """
-        mq_set_cmd = "ethtool -L %s combined %d" % (ifname, q_number)
         if not queues_status:
             queues_status = get_queues_status(session, ifname)
 
-        if (q_number != queues_status[1] and q_number <= queues_status[0] and
-                q_number > 0):
-            expect_status = 0
-        else:
-            expect_status = 1
-
+        mq_set_cmd = "ethtool -L %s combined %d" % (ifname, q_number)
         status, output = session.cmd_status_output(mq_set_cmd, safe=True)
         cur_queues_status = get_queues_status(session, ifname)
-        if status != expect_status:
-            err_msg = "Change queues number failed, "
-            err_msg += "current queues set is %s, " % queues_status[1]
-            err_msg += "max allow queues set is %s, " % queues_status[0]
+
+        err_msg = ""
+        expect_q_number = q_number
+        if (q_number != queues_status[1] and q_number <= queues_status[0]
+                and q_number > 0):
+            if (cur_queues_status[1] != q_number
+                    or cur_queues_status[0] != queues_status[0]):
+                err_msg = "Param is valid, but change queues failed, "
+        elif cur_queues_status != queues_status:
+            if q_number != queues_status[1]:
+                err_msg = "Param is invalid, "
+            err_msg += "Current queues value is not expected, "
+            expect_q_number = queues_status[1]
+
+        if len(err_msg) > 0:
+            err_msg += "current queues set is %s, " % cur_queues_status[1]
+            err_msg += "max allow queues set is %s, " % cur_queues_status[0]
             err_msg += "when run cmd: '%s', " % mq_set_cmd
-            err_msg += "expect exit status is: %s, " % expect_status
+            err_msg += "expect queues are %s," % expect_q_number
+            err_msg += "expect max allow queues are %s, " % queues_status[0]
             err_msg += "output: '%s'" % output
             test.fail(err_msg)
-        if not status and cur_queues_status == queues_status:
-            test.fail("params is right, but change queues failed")
-        elif status and cur_queues_status != queues_status:
-            test.fail("No need change queues number")
+
         return [int(_) for _ in cur_queues_status]
 
     def get_queues_status(session, ifname, timeout=240):

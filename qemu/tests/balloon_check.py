@@ -114,6 +114,7 @@ class BallooningTest(MemoryBaseTest):
         elif new_mem == 0:
             compare_mem = self.current_mmem
         elif new_mem <= 100:
+            self._balloon_post_action()
             self.current_mmem = self.get_ballooned_memory()
             compare_mem = self.current_mmem
         else:
@@ -158,7 +159,7 @@ class BallooningTest(MemoryBaseTest):
             qemu_quit_after_test = 0
         return qemu_quit_after_test
 
-    def _mem_state(self):
+    def _mem_state(self, threshold):
         """
         A generator to get guest memory until it does not change
         """
@@ -167,7 +168,7 @@ class BallooningTest(MemoryBaseTest):
         while True:
             yield stable
             cur_mem = self.get_memory_status()
-            stable = abs(cur_mem - ori_mem) < 100
+            stable = abs(cur_mem - ori_mem) < threshold
             ori_mem = cur_mem
 
     def wait_for_balloon_complete(self, timeout):
@@ -175,8 +176,10 @@ class BallooningTest(MemoryBaseTest):
         Wait until guest memory don't change
         """
         logging.info("Wait until guest memory don't change")
-        is_stable = self._mem_state()
-        utils_misc.wait_for(lambda: next(is_stable), timeout, step=10.0)
+        threshold = int(self.params.get("guest_stable_threshold", 100))
+        is_stable = self._mem_state(threshold)
+        utils_misc.wait_for(lambda: next(is_stable), timeout,
+                            step=float(self.params.get("guest_check_step", 10.0)))
 
     def get_memory_boundary(self, balloon_type=''):
         """
@@ -310,12 +313,24 @@ class BallooningTest(MemoryBaseTest):
         """
         pass
 
+    def _balloon_post_action(self):
+        """
+        Wait for guest memory goes into stable status
+        """
+        pass
+
 
 class BallooningTestWin(BallooningTest):
 
     """
     Windows memory ballooning test
     """
+    def _balloon_post_action(self):
+        """
+        Wait for guest memory goes into stable status
+        """
+        balloon_timeout = float(self.params.get("balloon_timeout", 240))
+        self.wait_for_balloon_complete(balloon_timeout)
 
     def error_report(self, step, expect_value, monitor_value, guest_value):
         """
@@ -496,6 +511,8 @@ def run(test, params, env):
             balloon_type = params_tag['balloon_type']
             min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)
             expect_mem = int(random.uniform(min_sz, max_sz))
+            if params_tag.get('minimum_value_check', 'no') == 'yes':
+                expect_mem = int(min_sz)
 
         quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
         if params.get("balloon_opt_deflate_on_oom") == "yes":

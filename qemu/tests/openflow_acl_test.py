@@ -172,7 +172,8 @@ def run(test, params, env):
                     if err_type == "ref":
                         test.cancel(err_msg)
                     test.fail(err_msg)
-                session.close()
+                if asys in vms_tags:
+                    session.close()
 
     def get_acl_cmd(protocol, in_port, action, extra_options):
         acl_cmd = protocol.strip()
@@ -396,7 +397,7 @@ def run(test, params, env):
                           logging.info)
     access_service(access_sys, access_targets, False, host_ip, ref=True)
     error_context.context("Disable the access in ovs", logging.info)
-    br_infos = utils_net.openflow_manager(br_name, "show").stdout
+    br_infos = utils_net.openflow_manager(br_name, "show").stdout.decode()
     if_port = re.findall(r"(\d+)\(%s\)" % if_name, br_infos)
     if not if_port:
         test.cancel("Can not find %s in bridge %s" % (if_name, br_name))
@@ -404,7 +405,8 @@ def run(test, params, env):
 
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "drop", acl_extra_options)
     utils_net.openflow_manager(br_name, "add-flow", acl_cmd)
-    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+    acl_rules = utils_net.openflow_manager(
+                br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
@@ -414,7 +416,8 @@ def run(test, params, env):
     error_context.context("Enable the access in ovs", logging.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "normal", acl_extra_options)
     utils_net.openflow_manager(br_name, "mod-flows", acl_cmd)
-    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+    acl_rules = utils_net.openflow_manager(
+                br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
     error_context.context("Try to acess target to exam the enable rules",
@@ -423,7 +426,8 @@ def run(test, params, env):
     error_context.context("Delete the access rules in ovs", logging.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "", acl_extra_options)
     utils_net.openflow_manager(br_name, "del-flows", acl_cmd)
-    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+    acl_rules = utils_net.openflow_manager(
+                br_name, "dump-flows").stdout.decode()
     if acl_rules_check(acl_rules, acl_cmd):
         test.fail("Still can find the rules from ovs-ofctl: %s" % acl_rules)
     error_context.context("Try to acess target to exam after delete the rules",

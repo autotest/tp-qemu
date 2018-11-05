@@ -8,7 +8,6 @@ import logging
 import random
 import re
 import six
-import time
 
 from virttest import env_process
 from virttest import error_context
@@ -356,11 +355,12 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
 
     # PCI devices are initialized by firmware, which might require some time
-    # to setup. Wait 5s before getting the qtree.
-    time.sleep(5)
-    qtree = qemu_qtree.QtreeContainer()
+    # to setup. Wait until the guest boots up.
+    error_context.context("Verify VM booted properly.", logging.info)
+    session = vm.wait_for_login()
 
     error_context.context("Verify qtree vs. qemu devices", logging.info)
+    qtree = qemu_qtree.QtreeContainer()
     _info_qtree = vm.monitor.info('qtree', False)
     qtree.parse_info_qtree(_info_qtree)
     info_qdev = process_qdev(vm.devices)
@@ -373,9 +373,6 @@ def run(test, params, env):
         logging.error(vm.devices.str_bus_long())
         logging.error(err)
         errors += "qdev vs. qtree, "
-
-    error_context.context("Verify VM booted properly.", logging.info)
-    session = vm.wait_for_login()
 
     error_context.context("Verify lspci vs. qtree", logging.info)
     if params.get('lspci_cmd'):

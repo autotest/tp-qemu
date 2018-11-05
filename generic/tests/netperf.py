@@ -291,6 +291,9 @@ def run(test, params, env):
             password = params_tmp["password"]
             username = params_tmp["username"]
             env_setup(i, ip_dict[i], username, shell_port, password)
+        elif params_tmp.get("os_type") == "windows":
+            windows_disable_firewall = params.get("windows_disable_firewall")
+            ssh_cmd(i, windows_disable_firewall)
     tweak_tuned_profile()
     mtu = int(params.get("mtu", "1500"))
     mtu_set(mtu)

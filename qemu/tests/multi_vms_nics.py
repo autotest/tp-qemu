@@ -147,14 +147,14 @@ def run(test, params, env):
     flood_minutes = float(params["flood_minutes"])
     error_context.context("Check irqbalance service status", logging.info)
     o = process.system_output(check_irqbalance_cmd, ignore_status=True,
-                              shell=True)
+                              shell=True).decode()
     check_stop_irqbalance = False
     if re.findall(status_irqbalance, o):
         logging.debug("stop irqbalance")
         process.run(stop_irqbalance_cmd, shell=True)
         check_stop_irqbalance = True
         o = process.system_output(check_irqbalance_cmd, ignore_status=True,
-                                  shell=True)
+                                  shell=True).decode()
         if re.findall(status_irqbalance, o):
             test.error("Can not stop irqbalance")
     thread_list = []

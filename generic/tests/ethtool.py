@@ -146,7 +146,7 @@ def run(test, params, env):
         # only capture the new tcp port after offload setup
         original_tcp_ports = re.findall(
             r"tcp.*:(\d+).*%s" % guest_ip,
-            process.system_output("/bin/netstat -nap"))
+            process.system_output("/bin/netstat -nap").decode())
 
         for i in original_tcp_ports:
             tcpdump_cmd += " and not port %s" % i

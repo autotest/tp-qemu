@@ -125,7 +125,11 @@ def run(test, params, env):
                                                     mode=mode)
 
             o = session_serial.cmd_output_safe("ipconfig /all")
-            if not re.findall("%s" % "-".join(new_mac.split(":")), o, re.I):
+            if params.get("ctrl_mac_addr") == "off":
+                mac_check = old_mac
+            else:
+                mac_check = new_mac
+            if not re.findall("%s" % "-".join(mac_check.split(":")), o, re.I):
                 test.fail("Guest mac change failed")
             logging.info("Guest mac have been modified successfully")
 
@@ -138,8 +142,16 @@ def run(test, params, env):
                 logging.warn(msg)
             session.close()
 
+            # In the following case, mac address should not change,
+            # so set the old_mac back to virtnet cache
+            # Or the vm will not able to be logined(no ip for the virtnet[0].mac)
+            if os_type == "windows" and params.get("ctrl_mac_addr") == "off":
+                nic = vm.virtnet[0]
+                nic.mac = old_mac
+                vm.virtnet.update_db()
+
             # Re-log into guest and check if session is responsive
-            error_context.context("Re-log into the guest")
+            error_context.context("Re-log into the guest", logging.info)
             session = vm.wait_for_login(timeout=timeout)
             if not session.is_responsive():
                 test.error("The new session is not responsive.")
@@ -152,6 +164,9 @@ def run(test, params, env):
                     nic.mac = old_mac
                     vm.virtnet.update_db()
                     mac_check = old_mac
+                else:
+                    if params.get("ctrl_mac_addr") == "off":
+                        mac_check = old_mac
 
                 session_serial = vm.reboot(session_serial, serial=True)
                 check_guest_mac(test, mac_check, vm)

@@ -119,12 +119,16 @@ def run(test, params, env):
             test.error("File changed after transfer")
 
     nic_interface_list = []
-    check_irqbalance_cmd = params.get("check_irqbalance_cmd")
-    stop_irqbalance_cmd = params.get("stop_irqbalance_cmd")
-    start_irqbalance_cmd = params.get("start_irqbalance_cmd")
-    status_irqbalance = params.get("status_irqbalance")
+    check_irqbalance_cmd = params.get("check_irqbalance_cmd",
+                                      "systemctl status irqbalance")
+    stop_irqbalance_cmd = params.get("stop_irqbalance_cmd",
+                                     "systemctl stop irqbalance")
+    start_irqbalance_cmd = params.get("start_irqbalance_cmd",
+                                      "systemctl start irqbalance")
+    status_irqbalance = params.get("status_irqbalance",
+                                   "Active: active|running")
     vms = params["vms"].split()
-    host_mem = utils_memory.memtotal() / (1024 * 1024)
+    host_mem = utils_memory.memtotal() // (1024 * 1024)
     host_cpu_count = len(utils_misc.get_cpu_processors())
     vhost_count = 0
     if params.get("vhost"):
@@ -133,8 +137,8 @@ def run(test, params, env):
         test.error("The host don't have enough cpus to start guest"
                    "pcus: %d, minimum of vcpus and vhost: %d" %
                    (host_cpu_count, (1 + vhost_count) * len(vms)))
-    params['mem'] = host_mem / len(vms) * 1024
-    params['smp'] = host_cpu_count / len(vms) - vhost_count
+    params['mem'] = host_mem // len(vms) * 1024
+    params['smp'] = host_cpu_count // len(vms) - vhost_count
     if params['smp'] % 2 != 0:
         params['vcpu_sockets'] = 1
     params["start_vm"] = "yes"

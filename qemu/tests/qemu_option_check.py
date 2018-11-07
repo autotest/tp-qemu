@@ -26,7 +26,8 @@ def run(test, params, env):
         """
         support_device = process.system_output("%s -device ? 2>&1"
                                                % qemu_binary, timeout=10,
-                                               ignore_status=True, shell=True)
+                                               ignore_status=True,
+                                               shell=True).decode()
         if not support_device:
             test.cancel("Can not get qemu support device list")
         device_list = re.findall(r'name\s+"(.*)",', support_device)
@@ -42,17 +43,18 @@ def run(test, params, env):
             err_msg = "Oops, Your qemu version doesn't support devic '%s', "
             err_msg += "make sure you have inputted a correct device name"
             test.cancel(err_msg % device_name)
-        device_support_option = process.run("%s -device %s,? 2>&1" %
-                                            (qemu_binary, device_name),
-                                            timeout=10,
-                                            ignore_status=True, shell=True)
-        if device_support_option.exit_status:
-            test.error("Oops, output status is wrong")
-        if not re.findall(r"%s\.(.*)=(.*)" % device_name,
-                          device_support_option.stdout):
+        device_support_option = process.system_output("%s -device %s,? 2>&1" %
+                                                      (qemu_binary,
+                                                       device_name),
+                                                      timeout=10,
+                                                      ignore_status=True,
+                                                      shell=True)
+        device_support_option = device_support_option.decode().strip()
+        if not re.findall(r"%s\.(.*)=(.*)" %
+                          device_name, device_support_option):
             test.fail("Qemu option check Failed")
         logging.info("Qemu options check successful. output is:\n%s" %
-                     device_support_option.stdout)
+                     device_support_option)
 
     device_name = params.get("device_name")
     qemu_binary = utils_misc.get_qemu_binary(params)

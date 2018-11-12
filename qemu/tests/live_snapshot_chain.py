@@ -7,6 +7,7 @@ from virttest import error_context
 from virttest import storage
 from virttest import qemu_storage
 from virttest import data_dir
+from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -90,10 +91,12 @@ def run(test, params, env):
     file_dir = params.get("file_dir")
     dir_create_cmd = params.get("dir_create_cmd")
     md5_cmd = params.get("md5_cmd")
+    sync_cmd = params.get("sync_bin", "sync")
 
     snapshot_chain = generate_snapshot_chain(snapshot_chain, snapshot_num)
     snapshot_chain = re.split(r"\s+", snapshot_chain)
     session = vm.wait_for_login(timeout=timeout)
+    sync_cmd = utils_misc.set_winutils_letter(session, sync_cmd)
 
     md5_value = {}
     files_in_guest = {}
@@ -134,6 +137,10 @@ def run(test, params, env):
                     session.cmd(file_create_cmd % image)
                     md5 = session.cmd_output(md5_cmd % image)
                 md5_value[image] = {image: md5}
+            status, output = session.cmd_status_output(sync_cmd)
+            if status != 0:
+                test.error("Execute '%s' with failures('%s') " %
+                           (sync_cmd, output))
             if image_params.get("check_alive_cmd"):
                 session.cmd(image_params.get("check_alive_cmd"))
             if image_params.get("file_create"):

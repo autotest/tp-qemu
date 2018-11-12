@@ -4,6 +4,7 @@ import re
 
 from avocado.utils import process
 from virttest import utils_test
+from virttest import utils_time
 from virttest import funcatexit
 from virttest import error_context
 
@@ -142,6 +143,12 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+
+    error_context.context("Sync guest timezone before test", logging.info)
+    if params["os_type"] == 'linux':
+        utils_time.sync_timezone_linux(vm)
+    else:
+        utils_time.sync_timezone_win(vm)
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_serial_login(timeout=timeout)

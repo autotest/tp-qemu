@@ -58,10 +58,40 @@ def run(test, params, env):
             raise err
         return guest_time
 
+    def verify_timedrift(session, is_hardware=False):
+        """
+        Verify timedrift between host and guest.
+
+        :param session: VM session.
+        :param is_hardware: if need to verify guest's hardware time.
+        """
+        # Command to run to get the current time
+        time_command = params["time_command"]
+        # Filter which should match a string to be passed to time.strptime()
+        time_filter_re = params["time_filter_re"]
+        # Time format for time.strptime()
+        time_format = params["time_format"]
+        timerdevice_drift_threshold = float(params.get(
+            "timerdevice_drift_threshold", 3))
+
+        time_type = "system" if not is_hardware else "harware"
+        error_context.context("Check the %s time on guest" % time_type,
+                              logging.info)
+        host_time, guest_time = utils_test.get_time(session, time_command,
+                                                    time_filter_re,
+                                                    time_format)
+        if is_hardware:
+            guest_time = get_hwtime(session)
+        drift = abs(float(host_time) - float(guest_time))
+        if drift > timerdevice_drift_threshold:
+            test.fail("The guest's %s time is different with"
+                      " host's system time. Host time: '%s', guest time:"
+                      " '%s'" % (time_type, host_time, guest_time))
+
     def get_current_clksrc(session):
         cmd = "cat /sys/devices/system/clocksource/"
         cmd += "clocksource0/current_clocksource"
-        current_clksrc = session.cmd_output(cmd)
+        current_clksrc = session.cmd_output_safe(cmd)
         if "kvm-clock" in current_clksrc:
             return "kvm-clock"
         elif "tsc" in current_clksrc:
@@ -82,7 +112,7 @@ def run(test, params, env):
         """
         avail_cmd = "cat /sys/devices/system/clocksource/clocksource0/"
         avail_cmd += "available_clocksource"
-        avail_clksrc = session.cmd_output(avail_cmd)
+        avail_clksrc = session.cmd_output_safe(avail_cmd)
         if clksrc in avail_clksrc:
             clksrc_cmd = "echo %s > /sys/devices/system/clocksource/" % clksrc
             clksrc_cmd += "clocksource0/current_clocksource"
@@ -126,33 +156,11 @@ def run(test, params, env):
             update_clksrc(session, timerdevice_clksource)
             need_restore_clksrc = True
 
-    # Command to run to get the current time
-    time_command = params["time_command"]
-    # Filter which should match a string to be passed to time.strptime()
-    time_filter_re = params["time_filter_re"]
-    # Time format for time.strptime()
-    time_format = params["time_format"]
-    timerdevice_drift_threshold = float(params.get("timerdevice_drift_threshold", 3))
-
-    error_context.context("Check the system time on guest and host",
+    error_context.context("check timedrift between guest and host.",
                           logging.info)
-    (host_time, guest_time) = utils_test.get_time(session, time_command,
-                                                  time_filter_re, time_format)
+    verify_timedrift(session)
     if params["os_type"] == "linux":
-        error_context.context("Check the hardware time on guest", logging.info)
-        guest_hwtime = get_hwtime(session)
-
-    drift = abs(float(host_time) - float(guest_time))
-    if drift > timerdevice_drift_threshold:
-        test.fail("The guest's system time is different with"
-                  " host's. Host time: '%s', guest time:"
-                  " '%s'" % (host_time, guest_time))
-
-    drift = abs(float(host_time) - float(guest_hwtime))
-    if drift > timerdevice_drift_threshold:
-        test.fail("The guest's hardware time is different with"
-                  " host's system time. Host time: '%s', guest time:"
-                  " '%s'" % (host_time, guest_hwtime))
+        verify_timedrift(session, is_hardware=True)
 
     if params.get("timerdevice_reboot_test") == "yes":
         sleep_time = params.get("timerdevice_sleep_time")
@@ -162,26 +170,12 @@ def run(test, params, env):
             sleep_time = int(sleep_time)
             time.sleep(sleep_time)
 
-        session = vm.reboot(timeout=timeout)
-        error_context.context("Check the system time on guest and host",
-                              logging.info)
-        (host_time, guest_time) = utils_test.get_time(session, time_command,
-                                                      time_filter_re, time_format)
-        drift = abs(float(host_time) - float(guest_time))
-        if drift > timerdevice_drift_threshold:
-            test.fail("The guest's system time is different with"
-                      " host's. Host time: '%s', guest time:"
-                      " '%s'" % (host_time, guest_time))
-
+        error_context.context("Check timedrift between guest and host "
+                              "after reboot.", logging.info)
+        vm.reboot(timeout=timeout, serial=True)
+        verify_timedrift(session)
         if params["os_type"] == "linux":
-            error_context.context(
-                "Check the hardware time on guest", logging.info)
-            guest_hwtime = get_hwtime(session)
-            drift = abs(float(host_time) - float(guest_hwtime))
-            if drift > timerdevice_drift_threshold:
-                test.fail("The guest's hardware time is different with"
-                          " host's. Host time: '%s', guest time:"
-                          " '%s'" % (host_time, guest_hwtime))
+            verify_timedrift(session, is_hardware=True)
     session.close()
     if need_restore_clksrc:
         update_clksrc(session, origin_clksrc)

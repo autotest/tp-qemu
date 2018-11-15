@@ -130,6 +130,13 @@ def run(test, params, env):
         if netdst in br_in_use:
             ifaces_in_use = host_bridges.list_iface()
             target_ifaces = list(ifaces_in_use + br_in_use)
+        if params.get("netdst_nic1") in process.system_output(
+                "ovs-vsctl list-br", ignore_status=True, shell=True).decode():
+            ovs_list = "ovs-vsctl list-ports %s" % params["netdst_nic1"]
+            ovs_port = process.system_output(ovs_list,
+                                             shell=True).decode().splitlines()
+            target_ifaces = target_ifaces + \
+                params.objects("netdst_nic1") + ovs_port
         if vm.virtnet[0].nettype == "macvtap":
             target_ifaces.extend([vm.virtnet[0].netdst, vm.get_ifname(0)])
         error_context.context("Change all Bridge NICs MTU to %s"
@@ -291,51 +298,56 @@ def run(test, params, env):
             password = params_tmp["password"]
             username = params_tmp["username"]
             env_setup(i, ip_dict[i], username, shell_port, password)
+        elif params_tmp.get("os_type") == "windows":
+            windows_disable_firewall = params.get("windows_disable_firewall")
+            ssh_cmd(i, windows_disable_firewall)
     tweak_tuned_profile()
     mtu = int(params.get("mtu", "1500"))
     mtu_set(mtu)
 
     env.stop_ip_sniffing()
 
-    error_context.context("Start netperf testing", logging.info)
-    start_test(server_ip, server_ctl, host, clients, test.resultsdir,
-               test_duration=int(params.get('l')),
-               sessions_rr=params.get('sessions_rr'),
-               sessions=params.get('sessions'),
-               sizes_rr=params.get('sizes_rr'),
-               sizes=params.get('sizes'),
-               protocols=params.get('protocols'),
-               ver_cmd=params.get('ver_cmd', "rpm -q qemu-kvm"),
-               netserver_port=params.get('netserver_port', "12865"),
-               params=params, server_cyg=server_cyg, test=test)
+    try:
+        error_context.context("Start netperf testing", logging.info)
+        start_test(server_ip, server_ctl, host, clients, test.resultsdir,
+                   test_duration=int(params.get('l')),
+                   sessions_rr=params.get('sessions_rr'),
+                   sessions=params.get('sessions'),
+                   sizes_rr=params.get('sizes_rr'),
+                   sizes=params.get('sizes'),
+                   protocols=params.get('protocols'),
+                   ver_cmd=params.get('ver_cmd', "rpm -q qemu-kvm"),
+                   netserver_port=params.get('netserver_port', "12865"),
+                   params=params, server_cyg=server_cyg, test=test)
 
-    if params.get("log_hostinfo_script"):
-        src = os.path.join(test.virtdir, params.get("log_hostinfo_script"))
-        path = os.path.join(test.resultsdir, "systeminfo")
-        process.system_output(
-            "bash %s %s &> %s" % (src, test.resultsdir, path), shell=True)
+        if params.get("log_hostinfo_script"):
+            src = os.path.join(test.virtdir, params.get("log_hostinfo_script"))
+            path = os.path.join(test.resultsdir, "systeminfo")
+            process.system_output("bash %s %s &> %s" % (
+                                  src, test.resultsdir, path), shell=True)
 
-    if params.get("log_guestinfo_script") and params.get("log_guestinfo_exec"):
-        src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
-        path = os.path.join(test.resultsdir, "systeminfo")
-        destpath = params.get("log_guestinfo_path", "/tmp/log_guestinfo.sh")
-        vm.copy_files_to(src, destpath, nic_index=1)
-        logexec = params.get("log_guestinfo_exec", "bash")
-        output = server_ctl.cmd_output("%s %s" % (logexec, destpath))
-        logfile = open(path, "a+")
-        logfile.write(output)
-        logfile.close()
-
-    if mtu != 1500:
-        mtu_default = 1500
-        error_context.context("Change back server, client and host's mtu to %s"
-                              % mtu_default)
-        mtu_set(mtu_default)
+        if params.get("log_guestinfo_script") and params.get("log_guestinfo_exec"):
+            src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
+            path = os.path.join(test.resultsdir, "systeminfo")
+            destpath = params.get("log_guestinfo_path", "/tmp/log_guestinfo.sh")
+            vm.copy_files_to(src, destpath, nic_index=1)
+            logexec = params.get("log_guestinfo_exec", "bash")
+            output = server_ctl.cmd_output("%s %s" % (logexec, destpath))
+            logfile = open(path, "a+")
+            logfile.write(output)
+            logfile.close()
+    finally:
+        if mtu != 1500:
+            mtu_default = 1500
+            error_context.context("Change back server, client and host's mtu to %s"
+                                  % mtu_default)
+            mtu_set(mtu_default)
 
 
 @error_context.context_aware
 def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
-               sessions_rr="50 100 250 500", sessions="1 2 4",
+               sessions_rr="50 100 250 500",
+               sessions="1 2 4",
                sizes_rr="64 256 512 1024 2048",
                sizes="64 256 512 1024 2048 4096",
                protocols="TCP_STREAM TCP_MAERTS TCP_RR TCP_CRR", ver_cmd=None,

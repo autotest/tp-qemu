@@ -1,5 +1,7 @@
 import logging
-import re
+import operator
+import time
+import platform
 
 from avocado.utils import process
 
@@ -19,167 +21,125 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environmen.
     """
-    def check_result(qmp_o, output=None, exception_list=""):
+
+    def check_list(qmp_o, key, val=None, check_item_in_pair=True):
         """
-        Check test result with difference way accoriding to
-        result_check.
-        result_check = equal, will compare cmd_return_value with qmp
-                       command output.
-        result_check = contain, will try to find cmd_return_value in qmp
-                       command output.
-        result_check = m_equal_q, will compare key value in monitor command
-                       output and qmp command output.
-        result_check = m_in_q, will try to find monitor command output's key
-                       value in qmp command output.
-        result_check = m_format_q, will try to match the output's format with
-                       check pattern.
+        Check if the expect key, val are contained in QMP output qmp_o.
+
+        :param qmp_o: output of QMP command
+        :type qmp_o: list
+        :param key: expect result
+        :type key: str
+        :param val: expect result
+        :type val: str or None(if check_item_in_pair=False)
+        :param check_item_in_pair: If expect result is dict (True) or str (False)
+        :type check_item_in_pair: bool.
+
+        :return check result
+        :rtype: bool
+        """
+        for element in qmp_o:
+            if isinstance(element, dict):
+                if _check_dict(element, key, val, check_item_in_pair):
+                    return True
+            elif isinstance(element, list):
+                if check_list(element, key, val, check_item_in_pair):
+                    return True
+            elif element != '' and not check_item_in_pair:
+                if strict_match:
+                    if operator.eq(key, element):
+                        return True
+                else:
+                    if key in str(element):
+                        return True
+        return False
+
+    def _check_dict(dic, key, val, check_item_in_pair=True):
+        """
+        Check if the expect key, val are contained in QMP output dic.
+
+        :param dic: content of QMP command return value
+        :type dic: dict
+        :param key: expect result
+        :type key: str
+        :param val: expect result
+        :type val: str or None(if check_item_in_pair=False)
+        :param check_item_in_pair: If expect result is dict or str
+        :type check_item_in_pair: bool. Means expect result is dict or str.
+
+        :return check result
+        :rtype: bool
+        """
+        if key in dic and not check_item_in_pair:
+            return True
+        elif key in dic and val == dic[key]:
+            return True
+        else:
+            for value in dic.values():
+                if isinstance(value, dict):
+                    if _check_dict(value, key, val, check_item_in_pair):
+                        return True
+                elif isinstance(value, list):
+                    if check_list(value, key, val, check_item_in_pair):
+                        return True
+                elif value != '' and not check_item_in_pair:
+                    if strict_match:
+                        if operator.eq(key, value):
+                            return True
+                    else:
+                        if key in str(value):
+                            return True
+            return False
+
+    def check_result(qmp_o, expect_o=None):
+        """
+        Check test result with difference way according to result_check.
+        result_check = equal, expect_o should equal to qmp_o.
+        result_check = contain, expect_o should be contained in qmp_o
+        result_check = not_contain, expect_o should not be contained in qmp_o.
 
         :param qmp_o: output from pre_cmd, qmp_cmd or post_cmd.
-        :param o: output from pre_cmd, qmp_cmd or post_cmd or an execpt
-        :param exception_list: element no need check.
-        result set in config file.
+        :type qmp_o: list
+        :param expect_o: the expect result.
+        :type expect_o: list
         """
+        logging.info("Expect result is %s" % expect_o)
+        logging.info("Actual result that get from qmp_cmd/post_cmd is %s" % qmp_o)
         if result_check == "equal":
-            value = output
-            if value != str(qmp_o):
-                test.fail("QMP command return value does not match "
-                          "the expect result. Expect result: '%s'\n"
-                          "Actual result: '%s'" % (value, qmp_o))
+            if not operator.eq(qmp_o, expect_o):
+                test.fail("QMP output does not equal to the expect result.\n "
+                          "Expect result: '%s'\n"
+                          "Actual result: '%s'" % (expect_o, qmp_o))
         elif result_check == "contain":
-            values = output.split(';')
-            for value in values:
-                if value in exception_list:
-                    continue
-                if value.strip() not in str(qmp_o):
-                    test.fail("QMP command output does not contain "
-                              "expect result. Expect result: '%s'\n"
-                              "Actual result: '%s'" % (value, qmp_o))
-        elif result_check == "not_contain":
-            values = output.split(';')
-            for value in values:
-                if value in exception_list:
-                    continue
-                if value in str(qmp_o):
-                    test.fail("QMP command output contains unexpect"
-                              " result. Unexpect result: '%s'\n"
-                              "Actual result: '%s'" % (value, qmp_o))
-        elif result_check == "m_equal_q":
-            msg = "QMP command ouput is not equal to in human monitor command."
-            msg += "\nQMP command output: '%s'" % qmp_o
-            msg += "\nHuman command output: '%s'" % output
-            res = output.splitlines(True)
-            if type(qmp_o) != type(res):
-                len_o = 1
-            else:
-                len_o = len(qmp_o)
-            if len(res) != len_o:
-                if res[0].startswith(' '):
-                    test.fail("Human command starts with ' ', "
-                              "there is probably some garbage in "
-                              "the output.\n" + msg)
-                res_tmp = []
-                #(qemu)info block in RHEL7 divided into 3 lines
-                for line in res:
-                    if not line.startswith(' '):
-                        res_tmp.append(line)
-                    else:
-                        res_tmp[-1] += line
-                res = res_tmp
-                if len(res) != len_o:
-                    test.fail(msg)
-            re_str = r'([^ \t\n\r\f\v=]*)=([^ \t\n\r\f\v=]*)'
-            for i in range(len(res)):
-                if qmp_cmd == "query-version":
-                    version = qmp_o['qemu']
-                    version = "%s.%s.%s" % (version['major'], version['minor'],
-                                            version['micro'])
-                    package = qmp_o['package']
-                    re_str = r"([0-9]+\.[0-9]+\.[0-9]+)\s*(\(\S*\))?"
-                    hmp_version, hmp_package = re.findall(re_str, res[i])[0]
-                    if not hmp_package:
-                        hmp_package = package
-                    hmp_package = hmp_package.strip()
-                    package = package.strip()
-                    hmp_version = hmp_version.strip()
-                    if version != hmp_version or package != hmp_package:
-                        test.fail(msg)
+            for o in expect_o:
+                if isinstance(o, dict):
+                    for key, val in o.items():
+                        result = check_list(qmp_o, key, val)
+                        if not result:
+                            break
+                elif isinstance(o, str):
+                    result = check_list(qmp_o, o, check_item_in_pair=False)
+
+                if result:
+                    logging.info("QMP output contain the expect value %s" % o)
                 else:
-                    matches = re.findall(re_str, res[i])
-                    for key, val in matches:
-                        if key in exception_list:
-                            continue
-                        if '0x' in val:
-                            val = int(val, 16)
-                            val_str = str(bin(val))
-                            com_str = ""
-                            for p in range(3, len(val_str)):
-                                if val_str[p] == '1':
-                                    com_str += '0'
-                                else:
-                                    com_str += '1'
-                            com_str = "0b" + com_str
-                            value = eval(com_str) + 1
-                            if val_str[2] == '1':
-                                value = -value
-                            if value != qmp_o[i][key]:
-                                msg += "\nValue in human monitor: '%s'" % value
-                                msg += "\nValue in qmp: '%s'" % qmp_o[i][key]
-                                test.fail(msg)
-                        elif qmp_cmd == "query-block":
-                            cmp_str = "u'%s': u'%s'" % (key, val)
-                            cmp_s = "u'%s': %s" % (key, val)
-                            if '0' == val:
-                                cmp_str_b = "u'%s': False" % key
-                            elif '1' == val:
-                                cmp_str_b = "u'%s': True" % key
-                            else:
-                                cmp_str_b = cmp_str
-                            if (cmp_str not in str(qmp_o[i]) and
-                                    cmp_str_b not in str(qmp_o[i]) and
-                                    cmp_s not in str(qmp_o[i])):
-                                msg += ("\nCan not find '%s', '%s' or '%s' in "
-                                        " QMP command output."
-                                        % (cmp_s, cmp_str_b, cmp_str))
-                                test.fail(msg)
-                        elif qmp_cmd == "query-balloon":
-                            if (int(val) * 1024 * 1024 != qmp_o[key] and
-                                    val not in str(qmp_o[key])):
-                                msg += ("\n'%s' is not in QMP command output"
-                                        % val)
-                                test.fail(msg)
-                        else:
-                            if (val not in str(qmp_o[i][key]) and
-                                    str(bool(int(val))) not in str(qmp_o[i][key])):
-                                msg += ("\n'%s' is not in QMP command output"
-                                        % val)
-                                test.fail(msg)
-        elif result_check == "m_in_q":
-            res = output.splitlines(True)
-            msg = "Key value from human monitor command is not in"
-            msg += "QMP command output.\nQMP command output: '%s'" % qmp_o
-            msg += "\nHuman monitor command output '%s'" % output
-            for i in range(len(res)):
-                params = res[i].rstrip().split()
-                for param in params:
-                    if param.rstrip() in exception_list:
-                        continue
-                    try:
-                        str_o = str(qmp_o.values())
-                    except AttributeError:
-                        str_o = qmp_o
-                    if param.rstrip() not in str(str_o):
-                        msg += "\nKey value is '%s'" % param.rstrip()
-                        test.fail(msg)
-        elif result_check == "m_format_q":
-            match_flag = True
-            for i in qmp_o:
-                if output is None:
-                    test.error("QMP output pattern is missing")
-                if re.match(output.strip(), str(i)) is None:
-                    match_flag = False
-            if not match_flag:
-                msg = "Output does not match the pattern: '%s'" % output
-                test.fail(msg)
+                    test.fail("QMP output does not contain the expect value.\n"
+                              "Missed expect value: '%s'\n"
+                              "Actual result: '%s'\n" % (o, qmp_o))
+        elif result_check == "not_contain":
+            for o in expect_o:
+                if isinstance(o, dict):
+                    for key, val in o.items():
+                        result = check_list(qmp_o, key, val)
+                        if result:
+                            break
+                elif isinstance(o, str):
+                    result = check_list(qmp_o, o, check_item_in_pair=False)
+
+                if result:
+                    test.fail("QMP output contain the unexpect result.\n"
+                              "Unexpect result: '%s'\n"
+                              "Actual result: '%s'" % (o, qmp_o))
 
     qemu_binary = utils_misc.get_qemu_binary(params)
     if not utils_misc.qemu_has_option("qmp", qemu_binary):
@@ -200,18 +160,12 @@ def run(test, params, env):
         qmp_port = qmp_ports[0]
     else:
         test.error("Incorrect configuration, no QMP monitor found.")
-    hmp_ports = vm.get_monitors_by_type('human')
-    if hmp_ports:
-        hmp_port = hmp_ports[0]
-    else:
-        test.error("Incorrect configuration, no QMP monitor found.")
     callback = {"host_cmd": lambda cmd: process.system_output(cmd, shell=True).decode(),
                 "guest_cmd": session.cmd_output,
-                "monitor_cmd": hmp_port.send_args_cmd,
                 "qmp_cmd": qmp_port.send_args_cmd}
 
     def send_cmd(cmd):
-        """ Helper to execute command on ssh/host/monitor """
+        """ Helper to execute command on host/ssh guest/qmp monitor """
         if cmd_type in callback.keys():
             return callback[cmd_type](cmd)
         else:
@@ -219,22 +173,26 @@ def run(test, params, env):
 
     pre_cmd = params.get("pre_cmd")
     qmp_cmd = params.get("qmp_cmd")
-    cmd_type = params.get("event_cmd_type")
     post_cmd = params.get("post_cmd")
+    cmd_type = params.get("event_cmd_type")
     result_check = params.get("cmd_result_check")
-    cmd_return_value = params.get("cmd_return_value")
-    exception_list = params.get("exception_list", "")
+    strict_match = params.get("strict_match", "yes") == 'yes'
+    expect_o = eval(params.get("cmd_return_value", "[]"))
 
     # Pre command
     if pre_cmd is not None:
         logging.info("Run prepare command '%s'.", pre_cmd)
         pre_o = send_cmd(pre_cmd)
         logging.debug("Pre-command: '%s'\n Output: '%s'", pre_cmd, pre_o)
+
+    # qmp command
     try:
         # Testing command
         logging.info("Run qmp command '%s'.", qmp_cmd)
-        output = qmp_port.send_args_cmd(qmp_cmd)
-        logging.debug("QMP command: '%s' \n Output: '%s'", qmp_cmd, output)
+        qmp_o = qmp_port.send_args_cmd(qmp_cmd)
+        if not isinstance(qmp_o, list):
+            qmp_o = [qmp_o]
+        logging.debug("QMP command: '%s' \n Output: '%s'", qmp_cmd, qmp_o)
     except qemu_monitor.QMPCmdError as err:
         if params.get("negative_test") == 'yes':
             logging.debug("Negative QMP command: '%s'\n output:'%s'", qmp_cmd,
@@ -251,29 +209,45 @@ def run(test, params, env):
     except Exception as err:
         test.fail(err)
 
+    # sleep 10s to make netdev_del take effect
+    if 'netdev_del' in qmp_cmd:
+        time.sleep(10)
+
     # Post command
     if post_cmd is not None:
         logging.info("Run post command '%s'.", post_cmd)
         post_o = send_cmd(post_cmd)
+        if not isinstance(post_o, list):
+            post_o = [post_o]
         logging.debug("Post-command: '%s'\n Output: '%s'", post_cmd, post_o)
 
-    if result_check is not None:
-        txt = "Verify that qmp command '%s' works as designed." % qmp_cmd
-        logging.info(txt)
-        if result_check == "equal" or result_check == "contain":
-            if qmp_cmd == "query-name":
-                vm_name = params["main_vm"]
-                check_result(output, vm_name, exception_list)
-            elif qmp_cmd == "query-uuid":
-                uuid_input = params["uuid"]
-                check_result(output, uuid_input, exception_list)
-            else:
-                check_result(output, cmd_return_value, exception_list)
-        elif result_check == "m_format_q":
-            check_result(output, cmd_return_value, exception_list)
-        elif 'post' in result_check:
-            result_check = result_check.split('_', 1)[1]
-            check_result(post_o, cmd_return_value, exception_list)
-        else:
-            check_result(output, post_o, exception_list)
+    if result_check == "equal" or result_check == "contain":
+        logging.info("Verify qmp command '%s' works as designed." % qmp_cmd)
+        if qmp_cmd == "query-name":
+            vm_name = params["main_vm"]
+            expect_o = [{'name': vm_name}]
+        elif qmp_cmd == "query-uuid":
+            uuid_input = params["uuid"]
+            expect_o = [{'UUID': uuid_input}]
+        elif qmp_cmd == "query-version":
+            qemu_version_cmd = "rpm -qa | grep -E 'qemu-kvm(-(rhev|ma))?-[0-9]' | head -n 1"
+            host_arch = platform.machine()
+            qemu_version = callback["host_cmd"](qemu_version_cmd).replace('.%s' % host_arch, '')
+            expect_o = [str(qemu_version)]
+        elif qmp_cmd == "query-block":
+            images = params['images'].split()
+            image_info = {}
+            for image in images:
+                image_params = params.object_params(image)
+                image_format = image_params['image_format']
+                image_drive = "drive_%s" % image
+                image_info['device'] = image_drive
+                image_info['qdev'] = image
+                image_info['format'] = image_format
+                expect_o.append(image_info)
+        check_result(qmp_o, expect_o)
+    elif result_check.startswith("post_"):
+        logging.info("Verify post qmp command '%s' works as designed." % post_cmd)
+        result_check = result_check.split('_', 1)[1]
+        check_result(post_o, expect_o)
     session.close()

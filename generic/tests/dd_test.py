@@ -169,4 +169,3 @@ def run(test, params, env):
         for dev_id in dev_partitioned:
             utils_disk.clean_partition_linux(session, dev_id)
         session.close()
-        vm.destroy(gracefully=True)

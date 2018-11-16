@@ -79,10 +79,11 @@ def run(test, params, env):
         error_context.context("Check the cpu interrupt of virito",
                               logging.info)
         cmd = "cat /proc/interrupts |grep virtio"
-        output = session.cmd_output(cmd)
+        output = session.cmd_output(cmd).strip()
         vectors = int(vectors)
         if vectors == 0 or vectors == 1:
-            if "IO-APIC-fasteoi" not in output:
+            if not (re.findall("IO-APIC", output) and
+                    re.findall("fasteoi", output)):
                 msg = "Could not find IO-APIC-fasteoi interrupt"
                 msg += " when vectors = %d" % vectors
                 test.fail(msg)

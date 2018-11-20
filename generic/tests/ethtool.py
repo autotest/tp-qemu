@@ -52,8 +52,12 @@ def run(test, params, env):
         status = {}
         for f in feature_pattern.keys():
             try:
-                status[f] = re.findall(
-                    "%s: (.*)" % feature_pattern.get(f), o)[0]
+                temp = re.findall(
+                        "%s: (.*)" % feature_pattern.get(f), o)[0]
+                if temp.find("[fixed]") != -1:
+                    logging.debug("%s is fixed" % f)
+                    continue
+                status[f] = temp
             except IndexError:
                 status[f] = None
                 logging.debug("(%s) failed to get status '%s'", ethname, f)
@@ -94,8 +98,10 @@ def run(test, params, env):
         return ethtool_get(session)
 
     def ethtool_restore_params(session, status):
-        error_context.context("Restoring ethtool configuration", logging.info)
-        ethtool_set(session, status)
+        cur_stat = ethtool_get(session)
+        if cur_stat != status:
+            error_context.context("Restoring ethtool configuration", logging.info)
+            ethtool_set(session, status)
 
     def compare_md5sum(name):
         txt = "Comparing md5sum of the files on guest and host"
@@ -247,7 +253,11 @@ def run(test, params, env):
 
             offload_stat = {f_type: "on"}
             offload_stat.update(dict.fromkeys(test_matrix[f_type][1], "on"))
-            offload_stat.update(dict.fromkeys(test_matrix[f_type][2], "off"))
+            # lro is fixed for e1000 and e1000e, while trying to exclude
+            # lro by setting "lro off", the command of ethtool returns error
+            if not (f_type == "gro" and (vm.virtnet[0].nic_model == "e1000e"
+                    or vm.virtnet[0].nic_model == "e1000")):
+                offload_stat.update(dict.fromkeys(test_matrix[f_type][2], "off"))
             if not ethtool_set(session, offload_stat):
                 e_msg = "Failed to set offload status"
                 logging.error(e_msg)

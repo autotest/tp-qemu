@@ -130,7 +130,8 @@ def run(test, params, env):
             Get vms information;
             """
             login_timeout = float(params.get("login_timeout", 360))
-            clear_iptables_cmd = "service iptables stop; iptables -F"
+            stop_firewall_cmd = "systemctl stop firewalld||"
+            stop_firewall_cmd += "service firewalld stop"
             guest_info = ["status_test_command", "shell_linesep", "shell_prompt",
                           "username", "password", "shell_client", "shell_port", "os_type"]
             vms_info = []
@@ -141,7 +142,7 @@ def run(test, params, env):
                 vm = env.get_vm(_)
                 vm.verify_alive()
                 session = vm.wait_for_login(timeout=login_timeout)
-                session.cmd(clear_iptables_cmd, ignore_all_errors=True)
+                session.cmd(stop_firewall_cmd, ignore_all_errors=True)
                 vms_info.append((vm, info))
             return vms_info
 

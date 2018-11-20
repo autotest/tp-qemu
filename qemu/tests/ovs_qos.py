@@ -217,7 +217,8 @@ def run(test, params, env):
         return netperf_clients, netperf_servers
 
     utils_path.find_command("ovs-vsctl")
-    if params.get("netdst") not in process.system_output("ovs-vsctl show"):
+    if (params.get("netdst") not in
+            process.system_output("ovs-vsctl show").decode()):
         test.error("This is a openvswitch only test")
     extra_options = params.get("netperf_client_options", " -l 60")
     rate_brust_pairs = params.get("rate_brust_pairs").split()

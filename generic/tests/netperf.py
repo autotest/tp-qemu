@@ -377,10 +377,10 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
 
-    test.write_test_keyval({'kvm-userspace-ver': ssh_cmd(host,
-                            ver_cmd).strip()})
-    test.write_test_keyval({'guest-kernel-ver': ssh_cmd(server_ctl,
-                            guest_ver_cmd).strip()})
+    test.write_test_keyval({'kvm-userspace-ver': ssh_cmd(
+                            host, ver_cmd).strip()})
+    test.write_test_keyval({'guest-kernel-ver': ssh_cmd(
+                            server_ctl, guest_ver_cmd).strip()})
     test.write_test_keyval({'session-length': test_duration})
 
     fd.write('### kvm-userspace-ver : %s\n' % ssh_cmd(host,
@@ -439,46 +439,51 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                 ret = launch_client(j, server, server_ctl, host, clients,
                                     test_duration, nf_args, netserver_port,
                                     params, server_cyg, test)
+                if ret:
+                    thu = float(ret['thu'])
+                    cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
+                    normal = thu / cpu
+                    if ret.get('tx_pkt') and ret.get('exits'):
+                        ret['tpkt_per_exit'] = float(
+                                ret['tx_pkts']) / float(ret['exits'])
 
-                thu = float(ret['thu'])
-                cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
-                normal = thu / cpu
-                if ret.get('tx_pkt') and ret.get('exits'):
-                    ret['tpkt_per_exit'] = float
-                    (ret['tx_pkts']) / float(ret['exits'])
+                    ret['size'] = int(i)
+                    ret['sessions'] = int(j)
+                    if protocol in ("TCP_RR", "TCP_CRR"):
+                        ret['trans.rate'] = thu
+                    else:
+                        ret['throughput'] = thu
+                    ret['CPU'] = cpu
+                    ret['thr_per_CPU'] = normal
+                    row, key_list = netperf_record(ret, record_list,
+                                                   header=record_header,
+                                                   base=base,
+                                                   fbase=fbase)
+                    if record_header:
+                        record_header = False
+                        category = row.split('\n')[0]
 
-                ret['size'] = int(i)
-                ret['sessions'] = int(j)
-                if protocol in ("TCP_RR", "TCP_CRR"):
-                    ret['trans.rate'] = thu
+                    test.write_test_keyval({'category': category})
+                    prefix = '%s--%s--%s' % (protocol, i, j)
+                    for key in key_list:
+                        test.write_test_keyval(
+                            {'%s--%s' % (prefix, key): ret[key]})
+
+                    logging.info(row)
+                    fd.write(row + "\n")
+
+                    fd.flush()
+
+                    logging.debug("Remove temporary files")
+                    process.system_output("rm -f /tmp/netperf.%s.nf" % ret['pid'],
+                                          verbose=False, ignore_status=True,
+                                          shell=True)
+                    logging.info("Netperf thread completed successfully")
                 else:
-                    ret['throughput'] = thu
-                ret['CPU'] = cpu
-                ret['thr_per_CPU'] = normal
-                row, key_list = netperf_record(ret, record_list,
-                                               header=record_header,
-                                               base=base,
-                                               fbase=fbase)
-                if record_header:
-                    record_header = False
-                    category = row.split('\n')[0]
-
-                test.write_test_keyval({'category': category})
-                prefix = '%s--%s--%s' % (protocol, i, j)
-                for key in key_list:
-                    test.write_test_keyval(
-                        {'%s--%s' % (prefix, key): ret[key]})
-
-                logging.info(row)
-                fd.write(row + "\n")
-
-                fd.flush()
-
-                logging.debug("Remove temporary files")
-                process.system_output("rm -f /tmp/netperf.%s.nf" % ret['pid'],
-                                      verbose=False, ignore_status=True,
-                                      shell=True)
-                logging.info("Netperf thread completed successfully")
+                    logging.debug(
+                        "Not all netperf clients start to work, please enlarge"
+                        " '%s' number or skip this tests" % int(j))
+                    continue
     fd.close()
 
 
@@ -653,6 +658,14 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             return True
         return False
 
+    def stop_netperf_clients():
+        if params.get("os_type_client") == "linux":
+            ssh_cmd(clients[-1], params.get("client_kill_linux"),
+                    ignore_status=True)
+        else:
+            ssh_cmd(clients[-1], params.get("client_kill_windows"),
+                    ignore_status=True)
+
     def parse_demo_result(fname, sessions):
         """
         Process the demo result, remove the noise from head,
@@ -682,58 +695,62 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         logging.debug("niteration: %s" % niteration)
         return result
 
-    error_context.context("Start netperf client threads", logging.info)
-    pid = str(os.getpid())
-    fname = "/tmp/netperf.%s.nf" % pid
-    ssh_cmd(clients[-1], "rm -f %s" % fname)
-    numa_enable = params.get("netperf_with_numa", "yes") == "yes"
-    timeout_netperf_start = int(l) * 0.5
-    client_thread = threading.Thread(target=netperf_thread,
-                                     kwargs={"i": int(sessions),
-                                             "numa_enable": numa_enable,
-                                             "client_s": clients[0],
-                                             "timeout": timeout_netperf_start})
-    client_thread.start()
+    tries = int(params.get("tries", 1))
+    while tries > 0:
+        error_context.context("Start netperf client threads", logging.info)
+        pid = str(os.getpid())
+        fname = "/tmp/netperf.%s.nf" % pid
+        ssh_cmd(clients[-1], "rm -f %s" % fname)
+        numa_enable = params.get("netperf_with_numa", "yes") == "yes"
+        timeout_netperf_start = int(l) * 0.5
+        client_thread = threading.Thread(
+                target=netperf_thread,
+                kwargs={"i": int(sessions),
+                        "numa_enable": numa_enable,
+                        "client_s": clients[0],
+                        "timeout": timeout_netperf_start})
+        client_thread.start()
 
-    ret = {}
-    ret['pid'] = pid
+        ret = {}
+        ret['pid'] = pid
 
-    if utils_misc.wait_for(all_clients_up, timeout_netperf_start, 0.0, 0.2,
-                           "Wait until all netperf clients start to work"):
-        logging.debug("All netperf clients start to work.")
-    else:
-        test.fail("Error, not all netperf clients at work")
+        if utils_misc.wait_for(all_clients_up, timeout_netperf_start, 0.0, 0.2,
+                               "Wait until all netperf clients start to work"):
+            logging.debug("All netperf clients start to work.")
 
-    # real & effective test starts
-    if get_status_flag:
-        start_state = get_state()
-    ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
-    finished_result = ssh_cmd(clients[-1], "cat %s" % fname)
+            # real & effective test starts
+            if get_status_flag:
+                start_state = get_state()
+            ret['mpstat'] = ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
+            finished_result = ssh_cmd(clients[-1], "cat %s" % fname)
 
-    # stop netperf clients
-    kill_cmd = "killall netperf"
-    if params.get("os_type") == "windows":
-        kill_cmd = "taskkill /F /IM netperf*"
-    ssh_cmd(clients[-1], kill_cmd, ignore_status=True)
+            # stop netperf clients
+            stop_netperf_clients()
 
-    # real & effective test ends
-    if get_status_flag:
-        end_state = get_state()
-        if len(start_state) != len(end_state):
-            msg = "Initial state not match end state:\n"
-            msg += "  start state: %s\n" % start_state
-            msg += "  end state: %s\n" % end_state
-            logging.warn(msg)
+            # real & effective test ends
+            if get_status_flag:
+                end_state = get_state()
+                if len(start_state) != len(end_state):
+                    msg = "Initial state not match end state:\n"
+                    msg += "  start state: %s\n" % start_state
+                    msg += "  end state: %s\n" % end_state
+                    logging.warn(msg)
+                else:
+                    for i in range(len(end_state) // 2):
+                        ret[end_state[i * 2]] = (end_state[i * 2 + 1] -
+                                                 start_state[i * 2 + 1])
+
+            client_thread.join()
+
+            error_context.context("Testing Results Treatment and Report",
+                                  logging.info)
+            f = open(fname, "w")
+            f.write(finished_result)
+            f.close()
+            ret['thu'] = parse_demo_result(fname, int(sessions))
+            return ret
+            break
         else:
-            for i in range(len(end_state) // 2):
-                ret[end_state[i * 2]] = (end_state[i * 2 + 1] -
-                                         start_state[i * 2 + 1])
-
-    client_thread.join()
-
-    error_context.context("Testing Results Treatment and Report", logging.info)
-    f = open(fname, "w")
-    f.write(finished_result)
-    f.close()
-    ret['thu'] = parse_demo_result(fname, int(sessions))
-    return ret
+            stop_netperf_clients()
+            tries = tries - 1
+            logging.debug("left %s times" % tries)

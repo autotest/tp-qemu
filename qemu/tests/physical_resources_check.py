@@ -175,8 +175,8 @@ def run(test, params, env):
             test.error("Failed to get machine type from vm")
 
         machine_type_cmd = "%s -M ?" % utils_misc.get_qemu_binary(params)
-        machine_types = process.system_output(machine_type_cmd,
-                                              ignore_status=True)
+        machine_types = process.system_output(
+                machine_type_cmd, ignore_status=True).decode()
         machine_types = machine_types.split(':')[-1]
         machine_type_map = {}
         for machine_type in machine_types.splitlines():

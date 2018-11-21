@@ -32,7 +32,7 @@ def run(test, params, env):
         """
         Get latest scsi disk which emulated by scsi_debug module.
         """
-        scsi_disk_info = process.system_output("lsscsi").splitlines()
+        scsi_disk_info = process.system_output("lsscsi").decode().splitlines()
         scsi_debug = [_ for _ in scsi_disk_info if 'scsi_debug' in _][-1]
         scsi_debug = scsi_debug.split()
         host_id = scsi_debug[0][1:-1]

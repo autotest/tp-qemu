@@ -130,7 +130,8 @@ def run(test, params, env):
             Get vms information;
             """
             login_timeout = float(params.get("login_timeout", 360))
-            clear_iptables_cmd = "service iptables stop; iptables -F"
+            stop_firewall_cmd = "systemctl stop firewalld||"
+            stop_firewall_cmd += "service firewalld stop"
             guest_info = ["status_test_command", "shell_linesep", "shell_prompt",
                           "username", "password", "shell_client", "shell_port", "os_type"]
             vms_info = []
@@ -141,7 +142,7 @@ def run(test, params, env):
                 vm = env.get_vm(_)
                 vm.verify_alive()
                 session = vm.wait_for_login(timeout=login_timeout)
-                session.cmd(clear_iptables_cmd, ignore_all_errors=True)
+                session.cmd(stop_firewall_cmd, ignore_all_errors=True)
                 vms_info.append((vm, info))
             return vms_info
 
@@ -217,7 +218,8 @@ def run(test, params, env):
         return netperf_clients, netperf_servers
 
     utils_path.find_command("ovs-vsctl")
-    if params.get("netdst") not in process.system_output("ovs-vsctl show"):
+    if (params.get("netdst") not in
+            process.system_output("ovs-vsctl show").decode()):
         test.error("This is a openvswitch only test")
     extra_options = params.get("netperf_client_options", " -l 60")
     rate_brust_pairs = params.get("rate_brust_pairs").split()

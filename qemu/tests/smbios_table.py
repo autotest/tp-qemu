@@ -66,6 +66,8 @@ def run(test, params, env):
 
     failures = []
     for m_type in support_machine_types:
+        if m_type in ("isapc", "xenfv", "xenpv"):
+            continue
         params["machine_type"] = m_type
         params["start_vm"] = "yes"
 

@@ -6,6 +6,7 @@ import six
 from virttest import qemu_storage
 from virttest import data_dir
 from virttest import error_context
+from virttest import utils_misc
 from avocado.utils import process
 
 
@@ -43,8 +44,7 @@ def run(test, params, env):
     session2.cmd(check_cmd, timeout=360)
 
     error_context.context("Kill the VM", logging.info)
-    vm.process.close()
-
+    utils_misc.kill_process_tree(vm.process.get_pid(), wait=60)
     error_context.context("Check img after kill VM", logging.info)
     base_dir = data_dir.get_data_dir()
     image_name = params.get("image_name")

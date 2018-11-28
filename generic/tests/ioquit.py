@@ -1,6 +1,7 @@
 import logging
 import time
 import random
+import six
 
 from virttest import qemu_storage
 from virttest import data_dir
@@ -50,8 +51,8 @@ def run(test, params, env):
     image = qemu_storage.QemuImg(params, base_dir, image_name)
     try:
         image.check_image(params, base_dir)
-    except Exception as e:
-        if "Leaked clusters" not in e.message:
+    except Exception as exc:
+        if "Leaked clusters" not in six.text_type(exc):
             raise
         error_context.context("Detected cluster leaks, try to repair it",
                               logging.info)

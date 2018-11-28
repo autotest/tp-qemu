@@ -51,7 +51,7 @@ def run(test, params, env):
     try:
         image.check_image(params, base_dir)
     except Exception as e:
-        if "Leaked clusters" not in e.message:
+        if "Leaked clusters" not in str(e):
             raise
         error_context.context("Detected cluster leaks, try to repair it",
                               logging.info)

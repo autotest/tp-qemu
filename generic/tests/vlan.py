@@ -202,7 +202,8 @@ def run(test, params, env):
         digest_origin.append(re.findall(r'(\w+)', md5sum_output)[0])
 
         # stop firewall in vm
-        session.cmd_output_safe("iptables -F; service iptables stop; true")
+        stop_firewall_cmd = "systemctl stop firewalld||service firewalld stop"
+        session.cmd_output_safe(stop_firewall_cmd)
         error_context.context("Load 8021q module in guest %s" % vm.name,
                               logging.info)
         session.cmd_output_safe("modprobe 8021q")

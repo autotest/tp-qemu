@@ -177,21 +177,22 @@ def run(test, params, env):
         finally:
             session.close()
 
-    def set_link_test(linkid, link_up, expect_status,
-                      operstate_always_up=False, change_queues=False):
+    def set_link_test(linkid, link_up, change_queues, operstate_always_up=False):
         """
         Issue set_link commands and test its function
 
         :param linkid: id of netdev or devices to be tested
         :param link_up: flag linkid is up or down
-        :param expect_status : expect guest operstate status"
+        :param change_queues: whether run change mq queues, only effect on
+                              linux guest with mq nic.
         :param operstate_always_up: when linkid is netdev id, guest interface
                                     operstate will never change,
                                     need set it to True.
-        :param change_queues: whether run change mq queues, only effect on
-                              linux guest with mq nic.
-
         """
+        if link_up:
+            expect_status = "up"
+        else:
+            expect_status = "down"
         vm.set_link(linkid, up=link_up)
         time.sleep(1)
         error_context.context("Check guest interface operstate", logging.info)
@@ -249,27 +250,23 @@ def run(test, params, env):
 
     session.close()
 
-    expect_down_status = params.get("down-status", "down")
-    expect_up_status = params.get("up-status", "up")
     operstate_always_up = params.get("operstate_always_up", "no") == "yes"
 
     error_context.context("Disable guest netdev link '%s' by set_link"
                           % netdev_id, logging.info)
-    set_link_test(netdev_id, False, expect_down_status, operstate_always_up,
-                  change_queues)
+    set_link_test(netdev_id, False, change_queues, operstate_always_up)
 
     error_context.context("Re-enable guest netdev link '%s' by set_link"
                           % netdev_id, logging.info)
-    set_link_test(netdev_id, True, expect_up_status, operstate_always_up,
-                  change_queues)
+    set_link_test(netdev_id, True, change_queues, operstate_always_up)
 
     error_context.context("Disable guest nic device '%s' by set_link"
                           % device_id, logging.info)
-    set_link_test(device_id, False, expect_down_status, False, change_queues)
+    set_link_test(device_id, False, change_queues)
 
     error_context.context("Re-enable guest nic device '%s' by set_link"
                           % device_id, logging.info)
-    set_link_test(device_id, True, expect_up_status, False, change_queues)
+    set_link_test(device_id, True, change_queues)
 
     error_context.context("Do file transfer after setlink on and off",
                           logging.info)

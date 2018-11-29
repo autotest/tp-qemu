@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 
 from virttest import utils_misc
 from virttest import utils_test
@@ -22,17 +23,18 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def run_stress(test, params, env, vm):
+    def check_bg_running():
         """
-        Run stress in background
+        Check the background test status in guest.
+        :return: return True if find the process name; otherwise False
         """
-        while True:
-            if params['os_type'] == 'windows':
-                utils_test.run_virt_sub_test(test, params, env,
-                                             params.get("stress_test"))
-            else:
-                stress_bg = utils_test.VMStress(vm, "stress", params)
-                stress_bg.load_stress_tool()
+        if params['os_type'] == 'windows':
+            list_cmd = params.get("list_cmd", "wmic process get name")
+            output = session.cmd_output_safe(list_cmd, timeout=60)
+            process = re.findall("mplayer", output, re.M | re.I)
+            return bool(process)
+        else:
+            return stress_bg.app_running()
 
     error_context.context("Boot guest with balloon device", logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -51,8 +53,16 @@ def run(test, params, env):
         balloon_test = BallooningTestLinux(test, params, env)
 
     error_context.context("Run stress background", logging.info)
-    bg = utils_misc.InterruptedThread(run_stress, (test, params, env, vm))
-    bg.start()
+    stress_test = params.get("stress_test")
+    if params['os_type'] == 'windows':
+        utils_test.run_virt_sub_test(test, params, env, stress_test)
+        if not utils_misc.wait_for(check_bg_running, first=2.0,
+                                   text="wait for stress app to start",
+                                   step=1.0, timeout=60):
+            test.error("Run stress background failed")
+    else:
+        stress_bg = utils_test.VMStress(vm, "stress", params)
+        stress_bg.load_stress_tool()
 
     repeat_times = int(params.get("repeat_times", 1000))
     min_sz, max_sz = balloon_test.get_memory_boundary()
@@ -62,7 +72,7 @@ def run(test, params, env):
         for i in range(1, int(repeat_times+1)):
             logging.info("repeat times: %d" % i)
             balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
-            if not bg.is_alive():
+            if not check_bg_running():
                 test.error("Background stress process is not alive")
     finally:
         if session:

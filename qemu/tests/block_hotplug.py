@@ -130,7 +130,7 @@ def run(test, params, env):
                                   "Output: %s" % output)
                 session.close()
 
-                devs = [dev for dev in devs if not isinstance(dev, qdevices.QDrive)]
+                devs = [dev for dev in devs if not isinstance(dev, qdevices.QHPBlockdev)]
                 device_list.extend(devs)
             else:
                 for device in vm.devices:

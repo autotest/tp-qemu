@@ -53,9 +53,7 @@ def run(test, params, env):
     cgroup.set_property("cpu.cfs_period_us", 100000, 0)
     assign_vm_into_cgroup(vm, cgroup, 0)
 
-    vhost_pids = process.system_output("pidof vhost-%s" % vm.get_pid(),
-                                       shell=True,
-                                       ignore_status=True).decode()
+    vhost_pids = process.system_output("pgrep vhost", shell=True).decode()
     if not vhost_pids:
         test.error("Vhost process does not exist")
     logging.info("Vhost have started with pid %s" % vhost_pids)

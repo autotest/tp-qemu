@@ -39,13 +39,7 @@ def run(test, params, env):
         logging.info("Changing virtio iso image to '%s'" % virtio_iso)
         vm.change_media("drive_virtio", virtio_iso)
 
-    if params.get("need_uninstall") == "yes":
-        error_context.context("Uninstall virtio driver", logging.info)
-        single_driver_install.run(test, params, env)
-        # Need install driver after uninstallation.
-        params["need_uninstall"] = False
-        error_context.context("Install virtio driver", logging.info)
-    else:
+    if params.get("need_uninstall") != "yes":
         error_context.context("Downgrade virtio driver", logging.info)
         change_virtio_media(params["cdrom_virtio_downgrade"])
         single_driver_install.run(test, params, env)
@@ -54,7 +48,7 @@ def run(test, params, env):
         vm.reboot()
         error_context.context("Upgrade virtio driver to original",
                               logging.info)
+        change_virtio_media(params["cdrom_virtio"])
 
-    change_virtio_media(params["cdrom_virtio"])
     single_driver_install.run(test, params, env)
     vm.destroy()

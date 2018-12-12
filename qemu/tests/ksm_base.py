@@ -37,7 +37,8 @@ def run(test, params, env):
                 started properly.
         """
         logging.debug("Starting guest script on guest %s", vm.name)
-        session.sendline("python /tmp/ksm_overcommit_guest.py")
+        session.sendline("$(command -v python python3 | head -1) "
+                         "/tmp/ksm_overcommit_guest.py")
         try:
             _ = session.read_until_last_line_matches(["PASS:", "FAIL:"],
                                                      timeout)

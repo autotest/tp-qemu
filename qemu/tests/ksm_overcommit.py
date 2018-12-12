@@ -72,7 +72,8 @@ def run(test, params, env):
                 ksm_overcommit_guest.py started properly.
         """
         logging.debug("Starting ksm_overcommit_guest.py on guest %s", vm.name)
-        session.sendline("python /tmp/ksm_overcommit_guest.py")
+        session.sendline("$(command -v python python3 | head -1) "
+                         "/tmp/ksm_overcommit_guest.py")
         try:
             session.read_until_last_line_matches(["PASS:", "FAIL:"], timeout)
         except aexpect.ExpectProcessTerminatedError as details:

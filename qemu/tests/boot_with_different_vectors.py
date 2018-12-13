@@ -47,15 +47,14 @@ def run(test, params, env):
 
     def check_msi_support(session):
         devices = session.cmd_output("lspci | grep Eth").strip()
-        vectors = params["vectors"]
-        vectors = int(vectors)
+        vectors = int(params["vectors"])
         error_context.context("Check if vnic inside guest support msi.",
                               logging.info)
         for device in devices.split("\n"):
             if not device:
                 continue
             d_id = device.split()[0]
-            msi_check_cmd = "lspci -vvv -s %s | grep MSI" % d_id
+            msi_check_cmd = params["msi_check_cmd"] % d_id
             output = session.cmd_output(msi_check_cmd)
             if vectors == 0 and output:
                 test.fail("Guest do not support msi when vectors = 0.")
@@ -78,27 +77,27 @@ def run(test, params, env):
     def check_interrupt(session, vectors):
         error_context.context("Check the cpu interrupt of virito",
                               logging.info)
-        cmd = "cat /proc/interrupts |grep virtio"
-        output = session.cmd_output(cmd).strip()
+        irq_check_cmd = params["irq_check_cmd"]
+        output = session.cmd_output(irq_check_cmd).strip()
         vectors = int(vectors)
         if vectors == 0 or vectors == 1:
-            if not (re.findall("IO-APIC", output) and
-                    re.findall("fasteoi", output)):
-                msg = "Could not find IO-APIC-fasteoi interrupt"
+            if not (re.findall("IO-APIC.*fasteoi|XICS.*Level|XIVE.*Level",
+                               output)):
+                msg = "Could not find interrupt controller for virito device"
                 msg += " when vectors = %d" % vectors
                 test.fail(msg)
         elif 2 <= vectors and vectors <= 8:
             if not re.findall("virtio[0-9]-virtqueues", output):
-                msg = "Could not find the device for msi interrupt "
-                msg += "when vectors = %d " % vectors
-                msg += "Command %s got output %s" % (cmd, output)
+                msg = "Could not find the virtio device for MSI-X interrupt"
+                msg += " when vectors = %d " % vectors
+                msg += "Command %s got output %s" % (irq_check_cmd, output)
                 test.fail(msg)
         elif vectors == 9 or vectors == 10:
             if not (re.findall("virtio[0-9]-input", output) and
                     re.findall("virtio[0-9]-output", output)):
-                msg = "Could not find the device for msi interrupt "
-                msg += "when vectors = %d " % vectors
-                msg += "Command %s got output %s" % (cmd, output)
+                msg = "Could not find the virtio device for MSI-X interrupt"
+                msg += " when vectors = %d " % vectors
+                msg += "Command %s got output %s" % (irq_check_cmd, output)
                 test.fail(msg)
 
     vectors_list = params["vectors_list"]

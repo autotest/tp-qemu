@@ -1163,6 +1163,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 disk_index = utils_misc.wait_for(
                     lambda: utils_disk.get_windows_disks_index(session, image_size_stg0), 120)
                 if disk_index:
+                    logging.info("Clear readonly for disk and online it in windows guest.")
+                    if not utils_disk.update_windows_disk_attributes(session, disk_index):
+                        test.error("Failed to update windows disk attributes.")
                     mnt_point = utils_disk.configure_empty_disk(
                         session, disk_index[0], image_size_stg0, "windows", labeltype="msdos")
             session.cmd(disk_write_cmd % mnt_point[0])

@@ -4,6 +4,7 @@ import time
 
 from avocado.utils import cpu as utils_cpu
 from virttest import utils_misc
+from virttest import utils_test
 from virttest import env_process
 from virttest import qemu_qtree
 from virttest import error_context
@@ -91,6 +92,24 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, vm.name)
     session = vm.wait_for_login(timeout=timeout)
 
+    if params.get("os_type") == "windows":
+        driver_name = params["driver_name"]
+        wmi_check_cmd = params["wmi_check_cmd"]
+        pattern = params["pattern"]
+        session = utils_test.qemu.windrv_check_running_verifier(session, vm, test,
+                                                                driver_name, timeout)
+        wmi_check_cmd = utils_misc.set_winutils_letter(session, wmi_check_cmd)
+        error_context.context("Run wmi check in guest.", logging.info)
+        output = session.cmd_output(wmi_check_cmd)
+        queue_num = re.findall(pattern, output, re.M)
+        try:
+            if not queue_num or queue_num[0] != num_queues:
+                test.fail("The queue_num from guest is not match with expected.\n"
+                          "queue_num from guest is %s, expected is %s"
+                          % (queue_num, num_queues))
+        finally:
+            session.close()
+            return
     error_context.context("Check irqbalance service status", logging.info)
     output = session.cmd_output("systemctl status irqbalance")
     if not re.findall("Active: active", output):

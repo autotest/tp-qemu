@@ -93,7 +93,7 @@ def run(test, params, env):
         if not re.findall(match_string, arp_entries[0], re.I):
             test.fail("Can not find the mac address"
                       " %s of %s in arp"
-                      " entry %s" % (mac, vm.name, arp_entries[0]))
+                      " entry %s" % (match_mac, vm.name, arp_entries[0]))
 
     def ping_test(session, dst, drop_flow=False):
         """
@@ -254,7 +254,7 @@ def run(test, params, env):
     f_base_options = "%s,nw_src=%s,nw_dst=%s" % (f_protocol, addresses[0],
                                                  addresses[1])
     for session in sessions:
-        session.cmd("service iptables stop; iptables -F",
+        session.cmd("systemctl stop firewalld || service firewalld stop",
                     ignore_all_errors=True)
 
     try:
@@ -276,7 +276,8 @@ def run(test, params, env):
             error_context.context("Do %s %s on %s"
                                   % (f_command, f_options, br_name))
             utils_net.openflow_manager(br_name, f_command, f_options)
-            acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+            acl_rules = utils_net.openflow_manager(
+                br_name, "dump-flows").stdout.decode()
             if not acl_rules_check(acl_rules, f_options):
                 test.fail("Can not find the rules from"
                           " ovs-ofctl: %s" % acl_rules)
@@ -328,11 +329,12 @@ def run(test, params, env):
             error_context.context("Check tcpdump data catch", logging.info)
             tcpdump_catch_packet_test(sessions[1], drop_flow)
     finally:
-        openflow_rules_ori = utils_net.openflow_manager(br_name,
-                                                        "dump-flows").stdout
+        openflow_rules_ori = utils_net.openflow_manager(
+            br_name, "dump-flows").stdout.decode()
         openflow_rules_ori = remove_plus_items(openflow_rules_ori)
         utils_net.openflow_manager(br_name, "del-flows", f_protocol)
-        openflow_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+        openflow_rules = utils_net.openflow_manager(
+            br_name, "dump-flows").stdout.decode()
         openflow_rules = remove_plus_items(openflow_rules)
         removed_rule = list(set(openflow_rules_ori.splitlines()) -
                             set(openflow_rules.splitlines()))

@@ -15,6 +15,8 @@ from virttest import error_context
 class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
 
     __sessions__ = []
+    T_SERIAL = "serial"
+    T_CONSOLE = "console"
 
     def __init__(self, test, env, params):
         super(ConsoleLoginTest, self).__init__(test, env, params)
@@ -31,23 +33,27 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
 
     @error_context.context_aware
     def virtio_console_login(self, port='vc1'):
-        error_context.context("Login guest via '%s'" % port, logging.info)
-        session = self.vm.wait_for_serial_login(timeout=180, virtio=port)
-        self.__sessions__.append(session)
-        return session
+        """
+        Login via virtio console
+        :param port: the port name of console
+        :return: the session created via the console
+        """
+        return self.virtio_serial_login(port, self.T_CONSOLE)
 
     def console_login(self, port='vc1'):
         return self.virtio_console_login(port=port)
 
     @error_context.context_aware
-    def virtio_serial_login(self, port='vs1'):
+    def virtio_serial_login(self, port='vs1', type=T_SERIAL):
         error_context.context("Try to login guest via '%s'" % port,
                               logging.info)
         username = self.params.get("username")
         password = self.params.get("password")
         prompt = self.params.get("shell_prompt", "[#$]")
         linesep = eval("'%s'" % self.params.get("shell_linesep", r"\n"))
-        for vport in self.get_virtio_ports(self.vm)[1]:
+        vport_list = self.get_virtio_ports(self.vm)[0]\
+            if type == self.T_CONSOLE else self.get_virtio_ports(self.vm)[1]
+        for vport in vport_list:
             if vport.name == port:
                 break
             vport = None

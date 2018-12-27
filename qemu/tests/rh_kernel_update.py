@@ -272,14 +272,20 @@ def run(test, params, env):
             test.error("Fail to set default kernel: %s" % o)
 
     # remove or add the required arguments
-    error_context.context("Update the guest kernel cmdline", logging.info)
-    update_kernel_cmd = "grubby --update-kernel=%s" % kernel_path
-    update_kernel_cmd += ' --remove-args="%s"' % " ".join(args_removed)
-    update_kernel_cmd += ' --args="%s"' % " ".join(args_added)
+    update_kernel_cmd = ""
+    if args_removed:
+        update_kernel_cmd += ' --remove-args="%s"' % " ".join(args_removed)
+    if args_added:
+        update_kernel_cmd += ' --args="%s"' % " ".join(args_added)
+    if update_kernel_cmd:
+        update_kernel_cmd = ("grubby --update-kernel=%s %s"
+                             % (kernel_path, update_kernel_cmd))
     update_kernel_cmd = params.get("update_kernel_cmd", update_kernel_cmd)
-    s, o = session.cmd_status_output(update_kernel_cmd)
-    if s != 0:
-        test.error("Fail to modify kernel cmdline: %s" % o)
+    if update_kernel_cmd:
+        error_context.context("Update the guest kernel cmdline", logging.info)
+        s, o = session.cmd_status_output(update_kernel_cmd)
+        if s != 0:
+            test.error("Fail to modify kernel cmdline: %s" % o)
 
     # upgrade listed packages to latest version.
     for pkg in params.get("upgrade_pkgs", "").split():

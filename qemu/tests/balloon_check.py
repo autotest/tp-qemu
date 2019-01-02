@@ -91,6 +91,71 @@ class BallooningTest(MemoryBaseTest):
                 raise exceptions.TestFail("Balloon test failed %s" % step)
         return (mmem, gmem)
 
+    def enable_polling(self, device_path):
+        """
+        Enables polling in the specified interval
+
+        :param device_path: QOM path for the balloon device.
+        """
+        polling_interval = int(self.params.get("polling_interval", 2))
+        sleep_time = int(self.params.get("polling_sleep_time", 20))
+        error_context.context("Enable polling", logging.info)
+        self.vm.monitor.qom_set(device_path, "guest-stats-polling-interval", polling_interval)
+        time.sleep(sleep_time)
+
+    def get_memory_stat(self, device_path):
+        """
+        Get memory statistics from qmp.
+
+        :param device_path: QOM path for the balloon device.
+        """
+        return self.vm.monitor.qom_get(device_path, "guest-stats")
+
+    def _memory_stats_compare(self, keyname, memory_stat_qmp):
+        """
+        Check whether memory statistics from qmp is same with guest memory.
+
+        :param keyname: key name of the output of the 'qom-get' property.
+        :param memory_stat_qmp: memory stat values from qmp.
+        """
+        check_mem_ratio = float(self.params.get("check_mem_ratio", 0.1))
+        error_context.context("Get memory from guest", logging.info)
+        if keyname == "stat-free-memory":
+            guest_mem = self.get_guest_free_mem(self.vm)
+        elif keyname == "stat-total-memory":
+            guest_mem = self.get_vm_mem(self.vm)
+        memory_stat_qmp = "%sB" % memory_stat_qmp
+        memory_stat_qmp = int(float(utils_misc.normalize_data_size(
+                                   memory_stat_qmp, order_magnitude="M")))
+        if (float(abs(guest_mem - memory_stat_qmp)) / guest_mem) > check_mem_ratio:
+            self.test.fail("%s of guest %s is not equal to %s in qmp,the"
+                           "acceptable ratio is %s" % (keyname, guest_mem,
+                                                       memory_stat_qmp,
+                                                       check_mem_ratio))
+
+    def memory_stats_check(self, keyname, enabled):
+        """
+        Check whether memory statistics reporting works as expected.
+
+        :param keyname: key name of the output of the 'qom-get' property.
+        :param enabled: expected memory stat working status: True means
+                        memory stat should work, False means not work.
+        """
+        base_path = self.params.get("base_path", "/machine/peripheral/")
+        device = self.params["balloon"]
+        device_path = base_path + device
+        mem_stat_disabled = 0xffffffffffffffff
+
+        self.enable_polling(device_path)
+        memory_stat_qmp = self.get_memory_stat(device_path)['stats'][keyname]
+
+        stat_enabled = (memory_stat_qmp != mem_stat_disabled)
+        if stat_enabled != enabled:
+            self.test.fail("Memory statistics reporting is not working as"
+                           " expected")
+        elif enabled:
+            self._memory_stats_compare(keyname, memory_stat_qmp)
+
     @error_context.context_aware
     def balloon_memory(self, new_mem):
         """

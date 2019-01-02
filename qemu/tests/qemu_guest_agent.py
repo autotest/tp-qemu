@@ -791,27 +791,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("the interface list info after interface was down "
                       "was not as expected")
 
-    @error_context.context_aware
-    def _action_before_fsfreeze(self, *args):
-        session = self._get_session(self.params, None)
-        self._open_session_list.append(session)
-
-    @error_context.context_aware
-    def _action_after_fsfreeze(self, *args):
-        error_context.context("Verfiy FS is frozen in guest.", logging.info)
-
-        if not self._open_session_list:
-            self.test.error("Could not find any opened session")
-        # Use the last opened session to send cmd.
-        session = self._open_session_list[-1]
-
-        try:
-            session.cmd(self.params["gagent_fs_test_cmd"])
-        except aexpect.ShellTimeoutError:
-            logging.info("FS is frozen as expected,can't write in guest.")
-        else:
-            self.test.fail("FS is not frozen,still can write in guest.")
-
     def gagent_check_reboot_shutdown(self, test, params, env):
         """
         Send "shutdown,reboot" command to guest agent
@@ -838,6 +817,27 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 gagent.fsthaw(check_status=False)
             except Exception:
                 pass
+
+    @error_context.context_aware
+    def _action_before_fsfreeze(self, *args):
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+
+    @error_context.context_aware
+    def _action_after_fsfreeze(self, *args):
+        error_context.context("Verfiy FS is frozen in guest.", logging.info)
+
+        if not self._open_session_list:
+            self.test.error("Could not find any opened session")
+        # Use the last opened session to send cmd.
+        session = self._open_session_list[-1]
+
+        try:
+            session.cmd(self.params["gagent_fs_test_cmd"])
+        except aexpect.ShellTimeoutError:
+            logging.info("FS is frozen as expected,can't write in guest.")
+        else:
+            self.test.fail("FS is not frozen,still can write in guest.")
 
     @error_context.context_aware
     def _action_before_fsthaw(self, *args):
@@ -931,7 +931,11 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
              read two bytes.
           c. seek from current position and offset is 2,read 5 bytes.
           d. seek from the file end and offset is -5,read 3 bytes.
-        5) close file
+        5) create another new file with mode "w" and write to it.
+        6) write test with count parameter.
+          a. write two counts bytes to guest file.
+          b. write ten counts bytes to guest file from the file end.
+          c. write more than all counts bytes to guest file.
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
@@ -1000,8 +1004,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
 
         # create a new file by agent.
-        error_context.context("Create new file with mode 'w' and write to it",
-                              logging.info)
+        error_context.context("Create new file with mode 'w' to do read and"
+                              " seek test", logging.info)
         ranstr = utils_misc.generate_random_string(5)
         tmp_file = "%s%s" % (params["file_path"], ranstr)
         ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
@@ -1043,7 +1047,38 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_seek(ret_handle, -5, 2)
         _read_check(ret_handle, "orl", 3)
 
-        error_context.context("Close the opened file.", logging.info)
+        self.gagent.guest_file_close(ret_handle)
+
+        # create a new file by agent.
+        error_context.context("Create new file with mode 'w' and do file write"
+                              " test", logging.info)
+        ranstr = utils_misc.generate_random_string(5)
+        tmp_file = "%s%s" % (params["file_path"], ranstr)
+        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
+
+        content_check = ""
+        for cnt in range(1, 10, 2):
+            error_context.context("Write %s bytes to guest file." % cnt,
+                                  logging.info)
+            self.gagent.guest_file_seek(ret_handle, 0, 2)
+            self.gagent.guest_file_write(ret_handle, content, cnt)
+            self.gagent.guest_file_flush(ret_handle)
+            self.gagent.guest_file_seek(ret_handle, 0, 0)
+            content_check += content[: int(cnt)]
+            _read_check(ret_handle, content_check)
+
+        error_context.context("Write more than all counts bytes to guest "
+                              "file.", logging.info)
+        try:
+            self.gagent.guest_file_write(ret_handle, content, 15)
+        except guest_agent.VAgentCmdError as e:
+            expected = "invalid for argument count"
+            if expected not in e.edata["desc"]:
+                test.fail(e)
+        else:
+            test.fail("Cmd 'guest-file-write' is executed successfully "
+                      "after freezing FS! But it should return error.")
+
         self.gagent.guest_file_close(ret_handle)
 
     @error_context.context_aware

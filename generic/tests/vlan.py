@@ -164,7 +164,6 @@ def run(test, params, env):
     for vm_index, vm in enumerate(vms):
         if params["os_type"] == "windows":
             session = vm.wait_for_serial_login(timeout=login_timeout)
-            win_vlan_id = int(params.get("win_vlan_id", 900))
             set_vlan_cmd = params.get("set_vlan_cmd")
             nicid = utils_net.get_windows_nic_attribute(session=session,
                                                         key="netenabled", value=True,

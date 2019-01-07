@@ -1,8 +1,11 @@
 import logging
 import re
+import ctypes
 
 from virttest import error_context
 from virttest import utils_test
+from virttest import utils_misc
+from provider import win_dev
 
 
 # This decorator makes the test function aware of context strings
@@ -13,31 +16,36 @@ def run(test, params, env):
 
     1) Start guest with virtio device.
     2) Make sure driver verifier enabled in guest.
-    3) Get irq info in guest.
-    4) Check the value of irq number.
+    3) Get irq info in guest and check the value of irq number.
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    def irq_check(session, device_name):
+    def irq_check(session, device_name, devcon_folder, timeout):
         """
-        Return virtio device's irq number
+        Check virtio device's irq number, irq number should be greater than zero.
+
         :param session: use for sending cmd
-        :param device_name: virtio device's name
-        :param driver_name: virtio driver's name
+        :param device_name: name of the specified device
+        :param devcon_folder: Full path for devcon.exe
+        :param timeout: Timeout in seconds.
         """
-        status, irq_dev_info = session.cmd_status_output(params["irq_cmd"]
-                                                         % device_name)
-        if status:
-            test.fail("Can't get %s's irq info." % device_name)
-        irq_value = re.split(r'\s+', irq_dev_info)[1]
-        logging.info("irq number is %s" % irq_value)
-        return int(irq_value)
+        hwids = win_dev.get_hwids(session, device_name, devcon_folder, timeout)
+        if not hwids:
+            test.error("Didn't find %s device info from guest" % device_name)
+        for hwid in hwids:
+            get_irq_cmd = '%sdevcon.exe resources @"%s" | find "IRQ"' % (devcon_folder,
+                                                                         hwid)
+            output = session.cmd_output(get_irq_cmd)
+            irq_value = re.split(r':+', output)[1]
+            if ctypes.c_int32(int(irq_value)).value < 0:
+                test.fail("%s's irq is not correct." % device_name, logging.info)
 
     driver = params["driver_name"]
     device_name = params["device_name"]
     timeout = int(params.get("login_timeout", 360))
+
     error_context.context("Boot guest with %s device" % driver, logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -47,9 +55,8 @@ def run(test, params, env):
                                                             timeout)
 
     error_context.context("Check %s's irq number" % device_name, logging.info)
-    irq_num = irq_check(session, device_name)
-    if irq_num < 0:
-        test.fail("%s's irq is not correct." % device_name,
-                  logging.info)
+    devcon_folder = utils_misc.set_winutils_letter(session, params["devcon_folder"])
+    irq_check(session, device_name, devcon_folder, timeout)
+
     if session:
         session.close()

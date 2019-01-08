@@ -22,5 +22,7 @@ def run(test, params, env):
     session.cmd('/sbin/hwclock --set --date "2/2/80 03:04:00"')
     date = session.cmd_output('LC_ALL=C /sbin/hwclock')
     if not re.match(date_pattern, date):
-        test.fail("Fail to set hwclock back to the 80s."
-                  "Output of hwclock is '%s'" % date)
+        test.fail("Fail to set hwclock back to the 80s. "
+                  "Output of hwclock is '%s'. "
+                  "Expected output pattern is '%s'." % (date.rstrip(),
+                                                        date_pattern))

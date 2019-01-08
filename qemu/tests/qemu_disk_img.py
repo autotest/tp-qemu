@@ -91,7 +91,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         session = self.vm.wait_for_login(timeout=login_timeout)
         md5bin = self.params.get("md5sum_bin", "md5sum")
         cmd = "%s %s" % (md5bin, dst)
-        status, output = session.cmd_status_output(cmd)
+        status, output = session.cmd_status_output(cmd, timeout=300)
         if status != 0:
             logging.error("Execute '%s' with failures('%s') " % (cmd, output))
             return None
@@ -108,7 +108,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         session = self.vm.wait_for_login(timeout=login_timeout)
         logging.info("sync guest data")
         cmd = utils_misc.set_winutils_letter(session, cmd)
-        status, output = session.cmd_status_output(cmd)
+        status, output = session.cmd_status_output(cmd, timeout=300)
         if status != 0:
             logging.error("Execute '%s' with failures('%s') " % (cmd, output))
             return None

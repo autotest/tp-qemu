@@ -1352,14 +1352,17 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
+            qemu_ga_pkg_path = self.get_qga_pkg_path(self.qemu_ga_pkg, test,
+                                                     session, params, self.vm)
+            self.gagent_install_cmd = params.get("gagent_install_cmd"
+                                                 ) % qemu_ga_pkg_path
+            self.gagent_uninstall_cmd = params.get("gagent_uninstall_cmd"
+                                                   ) % qemu_ga_pkg_path
+
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 logging.info("qemu-ga is already installed.")
             else:
                 logging.info("qemu-ga is not installed.")
-                qemu_ga_pkg_path = self.get_qga_pkg_path(self.qemu_ga_pkg, test,
-                                                         session, params, self.vm)
-                self.gagent_install_cmd = params.get("gagent_install_cmd"
-                                                     ) % qemu_ga_pkg_path
                 self.gagent_install(session, self.vm)
 
             if self._check_ga_service(session, params.get("gagent_status_cmd")):

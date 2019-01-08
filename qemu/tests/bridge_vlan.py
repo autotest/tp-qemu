@@ -31,7 +31,7 @@ def _system(*args, **kwargs):
 @error_context.context_aware
 def run(test, params, env):
     """
-    Test 802.1Q vlan of NIC among guests and host.
+    Test 802.1Q vlan of NIC among guests and host with linux bridge backend.
 
     1) Configure vlan interface over host bridge interface.
     2) Create two VMs over vlan interface.
@@ -59,11 +59,9 @@ def run(test, params, env):
         :params session: VM session or none.
         """
         vlan_if = '%s.%s' % (interface, v_id)
-        add_cmd = "ip link add link %s name %s type " % (interface, vlan_if)
-        add_cmd += "vlan id %s" % v_id
-        error_context.context("Create vlan interface '%s' on %s" % (vlan_if,
-                                                                    interface),
-                              logging.info)
+        add_cmd = params["add_vlan_cmd"] % (interface, vlan_if, v_id)
+        error_context.context("Create vlan interface '%s' on %s" %
+                              (vlan_if, interface), logging.info)
         if session:
             session.cmd(add_cmd)
         else:
@@ -146,12 +144,15 @@ def run(test, params, env):
     vm_vlan_ip = []
     vm_vlan_if = []
     sub_type = params["sub_type"]
-    host_br = params.get("host_br", "switch")
+    host_br = params.get("netdst", "switch")
     host_vlan_id = params.get("host_vlan_id", "10")
     host_vlan_ip = params.get("host_vlan_ip", "192.168.10.10")
     subnet = params.get("subnet", "192.168")
     mac_str = params.get("mac_str").split(',')
-    os_type = params.get("os_type", "linux")
+
+    br_backend = utils_net.find_bridge_manager(host_br)
+    if not isinstance(br_backend, utils_net.Bridge):
+        test.cancel("Host does not use Linux Bridge")
 
     linux_modules.load_module("8021q")
 
@@ -187,34 +188,33 @@ def run(test, params, env):
             err_msg = "Could not log into guest %s" % vm.name
             test.error(err_msg)
 
-        if os_type == "linux":
-            interface = utils_net.get_linux_ifname(session,
-                                                   vm.get_mac_address())
+        interface = utils_net.get_linux_ifname(session, vm.get_mac_address())
 
-            error_context.context("Load 8021q module in guest %s" % vm.name,
-                                  logging.info)
-            session.cmd_output_safe("modprobe 8021q")
+        error_context.context("Load 8021q module in guest %s" % vm.name,
+                              logging.info)
+        session.cmd_output_safe("modprobe 8021q")
 
-            error_context.context("Setup vlan environment in guest %s" % vm.name,
-                                  logging.info)
-            inter_ip = "%s.%s.%d" % (subnet, host_vlan_id, vm_index + 1)
-            set_ip_vlan(interface, inter_ip, session=session)
-            set_arp_ignore(session)
-            error_context.context("Test ping from guest '%s' to host with "
-                                  "interface '%s'" %
-                                  (vm.name, interface), logging.info)
-            try:
-                ping_vlan(vm, dest=host_vlan_ip, vlan_if=interface,
-                          session=session)
-            except NetPingError:
-                logging.info("Guest ping fail to host as expected with "
-                             "interface '%s'" % interface)
-            else:
-                test.fail("Guest ping to host should fail with interface"
-                          " '%s'" % interface)
-            ifname.append(interface)
-            vm_ip.append(inter_ip)
-            sessions.append(session)
+        error_context.context("Setup vlan environment in guest %s" % vm.name,
+                              logging.info)
+        inter_ip = "%s.%s.%d" % (subnet, host_vlan_id, vm_index + 1)
+        set_ip_vlan(interface, inter_ip, session=session)
+        set_arp_ignore(session)
+        params["vlan_nic"] = "%s.%s" % (interface, host_vlan_id)
+        error_context.context("Test ping from guest '%s' to host with "
+                              "interface '%s'" %
+                              (vm.name, interface), logging.info)
+        try:
+            ping_vlan(vm, dest=host_vlan_ip, vlan_if=interface,
+                      session=session)
+        except NetPingError:
+            logging.info("Guest ping fail to host as expected with "
+                         "interface '%s'" % interface)
+        else:
+            test.fail("Guest ping to host should fail with interface"
+                      " '%s'" % interface)
+        ifname.append(interface)
+        vm_ip.append(inter_ip)
+        sessions.append(session)
 
     # Ping succeed between guests
     error_context.context("Test ping between guests with interface %s"

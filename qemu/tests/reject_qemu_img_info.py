@@ -44,13 +44,13 @@ def run(test, params, env):
         img = QemuImg(img_param, data_dir.get_data_dir(), info_img)
         img.info(force_share)
 
-    def _verify_shared_write_lock_err_msg(e, img_tag):
-        error_context.context("Verify qemu-img shared write lock err msg.",
+    def _verify_write_lock_err_msg(e, img_tag):
+        error_context.context("Verify qemu-img write lock err msg.",
                               logging.info)
         img_param = params.object_params(img_tag)
         img = QemuImg(img_param, data_dir.get_data_dir(), img_tag)
-        msgs = ['Failed to get shared "write" lock',
-                'Is another process using the image?',
+        msgs = ['"write" lock',
+                'Is another process using the image',
                 img.image_filename]
         if not all(msg in e.result.stderr.decode() for msg in msgs):
             test.fail("Image lock information is not as expected.")
@@ -60,7 +60,7 @@ def run(test, params, env):
         try:
             _qemu_img_info(info_img)
         except process.CmdError as e:
-            _verify_shared_write_lock_err_msg(e, img_tag)
+            _verify_write_lock_err_msg(e, img_tag)
         else:
             test.fail("The image %s is not locked." % img_tag)
         try:

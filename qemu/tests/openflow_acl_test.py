@@ -172,7 +172,8 @@ def run(test, params, env):
                     if err_type == "ref":
                         test.cancel(err_msg)
                     test.fail(err_msg)
-                session.close()
+                if asys in vms_tags:
+                    session.close()
 
     def get_acl_cmd(protocol, in_port, action, extra_options):
         acl_cmd = protocol.strip()
@@ -276,9 +277,14 @@ def run(test, params, env):
         error_context.context("Set up %s service in %s"
                               % (setup_params.get("service"), setup_target),
                               logging.info)
+        setup_func(setup_cmd, timeout=setup_timeout)
+        if params.get("copy_ftp_site") and setup_target != "localhost":
+            ftp_site = os.path.join(data_dir.get_deps_dir(), params.get("copy_ftp_site"))
+            ftp_dir = params.get("ftp_dir")
+            setup_vm.copy_files_to(ftp_site, ftp_dir)
+
         if prepare_cmd:
             setup_func(prepare_cmd, timeout=setup_timeout)
-        setup_func(setup_cmd, timeout=setup_timeout)
         if setup_target != "localhost":
             setup_session.close()
 
@@ -328,7 +334,7 @@ def run(test, params, env):
             for script in params.get("copy_scripts").split():
                 script_path = os.path.join(script_dir, script)
                 vm.copy_files_to(script_path, tmp_dir)
-        if params.get("os_type") == "windows":
+        if params.get("copy_curl") and params.get("os_type") == "windows":
             curl_win_path = params.get("curl_win_path", "C:\\curl\\")
             session.cmd("dir {0} || mkdir {0}".format(curl_win_path))
             for script in params.get("copy_curl").split():
@@ -339,7 +345,7 @@ def run(test, params, env):
     vms_tags = params.objects("vms")
     br_name = params.get("netdst")
     if br_name == "private":
-        br_name = params.get("priv_brname", 'autotest-prbr0')
+        br_name = params.get("priv_brname", 'atbr0')
 
     for setup_target in params.get("setup_targets", "").split():
         setup_service(setup_target)
@@ -391,7 +397,7 @@ def run(test, params, env):
                           logging.info)
     access_service(access_sys, access_targets, False, host_ip, ref=True)
     error_context.context("Disable the access in ovs", logging.info)
-    br_infos = utils_net.openflow_manager(br_name, "show").stdout
+    br_infos = utils_net.openflow_manager(br_name, "show").stdout.decode()
     if_port = re.findall(r"(\d+)\(%s\)" % if_name, br_infos)
     if not if_port:
         test.cancel("Can not find %s in bridge %s" % (if_name, br_name))
@@ -399,7 +405,8 @@ def run(test, params, env):
 
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "drop", acl_extra_options)
     utils_net.openflow_manager(br_name, "add-flow", acl_cmd)
-    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+    acl_rules = utils_net.openflow_manager(
+                br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
@@ -409,7 +416,8 @@ def run(test, params, env):
     error_context.context("Enable the access in ovs", logging.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "normal", acl_extra_options)
     utils_net.openflow_manager(br_name, "mod-flows", acl_cmd)
-    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+    acl_rules = utils_net.openflow_manager(
+                br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
     error_context.context("Try to acess target to exam the enable rules",
@@ -418,7 +426,8 @@ def run(test, params, env):
     error_context.context("Delete the access rules in ovs", logging.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "", acl_extra_options)
     utils_net.openflow_manager(br_name, "del-flows", acl_cmd)
-    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout
+    acl_rules = utils_net.openflow_manager(
+                br_name, "dump-flows").stdout.decode()
     if acl_rules_check(acl_rules, acl_cmd):
         test.fail("Still can find the rules from ovs-ofctl: %s" % acl_rules)
     error_context.context("Try to acess target to exam after delete the rules",

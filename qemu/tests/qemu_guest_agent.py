@@ -1429,6 +1429,39 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         check_value_frontend_open(out, False)
         session.close()
 
+    @error_context.context_aware
+    def gagent_check_frozen_io(self, test, params, env):
+        """
+        fsfreeze test during disk io.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        error_context.context("Before freeze/thaw the FS, run the iozone test",
+                              logging.info)
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+        iozone_cmd = utils_misc.set_winutils_letter(session, params["iozone_cmd"])
+        session.cmd(iozone_cmd, timeout=360)
+        error_context.context("Freeze the FS.", logging.info)
+        try:
+            self.gagent.fsfreeze()
+        except guest_agent.VAgentCmdError as detail:
+            if not re.search("timeout when try to receive Frozen event from"
+                             " VSS provider", str(detail)):
+                test.fail("guest-fsfreeze-freeze cmd failed with:"
+                          "('%s')" % str(detail))
+        if self.gagent.verify_fsfreeze_status(self.gagent.FSFREEZE_STATUS_FROZEN):
+            try:
+                self.gagent.fsthaw(check_status=False)
+            except guest_agent.VAgentCmdError as detail:
+                if not re.search("fsfreeze is limited up to 10 seconds", str(detail)):
+                    test.error("guest-fsfreeze-thaw cmd failed with:"
+                               "('%s')" % str(detail))
+
+        self.gagent_verify(self.params, self.vm)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

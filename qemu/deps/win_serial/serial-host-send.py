@@ -33,8 +33,8 @@ def main():
     vport.connect(sys.argv[1])
     data_file = sys.argv[2]
 
-    ff = open(data_file)
-    arg = ff.read(65535)
+    with open(data_file, 'rb') as ff:
+        arg = ff.read(65535)
     stream = pack_message(arg)
     vport.send(stream)
 

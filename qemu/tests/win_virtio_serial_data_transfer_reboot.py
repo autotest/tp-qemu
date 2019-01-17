@@ -93,7 +93,7 @@ def run(test, params, env):
     send_script = params.get("host_send_script", "serial-host-send.py")
     send_script = os.path.join(data_dir.get_deps_dir("win_serial"),
                                send_script)
-    serial_send_cmd = "python %s %s %s" % (send_script, host_file, data_file)
+    serial_send_cmd = "`command -v python python3 | head -1` %s %s %s" % (send_script, host_file, data_file)
     receive_script = params.get("guest_receive_script",
                                 "VirtIoChannel_guest_recieve.py")
     receive_script = "%s%s" % (guest_path, receive_script)

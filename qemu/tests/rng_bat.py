@@ -36,31 +36,6 @@ def run(test, params, env):
         output = process.system_output(lsof_cmd, ignore_status=True).decode()
         return re.search(r"\s+%s\s+" % vm_pid, output, re.M)
 
-    def check_driver_status(session, check_cmd, driver_id):
-        """
-        :param session: VM session
-        :param check_cmd: cmd to check driver status
-        :param driver_id: driver id
-        """
-        check_cmd = check_cmd.replace("DRIVER_ID", driver_id)
-        status, output = session.cmd_status_output(check_cmd)
-        if "disabled" in output:
-            test.fail("Driver is disable")
-
-    def get_driver_id(session, cmd, pattern):
-        """
-        :param session: VM session
-        :param cmd: cmd to get driver id
-        :param pattern: driver id pattern
-        """
-        output = session.cmd_output(cmd)
-        driver_id = re.findall(pattern, output)
-        if not driver_id:
-            test.fail("Didn't find driver info from guest %s" % output)
-        driver_id = driver_id[0]
-        driver_id = '^&'.join(driver_id.split('&'))
-        return driver_id
-
     rng_data_rex = params.get("rng_data_rex", r".*")
     dev_file = params.get("filename_passthrough")
     timeout = float(params.get("login_timeout", 360))
@@ -86,15 +61,6 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test, driver_name,
                                                                 timeout)
-        error_context.context("Check driver status", logging.info)
-        driver_id_cmd = utils_misc.set_winutils_letter(
-            session, params["driver_id_cmd"])
-        driver_id = get_driver_id(session, driver_id_cmd,
-                                  params["driver_id_pattern"])
-        if params.get("driver_check_cmd"):
-            driver_check_cmd = utils_misc.set_winutils_letter(
-                session, params.get("driver_check_cmd"))
-            check_driver_status(session, driver_check_cmd, driver_id)
     else:
         error_context.context("verify virtio-rng device driver", logging.info)
         verify_cmd = params["driver_verifier_cmd"]

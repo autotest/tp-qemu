@@ -87,6 +87,7 @@ def run(test, params, env):
         vm.params["balloon_dev_add_bus"] = "yes"
         devs = vm.devices.get_by_params({"id": 'balloon%d' % idx})
         vm.params["balloon_pci_bus"] = devs[0]["bus"]
+        vm.params["balloon_addr"] = devs[0]["addr"]
 
         enable_balloon_service()
 
@@ -119,6 +120,7 @@ def run(test, params, env):
             del vm.params["balloon_dev_devid"]
             del vm.params["balloon_dev_add_bus"]
             del vm.params["balloon_pci_bus"]
+            del vm.params["balloon_addr"]
             vm.migrate(float(params.get("mig_timeout", "3600")))
 
         if pm_test_after_unplug:

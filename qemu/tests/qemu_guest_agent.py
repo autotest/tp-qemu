@@ -818,6 +818,214 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             except Exception:
                 pass
 
+    def _change_bl(self, session):
+        """
+        As file related cmd is in blacklist by default,so need to change.
+        Now only linux guest has this behavior,but still leave interface
+        for windows guest.
+        """
+        if self.params.get("os_type") == "linux":
+            output = session.cmd_output(self.params["cmd_verify"])
+            if output == "":
+                logging.info("Guest-file related cmds are already "
+                             "in white list.")
+                return
+
+            session.cmd(self.params["cmd_change_black"])
+            output = session.cmd_output(self.params["cmd_verify"])
+            if not output == "":
+                self.test.fail("Failed to change guest-file related cmd to "
+                               "white list, the output is %s" % output)
+
+            s, o = session.cmd_status_output(self.params["gagent_restart_cmd"])
+            if s:
+                self.test.fail("Could not restart qemu-ga in VM after changing"
+                               " list, detail: %s" % o)
+
+    def _read_check(self, ret_handle, content, count=None):
+        """
+        Read file and check if the content read is correct.
+
+        :param ret_handle: file handle returned by guest-file-open
+        :param count: maximum number of bytes to read
+        :param content: expected content
+        """
+        logging.info("Read content and do check.")
+        ret_read = self.gagent.guest_file_read(ret_handle, count=count)
+        content_read = base64.b64decode(ret_read["buf-b64"]).decode()
+        logging.info("The read content is '%s'; the real content is '%s'."
+                     % (content_read, content))
+        if not content_read.strip() == content.strip():
+            self.test.fail("The read content is '%s'; the real content is '%s'."
+                           % (content_read, content))
+
+    def _guest_file_prepare(self):
+        """
+        Preparation for gagent_check_file_xxx function.
+        :return: vm session and guest file full path
+        """
+        session = self._get_session(self.params, self.vm)
+        self._open_session_list.append(session)
+        logging.info("Change guest-file related cmd to white list.")
+        self._change_bl(session)
+
+        ranstr = utils_misc.generate_random_string(5)
+        file_name = "qgatest" + ranstr
+        guest_file = "%s%s" % (self.params["file_path"], file_name)
+        return session, guest_file
+
+    @error_context.context_aware
+    def gagent_check_file_seek(self, test, params, env):
+        """
+        Guest-file-seek cmd test.
+
+        Test steps:
+        1) create new guest file in guest.
+        2) write "hello world" to guest file.
+        3) seek test
+          a.seek from the file beginning position and offset is 0
+           ,and read two count
+          b. seek from the file beginning position and offset is 0,
+           read two bytes.
+          c. seek from current position and offset is 2,read 5 bytes.
+          d. seek from the file end and offset is -5,read 3 bytes.
+        4) close the handle
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        error_context.context("Change guest-file related cmd to white list"
+                              " and get guest file name.")
+        session, tmp_file = self._guest_file_prepare()
+
+        error_context.context("Write content to file.", logging.info)
+        content = "hello world\n"
+        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
+        self.gagent.guest_file_write(ret_handle, content)
+        self.gagent.guest_file_flush(ret_handle)
+
+        error_context.context("Seek to one position and read file with "
+                              "file-seek/read cmd.", logging.info)
+        self.gagent.guest_file_seek(ret_handle, 0, 0)
+        self._read_check(ret_handle, content)
+
+        logging.info("Seek the position to file beginning and read all.")
+        self.gagent.guest_file_seek(ret_handle, 0, 0)
+        self._read_check(ret_handle, "he", 2)
+
+        logging.info("Seek the position to file beginning, offset is 2, and read 2 bytes.")
+        self.gagent.guest_file_seek(ret_handle, 2, 0)
+        self._read_check(ret_handle, "ll", 2)
+
+        logging.info("Seek to current position, offset is 2 and read 5 byte.")
+        self.gagent.guest_file_seek(ret_handle, 2, 1)
+        self._read_check(ret_handle, "world", 5)
+
+        logging.info("Seek from the file end position, offset is -5 and "
+                     "read 3 byte.")
+        self.gagent.guest_file_seek(ret_handle, -5, 2)
+        self._read_check(ret_handle, "orl", 3)
+
+        self.gagent.guest_file_close(ret_handle)
+        cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
+        session.cmd(cmd_del_file)
+
+    @error_context.context_aware
+    def gagent_check_file_write(self, test, params, env):
+        """
+        Guest-file-write cmd test.
+
+        Test steps:
+        1) write two counts bytes to guest file.
+        2) write ten counts bytes to guest file from the file end.
+        3) write more than all counts bytes to guest file.
+        4) close the handle
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        error_context.context("Change guest-file related cmd to white list"
+                              " and get guest file name.")
+        session, tmp_file = self._guest_file_prepare()
+
+        error_context.context("Create new file with mode 'w' and do file"
+                              " write test", logging.info)
+        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
+        content = "hello world\n"
+        content_check = ""
+        for cnt in range(1, 10, 2):
+            error_context.context("Write %s bytes to guest file."
+                                  % cnt, logging.info)
+            self.gagent.guest_file_seek(ret_handle, 0, 2)
+            self.gagent.guest_file_write(ret_handle, content, cnt)
+            self.gagent.guest_file_flush(ret_handle)
+            self.gagent.guest_file_seek(ret_handle, 0, 0)
+            content_check += content[: int(cnt)]
+            self._read_check(ret_handle, content_check)
+
+        error_context.context("Write more than all counts bytes to"
+                              " guest file.", logging.info)
+        try:
+            self.gagent.guest_file_write(ret_handle, content, 15)
+        except guest_agent.VAgentCmdError as e:
+            expected = "invalid for argument count"
+            if expected not in e.edata["desc"]:
+                self.test.fail(e)
+        else:
+            self.test.fail("Cmd 'guest-file-write' is executed "
+                           "successfully after freezing FS! "
+                           "But it should return error.")
+        self.gagent.guest_file_close(ret_handle)
+        cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
+        session.cmd(cmd_del_file)
+
+    @error_context.context_aware
+    def gagent_check_with_fsfreeze(self, test, params, env):
+        """
+        Try to operate guest file when fs freeze.
+
+        Test steps:
+        1) freeze fs and try to open guest file with qga cmd.
+        2) after thaw fs, try to operate guest file with qga cmd.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        error_context.context("Change guest-file related cmd to white list"
+                              " and get guest file name.")
+        session, tmp_file = self._guest_file_prepare()
+
+        content = "hello world\n"
+        error_context.context("Freeze fs and try to open guest file.",
+                              logging.info)
+        self.gagent.fsfreeze()
+        try:
+            self.gagent.guest_file_open(tmp_file, mode="a+")
+        except guest_agent.VAgentCmdError as detail:
+            if not re.search('guest-file-open has been disabled',
+                             str(detail)):
+                self.test.fail("This is not the desired information: "
+                               "('%s')" % str(detail))
+        else:
+            self.test.fail("guest-file-open command shouldn't succeed "
+                           "for freeze FS.")
+        finally:
+            self.gagent.fsthaw()
+
+        error_context.context("After thaw fs, try to operate guest"
+                              " file.", logging.info)
+        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="a+"))
+        self.gagent.guest_file_write(ret_handle, content)
+        self.gagent.guest_file_flush(ret_handle)
+        self.gagent.guest_file_seek(ret_handle, 0, 0)
+        self._read_check(ret_handle, "hello world")
+        self.gagent.guest_file_close(ret_handle)
+        cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
+        session.cmd(cmd_del_file)
+
     @error_context.context_aware
     def _action_before_fsfreeze(self, *args):
         session = self._get_session(self.params, None)
@@ -906,180 +1114,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             raise
 
         self._action_after_fsthaw()
-
-    @error_context.context_aware
-    def gagent_check_guest_file(self, test, params, env):
-        """
-        Test guest agent commands "guest-file-open/write/flush/
-        seek/read/close".
-
-        Test steps:
-        1) set file related cmd to qemu-ga white list(linux guest only)
-        2) read guest file which is created in guest.
-          a. create file in guest and write "hello world" to it.
-          b. open and read file with mode "r".
-          c. close file.
-        3) create new file with mode "w" and write to it.
-          a. open a file with mode "w".
-          b. write "hello world" to guest file with file_write cmd.
-          c. flush the data to disk.
-          d. check file content from guest.
-        4) seek one position and read file content.
-          a. seek from the file beginning position and offset is 0
-             ,and read all content
-          b. seek from the file beginning position and offset is 0,
-             read two bytes.
-          c. seek from current position and offset is 2,read 5 bytes.
-          d. seek from the file end and offset is -5,read 3 bytes.
-        5) create another new file with mode "w" and write to it.
-        6) write test with count parameter.
-          a. write two counts bytes to guest file.
-          b. write ten counts bytes to guest file from the file end.
-          c. write more than all counts bytes to guest file.
-
-        :param test: kvm test object
-        :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environmen.
-        """
-
-        def _read_check(ret_handle, content, count=None):
-            """
-            Read file and check if the content read is correct.
-
-            :param ret_handle: file handle returned by guest-file-open
-            :param count: maximum number of bytes to read
-            :param content: expected content
-            """
-            logging.info("Read content and do check.")
-            ret_read = self.gagent.guest_file_read(ret_handle, count=count)
-            content_read = base64.b64decode(ret_read["buf-b64"]).decode()
-            if not content_read.strip() == content.strip():
-                test.fail("The read content is '%s'; the real content is '%s'."
-                          % (content_read, content))
-
-        def _change_bl():
-            """
-            As file related cmd is in blacklist at default,so need to change.
-            Now only linux guest has this behavior,but still leave interface
-            for windows guest.
-            """
-            if params.get("os_type") == "linux":
-                output = session.cmd_output(params["cmd_verify"])
-                if output == "":
-                    logging.info("Guest-file related cmds are already "
-                                 "in white list.")
-                    return
-
-                session.cmd(params["cmd_change_black"])
-                output = session.cmd_output(params["cmd_verify"])
-                if not output == "":
-                    test.fail("Failed to change guest-file related cmd to "
-                              "white list, the output is %s" % output)
-
-                s, o = session.cmd_status_output(params["gagent_restart_cmd"])
-                if s:
-                    test.fail("Could not restart qemu-ga in VM after changing"
-                              " list, detail: %s" % o)
-
-        session = self._get_session(params, self.vm)
-        self._open_session_list.append(session)
-
-        error_context.context("Change guest-file related cmd to white list.")
-        _change_bl()
-
-        error_context.context("Read guest file with file-read cmd.",
-                              logging.info)
-        # read guest file which are already created in guest.
-        logging.info("Create file in guest.")
-        ranstr = utils_misc.generate_random_string(5)
-        tmp_file = "%s%s" % (params["file_path"], ranstr)
-        content = "hello world"
-        session.cmd("echo %s > %s" % (content, tmp_file))
-
-        logging.info("Open and read the guest file.")
-        ret_handle = int(self.gagent.guest_file_open(tmp_file))
-        _read_check(ret_handle, content)
-
-        logging.info("Close the opened file.")
-        self.gagent.guest_file_close(ret_handle)
-
-        # create a new file by agent.
-        error_context.context("Create new file with mode 'w' to do read and"
-                              " seek test", logging.info)
-        ranstr = utils_misc.generate_random_string(5)
-        tmp_file = "%s%s" % (params["file_path"], ranstr)
-        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
-
-        logging.info("Write content to the file.")
-        content = "%s\n" % content
-
-        self.gagent.guest_file_write(ret_handle, content)
-        self.gagent.guest_file_flush(ret_handle)
-
-        logging.info("check file content from guest.")
-        cmd_check_file = "%s %s" % (params["cmd_read"], tmp_file)
-        status, output = session.cmd_status_output(cmd_check_file)
-        if status:
-            test.error("Read file content cmd failed, the output is %s."
-                       % output)
-        elif output.strip() == content.strip():
-            logging.info("Succeed to write the content.")
-        else:
-            test.fail("Write content failed, the content read from guest is "
-                      "%s." % output)
-
-        error_context.context("Seek to one position and read file with "
-                              "file-seek/read cmd.", logging.info)
-        logging.info("Seek the position to file beginning and read all.")
-        self.gagent.guest_file_seek(ret_handle, 0, 0)
-        _read_check(ret_handle, "hello world")
-
-        logging.info("Seek the position to file beginning and read 2 bytes.")
-        self.gagent.guest_file_seek(ret_handle, 0, 0)
-        _read_check(ret_handle, "he", 2)
-
-        logging.info("Seek to current position, offset is 2 and read 5 byte.")
-        self.gagent.guest_file_seek(ret_handle, 2, 1)
-        _read_check(ret_handle, "o wor", 5)
-
-        logging.info("Seek from the file end position, offset is -5 and "
-                     "read 3 byte.")
-        self.gagent.guest_file_seek(ret_handle, -5, 2)
-        _read_check(ret_handle, "orl", 3)
-
-        self.gagent.guest_file_close(ret_handle)
-
-        # create a new file by agent.
-        error_context.context("Create new file with mode 'w' and do file write"
-                              " test", logging.info)
-        ranstr = utils_misc.generate_random_string(5)
-        tmp_file = "%s%s" % (params["file_path"], ranstr)
-        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
-
-        content_check = ""
-        for cnt in range(1, 10, 2):
-            error_context.context("Write %s bytes to guest file." % cnt,
-                                  logging.info)
-            self.gagent.guest_file_seek(ret_handle, 0, 2)
-            self.gagent.guest_file_write(ret_handle, content, cnt)
-            self.gagent.guest_file_flush(ret_handle)
-            self.gagent.guest_file_seek(ret_handle, 0, 0)
-            content_check += content[: int(cnt)]
-            _read_check(ret_handle, content_check)
-
-        error_context.context("Write more than all counts bytes to guest "
-                              "file.", logging.info)
-        try:
-            self.gagent.guest_file_write(ret_handle, content, 15)
-        except guest_agent.VAgentCmdError as e:
-            expected = "invalid for argument count"
-            if expected not in e.edata["desc"]:
-                test.fail(e)
-        else:
-            test.fail("Cmd 'guest-file-write' is executed successfully "
-                      "after freezing FS! But it should return error.")
-
-        self.gagent.guest_file_close(ret_handle)
 
     @error_context.context_aware
     def gagent_check_thaw_unfrozen(self, test, params, env):

@@ -175,9 +175,8 @@ def run(test, params, env):
                 if asys in vms_tags:
                     session.close()
 
-    def get_acl_cmd(protocol, in_port, action, extra_options):
+    def get_acl_cmd(protocol, action, extra_options):
         acl_cmd = protocol.strip()
-        acl_cmd += ",in_port=%s" % in_port.strip()
         if extra_options.strip():
             acl_cmd += ",%s" % ",".join(extra_options.strip().split())
         if action.strip():
@@ -397,13 +396,8 @@ def run(test, params, env):
                           logging.info)
     access_service(access_sys, access_targets, False, host_ip, ref=True)
     error_context.context("Disable the access in ovs", logging.info)
-    br_infos = utils_net.openflow_manager(br_name, "show").stdout.decode()
-    if_port = re.findall(r"(\d+)\(%s\)" % if_name, br_infos)
-    if not if_port:
-        test.cancel("Can not find %s in bridge %s" % (if_name, br_name))
-    if_port = if_port[0]
 
-    acl_cmd = get_acl_cmd(acl_protocol, if_port, "drop", acl_extra_options)
+    acl_cmd = get_acl_cmd(acl_protocol, "drop", acl_extra_options)
     utils_net.openflow_manager(br_name, "add-flow", acl_cmd)
     acl_rules = utils_net.openflow_manager(
                 br_name, "dump-flows").stdout.decode()
@@ -414,7 +408,7 @@ def run(test, params, env):
                           logging.info)
     access_service(access_sys, access_targets, True, host_ip)
     error_context.context("Enable the access in ovs", logging.info)
-    acl_cmd = get_acl_cmd(acl_protocol, if_port, "normal", acl_extra_options)
+    acl_cmd = get_acl_cmd(acl_protocol, "normal", acl_extra_options)
     utils_net.openflow_manager(br_name, "mod-flows", acl_cmd)
     acl_rules = utils_net.openflow_manager(
                 br_name, "dump-flows").stdout.decode()
@@ -424,7 +418,7 @@ def run(test, params, env):
                           logging.info)
     access_service(access_sys, access_targets, False, host_ip)
     error_context.context("Delete the access rules in ovs", logging.info)
-    acl_cmd = get_acl_cmd(acl_protocol, if_port, "", acl_extra_options)
+    acl_cmd = get_acl_cmd(acl_protocol, "", acl_extra_options)
     utils_net.openflow_manager(br_name, "del-flows", acl_cmd)
     acl_rules = utils_net.openflow_manager(
                 br_name, "dump-flows").stdout.decode()

@@ -1,9 +1,10 @@
 import os
-import re
 import logging
 
+from functools import partial
+
 from avocado.utils import process
-from avocado.utils import path as utils_path
+from avocado.utils import service
 from virttest import utils_misc
 from virttest import utils_net
 from virttest import env_process
@@ -25,7 +26,7 @@ class NFSCorruptConfig(object):
     """
     This class sets up nfs_corrupt test environment.
     """
-    iptables_template = ("iptables -t filter -{{op}} INPUT -d {ip} -m state"
+    iptables_template = ("iptables -t filter -{{op}} OUTPUT -d {ip} -m state"
                          " --state NEW,RELATED,ESTABLISHED -p tcp --dport 2049"
                          " -j REJECT")
 
@@ -37,47 +38,20 @@ class NFSCorruptConfig(object):
         self.required_size = params.object_params("stg").get("image_size")
         self.iptables_template = self.iptables_template.format(ip=self.nfs_ip)
 
-        cmd_list = self._get_service_cmds()
-        self.start_cmd = cmd_list[0]
-        self.stop_cmd = cmd_list[1]
-        self.restart_cmd = cmd_list[2]
-        self.status_cmd = cmd_list[3]
-
-    @error_context.context_aware
-    def _get_service_cmds(self):
-        """
-        Figure out the commands used to control the NFS service.
-        """
-        error_context.context("Finding out commands to handle NFS service",
-                              logging.info)
-        service = utils_path.find_command("service")
-        try:
-            systemctl = utils_path.find_command("systemctl")
-        except ValueError:
-            systemctl = None
-
-        if systemctl is not None:
-            init_script = "/etc/init.d/nfs"
-            service_file = "/lib/systemd/system/nfs-server.service"
-            if os.path.isfile(init_script):
-                service_name = "nfs"
-            elif os.path.isfile(service_file):
-                service_name = "nfs-server"
-            else:
-                raise NFSCorruptError("Files %s and %s absent, don't know "
-                                      "how to set up NFS for this host" %
-                                      (init_script, service_file))
-            start_cmd = "%s start %s.service" % (systemctl, service_name)
-            stop_cmd = "%s stop %s.service" % (systemctl, service_name)
-            restart_cmd = "%s restart %s.service" % (systemctl, service_name)
-            status_cmd = "%s status %s.service" % (systemctl, service_name)
+        self.service_manager = service.ServiceManager()
+        for name in ["nfs", "nfs-server"]:
+            if self.service_manager.status(name) is not None:
+                self.service_name = name
+                break
         else:
-            start_cmd = "%s nfs start" % service
-            stop_cmd = "%s nfs stop" % service
-            restart_cmd = "%s nfs restart" % service
-            status_cmd = "%s nfs status" % service
+            msg = ("Fail to set up NFS for this host, service "
+                   "with name 'nfs' and 'nfs-server' not exist.")
+            raise NFSCorruptError(msg)
 
-        return [start_cmd, stop_cmd, restart_cmd, status_cmd]
+        for attrname in ["start", "stop", "restart", "status"]:
+            setattr(self, attrname,
+                    partial(getattr(self.service_manager, attrname),
+                            self.service_name))
 
     @error_context.context_aware
     def setup(self, force_start=False):
@@ -112,10 +86,10 @@ class NFSCorruptConfig(object):
             raise NFSCorruptError(msg)
 
         if force_start:
-            self.start_service()
+            self.start()
         else:
-            if not self.is_service_active():
-                self.start_service()
+            if not self.status():
+                self.start()
 
         process.run("exportfs %s:%s -o rw,no_root_squash" %
                     (self.nfs_ip, self.nfs_dir), shell=True)
@@ -129,7 +103,7 @@ class NFSCorruptConfig(object):
         process.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir),
                     shell=True)
         if force_stop:
-            self.stop_service()
+            self.stop()
 
     def is_mounted(self):
         """
@@ -148,37 +122,6 @@ class NFSCorruptConfig(object):
         except OSError:
             return False
         return True
-
-    def start_service(self):
-        """
-        Starts the NFS server.
-        """
-        process.run(self.start_cmd, shell=True)
-
-    def stop_service(self):
-        """
-        Stops the NFS server.
-        """
-        process.run(self.stop_cmd, shell=True)
-
-    def restart_service(self):
-        """
-        Restarts the NFS server.
-        """
-        process.run(self.restart_cmd, shell=True)
-
-    def is_service_active(self):
-        """
-        Verifies whether the NFS server is running or not.
-
-        :param chk_re: Regular expression that tells whether NFS is running
-                or not.
-        """
-        out = process.run(self.status_cmd, ignore_status=True, shell=True)
-        if re.findall(self.chk_re, out.stdout_text):
-            return True
-        else:
-            return False
 
     def iptables_rule_gen(self, op='A'):
         """

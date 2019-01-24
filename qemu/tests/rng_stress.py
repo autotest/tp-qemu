@@ -38,9 +38,10 @@ def run(test, params, env):
         Get available rng devices from /sys/devices
         """
         verify_cmd = params["driver_available_cmd"]
+        driver_name = params["driver_name"]
         try:
             output = session.cmd_output_safe(verify_cmd)
-            rng_devices = re.findall(r"virtio_rng.\d+", output)
+            rng_devices = re.findall(r"%s(?:\.\d+)?" % driver_name, output)
         except aexpect.ShellTimeoutError:
             err = "%s timeout, pls check if it's a product bug" % verify_cmd
             test.fail(err)

@@ -211,6 +211,7 @@ def run(test, params, env):
     drive_letters = int(params.get("drive_letters", "26"))
     stg_image_size = params["stg_image_size"]
     dd_test = params.get("dd_test", "no")
+    pre_command = params.get("pre_command", "")
     labeltype = params.get("labeltype", "gpt")
 
     have_qtree = True
@@ -304,6 +305,17 @@ def run(test, params, env):
                             dd_test % (partition, partition), timeout=cmd_timeout)
                         if status != 0:
                             test.fail("dd test fail: %s" % output)
+                    # When multiple SCSI disks are simulated by scsi_debug,
+                    # they could be viewed as multiple paths to the same
+                    # storage device. So need umount partition before operate
+                    # next disk, in order to avoid corrupting the filesystem
+                    # (xfs integrity checks error).
+                    if ostype == "linux" and "scsi_debug add_host" in pre_command:
+                        status, output = session.cmd_status_output(
+                            "umount /dev/%s" % partition, timeout=cmd_timeout)
+                        if status != 0:
+                            test.fail("Failed to umount partition '%s': %s"
+                                      % (partition, output))
             need_reboot = params.get("need_reboot", "no")
             need_shutdown = params.get("need_shutdown", "no")
             if need_reboot == "yes":

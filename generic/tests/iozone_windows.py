@@ -4,6 +4,7 @@ import logging
 from virttest import postprocess_iozone
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import utils_disk
 from virttest import error_context
 
 
@@ -50,10 +51,56 @@ def run(test, params, env):
                 driver_name = None
         return driver_name
 
+    def run_iozone_parallel(timeout):
+        """ Run the iozone parallel. """
+        iozone_sessions = []
+        iozone_threads = []
+        thread_maps = {}
+
+        for _ in disk_letters:
+            iozone_sessions.append(vm.wait_for_login(timeout=360))
+        for iozone_session, disk_letter in zip(iozone_sessions, disk_letters):
+            args = (iozone_cmd.format(disk_letter), iozone_timeout)
+            thread_maps[disk_letter] = (iozone_session.cmd, args)
+            iozone_thread = utils_misc.InterruptedThread(iozone_session.cmd, args)
+            iozone_thread.setName(disk_letter)
+            iozone_threads.append(iozone_thread)
+            iozone_thread.start()
+
+        start_time = time.time()
+        while time.time() - start_time <= timeout:
+            for iozone_thread in iozone_threads:
+                if iozone_thread.is_alive():
+                    continue
+                else:
+                    thread_name = iozone_thread.getName()
+                    iozone_threads.remove(iozone_thread)
+                    iozone_threads.append(
+                        utils_misc.InterruptedThread(thread_maps[thread_name][0],
+                                                     thread_maps[thread_name][1]))
+                    iozone_threads[-1].setName(thread_name)
+                    iozone_threads[-1].start()
+
+        for iozone_thread in iozone_threads:
+            iozone_thread.join()
+
+        logging.info('All the iozone threads are done.')
+
+    def check_gpt_labletype(disk_index):
+        """
+        """
+        output = session.cmd_output("echo list disk > test.dp & diskpart /s test.dp && del test.dp")
+        print(output)
+        pattern = r'Disk %s.+?B\s{8}\*' % disk_index
+        if re.search(pattern, output):
+            return True
+        return False
+
     timeout = int(params.get("login_timeout", 360))
     iozone_timeout = int(params.get("iozone_timeout"))
-    disk_letter = params.get("disk_letter", 'C')
-    disk_index = params.get("disk_index", "2")
+    disk_letters = params.get("disk_letter", 'C').split()
+    disk_indexes = params.get("disk_index", "2").split()
+    disk_fstypes = params.get("disk_fstype", "ntfs").split()
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
     analysisdir = os.path.join(test.resultsdir, 'analysis_%s' % test.iteration)
@@ -68,8 +115,13 @@ def run(test, params, env):
                                                                 timeout)
     if params.get("format_disk", "no") == "yes":
         error_context.context("Format disk", logging.info)
-        utils_misc.format_windows_disk(session, disk_index,
-                                       mountpoint=disk_letter)
+        for index, letter, fstype in zip(disk_indexes, disk_letters, disk_fstypes):
+            utils_misc.format_windows_disk(session, index, letter, fstype=fstype)
+
+    if params.get("gpt_check", "no") == "yes":
+        if not check_gpt_labletype(params.get("disk_index")):
+            test.fail("Disk partition type is not gpt")
+
     cmd = params["iozone_cmd"]
     iozone_cmd = utils_misc.set_winutils_letter(session, cmd)
     error_context.context("Running IOzone command on guest, timeout %ss"

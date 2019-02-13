@@ -288,4 +288,5 @@ def run(test, params, env):
     # del temporary files in guest
     clean_tmp_files(session, check_install_fio, tarball, os_type, guest_result_file, fio_path, cmd_timeout)
 
+    result_file.close()
     session.close()

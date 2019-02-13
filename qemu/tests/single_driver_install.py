@@ -98,8 +98,8 @@ def run(test, params, env):
     logging.info("Found inf file '%s'", inf_path)
 
     # `findstr` cannot handle unicode so calling `type` makes it work
-    expected_ver = session.cmd("type %s | findstr DriverVer=" % inf_path,
-                               timeout=OPERATION_TIMEOUT)
+    expected_ver = session.cmd("type %s | findstr /i /r DriverVer.*=" %
+                               inf_path, timeout=OPERATION_TIMEOUT)
     expected_ver = expected_ver.strip().split(",", 1)[-1]
     if not expected_ver:
         test.error("Failed to find driver version from inf file")

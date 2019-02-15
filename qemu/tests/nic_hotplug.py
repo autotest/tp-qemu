@@ -94,7 +94,7 @@ def run(test, params, env):
             session.cmd_output_safe(add_route_cmd)
             status, output = utils_test.ping(hotnic_ip, 10, timeout=30)
             logging.info("Del the route.")
-            status, output = session.cmd_output_safe(del_route_cmd)
+            session.cmd_output_safe(del_route_cmd)
         return status, output
 
     def device_add_nic(pci_model, netdev, device_id):
@@ -153,7 +153,7 @@ def run(test, params, env):
                 useddevice_id = primary_nic[0].netdev_id
                 logging.info("Hot-plug NIC with the netdev already in use")
                 try:
-                    add_output = device_add_nic(nic_model, useddevice_id, nic_name)
+                    device_add_nic(nic_model, useddevice_id, nic_name)
                 except Exception as err_msg:
                     match_error = params["devadd_match_string"]
                     if match_error in str(err_msg):

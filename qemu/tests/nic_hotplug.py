@@ -7,6 +7,7 @@ from virttest import utils_test
 from virttest import utils_net
 from virttest import virt_vm
 from virttest import utils_misc
+from virttest.qemu_devices import qdevices
 
 
 def run(test, params, env):
@@ -106,6 +107,18 @@ def run(test, params, env):
         pci_add_cmd = "device_add id=%s, driver=%s, netdev=%s" % (device_id,
                                                                   pci_model,
                                                                   netdev)
+        bus = vm.devices.get_buses({'aobject': 'pci.0'})[0]
+        if isinstance(bus, qdevices.QPCIEBus):
+            root_port_id = bus.get_free_root_port()
+            if root_port_id:
+                pci_add_cmd += ",bus=%s" % root_port_id
+                root_port = vm.devices.get_buses({"aobject": root_port_id})[0]
+                root_port.insert(qdevices.QBaseDevice(pci_model,
+                                                      aobject=device_id))
+            else:
+                test.error("No free root port for device %s to plug."
+                           % device_id)
+
         add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         return add_output
 

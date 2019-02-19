@@ -2,6 +2,7 @@ import time
 import logging
 
 from virttest import error_context
+from virttest import utils_test
 
 
 @error_context.context_aware
@@ -9,11 +10,12 @@ def run(test, params, env):
     """
     Generate a dump on NMI, then analyse the dump file:
     1) Boot a windows guest.
-    2) Edit the guest's system registry if need.
-    3) Reboot the guest.
-    4) Send inject-nmi or nmi from host to guest.
-    5) Send a reboot command or a system_reset monitor command (optional)
-    6) Verify whether the dump files are generated.
+    2) Check whether driver verifier enabled in guest.
+    3) Edit the guest's system registry if need.
+    4) Reboot the guest.
+    5) Send inject-nmi or nmi from host to guest.
+    6) Send a reboot command or a system_reset monitor command (optional)
+    7) Verify whether the dump files are generated.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -30,6 +32,12 @@ def run(test, params, env):
     nmi_cmd = params.get("nmi_cmd")
     del_dump_cmd = params.get("del_dump_cmd")
     analyze_cmd = params.get("analyze_cmd")
+    driver_name = params.get("driver_name")
+
+    if driver_name:
+        session = utils_test.qemu.windrv_check_running_verifier(session,
+                                                                vm, test,
+                                                                driver_name)
 
     if del_dump_cmd:
         session.sendline(del_dump_cmd)

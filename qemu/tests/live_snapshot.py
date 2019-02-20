@@ -1,9 +1,12 @@
 import time
 import logging
 
+from avocado.utils import process
+
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import data_dir
 
 
 def run(test, params, env):
@@ -33,16 +36,17 @@ def run(test, params, env):
             device = block_info[0]["device"]
         else:
             device = "".join(block_info).split(":")[0]
-        snapshot_name = params.get("snapshot_file")
         format = params.get("snapshot_format", "qcow2")
-        vm.monitor.live_snapshot(device, snapshot_name, format=format)
+        vm.monitor.live_snapshot(device, snapshot_file, format=format)
 
         logging.info("Check snapshot is created ...")
         snapshot_info = str(vm.monitor.info("block"))
-        if snapshot_name not in snapshot_info:
+        if snapshot_file not in snapshot_info:
             logging.error(snapshot_info)
             test.fail("Snapshot doesn't exist")
 
+    snapshot_file = "images/%s" % params.get("snapshot_file")
+    snapshot_file = utils_misc.get_path(data_dir.get_data_dir(), snapshot_file)
     timeout = int(params.get("login_timeout", 360))
     dd_timeout = int(params.get("dd_timeout", 900))
     vm = env.get_vm(params["main_vm"])
@@ -105,6 +109,8 @@ def run(test, params, env):
                 bg.join()
             except Exception:
                 raise
-
-    subcommand = params.get("subcommand")
-    eval("%s_test()" % subcommand)
+    try:
+        subcommand = params.get("subcommand")
+        eval("%s_test()" % subcommand)
+    finally:
+        process.system("rm -f %s" % snapshot_file)

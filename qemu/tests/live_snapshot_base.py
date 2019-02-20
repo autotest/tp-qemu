@@ -32,7 +32,7 @@ def run(test, params, env):
     copy_timeout = params.get("copy_timeoout", 600)
     base_file = storage.get_image_filename(params, data_dir.get_data_dir())
     device = vm.get_block({"file": base_file})
-    snapshot_file = "images/%s" % params.get("snapshot_name")
+    snapshot_file = "images/%s" % params.get("snapshot_file")
     snapshot_file = utils_misc.get_path(data_dir.get_data_dir(), snapshot_file)
     snapshot_format = params.get("snapshot_format", "qcow2")
     tmp_name = utils_misc.generate_random_string(5)

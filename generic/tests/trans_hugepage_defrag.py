@@ -1,11 +1,12 @@
 import logging
 import time
 import os
-import re
 
 from avocado.utils import process
 from virttest import test_setup
 from virttest import error_context
+from virttest import utils_misc
+from virttest import kernel_interface
 
 
 @error_context.context_aware
@@ -25,18 +26,6 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    def get_mem_stat(param):
-        """
-        Get the memory size for a given memory param.
-
-        :param param: Memory parameter.
-        """
-        with open('/proc/meminfo', 'r') as f:
-            for line in f.readlines():
-                if line.startswith("%s" % param):
-                    output = re.split(r'\s+', line)[1]
-            return int(output)
-
     def set_libhugetlbfs(number):
         """
         Set the number of hugepages on the system.
@@ -44,32 +33,29 @@ def run(test, params, env):
         :param number: Number of pages (either string or numeric).
         """
         logging.info("Trying to setup %d hugepages on host", number)
-        with open("/proc/sys/vm/nr_hugepages", "w+") as f:
-            pre_ret = f.read()
-            logging.debug("Number of huge pages on libhugetlbfs"
-                          " (pre-write): %s" % pre_ret.strip())
-            f.write(str(number))
-            f.seek(0)
-            ret = f.read()
-            logging.debug("Number of huge pages on libhugetlbfs:"
-                          " (post-write): %s" % ret.strip())
-            return int(ret)
+        hp = kernel_interface.ProcFS("/proc/sys/vm/nr_hugepages")
+        logging.debug("Number of huge pages on libhugetlbfs"
+                      " (pre-write): %s", str(hp.proc_fs_value).strip())
+        hp.proc_fs_value = number
+        ret = str(hp.proc_fs_value)
+        logging.debug("Number of huge pages on libhugetlbfs:"
+                      " (post-write): %s", ret.strip())
+        return int(ret)
 
     def change_feature_status(test, status, feature_path, test_config):
         """
         Turn on/off feature functionality.
 
         :param status: String representing status, may be 'on' or 'off'.
-        :param relative_path: Path of the feature relative to THP config base.
+        :param feature_path: THP object to get path of the feature relative
+                             to THP config base.
         :param test_config: Object that keeps track of THP config state.
 
         :raise: error.TestFail, if can't change feature status
         """
-        feature_path = os.path.join(test_config.thp_path, feature_path)
-        feature_file = open(feature_path, 'r')
-        feature_file_contents = feature_file.read()
-        feature_file.close()
-        possible_values = test_config.value_listed(feature_file_contents)
+        feature_path = kernel_interface.SysFS(os.path.join(test_config.thp_path,
+                                                           feature_path))
+        possible_values = [each.strip("[]") for each in feature_path.fs_value.split()]
 
         if 'yes' in possible_values:
             on_action = 'yes'
@@ -89,12 +75,7 @@ def run(test, params, env):
         elif status == 'off':
             action = off_action
 
-        try:
-            feature_file = open(feature_path, 'w')
-            feature_file.write(action)
-            feature_file.close()
-        except IOError as e:
-            test.fail("Error writing %s to %s: %s" % (action, feature_path, e))
+        feature_path.sys_fs_value = action
         time.sleep(1)
 
     def fragment_host_memory(mem_path):
@@ -123,6 +104,7 @@ def run(test, params, env):
     logging.info("Defrag test start")
     login_timeout = float(params.get("login_timeout", 360))
     mem_path = os.path.join("/tmp", "thp_space")
+    session = None
 
     try:
         error_context.context("deactivating khugepaged defrag functionality")
@@ -134,8 +116,8 @@ def run(test, params, env):
 
         fragment_host_memory(mem_path)
 
-        total = get_mem_stat('MemTotal')
-        hugepagesize = get_mem_stat('Hugepagesize')
+        total = utils_misc.get_mem_info()
+        hugepagesize = utils_misc.get_mem_info(attr='Hugepagesize')
         nr_full = int(0.8 * (total / hugepagesize))
 
         nr_hp_before = set_libhugetlbfs(nr_full)
@@ -156,7 +138,9 @@ def run(test, params, env):
                       "khugepaged defrag on, %s after it" %
                       (nr_hp_before, nr_hp_after))
         logging.info("Defrag test succeeded")
-        session.close()
     finally:
         logging.debug("Cleaning up libhugetlbfs on host")
+        if session:
+            session.close()
         set_libhugetlbfs(0)
+        test_config.cleanup()

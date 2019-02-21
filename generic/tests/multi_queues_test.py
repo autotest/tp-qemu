@@ -76,6 +76,8 @@ def run(test, params, env):
         return []
 
     login_timeout = int(params.get("login_timeout", 360))
+    bg_stress_run_flag = params.get("bg_stress_run_flag")
+    stress_thread = None
     queues = int(params.get("queues", 1))
     vms = params.get("vms").split()
     if queues == 1:
@@ -117,9 +119,7 @@ def run(test, params, env):
 
                 # Set flag, when the sub test really running, will change this
                 # flag to True
-                bg_stress_run_flag = params.get("bg_stress_run_flag")
                 env[bg_stress_run_flag] = False
-                stress_thread = ""
                 wait_time = float(params.get("wait_bg_time", 60))
                 stress_thread = utils_misc.InterruptedThread(
                     utils_test.run_virt_sub_test, (test, params, env),
@@ -138,16 +138,22 @@ def run(test, params, env):
                 vhost_threads = vm.get_vhost_threads(vhost_thread_pattern)
                 time.sleep(10)
 
-                top_cmd = r"top -n 1 -p %s -b" % ",".join(map(str,
-                                                              vhost_threads))
-                top_info = process.system_output(top_cmd, shell=True).decode()
+                top_cmd = (r'top -n 1 -bis | tail -n +7 | grep -E "^ *%s "'
+                           % ' |^ *'.join(map(str, vhost_threads)))
+                top_info = None
+                while session.cmd_status("ps -C netperf") == 0:
+                    top_info = process.system_output(top_cmd, ignore_status=True,
+                                                     shell=True).decode()
+                    if top_info:
+                        break
                 logging.info("%s", top_info)
-                vhost_re = re.compile(r"S(\s+0.0+){2}.*vhost-\d+[\d|+]")
-                sleep_vhost_thread = len(vhost_re.findall(top_info, re.I))
-                running_threads = len(vhost_threads) - int(sleep_vhost_thread)
+                vhost_re = re.compile(r"(0:00.\d{2}).*vhost-\d+[\d|+]")
+                invalid_vhost_thread = len(vhost_re.findall(top_info, re.I))
+                running_threads = (len(top_info.splitlines()) -
+                                   int(invalid_vhost_thread))
 
                 n_instance = min(n_instance, int(queues), int(vm.cpuinfo.smp))
-                if (running_threads != n_instance):
+                if running_threads != n_instance:
                     err_msg = "Run %s netperf session, but %s queues works"
                     test.fail(err_msg % (n_instance, running_threads))
 

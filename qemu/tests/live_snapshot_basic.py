@@ -1,4 +1,5 @@
 import logging
+import re
 
 from virttest import utils_misc
 from virttest import data_dir
@@ -80,8 +81,8 @@ class LiveSnapshot(block_copy.BlockCopy):
             logging.error(snapshot_info)
             raise exceptions.TestFail("Snapshot doesn't exist")
         if self.snapshot_node_name:
-            match_string = "u'node-name': u'%s'" % self.snapshot_node_name
-            if match_string not in snapshot_info:
+            match_string = "u?'node-name': u?'%s'" % self.snapshot_node_name
+            if not re.search(match_string, snapshot_info):
                 logging.error(snapshot_info)
                 raise exceptions.TestFail("Can not find node name %s of"
                                           " snapshot in block info %s"

@@ -1,11 +1,12 @@
 import logging
+import random
 import re
 
 from virttest.qemu_devices import qdevices
 from virttest import error_context
 from virttest import utils_test
-from qemu.tests import balloon_check
 from qemu.tests.balloon_check import BallooningTestWin
+from qemu.tests.balloon_check import BallooningTestLinux
 
 
 @error_context.context_aware
@@ -51,7 +52,6 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(session,
                                                                 vm, test,
                                                                 driver_name)
-        balloon_test = BallooningTestWin(test, params, env)
         balloon_test.configure_balloon_service(session)
 
         output = balloon_test.operate_balloon_service(session, "status")
@@ -64,8 +64,8 @@ def run(test, params, env):
     idx = 0
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    balloon_device = params.get("ballon_device", "virtio-balloon-pci")
 
+    balloon_device = params.get("ballon_device", "virtio-balloon-pci")
     error_context.context("Hotplug and unplug balloon device in a loop",
                           logging.info)
     for i in range(int(params.get("balloon_repeats", 3))):
@@ -88,18 +88,24 @@ def run(test, params, env):
         devs = vm.devices.get_by_params({"id": 'balloon%d' % idx})
         vm.params["balloon_pci_bus"] = devs[0]["bus"]
 
+        if params['os_type'] == 'windows':
+            balloon_test = BallooningTestWin(test, params, env)
+        else:
+            balloon_test = BallooningTestLinux(test, params, env)
+        min_sz, max_sz = balloon_test.get_memory_boundary()
+
         enable_balloon_service()
 
         error_context.context("Check whether balloon device work after hotplug",
                               logging.info)
-        balloon_check.run(test, params, env)
+        balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
 
         if pm_test_after_plug:
             run_pm_test(pm_test_after_plug, "hot-plug")
             # run balloon test after reboot,skip followed test if
             # pm_test_after_plug is shutdown
             if vm.is_alive():
-                balloon_check.run(test, params, env)
+                balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
             else:
                 return
 

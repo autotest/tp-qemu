@@ -94,8 +94,7 @@ def netperf_setup(test, params, env):
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout",
-                                360)))
+    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     try:
         if params.get("os_type") == "linux":
             netperf_link = params["netperf_link"]

@@ -1,11 +1,13 @@
 import logging
 import random
+import re
 
 from avocado.utils import process
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_net
 from virttest import error_context
+from virttest import env_process
 
 
 @error_context.context_aware
@@ -28,6 +30,29 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+    def get_ovs_ports(ovs):
+        '''
+        get the ovs bridge all Interface list.
+
+        :param ovs: Ovs bridge name
+        '''
+        cmd = "ovs-vsctl list-ports %s" % ovs
+        return process.getoutput(cmd, shell=True)
+
+    netdst = params.get("netdst", "switch")
+    host_bridges = utils_net.find_bridge_manager(netdst)
+    if not isinstance(host_bridges, utils_net.Bridge):
+        ovs = host_bridges
+        host_hw_interface = get_ovs_ports(netdst)
+        tmp_ports = re.findall(r"t[0-9]-[a-zA-Z0-9]{6}", host_hw_interface)
+        if tmp_ports:
+            for p in tmp_ports:
+                process.system_output("ovs-vsctl del-port %s %s" %
+                                      (netdst, p))
+
+    params["start_vm"] = "yes"
+    env_process.preprocess_vm(test, params, env, params["main_vm"])
+
     timeout = int(params.get("login_timeout", 360))
     mtu_default = 1500
     mtu = params.get("mtu", "1500")
@@ -48,24 +73,14 @@ def run(test, params, env):
     if guest_ip is None:
         test.error("Could not get the guest ip address")
 
-    def get_ovs_ports(ovs):
-        '''
-        get the ovs bridge all Interface list.
-
-        :param ovs: Ovs bridge name
-        '''
-        cmd = "ovs-vsctl list-ports %s" % ovs
-        return set(process.system_output(cmd, shell=True).splitlines())
-
     host_mtu_cmd = "ifconfig %s mtu %s"
-    netdst = params.get("netdst", "switch")
-    host_bridges = utils_net.Bridge()
-    br_in_use = host_bridges.list_br()
-    if netdst in br_in_use:
+    if not isinstance(host_bridges, utils_net.Bridge):
+        target_ifaces = set(get_ovs_ports(netdst).splitlines())
+    else:
+        br_in_use = host_bridges.list_br()
         ifaces_in_use = host_bridges.list_iface()
         target_ifaces = set(ifaces_in_use) - set(br_in_use)
-    else:
-        target_ifaces = get_ovs_ports(netdst)
+
     error_context.context("Change all Bridge NICs MTU to %s" %
                           mtu, logging.info)
     for iface in target_ifaces:
@@ -176,9 +191,10 @@ def run(test, params, env):
         logging.info("Waiting for the MTU to be OK")
         wait_mtu_ok = 10
         if not utils_misc.wait_for(is_mtu_ok, wait_mtu_ok, 0, 1):
-            logging.debug(process.system_output("ifconfig -a",
-                          verbose=False, ignore_status=True,
-                          shell=True))
+            logging.debug(process.getoutput("ifconfig -a",
+                                            verbose=False,
+                                            ignore_status=True,
+                                            shell=True))
             test.error("MTU is not as expected even after %s "
                        "seconds" % wait_mtu_ok)
 

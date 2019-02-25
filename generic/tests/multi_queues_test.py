@@ -135,13 +135,12 @@ def run(test, params, env):
                                     "Wait %s start background" % bg_sub_test)
 
             if params.get("vhost") == 'vhost=on' and check_vhost == 'yes':
-                error_context.context("Check vhost threads on host",
-                                      logging.info)
                 vhost_thread_pattern = params.get("vhost_thread_pattern",
                                                   r"\w+\s+(\d+)\s.*\[vhost-%s\]")
                 vhost_threads = vm.get_vhost_threads(vhost_thread_pattern)
-                time.sleep(10)
-
+                time.sleep(120)
+                error_context.context("Check vhost threads on host",
+                                      logging.info)
                 top_cmd = (r'top -n 1 -bis | tail -n +7 | grep -E "^ *%s "'
                            % ' |^ *'.join(map(str, vhost_threads)))
                 top_info = None

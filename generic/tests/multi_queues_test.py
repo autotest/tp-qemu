@@ -30,7 +30,10 @@ def run(test, params, env):
         Return multi queues input irq list
         """
         guest_irq_info = session.cmd_output("cat /proc/interrupts")
-        return re.findall(r"(\d+):.*virtio\d+-input.\d", guest_irq_info)
+        virtio_queues_irq = re.findall(r"(\d+):.*virtio\d+-input.\d", guest_irq_info)
+        if not virtio_queues_irq:
+            test.error('Could not find any "virtio-input" interrupts')
+        return virtio_queues_irq
 
     def get_cpu_affinity_hint(session, irq_number):
         """
@@ -64,7 +67,7 @@ def run(test, params, env):
         Get guest interrupts statistics
         """
         online_cpu_number_cmd = r"cat /proc/interrupts | head -n 1 | wc -w"
-        cmd = r"cat /proc/interrupts | sed -n '/^\s\+%s:/p'" % irq_number
+        cmd = r"cat /proc/interrupts | sed -n '/^\s*%s:/p'" % irq_number
         online_cpu_number = int(session.cmd_output_safe(online_cpu_number_cmd))
         irq_statics = session.cmd_output(cmd)
         irq_statics_list = list(map(int, irq_statics.split()[1:online_cpu_number]))
@@ -108,6 +111,7 @@ def run(test, params, env):
         check_vhost = params.get("check_vhost_threads", 'yes')
         if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
             process.system("systemctl stop irqbalance.service")
+            session.cmd("systemctl stop irqbalance.service")
             set_cpu_affinity(session)
 
         bg_sub_test = params.get("bg_sub_test")
@@ -146,7 +150,7 @@ def run(test, params, env):
                                                      shell=True).decode()
                     if top_info:
                         break
-                logging.info("%s", top_info)
+                logging.info(top_info)
                 vhost_re = re.compile(r"(0:00.\d{2}).*vhost-\d+[\d|+]")
                 invalid_vhost_thread = len(vhost_re.findall(top_info, re.I))
                 running_threads = (len(top_info.splitlines()) -
@@ -201,3 +205,5 @@ def run(test, params, env):
             env[bg_stress_run_flag] = False
             if session:
                 session.close()
+            if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
+                process.system("systemctl start irqbalance.service")

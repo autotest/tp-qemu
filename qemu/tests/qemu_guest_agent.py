@@ -1223,11 +1223,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                     test.fail("Can't detect the new hotplugged disks in guest")
                 try:
                     mnt_point = utils_disk.configure_empty_disk(
-                        session, new_disks[0], image_size_stg0, "linux", labeltype="msdos")
+                        session, "linux", new_disks[0],
+                        utils_disk.SIZE_AVAILABLE, labeltype="msdos")
                 except aexpect.ShellTimeoutError:
                     self.gagent.fsthaw()
                     mnt_point = utils_disk.configure_empty_disk(
-                        session, new_disks[0], image_size_stg0, "linux", labeltype="msdos")
+                        session, "linux", new_disks[0],
+                        utils_disk.SIZE_AVAILABLE, labeltype="msdos")
             elif params.get("os_type") == "windows":
                 disk_index = utils_misc.wait_for(
                     lambda: utils_disk.get_windows_disks_index(session, image_size_stg0), 120)
@@ -1236,7 +1238,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                     if not utils_disk.update_windows_disk_attributes(session, disk_index):
                         test.error("Failed to update windows disk attributes.")
                     mnt_point = utils_disk.configure_empty_disk(
-                        session, disk_index[0], image_size_stg0, "windows", labeltype="msdos")
+                        session, "windows", disk_index[0],
+                        utils_disk.SIZE_AVAILABLE, labeltype="msdos")
             session.cmd(disk_write_cmd % mnt_point[0])
             error_context.context("Unplug the added disk", logging.info)
             self.vm.devices.simple_unplug(devs[0], self.vm.monitor)

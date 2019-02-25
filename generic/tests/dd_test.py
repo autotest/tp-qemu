@@ -93,16 +93,13 @@ def run(test, params, env):
                     params.get("partition_size", '2G')
                     )
                 )
-            start = 0.0
+            psize = '%fM' % psize
             dev_id = os.path.split(path)[-1]
             dev_partitioned.append(dev_id)
 
             utils_disk.create_partition_table_linux(session, dev_id, 'gpt')
             for i in range(bs_count):
-                utils_disk.create_partition_linux(session, dev_id,
-                                                  '%fM' % psize,
-                                                  '%fM' % start)
-                start += psize
+                utils_disk.create_partition_linux(session, dev_id, psize)
 
             disks = utils_disk.get_linux_disks(session, partition=True)
             partitions = [key for key in disks if

@@ -277,7 +277,7 @@ def run(test, params, env):
                 index = random.randint(0, (len(file_system) - 1))
                 fstype = file_system[index].strip()
                 partitions = utils_disk.configure_empty_disk(
-                    session, disk, stg_image_size, ostype,
+                    session, ostype, disk, utils_disk.SIZE_AVAILABLE,
                     fstype=fstype, labeltype=labeltype)
                 if not partitions:
                     test.fail("Fail to format disks.")

@@ -52,7 +52,7 @@ def run(test, params, env):
     error_context.context("Format disk %s in guest." % disk_index_list[0],
                           logging.info)
     drive_letter = utils_disk.configure_empty_disk(
-        session, disk_index_list[0], data_image_size, os_type, fstype=fstype)
+        session, os_type, disk_index_list[0], utils_disk.SIZE_AVAILABLE, fstype=fstype)
     if not drive_letter:
         test.fail("Fail to format disks.")
     dst_file = params["dst_file"] % drive_letter[0]

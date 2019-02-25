@@ -122,8 +122,8 @@ def run(test, params, env):
         error_context.context("Format disk", logging.info)
         for item in index_sizes:
             did, size = item.split()
-            drive_letter = utils_disk.configure_empty_windows_disk(session,
-                                                                   did, size + "B")
+            drive_letter = utils_disk.configure_empty_windows_disk(
+                session, did, utils_disk.SIZE_AVAILABLE)
             windows_drive_letters.extend(drive_letter)
 
     def rw_disk_in_guest(session, plug_disks, iteration):

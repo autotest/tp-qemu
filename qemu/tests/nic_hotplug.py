@@ -7,6 +7,7 @@ from virttest import utils_test
 from virttest import utils_net
 from virttest import virt_vm
 from virttest import utils_misc
+from virttest.qemu_devices import qdevices
 
 
 def run(test, params, env):
@@ -93,7 +94,7 @@ def run(test, params, env):
             session.cmd_output_safe(add_route_cmd)
             status, output = utils_test.ping(hotnic_ip, 10, timeout=30)
             logging.info("Del the route.")
-            status, output = session.cmd_output_safe(del_route_cmd)
+            session.cmd_output_safe(del_route_cmd)
         return status, output
 
     def device_add_nic(pci_model, netdev, device_id):
@@ -106,6 +107,18 @@ def run(test, params, env):
         pci_add_cmd = "device_add id=%s, driver=%s, netdev=%s" % (device_id,
                                                                   pci_model,
                                                                   netdev)
+        bus = vm.devices.get_buses({'aobject': 'pci.0'})[0]
+        if isinstance(bus, qdevices.QPCIEBus):
+            root_port_id = bus.get_free_root_port()
+            if root_port_id:
+                pci_add_cmd += ",bus=%s" % root_port_id
+                root_port = vm.devices.get_buses({"aobject": root_port_id})[0]
+                root_port.insert(qdevices.QBaseDevice(pci_model,
+                                                      aobject=device_id))
+            else:
+                test.error("No free root port for device %s to plug."
+                           % device_id)
+
         add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         return add_output
 
@@ -140,7 +153,7 @@ def run(test, params, env):
                 useddevice_id = primary_nic[0].netdev_id
                 logging.info("Hot-plug NIC with the netdev already in use")
                 try:
-                    add_output = device_add_nic(nic_model, useddevice_id, nic_name)
+                    device_add_nic(nic_model, useddevice_id, nic_name)
                 except Exception as err_msg:
                     match_error = params["devadd_match_string"]
                     if match_error in str(err_msg):

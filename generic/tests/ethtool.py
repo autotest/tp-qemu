@@ -53,7 +53,7 @@ def run(test, params, env):
         for f in feature_pattern.keys():
             try:
                 temp = re.findall(
-                        "%s: (.*)" % feature_pattern.get(f), o)[0]
+                    "%s: (.*)" % feature_pattern.get(f), o)[0]
                 if temp.find("[fixed]") != -1:
                     logging.debug("%s is fixed" % f)
                     continue
@@ -256,7 +256,7 @@ def run(test, params, env):
             # lro is fixed for e1000 and e1000e, while trying to exclude
             # lro by setting "lro off", the command of ethtool returns error
             if not (f_type == "gro" and (vm.virtnet[0].nic_model == "e1000e"
-                    or vm.virtnet[0].nic_model == "e1000")):
+                                         or vm.virtnet[0].nic_model == "e1000")):
                 offload_stat.update(dict.fromkeys(test_matrix[f_type][2], "off"))
             if not ethtool_set(session, offload_stat):
                 e_msg = "Failed to set offload status"

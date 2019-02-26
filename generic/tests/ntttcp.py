@@ -8,10 +8,30 @@ import aexpect
 from avocado.utils import process
 from virttest import utils_misc
 from virttest import utils_test
-from virttest import remote
 from virttest import error_context
 
 _receiver_ready = False
+
+
+@error_context.context_aware
+def _verify_vm_driver(vm, test, driver_name, timeout=360):
+    """
+    Verify driver for vm
+
+    :param vm: target vm
+    :param test: the current test
+    :param driver: target driver name
+    :param timeout: the timeout for the login and verify operation
+    """
+
+    error_context.context("Check if driver is installed"
+                          " and verified for vm: %s" % vm.name, logging.info)
+    session = vm.wait_for_login(timeout=timeout)
+    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                            test,
+                                                            driver_name,
+                                                            timeout)
+    session.close()
 
 
 def run(test, params, env):
@@ -27,7 +47,6 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
-    timeout = int(params.get("timeout"))
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
     platform = "x86"
@@ -36,11 +55,13 @@ def run(test, params, env):
     buffers = params.get("buffers").split()
     buf_num = params.get("buf_num", 200000)
     session_num = params.get("session_num")
+    timeout = int(params.get("timeout")) * int(session_num)
+    driver_name = params.get("driver_name", "netkvm")
 
     vm_sender = env.get_vm(params["main_vm"])
     vm_sender.verify_alive()
-    vm_receiver = None
-    receiver_addr = params.get("receiver_address")
+    # verify driver
+    _verify_vm_driver(vm_sender, test, driver_name)
 
     logging.debug(process.system("numactl --hardware", ignore_status=True,
                                  shell=True))
@@ -52,21 +73,21 @@ def run(test, params, env):
         node = utils_misc.NumaNode(numa_node)
         utils_test.qemu.pin_vm_threads(vm_sender, node)
 
-    if not receiver_addr:
-        vm_receiver = env.get_vm("vm2")
-        vm_receiver.verify_alive()
-        try:
-            sess = None
-            sess = vm_receiver.wait_for_login(timeout=login_timeout)
-            receiver_addr = vm_receiver.get_address()
-            if not receiver_addr:
-                test.error("Can't get receiver(%s) ip address" %
-                           vm_sender.name)
-            if params.get('numa_node'):
-                utils_test.qemu.pin_vm_threads(vm_receiver, node)
-        finally:
-            if sess:
-                sess.close()
+    vm_receiver = env.get_vm("vm2")
+    vm_receiver.verify_alive()
+    _verify_vm_driver(vm_receiver, test, driver_name)
+    try:
+        sess = None
+        sess = vm_receiver.wait_for_login(timeout=login_timeout)
+        receiver_addr = vm_receiver.get_address()
+        if not receiver_addr:
+            test.error("Can't get receiver(%s) ip address" %
+                       vm_receiver.name)
+        if params.get('numa_node'):
+            utils_test.qemu.pin_vm_threads(vm_receiver, node)
+    finally:
+        if sess:
+            sess.close()
 
     @error_context.context_aware
     def install_ntttcp(session):
@@ -78,27 +99,14 @@ def run(test, params, env):
             session.cmd(params.get("check_ntttcp_cmd"))
         except aexpect.ShellCmdError:
             ntttcp_install_cmd = params.get("ntttcp_install_cmd")
+            ntttcp_install_cmd = utils_misc.set_winutils_letter(session, ntttcp_install_cmd)
             error_context.context("Installing NTttcp on guest")
             session.cmd(ntttcp_install_cmd % (platform, platform), timeout=200)
 
     def receiver():
         """ Receive side """
         logging.info("Starting receiver process on %s", receiver_addr)
-        if vm_receiver:
-            session = vm_receiver.wait_for_login(timeout=login_timeout)
-        else:
-            username = params.get("username", "")
-            password = params.get("password", "")
-            prompt = params.get("shell_prompt", "[#$]")
-            linesep = eval("'%s'" % params.get("shell_linesep", r"\n"))
-            client = params.get("shell_client")
-            port = int(params.get("shell_port"))
-            log_filename = ("session-%s-%s.log" % (receiver_addr,
-                                                   utils_misc.generate_random_string(4)))
-            session = remote.remote_login(client, receiver_addr, port,
-                                          username, password, prompt,
-                                          linesep, log_filename, timeout)
-            session.set_status_test_command("echo %errorlevel%")
+        session = vm_receiver.wait_for_login(timeout=login_timeout)
         install_ntttcp(session)
         ntttcp_receiver_cmd = params.get("ntttcp_receiver_cmd")
         global _receiver_ready

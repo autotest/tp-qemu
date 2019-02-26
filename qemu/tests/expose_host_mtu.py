@@ -56,15 +56,13 @@ def run(test, params, env):
 
         if is_ovs_backend(netdst) is True:
             ports = set(get_ovs_ports(netdst).splitlines()) - \
-                set(ports.splitlines())
+                    set(ports.splitlines())
             for p in ports:
                 process.system("ovs-vsctl del-port %s %s" % (netdst, p))
 
     netdst = params.get("netdst", "switch")
     if netdst in utils_net.Bridge().list_br():
-        cmd = params["bridge_get_if_cmd"]
-        host_hw_interface = process.system_output(
-                cmd, shell=True).decode().strip(':')
+        host_hw_interface = utils_net.Bridge().list_iface()[0]
     elif is_ovs_backend(netdst) is True:
         host_hw_interface = get_ovs_ports(netdst)
         tmp_ports = re.findall(r"t[0-9]-[a-zA-Z0-9]{6}", host_hw_interface)
@@ -83,12 +81,10 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    device_mac = vm.virtnet[0].mac
     vm_iface = vm.get_ifname()
     # TODO, will support windows later
-    process.system_output(params["nm_stop_cmd"])
-    process.system_output(params["set_guest_mtu_cmd"] % host_hw_interface)
-    process.system_output(params["set_guest_mtu_cmd"] % vm_iface)
+    process.system_output(params["set_mtu_cmd"] % host_hw_interface)
+    process.system_output(params["set_mtu_cmd"] % vm_iface)
 
     os_type = params.get("os_type", "linux")
     login_timeout = float(params.get("login_timeout", 360))

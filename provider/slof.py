@@ -19,18 +19,20 @@ import os
 
 from virttest import utils_misc
 
+START_PATTERN = r'\s+SLOF\S+\s+\*+'
+END_PATTERN = r'\s+Successfully loaded$'
 
-def get_boot_content(vm, start_pos=0, start_str='SLOF',
-                     end_str='Successfully loaded'):
+
+def get_boot_content(vm, start_pos=0, start_str=START_PATTERN, end_str=END_PATTERN):
     """
     Get the specified content of SLOF by reading the serial log.
 
     :param vm: VM object
     :param start_pos: start position which start to read
     :type start_pos: int
-    :param start_str: start string
+    :param start_str: start string pattern
     :type start_str: int
-    :param end_str: end string
+    :param end_str: end string pattern
     :type end_str: str
     :return: content list and next position of the end of the content if found
              the the whole SLOF contents, otherwise return None and the
@@ -42,20 +44,21 @@ def get_boot_content(vm, start_pos=0, start_str='SLOF',
     with open(vm.serial_console_log) as fd:
         for pos, line in enumerate(fd):
             if pos >= start_pos:
-                if start_str in line:
+                if re.search(start_str, line):
                     start_str_pos = pos
                     content.append(line)
-                elif end_str in line:
-                    content.append(line)
-                    return content, pos + 1
                 elif content:
                     content.append(line)
+                    if re.search(end_str, line):
+                        return content, pos + 1
+            else:
+                start_str_pos = pos + 1
         else:
             return None, start_str_pos
 
 
-def wait_for_loaded(vm, test, start_pos=0, start_str='SLOF',
-                    end_str='Successfully loaded', timeout=300):
+def wait_for_loaded(vm, test, start_pos=0, start_str=START_PATTERN,
+                    end_str=END_PATTERN, timeout=300):
     """
     Wait for loading the SLOF.
 
@@ -63,9 +66,9 @@ def wait_for_loaded(vm, test, start_pos=0, start_str='SLOF',
     :param test: kvm test object
     :param start_pos: start position which start to read
     :type start_pos: int
-    :param start_str: start string
+    :param start_str: start string pattern
     :type start_str: int
-    :param end_str: end string
+    :param end_str: end string pattern
     :type end_str: str
     :param timeout: time out for waiting
     :type timeout: float

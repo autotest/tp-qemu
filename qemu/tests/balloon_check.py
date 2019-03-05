@@ -258,7 +258,7 @@ class BallooningTest(MemoryBaseTest):
         max_size = self.ori_mem
         min_size = self.params.get("minmem", "512M")
         min_size = int(float(utils_misc.normalize_data_size(min_size)))
-        balloon_buffer = self.params.get("balloon_buffer", 300)
+        balloon_buffer = int(self.params.get("balloon_buffer", 300))
         if self.params.get('os_type') == 'windows':
             logging.info("Get windows miminum balloon value:")
             self.vm.balloon(1)

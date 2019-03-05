@@ -138,8 +138,7 @@ def run(test, params, env):
                 utils_test.run_virt_sub_test(test, params, env, main_test)
                 break
         if stress_thread:
-            stress_thread.join(timeout=timeout,
-                               suppress_exception=suppress_exception)
+            stress_thread.join(suppress_exception=suppress_exception)
         if vm.is_alive():
             run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "after_bg_test":

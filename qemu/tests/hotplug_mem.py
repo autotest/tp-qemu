@@ -1,4 +1,5 @@
 import logging
+import time
 
 from avocado.utils.wait import wait_for
 
@@ -69,6 +70,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         operation = self.params["operation"]
         target_mems = self.params["target_mems"]
         stage = self.params.get("stage", "before")
+        login_timeout = int(self.params.get("login_timeout", 360))
         sub_test_runner = (
             stage == 'during' and [
                 self.run_background_test] or [
@@ -77,9 +79,13 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         if not callable(func):
             self.test.error("Unsupported memory operation '%s'" % operation)
         vm = self.env.get_vm(self.params["main_vm"])
+        vm.wait_for_login(timeout=login_timeout)
+        bootup_time = time.time() - vm.start_time
         try:
             if stage != "after":
                 sub_test = sub_test_runner()
+                if self.params.get("sub_type") == "boot":
+                    time.sleep(bootup_time/2)
                 for target_mem in target_mems.split():
                     func(vm, target_mem)
                     self.check_memory(vm)

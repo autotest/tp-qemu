@@ -359,7 +359,7 @@ class BlockCopy(object):
         """
         params = self.parser_test_args()
         info = self.get_status()
-        ret = bool(info and info["len"] == info["offset"])
+        ret = bool(info and info.get("ready") and not info.get("busy"))
         if params.get("check_event", "no") == "yes":
             ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))
         return ret

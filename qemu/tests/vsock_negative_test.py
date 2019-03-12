@@ -11,6 +11,41 @@ from virttest import error_context
 from qemu.tests import vsock_test
 
 
+def check_data_received(test, rec_session, file):
+    """
+    Check if data is received successfully
+
+    :param test: QEMU test object
+    :param rec_session: nc-vsock receive session
+    :param file: file to receive data
+    """
+    if not utils_misc.wait_for(lambda: rec_session.is_alive(),
+                               timeout=3, step=0.1):
+        test.error("Host connection failed.")
+    if not utils_misc.wait_for(lambda: os.path.exists(file),
+                               timeout=3, step=0.1):
+        test.fail("Host does not create receive file successfully.")
+    elif not utils_misc.wait_for(lambda: os.path.getsize(file) > 0,
+                                 timeout=3, step=0.1):
+        test.fail('Host does not receive data successfully.')
+
+
+@error_context.context_aware
+def kill_host_receive_process(test, rec_session):
+    """
+    Kill the receive process on host
+
+    :param test: QEMU test object
+    :param rec_session: nc-vsock receive session
+    """
+    error_context.context("Kill the nc-vsock process on host...",
+                          logging.info)
+    rec_session.kill(sig=signal.SIGINT)
+    if not utils_misc.wait_for(lambda: not rec_session.is_alive(),
+                               timeout=1, step=0.1):
+        test.fail("Host nc-vsock process does not quit as expected.")
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -55,21 +90,8 @@ def run(test, params, env):
     rec_session = vsock_test.send_data_from_guest_to_host(
         session, nc_vsock_bin, guest_cid, tmp_file, file_size=10000)
     try:
-        if not utils_misc.wait_for(lambda: rec_session.is_alive(),
-                                   timeout=3, step=0.1):
-            test.error("Host connection failed.")
-        if not utils_misc.wait_for(lambda: os.path.exists(tmp_file),
-                                   timeout=3, step=0.1):
-            test.fail("Host does not create receive file successfully.")
-        elif not utils_misc.wait_for(lambda: os.path.getsize(tmp_file) > 0,
-                                     timeout=3, step=0.1):
-            test.fail('Host does not receive data successfully.')
-        error_context.context("Kill the nc-vsock process on host...",
-                              logging.info)
-        rec_session.kill(sig=signal.SIGINT)
-        if not utils_misc.wait_for(lambda: not rec_session.is_alive(),
-                                   timeout=1, step=0.1):
-            test.fail("Host nc-vsock process does not quit as expected.")
+        check_data_received(test, rec_session, tmp_file)
+        kill_host_receive_process(test, rec_session)
         vsock_test.check_guest_nc_vsock_exit(test, session)
     finally:
         session.cmd_output("rm -f %s" % tmp_file)

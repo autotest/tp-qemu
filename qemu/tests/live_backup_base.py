@@ -132,7 +132,7 @@ class LiveBackup(block_copy.BlockCopy):
         for image in self.image_chain:
             params = self.params.object_params(image)
             qemu_image = qemu_storage.QemuImg(params, data_dir, image)
-            qemu_image.check_image(params, data_dir)
+            qemu_image.check_image(params, data_dir, force_share=True)
         params = self.params.object_params(self.source_image)
         if compare_image:
             compare_image = utils_misc.get_path(data_dir, compare_image)
@@ -147,7 +147,7 @@ class LiveBackup(block_copy.BlockCopy):
         """
         params = self.params.object_params(image)
         qemu_image = qemu_storage.QemuImg(params, self.data_dir, image)
-        image_info = qemu_image.info()
+        image_info = qemu_image.info(force_share=True)
         if not image_info:
             self.test.error("Get image info failed.")
         image_size = re.findall(r"disk size: (\d\.?\d*?.*)", image_info)[0]

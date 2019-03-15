@@ -56,13 +56,13 @@ def run(test, params, env):
 
         if is_ovs_backend(netdst) is True:
             ports = set(get_ovs_ports(netdst).splitlines()) - \
-                    set(ports.splitlines())
+                set(ports.splitlines())
             for p in ports:
                 process.system("ovs-vsctl del-port %s %s" % (netdst, p))
 
     netdst = params.get("netdst", "switch")
     if netdst in utils_net.Bridge().list_br():
-        host_hw_interface = utils_net.Bridge().list_iface()[0]
+        host_hw_interface = utils_net.Bridge().list_iface(netdst)[0]
     elif is_ovs_backend(netdst) is True:
         host_hw_interface = get_ovs_ports(netdst)
         tmp_ports = re.findall(r"t[0-9]-[a-zA-Z0-9]{6}", host_hw_interface)
@@ -96,7 +96,7 @@ def run(test, params, env):
         guest_ifname = utils_net.get_linux_ifname(session,
                                                   vm.get_mac_address())
         output = session.cmd_output_safe(
-                params["check_guest_mtu_cmd"] % guest_ifname)
+            params["check_guest_mtu_cmd"] % guest_ifname)
         error_context.context(output, logging.info)
         match_string = "mtu %s" % params["mtu_value"]
         if match_string in output:

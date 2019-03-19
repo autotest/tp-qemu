@@ -36,6 +36,9 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
+    # diskpart requires windows volume INF file and volume setup
+    # events ready, add 10s to wait events done.
+    time.sleep(10)
     # format the target disk
     utils_test.run_virt_sub_test(test, params, env, "format_disk")
 

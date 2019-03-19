@@ -44,7 +44,7 @@ def run(test, params, env):
     if not isinstance(host_bridges, utils_net.Bridge):
         ovs = host_bridges
         host_hw_interface = get_ovs_ports(netdst)
-        tmp_ports = re.findall(r"t[0-9]-[a-zA-Z0-9]{6}", host_hw_interface)
+        tmp_ports = re.findall(r"t[0-9]{1,}-[a-zA-Z0-9]{6}", host_hw_interface)
         if tmp_ports:
             for p in tmp_ports:
                 process.system_output("ovs-vsctl del-port %s %s" %

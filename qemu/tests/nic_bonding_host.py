@@ -37,6 +37,7 @@ def run(test, params, env):
     bonding_timeout = int(params.get("bonding_timeout", 1))
     bonding_mode = params.get("bonding_mode", "1")
     bonding_miimon = params.get("bonding_miimon", "100")
+    bonding_max_bonds = params.get("bonding_max_bonds", "1")
     params['netdst'] = bond_br_name
     host_bridges = utils_net.Bridge()
 
@@ -46,15 +47,14 @@ def run(test, params, env):
                           shell=True):
         process.system("modprobe -r bonding")
 
-    process.system(
-        "modprobe bonding mode=%s miimon=%s" %
-        (bonding_mode, bonding_miimon))
+    process.system("modprobe bonding mode=%s miimon=%s max_bonds=%s" %
+                   (bonding_mode, bonding_miimon, bonding_max_bonds))
 
     error_context.context("Bring up %s" % bond_iface, logging.info)
     host_ifaces = utils_net.get_host_iface()
 
     if bond_iface not in host_ifaces:
-        test.error("Can not find bond0 in host")
+        test.error("Can not find %s in host" % bond_iface)
 
     bond_iface = utils_net.Interface(bond_iface)
     bond_iface.up()

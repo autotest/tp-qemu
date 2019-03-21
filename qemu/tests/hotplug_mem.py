@@ -3,6 +3,7 @@ import time
 
 from avocado.utils.wait import wait_for
 
+from virttest import utils_test
 from virttest import error_context
 from virttest.utils_test import BackgroundTest
 from virttest.utils_test import run_virt_sub_test
@@ -81,6 +82,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         vm = self.env.get_vm(self.params["main_vm"])
         vm.wait_for_login(timeout=login_timeout)
         bootup_time = time.time() - vm.start_time
+        utils_test.update_boot_option(vm, args_added="movable_node")
         try:
             if stage != "after":
                 sub_test = sub_test_runner()

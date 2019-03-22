@@ -1,6 +1,7 @@
 import logging
 import random
 import re
+import time
 
 from virttest.qemu_devices import qdevices
 from virttest import error_context
@@ -108,6 +109,9 @@ def run(test, params, env):
                 balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
             else:
                 return
+
+        if params['os_type'] == 'windows':
+            time.sleep(10)
 
         error_context.context("Unplug balloon device for %d times" % (i+1),
                               logging.info)

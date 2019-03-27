@@ -192,6 +192,7 @@ def run(test, params, env):
     rec_session = send_data_from_guest_to_host(session, nc_vsock_bin,
                                                guest_cid, tmp_file)
     utils_misc.wait_for(lambda: not rec_session.is_alive(), timeout=20)
+    check_guest_nc_vsock_exit(test, session)
     cmd_chksum = 'md5sum %s' % tmp_file
     md5_origin = session.cmd_output(cmd_chksum).split()[0]
     md5_received = process.system_output(cmd_chksum).split()[0].decode()

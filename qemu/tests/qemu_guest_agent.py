@@ -820,22 +820,20 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     def _change_bl(self, session):
         """
-        As file related cmd is in blacklist by default,so need to change.
+        Some cmds are in blacklist by default,so need to change.
         Now only linux guest has this behavior,but still leave interface
         for windows guest.
         """
         if self.params.get("os_type") == "linux":
-            output = session.cmd_output(self.params["cmd_verify"])
-            if output == "":
-                logging.info("Guest-file related cmds are already "
-                             "in white list.")
-                return
-
-            session.cmd(self.params["cmd_change_black"])
-            output = session.cmd_output(self.params["cmd_verify"])
-            if not output == "":
-                self.test.fail("Failed to change guest-file related cmd to "
-                               "white list, the output is %s" % output)
+            black_list = self.params["black_list"]
+            for black_cmd in black_list.split():
+                bl_check_cmd = self.params["black_list_check_cmd"] % black_cmd
+                bl_change_cmd = self.params["black_list_change_cmd"] % black_cmd
+                session.cmd(bl_change_cmd)
+                output = session.cmd_output(bl_check_cmd)
+                if not output == "":
+                    self.test.fail("Failed to change the cmd to "
+                                   "white list, the output is %s" % output)
 
             s, o = session.cmd_status_output(self.params["gagent_restart_cmd"])
             if s:
@@ -1025,6 +1023,126 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+
+    @error_context.context_aware
+    def gagent_check_guest_exec(self, test, params, env):
+        """
+        Execute a command in the guest via guest-exec cmd,
+        and check status of this process.
+
+        Steps:
+        1) Change guest-exec related cmd to white list,linux guest only.
+        2) Execute guest cmd and get the output.
+        3) Check the cmd's result and output from return.
+        4) Execute guest cmd and no need to get the output.
+        5) Check the cmd's result from return.
+        6) Issue an invalid guest cmd.
+        7) Check the return result.
+        8) Execute guest cmd with wrong args.
+        9) Check the return result.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        """
+
+        def _guest_cmd_run(guest_cmd, cmd_args=None, env_qga=None,
+                           input=None, capture_output=None):
+            """
+            Execute guest-exec cmd and get the result in timeout.
+
+            :param guest_cmd: path or executable name to execute
+            :param cmd_args: argument list to pass to executable
+            :param env_qga: environment variables to pass to executable
+            :param input: data to be passed to process stdin (base64 encoded)
+            :param capture_output: bool flag to enable capture of stdout/stderr
+                                   of running process,defaults to false.
+            :return: result of guest-exec cmd
+            """
+
+            # change cmd_args to be a list needed by guest-exec.
+            if cmd_args:
+                cmd_args = cmd_args.split()
+            ret = self.gagent.guest_exec(path=guest_cmd, arg=cmd_args,
+                                         env=env_qga, input_data=input,
+                                         capture_output=capture_output)
+            result = self.gagent.guest_exec_status(ret["pid"])
+            if "exited" not in result:
+                test.fail("The result of guest-exec is not correct.")
+
+            end_time = time.time() + float(params["guest_cmd_timeout"])
+            while time.time() < end_time:
+                result = self.gagent.guest_exec_status(ret["pid"])
+                if result["exited"]:
+                    logging.info("Guest cmd is finished.")
+                    break
+                time.sleep(5)
+
+            if not result["exited"]:
+                test.error("Guest cmd is still running, pls login guest to"
+                           " handle it or extend your timeout.")
+            # check the exitcode and output/error data result
+            if result["exitcode"] == 0:
+                if "out-data" in result:
+                    out_data = base64.b64decode(result["out-data"]).decode()
+                    logging.info("The guest cmd is executed successfully,"
+                                 "the output is: \n %s." % out_data)
+                elif "err-data" in result:
+                    test.fail("When exitcode is 0, should not get error data.")
+            else:
+                if "out-data" in result:
+                    test.fail("When exitcode is 1, should not get output data.")
+                elif "err-data" in result:
+                    err_data = base64.b64decode(result["err-data"]).decode()
+                    logging.info("The guest cmd failed,"
+                                 "the error info is: \n %s" % err_data)
+            return result
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        error_context.context("Change guest-exec related cmd to white list.",
+                              logging.info)
+        self._change_bl(session)
+
+        guest_cmd = params["guest_cmd"]
+        guest_cmd_args = params["guest_cmd_args"]
+
+        error_context.context("Execute guest cmd and get the output.",
+                              logging.info)
+        result = _guest_cmd_run(guest_cmd=guest_cmd, cmd_args=guest_cmd_args,
+                                capture_output=True)
+
+        if "out-data" not in result and "err-data" not in result:
+            test.fail("There is no output in result.")
+
+        error_context.context("Execute guest cmd and no need to get the output.",
+                              logging.info)
+        result = _guest_cmd_run(guest_cmd=guest_cmd, cmd_args=guest_cmd_args)
+
+        if "out-data" in result or "err-data" in result:
+            test.fail("There is output in result which is not expected.")
+
+        error_context.context("Invalid guest cmd test.", logging.info)
+        try:
+            self.gagent.guest_exec(path="invalid_cmd")
+        except guest_agent.VAgentCmdError as detail:
+            if not re.search('Failed to execute child process', str(detail)):
+                test.fail("This is not the desired information: ('%s')"
+                          % str(detail))
+        else:
+            test.fail("Should not success for invalid cmd.")
+
+        error_context.context("Execute guest cmd with wrong args.", logging.info)
+        if params.get("os_type") == "linux":
+            guest_cmd = "cd"
+            guest_cmd_args = "/tmp/qga_empty_dir"
+        else:
+            guest_cmd = "ping"
+            guest_cmd_args = "invalid-address"
+        result = _guest_cmd_run(guest_cmd=guest_cmd, cmd_args=guest_cmd_args,
+                                capture_output=True)
+        if result["exitcode"] == 0:
+            test.fail("The cmd should be failed with wrong args.")
 
     @error_context.context_aware
     def _action_before_fsfreeze(self, *args):

@@ -1,61 +1,70 @@
-import time
 import logging
 
 from virttest import error_context
+from virttest import utils_test
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 
 class MemoryHotplugRepeat(MemoryHotplugTest):
 
+    def repeat_hotplug(self, vm, target_mems):
+        """
+        Hotplug memory in target_mems
+        :param vm: vm object in this test
+        :param target_mems: target memory to be hotplugged
+        """
+        for target_mem in target_mems:
+            self.hotplug_memory(vm, target_mem)
+        self.check_memory(vm)
+
+    def repeat_unplug(self, vm, target_mems):
+        """
+        Unplug memory in target_mems
+        :param vm: vm object in this test
+        :param target_mems: target memory to be unplugged
+        """
+        for target_mem in target_mems:
+            self.unplug_memory(vm, target_mem)
+        self.check_memory(vm)
+
     def start_test(self):
         """
-        Prepare reqired test params, then start memory
-        hotplug/unplug tests in turn. And this is test entry.
+        Prepare required test params, then for scalability test, hotplug
+        memory 256 times, then unplug 256 times. Otherwise, repeat hotplug
+        and unplug in turn for 256 times. This is test entry.
         """
-        target_mem = self.params["target_mem"]
+        times = int(self.params["repeat_times"])
+        target_mems = []
+        for i in range(times):
+            target_mems.append("mem%s" % i)
         vm = self.env.get_vm(self.params["main_vm"])
-        max_slots = int(self.params.get("slots_mem", 4))
-        scalability_test = self.params.get("scalability_test") == "yes"
-        repeats = scalability_test and max_slots or self.params["repeats"]
+        session = vm.wait_for_login()
+        if self.params.get('os_type') == 'linux':
+            arg = "movable_node"
+            utils_test.update_boot_option(vm, args_added=arg)
         original_mem = self.get_guest_total_mem(vm)
-        for repeat in range(int(repeats)):
-            extra_params = (scalability_test and
-                            [{'slot_dimm': repeat}] or [None])[0]
-            error_context.context("Hotplug/unplug loop '%d'" % repeat,
-                                  logging.info)
-            self.turn(vm, target_mem, extra_params)
+        if self.params["test_type"] == "scalability_test":
+            error_context.context("Repeat hotplug memory for %s times"
+                                  % times, logging.info)
+            self.repeat_hotplug(vm, target_mems)
+            if self.params.get('os_type') == 'linux':
+                error_context.context("Repeat unplug memory for %s times"
+                                      % times, logging.info)
+                self.repeat_unplug(vm, target_mems)
+        else:
+            for target_mem in target_mems:
+                error_context.context("Hotplug and unplug memory %s"
+                                      % target_mem, logging.info)
+                self.hotplug_memory(vm, target_mem)
+                self.unplug_memory(vm, target_mem)
+
+        if self.params.get('os_type') == 'linux':
             current_mem = self.get_guest_total_mem(vm)
             if current_mem != original_mem:
                 self.test.fail("Guest memory changed about repeat"
-                               " hotpug/unplug memory %d times" % repeat)
-            time.sleep(1.5)
-        vm.verify_alive()
-        vm.reboot()
-
-    def turn(self, vm, target_mem, extra_params=None):
-        """
-        Hotplug/Unplug memory in turn
-
-        :param vm: qemu target VM object
-        :param target_mem: memory name of target VM object
-        :param extra_params: params dict, that you want to update
-
-        """
-        memorys = self.get_all_memorys(vm)
-        if extra_params:
-            self.params.update(extra_params)
-        self.hotplug_memory(vm, target_mem)
-        memorys_added = self.get_all_memorys(vm) - memorys
-        offline_memorys = self.get_offline_memorys(vm)
-        time.sleep(1.5)
-        for memory in offline_memorys:
-            # Online memory to movable zone maybe failed, see details
-            # in redhat Bug 1314306
-            self.memory_operate(vm, memory, 'online_movable')
-        for memory in memorys_added:
-            self.memory_operate(vm, memory, 'offline')
-        time.sleep(1.5)
-        self.unplug_memory(vm, target_mem)
+                               " hotpug/unplug memory %d times" % times)
+        vm.verify_kernel_crash()
+        session.close()
 
 
 @error_context.context_aware
@@ -63,8 +72,8 @@ def run(test, params, env):
     """
     Qemu memory hotplug test:
     1) Boot guest with -m option
-    2) Hotplug/unplug memory in turn
-    3) Reboot VM
+    2) For scalability test, hotplug memory 256 times, then unplug 256 times
+    3) Otherwise, repeat hotplug and unplug in turn for 256 times
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters

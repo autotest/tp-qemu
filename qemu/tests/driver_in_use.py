@@ -122,6 +122,7 @@ def run(test, params, env):
     bg_stress_test = params["run_bgstress"]
     wait_time = float(params.get("wait_bg_time", 60))
     suppress_exception = params.get("suppress_exception", "no") == "yes"
+    wait_bg_finish = params.get("wait_bg_finish", "no") == "yes"
 
     error_context.context("Run %s %s %s" % (main_test, run_bg_flag,
                                             bg_stress_test), logging.info)
@@ -138,7 +139,10 @@ def run(test, params, env):
                 utils_test.run_virt_sub_test(test, params, env, main_test)
                 break
         if stress_thread:
-            stress_thread.join(suppress_exception=suppress_exception)
+            if wait_bg_finish:
+                stress_thread.join(suppress_exception=suppress_exception)
+            else:
+                stress_thread.join(timeout=timeout, suppress_exception=suppress_exception)
         if vm.is_alive():
             run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "after_bg_test":

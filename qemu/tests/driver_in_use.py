@@ -30,8 +30,11 @@ def run(test, params, env):
                  else return False
         """
         session = vm.wait_for_login()
-        list_cmd = params.get("list_cmd", "wmic process get name")
-        output = session.cmd_output_safe(list_cmd, timeout=60)
+        if params['os_type'] == 'linux':
+            output = session.cmd_output_safe('pgrep -lx %s' % target_process)
+        else:
+            list_cmd = params.get("list_cmd", "wmic process get name")
+            output = session.cmd_output_safe(list_cmd, timeout=60)
         process = re.findall(target_process, output, re.M | re.I)
         session.close()
         return bool(process)
@@ -74,8 +77,9 @@ def run(test, params, env):
             # Clear event
             params[event] = False
 
+        check_bg_timeout = float(params.get('check_bg_timeout', 120))
         if not utils_misc.wait_for(lambda: check_bg_running(target_process),
-                                   120, 0, 1):
+                                   check_bg_timeout, 0, 1):
             test.fail("Backgroud test %s is not alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
             logging.info("Wait %s test start" % bg_stress_test)

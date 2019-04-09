@@ -62,6 +62,13 @@ def run(test, params, env):
                 logging.error(err)
                 test.error(err)
 
+    def _check_disk_partitions_number():
+        """ Check the data disk partitions number. """
+        del partitions[:]
+        partitions.extend(re.findall(
+            r'%s\d+' % dev_id, ' '.join(utils_disk.get_linux_disks(session, True))))
+        return len(partitions) == bs_count
+
     vm = env.get_vm(params['main_vm'])
     timeout = int(params.get("login_timeout", 360))
 
@@ -104,9 +111,9 @@ def run(test, params, env):
                                                   '%fM' % start)
                 start += psize
 
-            disks = utils_disk.get_linux_disks(session, partition=True)
-            partitions = [key for key in disks if
-                          re.match(r'%s\d+$' % dev_id, key)]
+            partitions = []
+            if not utils_misc.wait_for(_check_disk_partitions_number, 30, step=3.0):
+                test.error('Failed to get %d partitions on %s.' % (bs_count, dev_id))
             partitions.sort()
             dd_params[arg] = [path.replace(dev_id, part)
                               for part in partitions]

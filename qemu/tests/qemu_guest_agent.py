@@ -1065,10 +1065,6 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             ret = self.gagent.guest_exec(path=guest_cmd, arg=cmd_args,
                                          env=env_qga, input_data=input,
                                          capture_output=capture_output)
-            result = self.gagent.guest_exec_status(ret["pid"])
-            if "exited" not in result:
-                test.fail("The result of guest-exec is not correct.")
-
             end_time = time.time() + float(params["guest_cmd_timeout"])
             while time.time() < end_time:
                 result = self.gagent.guest_exec_status(ret["pid"])

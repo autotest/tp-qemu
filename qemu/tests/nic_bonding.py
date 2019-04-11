@@ -13,10 +13,10 @@ def run(test, params, env):
     """
     Nic bonding test in guest.
 
-    1) Start guest with four nic models.
-    2) Setup bond0 in guest by script nic_bonding_guest.py.
+    1) Start guest with four nic devices.
+    2) Setup bond0 in guest.
     3) Execute file transfer test between guest and host.
-    4) Repeatedly put down/up interfaces by set_link
+    4) Repeatedly put down/up interfaces by 'ip link'
     5) Execute file transfer test between guest and host.
 
     :param test: Kvm test object.
@@ -28,9 +28,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session_serial = vm.wait_for_serial_login(timeout=timeout)
-    ifnames = [utils_net.get_linux_ifname(session_serial,
-                                          vm.get_mac_address(vlan))
-               for vlan, nic in enumerate(vm.virtnet)]
+    ifnames = utils_net.get_linux_ifname(session_serial)
 
     ssh_login_cmd = (
         "echo LoginGraceTime 5m  >> /etc/ssh/sshd_config &&"
@@ -38,7 +36,7 @@ def run(test, params, env):
     session_serial.cmd_output_safe(ssh_login_cmd)
 
     # get params of bonding
-    nm_stop_cmd = "pidof NetworkManager && service NetworkManager stop; true"
+    nm_stop_cmd = "service NetworkManager stop; true"
     session_serial.cmd_output_safe(nm_stop_cmd)
     modprobe_cmd = "modprobe bonding"
     bonding_params = params.get("bonding_params")
@@ -64,6 +62,7 @@ def run(test, params, env):
 
     # get_bonding_nic_mac and ip
     try:
+        link_set_cmd = "ip link set dev %s %s"
         logging.info("Test file transferring:")
         utils_test.run_file_transfer(test, params, env)
 
@@ -73,15 +72,12 @@ def run(test, params, env):
         transfer_thread.start()
         try:
             while transfer_thread.isAlive():
-                for vlan, nic in enumerate(vm.virtnet):
-                    device_id = nic.device_id
-                    if not device_id:
-                        test.error("Could not find peer device for"
-                                   " nic device %s" % nic)
-                    vm.set_link(device_id, up=False)
+                for ifname in ifnames:
+                    session_serial.cmd(link_set_cmd % (ifname, "down"))
                     time.sleep(random.randint(1, 30))
-                    vm.set_link(device_id, up=True)
+                    session_serial.cmd(link_set_cmd % (ifname, "up"))
                     time.sleep(random.randint(1, 30))
+
         except Exception:
             transfer_thread.join(suppress_exception=True)
             raise
@@ -93,19 +89,15 @@ def run(test, params, env):
             utils_test.run_file_transfer, (test, params, env))
         transfer_thread.start()
         try:
-            nic_num = len(vm.virtnet)
+            nic_num = len(ifnames)
             up_index = 0
             while transfer_thread.isAlive():
                 up_index = up_index % nic_num
                 for num in range(nic_num):
-                    device_id = vm.virtnet[num].device_id
-                    if not device_id:
-                        test.error("Could not find peer device for"
-                                   " nic device %s" % nic)
                     if num == up_index:
-                        vm.set_link(device_id, up=True)
+                        session_serial.cmd(link_set_cmd % (ifnames[num], "up"))
                     else:
-                        vm.set_link(device_id, up=False)
+                        session_serial.cmd(link_set_cmd % (ifnames[num], "down"))
                 time.sleep(random.randint(1, 5))
                 up_index += 1
         except Exception:

@@ -119,6 +119,7 @@ class BallooningTest(MemoryBaseTest):
         :param memory_stat_qmp: memory stat values from qmp.
         """
         check_mem_ratio = float(self.params.get("check_mem_ratio", 0.1))
+        check_mem_diff = float(self.params.get("check_mem_diff", 150))
         error_context.context("Get memory from guest", logging.info)
         if keyname == "stat-free-memory":
             guest_mem = self.get_guest_free_mem(self.vm)
@@ -127,11 +128,15 @@ class BallooningTest(MemoryBaseTest):
         memory_stat_qmp = "%sB" % memory_stat_qmp
         memory_stat_qmp = int(float(utils_misc.normalize_data_size(
                                    memory_stat_qmp, order_magnitude="M")))
-        if (float(abs(guest_mem - memory_stat_qmp)) / guest_mem) > check_mem_ratio:
+        mem_diff = float(abs(guest_mem - memory_stat_qmp))
+        if ((mem_diff / guest_mem) > check_mem_ratio and
+                mem_diff > check_mem_diff):
             self.test.fail("%s of guest %s is not equal to %s in qmp,the"
-                           "acceptable ratio is %s" % (keyname, guest_mem,
-                                                       memory_stat_qmp,
-                                                       check_mem_ratio))
+                           "acceptable ratio/diff is %s/%s" % (keyname,
+                                                               guest_mem,
+                                                               memory_stat_qmp,
+                                                               check_mem_ratio,
+                                                               check_mem_diff))
 
     def memory_stats_check(self, keyname, enabled):
         """

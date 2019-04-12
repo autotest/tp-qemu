@@ -8,6 +8,8 @@ from avocado.utils import process
 
 from virttest import env_process
 from virttest import error_context
+from virttest import utils_disk
+from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -68,6 +70,11 @@ def run(test, params, env):
             logging.warn("block allocation bitmap not exists")
         return ""
 
+    def _check_disk_partitions_number():
+        """ Check the data disk partitions number. """
+        disks = utils_disk.get_linux_disks(session, True)
+        return len(re.findall(r'%s\d+' % device_name[5:], ' '.join(disks))) == 1
+
     # destroy all vms to avoid emulated disk marked drity before start test
     for vm in env.get_all_vms():
         if vm:
@@ -114,11 +121,15 @@ def run(test, params, env):
         logging.debug("bitmap before test: %s" % bitmap_before_trim)
         test.fail("bitmap should be continuous before fstrim")
 
-    format_disk_cmd = params["format_disk_cmd"]
-    format_disk_cmd = format_disk_cmd.replace("DISK", device_name)
-    error_context.context("format disk '%s' in guest" % device_name,
+    error_context.context("Create partition on '%s' in guest" % device_name,
                           logging.info)
-    session.cmd(format_disk_cmd)
+    session.cmd(params['create_partition_cmd'].replace("DISK", device_name))
+
+    if not utils_misc.wait_for(_check_disk_partitions_number, 30, step=3.0):
+        test.error('Failed to get a partition on %s.' % device_name)
+
+    error_context.context("format disk '%s' in guest" % device_name, logging.info)
+    session.cmd(params["format_disk_cmd"].replace("DISK", device_name))
 
     error_context.context("mount disk with discard options '%s'" % device_name,
                           logging.info)

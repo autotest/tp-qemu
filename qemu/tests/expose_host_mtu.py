@@ -1,7 +1,6 @@
 import logging
 import re
 
-from avocado.utils import process
 from virttest import error_context
 from virttest import utils_net
 from virttest import utils_test
@@ -25,27 +24,6 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
 
-    def get_ovs_ports(ovs):
-        """
-        Get ovs ports
-
-        :param ovs: ovs bridge name
-        """
-
-        cmd = "ovs-vsctl list-ports %s" % ovs
-        return process.system_output(cmd, shell=True).decode()
-
-    def is_ovs_backend(netdst):
-        """
-        Check whether the host is OVS backend
-
-        :param netdst: netdst get from command line
-        """
-
-        return netdst in process.system_output("ovs-vsctl list-br",
-                                               ignore_status=True,
-                                               shell=True).decode()
-
     def cleanup_ovs_ports(netdst, ports):
         """
         Clean up created ovs ports in this case
@@ -54,26 +32,24 @@ def run(test, params, env):
         :param ports: existing ports need to be remain before this test
         """
 
-        if is_ovs_backend(netdst) is True:
-            ports = set(get_ovs_ports(netdst).splitlines()) - \
-                set(ports.splitlines())
+        host_bridge = utils_net.find_bridge_manager(netdst)
+        if utils_net.ovs_br_exists(netdst) is True:
+            ports = set(host_bridge.list_ports(netdst)) - set(ports)
             for p in ports:
-                process.system("ovs-vsctl del-port %s %s" % (netdst, p))
+                utils_net.find_bridge_manager(netdst).del_port(netdst, p)
 
     netdst = params.get("netdst", "switch")
+    host_bridge = utils_net.find_bridge_manager(netdst)
     if netdst in utils_net.Bridge().list_br():
         host_hw_interface = utils_net.Bridge().list_iface(netdst)[0]
-    elif is_ovs_backend(netdst) is True:
-        host_hw_interface = get_ovs_ports(netdst)
-        tmp_ports = re.findall(r"t[0-9]{1,}-[a-zA-Z0-9]{6}", host_hw_interface)
+    else:
+        host_hw_interface = host_bridge.list_ports(netdst)
+        tmp_ports = re.findall(r"t[0-9]{1,}-[a-zA-Z0-9]{6}",
+                               ' '.join(host_hw_interface))
         if tmp_ports:
             for p in tmp_ports:
-                process.system_output("ovs-vsctl del-port %s %s" %
-                                      (netdst, p))
-            host_hw_interface = get_ovs_ports(netdst)
-    else:
-        test.cancel("The host is using Macvtap backend, which is not"
-                    " supported by now!")
+                host_bridge.del_port(netdst, p)
+            host_hw_interface = host_bridge.list_ports(netdst)
 
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params["main_vm"])
@@ -82,33 +58,68 @@ def run(test, params, env):
     vm.verify_alive()
 
     vm_iface = vm.get_ifname()
-    # TODO, will support windows later
-    process.system_output(params["set_mtu_cmd"] % host_hw_interface)
-    process.system_output(params["set_mtu_cmd"] % vm_iface)
+    # Get host interface original mtu value before setting
+    if netdst in utils_net.Bridge().list_br():
+        host_hw_iface = utils_net.Interface(host_hw_interface)
+    elif utils_net.ovs_br_exists(netdst) is True:
+        host_hw_iface = utils_net.Interface(' '.join(host_hw_interface))
+    host_mtu_origin = host_hw_iface.get_mtu()
+
+    utils_net.Interface(vm_iface).set_mtu(int(params["mtu_value"]))
+    host_hw_iface.set_mtu(int(params["mtu_value"]))
 
     os_type = params.get("os_type", "linux")
     login_timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
 
     host_ip = utils_net.get_ip_address_by_interface(params["netdst"])
-    if os_type == "linux":  # TODO, will support windows later
+    if os_type == "linux":
         session.cmd_output_safe(params["nm_stop_cmd"])
         guest_ifname = utils_net.get_linux_ifname(session,
                                                   vm.get_mac_address())
         output = session.cmd_output_safe(
-            params["check_guest_mtu_cmd"] % guest_ifname)
+            params["check_linux_mtu_cmd"] % guest_ifname)
         error_context.context(output, logging.info)
         match_string = "mtu %s" % params["mtu_value"]
-        if match_string in output:
-            logging.info("Host mtu %s exposed to guest as expected!" %
-                         params["mtu_value"])
-            logging.info("Ping from guest to host with packet size 3972")
-            status, output = utils_test.ping(host_ip, 10, packetsize=3972,
-                                             timeout=30, session=session)
-            ratio = utils_test.get_loss_ratio(output)
-            if ratio != 0:
-                test.fail("Loss ratio is %s", ratio)
-        else:
+        if match_string not in output:
             test.fail("host mtu %s not exposed to guest" % params["mtu_value"])
-    cleanup_ovs_ports(netdst, host_hw_interface)
+    elif os_type == "windows":
+        connection_id = utils_net.get_windows_nic_attribute(
+            session, "macaddress", vm.get_mac_address(), "netconnectionid")
+        output = session.cmd_output_safe(
+            params["check_win_mtu_cmd"] % connection_id)
+        error_context.context(output, logging.info)
+        lines = output.strip().splitlines()
+        lines_len = len(lines)
+
+        line_table = lines[0].split('  ')
+        line_value = lines[2].split('  ')
+        while '' in line_table:
+            line_table.remove('')
+        while '' in line_value:
+            line_value.remove('')
+        index = 0
+        for name in line_table:
+            if re.findall("MTU", name):
+                break
+            index += 1
+        mtu_value = line_value[index]
+        logging.info("MTU is %s", mtu_value)
+        if not int(mtu_value) == int(params["mtu_value"]):
+            test.fail("Host mtu %s is not exposed to "
+                      "guest!" % params["mtu_value"])
+
+    logging.info("Ping from guest to host with packet size 3972")
+    status, output = utils_test.ping(host_ip, 10, packetsize=3972,
+                                     timeout=30, session=session)
+    ratio = utils_test.get_loss_ratio(output)
+    if ratio != 0:
+        test.fail("Loss ratio is %s", ratio)
+
+    # Restore host mtu after finish testing
+    utils_net.Interface(vm_iface).set_mtu(host_mtu_origin)
+    host_hw_iface.set_mtu(host_mtu_origin)
+
+    if netdst not in utils_net.Bridge().list_br():
+        cleanup_ovs_ports(netdst, host_hw_interface)
     session.close()

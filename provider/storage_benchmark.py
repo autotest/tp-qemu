@@ -223,6 +223,14 @@ class StorageBenchmark(object):
             self._wait_procs_done(timeout)
         self._remove_env_files()
 
+    def __enter__(self):
+        """Enter context."""
+        return self
+
+    def __exit__(self, etype, evalue, traceback):
+        """Exit context by calling clean with default arguments."""
+        self.clean()
+
 
 class IozoneLinuxCfg(object):
     def __init__(self, params, session):

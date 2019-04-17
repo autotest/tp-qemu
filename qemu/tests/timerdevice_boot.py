@@ -183,6 +183,6 @@ def run(test, params, env):
         verify_timedrift(session)
         if params["os_type"] == "linux":
             verify_timedrift(session, is_hardware=True)
-    session.close()
     if need_restore_clksrc:
         update_clksrc(session, origin_clksrc)
+    session.close()

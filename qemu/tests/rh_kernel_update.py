@@ -322,4 +322,5 @@ def run(test, params, env):
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
     image_filename = storage.get_image_filename(params, base_dir)
     block = vm.get_block({"backing_file": image_filename})
+    vm.monitor.cmd("stop")
     vm.monitor.send_args_cmd("commit %s" % block)

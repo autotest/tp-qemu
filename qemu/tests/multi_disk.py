@@ -14,6 +14,7 @@ from virttest import error_context
 from virttest import qemu_qtree
 from virttest import utils_misc
 from virttest import utils_disk
+from provider.storage_benchmark import generate_instance
 
 _RE_RANGE1 = re.compile(r'range\([ ]*([-]?\d+|n).*\)')
 _RE_RANGE2 = re.compile(r',[ ]*([-]?\d+|n)')
@@ -213,6 +214,9 @@ def run(test, params, env):
     dd_test = params.get("dd_test", "no")
     pre_command = params.get("pre_command", "")
     labeltype = params.get("labeltype", "gpt")
+    iozone_target_num = int(params.get('iozone_target_num', '5'))
+    iozone_options = params.get('iozone_options')
+    iozone_timeout = float(params.get('iozone_timeout', '7200'))
 
     have_qtree = True
     out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
@@ -268,9 +272,12 @@ def run(test, params, env):
         _do_post_cmd(session)
         raise
     try:
+        if iozone_options:
+            iozone = generate_instance(params, session, 'iozone')
+            random.shuffle(disks)
         for i in range(n_repeat):
             logging.info("iterations: %s", (i + 1))
-            for disk in disks:
+            for n, disk in enumerate(disks):
                 error_context.context("Format disk in guest: '%s'" % disk,
                                       logging.info)
                 # Random select one file system from file_system
@@ -283,6 +290,7 @@ def run(test, params, env):
                     test.fail("Fail to format disks.")
                 cmd_list = params["cmd_list"]
                 for partition in partitions:
+                    orig_partition = partition
                     if "/" not in partition:
                         partition += ":"
                     else:
@@ -296,6 +304,8 @@ def run(test, params, env):
                     cmd = params["compare_command"]
                     key_word = params["check_result_key_word"]
                     output = session.cmd_output(cmd)
+                    if iozone_options and n < iozone_target_num:
+                        iozone.run(iozone_options.format(orig_partition), iozone_timeout)
                     if key_word not in output:
                         test.fail("Files on guest os root fs and disk differ")
                     if dd_test != "no":
@@ -334,4 +344,6 @@ def run(test, params, env):
             for disk in disks:
                 utils_disk.clean_partition(session, disk, ostype)
     finally:
+        if iozone_options:
+            iozone.clean()
         _do_post_cmd(session)

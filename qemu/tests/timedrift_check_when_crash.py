@@ -29,6 +29,7 @@ def run(test, params, env):
     nmi_cmd = params.get("nmi_cmd", "inject-nmi")
     sleep_time = float(params.get("sleep_time", 1800))
     deviation = float(params.get("deviation", 5))
+    os_type = params["os_type"]
 
     error_context.context("sync host time with ntp server", logging.info)
     process.system(clock_sync_command, shell=True)
@@ -61,6 +62,8 @@ def run(test, params, env):
     time.sleep(sleep_time)
     # Autotest parses serial output and could raise VMDeadKernelCrash
     # we generated using sysrq. Ignore one "BUG:" line
+    if os_type == "linux":
+        vm.resume()
     try:
         session = vm.reboot(method="system_reset")
     except VMDeadKernelCrashError as details:

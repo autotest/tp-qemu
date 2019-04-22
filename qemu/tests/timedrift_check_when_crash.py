@@ -23,7 +23,6 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    clock_sync_command = params["clock_sync_command"]
     ntp_cmd = params["ntp_cmd"]
     ntp_query_cmd = params["ntp_query_cmd"]
     nmi_cmd = params.get("nmi_cmd", "inject-nmi")
@@ -32,7 +31,7 @@ def run(test, params, env):
     os_type = params["os_type"]
 
     error_context.context("sync host time with ntp server", logging.info)
-    process.system(clock_sync_command, shell=True)
+    process.system(ntp_cmd, shell=True)
 
     error_context.context("start guest", logging.info)
     params["start_vm"] = "yes"

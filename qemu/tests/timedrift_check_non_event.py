@@ -45,10 +45,10 @@ def run(test, params, env):
             raise err
         return guest_time
 
-    clock_sync_command = params["clock_sync_command"]
+    ntp_cmd = params["ntp_cmd"]
 
     error_context.context("Sync host system time with ntpserver", logging.info)
-    process.system(clock_sync_command, shell=True)
+    process.system(ntp_cmd, shell=True)
 
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()

@@ -91,7 +91,7 @@ def run(test, params, env):
     error_context.context("check time offset via ntp", logging.info)
     output = session.cmd_output(ntp_query_cmd)
     try:
-        offset = re.findall(r"[+-](\d+\.\d+)", output, re.M)[-1]
+        offset = re.findall(r"[+-]?(\d+\.\d+)", output, re.M)[-1]
     except IndexError:
         offset = 0.0
     if float(offset) > deviation:

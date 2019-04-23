@@ -51,7 +51,7 @@ def run(test, params, env):
     for query in range(query_times):
         output = session.cmd_output(ntp_query_cmd)
         try:
-            offset = re.findall(r"([+-]*\d+\.\d+) seconds", output, re.M)[0]
+            offset = re.findall(r"([+-]*\d+\.\d+) sec", output, re.M)[-1]
         except IndexError:
             test.error("Failed to get time offset")
         if float(offset) >= drift_threshold:

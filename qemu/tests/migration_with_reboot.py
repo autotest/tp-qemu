@@ -3,6 +3,9 @@ import tempfile
 
 from virttest import utils_misc
 
+# Import helper methods from test "migration"
+import migration
+
 
 def run(test, params, env):
     """
@@ -29,6 +32,10 @@ def run(test, params, env):
     mig_cancel_delay = int(params.get("mig_cancel") == "yes") * 2
     migration_exec_cmd_src = params.get("migration_exec_cmd_src")
     migration_exec_cmd_dst = params.get("migration_exec_cmd_dst")
+    pre_migrate = migration.get_functions(params.get("pre_migrate"),
+                                          migration.__dict__)
+    post_migrate = migration.get_functions(params.get("post_migrate"),
+                                           migration.__dict__)
     if migration_exec_cmd_src and "%s" in migration_exec_cmd_src:
         mig_file = os.path.join(tempfile.mkdtemp(prefix="migrate",
                                                  dir=test.workdir),
@@ -43,10 +50,15 @@ def run(test, params, env):
         bg.start()
         try:
             while bg.isAlive():
+                for func in pre_migrate:
+                    func(vm, params, test)
                 vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                            env=env,
                            migration_exec_cmd_src=migration_exec_cmd_src,
                            migration_exec_cmd_dst=migration_exec_cmd_dst)
+                # run some functions after migrate finish.
+                for func in post_migrate:
+                    func(vm, params, test)
         except Exception:
             # If something bad happened in the main thread, ignore exceptions
             # raised in the background thread

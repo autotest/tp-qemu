@@ -89,12 +89,15 @@ class StorageBenchmark(object):
         :param timeout: timeout for waiting
         :type timeout: float
         """
-        logging.info('Checking the currently running %s processes.' % self.name)
+        proc_name = self.name if self.os_type == 'linux' else (
+                self.name.upper() + '.EXE')
+        logging.info('Checking the running %s processes.' % self.name)
         if not utils_misc.wait_for(
-                lambda: self.name not in self.session.cmd_output(
-                    self._list_pid % self.name), timeout, step=3.0):
+                lambda: not re.search(
+                    proc_name.lower(), self.session.cmd_output(
+                        self._list_pid % proc_name), re.I | re.M), timeout, step=3.0):
             raise TestError(
-                'Not all %s processes done in %s sec.' % (self.name, timeout))
+                'Not all %s processes done in %s sec.' % (proc_name, timeout))
 
     def _kill_procs(self):
         """Kill the specified processors by force."""
@@ -221,7 +224,8 @@ class StorageBenchmark(object):
             self._kill_procs()
         else:
             self._wait_procs_done(timeout)
-        self._remove_env_files()
+        if self.env_files:
+            self._remove_env_files()
 
 
 class IozoneLinuxCfg(object):

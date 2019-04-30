@@ -23,10 +23,10 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    clock_sync_command = params["clock_sync_command"]
+    ntp_cmd = params["ntp_cmd"]
 
     error_context.context("Sync host system time with ntpserver", logging.info)
-    process.system(clock_sync_command, shell=True)
+    process.system(ntp_cmd, shell=True)
 
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
@@ -37,7 +37,7 @@ def run(test, params, env):
     drift_threshold = float(params.get("drift_threshold", "3"))
 
     error_context.context("Sync time from guest to ntpserver", logging.info)
-    session.cmd(clock_sync_command)
+    session.cmd(ntp_cmd)
 
     error_context.context("Hotplug a vcpu to guest", logging.info)
     if int(params["smp"]) < int(params["vcpus_maxcpus"]):
@@ -51,7 +51,7 @@ def run(test, params, env):
     for query in range(query_times):
         output = session.cmd_output(ntp_query_cmd)
         try:
-            offset = re.findall(r"([+-]*\d+\.\d+) seconds", output, re.M)[0]
+            offset = re.findall(r"([+-]*\d+\.\d+) sec", output, re.M)[-1]
         except IndexError:
             test.error("Failed to get time offset")
         if float(offset) >= drift_threshold:

@@ -22,7 +22,7 @@ def run(test, params, env):
                           logging.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
-    if "tsc" not in process.system_output(host_cmd):
+    if "tsc" not in process.getoutput(host_cmd):
         test.cancel("Host must use 'tsc' clocksource")
 
     error_context.context("Boot the guest", logging.info)

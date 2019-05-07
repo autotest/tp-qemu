@@ -27,14 +27,17 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     def verify_elapsed_time():
-        usleep_cmd = r'echo "for n in \$(seq 1000);'
-        usleep_cmd += ' do usleep 10000; done"'' > /tmp/usleep.sh'
-        session.cmd(usleep_cmd)
+        sleep_cmd = r'echo "for n in \$(seq 1000);'
+        sleep_cmd += ' do sleep 0.01; done"'' > /tmp/sleep.sh'
+        session.cmd(sleep_cmd)
 
         get_time_cmd = 'for (( i=0; i<$(grep "processor" /proc/cpuinfo'
         get_time_cmd += ' | wc -l); i+=1 )); do /usr/bin/time -f"%e"'
-        get_time_cmd += ' taskset -c $i sh /tmp/usleep.sh; done'
-        output = session.cmd_output(get_time_cmd, timeout=timeout)
+        get_time_cmd += ' taskset -c $i sh /tmp/sleep.sh; done'
+        guest_cpu = session.cmd_output("grep 'processor' "
+                                       "/proc/cpuinfo | wc -l")
+        timeout_sleep = int(guest_cpu) * 12
+        output = session.cmd_output(get_time_cmd, timeout=timeout_sleep)
 
         times_list = output.splitlines()[1:]
         times_list = [_ for _ in times_list if float(_) < 10.0 or float(_) > 11.0]

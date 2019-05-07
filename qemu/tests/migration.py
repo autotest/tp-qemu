@@ -13,6 +13,53 @@ from virttest import error_context
 from virttest import qemu_monitor     # For MonitorNotSupportedMigCapError
 
 
+# Define get_function-functions as global to allow importing from other tests
+def get_functions(func_names, locals_dict):
+    """
+    Find sub function(s) in this function with the given name(s).
+    """
+    if not func_names:
+        return []
+    funcs = []
+    for f in func_names.split():
+        f = locals_dict.get(f)
+        if isinstance(f, types.FunctionType):
+            funcs.append(f)
+    return funcs
+
+
+def mig_set_speed(vm, params, test):
+    mig_speed = params.get("mig_speed", "1G")
+    return vm.monitor.migrate_set_speed(mig_speed)
+
+
+def check_dma(vm, params, test):
+    dmesg_pattern = params.get("dmesg_pattern",
+                               "ata.*?configured for PIO")
+    dma_pattern = params.get("dma_pattern", r"DMA.*?\(\?\)$")
+    pio_pattern = params.get("pio_pattern", r"PIO.*?pio\d+\s+$")
+    hdparm_cmd = params.get("hdparm_cmd",
+                            "i=`ls /dev/[shv]da` ; hdparm -I $i")
+    session_dma = vm.wait_for_login()
+    hdparm_output = session_dma.cmd_output(hdparm_cmd)
+    failed_msg = ""
+    if not re.search(dma_pattern, hdparm_output, re.M):
+        failed_msg += "Failed in DMA check from hdparm output.\n"
+    if not re.search(pio_pattern, hdparm_output, re.M):
+        failed_msg += "Failed in PIO check from hdparm output.\n"
+
+    if failed_msg:
+        failed_msg += "hdparm output is: %s\n" % hdparm_output
+
+    dmesg = session_dma.cmd_output("dmesg")
+    if not re.search(dmesg_pattern, dmesg):
+        failed_msg += "Failed in dmesg check.\n"
+        failed_msg += " dmesg from guest is: %s\n" % dmesg
+
+    if failed_msg:
+        test.fail(failed_msg)
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -103,49 +150,6 @@ def run(test, params, env):
                 break
             time.sleep(10)
 
-    def get_functions(func_names, locals_dict):
-        """
-        Find sub function(s) in this function with the given name(s).
-        """
-        if not func_names:
-            return []
-        funcs = []
-        for f in func_names.split():
-            f = locals_dict.get(f)
-            if isinstance(f, types.FunctionType):
-                funcs.append(f)
-        return funcs
-
-    def mig_set_speed():
-        mig_speed = params.get("mig_speed", "1G")
-        return vm.monitor.migrate_set_speed(mig_speed)
-
-    def check_dma():
-        dmesg_pattern = params.get("dmesg_pattern",
-                                   "ata.*?configured for PIO")
-        dma_pattern = params.get("dma_pattern", r"DMA.*?\(\?\)$")
-        pio_pattern = params.get("pio_pattern", r"PIO.*?pio\d+\s+$")
-        hdparm_cmd = params.get("hdparm_cmd",
-                                "i=`ls /dev/[shv]da` ; hdparm -I $i")
-        session_dma = vm.wait_for_login()
-        hdparm_output = session_dma.cmd_output(hdparm_cmd)
-        failed_msg = ""
-        if not re.search(dma_pattern, hdparm_output, re.M):
-            failed_msg += "Failed in DMA check from hdparm output.\n"
-        if not re.search(pio_pattern, hdparm_output, re.M):
-            failed_msg += "Failed in PIO check from hdparm output.\n"
-
-        if failed_msg:
-            failed_msg += "hdparm output is: %s\n" % hdparm_output
-
-        dmesg = session_dma.cmd_output("dmesg")
-        if not re.search(dmesg_pattern, dmesg):
-            failed_msg += "Failed in dmesg check.\n"
-            failed_msg += " dmesg from guest is: %s\n" % dmesg
-
-        if failed_msg:
-            test.fail(failed_msg)
-
     login_timeout = int(params.get("login_timeout", 360))
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")
@@ -198,7 +202,7 @@ def run(test, params, env):
             # run some functions before migrate start.
             pre_migrate = get_functions(params.get("pre_migrate"), locals())
             for func in pre_migrate:
-                func()
+                func(vm, params, test)
 
             # Start stress test in guest.
             guest_stress_test = params.get("guest_stress_test")
@@ -242,7 +246,7 @@ def run(test, params, env):
             # run some functions after migrate finish.
             post_migrate = get_functions(params.get("post_migrate"), locals())
             for func in post_migrate:
-                func()
+                func(vm, params, test)
 
             # Log into the guest again
             logging.info("Logging into guest after migration...")

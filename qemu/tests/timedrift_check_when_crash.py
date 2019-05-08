@@ -6,6 +6,7 @@ from avocado.utils import process
 from virttest.env_process import preprocess
 from virttest.virt_vm import VMDeadKernelCrashError
 from virttest import error_context
+from virttest import utils_test
 
 
 @error_context.context_aware
@@ -29,9 +30,10 @@ def run(test, params, env):
     sleep_time = float(params.get("sleep_time", 1800))
     deviation = float(params.get("deviation", 5))
     os_type = params["os_type"]
+    ntp_host_cmd = params.get("ntp_host_cmd", ntp_cmd)
 
     error_context.context("sync host time with ntp server", logging.info)
-    process.system(ntp_cmd, shell=True)
+    process.system(ntp_host_cmd, shell=True)
 
     error_context.context("start guest", logging.info)
     params["start_vm"] = "yes"
@@ -42,6 +44,8 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("sync time in guest", logging.info)
+    if os_type == "windows":
+        utils_test.start_windows_service(session, "w32time")
     session.cmd(ntp_cmd)
 
     error_context.context("inject nmi interrupt in vm", logging.info)

@@ -791,6 +791,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("the interface list info after interface was down "
                       "was not as expected")
 
+    @error_context.context_aware
     def gagent_check_reboot_shutdown(self, test, params, env):
         """
         Send "shutdown,reboot" command to guest agent
@@ -1155,7 +1156,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session = self._open_session_list[-1]
 
         try:
-            session.cmd(self.params["gagent_fs_test_cmd"])
+            session.cmd(args[0], args[1])
         except aexpect.ShellTimeoutError:
             logging.info("FS is frozen as expected,can't write in guest.")
         else:
@@ -1174,9 +1175,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self._open_session_list.append(session)
         # Use the last opened session to send cmd.
         session = self._open_session_list[-1]
-
         try:
-            session.cmd(self.params["gagent_fs_test_cmd"])
+            session.cmd(args[0], args[1])
         except aexpect.ShellTimeoutError:
             self.test.fail("FS is not thawed, still can't write in guest.")
         else:
@@ -1201,6 +1201,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Check guest agent command "
                               "'guest-fsfreeze-freeze/thaw'",
                               logging.info)
+        write_cmd = params["gagent_fs_test_cmd"]
+        write_cmd_timeout = int(params.get("write_cmd_timeout", 60))
         try:
             expect_status = self.gagent.FSFREEZE_STATUS_THAWED
             self.gagent.verify_fsfreeze_status(expect_status)
@@ -1212,7 +1214,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Freeze the FS.", logging.info)
         self.gagent.fsfreeze()
         try:
-            self._action_after_fsfreeze()
+            self._action_after_fsfreeze(write_cmd, write_cmd_timeout)
             # Next, thaw guest fs.
             self._action_before_fsthaw()
             error_context.context("Thaw the FS.", logging.info)
@@ -1227,7 +1229,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                              " detail: '%s'", detail)
             raise
 
-        self._action_after_fsthaw()
+        self._action_after_fsthaw(write_cmd, write_cmd_timeout)
 
     @error_context.context_aware
     def gagent_check_thaw_unfrozen(self, test, params, env):
@@ -1553,6 +1555,125 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)
+
+    @error_context.context_aware
+    def gagent_check_fsfreeze_vss_test(self, test, params, env):
+        """
+        Test guest agent commands "guest-fsfreeze-freeze/status/thaw"
+        for windows guest.
+
+        Test steps:
+        1) Check the FS is thawed.
+        2) Start writing file test as a background test.
+        3) Freeze the FS.
+        3) Check the FS is frozen from both guest agent side and guest os side.
+        4) Start writing file test as a background test.
+        5) Thaw the FS.
+        6) Check the FS is thaw from both guest agent side and guest os side.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        @error_context.context_aware
+        def background_start(session):
+            """
+            Before freeze or thaw guest file system, start a background test.
+            """
+            logging.info("Write time stamp to guest file per second "
+                         "as a background job.")
+            fswrite_cmd = utils_misc.set_winutils_letter(
+                session, self.params["gagent_fs_test_cmd"])
+
+            session.cmd(fswrite_cmd, timeout=360)
+
+        @error_context.context_aware
+        def result_check(flag, write_timeout, session):
+            """
+            Check if freeze or thaw guest file system works.
+
+            :param flag: frozen or thaw
+            :param write_timeout: timeout of writing to guest file
+            """
+            time.sleep(write_timeout)
+            k_cmd = "wmic process where \"name='python.exe' and " \
+                    "CommandLine Like '%fsfreeze%'\" call terminate"
+            s, o = session.cmd_status_output(k_cmd)
+            if s:
+                self.test.error("Command '%s' failed, status: %s,"
+                                " output: %s" % (k_cmd, s, o))
+
+            error_context.context("Check guest FS status.", logging.info)
+            # init fs status to 'thaw'
+            fs_status = "thaw"
+            file_name = "/tmp/fsfreeze_%s.txt" % flag
+            process.system("rm -rf %s" % file_name)
+            self.vm.copy_files_from("C:\\fsfreeze.txt", file_name)
+            with open(file_name, 'r') as f:
+                list_time = f.readlines()
+
+            for i in list(range(0, len(list_time))):
+                list_time[i] = list_time[i].strip()
+
+            for i in list(range(1, len(list_time))):
+                num_d = float(list_time[i]) - float(list_time[i - 1])
+                if num_d > 8:
+                    logging.info("Time stamp is not continuous,"
+                                 " so the FS is frozen.")
+                    fs_status = "frozen"
+                    break
+            if not fs_status == flag:
+                self.test.fail("FS is not %s, it's %s." % (flag, fs_status))
+
+        error_context.context("Check guest agent command "
+                              "'guest-fsfreeze-freeze/thaw'",
+                              logging.info)
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+
+        # make write time longer than freeze timeout
+        write_timeout = int(params["freeze_timeout"]) + 10
+        try:
+            expect_status = self.gagent.FSFREEZE_STATUS_THAWED
+            self.gagent.verify_fsfreeze_status(expect_status)
+        except guest_agent.VAgentFreezeStatusError:
+            # Thaw guest FS if the fs status is incorrect.
+            self.gagent.fsthaw(check_status=False)
+
+        error_context.context("Before freeze/thaw the FS, run the background "
+                              "job.", logging.info)
+        background_start(session)
+        error_context.context("Freeze the FS.", logging.info)
+        self.gagent.fsfreeze()
+        try:
+            error_context.context("Waiting %s, then finish writing the time "
+                                  "stamp in guest file." % write_timeout)
+            result_check("frozen", write_timeout, session)
+            # Next, thaw guest fs.
+            error_context.context("Before freeze/thaw the FS, run the background "
+                                  "job.", logging.info)
+            background_start(session)
+            error_context.context("Thaw the FS.", logging.info)
+            try:
+                self.gagent.fsthaw()
+            except guest_agent.VAgentCmdError as detail:
+                if re.search("fsfreeze is limited up to 10 seconds", str(detail)):
+                    logging.info("FS is thaw as it's limited up to 10 seconds.")
+                else:
+                    test.fail("guest-fsfreeze-thaw cmd failed with:"
+                              "('%s')" % str(detail))
+        except Exception:
+            # Thaw fs finally, avoid problem in following cases.
+            try:
+                self.gagent.fsthaw(check_status=False)
+            except Exception as detail:
+                # Ignore exception for this thaw action.
+                logging.warn("Finally failed to thaw guest fs,"
+                             " detail: '%s'", detail)
+            raise
+        error_context.context("Waiting %s, then finish writing the time "
+                              "stamp in guest file." % write_timeout)
+        result_check("thaw", write_timeout, session)
 
 
 def run(test, params, env):

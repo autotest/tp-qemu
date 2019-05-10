@@ -4,7 +4,7 @@ import tempfile
 from virttest import utils_misc
 
 # Import helper methods from test "migration"
-import migration
+from qemu.tests import migration
 
 
 def run(test, params, env):

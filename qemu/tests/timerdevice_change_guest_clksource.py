@@ -1,11 +1,9 @@
 import logging
 import re
 
-from virttest import data_dir
-from virttest import storage
-from virttest import utils_disk
-from virttest import env_process
 from virttest import error_context
+from virttest import utils_time
+from virttest import utils_test
 
 
 @error_context.context_aware
@@ -25,11 +23,7 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     def verify_guest_clock_source(session, expected):
-        error_context.context("Check the current clocksource in guest",
-                              logging.info)
-        cmd = "cat /sys/devices/system/clocksource/"
-        cmd += "clocksource0/current_clocksource"
-        if expected not in session.cmd(cmd):
+        if expected not in session.cmd(cur_clk):
             test.fail("Guest didn't use '%s' clocksource" % expected)
 
     error_context.context("Boot a guest with kvm-clock", logging.info)
@@ -41,134 +35,38 @@ def run(test, params, env):
 
     error_context.context("Check the current clocksource in guest",
                           logging.info)
-    cmd = "cat /sys/devices/system/clocksource/"
-    cmd += "clocksource0/current_clocksource"
-    if "kvm-clock" not in session.cmd(cmd):
-        grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
-        if "clocksource=" not in session.cmd("cat %s" % grub_file):
-            test.fail("Guest didn't use 'kvm-clock' clocksource")
-
-        error_context.context("Shutdown guest")
-        vm.destroy()
-        env.unregister_vm(vm.name)
+    cur_clk = params["cur_clk"]
+    if "kvm-clock" not in session.cmd(cur_clk):
         error_context.context("Update guest kernel cli to kvm-clock",
                               logging.info)
-        image_filename = storage.get_image_filename(params,
-                                                    data_dir.get_data_dir())
-        kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                        r".*vmlinuz-\d+.*")
-
-        disk_obj = utils_disk.GuestFSModiDisk(image_filename)
-        kernel_cfg_original = disk_obj.read_file(grub_file)
-        try:
-            logging.warn("Update the first kernel entry to"
-                         " kvm-clock only")
-            kernel_cfg = re.findall(kernel_cfg_pattern,
-                                    kernel_cfg_original)[0]
-        except IndexError as detail:
-            test.error("Couldn't find the kernel config, regex"
-                       " pattern is '%s', detail: '%s'" %
-                       (kernel_cfg_pattern, detail))
-
-        if "clocksource=" in kernel_cfg:
-            kernel_cfg_new = re.sub(r"clocksource=[a-z\- ]+", " ", kernel_cfg)
-            disk_obj.replace_image_file_content(grub_file, kernel_cfg,
-                                                kernel_cfg_new)
-
-        error_context.context("Boot the guest", logging.info)
-        vm_name = params["main_vm"]
-        cpu_model_flags = params.get("cpu_model_flags")
-        params["cpu_model_flags"] = cpu_model_flags + ",-kvmclock"
-        env_process.preprocess_vm(test, params, env, vm_name)
-        vm = env.get_vm(vm_name)
-        vm.verify_alive()
+        utils_time.update_clksrc(vm, clksrc="kvm-clock")
         session = vm.wait_for_login(timeout=timeout)
+        verify_guest_clock_source(session, "kvm-clock")
 
     error_context.context("Check the available clocksource in guest",
                           logging.info)
-    cmd = "cat /sys/devices/system/clocksource/"
-    cmd += "clocksource0/available_clocksource"
+    avl_clk = params["avl_clk"]
     try:
-        available_clksrc_list = session.cmd(cmd).splitlines()[-1].split()
-        available_clksrc_list = [_.strip() for _ in available_clksrc_list]
+        available_clksrc_list = session.cmd(avl_clk).split()
     except Exception as detail:
         test.fail("Couldn't get guest available clock source."
                   " Detail: '%s'" % detail)
-
     try:
-        for clksrc in available_clksrc_list:
-            error_context.context("Shutdown guest")
-            vm.destroy()
-            env.unregister_vm(vm.name)
-            error_context.context("Update guest kernel cli to '%s'" % clksrc,
+        for avl_clksrc in available_clksrc_list:
+            if avl_clksrc == "kvm-clock":
+                continue
+            error_context.context("Update guest kernel cli to '%s'" % avl_clksrc,
                                   logging.info)
-            image_filename = storage.get_image_filename(params,
-                                                        data_dir.get_data_dir())
-            grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
-            kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                            r".*vmlinuz-\d+.*")
-
-            disk_obj = utils_disk.GuestFSModiDisk(image_filename)
-            kernel_cfg_original = disk_obj.read_file(grub_file)
-            try:
-                logging.warn("Update the first kernel entry to"
-                             " '%s' only" % clksrc)
-                kernel_cfg = re.findall(kernel_cfg_pattern,
-                                        kernel_cfg_original)[0]
-            except IndexError as detail:
-                test.error("Couldn't find the kernel config, regex"
-                           " pattern is '%s', detail: '%s'" %
-                           (kernel_cfg_pattern, detail))
-
-            if "clocksource=" in kernel_cfg:
-                kernel_cfg_new = re.sub(r"clocksource=[a-z \-_]+",
-                                        "clocksource=%s " % clksrc, kernel_cfg)
-            else:
-                kernel_cfg_new = "%s %s" % (kernel_cfg,
-                                            "clocksource=%s" % clksrc)
-            disk_obj.replace_image_file_content(grub_file, kernel_cfg,
-                                                kernel_cfg_new)
-
-            error_context.context("Boot the guest", logging.info)
-            if clksrc != "kvm-clock":
-                cpu_model_flags = params.get("cpu_model_flags")
-                if "-kvmclock" not in cpu_model_flags:
-                    params["cpu_model_flags"] = cpu_model_flags + ",-kvmclock"
-            vm_name = params["main_vm"]
-            env_process.preprocess_vm(test, params, env, vm_name)
-            vm = env.get_vm(vm_name)
-            vm.verify_alive()
+            utils_time.update_clksrc(vm, clksrc=avl_clksrc)
             session = vm.wait_for_login(timeout=timeout)
-
             error_context.context("Check the current clocksource in guest",
                                   logging.info)
-            verify_guest_clock_source(session, clksrc)
+            verify_guest_clock_source(session, avl_clksrc)
     finally:
-        try:
-            error_context.context("Shutdown guest")
-            vm.destroy()
-            error_context.context("Restore guest kernel cli", logging.info)
-            image_filename = storage.get_image_filename(params,
-                                                        data_dir.get_data_dir())
-            grub_file = params.get("grub_file", "/boot/grub2/grub.cfg")
-            kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
-                                            r".*vmlinuz-\d+.*")
-
-            disk_obj = utils_disk.GuestFSModiDisk(image_filename)
-            kernel_cfg_original = disk_obj.read_file(grub_file)
-            try:
-                kernel_cfg = re.findall(kernel_cfg_pattern,
-                                        kernel_cfg_original)[0]
-            except IndexError as detail:
-                test.error("Couldn't find the kernel config, regex"
-                           " pattern is '%s', detail: '%s'" %
-                           (kernel_cfg_pattern, detail))
-
-            if "clocksource=" in kernel_cfg:
-                kernel_cfg_new = re.sub(
-                    r"clocksource=[a-z \-_]+", " ", kernel_cfg)
-                disk_obj.replace_image_file_content(grub_file, kernel_cfg,
-                                                    kernel_cfg_new)
-        except Exception as detail:
-            logging.error("Failed to restore guest kernel cli."
-                          " Detail: '%s'" % detail)
+        error_context.context("Restore guest kernel cli", logging.info)
+        proc_cmdline = "cat /proc/cmdline"
+        check_output = str(session.cmd(proc_cmdline, timeout=60))
+        clk_removed = re.search("clocksource.*", check_output).group()
+        utils_test.update_boot_option(vm, args_removed=clk_removed)
+        session = vm.wait_for_login(timeout=timeout)
+        verify_guest_clock_source(session, "kvm-clock")

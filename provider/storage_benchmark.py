@@ -17,6 +17,8 @@ import logging
 import os
 import re
 
+from functools import wraps
+
 from platform import machine
 
 from virttest import utils_misc
@@ -227,6 +229,18 @@ class StorageBenchmark(object):
         if self.env_files:
             self._remove_env_files()
 
+    @staticmethod
+    def _clean_env(func):
+        """ Decorator that clean the env files. """
+        @wraps(func)
+        def __clean_env(self, *args, **kwargs):
+            try:
+                return func(self, *args, **kwargs)
+            except Exception as e:
+                self.clean()
+                raise TestError(str(e))
+        return __clean_env
+
 
 class IozoneLinuxCfg(object):
     def __init__(self, params, session):
@@ -257,6 +271,7 @@ class IozoneWinCfg(object):
 
 
 class Iozone(StorageBenchmark):
+    @StorageBenchmark._clean_env
     def __init__(self, params, session):
         self.os_type = params['os_type']
         super(Iozone, self).__init__(self.os_type, session, 'iozone')
@@ -305,6 +320,7 @@ class FioWinCfg(object):
 
 
 class Fio(StorageBenchmark):
+    @StorageBenchmark._clean_env
     def __init__(self, params, session):
         self.os_type = params['os_type']
         super(Fio, self).__init__(self.os_type, session, 'fio')

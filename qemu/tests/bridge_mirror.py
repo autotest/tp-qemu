@@ -11,7 +11,7 @@ from virttest import error_context
 @error_context.context_aware
 def run(test, params, env):
     """
-    Test port mirror with bridge backend
+    Test port mirror with linux bridge backend.
 
     1) Create a private bridge
     2) Set private bridge promisc mode and up
@@ -32,12 +32,11 @@ def run(test, params, env):
 
         :param tap_name: name of tap connected to vm
         """
-        enable_promisc_cmd = params.get("enable_promisc_cmd")
+
         tc_qdisc_add_ingress = params.get("tc_qdisc_add_ingress")
         tc_filter_show_dev = params.get("tc_filter_show_dev")
         tc_filter_replace_dev = params.get("tc_filter_replace_dev") % tap_name
         tc_qdisc_replace = params.get("tc_qdisc_replace")
-        process.system_output(enable_promisc_cmd)
         process.system_output(tc_qdisc_add_ingress)
         process.system_output(tc_filter_show_dev)
         process.system_output(tc_filter_replace_dev)
@@ -77,28 +76,34 @@ def run(test, params, env):
                 reply_num += 1
 
         if request_num != ping_count or reply_num != ping_count:
-            logging.debug(
-                "Unexpect request or reply number. "
-                "current request number is: %d, "
-                "current reply number is: %d, "
-                "expected request and reply number is: %d. "
-                % (request_num, reply_num, ping_count))
+            logging.debug("Unexpected request or reply number. "
+                          "current request number is: %d, "
+                          "current reply number is: %d, "
+                          "expected request and reply number is: %d. "
+                          % (request_num, reply_num, ping_count))
             return False
         return True
+
+    netdst = params.get("netdst", "switch")
+    br_backend = utils_net.find_bridge_manager(netdst)
+    if not isinstance(br_backend, utils_net.Bridge):
+        test.cancel("Host does not use Linux Bridge")
 
     brname = params.get("private_bridge", "tmpbr")
     net_mask = params.get("net_mask", "24")
     login_timeout = int(params.get("login_timeout", "600"))
     stop_NM_cmd = params.get("stop_NM_cmd")
     stop_firewall_cmd = params.get("stop_firewall_cmd")
-    add_private_bridge_cmd = params.get("add_private_bridge_cmd")
     tcpdump_cmd = params.get("tcpdump_cmd")
     tcpdump_log = params.get("tcpdump_log")
     get_tcpdump_log_cmd = params.get("get_tcpdump_log_cmd")
     ping_count = int(params.get("ping_count"))
 
     error_context.context("Create a private bridge", logging.info)
-    process.system_output(add_private_bridge_cmd, shell=True)
+    br_backend.add_bridge(brname)
+    br_iface = utils_net.Interface(brname)
+    br_iface.up()
+    br_iface.promisc_on()
 
     params['netdst'] = brname
     params["start_vm"] = "yes"
@@ -116,7 +121,9 @@ def run(test, params, env):
             session.cmd(stop_firewall_cmd, ignore_all_errors=True)
             nic_name = utils_net.get_linux_ifname(session, mac)
             ifname = vm.get_ifname()
-            ifup_cmd = "ifconfig %s %s/%s up" % (nic_name, ip, net_mask)
+            ifset_cmd = "ip addr add %s/%s dev %s" % (ip, net_mask, nic_name)
+            ifup_cmd = "ip link set dev %s up" % nic_name
+            session.cmd(ifset_cmd)
             session.cmd(ifup_cmd)
             vms_info[vm_name] = [vm, ifname, ip, session, nic_name]
 
@@ -132,8 +139,7 @@ def run(test, params, env):
 
         error_context.context("Start tcpdump in %s"
                               % vm_mirror, logging.info)
-        tcpdump_cmd = params.get("tcpdump_cmd") % (
-            vms_info[vm_des][2], tcpdump_log)
+        tcpdump_cmd = tcpdump_cmd % (vms_info[vm_des][2], tcpdump_log)
         logging.info("tcpdump command: %s" % tcpdump_cmd)
         vms_info[vm_mirror][3].sendline(tcpdump_cmd)
         time.sleep(5)
@@ -148,14 +154,12 @@ def run(test, params, env):
         vms_info[vm_mirror][3].cmd_output_safe("pkill tcpdump")
         tcpdump_content = vms_info[vm_mirror][3].cmd_output(
             get_tcpdump_log_cmd).strip()
-        if not check_tcpdump(
-                tcpdump_content, vms_info[vm_src][2], vms_info[vm_des][2], ping_count):
+        if not check_tcpdump(tcpdump_content, vms_info[vm_src][2],
+                             vms_info[vm_des][2], ping_count):
             test.fail("tcpdump results are not expected, mirror fail.")
     finally:
         for vm in vms_info:
             vms_info[vm][0].destroy(gracefully=False)
-        tc_qdisc_del_ingress = params.get("tc_qdisc_del_ingress")
-        tc_qdisc_del_root = params.get("tc_qdisc_del_root")
-        process.system_output(tc_qdisc_del_ingress)
-        process.system_output(tc_qdisc_del_root)
-        process.system_output("ip link delete %s" % brname)
+
+        br_iface.down()
+        br_backend.del_bridge(brname)

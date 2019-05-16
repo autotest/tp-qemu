@@ -67,7 +67,7 @@ def run(test, params, env):
     load_cmd = "for ((I=0; I<`grep 'processor id' /proc/cpuinfo| wc -l`; I++));"
     load_cmd += " do taskset $(( 1 << $I )) /bin/bash -c 'for ((;;)); do X=1; done &';"
     load_cmd += " done"
-    sess_guest_load.sendline(load_cmd)
+    sess_guest_load.cmd(load_cmd)
 
     error_context.context("Pin every vcpu to a physical cpu", logging.info)
     host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
@@ -84,7 +84,7 @@ def run(test, params, env):
     error_context.context("Run time-warp-test", logging.info)
     session = vm.wait_for_login(timeout=timeout)
     cmd = "/tmp/time-warp-test > /dev/null &"
-    session.sendline(cmd)
+    session.cmd(cmd)
 
     error_context.context("Start chronyd on guest", logging.info)
     cmd = "systemctl start chronyd; sleep 1; echo"

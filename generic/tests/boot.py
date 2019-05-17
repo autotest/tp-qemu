@@ -20,15 +20,22 @@ def run(test, params, env):
     """
 
     timeout = float(params.get("login_timeout", 240))
+    serial_login = params.get("serial_login", "no") == "yes"
     vms = env.get_all_vms()
     for vm in vms:
         error_context.context("Try to log into guest '%s'." % vm.name, logging.info)
-        session = vm.wait_for_login(timeout=timeout)
+        if serial_login:
+            session = vm.wait_for_serial_login(timeout=timeout)
+        else:
+            session = vm.wait_for_login(timeout=timeout)
         session.close()
 
     if params.get("rh_perf_envsetup_script"):
         for vm in vms:
-            session = vm.wait_for_login(timeout=timeout)
+            if serial_login:
+                session = vm.wait_for_serial_login(timeout=timeout)
+            else:
+                session = vm.wait_for_login(timeout=timeout)
             utils_test.service_setup(vm, session, test.virtdir)
             session.close()
     if params.get("reboot_method"):
@@ -37,10 +44,14 @@ def run(test, params, env):
             if params["reboot_method"] == "system_reset":
                 time.sleep(int(params.get("sleep_before_reset", 10)))
             # Reboot the VM
-            session = vm.wait_for_login(timeout=timeout)
+            if serial_login:
+                session = vm.wait_for_serial_login(timeout=timeout)
+            else:
+                session = vm.wait_for_login(timeout=timeout)
             for i in range(int(params.get("reboot_count", 1))):
                 session = vm.reboot(session,
                                     params["reboot_method"],
                                     0,
-                                    timeout)
+                                    timeout,
+                                    serial_login)
             session.close()

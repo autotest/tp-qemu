@@ -13,7 +13,7 @@ from virttest import remote
 from virttest import data_dir
 
 
-_system_output = functools.partial(process.system_output, shell=True)
+_system_output = functools.partial(process.getoutput, shell=True)
 
 
 @error_context.context_aware
@@ -277,11 +277,17 @@ def run(test, params, env):
         error_context.context("Set up %s service in %s"
                               % (setup_params.get("service"), setup_target),
                               logging.info)
-        setup_func(setup_cmd, timeout=setup_timeout)
         if params.get("copy_ftp_site") and setup_target != "localhost":
-            ftp_site = os.path.join(data_dir.get_deps_dir(), params.get("copy_ftp_site"))
+            ftp_site = os.path.join(data_dir.get_deps_dir(),
+                                    params.get("copy_ftp_site"))
             ftp_dir = params.get("ftp_dir")
             setup_vm.copy_files_to(ftp_site, ftp_dir)
+        access_param = setup_params.object_params(setup_target)
+        if "ftp" in access_param.get("access_cmd") and os_type == "linux":
+            setup_func(
+                    "sed -i 's/anonymous_enable=NO/anonymous_enable=YES/g' %s"
+                    % params["vsftpd_conf"])
+        setup_func(setup_cmd, timeout=setup_timeout)
 
         if prepare_cmd:
             setup_func(prepare_cmd, timeout=setup_timeout)
@@ -325,8 +331,7 @@ def run(test, params, env):
     for vm in env.get_all_vms():
         session = vm.wait_for_login(timeout=timeout)
         if params.get("disable_iptables") == "yes":
-            session.cmd("iptables -F")
-            #session.cmd_status_output("service iptables stop")
+            session.cmd_output("systemctl stop firewalld||service firewalld stop")
         if params.get("copy_scripts"):
             root_dir = data_dir.get_root_dir()
             script_dir = os.path.join(root_dir, "shared", "scripts")
@@ -420,6 +425,7 @@ def run(test, params, env):
                 br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
+
     error_context.context("Try to acess target to exam the enable rules",
                           logging.info)
     access_service(access_sys, access_targets, False, host_ip)

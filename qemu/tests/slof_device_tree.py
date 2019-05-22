@@ -1,10 +1,5 @@
 import logging
-
 from avocado.utils import process
-from avocado.core import exceptions
-
-from virttest import utils_misc
-from virttest.qemu_devices import qcontainer
 from virttest import error_context
 
 
@@ -31,15 +26,19 @@ def run(test, params, env):
         (status, output) = vm_session.cmd_status_output(
             "echo `cat /proc/device-tree/%s`" % guest_info)
         if status != 0:
-            raise exceptions.TestFail("Failed to get %s" % guest_info)
-        return output.strip()
+            test.fail("Failed to get %s" % guest_info)
+        return output.strip().splitlines()[-1]
 
-    def check_nonexist_aliases(vm_session, devices):
+    def compare_dev_tree(keyword, src):
+        dst = get_info(session, keyword)
+        if src != dst:
+            test.fail("%s does not match to %s" % (src, dst))
+
+    def check_nonexist_aliases(vm_session):
         """
         Check a nonexist device aliases.
 
         :param vm_session: session to checked vm.
-        :return: corresponding prompt
         """
 
         status = vm_session.cmd_status(
@@ -47,8 +46,7 @@ def run(test, params, env):
         error_context.context(
             "Checking whether aliases file is indeed nonexisting", logging.info)
         if status == 0:
-            raise exceptions.TestFail(
-                "Nonexist cdrom aliases check failed.")
+            test.fail("Nonexist cdrom aliases check failed.")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -57,29 +55,15 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     try:
-        guest_system_id = get_info(session, "system-id")
-        if guest_system_id != vm.get_uuid():
-            raise exceptions.TestFail("Guest system id does not match to uuid")
-
-        guest_uuid = get_info(session, "vm,uuid")
-        if guest_uuid != vm.get_uuid():
-            raise exceptions.TestFail(
-                "Guest uuid does not match to expected id.")
-
+        uuid = vm.get_uuid()
+        compare_dev_tree("system-id", uuid)
+        compare_dev_tree("vm,uuid", uuid)
         host_system_id = process.system_output(
-            "echo `cat /proc/device-tree/system-id`", shell=True).strip()
-        host_system_id_in_guest = get_info(session, "host-serial")
-        if host_system_id != host_system_id_in_guest:
-            raise exceptions.TestFail(
-                "Host system id does not match to value in guest.")
+            "echo `cat /proc/device-tree/system-id`", shell=True).strip().decode()
+        compare_dev_tree("host-serial", host_system_id)
+        compare_dev_tree("ibm,partition-name", params["main_vm"])
 
-        guest_partition_name = get_info(session, "ibm,partition-name")
-        if guest_partition_name != params.get("main_vm"):
-            raise exceptions.TestFail("Guest partition name is wrong.")
-
-        qemu_binary = utils_misc.get_qemu_binary(params)
-        devices = qcontainer.DevContainer(qemu_binary, vm, strict_mode="no")
-        check_nonexist_aliases(session, devices)
+        check_nonexist_aliases(session)
 
     finally:
         session.close()

@@ -190,7 +190,7 @@ class BallooningTest(MemoryBaseTest):
         else:
             compare_mem = new_mem
 
-        balloon_timeout = float(self.params.get("balloon_timeout", 240))
+        balloon_timeout = float(self.params.get("balloon_timeout", 480))
         status = utils_misc.wait_for((lambda: compare_mem ==
                                       self.get_ballooned_memory()),
                                      balloon_timeout)

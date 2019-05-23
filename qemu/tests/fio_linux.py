@@ -51,8 +51,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=float(params.get("login_timeout", 240)))
+    fio = generate_instance(params, session, 'fio')
     try:
-        fio = generate_instance(params, session, 'fio')
         for did in _get_data_disks():
             for option in params['fio_options'].split(';'):
                 fio.run('--filename=%s %s' % (did, option))

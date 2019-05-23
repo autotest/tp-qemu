@@ -60,8 +60,8 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=float(params.get("login_timeout", 360)))
     _wait_for_procs_done()
     error_context.context("Running IOzone command on guest.")
+    iozone = generate_instance(params, session, 'iozone')
     try:
-        iozone = generate_instance(params, session, 'iozone')
         dids = _get_data_disks()
         if dids:
             mount_info = session.cmd_output_safe('cat /proc/mounts | grep \'/dev/\'')

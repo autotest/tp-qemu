@@ -66,8 +66,8 @@ def run(test, params, env):
         logging.info('Doing fio testing inside guest.')
         session = utils_test.qemu.windrv_check_running_verifier(
             session, vm, test, params["driver_name"])
+        fio = generate_instance(params, session, 'fio')
         try:
-            fio = generate_instance(params, session, 'fio')
             fio.run(params['fio_options'], float(params['stress_timeout']))
         finally:
             fio.clean()
@@ -82,8 +82,8 @@ def run(test, params, env):
         if os_type == 'windows':
             session = utils_test.qemu.windrv_check_running_verifier(
                 session, vm, test, params["driver_name"])
+        iozone = generate_instance(params, session, 'iozone')
         try:
-            iozone = generate_instance(params, session, 'iozone')
             iozone.run(params['iozone_options'], float(params['iozone_timeout']))
         finally:
             iozone.clean()

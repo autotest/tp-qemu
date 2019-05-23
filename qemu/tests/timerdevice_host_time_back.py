@@ -27,7 +27,7 @@ def run(test, params, env):
     process.system(clock_sync_command, shell=True)
 
     vm = env.get_vm(params["main_vm"])
-    session = vm.wait_for_login()
+    session = vm.wait_for_serial_login()
 
     seconds_to_back = params["seconds_to_back"]
     set_host_time_back_cmd = params["set_host_time_back_cmd"]
@@ -50,8 +50,8 @@ def run(test, params, env):
     time.sleep(10)
 
     try:
-        vm.reboot()
-        session = vm.wait_for_login()
+        vm.reboot(serial=True)
+        session = vm.wait_for_serial_login()
 
         error_context.context("Check time difference between host and guest", logging.info)
         try:

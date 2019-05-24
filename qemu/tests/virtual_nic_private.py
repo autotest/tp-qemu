@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 
 from aexpect import ShellCmdError
 from virttest import remote
@@ -28,6 +29,26 @@ def run(test, params, env):
                 test.fail("God! Capture the transfet data:'%s'" % str(e))
             logging.info("Guest3 catch data is '%s'" % str(e))
 
+    def windump_env_set(vm, session):
+        """
+        Setup windump env in windows guest
+
+        :param vm: guest to install pcap and set up windump
+        :param session: guest session
+        """
+        error_context.context("Copy windump and npcap to "
+                              "windows guest", logging.info)
+        guest_windump_dir = params["guest_windump_dir"]
+        copy_cmd = "xcopy %s %s /y"
+        windump_path = utils_misc.set_winutils_letter(session, params["windump_path"])
+        winpcap_path = utils_misc.set_winutils_letter(session, params["winpcap_path"])
+        session.cmd(copy_cmd % (windump_path, params["guest_windump_dir"]))
+        session.cmd(copy_cmd % (winpcap_path, params["guest_windump_dir"]))
+        error_context.context("Install npcap in "
+                              "windows guest", logging.info)
+        session.cmd(params["npcap_install_cmd"])
+        time.sleep(120)
+
     timeout = int(params.get("login_timeout", '360'))
     password = params.get("password")
     username = params.get("username")
@@ -54,6 +75,8 @@ def run(test, params, env):
         addresses.append(vm.get_address())
     mon_session = vms[2].wait_for_login(timeout=timeout)
     mon_macaddr = vms[2].get_mac_address()
+    if params.get("os_type") == "windows":
+        windump_env_set(vms[2], mon_session)
 
     src_file = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
     dst_file = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))
@@ -69,8 +92,11 @@ def run(test, params, env):
             if_func = utils_net.get_windows_nic_attribute
             args = (mon_session, "macaddress", mon_macaddr, "netconnectionid")
         interface_name = if_func(*args)
-        tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
-                                     interface_name)
+        if params.get("os_type") == "linux":
+            tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
+                                         interface_name)
+        else:
+            tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0])
         dthread = utils_misc.InterruptedThread(data_mon,
                                                (sessions[2],
                                                 tcpdump_cmd,
@@ -78,7 +104,8 @@ def run(test, params, env):
 
         logging.info("Tcpdump mon start ...")
         logging.info("Creating %dMB file on guest1", filesize)
-        sessions[0].cmd(dd_cmd % (src_file, filesize), timeout=timeout)
+        sessions[0].sendline(dd_cmd % (src_file, filesize))
+        time.sleep(60)
         dthread.start()
 
         error_context.context("Transferring file guest1 -> guest2",
@@ -87,7 +114,8 @@ def run(test, params, env):
             cp_cmd = params["copy_cmd"]
             cp_cmd = cp_cmd % (addresses[1], params['file_transfer_port'],
                                src_file, dst_file)
-            sessions[0].cmd_output(cp_cmd)
+            sessions[0].sendline(cp_cmd)
+            time.sleep(120)
         else:
             remote.scp_between_remotes(addresses[0], addresses[1],
                                        shell_port, password, password,
@@ -95,8 +123,10 @@ def run(test, params, env):
 
         error_context.context("Check the src and dst file is same",
                               logging.info)
-        src_md5 = sessions[0].cmd_output(md5_check % src_file).split()[0]
-        dst_md5 = sessions[1].cmd_output(md5_check % dst_file).split()[0]
+        src_md5 = sessions[0].cmd_output(md5_check % src_file,
+                                         timeout=120).split()[0]
+        dst_md5 = sessions[1].cmd_output(md5_check % dst_file,
+                                         timeout=120).split()[0]
 
         if dst_md5 != src_md5:
             debug_msg = "Files md5sum mismatch!"
@@ -116,8 +146,8 @@ def run(test, params, env):
         dthread.join()
 
     finally:
-        sessions[0].cmd(" %s %s " % (clean_cmd, src_file))
-        sessions[1].cmd(" %s %s " % (clean_cmd, src_file))
+        sessions[0].sendline(" %s %s " % (clean_cmd, src_file))
+        sessions[1].sendline(" %s %s " % (clean_cmd, src_file))
         if mon_session:
             mon_session.close()
         for session in sessions:

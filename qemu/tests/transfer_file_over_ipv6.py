@@ -40,12 +40,10 @@ def run(test, params, env):
         Get file md5sum from guest.
         """
         logging.info("Get md5sum of the file:'%s'" % file_name)
-        try:
-            o = session.cmd_output("md5sum %s" % file_name, timeout=timeout)
-            file_md5sum = re.findall(r"\w+", o)[0]
-        except IndexError:
-            test.error("Could not get file md5sum in guest")
-        return file_md5sum
+        s, o = session.cmd_status_output("md5sum %s" % file_name, timeout=timeout)
+        if s != 0:
+            test.error("Get file md5sum failed as %s" % o)
+        return re.findall(r"\w{32}", o)[0]
 
     sessions = {}
     addresses = {}

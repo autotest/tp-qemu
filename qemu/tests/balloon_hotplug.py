@@ -62,6 +62,7 @@ def run(test, params, env):
 
     pm_test_after_plug = params.get("pm_test_after_plug")
     pm_test_after_unplug = params.get("pm_test_after_unplug")
+    unplug_timeout = params.get("unplug_timeout", 30)
     idx = 0
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -116,10 +117,12 @@ def run(test, params, env):
         error_context.context("Unplug balloon device for %d times" % (i+1),
                               logging.info)
 
-        out = vm.devices.simple_unplug(devs[0].get_aid(), vm.monitor)
+        out = vm.devices.simple_unplug(devs[0].get_aid(), vm.monitor,
+                                       timeout=unplug_timeout)
         if out[1] is False:
-            test.fail("Failed to hotplug balloon in iteration %s, %s"
+            test.fail("Failed to unplug balloon in iteration %s, %s"
                       % (i, out[0]))
+        time.sleep(2)
 
         if params.get("migrate_after_unplug", "no") == "yes":
             error_context.context("Migrate after hotunplug balloon device",

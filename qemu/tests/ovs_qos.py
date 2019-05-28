@@ -4,6 +4,7 @@ import time
 import glob
 import shutil
 import logging
+import itertools
 
 from avocado.utils import process
 from avocado.utils import path as utils_path
@@ -245,6 +246,13 @@ def run(test, params, env):
                 results.append([iface, throughout, rate, burst])
         report_test_results(results)
     finally:
+        try:
+            # cleanup netperf env
+            logging.debug("Cleanup netperf env")
+            for ntpf, _ in itertools.chain(netperf_clients, netperf_servers):
+                ntpf.cleanup()
+        except Exception as e:
+            logging.warn("Cleanup failed:\n%s\n", e)
         for f in glob.glob("/var/log/openvswith/*.log"):
             dst = os.path.join(test.resultsdir, os.path.basename(f))
             shutil.copy(f, dst)

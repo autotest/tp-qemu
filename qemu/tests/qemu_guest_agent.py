@@ -1358,7 +1358,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.vm.devices.simple_unplug(devs[0], self.vm.monitor)
         finally:
             if self.gagent.get_fsfreeze_status() == self.gagent.FSFREEZE_STATUS_FROZEN:
-                self.gagent.fsthaw(check_status=False)
+                try:
+                    self.gagent.fsthaw(check_status=False)
+                except guest_agent.VAgentCmdError as detail:
+                    if not re.search("fsfreeze is limited up to 10 seconds", str(detail)):
+                        test.error("guest-fsfreeze-thaw cmd failed with:"
+                                   "('%s')" % str(detail))
             self.vm.verify_alive()
             if params.get("os_type") == "linux":
                 utils_disk.umount(new_disks[0], mnt_point[0], session=session)

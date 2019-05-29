@@ -200,7 +200,7 @@ def run(test, params, env):
             session2.close()
 
             # run some functions before migrate start.
-            pre_migrate = get_functions(params.get("pre_migrate"), locals())
+            pre_migrate = get_functions(params.get("pre_migrate"), globals())
             for func in pre_migrate:
                 func(vm, params, test)
 
@@ -244,7 +244,7 @@ def run(test, params, env):
             params["action"] = "stop"
 
             # run some functions after migrate finish.
-            post_migrate = get_functions(params.get("post_migrate"), locals())
+            post_migrate = get_functions(params.get("post_migrate"), globals())
             for func in post_migrate:
                 func(vm, params, test)
 

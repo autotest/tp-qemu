@@ -23,6 +23,8 @@ from platform import machine
 from operator import attrgetter
 
 from virttest import utils_misc
+from virttest import data_dir
+from virttest.remote import scp_to_remote
 
 from avocado import TestError
 
@@ -151,6 +153,14 @@ class StorageBenchmark(object):
         self.session.cmd(self.download_cmds[mode].format(dst, url), timeout)
         self.env_files.append(dst)
 
+    def scp_benckmark(self, username, password, host_path, guest_path, port='22'):
+        """
+        Scp a benchmark tool from the local host to the guest.
+
+        """
+        scp_to_remote(self.vm.get_address(), port, username, password, host_path, guest_path)
+        self.env_files.append(guest_path)
+
     def _tar_unpack_file(self, src, dst, timeout=300):
         """Unpack file by tar."""
         cmd = 'mkdir -p {0} && tar {1} {2} -C {0}'.format(
@@ -267,23 +277,21 @@ class StorageBenchmark(object):
 
 class IozoneLinuxCfg(object):
     def __init__(self, params, session):
-        version = params.get('iozone_version', 'iozone3_483')
-        self.download_url = ('http://www.iozone.org/src/current/%s.tar' % version)
-        self.download_path = os.path.join('/home', 'iozone.tar')
-        self.iozone_dir = os.path.join('/home/iozone_inst', version)
+        iozone_pkg = params.get("iozone_pkg", 'iozone3_487.tar.bz2')
+        host_path = os.path.join(data_dir.get_deps_dir(), 'iozone', iozone_pkg)
+        self.download_path = os.path.join('/home', iozone_pkg)
+        self.iozone_inst = os.path.join('/home', 'iozone_inst')
         self.arch = 'linux-AMD64' if 'x86_64' in machine() else 'linux-powerpc64'
-        self.cmd = 'cd %s/src/current && make %s' % (self.iozone_dir, self.arch)
-        self.iozone_path = '%s/src/current/iozone' % self.iozone_dir
-        download_benchmark = attrgetter('download_benchmark')
+        self.cmd = 'cd %s/src/current && make %s' % (self.iozone_inst, self.arch)
+        self.iozone_path = '%s/src/current/iozone' % self.iozone_inst
+        scp_benckmark = attrgetter('scp_benckmark')
         unpack_file = attrgetter('unpack_file')
         session_cmd = attrgetter('session.cmd')
-        self.setups = {download_benchmark: (CURL_DOWNLOAD,
-                                            self.download_url,
-                                            self.download_path),
-                       unpack_file: (TAR_UNPACK, self.download_path,
-                                     '/home/iozone_inst'),
+        self.setups = {scp_benckmark: (params.get('username'), params.get('password'),
+                                       host_path, self.download_path),
+                       unpack_file: (TAR_UNPACK, self.download_path, self.iozone_inst),
                        session_cmd: (self.cmd, 300)}
-        self.setup_orders = (download_benchmark, unpack_file, session_cmd)
+        self.setup_orders = (scp_benckmark, unpack_file, session_cmd)
 
 
 class IozoneWinCfg(object):
@@ -321,17 +329,19 @@ class Iozone(StorageBenchmark):
 
 class FioLinuxCfg(object):
     def __init__(self, params, session):
-        self.download_url = 'git://github.com/axboe/fio.git'
-        self.download_path = os.path.join('/home', 'fio_repo')
+        fio_pkg = params.get("fio_pkg", 'fio-3.13-48-ga819.tar.bz2')
+        host_path = os.path.join(data_dir.get_deps_dir(), 'fio', fio_pkg)
+        self.download_path = os.path.join('/home', fio_pkg)
         self.fio_inst = os.path.join('/home', 'fio_inst')
         self.fio_path = '%s/bin/fio' % self.fio_inst
-        download_benchmark = attrgetter('download_benchmark')
+        scp_benckmark = attrgetter('scp_benckmark')
+        unpack_file = attrgetter('unpack_file')
         install = attrgetter('install')
-        self.setups = {download_benchmark: (GIT_DOWNLOAD,
-                                            self.download_url,
-                                            self.download_path),
-                       install: (self.download_path, self.fio_inst)}
-        self.setup_orders = (download_benchmark, install)
+        self.setups = {scp_benckmark: (params.get('username'), params.get('password'),
+                                       host_path, self.download_path),
+                       unpack_file: (TAR_UNPACK, self.download_path, self.fio_inst),
+                       install: (self.fio_inst, self.fio_inst)}
+        self.setup_orders = (scp_benckmark, unpack_file, install)
 
 
 class FioWinCfg(object):

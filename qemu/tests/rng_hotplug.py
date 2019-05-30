@@ -49,6 +49,7 @@ def run(test, params, env):
         if not ver_out:
             msg = "Still get %s in qtree after unplug" % dev
             raise exceptions.TestFail(msg)
+        time.sleep(15)
         logging.info("%s is unpluged successfully" % dev)
 
     def restart_rngd(vm):

@@ -12,8 +12,8 @@ def run(test, params, env):
     """
     A 'qemu-img' resize test.
 
-    1.create a raw image
-    2.change the raw image size * n
+    1.create a raw/qcow2 image
+    2.change the raw/qcow2 image size * n
     3.verify resize * n
 
     :param test: Qemu test object

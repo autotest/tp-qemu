@@ -1,7 +1,9 @@
+import os
 import logging
 
 from avocado.utils import process
 from virttest import error_context
+from virttest import data_dir
 
 
 @error_context.context_aware
@@ -34,8 +36,14 @@ def run(test, params, env):
 
     error_context.context("Download and compile the newest msr-tools",
                           logging.info)
-    msr_tools_install_cmd = params["msr_tools_install_cmd"]
-    session.cmd(msr_tools_install_cmd)
+    tarball = params["tarball"]
+    compile_cmd = params["compile_cmd"]
+    msr_name = params["msr_name"]
+    tarball = os.path.join(data_dir.get_deps_dir(), tarball)
+    msr_dir = "/tmp/"
+    vm.copy_files_to(tarball, msr_dir)
+    session.cmd("cd %s && tar -zxvf %s" % (msr_dir, os.path.basename(tarball)))
+    session.cmd("cd %s && %s" % (msr_name, compile_cmd))
 
     error_context.context("Execute cmd in guest", logging.info)
     cmd = "dmesg -c > /dev/null"

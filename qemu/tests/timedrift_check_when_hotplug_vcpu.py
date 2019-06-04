@@ -5,6 +5,7 @@ import logging
 from avocado.utils import process
 
 from virttest import error_context
+from virttest import utils_test
 
 
 @error_context.context_aware
@@ -23,10 +24,12 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+    os_type = params["os_type"]
     ntp_cmd = params["ntp_cmd"]
+    ntp_host_cmd = params.get("ntp_host_cmd", ntp_cmd)
 
     error_context.context("Sync host system time with ntpserver", logging.info)
-    process.system(ntp_cmd, shell=True)
+    process.system(ntp_host_cmd, shell=True)
 
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
@@ -37,6 +40,8 @@ def run(test, params, env):
     drift_threshold = float(params.get("drift_threshold", "3"))
 
     error_context.context("Sync time from guest to ntpserver", logging.info)
+    if os_type == "windows":
+        utils_test.start_windows_service(session, "w32time")
     session.cmd(ntp_cmd)
 
     error_context.context("Hotplug a vcpu to guest", logging.info)
@@ -51,7 +56,7 @@ def run(test, params, env):
     for query in range(query_times):
         output = session.cmd_output(ntp_query_cmd)
         try:
-            offset = re.findall(r"([+-]*\d+\.\d+) sec", output, re.M)[-1]
+            offset = re.findall(r"([+-]*\d+\.\d+)[s sec]", output, re.M)[-1]
         except IndexError:
             test.error("Failed to get time offset")
         if float(offset) >= drift_threshold:

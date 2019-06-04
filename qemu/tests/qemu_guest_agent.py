@@ -1465,6 +1465,59 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         self.gagent_verify(self.params, self.vm)
 
+    @error_context.context_aware
+    def gagent_check_vss_status(self, test, params, env):
+        """
+        Only for windows guest,check QEMU Guest Agent VSS Provider service start type
+        and if it works.
+
+        Steps:
+        1) Check VSS Provider service start type.
+        2) Check VSS Provider service should be in stopped status.
+        3) Issue fsfreeze qga command.
+        4) Check VSS Provider service should be in running status.
+        5) Issue fsthaw qga command.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        def check_vss_info(cmd_type, key, expect_value):
+            cmd_vss = "sc %s \"QEMU Guest Agent VSS Provider\" | findstr /i %s" % \
+                      (cmd_type, key)
+            status, output = session.cmd_status_output(cmd_vss)
+            if status:
+                test.error("Command to check VSS service info failed,"
+                           "detailed info is:\n%s" % output)
+            vss_result = output.split()[-1]
+            if vss_result != expect_value:
+                test.fail("The output is %s which is not expected."
+                          % vss_result)
+
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Check VSS Provider service start type.",
+                              logging.info)
+        check_vss_info("qc", "START_TYPE", "DEMAND_START")
+
+        error_context.context("Check VSS Provider status.", logging.info)
+        check_vss_info("query", "STATE", "STOPPED")
+
+        error_context.context("Freeze fs.", logging.info)
+        self.gagent.fsfreeze()
+
+        error_context.context("Check VSS Provider status after fsfreeze.", logging.info)
+        check_vss_info("query", "STATE", "RUNNING")
+
+        error_context.context("Thaw fs.", logging.info)
+        try:
+            self.gagent.fsthaw()
+        except guest_agent.VAgentCmdError as detail:
+            if not re.search("fsfreeze is limited up to 10 seconds", str(detail)):
+                test.error("guest-fsfreeze-thaw cmd failed with:"
+                           "('%s')" % str(detail))
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

@@ -79,5 +79,6 @@ def run(test, params, env):
         else:
             iozone.run(iozone_cmd_options % iozone_test_dir, iozone_timeout)
     finally:
-        iozone.clean()
+        if params.get('sub_test_shutdown_vm', 'no') == 'no':
+            iozone.clean()
         session.close()

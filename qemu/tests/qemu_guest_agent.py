@@ -454,12 +454,42 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     @error_context.context_aware
     def gagent_check_get_vcpus(self, test, params, env):
         """
-        Execute "guest-set-vcpus" command to guest agent
+        Execute "guest-get-vcpus" command to guest agent.
+
+        Steps:
+        1) Check can-offline field of guest agent.
+        2) Check cpu number.
+
         :param test: kvm test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
-        self.gagent.get_vcpus()
+        error_context.context("Check can-offline field of guest agent.", logging.info)
+        vcpus_info = self.gagent.get_vcpus()
+        cpu_num_qga = len(vcpus_info)
+        for vcpu in vcpus_info:
+            if params.get("os_type") == "linux" and not vcpu["can-offline"]:
+                test.fail("Linux guest cpu can't be offline from qga"
+                          "which isn't expected.")
+            if params.get("os_type") == "windows" and vcpu["can-offline"]:
+                test.fail("Windows guest cpu can be offline from qga"
+                          "which isn't expected.")
+
+        error_context.context("Check cpu number.", logging.info)
+        session = self._get_session(params, self.vm)
+        output = session.cmd_output(params["get_cpu_cmd"])
+        session.close()
+
+        if params.get("os_type") == "windows":
+            cpu_list = output.strip().split('\n')
+            cpu_num_guest = sum(map(int, cpu_list))
+        else:
+            cpu_num_guest = int(output)
+
+        if cpu_num_qga != cpu_num_guest:
+            test.fail("CPU number doen't match.\n"
+                      "number from guest os is %s,number from guest-agent is %s." %
+                      (cpu_num_guest, cpu_num_qga))
 
     @error_context.context_aware
     def gagent_check_set_vcpus(self, test, params, env):

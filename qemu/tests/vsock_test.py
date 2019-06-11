@@ -1,6 +1,5 @@
 import os
 import random
-import time
 import logging
 import aexpect
 
@@ -95,6 +94,50 @@ def nc_vsock_connect(nc_vsock_bin, guest_cid, port):
         output_params=("vsock_%s_%s" % (guest_cid, port),))
 
 
+def send_data_from_guest_to_host(guest_session, nc_vsock_bin,
+                                 guest_cid, tmp_file, file_size=1000):
+    """
+    Generate a temp file and transfer it from guest to host via vsock
+
+    :param guest_session: Guest session object
+    :param nc_vsock_bin: Path to nc-vsock binary
+    :param guest_cid: Guest cid to connected
+    :param file_size: Desired file size to be transferred
+    :return: The host nc-vsock connection process
+    """
+
+    cmd_generate = 'dd if=/dev/urandom of=%s count=%s bs=1M' % (tmp_file, file_size)
+    guest_session.cmd_status(cmd_generate, timeout=600)
+    port = random.randrange(1, 6000)
+    cmd_transfer = '%s -l %s < %s' % (nc_vsock_bin, port, tmp_file)
+    error_context.context('Transfer file from guest via command: %s'
+                          % cmd_transfer, logging.info)
+    guest_session.sendline(cmd_transfer)
+    cmd_receive = '%s %s %s > %s' % (nc_vsock_bin, guest_cid, port, tmp_file)
+    return aexpect.Expect(cmd_receive,
+                          auto_close=True,
+                          output_func=utils_misc.log_line,
+                          output_params=('%s.log' % tmp_file,))
+
+
+def check_guest_nc_vsock_exit(test, session, close_session=False):
+    """
+    Check if previous process exits and guest session returns to shell prompt
+
+    :param test: QEMU test object
+    :param session: Guest session object
+    :param close_session: close the session finally if True
+    """
+    try:
+        session.read_up_to_prompt(timeout=10)
+    except aexpect.ExpectTimeoutError:
+        test.fail("nc-vsock listening prcoess inside guest"
+                  " does not exit after close host nc-vsock connection.")
+    finally:
+        if close_session:
+            session.close()
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -142,29 +185,14 @@ def run(test, params, env):
     host_vsock_session.sendline(send_data)
     check_received_data(test, session, send_data)
     host_vsock_session.close()
-    try:
-        session.read_up_to_prompt(timeout=10)
-    except aexpect.ExpectTimeoutError:
-        test.fail("nc-vsock listening prcoess inside guest"
-                  " does not exit after close host nc-vsock connection.")
-    finally:
-        session.close()
+    check_guest_nc_vsock_exit(test, session, close_session=True)
 
     # Transfer data from guest to host
     session = vm.wait_for_login()
-    cmd_generate = 'dd if=/dev/urandom of=%s count=1000 bs=1M' % tmp_file
-    session.cmd_status(cmd_generate)
-    cmd_transfer = '%s -l %s < %s &' % (nc_vsock_bin, port, tmp_file)
-    error_context.context('Transfer file from guest via command: %s'
-                          % cmd_transfer, logging.info)
-    session.cmd_status(cmd_transfer)
-    time.sleep(1)  # wait nc-vsock start listening
-    cmd_receive = '%s %s %s > %s' % (nc_vsock_bin, guest_cid, port, tmp_file)
-    rec_session = aexpect.Expect(cmd_receive,
-                                 auto_close=True,
-                                 output_func=utils_misc.log_line,
-                                 output_params=('%s.log' % tmp_file,))
+    rec_session = send_data_from_guest_to_host(session, nc_vsock_bin,
+                                               guest_cid, tmp_file)
     utils_misc.wait_for(lambda: not rec_session.is_alive(), timeout=20)
+    check_guest_nc_vsock_exit(test, session)
     cmd_chksum = 'md5sum %s' % tmp_file
     md5_origin = session.cmd_output(cmd_chksum).split()[0]
     md5_received = process.system_output(cmd_chksum).split()[0].decode()

@@ -3,6 +3,7 @@ multi_disk test for Autotest framework.
 
 :copyright: 2011-2012 Red Hat Inc.
 """
+from __future__ import division
 import logging
 import re
 import random
@@ -50,10 +51,10 @@ def _range(buf, n=None):
             if len(out) > 1 and out[1] == 'n':
                 out[1] = int(out[0]) + n
             if len(out) > 2 and out[2] == 'n':
-                out[2] = (int(out[1]) - int(out[0])) / n
+                out[2] = (int(out[1]) - int(out[0])) // n
             if len(out) > 3 and out[3] == 'n':
                 _len = len(range(int(out[0]), int(out[1]), int(out[2])))
-                out[3] = n / _len
+                out[3] = n // _len
                 if n % _len:
                     out[3] += 1
     for i in range(len(out)):

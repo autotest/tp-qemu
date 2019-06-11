@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import re
 import logging
@@ -112,7 +113,7 @@ def run(test, params, env):
                      "is too small (%ss), force set to 60s", test_timeout)
         test_timeout = 60
         steping = 30
-    start_cmd = add_option(start_cmd, 'DURATION', test_timeout / 60)
+    start_cmd = add_option(start_cmd, 'DURATION', test_timeout // 60)
     start_cmd = add_option(start_cmd, 'START', '')
     start_cmd = add_option(start_cmd, 'AUTOEXIT', '')
     logging.info("heavyload cmd: %s" % start_cmd)

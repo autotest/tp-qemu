@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 from resource import getpagesize
 
@@ -27,7 +28,7 @@ class MlockBasic(object):
         Check nr_mlock and nr_unevictable with guest memory
         """
         if self.realtime_mlock == "on":
-            vm_pages = self.vm_mem * 1024 * 1024 / getpagesize()
+            vm_pages = self.vm_mem * 1024 * 1024 // getpagesize()
             nr_mlock = self.mlock_post - self.mlock_pre
             nr_unevictable = self.unevictable_post - self.unevictable_pre
             if nr_mlock < vm_pages:

@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import os
 import six
@@ -189,7 +190,7 @@ def run(test, params, env):
 
                 cmd = ("nohup %s/cpuflags-test --stressmem %d,%d &" %
                        (os.path.join(self.install_path, "cpu_flags"),
-                        self.vm_mem * 100, self.vm_mem / 2))
+                        self.vm_mem * 100, self.vm_mem // 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
                 time.sleep(3)

@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import os
 import re
@@ -44,21 +45,21 @@ def run(test, params, env):
                            "hugepage_size": "Hugepagesize", }
         args_dict = get_args(args_dict_check)
         swap_free = []
-        total = int(args_dict['total']) / 1024
-        free = int(args_dict['free']) / 1024
-        swap_size = int(args_dict['swap_size']) / 1024
-        swap_free.append(int(args_dict['swap_free']) / 1024)
-        hugepage_size = int(args_dict['hugepage_size']) / 1024
+        total = int(args_dict['total']) // 1024
+        free = int(args_dict['free']) // 1024
+        swap_size = int(args_dict['swap_size']) // 1024
+        swap_free.append(int(args_dict['swap_free']) // 1024)
+        hugepage_size = int(args_dict['hugepage_size']) // 1024
         login_timeout = float(params.get("login_timeout", 360))
         check_cmd_timeout = float(params.get("check_cmd_timeout", 900))
         mem_path = os.path.join(test.tmpdir, 'thp_space')
 
         # If swap is enough fill all memory with dd
         if swap_free > (total - free):
-            count = total / hugepage_size
+            count = total // hugepage_size
             tmpfs_size = total
         else:
-            count = free / hugepage_size
+            count = free // hugepage_size
             tmpfs_size = free
 
         if swap_size <= 0:
@@ -95,7 +96,7 @@ def run(test, params, env):
             process.run(cmd, shell=True)
 
             args_dict = get_args(args_dict_check)
-            swap_free.append(int(args_dict['swap_free']) / 1024)
+            swap_free.append(int(args_dict['swap_free']) // 1024)
 
             if swap_free[1] - swap_free[0] >= 0:
                 test.fail("No data was swapped to memory")

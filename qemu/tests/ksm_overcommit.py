@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import time
 import random
@@ -155,7 +156,7 @@ def run(test, params, env):
                     logging.debug(utils_test.get_memory_info(lvms))
                     test.error("SHM didn't merge the memory until "
                                "the DL on guest: %s" % vm.name)
-                pause = ksm_size / 200 * perf_ratio
+                pause = ksm_size // 200 * perf_ratio
                 logging.debug("Waiting %ds before proceeding...", pause)
                 time.sleep(pause)
                 if (new_ksm):
@@ -167,7 +168,7 @@ def run(test, params, env):
                 j += 1
 
         # Keep some reserve
-        pause = ksm_size / 200 * perf_ratio
+        pause = ksm_size // 200 * perf_ratio
         logging.debug("Waiting %ds before proceeding...", pause)
         time.sleep(pause)
 
@@ -273,7 +274,7 @@ def run(test, params, env):
         # Verify last machine with randomly generated memory
         cmd = "mem.static_random_verify()"
         _execute_allocator(cmd, lvms[last_vm], lsessions[last_vm],
-                           (mem / 200 * 50 * perf_ratio))
+                           (mem // 200 * 50 * perf_ratio))
         logging.debug(utils_test.get_memory_info([lvms[last_vm]]))
 
         lsessions[last_vm].cmd_output("die()", 20)
@@ -303,10 +304,10 @@ def run(test, params, env):
 
         logging.info("Phase 2a: Simultaneous merging")
         logging.debug("Memory used by allocator on guests = %dMB",
-                      (ksm_size / max_alloc))
+                      (ksm_size // max_alloc))
 
         for i in range(0, max_alloc):
-            cmd = "mem = MemFill(%d, %s, %s)" % ((ksm_size / max_alloc),
+            cmd = "mem = MemFill(%d, %s, %s)" % ((ksm_size // max_alloc),
                                                  skeys[i], dkeys[i])
             _execute_allocator(cmd, vm, lsessions[i], 60 * perf_ratio)
 
@@ -322,7 +323,7 @@ def run(test, params, env):
             if i > 64:
                 logging.debug(utils_test.get_memory_info(lvms))
                 test.error("SHM didn't merge the memory until DL")
-            pause = ksm_size / 200 * perf_ratio
+            pause = ksm_size // 200 * perf_ratio
             logging.debug("Waiting %ds before proceed...", pause)
             time.sleep(pause)
             if (new_ksm):
@@ -355,7 +356,7 @@ def run(test, params, env):
         for i in range(0, max_alloc):
             cmd = "mem.static_random_verify()"
             data = _execute_allocator(cmd, vm, lsessions[i],
-                                      (mem / 200 * 50 * perf_ratio))[1]
+                                      (mem // 200 * 50 * perf_ratio))[1]
         logging.info("Phase 2c: PASS")
 
         logging.info("Phase 2d: Simultaneous merging")
@@ -371,7 +372,7 @@ def run(test, params, env):
         for i in range(0, max_alloc):
             cmd = "mem.value_check(%d)" % skeys[0]
             data = _execute_allocator(cmd, vm, lsessions[i],
-                                      (mem / 200 * 50 * perf_ratio))[1]
+                                      (mem // 200 * 50 * perf_ratio))[1]
         logging.info("Phase 2e: PASS")
 
         logging.info("Phase 2f: Simultaneous spliting last 96B")
@@ -393,7 +394,7 @@ def run(test, params, env):
         for i in range(0, max_alloc):
             cmd = "mem.static_random_verify(96)"
             _, data = _execute_allocator(cmd, vm, lsessions[i],
-                                         (mem / 200 * 50 * perf_ratio))
+                                         (mem // 200 * 50 * perf_ratio))
         logging.debug(utils_test.get_memory_info([vm]))
         logging.info("Phase 2g: PASS")
 
@@ -438,7 +439,7 @@ def run(test, params, env):
             available = utils_memory.read_from_meminfo("MemFree")
         # default host_reserve = UsedMem + one_minimal_guest(128MB)
         # later we add 64MB per additional guest
-        host_reserve = ((utils_memory.memtotal() - available) / 1024 + 128)
+        host_reserve = ((utils_memory.memtotal() - available) // 1024 + 128)
         # using default reserve
         _host_reserve = True
     else:
@@ -470,7 +471,7 @@ def run(test, params, env):
             host_reserve += vmsc * 64
             _host_reserve = vmsc
 
-    host_mem = (int(utils_memory.memtotal()) / 1024 - host_reserve)
+    host_mem = (int(utils_memory.memtotal()) // 1024 - host_reserve)
 
     ksm_swap = False
     if params.get("ksm_swap") == "yes":
@@ -505,7 +506,7 @@ def run(test, params, env):
     else:
         # mem: Memory of the guest systems. Maximum must be less than
         # host's physical ram
-        mem = int(overcommit * host_mem / vmsc)
+        mem = int(overcommit * host_mem // vmsc)
 
         # 32bit system adjustment
         if not params['image_name'].endswith("64"):
@@ -538,7 +539,7 @@ def run(test, params, env):
     if _guest_reserve:
         guest_reserve += math.ceil(mem * 0.055)
 
-    swap = int(utils_memory.read_from_meminfo("SwapTotal")) / 1024
+    swap = int(utils_memory.read_from_meminfo("SwapTotal")) // 1024
 
     logging.debug("Overcommit = %f", overcommit)
     logging.debug("True overcommit = %f ", (float(vmsc * mem) /
@@ -589,7 +590,7 @@ def run(test, params, env):
     # ksm_size: amount of memory used by allocator
     ksm_size = mem - guest_reserve
     logging.debug("Memory used by allocator on guests = %dM", ksm_size)
-    fill_base_timeout = ksm_size / 10
+    fill_base_timeout = ksm_size // 10
 
     # Creating the first guest
     env_process.preprocess_vm(test, params, env, vm_name)

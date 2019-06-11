@@ -3,6 +3,7 @@ cgroup test (on KVM guest)
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2011 Red Hat, Inc.
 """
+from __future__ import division
 import logging
 import os
 import re
@@ -556,7 +557,7 @@ def run(test, params, env):
                                            "like string with same lengths. "
                                            "([[1024]] or [[0,1024],[1024,2048]])")
         # Minimum testing time is 30s (dd must copy few blocks)
-        test_time = max(int(params.get("cgroup_test_time", 60)) / no_speeds,
+        test_time = max(int(params.get("cgroup_test_time", 60)) // no_speeds,
                         30)
 
         logging.info("Prepare VMs")
@@ -845,7 +846,7 @@ def run(test, params, env):
             vm_cpus = host_cpus
         no_speeds = len(speeds)
         # All host_cpus have to be used with no_speeds overcommit
-        no_vms = host_cpus * no_speeds / vm_cpus
+        no_vms = host_cpus * no_speeds // vm_cpus
         no_threads = no_vms * vm_cpus
         sessions = []
         serials = []
@@ -886,7 +887,7 @@ def run(test, params, env):
 
             time_init = 2
             # there are 6 tests
-            time_test = max(int(params.get("cgroup_test_time", 60)) / 6, 5)
+            time_test = max(int(params.get("cgroup_test_time", 60)) // 6, 5)
             thread_count = 0    # actual thread number
             stats = []
             cmd = "renice -n 10 $$; "       # new ssh login should pass
@@ -1124,7 +1125,7 @@ def run(test, params, env):
                     raise exceptions.TestError(err)
         # if cgroup_use_half_smp, set smp accordingly
         elif params.get("cgroup_use_half_smp") == "yes":
-            vm_cpus = len(cpus) / 2
+            vm_cpus = len(cpus) // 2
             if len(cpus) == 2:
                 logging.warn("Host have only 2 CPUs, using 'smp = all cpus'")
                 vm_cpus = 2
@@ -1207,7 +1208,7 @@ def run(test, params, env):
             logging.info("Verification")
             # Normalize stats
             for i in range(len(stats)):
-                stats[i] = [(_ / test_time) for _ in stats[i]]
+                stats[i] = [(_ // test_time) for _ in stats[i]]
             # Check
             # header and matrix variables are only for "beautiful" log
             header = ['scen']
@@ -1375,7 +1376,7 @@ def run(test, params, env):
         sessions.append(vm.wait_for_login(timeout=30))
 
         # Don't allow to specify more than 1/2 of the VM's memory
-        size = int(params.get('mem', 1024)) / 2
+        size = int(params.get('mem', 1024)) // 2
         if params.get('cgroup_cpuset_mems_mb') is not None:
             size = min(size, int(params.get('cgroup_cpuset_mems_mb')))
 
@@ -1889,7 +1890,7 @@ def run(test, params, env):
             max_rssswap = 0
             out = ""
             err = ""
-            for _ in range(int(mem / 1024)):
+            for _ in range(int(mem // 1024)):
                 try:
                     fstats.seek(0)
                     status = fstats.read()
@@ -1956,7 +1957,7 @@ def run(test, params, env):
                                                       out))
                 else:
                     out = ("Created %dMB block with %.2f memory overcommit" %
-                           (mem / 1024, float(max_rssswap) / mem_limit))
+                           (mem // 1024, float(max_rssswap) / mem_limit))
                     logging.info(out)
 
         finally:
@@ -2016,7 +2017,7 @@ def run(test, params, env):
         sessions.append(vm.wait_for_login(timeout=30))
 
         # Don't allow to specify more than 1/2 of the VM's memory
-        size = int(params.get('mem', 1024)) / 2
+        size = int(params.get('mem', 1024)) // 2
         if params.get('cgroup_memory_move_mb') is not None:
             size = min(size, int(params.get('cgroup_memory_move_mb')))
 

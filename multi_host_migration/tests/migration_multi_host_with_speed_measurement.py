@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import re
 import logging
@@ -73,11 +74,11 @@ def run(test, params, env):
                 if o.get("status") != "active":
                     raise error.TestWarn(warning_msg)
                 try:
-                    transfered_mem = o.get("ram").get("transferred") / (1024)
+                    transfered_mem = o.get("ram").get("transferred") // (1024)
                 except (IndexError, ValueError):
                     raise error.TestFail(fail_msg)
 
-            real_mig_speed = (transfered_mem - last_transfer_mem) / 1024
+            real_mig_speed = (transfered_mem - last_transfer_mem) // 1024
 
             last_transfer_mem = transfered_mem
 
@@ -137,7 +138,7 @@ def run(test, params, env):
 
                 cmd = ("%s/cpuflags-test --stressmem %d,%d" %
                        (os.path.join(install_path, "cpu_flags"),
-                        vm_mem * 4, vm_mem / 2))
+                        vm_mem * 4, vm_mem // 2))
                 logging.debug("Sending command: %s" % (cmd))
                 session.sendline(cmd)
 
@@ -152,15 +153,15 @@ def run(test, params, env):
                     data_len += len(client.recv(2048))
                 client.close()
                 server.close()
-                self.link_speed = data_len / (30 * 1024 * 1024)
+                self.link_speed = data_len // (30 * 1024 * 1024)
                 logging.info("Link speed %d MB/s" % (self.link_speed))
                 ms = utils.convert_data_size(mig_speed, 'M')
-                if (ms > data_len / 30):
+                if (ms > data_len // 30):
                     logging.warn("Migration speed %s MB/s is set faster than "
                                  "real link speed %d MB/s" % (mig_speed,
                                                               self.link_speed))
                 else:
-                    self.link_speed = ms / (1024 * 1024)
+                    self.link_speed = ms // (1024 * 1024)
             else:
                 data = ""
                 for _ in range(10000):
@@ -188,7 +189,7 @@ def run(test, params, env):
 
         mig_stat = mig.mig_stat
 
-        mig_speed = mig_speed / (1024 * 1024)
+        mig_speed = mig_speed // (1024 * 1024)
         real_speed = mig_stat.get_average()
         ack_speed = mig.link_speed * mig_speed_accuracy
 

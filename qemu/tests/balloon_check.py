@@ -1,3 +1,4 @@
+from __future__ import division
 import time
 import re
 import logging
@@ -52,7 +53,7 @@ class BallooningTest(MemoryBaseTest):
             output = self.vm.monitor.info("balloon")
             ballooned_mem = int(re.findall(r"\d+", str(output))[0])
             if self.vm.monitor.protocol == "qmp":
-                ballooned_mem = ballooned_mem / (1024 ** 2)
+                ballooned_mem = ballooned_mem // (1024 ** 2)
         except qemu_monitor.MonitorError as emsg:
             logging.error(emsg)
             return 0

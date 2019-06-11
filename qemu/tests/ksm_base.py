@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import time
 import random
@@ -94,7 +95,7 @@ def run(test, params, env):
     # Keep test from OOM killer
     if max_mem < shared_mem:
         shared_mem = max_mem
-    fill_timeout = int(shared_mem) / 10
+    fill_timeout = int(shared_mem) // 10
     query_cmd = params.get("query_cmd")
     query_regex = params.get("query_regex")
     random_bits = params.get("random_bits")
@@ -178,7 +179,7 @@ def run(test, params, env):
         while (fail_type > 0):
             if fail_type % 2 == 1:
                 logging.error(fail[turns])
-            fail_type = fail_type / 2
+            fail_type = fail_type // 2
             turns += 1
         test.fail("KSM test failed: %s %s %s" %
                   (sharing_page_0, sharing_page_1,

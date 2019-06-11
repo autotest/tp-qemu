@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import time
 import types
@@ -224,9 +225,9 @@ def run(test, params, env):
             ping_pong = params.get("ping_pong", 1)
             for i in range(int(ping_pong)):
                 if i % 2 == 0:
-                    logging.info("Round %s ping..." % str(i / 2))
+                    logging.info("Round %s ping..." % str(i // 2))
                 else:
-                    logging.info("Round %s pong..." % str(i / 2))
+                    logging.info("Round %s pong..." % str(i // 2))
                 try:
                     vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                                offline, check,

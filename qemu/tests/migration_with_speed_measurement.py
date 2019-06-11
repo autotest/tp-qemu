@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import re
 import six
@@ -24,7 +25,7 @@ class Statistic(object):
 
     def get_average(self):
         if self._count != 0:
-            return self._sum / self._count
+            return self._sum // self._count
         else:
             return None
 
@@ -105,11 +106,11 @@ def run(test, params, env):
                 if o.get("status") != "active":
                     test.error(warning_msg)
                 try:
-                    transfered_mem = o.get("ram").get("transferred") / (1024)
+                    transfered_mem = o.get("ram").get("transferred") // (1024)
                 except (IndexError, ValueError):
                     test.fail(fail_msg)
 
-            real_mig_speed = (transfered_mem - last_transfer_mem) / 1024
+            real_mig_speed = (transfered_mem - last_transfer_mem) // 1024
 
             last_transfer_mem = transfered_mem
 
@@ -128,7 +129,7 @@ def run(test, params, env):
 
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
                (os.path.join(install_path, "cpu_flags"),
-                vm_mem * 4, vm_mem / 2))
+                vm_mem * 4, vm_mem // 2))
         logging.debug("Sending command: %s" % (cmd))
         session.sendline(cmd)
 

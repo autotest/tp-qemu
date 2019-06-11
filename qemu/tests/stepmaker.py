@@ -6,10 +6,11 @@ Step file creator/editor.
 :author: mgoldish@redhat.com (Michael Goldish)
 @version: "20090401"
 """
-
+from __future__ import division
 import time
 import os
 import logging
+
 
 try:
     from gi import pygtkcompat as pygtk
@@ -292,7 +293,7 @@ class StepMaker(step_editor.StepMakerWindow):
         self.mouse_click_coords[0] = int(x * self.spin_sensitivity.get_value())
         self.mouse_click_coords[1] = int(y * self.spin_sensitivity.get_value())
 
-        delay = self.spin_latency.get_value() / 1000
+        delay = self.spin_latency.get_value() // 1000
         if (x, y) != (self.prev_x, self.prev_y):
             self.vm.monitor.mouse_move(-8000, -8000)
             time.sleep(delay)

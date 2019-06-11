@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import time
 import random
@@ -54,7 +55,7 @@ def run(test, params, env):
     simple_test = DriveMirrorSimple(test, params, env, tag)
     try:
         for i in range(repeats):
-            v_max, v_min = int(params.get("login_timeout", 360)) / 4, 0
+            v_max, v_min = int(params.get("login_timeout", 360)) // 4, 0
             time.sleep(random.randint(v_min, v_max))
             simple_test.action_before_start()
             try:

@@ -1,3 +1,4 @@
+from __future__ import division
 import re
 import logging
 import random
@@ -258,7 +259,7 @@ def run(test, params, env):
     if ((params.get("os_type") == 'windows') and cpu_cores_num > 0 and
             cpu_lp_num > 0 and cpu_sockets_num > 0):
         actual_cpu_nr = cpu_lp_num * cpu_sockets_num
-        cpu_threads_num = cpu_lp_num / cpu_cores_num
+        cpu_threads_num = cpu_lp_num // cpu_cores_num
 
     if vm.cpuinfo.smp != actual_cpu_nr:
         fail_log = "CPU count mismatch:\n"

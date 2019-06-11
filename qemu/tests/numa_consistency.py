@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import resource
 
@@ -93,9 +94,9 @@ def run(test, params, env):
         memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            qemu_pid)
         memory_used_after = memory_status[node_used_host_index]
-        page_size = resource.getpagesize() / 1024
+        page_size = resource.getpagesize() // 1024
         memory_allocated = (memory_used_after -
-                            memory_used_before) * page_size / 1024
+                            memory_used_before) * page_size // 1024
         if 1 - float(memory_allocated) / float(dd_size) > 0.05:
             numa_hardware_cmd = params.get("numa_hardware_cmd")
             if numa_hardware_cmd:

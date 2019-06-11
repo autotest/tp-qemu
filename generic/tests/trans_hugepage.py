@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import os
 import re
@@ -71,14 +72,14 @@ def run(test, params, env):
         failures.append(e_msg)
 
     # Protect system from oom killer
-    if int(get_mem_status('MemFree', 'guest')) / 1024 < mem:
-        mem = int(get_mem_status('MemFree', 'guest')) / 1024
+    if int(get_mem_status('MemFree', 'guest')) // 1024 < mem:
+        mem = int(get_mem_status('MemFree', 'guest')) // 1024
 
     session.cmd("mkdir -p %s" % mem_path)
 
     session.cmd("mount -t tmpfs -o size=%sM none %s" % (str(mem), mem_path))
 
-    count = mem / 4
+    count = mem // 4
     session.cmd("dd if=/dev/zero of=%s/1 bs=4000000 count=%s" %
                 (mem_path, count), timeout=dd_timeout)
 
@@ -98,7 +99,7 @@ def run(test, params, env):
     logging.info("Smoke test finished")
 
     # Use parallel dd as stress for memory
-    count = count / 3
+    count = count // 3
     logging.info("Stress test start")
     error_context.context("stress test")
     cmd = "rm -rf %s/*; for i in `seq %s`; do dd " % (mem_path, count)

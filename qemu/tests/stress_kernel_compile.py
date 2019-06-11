@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 
 from virttest import utils_test, env_process
@@ -52,7 +53,7 @@ def run(test, params, env):
     for tag in range(1, guest_number):
         params["vms"] += " stress_guest_%s" % tag
 
-    mem_host = utils_memory.memtotal() / 1024
+    mem_host = utils_memory.memtotal() // 1024
     vmem = int(mem_host * over_c / guest_number)
 
     if vmem < 256:

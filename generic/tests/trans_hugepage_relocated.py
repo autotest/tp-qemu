@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 import time
 import os
@@ -49,8 +50,8 @@ def run(test, params, env):
     mem = params.get("mem")
     vmsm = int(mem) + 128
     hugetlbfs_path = params.get("hugetlbfs_path", "/proc/sys/vm/nr_hugepages")
-    if vmsm < int(free_memory) / 1024:
-        nr_hugetlbfs = vmsm * 1024 / int(hugepage_size)
+    if vmsm < int(free_memory) // 1024:
+        nr_hugetlbfs = vmsm * 1024 // int(hugepage_size)
     else:
         nr_hugetlbfs = None
     # Get dd speed in host
@@ -61,8 +62,8 @@ def run(test, params, env):
     dd_timeout = vmsm * (end_time - start_time) * 2
     nr_hugepages = []
     thp_cfg = params.get("thp_test_config")
-    s_time = int(re.findall(r"scan_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
-    w_time = int(re.findall(r"alloc_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
+    s_time = int(re.findall(r"scan_sleep_millisecs:(\d+)", thp_cfg)[0]) // 1000
+    w_time = int(re.findall(r"alloc_sleep_millisecs:(\d+)", thp_cfg)[0]) // 1000
 
     try:
         logging.info("Turn off swap in guest")
@@ -73,15 +74,15 @@ def run(test, params, env):
         mem_free_filter = r"MemFree:\s+(.\d+)\s+(\w+)"
         guest_mem_free, guest_unit = re.findall(mem_free_filter, o)[0]
         if re.findall("[kK]", guest_unit):
-            guest_mem_free = str(int(guest_mem_free) / 1024)
+            guest_mem_free = str(int(guest_mem_free) // 1024)
         elif re.findall("[gG]", guest_unit):
             guest_mem_free = str(int(guest_mem_free) * 1024)
         elif re.findall("[mM]", guest_unit):
             pass
         else:
-            guest_mem_free = str(int(guest_mem_free) / 1024 / 1024)
+            guest_mem_free = str(int(guest_mem_free) // 1024 // 1024)
 
-        file_size = min(1024, int(guest_mem_free) / 2)
+        file_size = min(1024, int(guest_mem_free) // 2)
         cmd = "mount -t tmpfs -o size=%sM none /mnt" % file_size
         s, o = session.cmd_status_output(cmd)
         if nr_hugetlbfs:
@@ -96,7 +97,7 @@ def run(test, params, env):
 
         # Try to make some fragment in memory
         # The total size of fragments is vmsm
-        count = vmsm * 1024 / 4
+        count = vmsm * 1024 // 4
         cmd = "for i in `seq %s`; do dd if=/dev/urandom of=/space/$i" % count
         cmd += " bs=4K count=1 & done"
         logging.info("Start to make fragment in host")
@@ -110,7 +111,7 @@ def run(test, params, env):
     bg.start()
 
     while bg.is_alive():
-        count = file_size / 2
+        count = file_size // 2
         cmd = "dd if=/dev/urandom of=/mnt/test bs=2M count=%s" % count
         s, o = session.cmd_status_output(cmd, dd_timeout)
 
@@ -119,7 +120,7 @@ def run(test, params, env):
     mem_increase_step = int(re.findall(r"pages_to_scan:(\d+)",
                                        thp_cfg)[0]) / 512
     mem_increase = 0
-    w_step = w_time / s_time + 1
+    w_step = w_time // s_time + 1
     count = 0
     last_value = nr_hugepages.pop()
     while len(nr_hugepages) > 0:

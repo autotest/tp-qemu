@@ -11,7 +11,7 @@ def run(test, params, env):
     """
     Boot guest with different vectors, then do file transfer tests.
 
-    1) Boot up VM with max vectors.
+    1) Boot up VM with certain vectors.
     2) Check guest msi & queues info
     3) Start 10 scp file transfer tests
 
@@ -23,7 +23,7 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
     cmd_timeout = int(params.get("cmd_timeout", 240))
 
-    # boot the vm with the max queues
+    # boot the vm with the queues
     queues = int(params["queues"])
     error_context.context("Boot the guest with queues = %s" % queues,
                           logging.info)
@@ -32,7 +32,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
 
-    # enable max queues for linux guest
+    # enable multi-queues for linux guest
     if params["os_type"] == "linux":
         nic = vm.virtnet[0]
         ifname = utils_net.get_linux_ifname(session, nic.mac)

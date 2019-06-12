@@ -18,15 +18,16 @@ def run(test, params, env):
 
     def get_info(vm_session, guest_info):
         """
-        Check the corresponding information from vm.
+        Get the corresponding information from vm.
 
         :param vm_session: session to checked vm.
-        :return: corresponding prompt
+        :return: if file does not exist return None, or not, return it's value
         """
-        (status, output) = vm_session.cmd_status_output(
+        output = vm_session.cmd_output(
             "echo `cat /proc/device-tree/%s`" % guest_info)
-        if status != 0:
-            test.fail("Failed to get %s" % guest_info)
+        if match_str in output:
+            logging.info(output)
+            return None
         return output.strip().splitlines()[-1]
 
     def compare_dev_tree(keyword, src):
@@ -53,14 +54,16 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 600))
 
     session = vm.wait_for_login(timeout=timeout)
+    match_str = params['match_str']
 
     try:
         uuid = vm.get_uuid()
         compare_dev_tree("system-id", uuid)
         compare_dev_tree("vm,uuid", uuid)
-        host_system_id = process.system_output(
-            "echo `cat /proc/device-tree/system-id`", shell=True).strip().decode()
-        compare_dev_tree("host-serial", host_system_id)
+        if get_info(session, "host-serial"):
+            host_system_id = process.getoutput(
+                "cat /proc/device-tree/system-id", verbose=True).strip("\x00")
+            compare_dev_tree("host-serial", host_system_id)
         compare_dev_tree("ibm,partition-name", params["main_vm"])
 
         check_nonexist_aliases(session)

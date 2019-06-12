@@ -20,8 +20,11 @@ import re
 from functools import wraps
 
 from platform import machine
+from operator import attrgetter
 
 from virttest import utils_misc
+from virttest import data_dir
+from virttest.remote import scp_to_remote
 
 from avocado import TestError
 
@@ -51,16 +54,18 @@ class StorageBenchmark(object):
                      CURL_DOWNLOAD: 'curl -o {0} {1}'}
     unpack_cmds = {TAR_UNPACK: '_tar_unpack_file'}
 
-    def __init__(self, os_type, session, name):
+    def __init__(self, os_type, vm, name):
         """
-        :param session: session connected guest
+        :param vm: vm object
+        :type vm: qemu_vm.VM object
         :param name: the name of benchmark
         :type name: str
         """
-        self.session = session
+        self.vm = vm
         self.name = name
         self.os_type = os_type
         self.env_files = []
+        self._session = self.vm.wait_for_login(timeout=360)
 
     def __getattr__(self, item):
         try:
@@ -68,9 +73,15 @@ class StorageBenchmark(object):
         except KeyError as e:
             raise AttributeError(str(e))
 
-    def session_cmd(self, cmd, timeout=60):
-        """ Session command. """
-        self.session.cmd(cmd, timeout)
+    @property
+    def session(self):
+        """
+        Refresh the session, if session is not alive will new one.
+        """
+        if not self._session.is_alive():
+            self._session.close()
+            self._session = self.vm.wait_for_login(timeout=360)
+        return self._session
 
     def make_symlinks(self, src, dst):
         """
@@ -84,10 +95,12 @@ class StorageBenchmark(object):
         self.session.cmd(self._symlinks % (src, dst))
         self.env_files.append(dst)
 
-    def _wait_procs_done(self, timeout=1800):
+    def __wait_procs_done(self, session, timeout=1800):
         """
         Wait all the processes are done.
 
+        :param session: vm session
+        :type session: aexpect.client.ShellSession
         :param timeout: timeout for waiting
         :type timeout: float
         """
@@ -96,27 +109,34 @@ class StorageBenchmark(object):
         logging.info('Checking the running %s processes.' % self.name)
         if not utils_misc.wait_for(
                 lambda: not re.search(
-                    proc_name.lower(), self.session.cmd_output(
+                    proc_name.lower(), session.cmd_output(
                         self._list_pid % proc_name), re.I | re.M), timeout, step=3.0):
             raise TestError(
                 'Not all %s processes done in %s sec.' % (proc_name, timeout))
 
-    def _kill_procs(self):
-        """Kill the specified processors by force."""
-        logging.info('Killing all %s processes by force.' % self.name)
-        self.session.cmd_output(self._kill_pid % self.name, timeout=120)
+    def __kill_procs(self, session):
+        """
+        Kill the specified processors by force.
 
-    def _remove_env_files(self, timeout=300):
+        :param session: vm session
+        :type session: aexpect.client.ShellSession
+        """
+        logging.info('Killing all %s processes by force.' % self.name)
+        session.cmd_output(self._kill_pid % self.name, timeout=120)
+
+    def __remove_env_files(self, session, timeout=300):
         """
         Remove the environment files includes downloaded files, installation
         files and others related to benchmark.
 
+        :param session: vm session
+        :type session: aexpect.client.ShellSession
         :param timeout: timeout for removing
         :type timeout: float
         """
         logging.info('Removing the environment files.')
         cmds = (self._rm_file.format(f) for f in self.env_files)
-        self.session.cmd(' && '.join(cmds), timeout=timeout)
+        session.cmd(' && '.join(cmds), timeout=timeout)
 
     def download_benchmark(self, mode, url, dst, timeout=300):
         """
@@ -132,6 +152,14 @@ class StorageBenchmark(object):
         """
         self.session.cmd(self.download_cmds[mode].format(dst, url), timeout)
         self.env_files.append(dst)
+
+    def scp_benckmark(self, username, password, host_path, guest_path, port='22'):
+        """
+        Scp a benchmark tool from the local host to the guest.
+
+        """
+        scp_to_remote(self.vm.get_address(), port, username, password, host_path, guest_path)
+        self.env_files.append(guest_path)
 
     def _tar_unpack_file(self, src, dst, timeout=300):
         """Unpack file by tar."""
@@ -222,12 +250,17 @@ class StorageBenchmark(object):
                       by force, otherwise wait they are done
         :type force: bool
         """
+        # In order to the output of the previous session object does not
+        # disturb the current session object to get the shell prompt, so
+        # new a session.
+        session = self.vm.wait_for_login(timeout=360)
         if force:
-            self._kill_procs()
+            self.__kill_procs(session)
         else:
-            self._wait_procs_done(timeout)
+            self.__wait_procs_done(session, timeout)
         if self.env_files:
-            self._remove_env_files()
+            self.__remove_env_files(session)
+        session.close()
 
     @staticmethod
     def _clean_env(func):
@@ -244,20 +277,21 @@ class StorageBenchmark(object):
 
 class IozoneLinuxCfg(object):
     def __init__(self, params, session):
-        version = params.get('iozone_version', 'iozone3_483')
-        self.download_url = ('http://www.iozone.org/src/current/%s.tar' % version)
-        self.download_path = os.path.join('/home', 'iozone.tar')
-        self.iozone_dir = os.path.join('/home/iozone_inst', version)
+        iozone_pkg = params.get("iozone_pkg", 'iozone3_487.tar.bz2')
+        host_path = os.path.join(data_dir.get_deps_dir(), 'iozone', iozone_pkg)
+        self.download_path = os.path.join('/home', iozone_pkg)
+        self.iozone_inst = os.path.join('/home', 'iozone_inst')
         self.arch = 'linux-AMD64' if 'x86_64' in machine() else 'linux-powerpc64'
-        self.cmd = 'cd %s/src/current && make %s' % (self.iozone_dir, self.arch)
-        self.iozone_path = '%s/src/current/iozone' % self.iozone_dir
-        self.setups = {'download_benchmark': (CURL_DOWNLOAD,
-                                              self.download_url,
-                                              self.download_path),
-                       'unpack_file': (TAR_UNPACK, self.download_path,
-                                       '/home/iozone_inst'),
-                       'session_cmd': (self.cmd, 300)}
-        self.setups_order = ['download_benchmark', 'unpack_file', 'session_cmd']
+        self.cmd = 'cd %s/src/current && make %s' % (self.iozone_inst, self.arch)
+        self.iozone_path = '%s/src/current/iozone' % self.iozone_inst
+        scp_benckmark = attrgetter('scp_benckmark')
+        unpack_file = attrgetter('unpack_file')
+        session_cmd = attrgetter('session.cmd')
+        self.setups = {scp_benckmark: (params.get('username'), params.get('password'),
+                                       host_path, self.download_path),
+                       unpack_file: (TAR_UNPACK, self.download_path, self.iozone_inst),
+                       session_cmd: (self.cmd, 300)}
+        self.setup_orders = (scp_benckmark, unpack_file, session_cmd)
 
 
 class IozoneWinCfg(object):
@@ -266,19 +300,20 @@ class IozoneWinCfg(object):
         drive_letter = utils_misc.get_winutils_vol(session, label)
         self.cmd = 'set nodosfilewarning=1 && set CYGWIN=nodosfilewarning'
         self.iozone_path = drive_letter + r':\Iozone\iozone.exe'
-        self.setups = {'session_cmd': (self.cmd, 300)}
-        self.setups_order = ['session_cmd']
+        session_cmd = attrgetter('session.cmd')
+        self.setups = {session_cmd: (self.cmd, 300)}
+        self.setup_orders = (session_cmd, )
 
 
 class Iozone(StorageBenchmark):
     @StorageBenchmark._clean_env
-    def __init__(self, params, session):
+    def __init__(self, params, vm):
         self.os_type = params['os_type']
-        super(Iozone, self).__init__(self.os_type, session, 'iozone')
+        super(Iozone, self).__init__(self.os_type, vm, 'iozone')
         self.cfg_map = {'linux': IozoneLinuxCfg, 'windows': IozoneWinCfg}
-        self.cfg = self.cfg_map[self.os_type](params, session)
-        for method in self.cfg.setups_order:
-            getattr(self, method)(*self.cfg.setups[method])
+        self.cfg = self.cfg_map[self.os_type](params, self.session)
+        for method in self.cfg.setup_orders:
+            method(self)(*self.cfg.setups[method])
 
     def run(self, cmd_options='-a', timeout=1800):
         """
@@ -294,15 +329,19 @@ class Iozone(StorageBenchmark):
 
 class FioLinuxCfg(object):
     def __init__(self, params, session):
-        self.download_url = 'git://github.com/axboe/fio.git'
-        self.download_path = os.path.join('/home', 'fio_repo')
+        fio_pkg = params.get("fio_pkg", 'fio-3.13-48-ga819.tar.bz2')
+        host_path = os.path.join(data_dir.get_deps_dir(), 'fio', fio_pkg)
+        self.download_path = os.path.join('/home', fio_pkg)
         self.fio_inst = os.path.join('/home', 'fio_inst')
         self.fio_path = '%s/bin/fio' % self.fio_inst
-        self.setups = {'download_benchmark': (GIT_DOWNLOAD,
-                                              self.download_url,
-                                              self.download_path),
-                       'install': (self.download_path, self.fio_inst)}
-        self.setups_order = ['download_benchmark', 'install']
+        scp_benckmark = attrgetter('scp_benckmark')
+        unpack_file = attrgetter('unpack_file')
+        install = attrgetter('install')
+        self.setups = {scp_benckmark: (params.get('username'), params.get('password'),
+                                       host_path, self.download_path),
+                       unpack_file: (TAR_UNPACK, self.download_path, self.fio_inst),
+                       install: (self.fio_inst, self.fio_inst)}
+        self.setup_orders = (scp_benckmark, unpack_file, install)
 
 
 class FioWinCfg(object):
@@ -315,19 +354,20 @@ class FioWinCfg(object):
         self.fio_msi = {'x86_64': r'%s:\fio-x64.msi' % utils_letter,
                         'i686': r'%s:\fio-x86.msi' % utils_letter}
         self.fio_path = r'"%s\fio\fio.exe"' % self.fio_inst[arch]
-        self.setups = {'install': (self.fio_msi[arch], self.fio_inst[arch], 300)}
-        self.setups_order = ['install']
+        install = attrgetter('install')
+        self.setups = {install: (self.fio_msi[arch], self.fio_inst[arch], 300)}
+        self.setup_orders = (install, )
 
 
 class Fio(StorageBenchmark):
     @StorageBenchmark._clean_env
-    def __init__(self, params, session):
+    def __init__(self, params, vm):
         self.os_type = params['os_type']
-        super(Fio, self).__init__(self.os_type, session, 'fio')
+        super(Fio, self).__init__(self.os_type, vm, 'fio')
         self.cfg_map = {'linux': FioLinuxCfg, 'windows': FioWinCfg}
-        self.cfg = self.cfg_map[self.os_type](params, session)
-        for method in self.cfg.setups_order:
-            getattr(self, method)(*self.cfg.setups[method])
+        self.cfg = self.cfg_map[self.os_type](params, self.session)
+        for method in self.cfg.setup_orders:
+            method(self)(*self.cfg.setups[method])
 
     def run(self, cmd_options, timeout=1800):
         """
@@ -342,15 +382,15 @@ class Fio(StorageBenchmark):
         return super(Fio, self).run(cmd, timeout)
 
 
-def generate_instance(params, session, name):
+def generate_instance(params, vm, name):
     """
     Generate a instance with the given name class.
 
     :param params: dictionary with the test parameters
-    :param session: session connected guest
+    :param vm: vm object
     :param name: benchmark name
     :type name: str
     :return: instance with the given name class
     :rtype: StorageBenchmark object
     """
-    return {'fio': Fio, 'iozone': Iozone}[name](params, session)
+    return {'fio': Fio, 'iozone': Iozone}[name](params, vm)

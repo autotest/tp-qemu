@@ -271,10 +271,10 @@ def run(test, params, env):
     except Exception:
         _do_post_cmd(session)
         raise
+    if iozone_options:
+        iozone = generate_instance(params, vm, 'iozone')
+        random.shuffle(disks)
     try:
-        if iozone_options:
-            iozone = generate_instance(params, session, 'iozone')
-            random.shuffle(disks)
         for i in range(n_repeat):
             logging.info("iterations: %s", (i + 1))
             for n, disk in enumerate(disks):

@@ -151,7 +151,7 @@ def run(test, params, env):
         netperf_server.start()
         # Run netperf with message size defined in range.
         msg = "Detail result of netperf test with different packet size.\n"
-        while(m_size <= end_size):
+        for m_size in range(start_size, end_size + 1, step):
             test_protocol = params.get("test_protocol", "UDP_STREAM")
             test_option = "-t %s -- -m %s" % (test_protocol, m_size)
             txt = "Run netperf client with protocol: '%s', packet size: '%s'"
@@ -169,9 +169,15 @@ def run(test, params, env):
                 test.error("Output format is not expected")
             throughput.append(float(line_tokens[5]))
             msg += output
-            m_size += step
     finally:
+        logging.debug("Kill netperf server")
         netperf_server.stop()
+        try:
+            logging.debug("Cleanup env on both server and client")
+            netperf_server.cleanup()
+            netperf_client.cleanup()
+        except Exception as e:
+            logging.warn("Cleanup failed:\n%s\n", e)
 
     with open(os.path.join(test.debugdir, "udp_results"), "w") as result_file:
         result_file.write(msg)
@@ -186,7 +192,6 @@ def run(test, params, env):
     logging.info("The UDP performance as measured via netperf is ok.")
     logging.info("Throughput of netperf command: %s" % throughput)
     logging.debug("Output of netperf command:\n %s" % msg)
-    error_context.context("Kill netperf server on server (dsthost).")
 
     try:
         if session:

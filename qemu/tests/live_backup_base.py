@@ -2,6 +2,8 @@ import re
 import time
 import logging
 
+from avocado.utils import process
+
 from virttest import utils_misc
 from virttest import qemu_storage
 from virttest.staging import utils_memory
@@ -128,6 +130,8 @@ class LiveBackup(block_copy.BlockCopy):
         Check and compare the backup images with qemu-img
         :param compare_image: the image that need to be compared
         """
+        if self.vm and self.vm.is_alive():
+            self.vm.destroy()
         data_dir = self.data_dir
         for image in self.image_chain:
             params = self.params.object_params(image)
@@ -145,9 +149,20 @@ class LiveBackup(block_copy.BlockCopy):
         :param image: image file.
         :return: image size.
         """
+        force_share = False
+        pause_vm = False
         params = self.params.object_params(image)
         qemu_image = qemu_storage.QemuImg(params, self.data_dir, image)
-        image_info = qemu_image.info()
+        if self.vm:
+            pids = process.getoutput(
+                "lsof %s |grep -v PID|awk '{print $2}'" % qemu_image.image_filename)
+            force_share = str(self.vm.get_pid()) in pids
+            if force_share and not self.vm.is_paused():
+                self.vm.pause()
+                pause_vm = True
+        image_info = qemu_image.info(force_share=force_share)
+        if self.vm and pause_vm:
+            self.vm.resume()
         if not image_info:
             self.test.error("Get image info failed.")
         image_size = re.findall(r"disk size: (\d\.?\d*?.*)", image_info)[0]

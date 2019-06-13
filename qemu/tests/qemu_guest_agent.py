@@ -981,6 +981,91 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.cmd(cmd_del_file)
 
     @error_context.context_aware
+    def gagent_check_file_read(self, test, params, env):
+        """
+        Guest-file-read cmd test.
+
+        Test steps:
+        1) create a file in guest.
+        2) read the file via qga command and check the result.
+        3) create a big file in guest.
+        4) Read the big file with an invalid count number.
+        5) Read the big file with big count number.
+        6) Open a none existing file of guest.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        error_context.context("Change guest-file related cmd to white list"
+                              " and get guest file name.")
+        session, tmp_file = self._guest_file_prepare()
+        content = "helloworld\n"
+
+        error_context.context("Create a new small file in guest", logging.info)
+        cmd_create_file = "echo helloworld > %s" % tmp_file
+        session.cmd(cmd_create_file)
+        error_context.context("Open guest file via guest-file-open with"
+                              " read only mode.", logging.info)
+        # default is read mode
+        ret_handle = int(self.gagent.guest_file_open(tmp_file))
+        error_context.context("Read the content and check the result via"
+                              " guest-file cmd", logging.info)
+        self._read_check(ret_handle, content)
+        self.gagent.guest_file_close(ret_handle)
+
+        error_context.context("Create a 200KB file in guest", logging.info)
+        process.run("dd if=/dev/urandom of=/tmp/big_file bs=1024 count=200")
+        self.vm.copy_files_to("/tmp/big_file", tmp_file)
+
+        error_context.context("Open the big guest file via guest-file-open with"
+                              " read only mode.", logging.info)
+        ret_handle = int(self.gagent.guest_file_open(tmp_file))
+
+        error_context.context("Read the big file with an invalid count number",
+                              logging.info)
+        try:
+            self.gagent.guest_file_read(ret_handle, count=10000000000)
+        except guest_agent.VAgentCmdError as detail:
+            if not re.search("invalid for argument count", str(detail)):
+                test.fail("Return error but is not the desired information: "
+                          "('%s')" % str(detail))
+        else:
+            test.fail("Did not get the expected result.")
+
+        error_context.context("Read the file with an valid big count number.",
+                              logging.info)
+        self.gagent.guest_file_seek(ret_handle, 0, 0)
+        # if guest os resource is enough, will return no error.
+        # else it will return error like "insufficient system resource"
+        # which is expected
+        try:
+            self.gagent.guest_file_read(ret_handle, count=1000000000)
+        except guest_agent.VAgentCmdError as detail:
+            info_insuffi = "Insufficient system resources exist to"
+            info_insuffi += " complete the requested service"
+            if not re.search(info_insuffi, str(detail)):
+                test.fail("Return error but is not the desired information: "
+                          "('%s')" % str(detail))
+        self.gagent.guest_file_close(ret_handle)
+
+        error_context.context("Open a none existing file with read only mode.",
+                              logging.info)
+        try:
+            self.gagent.guest_file_open("none_exist_file")
+        except guest_agent.VAgentCmdError as detail:
+            res_linux = "No such file or directory"
+            res_windows = "system cannot find the file"
+            if res_windows not in str(detail) and res_linux not in str(detail):
+                test.fail("This is not the desired information: "
+                          "('%s')" % str(detail))
+        else:
+            test.fail("Should not pass with none existing file.")
+
+        cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
+        session.cmd(cmd_del_file)
+
+    @error_context.context_aware
     def gagent_check_with_fsfreeze(self, test, params, env):
         """
         Try to operate guest file when fs freeze.

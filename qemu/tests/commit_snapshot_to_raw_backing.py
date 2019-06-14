@@ -17,7 +17,7 @@ def run(test, params, env):
     2. boot the guest from the snapshot
     3. create a file in the snapshot disk, calculate its md5sum
     4. shut the guest down
-    5. commit the snapshot to the raw backing image with various cache mode
+    5. commit the snapshot to the raw backing image with various cache mode,and check whether the snapshot file emptied
     6. boot the guest from the raw image and check whether the
         file's md5sum stays same
     7. check the snapshot
@@ -80,7 +80,19 @@ def run(test, params, env):
                      snapshot, base, cache_mode)
     else:
         logging.info("Commit snapshot image %s back to %s.", snapshot, base)
+
+    org_size = json.loads(sn_img.info(output="json"))["actual-size"]
     sn_img.commit(cache_mode=cache_mode)
+    remain_size = json.loads(sn_img.info(output="json"))["actual-size"]
+
+    """Verify the snapshot file whether emptied after committing"""
+    logging.info("Verify the snapshot file whether emptied after committing")
+    commit_size = org_size - remain_size
+    dd_size = 1073741824
+    if commit_size >= dd_size:
+        logging.info("The snapshot file was emptied!")
+    else:
+        test.fail("The snapshot file was not emptied, check pls!")
 
     base_qit = QemuImgTest(test, params, env, base)
     base_qit.start_vm()

@@ -37,6 +37,12 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
+    def _get_img_obj(tag):
+        """Get an QemuImg object based on the tag."""
+        img_param = params.object_params(tag)
+        img = QemuImg(img_param, data_dir.get_data_dir(), tag)
+        return img
+
     base_image = params.get("images", "image1").split()[0]
     params.update(
         {"image_name_%s" % base_image: params["image_name"],
@@ -51,9 +57,24 @@ def run(test, params, env):
     if not md5:
         test.error("Fail to save tmp file")
     commit_test.destroy_vm()
+
+    sn_tag = params["image_commit"]
+    sn_img = _get_img_obj(sn_tag)
+    org_size = json.loads(sn_img.info(output="json"))["actual-size"]
     commit_test.commit()
     error_context.context("sync host data after commit", logging.info)
     process.system("sync")
+    remain_size = json.loads(sn_img.info(output="json"))["actual-size"]
+
+    """Verify the snapshot file whether emptied after committing"""
+    logging.info("Verify the snapshot file whether emptied after committing")
+    commit_size = org_size - remain_size
+    dd_size = 1073741824
+    if commit_size >= dd_size:
+        logging.info("The snapshot file was emptied!")
+    else:
+        test.fail("The snapshot file was not emptied, check pls!")
+
     commit_test.start_vm(params)
 
     # check md5sum after commit

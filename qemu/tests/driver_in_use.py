@@ -146,7 +146,9 @@ def run(test, params, env):
             if wait_bg_finish:
                 stress_thread.join(suppress_exception=suppress_exception)
             else:
-                stress_thread.join(timeout=timeout, suppress_exception=suppress_exception)
+                join_timeout = int(params.get('join_timeout', timeout))
+                stress_thread.join(timeout=join_timeout,
+                                   suppress_exception=suppress_exception)
         if vm.is_alive():
             run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "after_bg_test":

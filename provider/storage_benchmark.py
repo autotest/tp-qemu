@@ -349,10 +349,11 @@ class FioWinCfg(object):
         label = params.get('win_utils_label', 'WIN_UTILS')
         utils_letter = utils_misc.get_winutils_vol(session, label)
         arch = params.get('vm_arch_name', 'x84_64')
+        fio_ver = params.get('fio_ver', 'fio-3.1')
         self.fio_inst = {'x86_64': r'C:\Program Files (x86)\fio',
                          'i686': r'C:\Program Files\fio'}
-        self.fio_msi = {'x86_64': r'%s:\fio-x64.msi' % utils_letter,
-                        'i686': r'%s:\fio-x86.msi' % utils_letter}
+        self.fio_msi = {'x86_64': r'%s:\%s-x64.msi' % (utils_letter, fio_ver),
+                        'i686': r'%s:\%s-x86.msi' % (utils_letter, fio_ver)}
         self.fio_path = r'"%s\fio\fio.exe"' % self.fio_inst[arch]
         install = attrgetter('install')
         self.setups = {install: (self.fio_msi[arch], self.fio_inst[arch], 300)}

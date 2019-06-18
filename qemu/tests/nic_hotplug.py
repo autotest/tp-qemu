@@ -8,8 +8,10 @@ from virttest import utils_net
 from virttest import virt_vm
 from virttest import utils_misc
 from virttest.qemu_devices import qdevices
+from virttest import error_context
 
 
+@error_context.context_aware
 def run(test, params, env):
     """
     Test hotplug of NIC devices
@@ -25,6 +27,7 @@ def run(test, params, env):
     7) Delete nic device and netdev if user config "do_random_unhotplug"
     8) Ping guest's new ip address after guest pause/resume
     9) Re-enable primary link of guest and hotunplug the plug nics
+    10) Perform the subtest after the hotunplug
 
     BEWARE OF THE NETWORK BRIDGE DEVICE USED FOR THIS TEST ("nettype=bridge"
     and "netdst=<bridgename>" param).  The virt-test default bridge virbr0,
@@ -122,7 +125,27 @@ def run(test, params, env):
         add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         return add_output
 
+    def run_sub_test(params, plug_tag):
+        """
+        Run subtest before/after hotplug/unplug device.
+
+        :param plug_tag: identify when to run subtest,
+                         ex, before_hotplug.
+        :return: whether vm was successfully shut-down
+                 if needed
+        """
+        sub_type = params.get("sub_type_%s" % plug_tag)
+        if sub_type:
+            context_msg = "Running sub test '%s' %s"
+            error_context.context(context_msg % (sub_type, plug_tag),
+                                  logging.info)
+            utils_test.run_virt_sub_test(test, params, env, sub_type)
+            return (sub_type == "shutdown")
+        return False
+
     login_timeout = int(params.get("login_timeout", 360))
+    repeat_times = int(params.get("repeat_times", 1))
+    logging.info("repeat_times: %s" % repeat_times)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     primary_nic = [nic for nic in vm.virtnet]
@@ -135,9 +158,12 @@ def run(test, params, env):
             s_session = vm.wait_for_serial_login(timeout=login_timeout)
             s_session.cmd_output_safe("modprobe %s" % module)
             s_session.close()
-    nic_hotplug_count = int(params.get("nic_hotplug_count", 1))
-    nic_hotplugged = []
-    try:
+
+    for iteration in range(repeat_times):
+        error_context.context("Start test iteration %s" % (iteration + 1),
+                              logging.info)
+        nic_hotplug_count = int(params.get("nic_hotplug_count", 1))
+        nic_hotplugged = []
         for nic_index in range(1, nic_hotplug_count + 1):
             # need to reconnect serial port after
             # guest reboot for windows guest
@@ -195,11 +221,9 @@ def run(test, params, env):
                 err_msg = "New nic failed ping test, error info: '%s'"
                 test.fail(err_msg % output)
 
-            logging.info("Reboot vm after hotplug nic")
             # reboot vm via serial port since some guest can't auto up
             # hotplug nic and next step will check is hotplug nic works.
-            s_session = vm.reboot(session=s_session, serial=True)
-            vm.verify_alive()
+
             hotnic_ip = get_hotplug_nic_ip(
                 vm,
                 hotplug_nic,
@@ -238,14 +262,18 @@ def run(test, params, env):
                 s_session = vm.reboot(session=s_session, serial=True)
                 vm.verify_alive()
             s_session.close()
-    finally:
-        for nic in nic_hotplugged:
-            vm.hotunplug_nic(nic.nic_name)
+
         logging.info("Re-enabling the primary link(s)")
         for nic in primary_nic:
             vm.set_link(nic.device_id, up=True)
-        logging.info("Reboot vm to verify it alive after hotunplug nic(s)")
-        serial = not (len(vm.virtnet) > 0)
-        session = vm.reboot(serial=serial)
-        vm.verify_alive()
-        session.close()
+
+        plug_tag = "after_plug"
+        vm_switched_off = run_sub_test(params, plug_tag)
+        if vm_switched_off:
+            return
+
+        for nic in nic_hotplugged:
+            vm.hotunplug_nic(nic.nic_name)
+
+        plug_tag = "after_unplug"
+        run_sub_test(params, plug_tag)

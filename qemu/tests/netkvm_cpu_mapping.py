@@ -27,7 +27,7 @@ def run(test, params, env):
     nic = vm.virtnet[0]
     nic_vectors = int(nic['vectors']) if nic['vectors'] else (2 * queues + 2)
     error_context.context("Get CPU mapping info by traceview", logging.info)
-    output = utils_net.dump_traceview_log(params, vm)
+    output = utils_net.dump_traceview_log_windows(params, vm)
     check_reg = "SetupInterrruptAffinity.*?Option = 0x0"
     mapping_count = len(re.findall(check_reg, output))
     if mapping_count != nic_vectors:

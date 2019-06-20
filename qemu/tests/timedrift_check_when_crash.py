@@ -65,8 +65,7 @@ def run(test, params, env):
     time.sleep(sleep_time)
     # Autotest parses serial output and could raise VMDeadKernelCrash
     # we generated using sysrq. Ignore one "BUG:" line
-    if os_type == "linux":
-        vm.resume()
+    vm.resume()
     try:
         session = vm.reboot(method="system_reset")
     except VMDeadKernelCrashError as details:

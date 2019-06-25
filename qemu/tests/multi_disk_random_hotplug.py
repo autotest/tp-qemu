@@ -17,6 +17,7 @@ from virttest import env_process
 from virttest.qemu_devices import utils
 from virttest.remote import LoginTimeoutError
 from virttest.qemu_monitor import MonitorError
+from virttest.qemu_capabilities import Flags
 
 
 # qdev is not thread safe so in case of dangerous ops lock this thread
@@ -162,6 +163,8 @@ def run(test, params, env):
                 args['scsi_hba'] = 'spapr-vscsi'
             else:
                 args['fmt'] = fmt
+            args['imgfmt'] = params['image_format_%s' % name] if params.get(
+                'image_format_%s' % name) else params['image_format']
             # Other params
             for key, value in param_matrix.items():
                 args[key] = random.choice(value)
@@ -291,7 +294,8 @@ def run(test, params, env):
                 # as dirty.
                 if LOCK:
                     LOCK.acquire()
-                qdev.remove(device)
+                qdev.remove(
+                    device, False if vm.check_capability(Flags.BLOCKDEV) else True)
                 if LOCK:
                     LOCK.release()
         time.sleep(unplug_sleep)

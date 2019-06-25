@@ -7,6 +7,7 @@ from virttest import utils_test
 from virttest.qemu_devices import qdevices
 from virttest import utils_disk
 from virttest import utils_numeric
+from virttest.qemu_capabilities import Flags
 
 
 @error_context.context_aware
@@ -168,7 +169,9 @@ def run(test, params, env):
                                   "Output: %s" % output)
                 session.close()
 
-                devs = [dev for dev in devs if not isinstance(dev, qdevices.QDrive)]
+                dtype = qdevices.QBlockdevNode if vm.check_capability(
+                    Flags.BLOCKDEV) else qdevices.QDrive
+                devs = [dev for dev in devs if not isinstance(dev, dtype)]
                 device_list.extend(devs)
             else:
                 for device in vm.devices:

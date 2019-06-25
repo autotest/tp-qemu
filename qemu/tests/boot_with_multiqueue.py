@@ -79,7 +79,7 @@ def run(test, params, env):
                                                                 cmd_timeout)
         # check the msi for windows guest with trace view
         error_context.context("Check the msi number in guest", logging.info)
-        msis, cur_queues = utils_net.get_MSIs_and_queues_windows(params,
+        msis, cur_queues = utils_net.get_msis_and_queues_windows(params,
                                                                  vm)
         if cur_queues != queues or msis != 2 * queues + 2:
             test.fail("queues not correct with %s, expect %s" %

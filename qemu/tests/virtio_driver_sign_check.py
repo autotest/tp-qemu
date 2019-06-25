@@ -57,6 +57,8 @@ def run(test, params, env):
         file_type = [".cat", ".sys", ".inf", "Wdf"]
         tested_list = []
         viowin_letter, path = get_driver_file_path(session, params)
+        if not viowin_letter:
+            test.error("Cannot find the virtio_win drive letter.")
         for ftype in file_type:
             cmd = list_files_cmd % (viowin_letter, path, ftype)
             list_file = session.cmd_output(cmd, timeout)

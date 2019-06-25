@@ -6,6 +6,7 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest import storage
 from virttest import data_dir
+from virttest.qemu_capabilities import Flags
 
 
 @error_context.context_aware
@@ -145,7 +146,11 @@ def run(test, params, env):
 
         error_context.context("Change disk size to %s in monitor"
                               % block_size, logging.info)
-        vm.monitor.block_resize(data_image_dev, block_size)
+        if Flags.BLOCKDEV in vm.capabilities:
+            args = (None, block_size, data_image_dev)
+        else:
+            args = (data_image_dev, block_size)
+        vm.monitor.block_resize(*args)
 
         if need_reboot:
             session = vm.reboot(session=session)

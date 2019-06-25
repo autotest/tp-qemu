@@ -9,6 +9,7 @@ from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
+from virttest.qemu_capabilities import Flags
 
 
 # This decorator makes the test function aware of context strings
@@ -72,6 +73,10 @@ def run(test, params, env):
             for block in blocks:
                 if 'inserted' not in block.keys():
                     device = block['device']
+                else:
+                    if (Flags.BLOCKDEV in vm.capabilities and
+                            block['inserted']['file'] == 'null-co://'):
+                        device = block['inserted']['node-name']
         return device
 
     def create_iso_image(params, name, prepare=True, file_size=None):

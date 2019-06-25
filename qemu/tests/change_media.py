@@ -6,6 +6,7 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import data_dir
+from virttest.qemu_capabilities import Flags
 
 
 @error_context.context_aware
@@ -37,7 +38,11 @@ def run(test, params, env):
                     return True
         else:
             for block in blocks_info:
-                if block['device'] == block_name and block['locked']:
+                if Flags.BLOCKDEV in vm.capabilities:
+                    condition = block['qdev'] == vm.devices.get_qdev_id(block_name)
+                else:
+                    condition = block['device'] == block_name
+                if condition and block['locked']:
                     return True
         return False
 
@@ -66,6 +71,9 @@ def run(test, params, env):
     orig_img_name = params.get("orig_img_name")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         orig_img_name)
+    if Flags.BLOCKDEV in vm.capabilities:
+        change_insert_cmd = ("blockdev-change-medium id=%s,filename=%s" %
+                             (vm.devices.get_qdev_id(device_name), orig_img_name))
     monitor.send_args_cmd(change_insert_cmd)
     logging.info("Wait until device is ready")
     exists = utils_misc.wait_for(lambda: (orig_img_name in
@@ -116,6 +124,9 @@ def run(test, params, env):
     new_img_name = params.get("new_img_name")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         new_img_name)
+    if Flags.BLOCKDEV in vm.capabilities:
+        change_insert_cmd = ("blockdev-change-medium id=%s,filename=%s" %
+                             (vm.devices.get_qdev_id(device_name), new_img_name))
     output = change_block(change_insert_cmd)
     if not ("is locked" in output or "is not open" in output):
         msg = ("%s is not locked or is open "
@@ -134,6 +145,9 @@ def run(test, params, env):
         test.error("VM doesn't have any non-removable devices.")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         new_img_name)
+    if Flags.BLOCKDEV in vm.capabilities:
+        change_insert_cmd = ("blockdev-change-medium id=%s,filename=%s" %
+                             (vm.devices.get_qdev_id(device_name), new_img_name))
     output = change_block(change_insert_cmd)
     if "is not removable" not in output:
         test.fail("Could remove non-removable device!")

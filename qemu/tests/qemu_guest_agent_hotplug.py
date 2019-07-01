@@ -29,7 +29,7 @@ def run(test, params, env):
     char_backend = params["backend_char_plug"]
     char_id = params["id_char_plug"]
     gagent_name = params["gagent_name"]
-    char_path = vm.get_virtio_port_filename(gagent_name)
+    char_path = vm.get_serial_console_filename(gagent_name)
     params["path_char_plug"] = char_path
     dev_driver = params["dev_driver"]
     dev_id = params["dev_id"]

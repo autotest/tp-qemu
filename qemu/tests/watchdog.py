@@ -29,6 +29,7 @@ def run(test, params, env):
 
     timeout = int(params.get("login_timeout", '360'))
     relogin_timeout = int(params.get("relogin_timeout", '240'))
+    vm_arch_name = params["vm_arch_name"]
 
     watchdog_device_type = params.get("watchdog_device_type", "i6300esb")
     watchdog_action = params.get("watchdog_action", "reset")
@@ -89,12 +90,35 @@ def run(test, params, env):
         """
         # when watchdog action is pause, shutdown, reset, poweroff
         # the vm session will lost responsive
+
+        def check_guest_reboot(pattern):
+            start_time = time.time()
+            while (time.time() - start_time) < vm.REBOOT_TIMEOUT:
+                if pattern in vm.serial_console.get_output().strip(o_before):
+                    return True
+            return False
+
         response_timeout = int(params.get("response_timeout", '240'))
         error_context.context("Check whether or not watchdog action '%s' took"
                               " effect" % watchdog_action, logging.info)
+        if watchdog_action == "inject-nmi":
+            if (vm_arch_name in ("x86_64", "i686")):
+                if not utils_misc.wait_for(lambda: "NMI received" in session.cmd_output("dmesg"),
+                                           response_timeout, 0, 1):
+                    test.fail("Guest didn't receive dmesg with 'NMI received',"
+                              "after action '%s'." % watchdog_action)
+                msg = session.cmd_output("dmesg").splitlines()[-8:]
+                logging.info("Guest received dmesg info: %s" % msg)
+            elif (vm_arch_name in ("ppc64", "ppc64le")):
+                rebooted = check_guest_reboot(params["guest_reboot_pattern"])
+                if not rebooted:
+                    test.fail("Guest isn't rebooted after watchdog action '%s'"
+                              % watchdog_action)
+                logging.info("Try to login the guest after reboot")
+                session = vm.wait_for_login(timeout=timeout)
         if not utils_misc.wait_for(lambda: not session.is_responsive(),
                                    response_timeout, 0, 1):
-            if watchdog_action == "none" or watchdog_action == "debug":
+            if (watchdog_action in ("none", "debug", "inject-nmi")):
                 logging.info("OK, the guest session is responsive still")
             else:
                 txt = "It seems action '%s' took no" % watchdog_action
@@ -420,6 +444,9 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login(timeout=timeout)
+
+    if (watchdog_action == "inject-nmi" and vm_arch_name in ("ppc64", "ppc64le")):
+        o_before = vm.serial_console.get_output()
 
     if params.get("setup_runlevel") == "yes":
         error_context.context("Setup the runlevel for guest", logging.info)

@@ -1,5 +1,6 @@
 import re
 import logging
+import time
 
 from avocado.utils import linux_modules
 
@@ -48,6 +49,7 @@ def run(test, params, env):
     addr_pattern = params['addr_pattern']
     device_pattern = params['device_pattern']
     lspci_cmd = 'lspci'
+    time.sleep(10)
     lspci_output = session.cmd_output(lspci_cmd)
     device_str = re.findall(r'%s\s%s' % (addr_pattern, device_pattern),
                             lspci_output)

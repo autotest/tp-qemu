@@ -1,6 +1,7 @@
 import logging
 
 from avocado.utils import process
+from virttest import env_process
 
 from qemu.tests.qemu_disk_img import QemuImgTest
 from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
@@ -41,6 +42,7 @@ def run(test, params, env):
 
     if params.get("create_snapshot", "no") == "yes":
         _create_os_snapshot()
+        env_process.preprocess_vm(test, params, env, "avocado-vt-vm1")
         vm1 = env.get_vm("avocado-vt-vm1")
         # remove sn in 'images' to prevent boot with two images
         vm1.params["images"] = "image1"

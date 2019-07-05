@@ -7,6 +7,7 @@ from avocado.utils import process
 from avocado.utils import cpu
 
 from virttest import utils_test
+from virttest import utils_time
 from virttest.compat_52lts import decode_to_text
 
 
@@ -73,6 +74,9 @@ def run(test, params, env):
         utils_test.update_boot_option(vm,
                                       args_removed=boot_option_removed,
                                       args_added=boot_option_added)
+
+    if params["os_type"] == "windows":
+        utils_time.sync_timezone_win(vm)
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_serial_login(timeout=timeout)

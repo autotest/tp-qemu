@@ -4,6 +4,7 @@ import os
 import signal
 
 from virttest import utils_test
+from virttest import utils_time
 
 
 def run(test, params, env):
@@ -33,6 +34,9 @@ def run(test, params, env):
         utils_test.update_boot_option(vm,
                                       args_removed=boot_option_removed,
                                       args_added=boot_option_added)
+
+    if params["os_type"] == 'windows':
+        utils_time.sync_timezone_win(vm)
 
     session = vm.wait_for_login(timeout=login_timeout)
 

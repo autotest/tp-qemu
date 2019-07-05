@@ -6,6 +6,7 @@ from avocado.utils import process
 from virttest import env_process
 from virttest import test_setup
 from virttest import error_context
+from virttest import utils_time
 
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 
@@ -240,6 +241,8 @@ class BackwardtimeTest(TimedriftTest):
         self.setup_private_network()
         self.sync_host_time()
         vm = self.get_vm(create=True)
+        if self.params["os_type"] == 'windows':
+            utils_time.sync_timezone_win(vm)
         session = self.get_session(vm)
         self.check_dirft_before_adjust_time(session)
         if self.params.get("read_clock_source_cmd"):

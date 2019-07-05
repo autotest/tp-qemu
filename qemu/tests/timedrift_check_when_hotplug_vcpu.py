@@ -6,6 +6,7 @@ from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_test
+from virttest import utils_time
 
 
 @error_context.context_aware
@@ -32,6 +33,8 @@ def run(test, params, env):
     process.system(ntp_host_cmd, shell=True)
 
     vm = env.get_vm(params["main_vm"])
+    if params["os_type"] == 'windows':
+        utils_time.sync_timezone_win(vm)
     session = vm.wait_for_login()
 
     ntp_query_cmd = params.get("ntp_query_cmd", "")

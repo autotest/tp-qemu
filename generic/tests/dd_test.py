@@ -42,7 +42,7 @@ def run(test, params, env):
             return "/dev/urandom"
         elif filename in params.objects("images"):
             drive_id = params["blk_extra_params_%s" % filename].split("=")[1]
-            drive_path = utils_misc.get_linux_drive_path(session, drive_id)
+            drive_path = utils_disk.get_linux_drive_path(session, drive_id)
             if drive_path:
                 return drive_path
             test.error("Failed to get '%s' drive path" % filename)

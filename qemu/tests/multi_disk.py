@@ -12,7 +12,6 @@ from avocado.utils import astring
 from virttest import env_process
 from virttest import error_context
 from virttest import qemu_qtree
-from virttest import utils_misc
 from virttest import utils_disk
 from provider.storage_benchmark import generate_instance
 
@@ -254,7 +253,7 @@ def run(test, params, env):
                 test.fail("Fail to list all the volumes"
                           ", %s" % err_msg % len(disks))
             if len(disks) > drive_letters:
-                black_list.extend(utils_misc.get_winutils_vol(session))
+                black_list.extend(utils_disk.get_winutils_vol(session))
                 disks = random.sample(disks, drive_letters - len(black_list))
             error_context.context("Clear readonly for all disks and online "
                                   "them in windows guest.", logging.info)

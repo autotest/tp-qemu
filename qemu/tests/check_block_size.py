@@ -3,7 +3,7 @@ import re
 
 from virttest import error_context
 from virttest import utils_test
-from virttest import utils_misc
+from virttest import utils_disk
 
 
 @error_context.context_aware
@@ -48,7 +48,7 @@ def run(test, params, env):
         error_context.context("Verify physical/Logical block size",
                               logging.info)
         if params["os_type"] == "linux":
-            drive_path = utils_misc.get_linux_drive_path(session, drive_serial)
+            drive_path = utils_disk.get_linux_drive_path(session, drive_serial)
             if not drive_path:
                 test.error("Could not find the specified virtio block device.")
 

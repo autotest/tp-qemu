@@ -7,6 +7,7 @@ from avocado.utils import process
 from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import data_dir
 
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheckWin
@@ -50,7 +51,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
             end_time = time.time() + timeout
             while time.time() < end_time:
                 time.sleep(2)
-                virtio_win_letter = utils_misc.get_win_disk_vol(session,
+                virtio_win_letter = utils_disk.get_win_disk_vol(session,
                                                                 vol_virtio_key)
                 if virtio_win_letter:
                     break

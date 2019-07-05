@@ -10,6 +10,7 @@ import os
 from virttest import data_dir
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import utils_test
 
 
@@ -94,7 +95,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=360)
-    vol_utils = utils_misc.get_winutils_vol(session)
+    vol_utils = utils_disk.get_winutils_vol(session)
     if not vol_utils:
         test.error("WIN_UTILS CDROM not found.")
 

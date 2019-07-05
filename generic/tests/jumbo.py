@@ -4,6 +4,7 @@ import re
 
 from avocado.utils import process
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import utils_test
 from virttest import utils_net
 from virttest import error_context
@@ -102,7 +103,7 @@ def run(test, params, env):
             if os_variant == "winxp":
                 pnpdevice_id = utils_net.get_windows_nic_attribute(
                     session, "netconnectionid", connection_id, "pnpdeviceid")
-                cd_num = utils_misc.get_winutils_vol(session)
+                cd_num = utils_disk.get_winutils_vol(session)
                 copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_num
                 session.cmd(copy_cmd)
 

@@ -3,6 +3,7 @@ import logging
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest.utils_windows import virtio_win, wmic
 from virttest.utils_test.qemu import windrv_verify_running
 
@@ -61,7 +62,7 @@ def run(test, params, env):
 
     # wait for cdroms having driver installed in case that
     # they are new appeared in this test
-    utils_misc.wait_for(lambda: utils_misc.get_winutils_vol(session),
+    utils_misc.wait_for(lambda: utils_disk.get_winutils_vol(session),
                         timeout=OPERATION_TIMEOUT, step=10)
 
     devcon_path = utils_misc.set_winutils_letter(session,

@@ -5,6 +5,7 @@ import aexpect
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 
 
 @error_context.context_aware
@@ -42,7 +43,7 @@ def run(test, params, env):
             drive_id = "on"
         elif drive_id == "EMPTY_STRING":
             drive_id = ""
-        drive_path = utils_misc.get_linux_drive_path(session, drive_id)
+        drive_path = utils_disk.get_linux_drive_path(session, drive_id)
         if not drive_path:
             test.error("Failed to get '%s' drive path" % drive_name)
 

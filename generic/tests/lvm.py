@@ -1,7 +1,7 @@
 import os
 import logging
 from virttest import error_context
-from virttest import utils_misc
+from virttest import utils_disk
 from virttest import utils_test
 
 
@@ -63,7 +63,7 @@ def run(test, params, env):
             disk_list = []
             for disk in params.objects("images")[-2:]:
                 d_id = params["blk_extra_params_%s" % disk].split("=")[1]
-                d_path = utils_misc.get_linux_drive_path(session, d_id)
+                d_path = utils_disk.get_linux_drive_path(session, d_id)
                 if not d_path:
                     test.error("Failed to get '%s' drive path" % d_id)
                 disk_list.append(d_path)

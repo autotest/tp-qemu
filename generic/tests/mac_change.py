@@ -3,6 +3,7 @@ import logging
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import utils_net
 from virttest import utils_test
 
@@ -89,7 +90,7 @@ def run(test, params, env):
                                                                "netconnectionid",
                                                                connection_id,
                                                                "pnpdeviceid")
-            cd_drive = utils_misc.get_winutils_vol(session)
+            cd_drive = utils_disk.get_winutils_vol(session)
             copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_drive
             session.cmd(copy_cmd)
 

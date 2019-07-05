@@ -23,6 +23,7 @@ from platform import machine
 from operator import attrgetter
 
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import data_dir
 from virttest.remote import scp_to_remote
 
@@ -297,7 +298,7 @@ class IozoneLinuxCfg(object):
 class IozoneWinCfg(object):
     def __init__(self, params, session):
         label = params.get('win_utils_label', 'WIN_UTILS')
-        drive_letter = utils_misc.get_winutils_vol(session, label)
+        drive_letter = utils_disk.get_winutils_vol(session, label)
         self.cmd = 'set nodosfilewarning=1 && set CYGWIN=nodosfilewarning'
         self.iozone_path = drive_letter + r':\Iozone\iozone.exe'
         session_cmd = attrgetter('session.cmd')
@@ -347,7 +348,7 @@ class FioLinuxCfg(object):
 class FioWinCfg(object):
     def __init__(self, params, session):
         label = params.get('win_utils_label', 'WIN_UTILS')
-        utils_letter = utils_misc.get_winutils_vol(session, label)
+        utils_letter = utils_disk.get_winutils_vol(session, label)
         arch = params.get('vm_arch_name', 'x84_64')
         fio_ver = params.get('fio_ver', 'fio-3.1')
         self.fio_inst = {'x86_64': r'C:\Program Files (x86)\fio',

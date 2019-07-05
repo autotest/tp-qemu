@@ -4,6 +4,7 @@ import logging
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 
 
 @error_context.context_aware
@@ -39,7 +40,7 @@ def run(test, params, env):
     try:
         installed = session.cmd_status(check_installed_cmd) == 0
         if not installed:
-            dst = r"%s:\\" % utils_misc.get_winutils_vol(session)
+            dst = r"%s:\\" % utils_disk.get_winutils_vol(session)
 
             error_context.context("Install fio in guest", logging.info)
             install_cmd = params["install_cmd"]

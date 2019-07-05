@@ -8,6 +8,7 @@ from avocado.core import exceptions
 from virttest import qemu_monitor
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import error_context
 from virttest.utils_test.qemu import MemoryBaseTest
 
@@ -459,7 +460,7 @@ class BallooningTestWin(BallooningTest):
         """
         key = "VolumeName like 'virtio-win%'"
         try:
-            return utils_misc.get_win_disk_vol(session,
+            return utils_disk.get_win_disk_vol(session,
                                                condition=key)
         except Exception:
             self.test.error("Could not get virtio-win disk vol!")

@@ -7,6 +7,7 @@ import aexpect
 from avocado.utils import download
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import data_dir
 
 
@@ -83,7 +84,7 @@ def run(test, params, env):
             download.get_file(download_url, pkg_path, hash_expected=pkg_md5sum)
             vm.copy_files_to(pkg_path, dst)
         else:
-            dst = r"%s:\\" % utils_misc.get_winutils_vol(session)
+            dst = r"%s:\\" % utils_disk.get_winutils_vol(session)
 
         error_context.context("Install HeavyLoad in guest", logging.info)
         install_cmd = params["install_cmd"]
@@ -97,7 +98,7 @@ def run(test, params, env):
     # genery heavyload command automaticly
     if params.get("autostress") == "yes":
         free_mem = utils_misc.get_free_mem(session, "windows")
-        free_disk = utils_misc.get_free_disk(session, "C:")
+        free_disk = utils_disk.get_free_disk(session, "C:")
         start_cmd = r'"%s\heavyload.exe"' % params["install_path"]
         start_cmd = add_option(start_cmd, 'CPU', params["smp"])
         start_cmd = add_option(start_cmd, 'MEMORY', free_mem)

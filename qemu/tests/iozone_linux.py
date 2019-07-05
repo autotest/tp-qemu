@@ -26,7 +26,7 @@ def run(test, params, env):
                 drive_id = match.group(2)
             else:
                 continue
-            drive_path = utils_misc.get_linux_drive_path(session, drive_id)
+            drive_path = utils_disk.get_linux_drive_path(session, drive_id)
             if not drive_path:
                 test.error("Failed to get '%s' drive path" % data_image)
             disks[drive_path[5:]] = data_image

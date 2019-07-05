@@ -9,6 +9,7 @@ from avocado.utils import process
 
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import utils_net
 from virttest import remote
 from virttest import data_dir
@@ -521,7 +522,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         error_context.context("Start Netserver on guest", logging.info)
         if params.get("os_type") == "windows":
             timeout = float(params.get("timeout", "240"))
-            cdrom_drv = utils_misc.get_winutils_vol(server_ctl)
+            cdrom_drv = utils_disk.get_winutils_vol(server_ctl)
             if params.get("use_cygwin") == "yes":
                 netserv_start_cmd = params.get("netserv_start_cmd")
                 netperf_src = params.get("netperf_src") % cdrom_drv

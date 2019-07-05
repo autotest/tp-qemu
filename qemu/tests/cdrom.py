@@ -21,6 +21,7 @@ from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_disk
 from virttest import gluster
 from virttest import env_process
 from virttest import data_dir
@@ -395,7 +396,7 @@ def run(test, params, env):
         """
         try:
             if params["os_type"] == "windows":
-                winutil_drive = utils_misc.get_winutils_vol(session)
+                winutil_drive = utils_disk.get_winutils_vol(session)
                 winutil_drive = "%s:" % winutil_drive
                 cdrom_dev_list.remove(winutil_drive)
                 testing_cdrom_device = cdrom_dev_list[-1]

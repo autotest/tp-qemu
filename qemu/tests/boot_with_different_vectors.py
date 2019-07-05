@@ -6,7 +6,7 @@ from virttest import error_context
 from virttest import utils_test
 from virttest import env_process
 from virttest import virt_vm
-from virttest import utils_misc
+from virttest import utils_disk
 from virttest import utils_net
 from virttest.utils_windows import virtio_win
 
@@ -186,7 +186,7 @@ def run(test, params, env):
         # copy traceview.exe
         error_context.context("Copy traceview.exe to drive C", logging.info)
         traceview_path_template = params.get("traceview_path_template")
-        cd_drive = utils_misc.get_winutils_vol(session)
+        cd_drive = utils_disk.get_winutils_vol(session)
         traceview_path = traceview_path_template % cd_drive
         _copy_file(session, traceview_path, "c:\\")
 

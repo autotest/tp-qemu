@@ -16,6 +16,7 @@ from virttest import qemu_vm
 from virttest import virt_vm
 from virttest import data_dir
 from virttest import utils_misc
+from virttest import cpu
 from virttest.utils_test.qemu import migration
 
 
@@ -27,7 +28,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    utils_misc.Flag.aliases = utils_misc.kvm_map_flags_aliases
+    cpu.Flag.aliases = cpu.kvm_map_flags_aliases
     qemu_binary = utils_misc.get_qemu_binary(params)
 
     cpuflags_src = os.path.join(data_dir.get_deps_dir("cpu_flags"), "src")
@@ -48,13 +49,13 @@ def run(test, params, env):
     class HgFlags(object):
 
         def __init__(self, cpu_model, extra_flags=set([])):
-            virtual_flags = set(map(utils_misc.Flag,
+            virtual_flags = set(map(cpu.Flag,
                                     params.get("guest_spec_flags", "").split()))
             self.hw_flags = set(map(utils_misc.Flag,
                                     params.get("host_spec_flags", "").split()))
             self.qemu_support_flags = get_all_qemu_flags()
-            self.host_support_flags = set(map(utils_misc.Flag,
-                                              utils_misc.get_cpu_flags()))
+            self.host_support_flags = set(map(cpu.Flag,
+                                              cpu.get_cpu_flags()))
             self.quest_cpu_model_flags = (get_guest_host_cpuflags(cpu_model) -
                                           virtual_flags)
 
@@ -120,7 +121,7 @@ def run(test, params, env):
         out = vm_session.cmd_output("cat /proc/cpuinfo")
 
         flags = flags_re.search(out).groups()[0].split()
-        return set(map(utils_misc.Flag, flags))
+        return set(map(cpu.Flag, flags))
 
     def get_guest_host_cpuflags_legacy(cpumodel):
         """
@@ -141,7 +142,7 @@ def run(test, params, env):
             test.fail("Cannot find %s cpu model." % (cpumodel))
         for flag_group in model.groups():
             flags += flag_group.split()
-        return set(map(utils_misc.Flag, flags))
+        return set(map(cpu.Flag, flags))
 
     class ParseCpuFlags(object):
 
@@ -198,7 +199,7 @@ def run(test, params, env):
         for arch in cpus.values():
             if cpumodel in arch.keys():
                 flags = arch[cpumodel]
-        return set(map(utils_misc.Flag, flags))
+        return set(map(cpu.Flag, flags))
 
     get_guest_host_cpuflags_BAD = get_guest_host_cpuflags_1350
 
@@ -213,7 +214,7 @@ def run(test, params, env):
         for a in m.groups():
             flags += a.split()
 
-        return set(map(utils_misc.Flag, flags))
+        return set(map(cpu.Flag, flags))
 
     def get_all_qemu_flags_1350():
         cmd = qemu_binary + " -cpu ?"
@@ -225,7 +226,7 @@ def run(test, params, env):
         for a in m.groups():
             flags += a.split()
 
-        return set(map(utils_misc.Flag, flags))
+        return set(map(cpu.Flag, flags))
 
     def get_all_qemu_flags_BAD():
         """
@@ -236,7 +237,7 @@ def run(test, params, env):
         """
         p = ParseCpuFlags()
         p.parse_file(cpuflags_def)
-        return set(map(utils_misc.Flag, p.all_flags))
+        return set(map(cpu.Flag, p.all_flags))
 
     def get_cpu_models_legacy():
         """
@@ -290,10 +291,10 @@ def run(test, params, env):
         :param cpu_flag: Flag
         :return: all name of Flag.
         """
-        cpu_flag = utils_misc.Flag(cpu_flag)
+        cpu_flag = cpu.Flag(cpu_flag)
         for f in get_all_qemu_flags():
             if f == cpu_flag:
-                return utils_misc.Flag(f)
+                return cpu.Flag(f)
         return []
 
     def parse_qemu_cpucommand(cpumodel):
@@ -307,8 +308,8 @@ def run(test, params, env):
         cpumodel = flags[0]
 
         qemu_model_flag = get_guest_host_cpuflags(cpumodel)
-        host_support_flag = set(map(utils_misc.Flag,
-                                    utils_misc.get_cpu_flags()))
+        host_support_flag = set(map(cpu.Flag,
+                                    cpu.get_cpu_flags()))
         real_flags = qemu_model_flag & host_support_flag
 
         for f in flags[1:]:
@@ -376,12 +377,12 @@ def run(test, params, env):
         :return: List of CPUs that are still enabled after disable procedure.
         """
         online = [0]
-        for cpu in range(1, smp):
+        for cpuid in range(1, smp):
             system_cpu_dir = "/sys/devices/system/cpu/"
-            cpu_online = system_cpu_dir + "cpu%d/online" % (cpu)
+            cpu_online = system_cpu_dir + "cpu%d/online" % (cpuid)
             cpu_state = vm_session.cmd_output("cat %s" % cpu_online).strip()
             if cpu_state == "1":
-                online.append(cpu)
+                online.append(cpuid)
         cpu_proc = vm_session.cmd_output("cat /proc/cpuinfo")
         cpu_state_proc = map(lambda x: int(x),
                              re.findall(r"processor\s+:\s*(\d+)\n", cpu_proc))
@@ -422,7 +423,7 @@ def run(test, params, env):
         session = vm.wait_for_login()
         for f in flags:
             try:
-                for tc in utils_misc.kvm_map_flags_to_test[f]:
+                for tc in cpu.kvm_map_flags_to_test[f]:
                     session.cmd("%s/cpuflags-test --%s" %
                                 (os.path.join(path, "src"), tc))
                 pass_Flags.append(f)
@@ -430,9 +431,9 @@ def run(test, params, env):
                 not_working.append(f)
             except KeyError:
                 not_tested.append(f)
-        return (set(map(utils_misc.Flag, pass_Flags)),
-                set(map(utils_misc.Flag, not_working)),
-                set(map(utils_misc.Flag, not_tested)))
+        return (set(map(cpu.Flag, pass_Flags)),
+                set(map(cpu.Flag, not_working)),
+                set(map(cpu.Flag, not_tested)))
 
     def run_stress(vm, timeout, guest_flags):
         """
@@ -449,7 +450,7 @@ def run(test, params, env):
         try:
             stress_session.cmd("%s/cpuflags-test --stress %s%s" %
                                (os.path.join(install_path, "src"), smp,
-                                utils_misc.kvm_flags_to_stresstests(flags[0])),
+                                cpu.kvm_flags_to_stresstests(flags[0])),
                                timeout=timeout)
         except aexpect.ShellTimeoutError:
             ret = True
@@ -475,7 +476,7 @@ def run(test, params, env):
 
         try:
             (cpu_model, extra_flags) = cpu_model.split(":")
-            extra_flags = set(map(utils_misc.Flag, extra_flags.split(",")))
+            extra_flags = set(map(cpu.Flag, extra_flags.split(",")))
         except ValueError:
             cpu_model = cpu_model
             extra_flags = set([])
@@ -672,9 +673,9 @@ def run(test, params, env):
                 uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
                 nf_re = re.compile(
                     r"^CPU feature (.+) not found", re.MULTILINE)
-                warn_flags = set([utils_misc.Flag(x)
+                warn_flags = set([cpu.Flag(x)
                                   for x in uns_re.findall(out)])
-                not_found = set([utils_misc.Flag(x)
+                not_found = set([cpu.Flag(x)
                                  for x in nf_re.findall(out)])
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 fwarn_flags -= not_found
@@ -714,9 +715,9 @@ def run(test, params, env):
                 uns_re = re.compile(r"^warning:.*flag '(.+)'", re.MULTILINE)
                 nf_re = re.compile(
                     r"^CPU feature (.+) not found", re.MULTILINE)
-                warn_flags = set([utils_misc.Flag(x)
+                warn_flags = set([cpu.Flag(x)
                                   for x in uns_re.findall(out)])
-                not_found = set([utils_misc.Flag(x)
+                not_found = set([cpu.Flag(x)
                                  for x in nf_re.findall(out)])
                 fwarn_flags = flags.host_all_unsupported_flags - warn_flags
                 fwarn_flags -= not_found
@@ -832,7 +833,7 @@ def run(test, params, env):
                                 "stressblock bs=10MB count=100 &")
             cmd = ("nohup %s/cpuflags-test --stress  %s%s &" %
                    (os.path.join(install_path, "src"), smp,
-                    utils_misc.kvm_flags_to_stresstests(flags[0])))
+                    cpu.kvm_flags_to_stresstests(flags[0])))
             stress_session.sendline(cmd)
 
             time.sleep(5)
@@ -956,8 +957,8 @@ def run(test, params, env):
                         cmd = ("nohup %s/cpuflags-test --stress  %s%s &" %
                                (os.path.join(install_path, "src"),
                                 smp,
-                                utils_misc.kvm_flags_to_stresstests(Flags[0] &
-                                                                    flags.guest_flags)))
+                                cpu.kvm_flags_to_stresstests(Flags[0] &
+                                                             flags.guest_flags)))
                         logging.debug("Guest_flags: %s",
                                       str(flags.guest_flags))
                         logging.debug("Working_flags: %s", str(Flags[0]))

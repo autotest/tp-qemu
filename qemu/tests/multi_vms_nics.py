@@ -2,6 +2,7 @@ import logging
 import re
 
 from avocado.utils import process
+from avocado.utils import cpu
 
 from virttest import error_context
 from virttest import utils_test
@@ -129,7 +130,7 @@ def run(test, params, env):
                                    "Active: active|running")
     vms = params["vms"].split()
     host_mem = utils_memory.memtotal() // (1024 * 1024)
-    host_cpu_count = len(utils_misc.get_cpu_processors())
+    host_cpu_count = cpu.total_cpus_count()
     vhost_count = 0
     if params.get("vhost"):
         vhost_count = 1

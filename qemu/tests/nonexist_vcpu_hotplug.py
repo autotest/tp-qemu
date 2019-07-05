@@ -2,6 +2,7 @@ import logging
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import cpu
 
 
 @error_context.context_aware
@@ -30,7 +31,7 @@ def run(test, params, env):
     error_context.context("check if CPUs in guest matches qemu cmd "
                           "before hot-plug", logging.info)
     smp_by_cmd = int(params.get("smp"))
-    if not utils_misc.check_if_vm_vcpu_match(smp_by_cmd, vm):
+    if not cpu.check_if_vm_vcpu_match(smp_by_cmd, vm):
         test.error("CPU quantity mismatch cmd before hotplug !")
     # Start vCPU hotplug
     error_context.context("hotplugging non-existed vCPU...", logging.info)
@@ -45,7 +46,7 @@ def run(test, params, env):
     # Windows is a little bit lazy that needs more secs to recognize.
     error_context.context("hotplugging finished, let's wait a few sec and"
                           " check cpus quantity in guest.", logging.info)
-    if not utils_misc.wait_for(lambda: utils_misc.check_if_vm_vcpu_match(
+    if not utils_misc.wait_for(lambda: cpu.check_if_vm_vcpu_match(
                                smp_by_cmd, vm),
                                60, first=10, step=5.0, text="retry later"):
         test.fail("CPU quantity mismatch cmd after hotplug !")

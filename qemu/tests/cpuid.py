@@ -9,6 +9,7 @@ from avocado.utils import build
 from avocado.utils import process
 
 from virttest import utils_misc
+from virttest import cpu
 from virttest import env_process
 from virttest import virt_vm
 from virttest import data_dir
@@ -63,7 +64,7 @@ def run(test, params, env):
         cpu_models = set()
 
         if models_opt == '*':
-            cpu_models.update(utils_misc.get_qemu_cpu_models(qemu_binary))
+            cpu_models.update(cpu.get_qemu_cpu_models(qemu_binary))
         elif models_opt:
             cpu_models.update(models_opt.split())
 
@@ -80,7 +81,7 @@ def run(test, params, env):
         test method
         """
         cpu_models = cpu_models_to_test()
-        qemu_models = utils_misc.get_qemu_cpu_models(qemu_binary)
+        qemu_models = cpu.get_qemu_cpu_models(qemu_binary)
         missing = set(cpu_models) - set(qemu_models)
         if missing:
             test.fail(
@@ -581,8 +582,7 @@ def run(test, params, env):
                 self, cpu_model, cpu_model_flags,
                 extra_params=dict(machine_type=machine_type, smp=1),
                 qom_mode=qom_mode)
-        except (virt_vm.VMStartError, virt_vm.VMCreateError) as e:
-            output = getattr(e, 'reason', getattr(e, 'output', ''))
+        except (virt_vm.VMStartError, virt_vm.VMCreateError) as output:
             if "host doesn't support requested feature:" in output \
                 or ("host cpuid" in output and
                     ("lacks requested flag" in output or

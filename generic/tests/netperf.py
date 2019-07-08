@@ -7,6 +7,7 @@ import time
 
 from avocado.utils import process
 
+from virttest import virt_vm
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import utils_net
@@ -183,7 +184,11 @@ def run(test, params, env):
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
 
-    vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
+    try:
+        vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
+    except virt_vm.VMIPAddressMissingError:
+        pass
+
     if len(params.get("nics", "").split()) > 1:
         session = vm.wait_for_login(nic_index=1, timeout=login_timeout)
     else:
@@ -202,23 +207,31 @@ def run(test, params, env):
             session = vm.reboot(session=session, timeout=login_timeout)
             vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
 
-    server_ip = vm.wait_for_get_address(0, timeout=90)
+    mac = vm.get_mac_address(0)
+    if params.get("os_type") == "linux":
+        ethname = utils_net.get_linux_ifname(session, mac)
+    queues = int(params.get("queues", 1))
+    if queues > 1:
+        if params.get("os_type") == "linux":
+            session.cmd_status_output("ethtool -L %s combined %s" %
+                                      (ethname, queues))
+        else:
+            logging.info("FIXME: support to enable MQ for Windows guest!")
+
+    if params.get("server_private_ip") and params.get("os_type") == "linux":
+        server_ip = params.get("server_private_ip")
+        cmd = "systemctl stop NetworkManager.service"
+        cmd += " && ifconfig %s %s up" % (ethname, server_ip)
+        session.cmd_output(cmd)
+    else:
+        server_ip = vm.wait_for_get_address(0, timeout=90)
+
     if len(params.get("nics", "").split()) > 1:
         server_ctl = vm.wait_for_login(nic_index=1, timeout=login_timeout)
         server_ctl_ip = vm.wait_for_get_address(1, timeout=90)
     else:
         server_ctl = vm.wait_for_login(timeout=login_timeout)
         server_ctl_ip = server_ip
-
-    mac = vm.get_mac_address(0)
-    queues = int(params.get("queues", 1))
-    if queues > 1:
-        if params.get("os_type") == "linux":
-            ethname = utils_net.get_linux_ifname(session, mac)
-            session.cmd_status_output("ethtool -L %s combined %s" %
-                                      (ethname, queues))
-        else:
-            logging.info("FIXME: support to enable MQ for Windows guest!")
 
     if params.get("rh_perf_envsetup_script"):
         utils_test.service_setup(vm, session, test.virtdir)
@@ -263,13 +276,17 @@ def run(test, params, env):
             vm_client = env.get_vm(client)
             tmp = vm_client.wait_for_login(timeout=login_timeout)
             client_ip = vm_client.wait_for_get_address(0, timeout=5)
-        elif client != "localhost":
+        elif client != "localhost" and params.get("os_type_client") == "linux":
+            client_pub_ip = params.get("client_public_ip")
             tmp = remote.wait_for_login(params.get("shell_client_client"),
-                                        client_ip,
+                                        client_pub_ip,
                                         params.get("shell_port_client"),
                                         params.get("username_client"),
                                         params.get("password_client"),
                                         params.get("shell_prompt_client"))
+            cmd = "ifconfig %s %s up" % (params.get("client_physical_nic"),
+                                         client_ip)
+            ssh_cmd(tmp, cmd)
         else:
             tmp = "localhost"
         clients.append(tmp)
@@ -290,7 +307,12 @@ def run(test, params, env):
     error_context.context("Prepare env of server/client/host", logging.info)
     prepare_list = set([server_ctl, client, host])
     tag_dict = {server_ctl: "server", client: "client", host: "host"}
-    ip_dict = {server_ctl: server_ctl_ip, client: client_ip, host: host_ip}
+    if client_pub_ip:
+        ip_dict = {server_ctl: server_ctl_ip, client: client_pub_ip,
+                   host: host_ip}
+    else:
+        ip_dict = {server_ctl: server_ctl_ip, client: client_ip,
+                   host: host_ip}
     for i in prepare_list:
         params_tmp = params.object_params(tag_dict[i])
         if params_tmp.get("os_type") == "linux":
@@ -342,6 +364,10 @@ def run(test, params, env):
             error_context.context("Change back server, client and host's mtu to %s"
                                   % mtu_default)
             mtu_set(mtu_default)
+        if params.get("client_physical_nic") and params.get(
+                                                    "os_type_client") == "linux":
+            cmd = 'ifconfig %s 0.0.0.0 down' % params.get("client_physical_nic")
+            ssh_cmd(client, cmd)
 
 
 @error_context.context_aware

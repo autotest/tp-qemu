@@ -5,6 +5,8 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest.qemu_devices import qdevices
+from virttest import utils_disk
+from virttest import utils_numeric
 
 
 @error_context.context_aware
@@ -64,6 +66,39 @@ def run(test, params, env):
                 return True
         return None
 
+    def get_disk_size(did):
+        """
+        Get the disk size from guest.
+
+        :param did: the disk of id, e.g. sdb,sda for linux, 1, 2 for windows
+        :return: the disk size
+        """
+        if params['os_type'] == 'linux':
+            size = utils_disk.get_linux_disks(session)[did][1].strip()
+        else:
+            script = '{}_{}'.format("disk", utils_misc.generate_random_string(6))
+            cmd = "echo %s > {0} && diskpart /s {0} && del /f {0}".format(script)
+            p = r'Disk\s+%s\s+[A-Z]+\s+\d+\s+[A-Z]+\s+(?P<free>\d+\s+[A-Z]+)'
+            disk_info = session.cmd(cmd % 'list disk')
+            size = re.search(p % did, disk_info, re.I | re.M).groupdict()['free'].strip()
+        logging.info('The size of disk[%s] is %s' % (did, size))
+        return size
+
+    def check_disk_size(did, excepted_size):
+        """
+        Checkt whether the disk size is equal to excepted size.
+
+        :param did: the disk of id, e.g. sdb,sda for linux, 1, 2 for windows
+        :param excepted_size: the excepted size
+        """
+        error_context.context(
+            'Check whether the size of the disk[%s] hot plugged is equal to '
+            'excepted size(%s).' % (did, excepted_size), logging.info)
+        value, unit = re.search(r"(\d+\.?\d*)\s*(\w?)", excepted_size).groups()
+        if utils_numeric.normalize_data_size(get_disk_size(did), unit) != value:
+            test.fail('The size of [%s] is not equal to excepted size(%s).'
+                      % (did, excepted_size))
+
     img_list = params.get("images").split()
     #sometimes, ppc can't get new plugged disk in 5s, so time to 10s
     pause = float(params.get("virtio_block_pause", 10.0))
@@ -106,6 +141,9 @@ def run(test, params, env):
                 disk = plug_disks[0]
 
                 session = vm.wait_for_login(timeout=timeout)
+                if params.get('check_disk_size', 'no') == 'yes':
+                    did = disk_index[num] if params['os_type'] == 'windows' else disk[5:]
+                    check_disk_size(did, image_params['image_size'])
                 if params.get("os_type") == "windows":
                     if iteration == 0:
                         error_context.context("Format disk", logging.info)

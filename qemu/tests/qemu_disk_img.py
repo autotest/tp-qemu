@@ -47,6 +47,25 @@ class QemuImgTest(qemu_storage.QemuImg):
         return params
 
     @error_context.context_aware
+    def commit(self, drop=False, cache_mode=None, base=None):
+        """
+        Commit snapshot to base file
+        """
+        error_context.context("commit snapshot")
+        cmds = [self.image_cmd, "commit"]
+        if drop:
+            cmds.append("-d")
+        if cache_mode:
+            cmds.extend(["-t", cache_mode])
+        if base:
+            base_image_filename = storage.get_image_filename(
+                self.params.object_params(base), self.root_dir)
+            cmds.extend(["-b", base_image_filename])
+        cmds.extend(["-f", self.image_format, self.image_filename])
+        logging.info("Commit image %s", self.image_filename)
+        process.system(" ".join(cmds))
+
+    @error_context.context_aware
     def start_vm(self, t_params=None):
         """
         Start a vm and wait for it bootup;

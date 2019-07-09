@@ -102,8 +102,7 @@ def run(test, params, env):
         if not pci_n:
             test.error("Can't get the pci id for device")
 
-        cmd = "cat /sys/bus/pci/devices/0000:%s/" % pci_n
-        cmd += "virtio*/features"
+        cmd = "grep . /sys/bus/pci/devices/0000:%s/virtio*/features" % pci_n
         virtio_bit = int(session.cmd_output(cmd)[32])
         if virtio_bit != (virtio_mode != "legacy"):
             test.fail("Fail as the virtio bit is not correct")

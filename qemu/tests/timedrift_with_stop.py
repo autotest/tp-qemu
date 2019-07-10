@@ -49,6 +49,7 @@ def run(test, params, env):
     stop_iterations = int(params.get("stop_iterations", 1))
     stop_time = int(params.get("stop_time", 60))
     stop_with_signal = params.get("stop_with_signal") == "yes"
+    old_windows = params.get("old_windows", "no")
 
     # Get guest's pid.
     pid = vm.get_pid()
@@ -93,7 +94,7 @@ def run(test, params, env):
             # so drift need to subtract stop_time.
             if not stop_with_signal:
                 drift = abs(drift - stop_time)
-                if params.get("os_type") == "windows" and rtc_clock == "host":
+                if old_windows == "yes" and rtc_clock == "host":
                     drift = abs(host_delta - guest_delta)
             logging.info("Host duration (iteration %d): %.2f",
                          (i + 1), host_delta)
@@ -127,7 +128,7 @@ def run(test, params, env):
     # so drift need to subtract stop_time.
     if not stop_with_signal:
         drift = abs(drift - stop_time)
-        if params.get("os_type") == "windows" and rtc_clock == "host":
+        if old_windows == "yes" and rtc_clock == "host":
             drift = abs(host_delta - guest_delta)
     logging.info("Host duration (%d stops): %.2f",
                  stop_iterations, host_delta)

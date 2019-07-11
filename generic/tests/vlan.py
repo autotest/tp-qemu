@@ -7,6 +7,7 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_net
 from virttest import error_context
+from virttest.utils_windows import virtio_win
 
 
 @error_context.context_aware
@@ -141,6 +142,34 @@ def run(test, params, env):
                         session=session_flood, timeout=10)
         session_flood.close()
 
+    def get_netkvmco_path(session):
+        """
+        Get the proper netkvmco.dll path from iso.
+
+        :param session: a session to send cmd
+        :return: the proper netkvmco.dll path
+        """
+
+        viowin_ltr = virtio_win.drive_letter_iso(session)
+        if not viowin_ltr:
+            err = "Could not find virtio-win drive in guest"
+            test.error(err)
+        guest_name = virtio_win.product_dirname_iso(session)
+        if not guest_name:
+            err = "Could not get product dirname of the vm"
+            test.error(err)
+        guest_arch = virtio_win.arch_dirname_iso(session)
+        if not guest_arch:
+            err = "Could not get architecture dirname of the vm"
+            test.error(err)
+
+        middle_path = "%s\\%s" % (guest_name, guest_arch)
+        find_cmd = 'dir /b /s %s\\netkvmco.dll | findstr "\\%s\\\\"'
+        find_cmd %= (viowin_ltr,  middle_path)
+        netkvmco_path = session.cmd(find_cmd).strip()
+        logging.info("Found netkvmco.dll file at %s" % netkvmco_path)
+        return netkvmco_path
+
     vms = []
     sessions = []
     session_ctl = []
@@ -155,6 +184,8 @@ def run(test, params, env):
     file_size = params.get("file_size", 4096)
     cmd_type = params.get("cmd_type", "ip")
     login_timeout = int(params.get("login_timeout", 360))
+    prepare_netkvmco_cmd = params.get("prepare_netkvmco_cmd")
+    set_vlan_cmd = params.get("set_vlan_cmd")
 
     vms.append(env.get_vm(params["main_vm"]))
     vms.append(env.get_vm("vm2"))
@@ -163,16 +194,25 @@ def run(test, params, env):
 
     for vm_index, vm in enumerate(vms):
         if params["os_type"] == "windows":
+            session = vm.wait_for_login(timeout=login_timeout)
+            session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                                    test,
+                                                                    "netkvm")
+            netkvmco_path = get_netkvmco_path(session)
+            session.cmd(prepare_netkvmco_cmd % netkvmco_path, timeout=240)
+            session.close()
             session = vm.wait_for_serial_login(timeout=login_timeout)
-            set_vlan_cmd = params.get("set_vlan_cmd")
-            nicid = utils_net.get_windows_nic_attribute(session=session,
-                                                        key="netenabled", value=True,
-                                                        target="netconnectionID")
-            set_vlan_cmd = set_vlan_cmd % nicid
-            session.cmd(set_vlan_cmd, timeout=240)
-            time.sleep(10)
-            ifname.append(nicid)
+            session.cmd(set_vlan_cmd)
             dev_mac = vm.virtnet[0].mac
+            connection_id = utils_net.get_windows_nic_attribute(
+                session, "macaddress", dev_mac, "netconnectionid")
+            utils_net.restart_windows_guest_network(
+                session, connection_id)
+            time.sleep(10)
+            nicid = utils_net.get_windows_nic_attribute(
+                    session=session, key="netenabled", value=True,
+                    target="netconnectionID")
+            ifname.append(nicid)
             vm_ip.append(utils_net.get_guest_ip_addr(session, dev_mac,
                                                      os_type="windows",
                                                      linklocal=True))

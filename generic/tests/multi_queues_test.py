@@ -30,7 +30,10 @@ def run(test, params, env):
         Return multi queues input irq list
         """
         guest_irq_info = session.cmd_output("cat /proc/interrupts")
-        return re.findall(r"(\d+):.*virtio\d+-input.\d", guest_irq_info)
+        virtio_queues_irq = re.findall(r"(\d+):.*virtio\d+-input.\d", guest_irq_info)
+        if not virtio_queues_irq:
+            test.error('Could not find any "virtio-input" interrupts')
+        return virtio_queues_irq
 
     def get_cpu_affinity_hint(session, irq_number):
         """
@@ -64,7 +67,7 @@ def run(test, params, env):
         Get guest interrupts statistics
         """
         online_cpu_number_cmd = r"cat /proc/interrupts | head -n 1 | wc -w"
-        cmd = r"cat /proc/interrupts | sed -n '/^\s\+%s:/p'" % irq_number
+        cmd = r"cat /proc/interrupts | sed -n '/^\s*%s:/p'" % irq_number
         online_cpu_number = int(session.cmd_output_safe(online_cpu_number_cmd))
         irq_statics = session.cmd_output(cmd)
         irq_statics_list = list(map(int, irq_statics.split()[1:online_cpu_number]))
@@ -76,6 +79,8 @@ def run(test, params, env):
         return []
 
     login_timeout = int(params.get("login_timeout", 360))
+    bg_stress_run_flag = params.get("bg_stress_run_flag")
+    stress_thread = None
     queues = int(params.get("queues", 1))
     vms = params.get("vms").split()
     if queues == 1:
@@ -106,6 +111,7 @@ def run(test, params, env):
         check_vhost = params.get("check_vhost_threads", 'yes')
         if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
             process.system("systemctl stop irqbalance.service")
+            session.cmd("systemctl stop irqbalance.service")
             set_cpu_affinity(session)
 
         bg_sub_test = params.get("bg_sub_test")
@@ -117,9 +123,7 @@ def run(test, params, env):
 
                 # Set flag, when the sub test really running, will change this
                 # flag to True
-                bg_stress_run_flag = params.get("bg_stress_run_flag")
                 env[bg_stress_run_flag] = False
-                stress_thread = ""
                 wait_time = float(params.get("wait_bg_time", 60))
                 stress_thread = utils_misc.InterruptedThread(
                     utils_test.run_virt_sub_test, (test, params, env),
@@ -131,23 +135,28 @@ def run(test, params, env):
                                     "Wait %s start background" % bg_sub_test)
 
             if params.get("vhost") == 'vhost=on' and check_vhost == 'yes':
-                error_context.context("Check vhost threads on host",
-                                      logging.info)
                 vhost_thread_pattern = params.get("vhost_thread_pattern",
                                                   r"\w+\s+(\d+)\s.*\[vhost-%s\]")
                 vhost_threads = vm.get_vhost_threads(vhost_thread_pattern)
-                time.sleep(10)
-
-                top_cmd = r"top -n 1 -p %s -b" % ",".join(map(str,
-                                                              vhost_threads))
-                top_info = process.system_output(top_cmd, shell=True).decode()
-                logging.info("%s", top_info)
-                vhost_re = re.compile(r"S(\s+0.0+){2}.*vhost-\d+[\d|+]")
-                sleep_vhost_thread = len(vhost_re.findall(top_info, re.I))
-                running_threads = len(vhost_threads) - int(sleep_vhost_thread)
+                time.sleep(120)
+                error_context.context("Check vhost threads on host",
+                                      logging.info)
+                top_cmd = (r'top -n 1 -bis | tail -n +7 | grep -E "^ *%s "'
+                           % ' |^ *'.join(map(str, vhost_threads)))
+                top_info = None
+                while session.cmd_status("ps -C netperf") == 0:
+                    top_info = process.system_output(top_cmd, ignore_status=True,
+                                                     shell=True).decode()
+                    if top_info:
+                        break
+                logging.info(top_info)
+                vhost_re = re.compile(r"(0:00.\d{2}).*vhost-\d+[\d|+]")
+                invalid_vhost_thread = len(vhost_re.findall(top_info, re.I))
+                running_threads = (len(top_info.splitlines()) -
+                                   int(invalid_vhost_thread))
 
                 n_instance = min(n_instance, int(queues), int(vm.cpuinfo.smp))
-                if (running_threads != n_instance):
+                if running_threads != n_instance:
                     err_msg = "Run %s netperf session, but %s queues works"
                     test.fail(err_msg % (n_instance, running_threads))
 
@@ -195,3 +204,5 @@ def run(test, params, env):
             env[bg_stress_run_flag] = False
             if session:
                 session.close()
+            if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
+                process.system("systemctl start irqbalance.service")

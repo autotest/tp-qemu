@@ -1,24 +1,28 @@
 import logging
+import re
 
 from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import env_process
 from virttest.staging import utils_memory
 from virttest.compat_52lts import decode_to_text
+from virttest.utils_numeric import normalize_data_size
 
 
-def check_host_numa_node_amount(test):
+def get_host_numa_node():
     """
-    Check host NUMA node amount
-
-    :param test: QEMU test object
+    Get host NUMA node whose node size is not zero
     """
-    host_numa_nodes = utils_memory.numa_nodes()
-    host_numa_nodes = len(host_numa_nodes)
-    if host_numa_nodes < 2:
-        test.cancel("The host numa nodes should be at least 2! But there is %d."
-                    % host_numa_nodes)
+    host_numa = utils_memory.numa_nodes()
+    node_list = []
+    numa_info = process.getoutput("numactl -H")
+    for i in host_numa:
+        node_size = re.findall(r"node %d size: \d+ \w" % i, numa_info)[0].split()[-2]
+        if node_size != '0':
+            node_list.append(str(i))
+    return node_list
 
 
 def check_query_memdev(test, params, vm):
@@ -102,7 +106,7 @@ def check_memory_in_procfs(test, params, vm):
 def run(test, params, env):
     """
     [Memory][Numa] NUMA memdev option, this case will:
-    1) Check host's numa node(s) amount.
+    1) Check host's numa node(s).
     2) Start the VM.
     3) Check query-memdev.
     4) Check the memory in procfs.
@@ -111,10 +115,36 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    error_context.context("Check host's numa node(s) amount!", logging.info)
-    check_host_numa_node_amount(test)
+    error_context.context("Check host's numa node(s)!", logging.info)
+    valid_nodes = get_host_numa_node()
+    if len(valid_nodes) < 2:
+        test.cancel("The host numa nodes that whose size is not zero should be "
+                    "at least 2! But there is %d." % len(valid_nodes))
+    node1 = valid_nodes[0]
+    node2 = valid_nodes[1]
+
+    if params.get('policy_mem') != 'default':
+        error_context.context("Assign host's numa node(s)!", logging.info)
+        params['host-nodes_mem0'] = node1
+        params['host-nodes_mem1'] = node2
+
+    if params.get('set_node_hugepage') == 'yes':
+        hugepage_size = utils_memory.get_huge_page_size()
+        normalize_total_hg1 = int(normalize_data_size(params['size_mem0'], 'K'))
+        hugepage_num1 = normalize_total_hg1 // hugepage_size
+        if 'numa_hugepage' in params['shortname']:
+            params['target_nodes'] = "%s %s" % (node1, node2)
+            normalize_total_hg2 = int(normalize_data_size(params['size_mem1'], 'K'))
+            hugepage_num2 = normalize_total_hg2 // hugepage_size
+            params['target_num_node%s' % node2] = hugepage_num2
+        else:
+            params['target_nodes'] = node1
+        params['target_num_node%s' % node1] = hugepage_num1
+        params['setup_hugepages'] = 'yes'
+        env_process.preprocess(test, params, env)
 
     error_context.context("Starting VM!", logging.info)
+    env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -123,3 +153,4 @@ def run(test, params, env):
 
     error_context.context("Check the memory in procfs!", logging.info)
     check_memory_in_procfs(test, params, vm)
+    vm.verify_dmesg()

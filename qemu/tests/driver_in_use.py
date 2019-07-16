@@ -154,3 +154,5 @@ def run(test, params, env):
         if vm.is_dead():
             vm.create(params=params)
         utils_test.run_virt_sub_test(test, params, env, main_test)
+        if vm.is_alive():
+            run_bg_test_sep(bg_stress_test)

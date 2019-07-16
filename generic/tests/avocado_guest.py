@@ -26,7 +26,11 @@ def run(test, params, env):
         except IndexError:
             pass
         testlist.append((item, mux))
-    utils_test.run_avocado(vm, params, test, testlist, timeout=timeout,
-                           testrepo=avocadotestrepo,
-                           installtype=avocadoinstalltype, reinstall=False,
-                           add_args=avocadotestargs, ignore_result=False)
+    avocado_obj = utils_test.AvocadoGuest(vm, params, test, testlist,
+                                          timeout=timeout,
+                                          testrepo=avocadotestrepo,
+                                          installtype=avocadoinstalltype,
+                                          reinstall=False,
+                                          add_args=avocadotestargs,
+                                          ignore_result=False)
+    avocado_obj.run_avocado()

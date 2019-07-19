@@ -1627,6 +1627,69 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 test.error("guest-fsfreeze-thaw cmd failed with:"
                            "('%s')" % str(detail))
 
+    @error_context.context_aware
+    def gagent_check_fsinfo(self, test, params, env):
+        """
+        Execute "guest-fsinfo" command to guest agent,check file system of
+        mountpoint,disk's name and serial number.
+
+        steps:
+        1) check file system type of every mount point.
+        2) check disk name.
+        3) check disk's serial number.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+        serial_num = params["blk_extra_params"].split("=")[1]
+
+        error_context.context("Check all file system info in a loop.", logging.info)
+        fs_info_qga = self.gagent.get_fsinfo()
+        for fs in fs_info_qga:
+            mount_pt = fs["mountpoint"]
+            if params["os_type"] == "windows":
+                mount_pt = mount_pt[:2]
+
+            error_context.context("Check file system type of '%s' mount point." %
+                                  mount_pt, logging.info)
+            fs_type_qga = fs["type"]
+            cmd_get_disk = params["cmd_get_disk"] % mount_pt
+            disk_info_guest = session.cmd(cmd_get_disk).strip().split()
+            fs_type_guest = disk_info_guest[1]
+            if fs_type_qga != fs_type_guest:
+                test.fail("File System doesn't match.\n"
+                          "from guest-agent is %s.\nfrom guest os is %s."
+                          % (fs_type_qga, fs_type_guest))
+            else:
+                logging.info("File system type is %s which is expected." % fs_type_qga)
+
+            error_context.context("Check disk name.", logging.info)
+            disk_name_qga = fs["name"]
+            disk_name_guest = disk_info_guest[0]
+            if params["os_type"] == "linux":
+                if not re.findall(r'^/\w*/\w*$', disk_name_guest):
+                    disk_name_guest = session.cmd("readlink %s" % disk_name_guest).strip()
+                disk_name_guest = disk_name_guest.split('/')[-1]
+            if disk_name_qga != disk_name_guest:
+                test.fail("Device name doesn't match.\n"
+                          "from guest-agent is %s.\nit's from guest os is %s."
+                          % (disk_name_qga, disk_name_guest))
+            else:
+                logging.info("Disk name is %s which is expected." % disk_name_qga)
+
+            error_context.context("Check serial number of some disk.", logging.info)
+            serial_qga = fs["disk"][0]["serial"]
+            if not re.findall(serial_num, serial_qga):
+                test.fail("Serial name is not correct via qga.\n"
+                          "from guest-agent is %s.\n"
+                          "but it should include %s." % (serial_qga, serial_num))
+            else:
+                logging.info("Serial number is %s which is expected." % serial_qga)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

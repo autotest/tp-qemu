@@ -680,9 +680,7 @@ def run(test, params, env):
         timeout = 1.5 * int(params.get("login_timeout", 360))
         # First one
         vms.append(env.get_all_vms()[0])
-        vcpu_thread_pattern = params.get("vcpu_thread_pattern",
-                                         r"thread_id.?[:|=]\s*(\d+)")
-        cpu_pids = vms[0].get_vcpu_pids(vcpu_thread_pattern)
+        cpu_pids = vms[0].get_vcpu_pids(debug=False)
 
         smp = len(cpu_pids)
         cgroup.mk_cgroup()
@@ -714,9 +712,7 @@ def run(test, params, env):
             # Total quota is for ALL vCPUs
             cgroup.set_property("cpu.cfs_quota_us", 50000 * smp, -1)
             assign_vm_into_cgroup(vms[-1], cgroup, -1)
-            vcpu_thread_pattern = params.get("vcpu_thread_pattern",
-                                             r"thread_id.?[:|=]\s*(\d+)")
-            cpu_pids = vms[-1].get_vcpu_pids(vcpu_thread_pattern)
+            cpu_pids = vms[-1].get_vcpu_pids(debug=False)
 
             for j in range(smp):
                 cgroup.mk_cgroup(pwd)
@@ -1138,9 +1134,7 @@ def run(test, params, env):
             params['smp'] = vm_cpus
             vm.create(params=params)
         # Verify vcpus matches prescription
-        vcpu_thread_pattern = params.get("vcpu_thread_pattern",
-                                         r"thread_id.?[:|=]\s*(\d+)")
-        vcpus = vm.get_vcpu_pids(vcpu_thread_pattern)
+        vcpus = vm.get_vcpu_pids(debug=False)
 
         if len(vcpus) != vm_cpus:
             raise exceptions.TestFail("Incorrect number of vcpu PIDs; smp=%s vcpus="

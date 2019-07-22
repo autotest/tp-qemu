@@ -218,6 +218,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         BaseVirtTest.setup(self, test, params, env)
         if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
+            self._open_session_list.append(session)
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 logging.info("qemu-ga is already installed.")
             else:
@@ -230,7 +231,6 @@ class QemuGuestAgentTest(BaseVirtTest):
                 logging.info("qemu-ga service is not running.")
                 self.gagent_start(session, self.vm)
 
-            session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)
 
@@ -1765,6 +1765,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
+            self._open_session_list.append(session)
             qemu_ga_pkg_path = self.get_qga_pkg_path(self.qemu_ga_pkg, test,
                                                      session, params, self.vm)
             self.gagent_install_cmd = params.get("gagent_install_cmd"
@@ -1782,7 +1783,6 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 logging.info("qemu-ga service is not running.")
                 self.gagent_start(session, self.vm)
 
-            session.close()
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)
 

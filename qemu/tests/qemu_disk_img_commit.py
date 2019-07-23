@@ -28,7 +28,7 @@ class CommitTest(qemu_disk_img.QemuImgTest):
         if t_params:
             params.update(t_params)
         cache_mode = params.get("cache_mode")
-        return super(CommitTest, self).commit(params, cache_mode)
+        return QemuImg.commit(self, params, cache_mode)
 
 
 @error_context.context_aware

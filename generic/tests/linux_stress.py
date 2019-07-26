@@ -1,9 +1,11 @@
+import os
 import time
 import logging
 
 from avocado.core import exceptions
 
 from virttest import utils_test
+from virttest import data_dir
 
 
 def run(test, params, env):
@@ -33,11 +35,16 @@ def run(test, params, env):
     up_time = {}
     error = False
     stress_server = {}
+    stress_pkg_name = params.get("stress_pkg_name", "stress-1.0.4.tar.gz")
+    stress_root_dir = os.path.join(data_dir.get_deps_dir(), "stress")
+    stress_file = os.path.join(stress_root_dir, stress_pkg_name)
 
     for vm in vms:
         try:
             up_time[vm.name] = vm.uptime()
-            stress_server[vm.name] = utils_test.VMStress(vm, stress_type, params)
+            stress_server[vm.name] = utils_test.VMStress(
+                vm, stress_type, params, download_type="tarball",
+                downloaded_file_path=stress_file)
             stress_server[vm.name].load_stress_tool()
         except exceptions.TestError as err_msg:
             error = True
@@ -47,15 +54,18 @@ def run(test, params, env):
         time.sleep(stress_duration)
         for vm in vms:
             try:
-                s_ping, o_ping = utils_test.ping(vm.get_address(), count=5, timeout=20)
+                s_ping, o_ping = utils_test.ping(
+                    vm.get_address(), count=5, timeout=20)
                 if s_ping != 0:
                     error = True
-                    logging.error("%s seem to have gone out of network", vm.name)
+                    logging.error(
+                        "%s seem to have gone out of network", vm.name)
                     continue
                 uptime = vm.uptime()
                 if up_time[vm.name] > uptime:
                     error = True
-                    logging.error("%s seem to have rebooted during the stress run", vm.name)
+                    logging.error(
+                        "%s seem to have rebooted during the stress run", vm.name)
                 stress_server[vm.name].unload_stress()
                 stress_server[vm.name].clean()
                 vm.verify_dmesg()

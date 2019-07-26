@@ -9,7 +9,7 @@ from avocado import fail_on
 
 from virttest import data_dir
 from virttest import storage
-from virttest import utils_misc
+from virttest import qemu_monitor
 
 
 def parse_params(vm, params):
@@ -55,13 +55,13 @@ def block_dirty_bitmap_add(vm, bitmap_params):
     """Add block dirty bitmap."""
     bitmap = bitmap_params.get("bitmap_name")
     target_device = bitmap_params.get("target_device")
-    persistent = bitmap_params.get("persistent", "default")
     logging.debug("add dirty bitmap %s to %s", bitmap, target_device)
+    mapping = {}
+    for item in ["persistent", "disabled"]:
+        mapping[item] = {"on": {item: True}, "off": {item: False}, "default": {item: None}}
     kargs = dict(node=target_device, name=bitmap)
-    _ = "persistent"
-    kargs.update(
-        {"on": {_: True}, "off": {_: False}, "default": {_: None}}[persistent]
-    )
+    for item in ["persistent", "disabled"]:
+        kargs.update(mapping[item][bitmap_params.get(item, "default")])
     vm.monitor.block_dirty_bitmap_add(**kargs)
 
 
@@ -74,7 +74,8 @@ def debug_block_dirty_bitmap_sha256(vm, device, bitmap):
     :param bitmap: bitmap name
     :return: sha256 string or None if bitmap is not exists
     """
-    func = utils_misc.get_monitor_function(vm)
+    func = qemu_monitor.get_monitor_function(
+        vm, "debug-block-dirty-bitmap-sha256")
     return func(device, bitmap).get("sha256")
 
 
@@ -87,7 +88,7 @@ def block_dirty_bitmap_merge(vm, device, bitmaps, target):
     :param bitmaps: source bitmaps
     :param target: target bitmap name
     """
-    func = utils_misc.get_monitor_function(vm)
+    func = qemu_monitor.get_monitor_function(vm, "block-dirty-bitmap-merge")
     cmd = func.__name__.replace("_", "-")
     logging.debug("Merge %s into %s" % (bitmaps, target))
     if not cmd.startswith("x-"):
@@ -97,9 +98,9 @@ def block_dirty_bitmap_merge(vm, device, bitmaps, target):
         return func(device, bitmaps[0], target)
     actions = []
     for bitmap in bitmaps:
-        data = {"node": device, "src_bitmap": bitmap, "dst_bitmap": target}
+        data = {"node": device, "src_name": bitmap, "dst_name": target}
         actions.append({"type": cmd, "data": data})
-    return vm.monitor.transalation(actions)
+    return vm.monitor.transaction(actions)
 
 
 def get_bitmap_by_name(vm, device, name):
@@ -119,12 +120,12 @@ def get_bitmap_by_name(vm, device, name):
 
 @fail_on
 def block_dirty_bitmap_clear(vm, device, name):
-    utils_misc.get_monitor_function(vm)(device, name)
-    time.sleep(0.3)
-    msg = "Count of '%s' in device '%s' not equal '0' after clear it" % (
-        device, name)
-    count = get_bitmap_by_name(vm, device, name)["count"]
-    assert int(count) == 0, msg
+    qemu_monitor.get_monitor_function(
+        vm, "block-dirty-bitmap-clear")(device, name)
+    count = int(get_bitmap_by_name(vm, device, name)["count"])
+    msg = "Count of '%s' in device '%s'" % (name, device)
+    msg += "is '%d' not equal '0' after clear it" % count
+    assert count == 0, msg
 
 
 @fail_on
@@ -133,13 +134,14 @@ def clear_all_bitmaps_in_device(vm, device):
     bitmaps = get_bitmaps_in_device(vm, device)
     names = [_["name"] for _ in bitmaps if _.get("name")]
     func = partial(block_dirty_bitmap_clear, vm, device)
-    map(func, names)
+    list(map(func, names))
 
 
 @fail_on
 def block_dirty_bitmap_remove(vm, device, name):
     """Remove bitmaps on the device one by one"""
-    utils_misc.get_monitor_function(vm)(device, name)
+    qemu_monitor.get_monitor_function(
+        vm, "block-dirty-bitmap-remove")(device, name)
     time.sleep(0.3)
     msg = "Bitmap '%s' in device '%s' still exists!" % (name, device)
     assert get_bitmap_by_name(vm, device, name) is None, msg
@@ -151,13 +153,14 @@ def remove_all_bitmaps_in_device(vm, device):
     bitmaps = get_bitmaps_in_device(vm, device)
     names = [_["name"] for _ in bitmaps if _.get("name")]
     func = partial(block_dirty_bitmap_remove, vm, device)
-    map(func, names)
+    list(map(func, names))
 
 
 @fail_on
 def block_dirty_bitmap_disable(vm, node, name):
     """Disable named block dirty bitmap in the node"""
-    func = utils_misc.get_monitor_function(vm)(node, name)
+    func = qemu_monitor.get_monitor_function(vm, "block-dirty-bitmap-disable")
+    func(node, name)
     bitmap = get_bitmap_by_name(vm, node, name)
     msg = "block dirty bitmap '%s' is not disabled" % name
     assert bitmap["status"] == "disabled", msg

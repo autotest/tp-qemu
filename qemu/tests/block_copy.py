@@ -44,10 +44,10 @@ class BlockCopy(object):
         self.env = env
         self.test = test
         self.params = params
+        self.data_dir = data_dir.get_data_dir()
         self.vm = self.get_vm()
         if self.vm.monitor.protocol != "qmp":
             self.test.cancel("hmp is not supported in this test.")
-        self.data_dir = data_dir.get_data_dir()
         self.device = self.get_device()
         self.image_file = self.get_image_file()
 

@@ -1,9 +1,14 @@
 import time
 import logging
 from functools import partial
+from avocado.utils import process
+from avocado.utils import software_manager
 
 from virttest import error_context
+from virttest import env_process 
+from virttest import qemu_storage
 from provider import block_dirty_bitmap
+from provider import job_utils
 from provider import backup_utils
 from qemu.tests import live_backup_base
 
@@ -20,12 +25,32 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
 
     def init_data_disk(self):
         """Initialize the data disk"""
-        session = self.get_session()
-        for cmd in ["format_disk_cmd", "mount_disk_cmd"]:
-            if self.params.get(cmd):
-                session.cmd(self.params[cmd])
-                time.sleep(0.5)
-        session.close()
+        pkg_name = "libguestfs-tools-c"
+        pkg_manager = software_manager.SoftwareManager() 
+        if not pkg_manager.check_installed(pkg_name):
+            pkg_manager.install(pkg_name)
+        params = self.params.object_params(self.tag)
+        self.source_img = qemu_storage.QemuImg(params, self.data_dir, self.tag)
+        self.image_file = self.source_img.image_filename
+        cmd = "export LIBGUESTFS_BACKEND=direct; "
+        cmd += "export LIBGUESTFS_DEBUG=1 LIBGUESTFS_TRACE=1; "
+        cmd += "virt-make-fs -F %s" % params["image_format"]
+        cmd += " -s %s" % params["image_size"]
+        cmd += " -t %s" % params["filesystem_type"]
+        cmd += " /boot %s" % self.image_file
+        process.system(cmd, shell=True, ignore_status=False)
+
+    def get_vm(self):
+        self.init_data_disk()
+        self.params["start_vm"] = "yes"
+        env_process.preprocess_vm(
+            self.test,
+            self.params,
+            self.env,
+            self.params.get("main_vm"))
+        vm = self.env.get_vm(self.params["main_vm"])
+        vm.verify_alive()
+        return vm
 
     def get_record_counts_of_bitmap(self, name):
         """
@@ -52,11 +77,12 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
             self, operator="add", index=1, extra_options=None):
         bitmap = "bitmap_%d" % index
         action = "block-dirty-bitmap-%s" % operator
+        action = self.vm.monitor.get_workable_cmd(action)
         data = {"node": self.device, "name": bitmap}
         if isinstance(extra_options, dict):
             data.update(extra_options)
         logging.debug("%s bitmap %s" % (operator.capitalize, bitmap))
-        return backup_utils.make_transaction_action(action, data)
+        return job_utils.make_transaction_action(action, data)
 
     def _bitmap_batch_operate_by_transaction(self, action, bitmap_index_list):
         bitmap_lists = ",".join(
@@ -64,7 +90,7 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         logging.info("%s %s in a transaction" %
                      (action.capitalize(), bitmap_lists))
         func = partial(self._make_bitmap_transaction_action, action)
-        actions = map(func, bitmap_index_list)
+        actions = list(map(func, bitmap_index_list))
         return self.vm.monitor.transaction(actions)
 
     def _track_file_with_bitmap(self, filename, action_items):
@@ -73,42 +99,45 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
 
         :param filename: full path of file will create
         :param action_items: list of bitmap action.
-                             eg, [{"action": add, "index": 1}
+                             eg, [{"operator": "add", "index": 1}
         """
-        self.create_file(filename)
-        actions = []
-        for item in action_items:
-            action = item["action"]
-            index = item["index"]
-            actions += [self._make_bitmap_transaction_action(action, index)]
+        full_name = "%s/%s" % (self.params.get("mount_point",
+                                               "/mnt"), filename)
+        self.create_file(full_name)
+        actions = list([self._make_bitmap_transaction_action(**item)
+                        for item in action_items])
         self.vm.monitor.transaction(actions)
 
     def track_file1_with_bitmap2(self):
         """track file1 with bitmap2"""
-        action_items = [{"action": "disable", "index": 2},
-                        {"action": "add", "index": 3}]
+        action_items = [{"operator": "disable", "index": 2},
+                        {"operator": "add", "index": 3}]
         self._track_file_with_bitmap("file1", action_items)
 
     def track_file2_with_bitmap3(self):
         """track file2 with bitmap3"""
-        action_items = [{"action": "disable", "index": 1},
-                        {"action": "disable", "index": 3}]
+        action_items = [{"operator": "disable", "index": 1},
+                        {"operator": "disable", "index": 3}]
         self._track_file_with_bitmap("file2", action_items)
 
     def merge_bitmap2_and_bitmap3_to_bitmap4(self):
         """merged bitmap2 and bitmap3 into bitmap4"""
         source_bitmaps, target_bitmap = ["bitmap_2", "bitmap_3"], "bitmap_4"
-        self.vm.monitor.block_dirty_bitmap_add(
-            self.device, target_bitmap, disabled=True)
+        args = {
+            "bitmap_name": target_bitmap,
+            "target_device": self.device,
+            "disabled": "on"}
+        block_dirty_bitmap.block_dirty_bitmap_add(self.vm, args)
         block_dirty_bitmap.block_dirty_bitmap_merge(
             self.vm, self.device, source_bitmaps, target_bitmap)
         time.sleep(5)
 
     def track_file3_with_bitmap5(self):
         """track file3 with bitmap5"""
-        self.vm.monitor.block_dirty_bitmap_add(self.device, "bitmap_5")
-        self.create_file("file3")
-        self.vm.monitor.block_dirty_bitmap_disable(self.device, "bitmap_5")
+        args = {"bitmap_name": "bitmap_5", "target_device": self.device}
+        block_dirty_bitmap.block_dirty_bitmap_add(self.vm, args)
+        full_name = "%s/file3" % self.params.get("mount_point", "/mnt")
+        self.create_file(full_name)
 
     def merge_bitmap5_to_bitmap4(self):
         source_bitmaps, target_bitmap = ["bitmap_5"], "bitmap_4"
@@ -146,7 +175,7 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
             out = self.vm.monitor.query_jobs()
             raise self.test.fail("Create target device failed, %s" % out)
         backup_utils.incremental_backup(
-            self.vm, self.device, node_name, "bitmap_4")
+            self.vm, self.device, node_name, bitmap="bitmap_4")
         self.trash_files.append(filename)
 
     def clean(self):
@@ -178,8 +207,6 @@ def run(test, params, env):
     tag = params.get("source_image", "image2")
     backup_test = DifferentialBackupTest(test, params, env, tag)
     try:
-        error_context.context("Initialize data disk", logging.info)
-        backup_test.init_data_disk()
         error_context.context("Do full backup", logging.info)
         node_name = backup_test.do_full_backup("full")
         error_context.context("track file1 in bitmap2", logging.info)
@@ -200,7 +227,7 @@ def run(test, params, env):
         record_counts_bitmap4 = backup_test.get_record_counts_of_bitmap(
             "bitmap_4")
         if sha256_bitmap4 != sha256_bitmap1:
-            logging.debug("sha256_bitmap1: %d, sha256_bitmap4: %d" %
+            logging.debug("sha256_bitmap1: %s, sha256_bitmap4: %s" %
                           (sha256_bitmap1, sha256_bitmap4))
             raise test.fail("sha256 of bitmap4 not equal sha256 of bitmap1")
         if record_counts_bitmap4 != record_counts_bitmap1:

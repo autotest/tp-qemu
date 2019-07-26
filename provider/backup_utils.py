@@ -1,3 +1,4 @@
+import sys
 import time
 from functools import partial
 
@@ -5,48 +6,47 @@ from avocado import fail_on
 
 from virttest import utils_misc
 from virttest import utils_numeric
+from virttest import utils_scheduling
 from virttest import storage
 from virttest import data_dir
+from virttest import qemu_monitor
 
 from provider import job_utils
 from provider import block_dirty_bitmap as block_bitmap
 
 MAX_JOB_TIMEOUT = 1200
+default_recursionlimit = sys.getrecursionlimit()
+sys.setrecursionlimit(default_recursionlimit * 5)
 
+def merge_options(options1, options2):
+    """Merge dict options2 into dict options1"""
+    if not isinstance(options2, dict):
+        return options1 
+    options2 = dict([(k,v) for k,v in options2.items() if v is not None])
+    options1.update(options2)
+    return options1
 
-def make_transaction_action(cmd, data):
-    """
-    Make transaction action dict by arguments
-    """
-    prefix = "x-"
-    if not cmd.startswith(prefix):
-        for k in data.keys():
-            if data.get(k) is None:
-                data.pop(k)
-                continue
-            if k.startswith(prefix):
-                data[k.lstrip(prefix)] = data.pop(k)
-    return {"type": cmd, "data": data}
-
-
-def blockdev_create(vm, options, job_id=None, wait=True):
+@utils_scheduling.timeout(MAX_JOB_TIMEOUT)
+def blockdev_create(vm, options, job_id=None, wait_for=True):
     """wrapper for blockdev-create QMP command"""
+    def wait(job_id):
+        job_info = job_utils.get_job_by_id(vm, job_id)
+        status = job_info.get("status")
+        if status == "concluded":
+            return True
+        time.sleep(1.0)
+        return wait(job_id)
+
     if not job_id:
         job_id = "blk_%s" % utils_misc.generate_random_id()
-    utils_misc.get_monitor_function(vm)(job_id, options)
-    if wait:
-        def wait_func():
-            job_info = job_utils.get_job_by_id(vm, job_id)
-            if job_info and job_info["status"] == "concluded":
-                return True
-            return False
-
-        if not utils_misc.wait_for(wait_func, 5, 1):
-            return None
+    func = qemu_monitor.get_monitor_function(vm, "blockdev-create")
+    func(job_id, options)
+    wait(job_id)
     return job_id
 
 
-def blockdev_backup(vm, options, wait):
+@utils_scheduling.timeout(MAX_JOB_TIMEOUT)
+def blockdev_backup(vm, options, wait_for):
     """
     Live backup block device
 
@@ -54,19 +54,35 @@ def blockdev_backup(vm, options, wait):
     :param options: dict for blockdev-backup cmd
     :param wait: bool type, wait for backup job finished or not
     """
-    event = "BLOCK_JOB_COMPLETED"
+    def wait(job_id):
+        job_info = job_utils.get_job_by_id(vm, job_id)
+        args = {"id": job_id}
+        status = job_info.get("status", None)
+        if status == "pending" and options.get("auto-finalize") == False:
+             vm.monitor.cmd("block-job-finalize", args) 
+        elif status == "concluded" and options.get("auto-dismiss") == False:
+             vm.monitor.cmd("block-job-dismiss", args)
+        event = vm.monitor.get_event("BLOCK_JOB_COMPLETED")
+        if event:
+            return event["data"].get("error") 
+        else:
+            time.sleep(3)
+        return wait(job_id)
+
     job_id = utils_misc.generate_random_id()
     options.setdefault("job-id", job_id)
-    out = utils_misc.get_monitor_function(vm)(options)
-    wait and wait_for_event(vm.monitor, event)
-    return out
-
+    qemu_monitor.get_monitor_function(vm, "blockdev-backup")(options)
+    vm.monitor.clear_event("BLOCK_JOB_COMPLETED")
+    error = wait(job_id)
+    assert error is None, "Block job failed with error '%s'" % error
+    node_info = get_block_node_by_name(vm, options["target"])
+    return node_info["image"]["filename"]
 
 def blockdev_add(vm, options):
     """wrapper for blockdev-add QMP command"""
     if "node-name" not in options:
         options["node-name"] = utils_misc.generate_random_id()
-    utils_misc.get_monitor_function(vm)(options)
+    qemu_monitor.get_monitor_function(vm, "blockdev-add")(options)
     return options["node-name"]
 
 
@@ -74,19 +90,17 @@ def get_block_node_by_name(vm, node):
     """Get block node info by node name"""
     out = query_named_block_nodes(vm)
     info = [i for i in out if i["node-name"] == node]
-    if info:
-        return info[0]
-    return None
+    return info[0] if info else dict() 
 
 
 def query_named_block_nodes(vm):
     """Get all block nodes info of the VM"""
-    func = utils_misc.get_monitor_function(vm)
+    func = qemu_monitor.get_monitor_function(vm, "query-named-block-nodes")
     return func()
 
 
 @fail_on
-def incremental_backup(vm, node, target, bitmap=None, wait=True):
+def incremental_backup(vm, node, target, bitmap=None, options=None, wait=True):
     """
     Do incremental backup with bitmap
 
@@ -95,37 +109,29 @@ def incremental_backup(vm, node, target, bitmap=None, wait=True):
     :param target: target device node-name or ID
     :param wait: wait for backup job finished or not
     """
-    options = {
+    args = {
         "device": node,
         "target": target,
         "sync": "incremental"}
     if bitmap:
-        options["bitmap"] = bitmap
+        args["bitmap"] = bitmap
         info = block_bitmap.get_bitmap_by_name(vm, node, bitmap)
         assert info, "Bitmap '%s' not exists in device '%s'" % (bitmap, node)
         if info["status"] != "disabled":
-            block_bitmap.block_dirty_bitmap_disbale(vm, node, bitmap)
-    return blockdev_backup(vm, options, wait)
+            block_bitmap.block_dirty_bitmap_disable(vm, node, bitmap)
+    args = merge_options(args, options)
+    return blockdev_backup(vm, args, wait)
 
 
 @fail_on
-def full_backup(vm, node, target, wait=True):
+def full_backup(vm, node, target, options=None, wait=True):
     """ Do full backup for node"""
-    options = {
+    args = {
         "device": node,
         "target": target,
         "sync": "full"}
-    return blockdev_backup(vm, options, wait)
-
-
-@utils_misc.timeout(MAX_JOB_TIMEOUT)
-def wait_for_event(monitor, event):
-    """wait for get event in monitor timeout in seconds"""
-    monitor.clear_event(event)
-    while True:
-        if monitor.get_event(event):
-            break
-        time.sleep(0.1)
+    args = merge_options(args, options)
+    return blockdev_backup(vm, args, wait)
 
 
 @fail_on
@@ -149,7 +155,11 @@ def create_target_block_device(vm, params, backing_info):
     format_image_options = {
         "driver": params["image_format"],
         "size": image_size,
-        "file": img_node_name}
+        "file": img_node_name,
+        }
+    if params.get("cluster_size"):
+        format_image_options.update(
+            {"cluster-size": int(params["cluster_size"])})
     add_device_options = {
         "driver": params["image_format"],
         "file": image_add_options["node-name"],
@@ -165,7 +175,7 @@ def create_target_block_device(vm, params, backing_info):
         jobs += [blockdev_create(vm, format_image_options)]
         blockdev_add(vm, add_device_options)
     finally:
-        map(partial(job_utils.job_dismiss, vm), jobs)
+        list(map(partial(job_utils.job_dismiss, vm), jobs))
     if get_block_node_by_name(vm, dev_node_name):
         return dev_node_name, filename
     return None, None

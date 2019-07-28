@@ -44,14 +44,19 @@ def run(test, params, env):
         icf_file = os.path.join(data_dir.get_deps_dir(), "iometer", icf_name)
         vm.copy_files_to(icf_file, "%s\\%s" % (ins_path, icf_name))
 
+    def _is_iometer_alive():
+        cmd = 'TASKLIST /FI "IMAGENAME eq Iometer.exe'
+        _session = vm.wait_for_login(timeout=360)
+        if not utils_misc.wait_for(
+                lambda: 'Iometer.exe' in _session.cmd_output(
+                    cmd, timeout=180), 600, step=3.0):
+            test.fail("Iometer is not alive!")
+        _session.close()
+
     def _run_backgroud(args):
         thread_session = vm.wait_for_login(timeout=360)
         thread = utils_misc.InterruptedThread(thread_session.cmd, args)
         thread.start()
-        cmd = 'TASKLIST /FI "IMAGENAME eq Iometer.exe'
-        if not utils_misc.wait_for(
-                lambda: 'Iometer.exe' in session.cmd_output(cmd), 180, step=3.0):
-            test.fail("Iometer is not alive!")
 
     def run_iometer():
         error_context.context("Start Iometer", logging.info)
@@ -60,7 +65,9 @@ def run(test, params, env):
             run_timeout)
         if params.get('bg_mode', 'no') == 'yes':
             _run_backgroud(args)
-            time.sleep(int(params.get('sleep_time', '900')))
+            _is_iometer_alive()
+            time.sleep(int(params.get('sleep_time', '180')))
+            _is_iometer_alive()
         else:
             session.cmd(*args)
             error_context.context(
@@ -71,11 +78,12 @@ def run(test, params, env):
         method, command = params.get('command_opts').split(',')
         logging.info('Sending command(%s): %s' % (method, command))
         if method == 'shell':
-            session = vm.wait_for_login(timeout=360)
-            session.sendline(command)
-            session.close()
+            vm.wait_for_login(timeout=360).sendline(command)
         else:
             getattr(vm.monitor, command)()
+        if shutdown_vm:
+            if not utils_misc.wait_for(lambda: vm.monitor.get_event("SHUTDOWN"), 600):
+                raise test.fail("Not received SHUTDOWN QMP event.")
 
     def check_vm_status(timeout=600):
         action = 'shutdown' if shutdown_vm else 'login'

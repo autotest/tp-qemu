@@ -52,6 +52,18 @@ def run(test, params, env):
         return [utils_disk.configure_empty_disk(
             session, disk, size, os_type)[0] for disk, size in get_data_disks()]
 
+    def get_win_drive_letters_after_reboot():
+        """ Get the drive letters after reboot in windows. """
+        new_mount_points = utils_misc.get_windows_drive_letters(
+            vm.wait_for_login(timeout=362))
+        for mount_point in fixed_mount_points:
+            new_mount_points.remove(mount_point)
+        diff_num = len(orig_mount_points) - len(new_mount_points)
+        if diff_num != 0:
+            test.error('No found the corresponding drive letters '
+                       'in %s disks.' % diff_num)
+        return new_mount_points
+
     def run_iozone(mount_points):
         """ Run iozone inside guest. """
         iozone = generate_instance(params, vm, 'iozone')
@@ -125,9 +137,12 @@ def run(test, params, env):
             session, vm, test, params["driver_name"])
 
     if with_data_disks:
-        mount_points = configure_data_disks()
+        orig_mount_points = configure_data_disks()
+        fixed_mount_points = set(utils_misc.get_windows_drive_letters
+                                 (session)) ^ set(orig_mount_points)
     else:
-        mount_points = ['C'] if windows else ['/home']
+        orig_mount_points = ['C'] if windows else ['/home']
+    mount_points = orig_mount_points
     stress_thread = run_bg_test(run_stress, (stress_name, mount_points))
 
     if not utils_misc.wait_for(
@@ -145,4 +160,7 @@ def run(test, params, env):
 
     if not shutdown_vm:
         stress_thread.join(stress_thread_timeout, True)
+        if with_data_disks and windows:
+            # XXX: The data disk letters will be changed after system reset in windows.
+            mount_points = get_win_drive_letters_after_reboot()
         run_stress(stress_name, mount_points)

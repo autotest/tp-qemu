@@ -7,6 +7,7 @@ from virttest.env_process import preprocess
 from virttest.virt_vm import VMDeadKernelCrashError
 from virttest import error_context
 from virttest import utils_test
+from virttest import utils_time
 
 
 @error_context.context_aware
@@ -40,6 +41,10 @@ def run(test, params, env):
     preprocess(test, params, env)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+
+    if params["os_type"] == 'windows':
+        utils_time.sync_timezone_win(vm)
+
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 

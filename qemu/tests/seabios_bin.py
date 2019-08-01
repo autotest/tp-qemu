@@ -20,7 +20,11 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    bin_dict = {'rhel6': 'bios.bin', 'rhel7': 'bios-256k.bin'}
+    bin_dict = {
+                   'rhel6': 'bios.bin',
+                   'rhel7': 'bios-256k.bin',
+                   'rhel8': 'bios-256k.bin'
+               }
 
     error_context.context("Get available bin files", logging.info)
     output = process.system_output('ls /usr/share/seabios', shell=True).decode()

@@ -19,7 +19,6 @@ from avocado.utils import process
 from virttest import error_context
 from virttest import qemu_virtio_port
 from virttest import env_process
-from virttest import qemu_qtree
 from virttest.utils_test.qemu import migration
 from virttest import utils_misc
 from virttest import funcatexit
@@ -564,29 +563,6 @@ def run(test, params, env):
             logging.error(msg)
             test.fail(msg)
 
-    def get_bus_of_port(vm, port_device):
-        """
-        Get right virtio-serial-pci name by qtree
-        :param vm: vm object in this test
-        :param port_device: QDevice object of this port
-        """
-        qtree = qemu_qtree.QtreeContainer()
-        qtree_check_port = port_device.get_param('id')
-        try:
-            qtree.parse_info_qtree(vm.monitor.info('qtree'))
-            for qbus in qtree.get_nodes():
-                if isinstance(qbus, qemu_qtree.QtreeBus) and (
-                              qbus.qtree['type'] == "virtio-serial-bus"):
-                    for qdev in qbus.get_children():
-                        if isinstance(qdev, qemu_qtree.QtreeDev) and (
-                                      'id' in qdev.qtree) and (
-                                      qdev.qtree['id'] == qtree_check_port):
-                            return qbus.qtree['id']
-            return None
-        except AttributeError as err:
-            logging.warn("Monitor deson't supoort qtree skip this test, error"
-                         " log: %s " % err)
-
     @error_context.context_aware
     def test_interrupted_transfer():
         """
@@ -600,16 +576,11 @@ def run(test, params, env):
                 portdev = vm.devices.get_by_params({"name": dev.qemu_id})[0]
                 if not portdev:
                     test.error("No port named %s" % dev.qemu_id)
-                if portdev.get_param("bus") == "None":
-                    bus_info = portdev.get_param("bus")
-                else:
-                    bus_info = get_bus_of_port(vm, portdev)
                 port_property = dict(id=portdev.get_param("id"),
                                      name=portdev.get_param("name"),
                                      chardev=portdev.get_param("chardev"),
-                                     bus=bus_info)
-                if not port_property["bus"]:
-                    test.error("Can't find the bus %s for this port" % bus_info)
+                                     bus=portdev.get_param("bus"),
+                                     nr=portdev.get_param("nr"))
                 (out, ver_out) = vm.devices.simple_unplug(portdev, vm.monitor)
                 if not ver_out:
                     test.error("Error occured when unplug %s" % dev.name)
@@ -621,7 +592,8 @@ def run(test, params, env):
                 for key, value in {'id': property['id'],
                                    'chardev': property['chardev'],
                                    'name': property['name'],
-                                   'bus': property['bus']}.items():
+                                   'bus': property['bus'],
+                                   'nr': property['nr']}.items():
                     portdev.set_param(key, value)
                 (out, ver_out) = vm.devices.simple_hotplug(portdev, vm.monitor)
                 if not ver_out:
@@ -691,17 +663,19 @@ def run(test, params, env):
             # when replugging port from pci to different pci. We should
             # either use symlinks (as in Windows) or replug with the busname
             port = ports[port_idx]
-            portdev = vm.devices.get_by_params({"name": port.qemu_id})[0]
+            portdev = vm.devices.get(port.qemu_id)
             if not portdev:
                 test.error("No port named %s" % port.qemu_id)
             chardev = portdev.get_param("chardev")
-            port_rid = portdev.get_param("id")
-            vm.devices.simple_unplug(portdev, vm.monitor)
+            out, ver_out = vm.devices.simple_unplug(portdev, vm.monitor)
+            if not ver_out:
+                test.error("The device %s isn't hotplugged well, "
+                           "result: %s" % (port.qemu_id, out))
             time.sleep(intr_time)
             if not chardev:
                 test.error("No chardev in guest for port %s" % port.qemu_id)
             new_portdev = qdevices.QDevice(device)
-            for key, value in {'id': port_rid, 'chardev': chardev, 'name':
+            for key, value in {'id': port.qemu_id, 'chardev': chardev, 'name':
                                port.name}.items():
                 new_portdev.set_param(key, value)
             vm.devices.simple_hotplug(new_portdev, vm.monitor)
@@ -1584,85 +1558,34 @@ def run(test, params, env):
         """
         # TODO: QMP
         # TODO: check qtree for device presence
-        pause = float(params.get("virtio_console_pause", 0.1))
+        pause = float(params.get("virtio_console_pause", 1))
         vm = virtio_test.get_vm_with_ports()
-        monitor = vm.monitors[0]
         idx = len(virtio_test.get_virtio_ports(vm)[0])
-        err = ""
-        booted = False
         error_context.context("Hotplug while booting", logging.info)
         vio_type = get_virtio_serial_name()
         if "pci" in vio_type:
             vio_parent_bus = {'aobject': 'pci.0'}
         else:
             vio_parent_bus = None
+        vm.wait_for_login()
         for i in range(int(params.get("virtio_console_loops", 10))):
-            error_context.context("Hotpluging virtio_pci (iteration %d)" % i)
-            vm.devices.set_dirty()
+            error_context.context("Hotpluging virtio_pci (iteration %d)" % i,
+                                  logging.info)
             new_dev = qdevices.QDevice(vio_type,
                                        {'id': 'virtio_serial_pci%d' % idx},
                                        parent_bus=vio_parent_bus)
 
             # Hotplug
-            out = new_dev.hotplug(monitor)
-            if out:
-                err += "\nHotplug monitor output: " + out
-
-            # Pause
+            out, ver_out = vm.devices.simple_hotplug(new_dev, vm.monitor)
+            if not ver_out:
+                test.error("The device %s isn't hotplugged well, "
+                           "result: %s" % (new_dev.aid, out))
             time.sleep(pause)
-            ver_out = new_dev.verify_hotplug(out, monitor)
-            if ver_out is False:
-                err += ("\nDevice is not in qtree %ss after hotplug:\n%s"
-                        % (pause, monitor.info("qtree")))
-
             # Unplug
-            out = new_dev.unplug(monitor)
-            if out:
-                err += "\nUnplug monitor output: " + out
-
-            # Pause
-            time.sleep(pause)
-            ver_out = new_dev.verify_unplug(out, monitor)
-            if booted:
-                deathline = time.time() + 5
-            else:
-                deathline = time.time() + 30
-            while time.time() < deathline:
-                if ver_out is True:
-                    break       # Unplugged successfully
-                elif "unknown command" in out:
-                    logging.warn("Can't verify if the device was removed "
-                                 "because info qtree is unsupported. Waiting"
-                                 "10s and hoping it's sufficient.")
-                    time.sleep(10)
-                    if not booted:      # Let's do another round, just in case
-                        booted = True
-                        continue
-                    break
-                if not booted:
-                    # When kernel doesn't answer to ACPI unplug event, pci is
-                    # not unplugged. We have to resend the unplug cmd.
-                    out = new_dev.unplug(monitor)
-                time.sleep(pause)
-                ver_out = new_dev.verify_unplug(out, monitor)
-            else:
-                logging.error(monitor.info("qtree"))
-                if err:
-                    logging.error("Device not unplugged after 20s.\nHotplug "
-                                  "errors:%s", err)
-                test.fail("Device not unplugged after 20s. "
-                          "Iteration %s" % i)
-
-            if err != "":
-                logging.error(monitor.info("qtree"))
-                test.fail("Error occurred while hotpluging virtio-"
-                          "pci. Iteration %s, monitor output:%s"
-                          % (i, err))
-
-            vm.devices.set_clean()
-            if not booted:   # Kernel should be booted when we get here
-                error_context.context("Hotplug on booted system", logging.info)
-                booted = True
+            out, ver_out = vm.devices.simple_unplug(new_dev, vm.monitor)
+            if ver_out is False:
+                test.fail("Device not unplugged. Iteration: %s, result: %s" %
+                          (i, out))
 
     #
     # Destructive tests

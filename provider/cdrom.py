@@ -9,6 +9,7 @@ import logging
 
 from avocado import fail_on
 from virttest import utils_misc
+from virttest.qemu_capabilities import Flags
 
 
 class CDRomError(Exception):
@@ -48,6 +49,9 @@ def is_device_tray_opened(vm, device_id):
     : device_id: block device identifier
     """
     blocks_info = vm.monitor.info('block')
+
+    if vm.check_capability(Flags.BLOCKDEV):
+        device_id = vm.devices.get_qdev_by_drive(device_id)
 
     if isinstance(blocks_info, str):
         open_str = 'tray open'

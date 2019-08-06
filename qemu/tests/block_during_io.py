@@ -52,6 +52,18 @@ def run(test, params, env):
         return [utils_disk.configure_empty_disk(
             session, disk, size, os_type)[0] for disk, size in get_data_disks()]
 
+    def get_win_drive_letters_after_reboot():
+        """ Get the drive letters after reboot in windows. """
+        new_mount_points = utils_misc.get_windows_drive_letters(
+            vm.wait_for_login(timeout=362))
+        for mount_point in fixed_mount_points:
+            new_mount_points.remove(mount_point)
+        diff_num = len(orig_mount_points) - len(new_mount_points)
+        if diff_num != 0:
+            test.error('No found the corresponding drive letters '
+                       'in %s disks.' % diff_num)
+        return new_mount_points
+
     def run_iozone(mount_points):
         """ Run iozone inside guest. """
         iozone = generate_instance(params, vm, 'iozone')
@@ -66,20 +78,24 @@ def run(test, params, env):
         """ Run the stress inside guest. """
         run_stress_maps[name](mount_points)
 
-    def stress_is_alive(session, name):
+    def is_stress_alive(session, name):
         """ Check whether the stress is alive. """
-        return session.cmd_output('pgrep -xl %s' % name)
+        name = name.upper() + '.EXE' if windows else name
+        chk_cmd = 'TASKLIST /FI "IMAGENAME eq %s' if windows else 'pgrep -xl %s'
+        return re.search(name, session.cmd_output(chk_cmd % name), re.I | re.M)
 
     def _change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
         logging.info('Sending command(%s): %s' % (method, command))
         if method == 'shell':
-            p_session = vm.wait_for_login(timeout=361)
-            p_session.sendline(command)
-            p_session.close()
+            power_session = vm.wait_for_login(timeout=360)
+            power_session.sendline(command)
         else:
             getattr(vm.monitor, command)()
+        if shutdown_vm:
+            if not utils_misc.wait_for(lambda: vm.monitor.get_event("SHUTDOWN"), 600):
+                raise test.fail("Not received SHUTDOWN QMP event.")
 
     def _check_vm_status():
         """ Check the status of vm. """
@@ -106,7 +122,7 @@ def run(test, params, env):
     with_data_disks = params.get('with_data_disks', 'yes') == 'yes'
     stress_name = params['stress_name']
     run_stress_maps = {'iozone': run_iozone}
-    stress_thread_timeout = int(params.get('stress_thread_timeout', 360))
+    stress_thread_timeout = int(params.get('stress_thread_timeout', 60))
     bg_test_thread_timeout = int(params.get('bg_test_thread_timeout', 600))
     sleep_time = int(params.get('sleep_time', 30))
     os_type = params['os_type']
@@ -121,16 +137,19 @@ def run(test, params, env):
             session, vm, test, params["driver_name"])
 
     if with_data_disks:
-        mount_points = configure_data_disks()
+        orig_mount_points = configure_data_disks()
+        fixed_mount_points = set(utils_misc.get_windows_drive_letters
+                                 (session)) ^ set(orig_mount_points)
     else:
-        mount_points = ['C'] if windows else ['/home']
+        orig_mount_points = ['C'] if windows else ['/home']
+    mount_points = orig_mount_points
     stress_thread = run_bg_test(run_stress, (stress_name, mount_points))
 
     if not utils_misc.wait_for(
-            lambda: stress_is_alive(session, stress_name), 60, step=3.0):
+            lambda: is_stress_alive(session, stress_name), 60, step=3.0):
         test.error('The %s stress is not alive.' % stress_name)
     time.sleep(sleep_time)
-    if not stress_is_alive(session, stress_name):
+    if not is_stress_alive(session, stress_name):
         test.error(
             'The %s stress is not alive after %s.' % (stress_name, sleep_time))
 
@@ -141,4 +160,7 @@ def run(test, params, env):
 
     if not shutdown_vm:
         stress_thread.join(stress_thread_timeout, True)
+        if with_data_disks and windows:
+            # XXX: The data disk letters will be changed after system reset in windows.
+            mount_points = get_win_drive_letters_after_reboot()
         run_stress(stress_name, mount_points)

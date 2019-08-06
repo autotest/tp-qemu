@@ -1,4 +1,5 @@
 import logging
+import aexpect
 
 from virttest import error_context
 from virttest import utils_net
@@ -29,11 +30,15 @@ def run(test, params, env):
         """
         flood_minutes = int(params["flood_minutes"])
         logging.info("Flood ping for %s minutes" % flood_minutes)
-        # TODO: windows guest doesn't have proper flood ping like linux,
-        # will consider how to implement it for windows later
-        if os_type == "linux":
+        try:
             utils_net.ping(host_ip, flood=True,
                            session=session, timeout=flood_minutes * 60)
+        except aexpect.ExpectProcessTerminatedError:
+            if os_type == "windows":
+                session.close()
+                session = vm.wait_for_login(timeout=timeout)
+                pass
+        return session
 
     def load_stress():
         """
@@ -76,7 +81,7 @@ def run(test, params, env):
         stress_test.load_stress_tool()
     else:
         load_stress()
-    flood_ping(session, host_ip, os_type)
+    session = flood_ping(session, host_ip, os_type)
     if os_type == "linux":
         stress_test.unload_stress()
         stress_test.clean()
@@ -87,7 +92,7 @@ def run(test, params, env):
                           " Check if the network is still alive",
                           logging.info)
     count = params["count"]
-    timeout = float(count) * 1.5
+    timeout = float(count) * 2
     status, output = utils_net.ping(host_ip, count, session=session,
                                     timeout=timeout)
     if status != 0:

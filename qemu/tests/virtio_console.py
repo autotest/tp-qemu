@@ -1886,4 +1886,5 @@ def run(test, params, env):
         finally:
             EXIT_EVENT.set()
             vm = env.get_vm(params["main_vm"])
-            vm.destroy()
+            if vm:
+                vm.destroy()

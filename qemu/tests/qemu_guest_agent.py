@@ -583,6 +583,82 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 test.fail("The guest time can't be set from hwclock on host")
 
     @error_context.context_aware
+    def gagent_check_time_sync(self, test, params, env):
+        """
+        Run "guest-set-time" to sync time after stop/cont vm
+
+        Steps:
+        1) start windows time service in guest and
+        change ntp server to clock.redhat.com
+        2) stop vm
+        3) wait 3 mins and resume vm
+        4) execute "guest-set-time" cmd via qga
+        5) query time offset of vm,it should be less than 3 seconds
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def time_drift():
+            """
+            Get the time diff between host and guest
+            :return: time diff
+            """
+            host_time = process.system_output("date +%s")
+            get_guest_time_cmd = params["get_guest_time_cmd"]
+            guest_time = session.cmd_output(get_guest_time_cmd)
+            logging.info("Host time is %s,guest time is %s." % (host_time,
+                                                                guest_time))
+            time_diff = abs(int(host_time) - int(guest_time))
+            return time_diff
+
+        time_config_cmd = params["time_service_config"]
+        time_service_status_cmd = params["time_service_status_cmd"]
+        time_service_start_cmd = params["time_service_start_cmd"]
+        time_service_stop_cmd = params["time_service_stop_cmd"]
+        session = self._get_session(self.params, self.vm)
+        self._open_session_list.append(session)
+
+        error_context.context("Start windows time service.", logging.info)
+        if session.cmd_status(time_service_status_cmd):
+            session.cmd(time_service_start_cmd)
+
+        error_context.context("Config time resource and restart time"
+                              " service.", logging.info)
+        session.cmd(time_config_cmd)
+        session.cmd(time_service_stop_cmd)
+        session.cmd(time_service_start_cmd)
+
+        error_context.context("Stop the VM", logging.info)
+        self.vm.pause()
+        self.vm.verify_status("paused")
+
+        pause_time = float(params["pause_time"])
+        error_context.context("Sleep %s seconds." % pause_time, logging.info)
+        time.sleep(pause_time)
+
+        error_context.context("Resume the VM", logging.info)
+        self.vm.resume()
+        self.vm.verify_status("running")
+
+        time_diff_before = time_drift()
+        if time_diff_before < (pause_time - 5):
+            test.error("Time is not paused about %s seconds." % pause_time)
+
+        error_context.context("Execute guest-set-time cmd.", logging.info)
+        self.gagent.set_time()
+
+        logging.info("Wait a few seconds up to 30s to check guest time.")
+        endtime = time.time() + 30
+        while time.time() < endtime:
+            time.sleep(2)
+            time_diff_after = time_drift()
+            if time_diff_after < 3:
+                break
+        else:
+            test.fail("The guest time sync failed.")
+
+    @error_context.context_aware
     def _get_mem_used(self, session, cmd):
         """
         get memory usage of the process

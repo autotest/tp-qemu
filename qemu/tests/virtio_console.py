@@ -1594,11 +1594,7 @@ def run(test, params, env):
         """
         Try to send to/read from guest on host while guest not recvs/sends any
         data.
-        :param cfg: virtio_console_params - which type of virtio port to test
-        :param cfg: virtio_port_spread - how many devices per virt pci (0=all)
         """
-        from autotest.client import utils
-        vm = env.get_vm(params["main_vm"])
         use_serialport = params.get('virtio_console_params') == "serialport"
         if use_serialport:
             vm = virtio_test.get_vm_with_ports(no_serialports=1, strict=True)
@@ -1615,12 +1611,7 @@ def run(test, params, env):
             port.open()
 
         port.sock.settimeout(20.0)
-
-        loads = utils.SystemLoad([(os.getpid(), 'autotest'),
-                                  (vm.get_pid(), 'VM'), 0])
         try:
-            loads.start()
-
             try:
                 sent1 = 0
                 for _ in range(1000000):
@@ -1629,15 +1620,11 @@ def run(test, params, env):
                 logging.info("Data sending to closed port timed out.")
 
             logging.info("Bytes sent to client: %d", sent1)
-            logging.info("\n" + loads.get_cpu_status_string()[:-1])
-
             logging.info("Open and then close port %s", port.name)
             guest_worker = qemu_virtio_port.GuestWorker(vm)
             # Test of live and open and close port again
             guest_worker.cleanup()
             port.sock.settimeout(20.0)
-
-            loads.start()
             try:
                 sent2 = 0
                 for _ in range(40000):
@@ -1646,12 +1633,8 @@ def run(test, params, env):
                 logging.info("Data sending to closed port timed out.")
 
             logging.info("Bytes sent to client: %d", sent2)
-            logging.info("\n" + loads.get_cpu_status_string()[:-1])
-            loads.stop()
         except Exception as inst:
             logging.error('test_rw_notconnect_guest failed: %s', inst)
-            if loads:
-                loads.stop()
             port.sock.settimeout(None)
             guest_worker = qemu_virtio_port.GuestWorker(vm)
             virtio_test.cleanup(vm, guest_worker)

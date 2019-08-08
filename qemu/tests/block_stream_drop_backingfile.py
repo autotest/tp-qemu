@@ -98,15 +98,17 @@ def run(test, params, env):
         if set([snapshots[0], image_file]).issubset(get_openingfiles()):
             test.fail("%s is opening by qemu"
                       % set([snapshots[0], image_file]))
-        error_context.context("Check backing-file of sn2 by qemu-img", logging.info)
+        error_context.context("Reboot VM to check it works fine", logging.info)
+        session = vm.reboot(session=session, timeout=timeout)
+        session.cmd(alive_check_cmd)
+        vm.destroy()
+        error_context.context(
+            "Check backing-file of sn2 by qemu-img",
+            logging.info)
         cmd = "%s info %s" % (qemu_img, snapshots[1])
         if re.search("backing file",
                      process.system_output(cmd, ignore_status=True)):
             test.fail("should no backing-file in this step")
-
-        error_context.context("Reboot VM to check it works fine", logging.info)
-        session = vm.reboot(session=session, timeout=timeout)
-        session.cmd(alive_check_cmd)
     finally:
-        for sn in snapshots:
-            process.system("rm -rf %s" % sn)
+        files = " ".join(snapshots)
+        process.system(r"\rm -rf %s" % files)

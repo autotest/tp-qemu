@@ -64,8 +64,8 @@ def run(test, params, env):
     error_context.context("Init the VM, and try to login", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    session_serial = vm.wait_for_serial_login(restart_network=True)
     session = vm.wait_for_login()
-    session_serial = vm.wait_for_serial_login()
 
     # print numa information on host and pinning vhost and vcpus to cpus
     process.system_output("numactl --hardware")
@@ -81,7 +81,7 @@ def run(test, params, env):
     # get qemu, guest kernel and kvm version info and write them into result
     result_path = utils_misc.get_path(test.resultsdir, "pktgen_perf.RHS")
     result_file = open(result_path, "w")
-    kvm_ver = process.system_output(kvm_ver_chk_cmd, shell=True)
+    kvm_ver = process.system_output(kvm_ver_chk_cmd, shell=True).decode()
     host_ver = os.uname()[2]
     guest_ver = session.cmd_output(guest_ver_cmd, timeout)
     result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)

@@ -7,13 +7,6 @@ from avocado.utils import process
 from virttest import error_context
 
 
-try:
-    cmp
-except NameError:
-    def cmp(x, y):
-        return (x > y) - (x < y)
-
-
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -76,7 +69,7 @@ def run(test, params, env):
         bootindex = int(params['bootindex_%s' % nic.nic_name])
         list_nic_addr.append((nic_addr[-2:], bootindex))
 
-    list_nic_addr.sort(cmp=lambda x, y: cmp(x[1], y[1]))
+    list_nic_addr.sort(key=lambda x: x[1])
 
     boot_fail_infos = boot_fail_infos % (list_nic_addr[0][0],
                                          list_nic_addr[1][0],

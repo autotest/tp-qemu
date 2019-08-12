@@ -26,6 +26,7 @@ from virttest import env_process
 from virttest import data_dir
 from virttest import utils_test
 from virttest.utils_test.qemu import migration
+from virttest.qemu_capabilities import Flags
 
 
 @error_context.context_aware
@@ -201,6 +202,7 @@ def run(test, params, env):
         :return: file associated with $qemu_cdrom_device device
         """
         blocks = vm.monitor.info("block")
+        enable_blockdev = vm.check_capability(Flags.BLOCKDEV)
         cdfile = None
         if isinstance(blocks, six.string_types):
             tmp_re_str = r'%s: .*file=(\S*) ' % qemu_cdrom_device
@@ -215,7 +217,9 @@ def run(test, params, env):
                     cdfile = file_list[0]
         else:
             for block in blocks:
-                if block['device'] == qemu_cdrom_device:
+                if (enable_blockdev and block['qdev'] == vm.devices.get_qdev_by_drive(
+                        qemu_cdrom_device) or (
+                        not enable_blockdev and block['device'] == qemu_cdrom_device)):
                     try:
                         cdfile = block['inserted']['file']
                         break
@@ -228,6 +232,7 @@ def run(test, params, env):
         Get the cdrom tray status via qemu monitor
         """
         is_open, checked = (None, False)
+        enable_blockdev = vm.check_capability(Flags.BLOCKDEV)
 
         blocks = vm.monitor.info("block")
         if isinstance(blocks, six.string_types):
@@ -251,7 +256,9 @@ def run(test, params, env):
                     tmp_block = ""
         else:
             for block in blocks:
-                if block['device'] == qemu_cdrom_device:
+                if (enable_blockdev and block['qdev'] == vm.devices.get_qdev_by_drive(
+                        qemu_cdrom_device) or (
+                        not enable_blockdev and block['device'] == qemu_cdrom_device)):
                     key = list(filter(lambda x: re.match(r"tray.*open", x),
                                       block.keys()))
                     # compatible rhel6 and rhel7 diff qmp output
@@ -441,8 +448,13 @@ def run(test, params, env):
                     device = block.split(':')[0]
         else:
             for block in blocks:
-                if 'inserted' not in block.keys():
-                    device = block['device']
+                if vm.check_capability(Flags.BLOCKDEV):
+                    if 'inserted' in block.keys():
+                        if block['inserted']['file'] == 'null-co://':
+                            device = block['inserted']['node-name']
+                else:
+                    if 'inserted' not in block.keys():
+                        device = block['device']
         return device
 
     def eject_test_via_monitor(vm, qemu_cdrom_device, guest_cdrom_device,

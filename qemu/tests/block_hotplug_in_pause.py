@@ -5,6 +5,7 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_disk
 from virttest.qemu_devices import qdevices
+from virttest.qemu_capabilities import Flags
 
 
 @error_context.context_aware
@@ -70,7 +71,9 @@ def run(test, params, env):
             if ret[1] is False:
                 test.fail("Failed to hotplug device '%s'."
                           "Output:\n%s" % (dev, ret[0]))
-        devs = [dev for dev in devs if not isinstance(dev, qdevices.QDrive)]
+        dtype = qdevices.QBlockdevNode if vm.check_capability(
+            Flags.BLOCKDEV) else qdevices.QDrive
+        devs = [dev for dev in devs if not isinstance(dev, dtype)]
         return devs
 
     def block_unplug(device_list):

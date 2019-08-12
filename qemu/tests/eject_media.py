@@ -3,6 +3,9 @@ import time
 
 from virttest import error_context
 from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
+from virttest import data_dir
+from virttest.qemu_capabilities import Flags
+from virttest.qemu_storage import QemuImg
 
 
 @error_context.context_aware
@@ -94,6 +97,9 @@ def run(test, params, env):
     error_context.context("Try to eject non-removable device", logging.info)
     p_dict = {"removable": False}
     device_name = vm.get_block(p_dict)
+    if vm.check_capability(Flags.BLOCKDEV):
+        sys_image = QemuImg(params, data_dir.get_data_dir(), params['images'].split()[0])
+        device_name = vm.get_block({"filename": sys_image.image_filename})
     if device_name is None:
         test.error("Could not find non-removable device")
     try:

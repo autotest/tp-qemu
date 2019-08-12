@@ -12,6 +12,7 @@ from virttest.utils_windows import drive
 from virttest.qemu_storage import QemuImg
 
 from provider.storage_benchmark import generate_instance
+from virttest.qemu_capabilities import Flags
 
 
 @error_context.context_aware
@@ -106,7 +107,11 @@ def run(test, params, env):
 
         error_context.context("Change disk size to %s in monitor"
                               % block_size, logging.info)
-        vm.monitor.block_resize(data_image_dev, block_size)
+        if vm.check_capability(Flags.BLOCKDEV):
+            args = (None, block_size, data_image_dev)
+        else:
+            args = (data_image_dev, block_size)
+        vm.monitor.block_resize(*args)
 
         if params.get("guest_prepare_cmd", ""):
             session.cmd(params.get("guest_prepare_cmd"))

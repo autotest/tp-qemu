@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import time
 
@@ -86,11 +87,20 @@ def run(test, params, env):
 
         logging.info('All the iozone threads are done.')
 
+    def check_gpt_labletype(disk_index):
+        """
+        Check the disk is gpt labletype.
+        """
+        cmd = "echo list disk > {0} && diskpart /s {0} && del {0}"
+        pattern = r'Disk %s.+?B.{8}\*' % disk_index
+        return re.search(pattern, session.cmd_output(cmd.format("test.dp")))
+
     timeout = int(params.get("login_timeout", 360))
     iozone_timeout = int(params.get("iozone_timeout"))
     disk_letters = params.get("disk_letter", 'C').split()
     disk_indexes = params.get("disk_index", "2").split()
     disk_fstypes = params.get("disk_fstype", "ntfs").split()
+    labletype = params.get("labletype", "msdos")
     results_path = os.path.join(test.resultsdir,
                                 'raw_output_%s' % test.iteration)
     analysisdir = os.path.join(test.resultsdir, 'analysis_%s' % test.iteration)
@@ -103,18 +113,27 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test, driver_name,
                                                                 timeout)
+
     if params.get("format_disk", "no") == "yes":
         error_context.context("Format disk", logging.info)
         for index, letter, fstype in zip(disk_indexes, disk_letters, disk_fstypes):
-            utils_misc.format_windows_disk(session, index, letter, fstype=fstype)
+            utils_misc.format_windows_disk(session, index, letter, fstype=fstype,
+                                           labletype=labletype)
+
+    if params.get("gpt_check", "no") == "yes":
+        if not check_gpt_labletype(disk_indexes[0]):
+            test.fail("Disk labletype is not gpt")
+
     cmd = params["iozone_cmd"]
     iozone_cmd = utils_misc.set_winutils_letter(session, cmd)
     error_context.context("Running IOzone command on guest, timeout %ss"
                           % iozone_timeout, logging.info)
+
     if params.get('run_iozone_parallel', 'no') == 'yes':
         disk_letters.append('C')
         run_iozone_parallel(int(params['stress_timeout']))
         return
+
     status, results = session.cmd_status_output(cmd=iozone_cmd,
                                                 timeout=iozone_timeout)
     error_context.context("Write results to %s" % results_path, logging.info)

@@ -1803,6 +1803,31 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             else:
                 logging.info("Serial number is %s which is expected." % serial_qga)
 
+    @error_context.context_aware
+    def gagent_check_nonexistent_cmd(self, test, params, env):
+        """
+        Execute "guest-fsinfo" command to guest agent, and check
+        the return info.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+        error_context.context("Issue the no existed guest-agent "
+                              "cmd via qga.", logging.info)
+        cmd_wrong = params["wrong_cmd"]
+        try:
+            self.gagent.cmd(cmd_wrong)
+        except guest_agent.VAgentCmdError as detail:
+            pattern = "command %s has not been found" % cmd_wrong
+            if not re.search(pattern, str(detail), re.I):
+                test.fail("The error info is not correct, the return is"
+                          " %s." % str(detail))
+        else:
+            test.fail("Should return error info.")
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

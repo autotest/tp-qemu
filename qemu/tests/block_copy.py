@@ -1,17 +1,15 @@
-import re
 import time
 import random
-import six
 import logging
 
 from avocado.utils import process
 
 from virttest import data_dir
 from virttest import error_context
-from virttest import storage
-from virttest import qemu_storage
 from virttest import utils_misc
+from virttest import utils_test
 from virttest import qemu_monitor
+from virttest import qemu_storage
 
 
 def speed2byte(speed):
@@ -44,12 +42,11 @@ class BlockCopy(object):
         self.env = env
         self.test = test
         self.params = params
-        self.vm = self.get_vm()
-        if self.vm.monitor.protocol != "qmp":
-            self.test.cancel("hmp is not supported in this test.")
+        self.device = "drive_%s" % tag
         self.data_dir = data_dir.get_data_dir()
-        self.device = self.get_device()
+        self.vm = self.get_vm()
         self.image_file = self.get_image_file()
+        self.job_id = None
 
     def parser_test_args(self):
         """
@@ -74,21 +71,22 @@ class BlockCopy(object):
             vm.verify_alive()
         return vm
 
-    def get_device(self):
-        """
-        according configuration get target device ID;
-        """
-        image_file = storage.get_image_filename(self.parser_test_args(),
-                                                self.data_dir)
-        logging.info("image filename: %s" % image_file)
-        return self.vm.get_block({"file": image_file})
-
     def get_session(self):
         """
         get a session object;
         """
+        count = 0
         params = self.parser_test_args()
-        session = self.vm.wait_for_login(timeout=params["login_timeout"])
+        while count < len(self.opening_sessions):
+            session = self.opening_sessions[count]
+            if session.is_responsive():
+                return session
+            session.close()
+            self.opening_sessions.pop(count)
+            count += 1
+            continue
+        timeout = params["login_timeout"]
+        session = self.vm.wait_for_login(timeout=timeout)
         self.opening_sessions.append(session)
         return session
 
@@ -96,15 +94,15 @@ class BlockCopy(object):
         """
         return block job info dict;
         """
-        count = 0
-        while count < 10:
+        def _get_status():
             try:
                 return self.vm.get_job_status(self.device)
-            except qemu_monitor.MonitorLockError as e:
-                logging.warn(e)
-            time.sleep(random.uniform(1, 5))
-            count += 1
-        return {}
+            except qemu_monitor.MonitorLockError:
+                pass
+            return dict()
+
+        ret = utils_misc.wait_for(_get_status, timeout=120, step=0.1)
+        return dict() if ret is None else ret
 
     def do_steps(self, tag=None):
         params = self.parser_test_args()
@@ -118,26 +116,25 @@ class BlockCopy(object):
         except KeyError:
             logging.warn("Undefined test phase '%s'" % tag)
 
+    def is_cancelled(self, job_id=None):
+        if not job_id:
+            job_id = self.job_id
+        if not job_id:
+            return bool(self.vm.monitor.get_event_by_id(
+                "BLOCK_JOB_CANCELLED", job_id))
+        return not bool(self.get_status())
+
     @error_context.context_aware
     def cancel(self):
         """
         cancel active job on given image;
         """
-        def is_cancelled():
-            ret = not bool(self.get_status())
-            ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_CANCELLED"))
-            return ret
-
         error_context.context("cancel block copy job", logging.info)
         params = self.parser_test_args()
         timeout = params.get("cancel_timeout")
-        self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
         self.vm.cancel_block_job(self.device)
-        cancelled = utils_misc.wait_for(is_cancelled, timeout=timeout)
-        if not cancelled:
-            msg = "Cancel block job timeout in %ss" % timeout
-            self.test.fail(msg)
-        self.vm.monitor.clear_event("BLOCK_JOB_CANCELLED")
+        cancelled = utils_misc.wait_for(self.is_cancelled, timeout=timeout)
+        assert cancelled, "Cancel block job timeout in %ss" % timeout
 
     def is_paused(self):
         """
@@ -163,24 +160,18 @@ class BlockCopy(object):
         """
         pause active job;
         """
-        if self.is_paused():
-            self.test.error("Job has been already paused.")
         logging.info("Pause block job.")
         self.vm.pause_block_job(self.device)
-        time.sleep(5)
-        if not self.is_paused():
-            self.test.fail("Pause block job failed.")
+        time.sleep(0.5)
+        assert self.is_paused(), "Job on device '%s' is not paused" % self.device
 
     def resume_job(self):
         """
         resume a paused job.
         """
-        if not self.is_paused():
-            self.test.error("Job is not paused, can't be resume.")
         logging.info("Resume block job.")
         self.vm.resume_block_job(self.device)
-        if self.is_paused():
-            self.test.fail("Resume block job failed.")
+        assert not self.is_paused(), "Job on device '%s' is not running" % self.device
 
     @error_context.context_aware
     def set_speed(self):
@@ -193,39 +184,25 @@ class BlockCopy(object):
         error_context.context("set speed to %s B/s" % expected_speed,
                               logging.info)
         self.vm.set_job_speed(self.device, expected_speed)
-        status = self.get_status()
-        if not status:
-            self.test.fail("Unable to query job status.")
-        speed = status["speed"]
-        if speed != expected_speed:
-            msg = "Set speed fail. (expected speed: %s B/s," % expected_speed
-            msg += "actual speed: %s B/s)" % speed
-            self.test.fail(msg)
+        speed = int(self.get_status()["speed"])
+        msg = "Unexpect job speed %s, expect is %s" % (speed, expected_speed)
+        assert speed == expected_speed, msg
 
     @error_context.context_aware
-    def reboot(self, method="shell", boot_check=True):
+    def reboot(self):
         """
         reboot VM, alias of vm.reboot();
         """
         error_context.context("reboot vm", logging.info)
         params = self.parser_test_args()
         timeout = params["login_timeout"]
-
-        if boot_check:
-            session = self.get_session()
-            return self.vm.reboot(session=session,
-                                  timeout=timeout, method=method)
-        error_context.context("reset guest via system_reset", logging.info)
-        self.vm.monitor.clear_event("RESET")
-        self.vm.monitor.cmd("system_reset")
-        reseted = utils_misc.wait_for(lambda:
-                                      self.vm.monitor.get_event("RESET"),
-                                      timeout=timeout)
-        if not reseted:
-            self.test.fail("No RESET event received after"
-                           "execute system_reset %ss" % timeout)
-        self.vm.monitor.clear_event("RESET")
-        return None
+        method = params.get("reboot_method", "shell")
+        session = self.get_session()
+        session = self.vm.reboot(
+            session=session,
+            timeout=timeout,
+            method=method)
+        self.opening_sessions.append(session)
 
     @error_context.context_aware
     def stop(self):
@@ -260,48 +237,14 @@ class BlockCopy(object):
         """
         return file associated with device
         """
-        blocks = self.vm.monitor.info("block")
-        try:
-            if isinstance(blocks, six.string_types):
-                # ide0-hd0: removable=1 locked=0 file=/tmp/test.img
-                image_regex = r'%s.*\s+file=(\S*)' % self.device
-                image_file = re.findall(image_regex, blocks)
-                if image_file:
-                    return image_file[0]
-                # ide0-hd0 (#block184): a b c
-                # or
-                # ide0-hd0 (#block184): a b c (raw)
-                image_file = re.findall(r"%s[^:]+: ([^(]+)\(?" % self.device,
-                                        blocks)
-                if image_file:
-                    if image_file[0][-1] == ' ':
-                        return image_file[0][:-1]
-                    else:
-                        return image_file[0]
-
-            for block in blocks:
-                if block['device'] == self.device:
-                    return block['inserted']['file']
-        except KeyError:
-            logging.warn("Image file not found for device '%s'" % self.device)
-            logging.debug("Blocks info: '%s'" % blocks)
-        return None
+        return qemu_storage.QemuImg(
+            self.params, self.data_dir, self.tag).image_filename
 
     def get_backingfile(self, method="monitor"):
         """
         return backingfile of the device, if not return None;
         """
-        if method == "monitor":
-            return self.vm.monitor.get_backingfile(self.device)
-
-        qemu_img = qemu_storage.QemuImg(self.params, self.data_dir, self.tag)
-        qemu_img.image_filename = self.get_image_file()
-        info = qemu_img.info(force_share=True)
-        try:
-            matched = re.search(r"backing file: +(.*)", info, re.M)
-            return matched.group(1)
-        except AttributeError:
-            logging.warn("No backingfile found, cmd output: %s" % info)
+        return self.vm.monitor.get_backingfile(self.device)
 
     def action_before_start(self):
         """
@@ -315,33 +258,27 @@ class BlockCopy(object):
         """
         for test in self.params.get("when_start").split():
             if hasattr(self, test):
-                fun = getattr(self, test)
-                bg = utils_misc.InterruptedThread(fun)
+                func = getattr(self, test)
+                bg = utils_test.BackgroundTest(func, ())
                 bg.start()
-                if bg.isAlive():
+                if bg.is_alive():
                     self.processes.append(bg)
 
     def job_finished(self):
         """
         check if block job finished;
         """
-        if self.get_status():
-            return False
-        return bool(self.vm.monitor.get_event("BLOCK_JOB_COMPLETED"))
+        event = "BLOCK_JOB_COMPLETED"
+        job_id = self.job_id or self.device
+        return self.vm.monitor.get_event_by_id(event, job_id)
 
     def wait_for_finished(self):
         """
         waiting until block job finished
         """
-        time_start = time.time()
         params = self.parser_test_args()
         timeout = params.get("wait_timeout")
-        finished = utils_misc.wait_for(self.job_finished, timeout=timeout)
-        if not finished:
-            self.test.fail("Job not finished in %s seconds" % timeout)
-        time_end = time.time()
-        logging.info("Block job done.")
-        return time_end - time_start
+        utils_misc.wait_for(self.job_finished, timeout=timeout)
 
     def action_after_finished(self):
         """
@@ -357,12 +294,8 @@ class BlockCopy(object):
         """
         check block job is steady status or not;
         """
-        params = self.parser_test_args()
-        info = self.get_status()
-        ret = bool(info and info.get("ready") and not info.get("busy"))
-        if params.get("check_event", "no") == "yes":
-            ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_READY"))
-        return ret
+        return bool(self.vm.monitor.get_event_by_id(
+            "BLOCK_JOB_READY", self.job_id))
 
     def wait_for_steady(self):
         """
@@ -371,11 +304,9 @@ class BlockCopy(object):
         """
         params = self.parser_test_args()
         timeout = params.get("wait_timeout")
-        self.vm.monitor.clear_event("BLOCK_JOB_READY")
-        steady = utils_misc.wait_for(self.is_steady, first=3.0,
-                                     step=3.0, timeout=timeout)
-        if not steady:
-            self.test.fail("Wait mirroring job ready timeout in %ss" % timeout)
+        steady = utils_misc.wait_for(self.is_steady, timeout=timeout)
+        message = "Wait job to steady timeout in '%s' seconds" % timeout
+        assert steady, message
 
     def action_before_steady(self):
         """
@@ -406,8 +337,10 @@ class BlockCopy(object):
             session = self.opening_sessions.pop()
             if session:
                 session.close()
-        if self.vm:
-            self.vm.destroy()
+        for vm in self.env.get_all_vms():
+            if vm.is_alive():
+                vm.destroy()
+            time.sleep(1)
         while self.trash_files:
             tmp_file = self.trash_files.pop()
             process.system("rm -f %s" % tmp_file, ignore_status=True)
@@ -420,10 +353,15 @@ class BlockCopy(object):
         params = self.params
         session = self.get_session()
         file_create_cmd = params.get("create_command", "touch FILE")
-        file_create_cmd = utils_misc.set_winutils_letter(session, file_create_cmd)
+        file_create_cmd = utils_misc.set_winutils_letter(
+            session, file_create_cmd)
         test_exists_cmd = params.get("test_exists_cmd", "test -f FILE")
         if session.cmd_status(test_exists_cmd.replace("FILE", file_name)):
-            session.cmd(file_create_cmd.replace("FILE", file_name), timeout=200)
+            session.cmd(
+                file_create_cmd.replace(
+                    "FILE",
+                    file_name),
+                timeout=200)
         session.cmd("md5sum %s > %s.md5" % (file_name, file_name), timeout=200)
         sync_cmd = params.get("sync_cmd", "sync")
         sync_cmd = utils_misc.set_winutils_letter(session, sync_cmd)
@@ -500,3 +438,31 @@ class BlockCopy(object):
         file_names = self.params["file_names"].split()
         for name in file_names:
             self.verify_md5(name)
+
+    @error_context.context_aware
+    def create_snapshots(self):
+        """
+        create live snapshot_chain, snapshots chain define in $snapshot_chain
+        """
+        kwargs = dict()
+        params = self.parser_test_args()
+        if params.get("snapshot_format"):
+            kwargs["format"] = params["snapshot_format"]
+        if params.get("snapshot_create_mode"):
+            kwargs["mode"] = params["snapshot_create_mode"]
+        snapshot_chain = params["snapshot_chain"].split()
+        error_context.context("create live snapshots", logging.info)
+        image_dir = utils_misc.get_path(self.data_dir, "images")
+        snapshot_files = [
+            utils_misc.get_path(
+                image_dir,
+                f) for f in snapshot_chain]
+        for index, snapshot_file in enumerate(snapshot_files):
+            base_file = (
+                index and [snapshot_files[index - 1]] or [self.image_file])[0]
+            self.vm.live_snapshot(
+                self.device,
+                base_file,
+                snapshot_file,
+                **kwargs)
+        self.trash_files.extend(snapshot_files)

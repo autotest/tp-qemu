@@ -7,12 +7,6 @@ from qemu.tests import blk_commit
 
 class BlockCommitReboot(blk_commit.BlockCommit):
 
-    def reboot(self):
-        """
-        Reset guest with system_reset;
-        """
-        return super(BlockCommitReboot, self).reboot(boot_check=False)
-
     def action_when_start(self):
         """
         start pre-action in new threads;

@@ -16,7 +16,7 @@ def run(test, params, env):
     tag = params.get("source_image", "image1")
     reboot_test = drive_mirror.DriveMirror(test, params, env, tag)
     try:
-        reboot_test.reboot("system_reset", False)
+        reboot_test.reboot()
         reboot_test.start()
         reboot_test.action_when_steady()
         reboot_test.action_after_reopen()

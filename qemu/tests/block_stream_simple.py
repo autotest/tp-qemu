@@ -16,8 +16,7 @@ class BlockStreamSimple(blk_stream.BlockStream):
         query running block streaming job info;
         """
         error_context.context("query job status", logging.info)
-        if not self.get_status():
-            self.test.fail("No active job")
+        assert self.get_status(), "No active job"
 
 
 def run(test, params, env):

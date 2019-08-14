@@ -41,8 +41,22 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
         backingfile = self.get_backingfile()
         if backingfile != self.base_image:
             msg = "The backing file from monitor does not meet expectation. "
-            msg += "It should be %s, now is %s." % (self.base_image, backingfile)
+            msg += "It should be %s, now is %s." % (
+                self.base_image, backingfile)
             self.test.fail(msg)
+
+    def get_image_file(self):
+        node_name = self.vm.get_top_node_by_qdev(self.tag)
+        for item in self.vm.monitor.query("block"):
+            image_info = item["inserted"]
+            if not image_info:
+                continue
+            if item["device"] == self.device:
+                return image_info["file"]
+            if not node_name:
+                continue
+            if image_info.get("node-name") == node_name:
+                return image_info["file"]
 
     def check_imagefile(self):
         """
@@ -50,7 +64,8 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
         """
         params = self.parser_test_args()
         exp_img_file = params["expected_image_file"]
-        exp_img_file = utils_misc.get_path(self.data_dir, exp_img_file)
+        image_dir = utils_misc.get_path(self.data_dir, "images")
+        exp_img_file = utils_misc.get_path(image_dir, exp_img_file)
         logging.info("Check image file is '%s'" % exp_img_file)
         img_file = self.get_image_file()
         if exp_img_file != img_file:

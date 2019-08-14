@@ -10,14 +10,6 @@ class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
         super(LiveSnapshotRuntime, self).__init__(test, params, env, tag)
 
     @error_context.context_aware
-    def reboot(self):
-        """
-        Reset guest with system_reset;
-        """
-        method = self.params.get("reboot_method", "system_reset")
-        return super(LiveSnapshotRuntime, self).reboot(method=method, boot_check=False)
-
-    @error_context.context_aware
     def action_when_start(self):
         """
         start pre-action in new threads;

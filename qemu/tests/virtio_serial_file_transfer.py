@@ -1,5 +1,6 @@
 import re
 import os
+import time
 import logging
 
 from avocado.utils import process
@@ -34,12 +35,16 @@ def get_virtio_port_property(vm, port_name):
     :param port_name: the port name to be processed
     :return: port type and port hostfile
     """
+    chardev_info = vm.monitor.human_monitor_cmd('info chardev')
     for port in vm.virtio_ports:
         if isinstance(port, qemu_virtio_port.VirtioSerial):
             if port.name == port_name:
                 hostfile = port.hostfile
                 if port.port_type in ('tcp_socket', 'udp'):
                     hostfile = '%s:%s' % (port.hostfile[0], port.hostfile[1])
+                elif port.port_type == 'pty':
+                    hostfile = re.findall('%s: filename=pty:(/dev/pts/\\d)?' %
+                                          port_name, chardev_info)[0]
                 return port.port_type, hostfile
 
 
@@ -125,6 +130,7 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
         host_thread = utils_misc.InterruptedThread(process.getoutput,
                                                    kwargs=kwargs)
         host_thread.start()
+        time.sleep(3)
         g_output = session.cmd_output(guest_cmd, timeout=timeout)
         result = check_output(sender, g_output)
         if result[0] is False:

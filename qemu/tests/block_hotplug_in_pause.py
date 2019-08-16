@@ -185,16 +185,15 @@ def run(test, params, env):
                 if devs:
                     device_list.extend(devs)
 
-            if vm.is_paused():
+            if vm.is_paused() and params.get("resume_vm_after_hotplug", "yes") == "yes":
                 error_context.context("Resume vm after hotplug")
                 vm.resume()
 
-            block_check_in_guest(session, disks_before_plug, blk_num, get_disk_cmd)
-
-            if params.get("disk_op_cmd"):
-                plug_disks = get_plug_unplug_disks(disks_before_plug,
-                                                   find_disk(session, get_disk_cmd))
-                rw_disk_in_guest(session, plug_disks, iteration)
+                block_check_in_guest(session, disks_before_plug, blk_num, get_disk_cmd)
+                if params.get("disk_op_cmd"):
+                    plug_disks = get_plug_unplug_disks(disks_before_plug,
+                                                       find_disk(session, get_disk_cmd))
+                    rw_disk_in_guest(session, plug_disks, iteration)
 
         else:
             for device in vm.devices:
@@ -203,12 +202,14 @@ def run(test, params, env):
                         device_list.append(device)
 
         error_context.context("Unplug device", logging.info)
-        disks_before_unplug = find_disk(session, get_disk_cmd)
-
-        if params.get("stop_vm_before_vm", "no") == "yes":
-            error_context.context("Stop vm before unplug")
-            vm.pause()
-
+        if not vm.is_paused():
+            disks_before_unplug = find_disk(session, get_disk_cmd)
+            if params.get("stop_vm_before_unplug", "yes") == "yes":
+                error_context.context("Stop vm before unplug")
+                vm.pause()
+        else:
+            blk_num = 0
+            disks_before_unplug = disks_before_plug
         block_unplug(device_list)
 
         if vm.is_paused():

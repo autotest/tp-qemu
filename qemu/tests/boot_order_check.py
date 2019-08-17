@@ -21,6 +21,43 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
+    def _get_device(devices, dev_id):
+        device_found = {}
+        for dev in devices:
+            if dev['qdev_id'] == dev_id:
+                device_found = dev
+                break
+            elif dev['class_info']['desc'] == 'PCI bridge':
+                device_found = _get_device(dev['pci_bridge']['devices'],
+                                           dev_id)
+                if device_found:
+                    break
+        return device_found
+
+    def _get_pci_addr_by_devid(vm, dev_id):
+        dev_addr = ''
+        dev_addr_fmt = '%02d:%02d.%d'
+        pci_info = vm.monitor.info('pci', debug=False)
+        if isinstance(pci_info, list):
+            device = _get_device(pci_info[0]['devices'], dev_id)
+            if device:
+                dev_addr = dev_addr_fmt % (device['bus'],
+                                           device['slot'],
+                                           device['function'])
+        else:
+            # As device id in the last line of info pci output
+            # We need reverse the pci information to get the pci addr which is in the
+            # front row.
+            pci_list = str(pci_info).split("\n")
+            pci_list.reverse()
+            pci_info = " ".join(pci_list)
+            dev_match = re.search(nic_addr_filter % dev_id, pci_info)
+            if dev_match:
+                bus_slot_func = [int(i) for i in dev_match.groups()]
+                dev_addr = dev_addr_fmt % tuple(bus_slot_func)
+        return dev_addr
+
     error_context.context("Boot vm by passing boot order decided",
                           logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -44,30 +81,12 @@ def run(test, params, env):
     result = None
     list_nic_addr = []
 
-    # As device id in the last line of info pci output
-    # We need reverse the pci information to get the pci addr which is in the
-    # front row.
-    pci_info = vm.monitor.info("pci")
-    nic_slots = {}
-    if isinstance(pci_info, list):
-        pci_devices = pci_info[0]['devices']
-        for device in pci_devices:
-            if device['class_info']['desc'] == "Ethernet controller":
-                nic_slots[device['qdev_id']] = device['slot']
-    else:
-        pci_list = str(pci_info).split("\n")
-        pci_list.reverse()
-        pci_info = " ".join(pci_list)
-
     for nic in vm.virtnet:
-        if nic_slots:
-            nic_addr = nic_slots[nic.device_id]
-        else:
-            nic_addr = re.findall(nic_addr_filter % nic.device_id,
-                                  pci_info)[0]
-        nic_addr = "0%s" % nic_addr
-        bootindex = int(params['bootindex_%s' % nic.nic_name])
-        list_nic_addr.append((nic_addr[-2:], bootindex))
+        boot_index = params['bootindex_%s' % nic.nic_name]
+        pci_addr = _get_pci_addr_by_devid(vm, nic.device_id)
+        if not pci_addr:
+            test.fail("Cannot get the pci address of %s." % nic.nic_name)
+        list_nic_addr.append((pci_addr, boot_index))
 
     list_nic_addr.sort(key=lambda x: x[1])
 

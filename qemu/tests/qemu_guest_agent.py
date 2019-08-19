@@ -1423,7 +1423,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Check guest agent command "
                               "'guest-fsfreeze-freeze/thaw'",
                               logging.info)
-        write_cmd = params["gagent_fs_test_cmd"]
+        write_cmd = params.get("gagent_fs_test_cmd", "")
         write_cmd_timeout = int(params.get("write_cmd_timeout", 60))
         try:
             expect_status = self.gagent.FSFREEZE_STATUS_THAWED
@@ -1847,8 +1847,8 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
     """
     def __init__(self, test, params, env):
         QemuGuestAgentBasicCheck.__init__(self, test, params, env)
-        self.gagent_guest_dir = params["gagent_guest_dir"]
-        self.qemu_ga_pkg = params["qemu_ga_pkg"]
+        self.gagent_guest_dir = params.get("gagent_guest_dir", "")
+        self.qemu_ga_pkg = params.get("qemu_ga_pkg", "")
         self.gagent_src_type = params.get("gagent_src_type", "url")
 
     @error_context.context_aware

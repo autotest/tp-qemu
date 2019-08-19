@@ -42,7 +42,10 @@ def run(test, params, env):
             if not virtio_port:
                 test.fail("Virtio Port '%s' not found" % port)
             chardev_qid = virtio_port.get_param("chardev")
-            port_chardev = vm.devices.get_by_qid(chardev_qid)[0]
+            try:
+                port_chardev = vm.devices.get_by_qid(chardev_qid)[0]
+            except IndexError:
+                test.error("Failed to get device %s" % chardev_qid)
             if module:
                 error_context.context("Unload module %s" % module,
                                       logging.info)

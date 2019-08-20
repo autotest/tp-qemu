@@ -8,6 +8,7 @@ from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
+from virttest.utils_windows import wmic
 
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheckWin
 
@@ -104,6 +105,25 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
         env_process.preprocess_vm(test, params, env, params["main_vm"])
         vm = self.env.get_vm(params["main_vm"])
         session = self._get_session(params, vm)
+
+        if params.get("driver_uninstall", "no") == "yes":
+            error_context.context("Uninstall vioser driver in guest.",
+                                  logging.info)
+            device_name = params["device_name"]
+            driver_name = params["driver_name"]
+            inf_names_get_cmd = wmic.make_query("path win32_pnpsigneddriver",
+                                                "DeviceName like '%s'" %
+                                                device_name,
+                                                props=["InfName"],
+                                                get_swch=wmic.FMT_TYPE_LIST)
+            inf_names = wmic.parse_list(session.cmd(inf_names_get_cmd,
+                                                    timeout=360))
+            for inf_name in inf_names:
+                uninst_store_cmd = "pnputil /f /d %s" % inf_name
+                s, o = session.cmd_status_output(uninst_store_cmd, 360)
+                if s:
+                    test.error("Failed to uninstall driver '%s' from store, "
+                               "details:\n%s" % (driver_name, o))
 
         error_context.context("Install the previous qemu-ga in guest.",
                               logging.info)

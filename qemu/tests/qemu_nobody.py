@@ -29,8 +29,8 @@ def run(test, params, env):
         """
         return user uid and gid as a list
         """
-        user_uid = process.system_output("id -u %s" % username).split()
-        user_gid = process.system_output("id -g %s" % username).split()
+        user_uid = process.getoutput("id -u %s" % username).split()
+        user_gid = process.getoutput("id -g %s" % username).split()
         return(user_uid, user_gid)
 
     def get_ugid_from_processid(pid):
@@ -38,7 +38,7 @@ def run(test, params, env):
         return a list[uid,euid,suid,fsuid,gid,egid,sgid,fsgid] of pid
         """
         grep_ugid_cmd = "cat /proc/%s/status | grep -iE '^(U|G)id'"
-        o = process.system_output(grep_ugid_cmd % pid.strip(), shell=True)
+        o = process.getoutput(grep_ugid_cmd % pid, shell=True)
         ugid = re.findall(r"(\d+)", o)
         # real UID, effective UID, saved set UID, and file system UID
         if ugid:

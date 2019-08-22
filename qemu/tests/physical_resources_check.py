@@ -361,17 +361,6 @@ def run(test, params, env):
                            catch_serial_cmd)
     n_fail.extend(f_fail)
 
-    # only check if the MS Windows VirtIO driver is digital signed.
-    chk_cmd = params.get("vio_driver_chk_cmd")
-    if chk_cmd:
-        error_context.context("Virtio Driver Check", logging.info)
-        chk_output = session.cmd_output(chk_cmd, timeout=chk_timeout)
-        if "FALSE" in chk_output:
-            fail_log = "VirtIO driver is not digitally signed!"
-            fail_log += "    VirtIO driver check output: '%s'" % chk_output
-            n_fail.append(fail_log)
-            logging.error(fail_log)
-
     error_context.context("Machine Type Check", logging.info)
     f_fail = verify_machine_type()
     n_fail.extend(f_fail)

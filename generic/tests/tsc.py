@@ -55,7 +55,7 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
 
-    tsc_test = TscTest(test, params, env, 'tsc')
+    tsc_test = TscTest(test, params, env, params["tsc_test_name"])
     tsc_test.setUp()
     tsc_test.runTest()
     tsc_test.cleanUp()

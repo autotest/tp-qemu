@@ -24,6 +24,8 @@ from virttest import utils_misc
 from virttest import funcatexit
 from virttest.qemu_devices import qdevices
 from virttest.utils_virtio_port import VirtioPortTest
+from virttest.qemu_devices import qcontainer
+
 
 EXIT_EVENT = threading.Event()
 
@@ -35,6 +37,84 @@ def __set_exit_event():
     """
     logging.warn("Executing __set_exit_event()")
     EXIT_EVENT.set()
+
+
+def add_chardev(vm, params):
+    """
+    Generate extra CharDevice without serial device utilize it
+
+    :param vm: VM object to be operated
+    :param params: Dictionary with the test parameters
+    :return list of added CharDevice object
+    """
+    qemu_binary = utils_misc.get_qemu_binary(params)
+    qdevices = qcontainer.DevContainer(qemu_binary, vm.name,
+                                       params.get('strict_mode'),
+                                       params.get(
+                                           'workaround_qemu_qmp_crash'),
+                                       params.get('allow_hotplugged_vm'))
+    char_devices = params['extra_chardevs'].split()
+    host = params.get('chardev_host', '127.0.0.1')
+    free_ports = utils_misc.find_free_ports(
+        5000, 6000, len(char_devices), host)
+    device_list = []
+    for index, chardev in enumerate(char_devices):
+        chardev_param = params.object_params(chardev)
+        file_name = vm.get_serial_console_filename(chardev)
+        backend = chardev_param.get('chardev_backend',
+                                    'unix_socket')
+        if backend in ['udp', 'tcp_socket']:
+            chardev_param['chardev_host'] = host
+            chardev_param['chardev_port'] = str(free_ports[index])
+        device = qdevices.chardev_define_by_params(
+            chardev, chardev_param, file_name)
+        device_list.append(device)
+    return device_list
+
+
+def add_virtserial_device(vm, params, serial_id, chardev_id):
+    """
+    Generate extra serial devices individually, without CharDevice
+
+    :param vm: VM object to be operated
+    :param params: Dictionary with the test parameters
+    :return list of added serial devices
+    """
+    s_params = params.object_params(serial_id)
+    serial_type = s_params['serial_type']
+    machine = params.get('machine_type')
+    if '-mmio' in machine:
+        controller_suffix = 'device'
+    elif machine.startswith("s390"):
+        controller_suffix = 'ccw'
+    else:
+        controller_suffix = 'pci'
+    bus_type = 'virtio-serial-%s' % controller_suffix
+    return vm.devices.serials_define_by_variables(
+        serial_id, serial_type, chardev_id, bus_type,
+        s_params.get('serial_name'), s_params.get('serial_bus'),
+        s_params.get('serial_nr'), s_params.get('serial_reg'))
+
+
+def add_virtio_ports_to_vm(vm, params, serial_device):
+    """
+    Add serial device to vm.virtio_ports
+
+    :param vm: VM object to be operated
+    :param params: Dictionary with the test parameters
+    :param serial_device: serial device object
+    """
+    serial_id = serial_device.get_qid()
+    chardev_id = serial_device.get_param('chardev')
+    chardev = vm.devices.get(chardev_id)
+    filename = chardev.get_param('path')
+    chardev_params = params.object_params(chardev_id)
+    backend = chardev_params.get('chardev_backend', 'unix_socket')
+    if backend in ['udp', 'tcp_socket']:
+        filename = (chardev.get_param('host'), chardev.get_param('port'))
+    serial_name = serial_device.get_param('name')
+    vm.virtio_ports.append(qemu_virtio_port.VirtioSerial(
+        serial_id, serial_name, filename, backend))
 
 
 @error_context.context_aware

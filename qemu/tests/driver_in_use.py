@@ -5,6 +5,29 @@ import logging
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
+from qemu.tests import vioser_in_use
+
+
+@error_context.context_aware
+def check_bg_running(vm, params):
+    """
+    Check the backgroud test status in guest.
+
+    :param vm: VM Object
+    :param params: Dictionary with the test parameters
+    :return: return True if find the driver name;
+             else return False
+    """
+    session = vm.wait_for_login()
+    target_process = params["target_process"]
+    if params['os_type'] == 'linux':
+        output = session.cmd_output_safe('pgrep -l %s' % target_process)
+    else:
+        list_cmd = params.get("list_cmd", "wmic process get name")
+        output = session.cmd_output_safe(list_cmd, timeout=60)
+    process = re.findall(target_process, output, re.M | re.I)
+    session.close()
+    return bool(process)
 
 
 @error_context.context_aware
@@ -20,24 +43,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-
-    def check_bg_running(target_process):
-        """
-        Check the backgroud test status in guest.
-
-        :param target_process: Background process running in guest.
-        :return: return True if find the driver name;
-                 else return False
-        """
-        session = vm.wait_for_login()
-        if params['os_type'] == 'linux':
-            output = session.cmd_output_safe('pgrep -lx %s' % target_process)
-        else:
-            list_cmd = params.get("list_cmd", "wmic process get name")
-            output = session.cmd_output_safe(list_cmd, timeout=60)
-        process = re.findall(target_process, output, re.M | re.I)
-        session.close()
-        return bool(process)
 
     def run_bg_test_simu(bg_stress_test):
         """
@@ -78,7 +83,7 @@ def run(test, params, env):
             params[event] = False
 
         check_bg_timeout = float(params.get('check_bg_timeout', 120))
-        if not utils_misc.wait_for(lambda: check_bg_running(target_process),
+        if not utils_misc.wait_for(lambda: check_bg_running(vm, params),
                                    check_bg_timeout, 0, 1):
             test.fail("Backgroud test %s is not alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
@@ -148,6 +153,8 @@ def run(test, params, env):
             else:
                 stress_thread.join(timeout=timeout, suppress_exception=suppress_exception)
         if vm.is_alive():
+            if driver == "vioser":
+                vioser_in_use.kill_host_serial_pid(params, vm)
             run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "after_bg_test":
         run_bg_test_sep(bg_stress_test)

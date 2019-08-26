@@ -168,6 +168,7 @@ def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
     :return: True if pass, False and error message if check fail
     """
     session = vm.wait_for_login()
+    os_type = params["os_type"]
     guest_path = params.get("guest_script_folder", "C:\\")
     guest_scripts = params.get("guest_scripts",
                                "VirtIoChannel_guest_send_receive.py")
@@ -199,8 +200,10 @@ def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
                   port_name, guest_file_name, guest_action))
     result = _transfer_data(session, host_cmd, guest_cmd, transfer_timeout, sender)
     clean_cmd = params['clean_cmd']
-    for script in guest_scripts.split(";"):
-        session.cmd('%s %s' % (clean_cmd, script))
+    os.remove(host_file_name)
+    if os_type == "windows":
+        guest_file_name = guest_file_name.replace("/", "\\")
+    session.cmd('%s %s' % (clean_cmd, guest_file_name))
     session.close()
     return result
 
@@ -224,7 +227,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     logging.info('Transfer data from %s' % sender)
-    result = transfer_data(params, vm, sender='both')
+    result = transfer_data(params, vm, sender=sender)
     vm.destroy()
     if result is not True:
         test.fail("Test failed. %s" % result[1])

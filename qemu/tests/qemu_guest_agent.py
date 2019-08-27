@@ -1299,21 +1299,42 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             if not result["exited"]:
                 test.error("Guest cmd is still running, pls login guest to"
                            " handle it or extend your timeout.")
-            # check the exitcode and output/error data result
-            if result["exitcode"] == 0:
+            # check the exitcode and output/error data if capture_output
+            #  is true
+            if capture_output is not True:
+                return result
+            if params.get("os_type") == "linux":
+                if result["exitcode"] == 0:
+                    if "out-data" in result:
+                        out_data = base64.b64decode(result["out-data"]).\
+                            decode()
+                        logging.info("The guest cmd is executed successfully,"
+                                     "the output is:\n%s." % out_data)
+                    elif "err-data" in result:
+                        test.fail("When exitcode is 0, should not return"
+                                  " error data.")
+                    else:
+                        test.fail("There is no output with capture_output is true.")
+                else:
+                    if "out-data" in result:
+                        test.fail("When exitcode is 1, should not return"
+                                  " output data.")
+                    elif "err-data" in result:
+                        err_data = base64.b64decode(result["err-data"]).\
+                            decode()
+                        logging.info("The guest cmd failed,"
+                                     "the error info is:\n%s" % err_data)
+                    else:
+                        test.fail("There is no output with capture_output is true.")
+            else:
+                # for windows guest,no matter what exitcode is,
+                #  the return key is out-data
                 if "out-data" in result:
                     out_data = base64.b64decode(result["out-data"]).decode()
                     logging.info("The guest cmd is executed successfully,"
-                                 "the output is: \n %s." % out_data)
-                elif "err-data" in result:
-                    test.fail("When exitcode is 0, should not get error data.")
-            else:
-                if "out-data" in result:
-                    test.fail("When exitcode is 1, should not get output data.")
-                elif "err-data" in result:
-                    err_data = base64.b64decode(result["err-data"]).decode()
-                    logging.info("The guest cmd failed,"
-                                 "the error info is: \n %s" % err_data)
+                                 "the output is:\n%s." % out_data)
+                else:
+                    test.fail("There is no output with capture_output is true.")
             return result
 
         session = self._get_session(params, self.vm)

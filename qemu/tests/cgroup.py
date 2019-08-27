@@ -194,7 +194,7 @@ def run(test, params, env):
             process.system("echo 1 > /sys/bus/pseudo/drivers/scsi_debug/"
                            "add_host", shell=True)
             time.sleep(1)   # Wait for device init
-            dev = process.system_output("ls /dev/sd* | tail -n 1", shell=True)
+            dev = process.getoutput("ls /dev/sd* | tail -n 1", shell=True)
             # Enable idling in scsi_debug drive
             process.system("echo 1 > /sys/block/%s/queue/rotational"
                            % (dev.split('/')[-1]), shell=True)
@@ -357,7 +357,8 @@ def run(test, params, env):
         for i in range(no_vms):
             blkio.mk_cgroup()
             assign_vm_into_cgroup(vms[i], blkio, i)
-            blkio.set_property("blkio.weight", weights[i], i)
+            blkio_weight = params.get("blkio_weight_file")
+            blkio.set_property(blkio_weight, weights[i], i)
 
         # Fails only when the session is occupied (Timeout)
         # ; true is necessarily when there is no dd present at the time
@@ -1684,8 +1685,8 @@ def run(test, params, env):
             out = None
             for i in range(10):
                 try:
-                    out = process.system_output("cat /proc/%s/task/*/stat" %
-                                                pid, shell=True)
+                    out = process.getoutput("cat /proc/%s/task/*/stat" %
+                                            pid, shell=True)
                 except process.CmdError:
                     out = None
                 else:

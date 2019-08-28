@@ -5,7 +5,6 @@ import logging
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
-from qemu.tests import vioser_in_use
 
 
 @error_context.context_aware
@@ -154,6 +153,7 @@ def run(test, params, env):
                 stress_thread.join(timeout=timeout, suppress_exception=suppress_exception)
         if vm.is_alive():
             if driver == "vioser":
+                from qemu.tests import vioser_in_use
                 vioser_in_use.kill_host_serial_pid(params, vm)
             run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "after_bg_test":

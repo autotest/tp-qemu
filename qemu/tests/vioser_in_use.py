@@ -65,6 +65,27 @@ def kill_host_serial_pid(params, vm):
         os.kill(int(host_process), signal.SIGINT)
 
 
+def run_bg_test(test, params, vm, sender="both"):
+    """
+    Run serial data transfer backgroud test.
+
+    :return: return the background case thread if it's successful;
+             else raise error.
+    """
+    error_context.context("Run serial transfer test in background",
+                          logging.info)
+    stress_thread = utils_misc.InterruptedThread(
+            virtio_serial_file_transfer.transfer_data, (params, vm),
+            {"sender": sender})
+    stress_thread.start()
+
+    check_bg_timeout = float(params.get('check_bg_timeout', 120))
+    if not utils_misc.wait_for(lambda: driver_in_use.check_bg_running(vm,
+                               params), check_bg_timeout, 0, 1):
+        test.fail("Backgroud test is not alive!")
+    return stress_thread
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -78,26 +99,6 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def run_bg_test():
-        """
-        Run serial data transfer backgroud test.
-
-        :return: return the background case thread if it's successful;
-                 else raise error.
-        """
-        error_context.context("Run serial transfer test in background",
-                              logging.info)
-        stress_thread = utils_misc.InterruptedThread(
-                virtio_serial_file_transfer.transfer_data, (params, vm),
-                {"sender": sender})
-        stress_thread.start()
-
-        check_bg_timeout = float(params.get('check_bg_timeout', 120))
-        if not utils_misc.wait_for(lambda: driver_in_use.check_bg_running(vm,
-                                   params), check_bg_timeout, 0, 1):
-            test.fail("Backgroud test is not alive!")
-        return stress_thread
-
     driver = params["driver_name"]
     sender = params['file_sender']
     timeout = int(params.get("login_timeout", 360))
@@ -110,7 +111,7 @@ def run(test, params, env):
                                                                 test, driver,
                                                                 timeout)
 
-    bg_thread = run_bg_test()
+    bg_thread = run_bg_test(test, params, vm, sender)
     globals().get(params["interrupt_test"])(test, params, vm, session)
     if bg_thread:
         bg_thread.join(timeout=timeout, suppress_exception=suppress_exception)

@@ -1828,6 +1828,27 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         else:
             test.fail("Should return error info.")
 
+    @error_context.context_aware
+    def gagent_check_with_migrate(self, test, params, env):
+        """
+        Migration test with guest agent service running.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        error_context.context("Migrate guest while guest agent service is"
+                              " running.", logging.info)
+        self.vm.monitor.migrate_set_speed(params.get("mig_speed", "1G"))
+        self.vm.migrate()
+        error_context.context("Recreate a QemuAgent object after vm"
+                              " migration.", logging.info)
+        self.gagent = None
+        args = [params.get("gagent_serial_type"), params.get("gagent_name")]
+        self.gagent_create(params, self.vm, *args)
+        error_context.context("Verify if guest agent works.", logging.info)
+        self.gagent_verify(self.params, self.vm)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

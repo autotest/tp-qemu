@@ -3,7 +3,7 @@ import re
 
 from virttest import env_process
 from virttest import error_context
-from virttest import utils_misc
+from virttest import cpu
 
 
 @error_context.context_aware
@@ -20,8 +20,8 @@ def run(test, params, env):
     """
 
     guest_cpumodel = params.get("cpu_model", "Conroe").split(",")[0]
-    host_cpumodel = utils_misc.get_host_cpu_models()
-    host_flags = utils_misc.get_cpu_flags()
+    host_cpumodel = cpu.get_host_cpu_models()
+    host_flags = cpu.get_cpu_flags()
     extra_flags = params.get("cpu_model_flags", " ")
 
     lack_flags = []

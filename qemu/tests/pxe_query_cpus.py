@@ -7,6 +7,7 @@ from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import cpu
 from virttest import qemu_monitor
 from virttest import env_process
 
@@ -52,7 +53,7 @@ def run(test, params, env):
 
     error_context.context("Enable ept/npt", logging.info)
     try:
-        flag = list(filter(lambda x: x in utils_misc.get_cpu_flags(),
+        flag = list(filter(lambda x: x in cpu.get_cpu_flags(),
                            ['ept', 'npt']))[0]
     except IndexError:
         logging.info("Host doesn't support ept/npt, skip the configuration")

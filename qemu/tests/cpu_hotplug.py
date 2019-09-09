@@ -5,6 +5,7 @@ import re
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import cpu
 
 
 @error_context.context_aware
@@ -49,12 +50,12 @@ def run(test, params, env):
 
     error_context.context("check if CPUs in guest matches qemu cmd "
                           "before hot-plug", logging.info)
-    if not utils_misc.check_if_vm_vcpu_match(current_cpus, vm):
+    if not cpu.check_if_vm_vcpu_match(current_cpus, vm):
         test.error("CPU quantity mismatch cmd before hotplug !")
 
-    for cpu in range(current_cpus, total_cpus):
-        error_context.context("hot-pluging vCPU %s" % cpu, logging.info)
-        vm.hotplug_vcpu(cpu_id=cpu, plug_command=cpu_hotplug_cmd)
+    for cpuid in range(current_cpus, total_cpus):
+        error_context.context("hot-pluging vCPU %s" % cpuid, logging.info)
+        vm.hotplug_vcpu(cpu_id=cpuid, plug_command=cpu_hotplug_cmd)
 
     output = vm.monitor.send_args_cmd("info cpus")
     logging.debug("Output of info CPUs:\n%s", output)
@@ -67,7 +68,7 @@ def run(test, params, env):
     # Windows is a little bit lazy that needs more secs to recognize.
     error_context.context("hotplugging finished, let's wait a few sec and"
                           " check CPUs quantity in guest.", logging.info)
-    if not utils_misc.wait_for(lambda: utils_misc.check_if_vm_vcpu_match(
+    if not utils_misc.wait_for(lambda: cpu.check_if_vm_vcpu_match(
                                total_cpus, vm),
                                60 + total_cpus, first=10,
                                step=5.0, text="retry later"):
@@ -75,7 +76,7 @@ def run(test, params, env):
     error_context.context("rebooting the vm and check CPU quantity !",
                           logging.info)
     session = vm.reboot()
-    if not utils_misc.check_if_vm_vcpu_match(total_cpus, vm):
+    if not cpu.check_if_vm_vcpu_match(total_cpus, vm):
         test.fail("CPU quantity mismatch cmd after hotplug and reboot !")
 
     # Window guest doesn't support online/offline test

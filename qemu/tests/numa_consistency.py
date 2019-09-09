@@ -3,6 +3,7 @@ import resource
 
 from avocado.utils import process
 
+from virttest import cpu
 from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
@@ -28,7 +29,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     def get_vcpu_used_node(numa_node_info, vcpu_thread):
-        cpu_used_host = utils_misc.get_thread_cpu(vcpu_thread)[0]
+        cpu_used_host = cpu.get_thread_cpu(vcpu_thread)[0]
         node_used_host = ([_ for _ in node_list if cpu_used_host
                            in numa_node_info.nodes[_].cpus][0])
         return node_used_host

@@ -11,7 +11,6 @@ from virttest import storage
 from virttest import qemu_storage
 from virttest import utils_test
 from virttest import utils_misc
-from virttest import error_context
 from avocado.core import exceptions
 
 
@@ -74,13 +73,8 @@ class QemuImgTest(qemu_storage.QemuImg):
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)
-        base_image = params.get("images", "image1").split()[0]
         params["start_vm"] = "yes"
-        try:
-            del params["image_name_%s" % base_image]
-            del params["image_format_%s" % base_image]
-        except KeyError:
-            pass
+        params["images"] = self.tag
         vm_name = params["main_vm"]
         env_process.preprocess_vm(self.test, params, self.env, vm_name)
         vm = self.env.get_vm(vm_name)
@@ -208,10 +202,15 @@ class QemuImgTest(qemu_storage.QemuImg):
                 msg = ("Expected backing file is null")
                 msg += " Actual backing file: %s" % backingfile
                 raise exceptions.TestFail(msg)
-            elif backingfile != self.base_image_filename:
-                msg = ("Expected backing file: %s" % self.base_image_filename)
-                msg += " Actual backing file: %s" % backingfile
-                raise exceptions.TestFail(msg)
+            else:
+                base_params = self.params.object_params(self.base_tag)
+                base_image_repr = qemu_storage.get_image_repr(
+                    self.base_tag, base_params, self.root_dir)
+                if base_image_repr != backingfile:
+                    msg = ("Expected backing file: %s" %
+                           self.base_image_filename)
+                    msg += " Actual backing file: %s" % backingfile
+                    raise exceptions.TestFail(msg)
         except AttributeError:
             if self.base_tag and self.base_tag != "null":
                 msg = ("Could not find backing file for image '%s'" %

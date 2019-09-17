@@ -463,11 +463,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         vcpus_info = self.gagent.get_vcpus()
         cpu_num_qga = len(vcpus_info)
         for vcpu in vcpus_info:
-            if params.get("os_type") == "linux" and not vcpu["can-offline"]:
-                test.fail("Linux guest cpu can't be offline from qga"
-                          "which isn't expected.")
+            if params.get("os_type") == "linux":
+                if vcpu["logical-id"] == 0 and vcpu["can-offline"] is True:
+                    test.fail("The first logical vcpu can't be offline.")
+                if vcpu["logical-id"] != 0 and vcpu["can-offline"] is False:
+                    test.fail("Linux guest cpu can't be offline from qga "
+                              "which isn't expected.")
             if params.get("os_type") == "windows" and vcpu["can-offline"]:
-                test.fail("Windows guest cpu can be offline from qga"
+                test.fail("Windows guest cpu can be offline from qga "
                           "which isn't expected.")
 
         error_context.context("Check cpu number.", logging.info)

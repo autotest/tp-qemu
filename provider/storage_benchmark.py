@@ -282,7 +282,8 @@ class IozoneLinuxCfg(object):
         self.download_path = os.path.join('/home', iozone_pkg)
         self.iozone_inst = os.path.join('/home', 'iozone_inst')
         self.arch = 'linux-AMD64' if 'x86_64' in machine() else 'linux-powerpc64'
-        self.cmd = 'cd %s/src/current && make %s' % (self.iozone_inst, self.arch)
+        self.cmd = 'cd %s/src/current && make clean && make %s' % (self.iozone_inst,
+                                                                   self.arch)
         self.iozone_path = '%s/src/current/iozone' % self.iozone_inst
         scp_benckmark = attrgetter('scp_benckmark')
         unpack_file = attrgetter('unpack_file')

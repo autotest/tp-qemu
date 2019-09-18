@@ -14,6 +14,7 @@ from virttest import env_process
 from virttest import storage
 from virttest import data_dir
 from virttest import gluster
+from virttest.utils_numeric import normalize_data_size
 
 
 @error_context.context_aware
@@ -331,7 +332,8 @@ def run(test, params, env):
         if image_format not in img_info:
             test.fail("Got unexpected format of image '%s'"
                       " in info test" % image_name)
-        if image_size not in img_info:
+        if not re.search(r'%s\s+bytes' % normalize_data_size(
+                  image_size, "B"), img_info):
             test.fail("Got unexpected size of image '%s'"
                       " in info test" % image_name)
 

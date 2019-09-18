@@ -1,7 +1,10 @@
-from avocado.utils import process
+import logging
 
+from virttest import env_process
+from virttest import error_context
 from virttest import storage
 
+from avocado.utils import process
 from qemu.tests import qemu_disk_img
 
 
@@ -11,6 +14,24 @@ class InfoTest(qemu_disk_img.QemuImgTest):
         self.tag = tag
         t_params = params.object_params(self.tag)
         super(InfoTest, self).__init__(test, t_params, env, self.tag)
+
+    @error_context.context_aware
+    def start_vm(self, t_params=None):
+        """Start a vm and wait for its bootup."""
+        error_context.context("start vm", logging.info)
+        params = self.params.object_params(self.tag)
+        if t_params:
+            params.update(t_params)
+        params["start_vm"] = "yes"
+        params["images"] = self.tag
+        vm_name = params["main_vm"]
+        env_process.preprocess_vm(self.test, params, self.env, vm_name)
+        vm = self.env.get_vm(vm_name)
+        vm.verify_alive()
+        login_timeout = int(self.params.get("login_timeout", 360))
+        vm.wait_for_login(timeout=login_timeout)
+        self.vm = vm
+        return vm
 
     def clean(self):
         params = self.params
@@ -45,7 +66,7 @@ def run(test, params, env):
             ret = info_test.check_file(_file, md5_dict[_file])
             if not ret:
                 test.error("Check md5sum fail (file:%s)" % _file)
-        #save file in guest
+        # save file in guest
         t_file = params["guest_file_name_%s" % tag]
         md5 = info_test.save_file(t_file)
         if not md5:

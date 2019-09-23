@@ -63,11 +63,8 @@ def run(test, params, env):
                                        output="json").stdout_text)
 
     for c_tag in params["convert_tags"].split():
-        img.convert(params.object_params(c_tag), data_dir.get_data_dir())
-
-        cvt = {"image_name_%s" % c_tag: params["convert_name_%s" % c_tag],
-               "image_format_%s" % c_tag: params["convert_format_%s" % c_tag]}
-        params.update(cvt)
+        img_param["convert_target"] = c_tag
+        img.convert(img_param, data_dir.get_data_dir())
 
         cvt, cvt_img_param = _get_img_obj_and_params(c_tag)
         size = _get_file_size(cvt)

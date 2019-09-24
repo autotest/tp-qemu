@@ -35,16 +35,14 @@ def run(test, params, env):
 
     unattended_install.run(test, params, env)
     os_type = params['os_type']
-    if os_type == 'linux':
-        params['cdroms'] = ''
-    else:
-        params['cdroms'] = 'cd1'
-    params['boot_once'] = 'c'
+    params['cdroms'] = ''
+    params['boot_once'] = ''
     params['force_create_image'] = 'no'
     params['start_vm'] = 'yes'
     params['kernel'] = ''
     params['initrd'] = ''
     params['kernel_params'] = ''
+    params['image_boot'] == 'yes'
     vm = env.get_vm(params['main_vm'])
     if vm:
         vm.destroy()

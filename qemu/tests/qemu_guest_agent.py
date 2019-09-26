@@ -1607,10 +1607,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment
         """
         error_context.context("Run init 3 in guest", logging.info)
-        session = self._get_session(params, self.vm)
-        session.cmd("init 3")
+        session = self.vm.wait_for_serial_login()
+        session.sendline("init 3")
+
         error_context.context("Check guest agent status after running init 3",
                               logging.info)
+        if params.get("new_session", "yes") == "yes":
+            session = self.vm.wait_for_serial_login()
+
         if self._check_ga_service(session, params.get("gagent_status_cmd")):
             logging.info("Guest agent service is still running after init 3.")
         else:

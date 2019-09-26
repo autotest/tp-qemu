@@ -12,7 +12,7 @@ from qemu.tests import qemu_disk_img
 class ConvertTest(qemu_disk_img.QemuImgTest):
 
     def __init__(self, test, params, env):
-        self.tag = params["image_convert"]
+        self.tag = params["convert_source"]
         t_params = params.object_params(self.tag)
         super(ConvertTest, self).__init__(test, t_params, env, self.tag)
 
@@ -26,9 +26,9 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         if t_params:
             params.update(t_params)
         cache_mode = params.get("cache_mode")
-        super(ConvertTest, self).convert(params, self.data_dir, cache_mode)
-        params["image_name"] = params["convert_name"]
-        params["image_format"] = params["convert_format"]
+        conv = super(ConvertTest, self).convert(
+            params, self.data_dir, cache_mode)
+        params = params.object_params(conv)
         converted = storage.get_image_filename(params, self.data_dir)
         process.run("sync")
         self.trash.append(converted)

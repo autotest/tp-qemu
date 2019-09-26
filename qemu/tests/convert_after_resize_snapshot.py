@@ -81,8 +81,5 @@ def run(test, params, env):
     img_sn2 = _qemu_img_info(sn2, sn1)
     img_sn2.convert(params.object_params(sn2), img_root_dir)
 
-    converted = {"image_name_converted": params["convert_name_%s" % sn2],
-                 "image_format_converted": params["convert_format_%s" % sn2]}
-    params.update(converted)
     img_converted = _qemu_img_info("converted")
     _compare_images(img_sn2, img_converted)

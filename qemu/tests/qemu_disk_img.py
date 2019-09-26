@@ -184,12 +184,14 @@ class QemuImgTest(qemu_storage.QemuImg):
                 elif params.get("lazy_refcounts") == "off":
                     evalue = "false"
             elif option == "csize":
-                csize = params.get("cluster_size")
+                csize = params.get("image_cluster_size")
                 evalue = int(float(utils_misc.normalize_data_size(csize, "B")))
             elif option == "sparse_size":
                 if info.get("dsize") < info.get("vsize"):
                     avalue = info.get("dsize")
                     evalue = info.get("vsize")
+            elif option == "compat":
+                evalue = params.get("qcow2_compatible")
             else:
                 evalue = params.get(option)
             if avalue is not None and avalue != evalue:

@@ -31,7 +31,7 @@ def run(test, params, env):
 
     file = params["guest_file_name"]
     initial_tag = params["images"].split()[0]
-    c_tag = params["image_convert"]
+    c_tag = params["convert_target"]
 
     logging.info("Boot a guest up with initial image: %s, and create a"
                  " file %s on the disk." % (initial_tag, file))
@@ -43,12 +43,9 @@ def run(test, params, env):
 
     logging.info("Convert initial image %s to %s" % (initial_tag, c_tag))
     img, img_param = _get_img_obj_and_params(initial_tag)
-    img.convert(params.object_params(c_tag), data_dir.get_data_dir())
+    img.convert(img_param, data_dir.get_data_dir())
 
     logging.info("Check image %s." % (c_tag))
-    tgt = {"image_name_%s" % c_tag: params["convert_name_%s" % c_tag],
-           "image_format_%s" % c_tag: params["convert_format_%s" % c_tag]}
-    params.update(tgt)
     tgt, tgt_img_param = _get_img_obj_and_params(c_tag)
     tgt.check_image(tgt_img_param, data_dir.get_data_dir())
 

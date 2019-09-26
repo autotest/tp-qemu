@@ -20,7 +20,8 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     login_timeout = int(params.get("login_timeout", 360))
-    reboot = params.get("reboot", "no") == "yes"
+    reboot_before_test = params.get("reboot_before_test", "yes") == "yes"
+    reboot_after_test = params.get("reboot_after_test", "yes") == "yes"
     serial_login = params.get("serial_login", "no") == "yes"
 
     vm = env.get_vm(params["main_vm"])
@@ -30,7 +31,7 @@ def run(test, params, env):
     else:
         session = vm.wait_for_login(timeout=login_timeout)
 
-    if reboot:
+    if reboot_before_test:
         logging.debug("Rebooting guest before test ...")
         session = vm.reboot(session, timeout=login_timeout,
                             serial=serial_login)
@@ -78,7 +79,7 @@ def run(test, params, env):
         finally:
             logging.info("------------ End of script output ------------")
 
-        if reboot:
+        if reboot_after_test:
             logging.debug("Rebooting guest after test ...")
             session = vm.reboot(session, timeout=login_timeout,
                                 serial=serial_login)

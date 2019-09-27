@@ -2,6 +2,8 @@ import time
 import logging
 
 from virttest import error_context
+from qemu.tests.virtio_serial_file_transfer import transfer_data
+from qemu.tests.vioser_in_use import run_bg_test
 
 
 @error_context.context_aware
@@ -10,14 +12,16 @@ def run(test, params, env):
     Test hot unplug virtio serial devices.
 
      1) Start guest with virtio serial device(s).
-     2) Load module in guest os.
-     3) For each of the virtio serial ports, do following steps one by one:
-     3.1) Unload module in guest
-     3.2) Hot-unplug the virtio serial port
-     3.3) Hotplug the devices
-     3.4) Reload module in the guest
-     4) Repeat step2,3 100 times
-     5) Reboot VM to make sure the guest kernel not panic.
+     2) Run serial data trainsfer in background(windows only)
+     3) Load module in guest os(linux only).
+     4) For each of the virtio serial ports, do following steps one by one:
+     4.1) Unload module in guest(linux only)
+     4.2) Hot-unplug the virtio serial port
+     4.3) Hotplug the devices
+     4.4) Reload module in the guest(linux only)
+     5) Repeat step2,3,4 100 times
+     6) Run serial data transfer after repeated unplug/plug
+     7) Reboot VM to make sure the guest kernel not panic.
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -27,6 +31,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
+    if params["os_type"] == "windows":
+        run_bg_test(test, params, vm)
     for repeat in range(int(params.get("repeat_times", 1))):
         repeat += 1
         session = vm.wait_for_login(timeout=timeout)
@@ -65,6 +71,8 @@ def run(test, params, env):
                 error_context.context("Load  module %s" % module, logging.info)
                 session.cmd("modprobe %s" % module)
         session.close()
+    if transfer_data(params, vm) is not True:
+        test.fail("Serial data transfter test failed.")
     vm.reboot()
     session = vm.wait_for_login(timeout=timeout)
     session.close()

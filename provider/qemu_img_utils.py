@@ -74,12 +74,12 @@ def save_random_file_to_vm(vm, save_path, count, sync_bin, blocksize=512,
     :param blocksize: block size, default 512
     :param timeout: time wait to finish
     """
+    session = vm.wait_for_login()
     dd_cmd = "dd if=/dev/urandom of=%s bs=%s count=%s conv=fsync"
     with tempfile.NamedTemporaryFile() as f:
         dd_cmd = dd_cmd % (f.name, blocksize, count)
         process.run(dd_cmd, shell=True, timeout=timeout)
         vm.copy_files_to(f.name, save_path)
-    session = vm.wait_for_login()
     sync_bin = utils_misc.set_winutils_letter(session, sync_bin)
     status, out = session.cmd_status_output(sync_bin, timeout=240)
     if status:

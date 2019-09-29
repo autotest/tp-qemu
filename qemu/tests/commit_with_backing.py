@@ -1,9 +1,9 @@
 import json
 import logging
 
-from collections import namedtuple
-
-from qemu.tests.qemu_disk_img import QemuImgTest
+from provider import qemu_img_utils as img_utils
+from virttest import qemu_storage
+from virttest import data_dir
 
 
 def run(test, params, env):
@@ -18,69 +18,78 @@ def run(test, params, env):
 
     def prepare_images_from_params(images, params):
         """Parse params to initialize a QImage list."""
-        return [QImage(tag, QemuImgTest(test, params, env, tag))
+        return [qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
                 for tag in images]
 
     def verify_backing_chain(info):
         """Verify image's backing chain."""
         for image, img_info in zip(images, reversed(info)):
-            base_image = getattr(image.imgobj, "base_image_filename", None)
+            base_image = None
+            if image.base_tag:
+                base_params = params.object_params(image.base_tag)
+                base_image = qemu_storage.get_image_repr(image.base_tag,
+                                                         base_params, root_dir)
             base_image_from_info = img_info.get("full-backing-filename")
             if base_image != base_image_from_info:
                 test.fail(("backing chain check for image %s failed, backing"
                            " file from info is %s, which should be %s.") %
-                          (image.imgobj.image_filename, base_image_from_info,
+                          (image.image_filename, base_image_from_info,
                            base_image))
 
-    QImage = namedtuple("QImage", ["tag", "imgobj"])
     images = params.get("image_chain", "").split()
     if len(images) < 3:
         test.cancel("Snapshot chain must at least contains three images")
     params["image_name_%s" % images[0]] = params["image_name"]
     params["image_format_%s" % images[0]] = params["image_format"]
+    root_dir = data_dir.get_data_dir()
     images = prepare_images_from_params(images, params)
     base, active_layer = images[0], images[-1]
 
+    md5sum_bin = params.get("md5sum_bin", "md5sum")
+    sync_bin = params.get("sync_bin", "sync")
     hashes = {}
     for image in images:
         if image is not base:
             logging.debug("Create snapshot %s based on %s",
-                          image.imgobj.image_filename,
-                          image.imgobj.base_image_filename)
-            image.imgobj.create_snapshot()
-        image.imgobj.start_vm()
+                          image.image_filename, image.base_image_filename)
+            image.create(image.params)
+        vm = img_utils.boot_vm_with_images(test, params, env, (image.tag,))
         guest_file = params["guest_tmp_filename"] % image.tag
         logging.debug("Create tmp file %s in image %s", guest_file,
-                      image.imgobj.image_filename)
-        hashes[guest_file] = image.imgobj.save_file(guest_file)
-        image.imgobj.destroy_vm()
+                      image.image_filename)
+        img_utils.save_random_file_to_vm(vm, guest_file, 2048 * 100, sync_bin)
+
+        session = vm.wait_for_login()
+        logging.debug("Get md5 value fo the temporary file")
+        hashes[guest_file] = img_utils.check_md5sum(guest_file,
+                                                    md5sum_bin, session)
+        session.close()
+        vm.destroy()
 
     logging.debug("Hashes of temporary files:\n%s", hashes)
 
     logging.debug("Verify the snapshot chain")
-    info = json.loads(active_layer.imgobj.info(output="json"))
+    info = json.loads(active_layer.info(output="json"))
     active_layer_size_before = info[0]["actual-size"]
     verify_backing_chain(info)
 
     logging.debug("Commit image")
-    active_layer.imgobj.commit(base=base.tag)
+    active_layer.commit(base=base.tag)
 
     logging.debug("Verify the snapshot chain after commit")
-    info = json.loads(active_layer.imgobj.info(output="json"))
+    info = json.loads(active_layer.info(output="json"))
     active_layer_size_after = info[0]["actual-size"]
     logging.debug("%s file size before commit: %s, after commit: %s",
-                  active_layer.imgobj.image_filename, active_layer_size_before,
+                  active_layer.image_filename, active_layer_size_before,
                   active_layer_size_after)
     if active_layer_size_after < active_layer_size_before:
         test.fail("image %s is emptied after commit with explicit base" %
-                  active_layer.imgobj.image_filename)
+                  active_layer.image_filename)
     verify_backing_chain(info)
 
     logging.debug("Verify hashes of temporary files")
-    base.imgobj.start_vm()
+    vm = img_utils.boot_vm_with_images(test, params, env, (base.tag,))
+    session = vm.wait_for_login()
     for tmpfile, hashval in hashes.items():
-        if not base.imgobj.check_file(tmpfile, hashval):
-            test.fail("File %s's hash is different after commit" % tmpfile)
-
-    for image in images:
-        image.imgobj.clean()
+        img_utils.check_md5sum(tmpfile, md5sum_bin, session,
+                               md5_value_to_check=hashval)

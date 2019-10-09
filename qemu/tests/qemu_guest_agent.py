@@ -1327,6 +1327,110 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.cmd(cmd_del_file)
 
     @error_context.context_aware
+    def gagent_check_with_selinux(self, test, params, env):
+        """
+        File operation via guest agent when selinux policy is in "Enforcing"
+         mode and "Permissive" mode.
+
+        Steps:
+        1) set selinux policy to "Enforcing" mode in guest
+        2) create and write content to temp file and non temp file
+        3) open the temp file with w+ mode and a+ mode
+        4) open the non temp file with w+ mode and a+ mode
+        5) set selinux policy to "Permissive" in guest
+        6) repeate step3-4
+        7) recovery the selinux policy
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def file_operation(guest_file, open_mode):
+            """
+            open/write/flush/close file test.
+
+            :param guest_file: file in guest
+            :param open_mode: open file mode, "r" is the default value
+            """
+            ret_handle = self.gagent.guest_file_open(guest_file,
+                                                     mode=open_mode)
+            self.gagent.guest_file_write(ret_handle, content)
+            self.gagent.guest_file_flush(ret_handle)
+            self.gagent.guest_file_close(ret_handle)
+
+        def result_check_enforcing():
+            """
+            Can't open guest file via guest agent with different open-mode
+            when selinux policy mode is enforcing.But can open temp file with
+            append mode via guest agent
+            """
+            def check(guest_file, open_mode):
+                error_context.context("Try to open %s with %s mode via"
+                                      " guest agent in enforcing"
+                                      " selinux policy." %
+                                      (guest_file, open_mode),
+                                      logging.info)
+                if "/tmp" in guest_file and open_mode == "a+":
+                    # can open and operate guest file successfully
+                    file_operation(guest_file, open_mode)
+                else:
+                    try:
+                        self.gagent.guest_file_open(guest_file,
+                                                    mode=open_mode)
+                    except guest_agent.VAgentCmdError as detail:
+                        msg = r"failed to open file.*Permission denied"
+                        if not re.search(msg, str(detail)):
+                            test.fail("This is not the desired information: "
+                                      "('%s')" % str(detail))
+                    else:
+                        test.fail("When selinux policy is 'Enforcing', guest"
+                                  " agent should not open %s with %s mode." %
+                                  (guest_file, open_mode))
+            for ch_file in [guest_temp_file, guest_file]:
+                check(ch_file, 'a+')
+                check(ch_file, 'w+')
+
+        def result_check_permissive():
+            """
+            Open guest file via guest agent with different open-mode
+            when selinux policy mode is permissive.
+            """
+            def check(guest_file, open_mode):
+                error_context.context("Try to open %s with %s mode via"
+                                      " guest agent in permissive"
+                                      " selinux policy." %
+                                      (guest_file, open_mode),
+                                      logging.info)
+                # can open and operate guest file successfully
+                file_operation(guest_file, open_mode)
+            for ch_file in [guest_temp_file, guest_file]:
+                check(ch_file, 'a+')
+                check(ch_file, 'w+')
+
+        content = "hello world\n"
+        guest_temp_file = "/tmp/testqga"
+        guest_file = "/home/testqga"
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+        logging.info("Change guest-file related cmd to white list.")
+        self._change_bl(session)
+
+        error_context.context("Create and write content to temp file and"
+                              " non temp file.", logging.info)
+        session.cmd("echo 'hello world' > %s" % guest_temp_file)
+        session.cmd("echo 'hello world' > %s" % guest_file)
+
+        error_context.context("Set selinux policy to 'Enforcing' mode in"
+                              " guest.", logging.info)
+        if session.cmd_output("getenforce").strip() != "Enforcing":
+            session.cmd("setenforce 1")
+        result_check_enforcing()
+
+        error_context.context("Set selinux policy to 'Permissive' mode in"
+                              " guest.", logging.info)
+        session.cmd("setenforce 0")
+        result_check_permissive()
+
+    @error_context.context_aware
     def gagent_check_guest_exec(self, test, params, env):
         """
         Execute a command in the guest via guest-exec cmd,

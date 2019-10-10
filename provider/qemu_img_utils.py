@@ -62,8 +62,7 @@ def qemu_img_compare(params, image0, image1, strict=False, force_share=False):
         raise avocado.TestError(result.stdout_text)
 
 
-def save_random_file_to_vm(vm, save_path, count, sync_bin, blocksize=512,
-                           timeout=240):
+def save_random_file_to_vm(vm, save_path, count, sync_bin, blocksize=512):
     """
     Save a random file to vm.
 
@@ -72,13 +71,12 @@ def save_random_file_to_vm(vm, save_path, count, sync_bin, blocksize=512,
     :param count: block count
     :param sync_bin: sync binary path
     :param blocksize: block size, default 512
-    :param timeout: time wait to finish
     """
-    session = vm.wait_for_login()
+    session = vm.wait_for_login(timeout=360)
     dd_cmd = "dd if=/dev/urandom of=%s bs=%s count=%s conv=fsync"
     with tempfile.NamedTemporaryFile() as f:
         dd_cmd = dd_cmd % (f.name, blocksize, count)
-        process.run(dd_cmd, shell=True, timeout=timeout)
+        process.run(dd_cmd, shell=True, timeout=360)
         vm.copy_files_to(f.name, save_path)
     sync_bin = utils_misc.set_winutils_letter(session, sync_bin)
     status, out = session.cmd_status_output(sync_bin, timeout=240)

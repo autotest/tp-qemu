@@ -71,8 +71,7 @@ def run(test, params, env):
     _verify_qemu_img_info(sn_img.info(output="json"),
                           base_img.image_format, base_img.image_filename)
 
-    sn_img.base_image_filename = params["none_existing_image_name"]
-    sn_img.base_format = sn_img.base_image_filename.split('.')[-1]
+    sn_img.base_tag = params["none_existing_image"]
     sn_img.rebase(sn_img_params)
     _verify_qemu_img_info(sn_img.info(output="json"),
                           sn_img.base_format, sn_img.base_image_filename)

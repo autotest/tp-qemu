@@ -1381,17 +1381,43 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         error_context.context("Read the big file with an invalid count number",
                               logging.info)
-        try:
+        if params.get("os_type") == "linux":
+            logging.info("Get guest agent's main version for linux guest.")
+            qga_ver = session.cmd_output(params["gagent_pkg_check_cmd"])
+            pattern = r"guest-agent-(\d+).\d+.\d+-\d+"
+            ver_main = int(re.findall(pattern, qga_ver)[0])
+        if params.get("os_type") == "linux" and ver_main <= 2:
+            # if resource is sufficient can read file,
+            # else file handle will not be found.
             self.gagent.guest_file_read(ret_handle, count=10000000000)
-        except guest_agent.VAgentCmdError as detail:
-            if not re.search("invalid for argument count", str(detail)):
-                test.fail("Return error but is not the desired information: "
-                          "('%s')" % str(detail))
+            try:
+                self.gagent.guest_file_seek(ret_handle, 0, 0)
+            except guest_agent.VAgentCmdError as detail:
+                if re.search("handle '%s' has not been found" % ret_handle,
+                             str(detail)):
+                    msg = "As resouce is not sufficient, "
+                    msg += "file is closed, so open the file again to "
+                    msg += "continue the following tests."
+                    logging.info(msg)
+                    ret_handle = int(self.gagent.guest_file_open(tmp_file))
         else:
-            test.fail("Did not get the expected result.")
+            # for windows os or qga version > 2 for linux os,
+            # the large count number is an invalid parameter from qga.
+            try:
+                self.gagent.guest_file_read(ret_handle, count=10000000000)
+            except guest_agent.VAgentCmdError as detail:
+                if not re.search("invalid for argument count", str(detail)):
+                    test.fail("Return error but is not the desired info: "
+                              "('%s')" % str(detail))
+                else:
+                    logging.info("The count number is invalid for windows"
+                                 " guest and linux guest in which qga version"
+                                 " is bigger than 2.")
+            else:
+                test.fail("Did not get the expected result.")
 
-        error_context.context("Read the file with an valid big count number.",
-                              logging.info)
+        error_context.context("Read the file with an valid big count"
+                              " number.", logging.info)
         self.gagent.guest_file_seek(ret_handle, 0, 0)
         # if guest os resource is enough, will return no error.
         # else it will return error like "insufficient system resource"

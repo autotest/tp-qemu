@@ -9,7 +9,6 @@ from virttest import utils_test
 from virttest import error_context
 
 from qemu.tests import virtio_serial_file_transfer
-from qemu.tests import driver_in_use
 from qemu.tests.timedrift_no_net import subw_guest_pause_resume  # pylint: disable=W0611
 
 
@@ -72,6 +71,10 @@ def run_bg_test(test, params, vm, sender="both"):
     :return: return the background case thread if it's successful;
              else raise error.
     """
+
+    # import driver_in_use in this function to avoid circular imports
+    from qemu.tests import driver_in_use
+
     error_context.context("Run serial transfer test in background",
                           logging.info)
     stress_thread = utils_misc.InterruptedThread(

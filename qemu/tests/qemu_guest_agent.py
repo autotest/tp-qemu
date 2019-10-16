@@ -2124,6 +2124,34 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                                              disk_index):
                 test.fail("Can't online disk with fsthaw")
 
+    @error_context.context_aware
+    def gagent_check_user_logoff(self, test, params, env):
+        """
+        Check guest agent status when user is logged out.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Check which user is logged in.", logging.info)
+        user_info = session.cmd_output('query user | findstr /i "Active"')
+        login_user_id = user_info.strip().split()[2]
+
+        error_context.context("Make the user log out.", logging.info)
+        try:
+            session.cmd("logoff %s" % login_user_id)
+        except aexpect.ShellProcessTerminatedError as detail:
+            if not re.search("Connection reset by peer", str(detail)):
+                test.error("Error occured with %s." % str(detail))
+        else:
+            test.fail("The user logoff failed.")
+
+        error_context.context("Verify if guest agent works.", logging.info)
+        self.gagent_verify(self.params, self.vm)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

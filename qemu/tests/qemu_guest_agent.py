@@ -17,6 +17,8 @@ from virttest import utils_misc
 from virttest import utils_disk
 from virttest import env_process
 from virttest import utils_net
+from virttest import data_dir
+from virttest import storage
 
 
 class BaseVirtTest(object):
@@ -2163,6 +2165,95 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         error_context.context("Waiting %s, then finish writing the time "
                               "stamp in guest file." % write_timeout)
         result_check("thaw", write_timeout, session)
+
+    @error_context.context_aware
+    def gagent_check_fstrim(self, test, params, env):
+        """
+        Execute "guest-fstrim" command via guest agent.
+
+        Steps:
+        1) boot up guest with scsi backend device
+        2) init and format the data disk
+        3) get the original blocks of data disk
+        4) create fragment in data disk
+        5) check the used blocks
+        6) execute fstrim cmd via guest agent
+        7) check if the used blocks is decreased
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def get_blocks():
+            """
+            Get the used blocks of data disk.
+            :return: the used blocks
+            """
+            blocks = process.system_output("stat -t %s" % image_filename_stg)
+            return blocks.strip().split()[2]
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Format data disk.", logging.info)
+        image_size_stg = params["image_size_stg"]
+        disk_index = utils_misc.wait_for(
+            lambda: utils_disk.get_windows_disks_index(session,
+                                                       image_size_stg), 120)
+        if not disk_index:
+            test.error("Didn't get windows disk index.")
+        logging.info("Clear readonly of disk and online it in windows guest.")
+        if not utils_disk.update_windows_disk_attributes(session, disk_index):
+            test.error("Failed to update windows disk attributes.")
+        mnt_point = utils_disk.configure_empty_disk(
+            session, disk_index[0], image_size_stg, "windows",
+            labeltype="msdos")
+
+        error_context.context("Check the original blocks of data disk.",
+                              logging.info)
+        image_params_stg = params.object_params("stg")
+        image_filename_stg = storage.get_image_filename(
+            image_params_stg, data_dir.get_data_dir())
+        blocks_init = get_blocks()
+        logging.info("The blocks original is %s" % blocks_init)
+
+        error_context.context("Create fragment in data disk.", logging.info)
+        guest_dir = r"%s:" % mnt_point[0]
+        data_file = os.path.join(guest_dir,
+                                 "qga_fstrim%s" %
+                                 utils_misc.generate_random_string(5))
+        for i in range(5):
+            count = 1000 * (i + 1)
+            logging.info("Create %sM file in guest." % count)
+            cmd = "dd if=/dev/random of=%s bs=1M count=%d" % (data_file, count)
+            session.cmd(cmd, timeout=600)
+            delete_file_cmd = "%s %s" % (params["delete_file_cmd"],
+                                         data_file.replace("/", "\\"))
+            logging.info("Delete the guest file created just now.")
+            session.cmd(delete_file_cmd)
+
+        error_context.context("Check blocks of data disk before fstrim.",
+                              logging.info)
+        blocks_before_fstrim = get_blocks()
+        if int(blocks_init) >= int(blocks_before_fstrim):
+            msg = "Fragment created failed in data disk\n"
+            msg += "the blocks original is %s\n" % blocks_init
+            msg += "the blocks before fstrim is %s." % blocks_before_fstrim
+            test.error("msg")
+
+        error_context.context("Execute the guest-fstrim cmd via qga.",
+                              logging.info)
+        self.gagent.fstrim()
+
+        error_context.context("Check blocks of data disk after fstrim.",
+                              logging.info)
+        blocks_after_fstrim = get_blocks()
+
+        if int(blocks_after_fstrim) >= int(blocks_before_fstrim):
+            msg = "Fstrim failed\n"
+            msg += "the blocks before fstrim is %s\n" % blocks_before_fstrim
+            msg += "the blocks after fstrim is %s." % blocks_after_fstrim
+            test.fail(msg)
 
 
 def run(test, params, env):

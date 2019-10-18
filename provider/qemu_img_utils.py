@@ -1,5 +1,6 @@
 """qemu-img related functions."""
 import avocado
+import functools
 import logging
 import tempfile
 
@@ -9,6 +10,11 @@ from virttest import qemu_storage
 from virttest import utils_misc
 
 from avocado.utils import process
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 
 def boot_vm_with_images(test, params, env, images=None, vm_name=None):
@@ -98,3 +104,38 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
         raise ValueError("md5 values mismatch, got: %s, expected: %s" %
                          (md5_value, md5_value_to_check))
     return md5_value
+
+
+def strace(trace_events=None, output_file=None):
+    """
+    Add strace to trace subprocess calls of avocado.utils.process.
+
+    :param trace_events: events tor trace
+    :param output_file: if presented, redirect the output to the file
+    """
+    def _subprocess(*args, **kargs):
+        if args:
+            args = list(args)
+            args[0] = "%s %s" % (strace_cmd, args[0])
+            args = tuple(args)
+        else:
+            kargs["cmd"] = "%s %s" % (strace_cmd, kargs["cmd"])
+        return cls(*args, **kargs)
+
+    strace_cmd = ["strace"]
+    if trace_events:
+        strace_cmd.extend(("-e", ",".join(trace_events)))
+    if output_file:
+        strace_cmd.extend(("-o", output_file))
+    strace_cmd = " ".join(strace_cmd)
+    # store original object before patching.
+    cls = process.SubProcess
+
+    def _add_strace(func):
+        @functools.wraps(func)
+        def func_wrapper(*args, **kargs):
+            with mock.patch("avocado.utils.process.SubProcess",
+                            side_effect=_subprocess):
+                return func(*args, **kargs)
+        return func_wrapper
+    return _add_strace

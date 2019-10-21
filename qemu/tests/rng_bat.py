@@ -6,6 +6,7 @@ import time
 from virttest import utils_misc
 from virttest import error_context
 from virttest import utils_test
+from virttest.utils_windows import system
 from avocado.utils import process
 
 
@@ -42,7 +43,11 @@ def run(test, params, env):
     rng_dll_register_cmd = params.get("rng_dll_register_cmd")
     read_rng_timeout = float(params.get("read_rng_timeout", "360"))
     cmd_timeout = float(params.get("session_cmd_timeout", "360"))
+    rng_src = params.get("rng_src",
+                         "WIN_UTILS:\\random_%PROCESSOR_ARCHITECTURE%.exe")
     driver_name = params["driver_name"]
+    read_rng_cmd = params["read_rng_cmd"]
+    rng_dst = params.get("rng_dst", "c:\\random_%PROCESSOR_ARCHITECTURE%.exe")
     os_type = params["os_type"]
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -61,6 +66,9 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test, driver_name,
                                                                 timeout)
+        if not system.file_exists(session, rng_dst):
+            rng_src = utils_misc.set_winutils_letter(session, rng_src)
+            session.cmd("copy %s %s /y" % (rng_src, rng_dst))
     else:
         error_context.context("verify virtio-rng device driver", logging.info)
         verify_cmd = params["driver_verifier_cmd"]
@@ -78,8 +86,6 @@ def run(test, params, env):
 
     error_context.context("Read virtio-rng device to get random number",
                           logging.info)
-    read_rng_cmd = utils_misc.set_winutils_letter(
-        session, params["read_rng_cmd"])
 
     if rng_dll_register_cmd:
         logging.info("register 'viorngum.dll' into system")

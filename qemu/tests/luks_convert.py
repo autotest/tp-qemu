@@ -29,8 +29,10 @@ def run(test, params, env):
     convert_target = params["convert_target"]
     source_params = params.object_params(convert_source)
     source = qemu_storage.QemuImg(source_params, root_dir, convert_source)
+    cache_mode = params.get("cache_mode")
     logging.debug("Convert from %s to %s", convert_source, convert_target)
-    fail_on((process.CmdError,))(source.convert)(source_params, root_dir)
+    fail_on((process.CmdError,))(source.convert)(
+        source_params, root_dir, cache_mode=cache_mode)
 
     logging.debug("Compare images: %s and %s", convert_source, convert_target)
     img_utils.qemu_img_compare(params, convert_source, convert_target)

@@ -186,7 +186,7 @@ def run(test, params, env):
 
         if params.get("ping_after_changing_queues", "yes") == "yes":
             default_host = "www.redhat.com"
-            ext_host = utils_net.get_host_default_gateway()
+            ext_host = utils_net.get_default_gateway()
             if not ext_host:
                 # Fallback to a hardcode host, eg:
                 logging.warn("Can't get specified host,"

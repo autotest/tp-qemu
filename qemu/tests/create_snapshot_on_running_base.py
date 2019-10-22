@@ -1,7 +1,9 @@
 import logging
 
-from qemu.tests.qemu_disk_img import QemuImgTest
-from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
+from virttest import data_dir
+from virttest import qemu_storage
+
+from provider import qemu_img_utils as img_utils
 
 
 def run(test, params, env):
@@ -18,29 +20,40 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    gen = generate_base_snapshot_pair(params["image_chain"])
-    base, snapshot = next(gen)
-    file = params["guest_file_name"]
+    def generate_images_from_image_chain(image_chain):
+        root_dir = data_dir.get_data_dir()
+        return [qemu_storage.QemuImg(
+            params.object_params(image), root_dir, image)
+                for image in image_chain.split()]
+
+    params["image_name_image1"] = params["image_name"]
+    params["image_format_image1"] = params["image_format"]
+
+    images = generate_images_from_image_chain(params["image_chain"])
+    base, snapshot = images[0], images[1]
+    guest_temp_file = params["guest_temp_file"]
+    md5sum_bin = params.get("md5sum_bin", "md5sum")
+    sync_bin = params.get("sync_bin", "sync")
 
     logging.info("Boot a guest up from base image: %s, and create a"
-                 " file %s on the disk." % (base, file))
-    base_qit = QemuImgTest(test, params, env, base)
-    base_qit.start_vm()
-    md5 = base_qit.save_file(file)
-    logging.info("Got %s's md5 %s from the base image disk." % (file, md5))
+                 " file %s on the disk.", base.tag, guest_temp_file)
+    vm = img_utils.boot_vm_with_images(test, params, env)
+    session = vm.wait_for_login()
+    img_utils.save_random_file_to_vm(vm, guest_temp_file, 1024 * 512, sync_bin)
+    md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
+    session.close()
 
-    logging.info("Create a snapshot %s on the running base image." % snapshot)
-    params["image_name_image1"] = params["image_name"]
-    sn_qit = QemuImgTest(test, params, env, snapshot)
-    sn_qit.create_snapshot()
+    logging.info("Create a snapshot %s on the running base image.",
+                 snapshot.tag)
+    snapshot.create(snapshot.params)
 
-    base_qit.destroy_vm()
+    vm.destroy()
     logging.info("Boot the guest up from snapshot image: %s, and verify the"
-                 " file %s's md5 on the disk." % (snapshot, file))
-    sn_qit.start_vm()
-    if not sn_qit.check_file(file, md5):
-        test.fail("The file %s's md5 on base and"
-                  " snapshot are different." % file)
-
-    for qit in (base_qit, sn_qit):
-        qit.clean()
+                 " file %s's md5 on the disk.", snapshot.tag, guest_temp_file)
+    vm = img_utils.boot_vm_with_images(test, params, env,
+                                       images=(snapshot.tag,))
+    session = vm.wait_for_login()
+    img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
+                           md5_value_to_check=md5_value)
+    session.close()
+    vm.destroy()

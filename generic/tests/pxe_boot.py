@@ -24,10 +24,17 @@ def run(test, params, env):
     timeout = int(params.get("pxe_timeout", 60))
 
     error_context.context("Snoop packet in the tap device", logging.info)
-    output = aexpect.run_fg("tcpdump -nli %s" % vm.get_ifname(),
-                            logging.debug, "(pxe capture) ", timeout)[1]
-
-    error_context.context("Analyzing the tcpdump result", logging.info)
-    if "tftp" not in output:
-        test.fail("Couldn't find any TFTP packets after %s seconds" % timeout)
-    logging.info("Found TFTP packet")
+    tcpdump_cmd = "tcpdump -nli %s" % vm.get_ifname()
+    try:
+        tcpdump_process = aexpect.run_bg(command=tcpdump_cmd,
+                                         output_func=logging.debug,
+                                         output_prefix="(pxe capture) ")
+        if not tcpdump_process.read_until_output_matches(['tftp'],
+                                                         timeout=timeout):
+            test.fail("Couldn't find any TFTP packets after %s seconds" % timeout)
+        logging.info("Found TFTP packet")
+    finally:
+        try:
+            tcpdump_process.kill()
+        except:
+            pass

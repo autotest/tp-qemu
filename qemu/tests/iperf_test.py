@@ -115,7 +115,7 @@ def run(test, params, env):
             test.cancel("Please install gcc-c++ to proceed")
         guest_iperf__bin = iperf_compile(guest_iperf_src_path, tmp_dir, guest_session)
     else:
-        guest_iperf__bin = guest_iperf_src_path + guest_iperf_file
+        guest_iperf__bin = guest_iperf_src_path
         iperf_deplist = params.get("iperf_deplist")
         if iperf_deplist:
             for d_name in iperf_deplist.split(','):

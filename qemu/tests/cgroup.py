@@ -103,7 +103,7 @@ def run(test, params, env):
         """
         cgroup.set_cgroup(vm.get_shell_pid(), pwd)
         for i in range(10):
-            for pid in process.get_children_pids(vm.get_shell_pid()):
+            for pid in vm.get_qemu_threads():
                 try:
                     cgroup.set_cgroup(int(pid), pwd)
                 except Exception as detail:   # Process might not already exist
@@ -513,7 +513,7 @@ def run(test, params, env):
                     if (speeds[i][j] == 0):
                         output[-1][0] = "INF"
                         output[-1][3] = "(inf)"
-                    elif distance(output[-1][4], speeds[i][j]) > limit:
+                    elif output[-1][4] > speeds[i][j]:
                         err += "vm%d:%d, " % (i, j)
                         output[-1][0] = "FAIL"
 
@@ -671,6 +671,7 @@ def run(test, params, env):
 
         # Create first VM
         params['smp'] = 1
+        params["vcpu_sockets"] = 1
         params['vms'] = "vm0"
         preprocess(test, params, env)
 
@@ -842,7 +843,7 @@ def run(test, params, env):
             vm_cpus = host_cpus
         no_speeds = len(speeds)
         # All host_cpus have to be used with no_speeds overcommit
-        no_vms = host_cpus * no_speeds / vm_cpus
+        no_vms = host_cpus * no_speeds // vm_cpus
         no_threads = no_vms * vm_cpus
         sessions = []
         serials = []
@@ -1121,7 +1122,7 @@ def run(test, params, env):
                     raise exceptions.TestError(err)
         # if cgroup_use_half_smp, set smp accordingly
         elif params.get("cgroup_use_half_smp") == "yes":
-            vm_cpus = len(cpus) / 2
+            vm_cpus = len(cpus) // 2
             if len(cpus) == 2:
                 logging.warn("Host have only 2 CPUs, using 'smp = all cpus'")
                 vm_cpus = 2
@@ -2101,7 +2102,7 @@ def run(test, params, env):
 
         check_install_stress = params["check_install_stress"]
         if session.cmd_status(check_install_stress):
-            VMStress(vm, "stress").install()
+            VMStress(vm, "stress", params).install()
 
         logging.info("Check the cpu utilization")
         stress_cmd = params["stress_cmd"]
@@ -2112,7 +2113,7 @@ def run(test, params, env):
             time.sleep(10)
             o = process.system_output("top -b -p %s -n 3 | tail -1" % vm.get_pid(),
                                       shell=True).decode()
-            if 49 <= float(o.split()[-4]) <= 51:
+            if float(o.split()[-4]) <= 51:
                 count = count + 1
                 logging.debug("CPU utilization of guest is: %.2f%%" %
                               float(o.split()[-4]))

@@ -1,6 +1,6 @@
+from avocado.utils import cpu
 from virttest import error_context
 from virttest import utils_test
-from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -18,7 +18,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    if utils_misc.get_cpu_vendor(verbose=False) != 'GenuineIntel':
+    if cpu.get_cpu_vendor_name() != 'intel':
         test.cancel("This case only support Intel platform")
 
     login_timeout = int(params.get("login_timeout", 360))

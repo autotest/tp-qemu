@@ -13,6 +13,30 @@ from qemu.tests.vioser_in_use import reboot_guest  # pylint: disable=W0611
 from qemu.tests.vioser_in_use import live_migration_guest  # pylint: disable=W0611
 
 
+def get_buses_and_serial_devices(vm, params, char_devices, serials):
+    """
+    Get buses list and serial devices list
+
+    :param vm: VM object to be operated
+    :param params: test params for the device
+    :param char_devices: CharDevice list
+    :param serials: serial device
+    :return: buses list and serial device object list
+    """
+    buses = []
+    serial_devices = []
+    for index, serial_id in enumerate(serials):
+        chardev_id = char_devices[index].get_qid()
+        params['serial_name_%s' % serial_id] = serial_id
+        devices = add_virtserial_device(vm, params, serial_id, chardev_id)
+        for device in devices:
+            if device.child_bus:
+                buses.append(device)
+            else:
+                serial_devices.append(device)
+    return buses, serial_devices
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -70,18 +94,8 @@ def run(test, params, env):
     vm = env.get_vm(params['main_vm'])
     vm.devices.insert(char_devices)
     serials = params.objects('extra_serials')
-    buses = []
-    serial_devices = []
-    for index, serial_id in enumerate(serials):
-        chardev_id = char_devices[index].get_qid()
-        params['serial_name_%s' % serial_id] = serial_id
-        devices = add_virtserial_device(vm, params, serial_id, chardev_id)
-        for device in devices:
-            if device.child_bus:
-                buses.append(device)
-            else:
-                serial_devices.append(device)
-
+    buses, serial_devices = get_buses_and_serial_devices(
+        vm, params, char_devices, serials)
     for i in range(repeat_times):
         error_context.context("Hotplug/unplug serial devices the %s time"
                               % (i+1), logging.info)

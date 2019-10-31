@@ -103,3 +103,4 @@ def run(test, params, env):
         nic_interface.append(guest_ip)
     session_srl.close()
     logging.info("All the [ %s ] NICs get IPs." % nics_num)
+    vm.destroy()

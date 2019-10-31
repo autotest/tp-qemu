@@ -87,3 +87,5 @@ def run(test, params, env):
         if not signed:
             test.fail('The guest is not signed,'
                       ' but boot succeed under secure mode.')
+    finally:
+        vm.destroy()

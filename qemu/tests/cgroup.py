@@ -826,7 +826,7 @@ def run(test, params, env):
 
         logging.info("Init")
         try:
-            speeds = eval(params.get('cgroup_speeds', '[10000, 100000]'))
+            speeds = eval(params.get('cgroup_speeds', '[100000, 100000, 100000]'))
             if type(speeds) is not list:
                 raise TypeError
         except TypeError:
@@ -842,7 +842,7 @@ def run(test, params, env):
             vm_cpus = host_cpus
         no_speeds = len(speeds)
         # All host_cpus have to be used with no_speeds overcommit
-        no_vms = host_cpus * no_speeds / vm_cpus
+        no_vms = host_cpus * no_speeds // vm_cpus
         no_threads = no_vms * vm_cpus
         sessions = []
         serials = []

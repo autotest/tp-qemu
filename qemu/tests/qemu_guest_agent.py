@@ -3,6 +3,8 @@ import time
 import os
 import re
 import base64
+import random
+import string
 
 import aexpect
 
@@ -10,6 +12,7 @@ from avocado.utils import genio
 from avocado.utils import path as avo_path
 from avocado.utils import process
 from avocado.core import exceptions
+from aexpect.exceptions import ShellTimeoutError
 
 from virttest import error_context
 from virttest import guest_agent
@@ -1950,6 +1953,130 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent_create(params, self.vm, *args)
         error_context.context("Verify if guest agent works.", logging.info)
         self.gagent_verify(self.params, self.vm)
+
+    @error_context.context_aware
+    def gagent_check_umount_frozen(self, test, params, env):
+        """
+        Umount file system while fs freeze.
+
+        Steps:
+        1) boot guest with a new data storage.
+        2) format disk and mount it.
+        3) freeze fs.
+        4) umount fs/offline the volume in guest,
+           for rhel6 guest will umount fail.
+        5) thaw fs.
+        6) mount fs and online it again.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        def wrap_windows_cmd(cmd):
+            """
+            add header and footer for cmd in order to run it in diskpart tool.
+
+            :param cmd: cmd to be wrapped.
+            :return: wrapped cmd
+            """
+            disk = "disk_" + ''.join(random.sample(string.ascii_letters +
+                                                   string.digits, 4))
+            cmd_header = "echo list disk > " + disk
+            cmd_header += " && echo select disk %s >> " + disk
+            cmd_footer = " echo exit >> " + disk
+            cmd_footer += " && diskpart /s " + disk
+            cmd_footer += " && del /f " + disk
+            cmd += " >> " + disk
+            return " && ".join([cmd_header, cmd, cmd_footer])
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+        image_size_stg0 = params["image_size_stg0"]
+
+        error_context.context("Format the new data disk and mount it.",
+                              logging.info)
+        if params.get("os_type") == "linux":
+            disk_data = list(utils_disk.get_linux_disks(session).keys())
+            mnt_point = utils_disk.configure_empty_disk(
+                session, disk_data[0], image_size_stg0, "linux",
+                labeltype="msdos")
+            src = "/dev/%s1" % disk_data[0]
+        else:
+            disk_index = utils_misc.wait_for(
+                lambda: utils_disk.get_windows_disks_index(session,
+                                                           image_size_stg0),
+                120)
+            if disk_index:
+                logging.info("Clear readonly for disk and online it in windows"
+                             " guest.")
+                if not utils_disk.update_windows_disk_attributes(session,
+                                                                 disk_index):
+                    test.error("Failed to update windows disk attributes.")
+                mnt_point = utils_disk.configure_empty_disk(
+                    session, disk_index[0], image_size_stg0, "windows",
+                    labeltype="msdos")
+            else:
+                test.error("Didn't find any disk_index except system disk.")
+
+        error_context.context("Freeze fs.", logging.info)
+        self.gagent.fsfreeze()
+
+        error_context.context("Umount fs or offline disk in guest.",
+                              logging.info)
+        if params.get("os_type") == "linux":
+            if params['os_variant'] == 'rhel6':
+                try:
+                    session.cmd("umount %s" % mnt_point[0])
+                except ShellTimeoutError:
+                    logging.info("For rhel6 guest, umount fs will fail after"
+                                 " fsfreeze.")
+                else:
+                    test.error("For rhel6 guest, umount fs should fail after"
+                               " fsfreeze.")
+            else:
+                if not utils_disk.umount(src, mnt_point[0], session=session):
+                    test.fail("For rhel7+ guest, umount fs should success"
+                              " after fsfreeze.")
+        else:
+            detail_cmd = ' echo detail disk'
+            detail_cmd = wrap_windows_cmd(detail_cmd)
+            offline_cmd = ' echo offline disk'
+            offline_cmd = wrap_windows_cmd(offline_cmd)
+            did = disk_index[0]
+            logging.info("Detail for 'Disk%s'" % did)
+            details = session.cmd_output(detail_cmd % did)
+            if re.search("Status.*Online", details, re.I | re.M):
+                logging.info("Offline 'Disk%s'" % did)
+                status, output = session.cmd_status_output(offline_cmd % did,
+                                                           timeout=120)
+                if status != 0:
+                    test.fail("Can not offline disk: %s with"
+                              " fsfreeze." % output)
+
+        error_context.context("Thaw fs.", logging.info)
+        try:
+            self.gagent.fsthaw()
+        except guest_agent.VAgentCmdError as detail:
+            if not re.search("fsfreeze is limited up to 10 seconds",
+                             str(detail)):
+                test.error("guest-fsfreeze-thaw cmd failed with: ('%s')"
+                           % str(detail))
+
+        error_context.context("Mount fs or online disk in guest.",
+                              logging.info)
+        if params.get("os_type") == "linux":
+            if not utils_disk.mount(src, mnt_point[0], session=session):
+                if params['os_variant'] != 'rhel6':
+                    test.fail("For rhel7+ guest, mount fs should success"
+                              " after fsthaw.")
+            else:
+                if params['os_variant'] == 'rhel6':
+                    test.fail("For rhel6 guest, mount fs should fail after"
+                              " fsthaw.")
+        else:
+            if not utils_disk.update_windows_disk_attributes(session,
+                                                             disk_index):
+                test.fail("Can't online disk with fsthaw")
 
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)

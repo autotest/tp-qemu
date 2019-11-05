@@ -22,18 +22,22 @@ def run(test, params, env):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
     """
-    def run_tcpdump_bg(session, addresses, dump_protocol):
+    def run_tcpdump_bg(vm, addresses, dump_protocol):
         """
         Run tcpdump in background, tcpdump will exit once catch a packet
         match the rules.
         """
-        tcpdump_cmd = "killall -9 tcpdump; "
-        tcpdump_cmd += "tcpdump -iany -n -v %s and 'src %s and dst %s' -c 1 &"
-        session.cmd_output_safe(tcpdump_cmd % (dump_protocol,
-                                               addresses[0], addresses[1]))
-        if not utils_misc.wait_for(lambda: tcpdump_is_alive(session),
+        bg_session = vm.wait_for_login()
+        if tcpdump_is_alive(bg_session):
+            bg_session.cmd("killall -9 tcpdump")
+        tcpdump_cmd = ("setsid tcpdump -iany -n -v %s and 'src %s and dst %s'"
+                       " -c 1 >/dev/null 2>&1")
+        bg_session.sendline(tcpdump_cmd % (dump_protocol, addresses[0],
+                                           addresses[1]))
+        if not utils_misc.wait_for(lambda: tcpdump_is_alive(bg_session),
                                    30, 0, 1, "Waiting tcpdump start..."):
             test.cancel("Error, can not run tcpdump")
+        bg_session.close()
 
     def dump_catch_data(session, dump_log, catch_reg):
         """
@@ -232,6 +236,7 @@ def run(test, params, env):
                                      open_flow_rules)
         return open_flow_rules
 
+    br_name = params.get("netdst", "ovs0")
     timeout = int(params.get("login_timeout", '360'))
     prepare_timeout = int(params.get("prepare_timeout", '360'))
     clean_cmd = params.get("clean_cmd", "rm -f")
@@ -240,8 +245,11 @@ def run(test, params, env):
     vms = []
     bg_ping_session = None
 
+    if not utils_net.ovs_br_exists(br_name):
+        test.cancel("%s isn't an openvswith bridge" % br_name)
+
     error_context.context("Init boot the vms")
-    for vm_name in params.get("vms", "vm1 vm2").split():
+    for vm_name in params.objects("vms"):
         vms.append(env.get_vm(vm_name))
     for vm in vms:
         vm.verify_alive()
@@ -249,7 +257,6 @@ def run(test, params, env):
         addresses.append(vm.get_address())
 
     # set openflow rules:
-    br_name = params.get("netdst", "ovs0")
     f_protocol = params.get("flow", "arp")
     f_base_options = "%s,nw_src=%s,nw_dst=%s" % (f_protocol, addresses[0],
                                                  addresses[1])
@@ -284,7 +291,7 @@ def run(test, params, env):
 
             error_context.context("Run tcpdump in guest %s" % vms[1].name,
                                   logging.info)
-            run_tcpdump_bg(sessions[1], addresses, f_protocol)
+            run_tcpdump_bg(vms[1], addresses, f_protocol)
 
             if drop_flow or f_protocol is not "arp":
                 error_context.context("Clean arp cache in both guest",
@@ -295,16 +302,17 @@ def run(test, params, env):
                 "Exec '%s' flow '%s' test" %
                 (f_protocol, drop_flow and "drop" or "normal"))
             if drop_flow:
-                error_context.context("Ping test form vm1 to vm2",
-                                      logging.info)
+                error_context.context("Ping test form %s to %s" %
+                                      (vms[0].name, vms[1].name), logging.info)
                 ping_test(sessions[0], addresses[1], drop_icmp)
                 if params.get("run_file_transfer") == "yes":
-                    error_context.context("Transfer file form vm1 to vm2",
+                    error_context.context("Transfer file form %s to %s" %
+                                          (vms[0].name, vms[1].name),
                                           logging.info)
                     file_transfer(sessions, addresses, prepare_timeout)
             else:
-                error_context.context("Ping test form vm1 to vm2 in "
-                                      "background", logging.info)
+                error_context.context("Ping test form %s to %s in background" %
+                                      (vms[0].name, vms[1].name), logging.info)
                 bg_ping_session = run_ping_bg(vms[0], addresses[1])
 
             if f_protocol == 'arp' and drop_flow:

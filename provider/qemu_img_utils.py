@@ -1,6 +1,6 @@
 """qemu-img related functions."""
 import avocado
-import functools
+import contextlib
 import logging
 import tempfile
 
@@ -10,11 +10,6 @@ from virttest import qemu_storage
 from virttest import utils_misc
 
 from avocado.utils import process
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
 
 def boot_vm_with_images(test, params, env, images=None, vm_name=None):
@@ -106,36 +101,24 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
     return md5_value
 
 
-def strace(trace_events=None, output_file=None):
+@contextlib.contextmanager
+def strace(image, trace_events=None, output_file=None):
     """
-    Add strace to trace subprocess calls of avocado.utils.process.
+    Add strace to trace image related operations.
 
-    :param trace_events: events tor trace
-    :param output_file: if presented, redirect the output to the file
+    :param image: image object
+    :param trace_events: events list to trace
+    :param output_file: if presented, redirect the output to file
     """
-    def _subprocess(*args, **kargs):
-        if args:
-            args = list(args)
-            args[0] = "%s %s" % (strace_cmd, args[0])
-            args = tuple(args)
-        else:
-            kargs["cmd"] = "%s %s" % (strace_cmd, kargs["cmd"])
-        return cls(*args, **kargs)
-
-    strace_cmd = ["strace"]
+    image_cmd = image.image_cmd
+    strace_prefix = ["strace"]
     if trace_events:
-        strace_cmd.extend(("-e", ",".join(trace_events)))
+        strace_prefix.extend(("-e", ",".join(trace_events)))
     if output_file:
-        strace_cmd.extend(("-o", output_file))
-    strace_cmd = " ".join(strace_cmd)
-    # store original object before patching.
-    cls = process.SubProcess
-
-    def _add_strace(func):
-        @functools.wraps(func)
-        def func_wrapper(*args, **kargs):
-            with mock.patch("avocado.utils.process.SubProcess",
-                            side_effect=_subprocess):
-                return func(*args, **kargs)
-        return func_wrapper
-    return _add_strace
+        strace_prefix.extend(("-o", output_file))
+    strace_prefix = " ".join(strace_prefix)
+    image.image_cmd = strace_prefix + " " + image_cmd
+    try:
+        yield
+    finally:
+        image.image_cmd = image_cmd

@@ -13,7 +13,8 @@ from virttest import remote
 from virttest import data_dir
 
 
-_system_output = functools.partial(process.getoutput, shell=True)
+_system_statusoutput = functools.partial(process.getstatusoutput, shell=True,
+                                         ignore_status=False)
 
 
 @error_context.context_aware
@@ -48,11 +49,11 @@ def run(test, params, env):
                 if asys in vms_tags:
                     vm = env.get_vm(asys)
                     session = vm.wait_for_login(timeout=timeout)
-                    run_func = session.cmd
+                    run_func = session.cmd_status_output
                     remote_src = vm
                     ssh_src_ip = vm.get_address()
                 else:
-                    run_func = _system_output
+                    run_func = _system_statusoutput
                     remote_src = "localhost"
                     ssh_src_ip = host_ip
                 if atgt in vms_tags:
@@ -83,7 +84,7 @@ def run(test, params, env):
                         stat = 1
                         out_err = "Failed to login %s " % atgt
                         out_err += "from %s, err: %s" % (asys, err.output)
-                    if "TelnetServer" in params.get("setup_cmd_windows"):
+                    if "TelnetServer" in params.get("setup_cmd_windows", ""):
                         try:
                             out += remote_login(access_cmd, ssh_src_ip,
                                                 target_vm, params, host_ip)
@@ -95,20 +96,13 @@ def run(test, params, env):
                         out = out_err
                 else:
                     try:
-                        out = run_func(access_cmd, timeout=op_timeout)
-                        stat = 0
+                        stat, out = run_func(access_cmd, timeout=op_timeout)
                         check_string = access_params.get("check_from_output")
                         if check_string and check_string in out:
                             stat = 1
-                    except aexpect.ShellCmdError as err:
-                        out = err.output
-                        stat = err.status
                     except aexpect.ShellTimeoutError as err:
                         out = err.output
                         stat = 1
-                        session.close()
-                        session = vm.wait_for_login(timeout=timeout)
-                        run_func = session.cmd
                     except process.CmdError as err:
                         out = err.result.stderr
                         stat = err.result.exit_status
@@ -122,7 +116,7 @@ def run(test, params, env):
                 if disabled and atgt_disabled and stat == 0:
                     err_msg += "Still can access %s after" % atgt
                     err_msg += " disable it from ovs. "
-                    err_msg += "Command: %s. " % access_cmd
+                    err_msg += "Command: %s " % access_cmd
                     err_msg += "Output: %s" % out
                 if disabled and atgt_disabled and stat != 0:
                     logging.debug("Can not access target as expect.")
@@ -133,25 +127,19 @@ def run(test, params, env):
                         err_type = "ref"
                     else:
                         err_msg += "Still can not access %s" % atgt
-                        err_msg += " after enable the access"
-                    err_msg += "Command: %s. " % access_cmd
+                        err_msg += " after enable the access. "
+                    err_msg += "Command: %s " % access_cmd
                     err_msg += "Output: %s" % out
                 if err_msg:
-                    session.close()
                     if err_type == "ref":
                         test.cancel(err_msg)
                     test.fail(err_msg)
 
                 if not ref_cmd:
-                    session.close()
                     return
 
                 try:
-                    out = run_func(ref_cmd, timeout=op_timeout)
-                    stat = 0
-                except aexpect.ShellCmdError as err:
-                    out = err.output
-                    stat = err.status
+                    stat, out = run_func(ref_cmd, timeout=op_timeout)
                 except aexpect.ShellTimeoutError as err:
                     out = err.output
                     stat = 1
@@ -161,20 +149,17 @@ def run(test, params, env):
 
                 if stat != 0:
                     if ref:
-                        err_msg += "Refernce command failed at beginning."
+                        err_msg += "Reference command failed at beginning."
                         err_type = "ref"
                     else:
-                        err_msg += "Refernce command failed after setup"
-                        err_msg += " the rules"
-                    err_msg += "Command: %s. " % ref_cmd
+                        err_msg += "Reference command failed after setup"
+                        err_msg += " the rules. "
+                    err_msg += "Command: %s " % ref_cmd
                     err_msg += "Output: %s" % out
                 if err_msg:
-                    session.close()
                     if err_type == "ref":
                         test.cancel(err_msg)
                     test.fail(err_msg)
-                if asys in vms_tags:
-                    session.close()
 
     def get_acl_cmd(protocol, in_port, action, extra_options):
         acl_cmd = protocol.strip()
@@ -204,7 +189,7 @@ def run(test, params, env):
         src_name = src
         if src != "localhost":
             src_name = src.name
-        logging.info("Login %s from %s" % (host, src))
+        logging.info("Login %s from %s" % (host, src_name))
         port = params_login["target_port"]
         username = params_login["username"]
         password = params_login["password"]
@@ -261,7 +246,7 @@ def run(test, params, env):
     def setup_service(setup_target):
         setup_timeout = int(params.get("setup_timeout", 360))
         if setup_target == "localhost":
-            setup_func = _system_output
+            setup_func = _system_statusoutput
             os_type = "linux"
         else:
             setup_vm = env.get_vm(setup_target)
@@ -288,17 +273,16 @@ def run(test, params, env):
             setup_func(
                     "sed -i 's/anonymous_enable=NO/anonymous_enable=YES/g' %s"
                     % params["vsftpd_conf"])
-        setup_func(setup_cmd, timeout=setup_timeout)
-
         if prepare_cmd:
             setup_func(prepare_cmd, timeout=setup_timeout)
+        setup_func(setup_cmd, timeout=setup_timeout)
         if setup_target != "localhost":
             setup_session.close()
 
     def stop_service(setup_target):
         setup_timeout = int(params.get("setup_timeout", 360))
         if setup_target == "localhost":
-            setup_func = _system_output
+            setup_func = _system_statusoutput
             os_type = "linux"
         else:
             setup_vm = env.get_vm(setup_target)

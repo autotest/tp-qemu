@@ -842,7 +842,7 @@ def run(test, params, env):
             vm_cpus = host_cpus
         no_speeds = len(speeds)
         # All host_cpus have to be used with no_speeds overcommit
-        no_vms = host_cpus * no_speeds / vm_cpus
+        no_vms = host_cpus * no_speeds // vm_cpus
         no_threads = no_vms * vm_cpus
         sessions = []
         serials = []
@@ -1121,7 +1121,7 @@ def run(test, params, env):
                     raise exceptions.TestError(err)
         # if cgroup_use_half_smp, set smp accordingly
         elif params.get("cgroup_use_half_smp") == "yes":
-            vm_cpus = len(cpus) / 2
+            vm_cpus = len(cpus) // 2
             if len(cpus) == 2:
                 logging.warn("Host have only 2 CPUs, using 'smp = all cpus'")
                 vm_cpus = 2

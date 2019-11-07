@@ -49,9 +49,10 @@ def run(test, params, env):
     image_params["convert_target"] = convert_target1
     logging.debug("Convert image from %s to %s, strace log: %s", image.tag,
                   convert_target1, strace_output_file)
-    fail_on((process.CmdError,))(
-        strace(trace_events=strace_events, output_file=strace_output_file)(
-            image.convert))(image_params, root_dir)
+
+    with strace(image, strace_events, strace_output_file):
+        fail_on((process.CmdError,))(image.convert)(image_params, root_dir)
+
     convert_target1_filename = storage.get_image_filename(
         params.object_params(convert_target1), root_dir)
     check_flags(strace_output_file, image.image_filename,
@@ -65,10 +66,12 @@ def run(test, params, env):
     logging.debug(("Convert image from %s to %s with cache mode "
                    "'none', strace log: %s"), image.tag, convert_target2,
                   strace_output_file)
-    fail_on((process.CmdError,))(
-        strace(trace_events=strace_events, output_file=strace_output_file)(
-            image.convert))(image_params, root_dir, cache_mode="none",
-                            source_cache_mode="none")
+
+    with strace(image, strace_events, strace_output_file):
+        fail_on((process.CmdError,))(image.convert)(
+            image_params, root_dir,
+            cache_mode="none", source_cache_mode="none")
+
     convert_target2_filename = storage.get_image_filename(
         params.object_params(convert_target2), root_dir)
     check_flags(strace_output_file, image.image_filename, "O_DIRECT")

@@ -1934,6 +1934,52 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("Should return error info.")
 
     @error_context.context_aware
+    def gagent_check_log(self, test, params, env):
+        """
+        Check guest agent logs.
+        Steps:
+        1) start guest-agent to record logs
+        2) issue some guest agent commands
+        3) check agent log, if those commands are recorded
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameterspy
+        :param env: Dictionary with test environment.
+        """
+        def log_check(qga_cmd):
+            """
+            check guest agent log.
+            """
+            error_context.context("Check %s cmd in agent log." % qga_cmd,
+                                  logging.info)
+            log_str = session.cmd_output(get_log_cmd).strip().split('\n')[-1]
+            pattern = r"%s" % qga_cmd
+            if not re.findall(pattern, log_str, re.M | re.I):
+                test.fail("The %s command is not recorded in agent"
+                          " log." % qga_cmd)
+
+        get_log_cmd = params["get_log_cmd"]
+        session = self._get_session(self.params, self.vm)
+        self._open_session_list.append(session)
+        self._change_bl(session)
+
+        error_context.context("Issue some common guest agent commands.",
+                              logging.info)
+        self.gagent.get_time()
+        log_check("guest-get-time")
+
+        tmp_file = params["tmp_file"]
+        content = "hello world\n"
+        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
+        log_check("guest-file-open")
+
+        self.gagent.guest_file_write(ret_handle, content)
+        log_check("guest-file-write")
+
+        self.gagent.guest_file_read(ret_handle)
+        log_check("guest-file-read")
+
+    @error_context.context_aware
     def gagent_check_with_migrate(self, test, params, env):
         """
         Migration test with guest agent service running.

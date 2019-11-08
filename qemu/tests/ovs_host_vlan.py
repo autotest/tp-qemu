@@ -176,11 +176,11 @@ def run(test, params, env):
     except process.CmdError:
         test.fail("Fail to create ovs bridge %s" % bridge_name)
 
+    sessions = []
     try:
         params["start_vm"] = "yes"
         params["netdst"] = bridge_name
         vms = params.get("vms").split()
-        sessions = []
         ips = []
         txt = "Start multi vms and add them to 2 vlans."
         error_context.context(txt, logging.info)
@@ -206,6 +206,7 @@ def run(test, params, env):
             session_ctl = vm.wait_for_serial_login(timeout=login_timeout)
             if os_type == "linux":
                 txt = "Stop NetworkManager service in guest %s." % vm_name
+                logging.info(txt)
                 session_ctl.cmd(params["stop_network_manager"], timeout=120)
 
             mac = vm.get_mac_address()
@@ -307,4 +308,7 @@ def run(test, params, env):
                                                d_session=sessions[1],
                                                file_transfer_timeout=f_tmout)
     finally:
+        for session in sessions:
+            if session:
+                session.close()
         process.system(ovs_br_remove_cmd, ignore_status=False, shell=True)

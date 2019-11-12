@@ -122,3 +122,20 @@ def strace(image, trace_events=None, output_file=None):
         yield
     finally:
         image.image_cmd = image_cmd
+
+
+def check_flag(strace_log, target_file, flag):
+    """
+    Check if flag is presented in the syscalls related to file.
+
+    :param strace_log: strace log file
+    :param target_file: syscall-related file
+    :param flag: flag to check
+    """
+    logging.debug("Check strace output: %s", strace_log)
+    with open(strace_log) as fd:
+        logging.debug("syscalls related to %s", target_file)
+        lines = [l for l in fd if target_file in l]
+        for line in lines:
+            logging.debug(line.strip())
+        return any(flag in line for line in lines)

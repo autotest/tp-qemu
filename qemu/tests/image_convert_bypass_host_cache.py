@@ -5,6 +5,7 @@ from avocado import fail_on
 from avocado import TestCancel
 from avocado.utils import path
 from avocado.utils import process
+from provider.qemu_img_utils import check_flag
 from provider.qemu_img_utils import strace
 from virttest import data_dir
 from virttest import qemu_storage
@@ -18,18 +19,6 @@ def run(test, params, env):
     3. convert image with cache mode `none` for both source and dest images.
     4. check strace output that `O_DIRECT` is on for `open`.
     """
-    def check_flags(strace_output_file, filename, flag, negative=False):
-        """Check flag is presented in calls related to filename."""
-        logging.debug("Check strace output from file %s", strace_output_file)
-        with open(strace_output_file) as fd:
-            logging.debug("syscalls related to %s", filename)
-            lines = [l for l in fd if filename in l]
-            for line in lines:
-                logging.debug(line.strip())
-            if any(flag in line for line in lines) is negative:
-                msg = "%s is%spresented." % \
-                    (flag, " " if negative else " not ")
-                test.fail(msg)
 
     logging.debug("Check if strace is available")
     try:
@@ -55,10 +44,11 @@ def run(test, params, env):
 
     convert_target1_filename = storage.get_image_filename(
         params.object_params(convert_target1), root_dir)
-    check_flags(strace_output_file, image.image_filename,
-                "O_DIRECT", negative=True)
-    check_flags(strace_output_file, convert_target1_filename,
-                "O_DIRECT", negative=True)
+    fail_msg = "'O_DIRECT' is presented in system calls %s" % strace_events
+    if check_flag(strace_output_file, image.image_filename, "O_DIRECT"):
+        test.fail(fail_msg)
+    if check_flag(strace_output_file, convert_target1_filename, "O_DIRECT"):
+        test.fail(fail_msg)
 
     strace_output_file = os.path.join(test.debugdir,
                                       "convert_to_%s.log" % convert_target2)
@@ -74,6 +64,10 @@ def run(test, params, env):
 
     convert_target2_filename = storage.get_image_filename(
         params.object_params(convert_target2), root_dir)
-    check_flags(strace_output_file, image.image_filename, "O_DIRECT")
-    check_flags(strace_output_file, convert_target2_filename, "O_DIRECT")
+    fail_msg = "'O_DIRECT' is not presented in system calls %s" % strace_events
+    if not check_flag(strace_output_file, image.image_filename, "O_DIRECT"):
+        test.fail(fail_msg)
+    if not check_flag(strace_output_file,
+                      convert_target2_filename, "O_DIRECT"):
+        test.fail(fail_msg)
     params["images"] += params["convert_target"]

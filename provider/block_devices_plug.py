@@ -17,6 +17,7 @@ import logging
 import multiprocessing
 import sys
 import threading
+import time
 
 from avocado import TestError
 
@@ -172,6 +173,7 @@ class BlockDevicesPlug(object):
         self._qdev_type = qdevices.QBlockdevNode if vm.check_capability(
             Flags.BLOCKDEV) else qdevices.QDrive
         self._timeout = 300
+        self._interval = 0
 
     def __getitem__(self, index):
         """ Get the hot plugged disk index. """
@@ -355,6 +357,7 @@ class BlockDevicesPlug(object):
                 args = (device, monitor) if bus is None else (device, monitor, bus)
                 self._qmp_outputs[device.get_qid()] = getattr(
                     self, '_%s_atomic' % action)(*args)
+                time.sleep(self._interval)
 
     def _hotplug_devs(self, images, monitor, bus=None):
         """
@@ -410,7 +413,8 @@ class BlockDevicesPlug(object):
         logging.info("All %s threads finished." % action)
 
     @_verify_plugged_num(action=HOTPLUG)
-    def hotplug_devs_serial(self, images=None, monitor=None, bus=None, timeout=300):
+    def hotplug_devs_serial(self, images=None, monitor=None, bus=None,
+                            timeout=300, interval=0):
         """
         Hot plug the block devices by serial.
 
@@ -422,8 +426,11 @@ class BlockDevicesPlug(object):
         :type bus: qdevice.QSparseBus
         :param timeout: Timeout for hot plugging.
         :type timeout: float
+        :param interval: Interval time for hot plugging.
+        :type interval: float
         """
         self._timeout = timeout
+        self._interval = interval
         if monitor is None:
             monitor = self.vm.monitor
         if images:

@@ -102,13 +102,14 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
 
 
 @contextlib.contextmanager
-def strace(image, trace_events=None, output_file=None):
+def strace(image, trace_events=None, output_file=None, trace_child=False):
     """
     Add strace to trace image related operations.
 
     :param image: image object
     :param trace_events: events list to trace
     :param output_file: if presented, redirect the output to file
+    :param trace_child: True to enable tracing child processes with -f
     """
     image_cmd = image.image_cmd
     strace_prefix = ["strace"]
@@ -116,6 +117,8 @@ def strace(image, trace_events=None, output_file=None):
         strace_prefix.extend(("-e", ",".join(trace_events)))
     if output_file:
         strace_prefix.extend(("-o", output_file))
+    if trace_child:
+        strace_prefix.append("-f")
     strace_prefix = " ".join(strace_prefix)
     image.image_cmd = strace_prefix + " " + image_cmd
     try:

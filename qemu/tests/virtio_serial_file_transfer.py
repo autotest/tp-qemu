@@ -126,7 +126,8 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
         kwargs = {'cmd': host_cmd,
                   'shell': True,
                   'timeout': timeout}
-        error_context.context("Send host command: %s" % host_cmd, logging.info)
+        error_context.context("Send host command: %s"
+                              % host_cmd, logging.info)
         host_thread = utils_misc.InterruptedThread(process.getoutput,
                                                    kwargs=kwargs)
         host_thread.start()
@@ -155,7 +156,7 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
 
 @error_context.context_aware
 def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
-                  sender='both'):
+                  sender='both', clean_file=True):
     """
     Transfer data file between guest and host, and check result via output;
     Generate random file first if not provided
@@ -165,6 +166,7 @@ def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
     :param host_file_name: Host file name to be transferred
     :param guest_file_name: Guest file name to be transferred
     :param sender: Who send the data file
+    :param clean_file: Whether clean the data file transferred
     :return: True if pass, False and error message if check fail
     """
     session = vm.wait_for_login()
@@ -198,12 +200,14 @@ def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
     guest_cmd = ("%s %s -d %s -f %s -a %s" %
                  (python_bin, guest_script,
                   port_name, guest_file_name, guest_action))
-    result = _transfer_data(session, host_cmd, guest_cmd, transfer_timeout, sender)
-    clean_cmd = params['clean_cmd']
-    os.remove(host_file_name)
+    result = _transfer_data(
+        session, host_cmd, guest_cmd, transfer_timeout, sender)
     if os_type == "windows":
         guest_file_name = guest_file_name.replace("/", "\\")
-    session.cmd('%s %s' % (clean_cmd, guest_file_name))
+    if clean_file:
+        clean_cmd = params['clean_cmd']
+        os.remove(host_file_name)
+        session.cmd('%s %s' % (clean_cmd, guest_file_name))
     session.close()
     return result
 

@@ -29,9 +29,10 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
+    os_type = params["os_type"]
     sender = params['file_sender']
     file_size = int(params.get("filesize", 100))
-    repeat_time = int(params.get("repeat_time", 600))
+    continue_time = int(params.get("continue_transfer_time", 600))
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
     host_dir = data_dir.get_tmp_dir()
@@ -47,9 +48,10 @@ def run(test, params, env):
     guest_script = params["guest_script"]
     logging.info('Transfer data from %s' % sender)
     try:
-        test_time = time.time() + repeat_time
+        test_time = time.time() + continue_time
         while time.time() < test_time:
-            transfer_data(params, vm, host_file_name, guest_file_name, sender)
+            transfer_data(
+                params, vm, host_file_name, guest_file_name, sender, False)
         host_proc = process.getoutput(check_pid_cmd % host_script, shell=True)
         guest_proc = session.cmd_output(check_pid_cmd % guest_script)
         if host_proc:
@@ -61,6 +63,9 @@ def run(test, params, env):
             logging.info("Kill serial process on guest")
             session.cmd('kill -9 %s' % guest_pid)
     finally:
+        clean_cmd = params['clean_cmd']
+        session.cmd('%s %s' % (clean_cmd, guest_file_name))
+        os.remove(host_file_name)
         session.close()
         vm.verify_kernel_crash()
         vm.destroy()

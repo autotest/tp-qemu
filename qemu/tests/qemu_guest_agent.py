@@ -518,6 +518,133 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("the vcpu status is not changed as expected")
 
     @error_context.context_aware
+    def gagent_check_set_mem_blocks(self, test, params, env):
+        """
+        Get/set logical memory blocks via guest agent.
+        Steps:
+        1) Get the size of memory block unit via guest agent
+        2) Offline one memory block which can be removable in guest
+        3) Verify memory blocks via guest agent is offline
+        4) Verify memory block unit size
+        5) Offline some memory blocks which can be offline via guest agent
+        6) Verify memory are decreased in guest
+        7) Online the memory blocks which are offline before
+        8) Verify memory are the same as before
+        9) Offline a memroy block which can't be offline
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+        cmd_get_mem = "free -m |grep -i mem"
+        cmd_offline_mem = "echo 0 > /sys/devices/system/memory/memory%s/online"
+        # record the memory blocks phys-index which is set to offline
+        mem_off_phys_index_list = []
+
+        error_context.context("Get the size of memory block unit.",
+                              logging.info)
+        mem_block_info = self.gagent.get_memory_block_info()["size"]
+        mem_unit_size = mem_block_info / float(1024 * 1024)
+
+        error_context.context("Offline one memory block in guest.",
+                              logging.info)
+        mem_size_original = session.cmd_output(cmd_get_mem).strip().split()[1]
+        mem_blocks = self.gagent.get_memory_blocks()
+        mem_list_index = 0
+        for memory in mem_blocks:
+            if memory["online"] and memory["can-offline"]:
+                mem_phys_index = memory["phys-index"]
+                mem_off_phys_index_list.append(mem_phys_index)
+                break
+            mem_list_index += 1
+        else:
+            logging.info("All memory blocks are offline already.")
+            return
+        session.cmd(cmd_offline_mem % mem_phys_index)
+
+        error_context.context("Verify it's changed to offline status via"
+                              " agent.", logging.info)
+        mem_blocks = self.gagent.get_memory_blocks()
+        if mem_blocks[mem_list_index]["online"] is not False:
+            test.fail("%s phys-index memory block is still online"
+                      " via agent." % mem_phys_index)
+
+        error_context.context("Verify the memory block unit size.",
+                              logging.info)
+        mem_size = session.cmd_output(cmd_get_mem)
+        mem_size_aft_offline_guest = mem_size.strip().split()[1]
+        delta = float(mem_size_original) - float(mem_size_aft_offline_guest)
+        if delta != mem_unit_size:
+            test.fail("Memory block info is not correct\nit's %s via agent\n"
+                      "it's %s via guest." % (mem_unit_size, delta))
+
+        error_context.context("Offline some memory blocks which can be"
+                              " offline via agent.", logging.info)
+        # record the memory blocks which will be offline
+        mem_blocks_list = []
+        count = 0
+        # offline 5 or less memory blocks
+        for memory in mem_blocks:
+            if memory["online"] and memory["can-offline"]:
+                mem_phys_index = memory["phys-index"]
+                mem_off_phys_index_list.append(mem_phys_index)
+                mem_obj = {"online": False, "can-offline": True,
+                           "phys-index": mem_phys_index}
+                mem_blocks_list.append(mem_obj)
+                count += 1
+                if count >= 5:
+                    break
+        if mem_blocks_list is not None:
+            self.gagent.set_memory_blocks(mem_blocks_list)
+            error_context.context("Verify memory size is decreased after"
+                                  " offline.", logging.info)
+            mem_size = session.cmd_output(cmd_get_mem)
+            mem_size_aft_offline_qga = mem_size.strip().split()[1]
+            if float(mem_size_aft_offline_qga) >= \
+                    float(mem_size_aft_offline_guest):
+                test.fail("Memory isn't decreased\nsize before is %s\n"
+                          "size after is %s" % (mem_size_aft_offline_guest,
+                                                mem_size_aft_offline_qga))
+        else:
+            logging.info("The memory blocks are already offline,"
+                         " no need to do offline operation.")
+
+        error_context.context("Recovery the memory blocks which are set to"
+                              " offline before.", logging.info)
+        # record the memory blocks which will be online
+        mem_blocks_list = []
+        for mem_phys_index in mem_off_phys_index_list:
+            mem_obj = {"online": True, "can-offline": True,
+                       "phys-index": mem_phys_index}
+            mem_blocks_list.append(mem_obj)
+        self.gagent.set_memory_blocks(mem_blocks_list)
+        mem_size_final = session.cmd_output(cmd_get_mem).strip().split()[1]
+        if float(mem_size_final) != float(mem_size_original):
+            test.fail("Memory is not the same with original\n"
+                      "original size is %s\nfinal size is %s." %
+                      (mem_size_original, mem_size_final))
+
+        error_context.context("Offline one memory block which can't be"
+                              " offline.", logging.info)
+        mem_blocks = self.gagent.get_memory_blocks()
+        for memory in mem_blocks:
+            if memory["online"] and memory["can-offline"] is False:
+                mem_obj_index = memory["phys-index"]
+                break
+        else:
+            logging.info("There is no required memory block that can-offline"
+                         " attribute is False.")
+            return
+        mem_blocks_list = [{"online": False, "can-offline": True,
+                            "phys-index": mem_obj_index}]
+        result = self.gagent.set_memory_blocks(mem_blocks_list)
+        if "operation-failed" not in result[0]["response"]:
+            test.fail("Didn't return the suitable description,"
+                      " the output info is %s." % result)
+
+    @error_context.context_aware
     def gagent_check_get_time(self, test, params, env):
         """
         Execute "guest-get-time" command to guest agent

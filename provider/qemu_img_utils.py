@@ -4,6 +4,7 @@ import contextlib
 import logging
 import tempfile
 
+from avocado.utils import path
 from virttest import data_dir
 from virttest import env_process
 from virttest import qemu_storage
@@ -99,6 +100,15 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
         raise ValueError("md5 values mismatch, got: %s, expected: %s" %
                          (md5_value, md5_value_to_check))
     return md5_value
+
+
+def find_strace():
+    """Find strace path or cancel the test."""
+    logging.debug("Check if strace is available")
+    try:
+        return path.find_command("strace")
+    except path.CmdNotFoundError as detail:
+        raise avocado.TestCancel(str(detail))
 
 
 @contextlib.contextmanager

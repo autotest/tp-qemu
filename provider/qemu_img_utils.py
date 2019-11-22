@@ -5,9 +5,7 @@ import logging
 import tempfile
 
 from avocado.utils import path
-from virttest import data_dir
 from virttest import env_process
-from virttest import qemu_storage
 from virttest import utils_misc
 
 from avocado.utils import process
@@ -27,41 +25,6 @@ def boot_vm_with_images(test, params, env, images=None, vm_name=None):
     vm = env.get_vm(vm_name)
     vm.verify_alive()
     return vm
-
-
-def qemu_img_compare(params, image0, image1, strict=False, force_share=False):
-    """qemu-img compare command wrapper function."""
-    image0_params = params.object_params(image0)
-    image1_params = params.object_params(image1)
-    root_dir = data_dir.get_data_dir()
-    image0 = qemu_storage.QemuImg(image0_params, root_dir, image0)
-    image1 = qemu_storage.QemuImg(image1_params, root_dir, image1)
-    compare_cmd = ["qemu-img compare"]
-    secret_objects = image0._secret_objects + image1._secret_objects
-    if secret_objects:
-        compare_cmd.append(" ".join(secret_objects))
-    if strict:
-        compare_cmd.append("-s")
-    if force_share:
-        compare_cmd.append("-U")
-    filename0, filename1 = image0.image_filename, image1.image_filename
-    if image0.encryption_config.key_secret:
-        filename0 = "'%s'" % qemu_storage.get_image_json(
-            image0.tag, image0_params, root_dir)
-    if image1.encryption_config.key_secret:
-        filename1 = "'%s'" % qemu_storage.get_image_json(
-            image1.tag, image1_params, root_dir)
-    compare_cmd.extend((filename0, filename1))
-    logging.debug("Compare %s with %s, strict: %s",
-                  filename0, filename1, strict)
-    result = process.run(" ".join(compare_cmd), ignore_status=True, shell=True)
-    if result.exit_status == 0:
-        logging.debug(result.stdout_text)
-    else:
-        logging.error(result.stdout_text)
-        if result.exit_status == 1:
-            raise avocado.TestFail(result.stdout_text)
-        raise avocado.TestError(result.stdout_text)
 
 
 def save_random_file_to_vm(vm, save_path, count, sync_bin, blocksize=512):

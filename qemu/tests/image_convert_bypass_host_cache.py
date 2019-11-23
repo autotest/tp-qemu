@@ -2,9 +2,8 @@ import logging
 import os
 
 from avocado import fail_on
-from avocado import TestCancel
-from avocado.utils import path
 from avocado.utils import process
+from provider.qemu_img_utils import find_strace
 from provider.qemu_img_utils import check_flag
 from provider.qemu_img_utils import strace
 from virttest import data_dir
@@ -20,11 +19,7 @@ def run(test, params, env):
     4. check strace output that `O_DIRECT` is on for `open`.
     """
 
-    logging.debug("Check if strace is available")
-    try:
-        path.find_command("strace")
-    except path.CmdNotFoundError as detail:
-        raise TestCancel(str(detail))
+    find_strace()
 
     root_dir = data_dir.get_data_dir()
     strace_events = params["strace_event"].split()

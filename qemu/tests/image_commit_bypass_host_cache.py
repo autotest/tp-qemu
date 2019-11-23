@@ -2,7 +2,6 @@ import logging
 import os
 
 from avocado import fail_on
-from avocado.utils import path
 from avocado.utils import process
 from provider import qemu_img_utils as img_utils
 from virttest import data_dir
@@ -20,11 +19,7 @@ def run(test, params, env):
     6. commit sn to base with cache=none.
     7. check strace output that `O_DIRECT` is on.
     """
-    logging.debug("check if strace is available")
-    try:
-        path.find_command("strace")
-    except path.CmdNotFoundError as detail:
-        raise test.cancel(str(detail))
+    img_utils.find_strace()
 
     root_dir = data_dir.get_data_dir()
     trace_events = params["trace_events"].split()

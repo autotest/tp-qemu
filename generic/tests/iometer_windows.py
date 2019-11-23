@@ -82,6 +82,14 @@ def run(test, params, env):
         if not getattr(vm, 'wait_for_%s' % action)(timeout=timeout):
             test.fail('Failed to %s vm.' % action)
 
+    def format_multi_disks():
+        disk_letters = params["disk_letters"].split()
+        disk_indexes = params["disk_indexes"].split()
+        disk_fstypes = params["disk_fstypes"].split()
+        error_context.context("Format the multiple disks.", logging.info)
+        for index, letter, fstype in zip(disk_indexes, disk_letters, disk_fstypes):
+            utils_misc.format_windows_disk(session, index, letter, fstype=fstype)
+
     cmd_timeout = int(params.get("cmd_timeout", 360))
     ins_cmd = params["install_cmd"]
     icf_name = params["icf_name"]
@@ -102,7 +110,10 @@ def run(test, params, env):
     # events ready, add 10s to wait events done.
     time.sleep(10)
     # format the target disk
-    utils_test.run_virt_sub_test(test, params, env, "format_disk")
+    if params.get('format_multi_disks', 'no') == 'yes':
+        format_multi_disks()
+    else:
+        utils_test.run_virt_sub_test(test, params, env, "format_disk")
     install_iometer()
     register_iometer()
     prepare_ifc_file()

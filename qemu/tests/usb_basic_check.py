@@ -72,6 +72,13 @@ def check_usb_device(test, params, env):
         exists, msgbox = check_usb_device_guest(*kargs)
         if not exists:
             test.fail(msgbox[0])
+    dwprotocols = params.get("dwprotocols", "")
+    if dwprotocols:
+        cmd = params["chk_specified_usb_info"] % (vendor_id, product_id)
+        kargs = (session, dwprotocols, cmd, 5.0)
+        exists, msgbox = check_usb_device_guest(*kargs)
+        if not exists:
+            test.fail(msgbox[0])
 
     output = ""
     try:

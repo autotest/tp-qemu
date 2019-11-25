@@ -19,7 +19,7 @@ def check_bg_running(vm, params):
              else return False
     """
     session = vm.wait_for_login()
-    target_process = params["target_process"]
+    target_process = params.get("target_process", "")
     if params['os_type'] == 'linux':
         output = session.cmd_output_safe('pgrep -l %s' % target_process)
     else:
@@ -58,7 +58,6 @@ def run(test, params, env):
                               logging.info)
         stress_thread = None
         wait_time = float(params.get("wait_bg_time", 60))
-        target_process = params.get("target_process", "")
         bg_stress_run_flag = params.get("bg_stress_run_flag")
         # Need to set bg_stress_run_flag in some cases to make sure all
         # necessary steps are active

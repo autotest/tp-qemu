@@ -74,7 +74,7 @@ def key_tap_test(test, params, vm):
 
     key_table_file = params.get('key_table_file')
     key_check_cfg = get_keycode_cfg(key_table_file)
-    wait_time = float(params.get("wait_time", 0.1))
+    wait_time = float(params.get("wait_time", 0.2))
 
     error_context.context("Start event listener in guest", logging.info)
     listener = input_event_proxy.EventListener(vm)

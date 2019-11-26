@@ -103,7 +103,7 @@ def run(test, params, env):
         """
         cgroup.set_cgroup(vm.get_shell_pid(), pwd)
         for i in range(10):
-            for pid in process.get_children_pids(vm.get_shell_pid()):
+            for pid in vm.get_qemu_threads():
                 try:
                     cgroup.set_cgroup(int(pid), pwd)
                 except Exception as detail:   # Process might not already exist
@@ -2101,7 +2101,7 @@ def run(test, params, env):
 
         check_install_stress = params["check_install_stress"]
         if session.cmd_status(check_install_stress):
-            VMStress(vm, "stress").install()
+            VMStress(vm, "stress", params).install()
 
         logging.info("Check the cpu utilization")
         stress_cmd = params["stress_cmd"]
@@ -2112,7 +2112,7 @@ def run(test, params, env):
             time.sleep(10)
             o = process.system_output("top -b -p %s -n 3 | tail -1" % vm.get_pid(),
                                       shell=True).decode()
-            if 49 <= float(o.split()[-4]) <= 51:
+            if float(o.split()[-4]) <= 51:
                 count = count + 1
                 logging.debug("CPU utilization of guest is: %.2f%%" %
                               float(o.split()[-4]))

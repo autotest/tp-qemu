@@ -124,37 +124,23 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
 
     def do_full_backup(self, tag):
         """Do full backup"""
-        backing_info = dict()
-        params = self.params.object_params(tag)
-        node_name, filename = backup_utils.create_target_block_device(
-            self.vm, params, backing_info)
-        if not node_name:
-            out = self.vm.monitor.query_jobs()
-            self.test.fail("Create target device failed, %s" % out)
+        target = backup_utils.create_image_by_params(self.vm, self.params, tag)
+        node_name = target.format.get_param("node-name")
         # Notes:
         #    We use data disk in this case, so here not need to
         # pause VM to stop IO for ensure data integrity
         self._bitmap_batch_operate_by_transaction("add", [1, 2])
         backup_utils.full_backup(self.vm, self.device, node_name)
-        self.trash_files.append(filename)
+        self.trash_files.append(target.key)
         return node_name
 
     def do_incremental_backup_with_bitmap4(self, base_node, tag):
         """Do incremental backup with bitmap4"""
-        params = self.params.object_params(tag)
-        node_info = backup_utils.get_block_node_by_name(self.vm, base_node)
-        backing = {
-            "backing": base_node,
-            "backing-file": node_info["image"]["filename"],
-            "backing-fmt": node_info["image"]["format"]}
-        node_name, filename = backup_utils.create_target_block_device(
-            self.vm, params, backing)
-        if not node_name:
-            out = self.vm.monitor.query_jobs()
-            raise self.test.fail("Create target device failed, %s" % out)
+        img = backup_utils.create_image_by_params(self.vm, self.params, tag)
+        node_name = img.format.get_param("node-name")
         backup_utils.incremental_backup(
             self.vm, self.device, node_name, "bitmap_4")
-        self.trash_files.append(filename)
+        self.trash_files.append(img.key)
 
     def clean(self):
         """Stop bitmaps and clear image files"""

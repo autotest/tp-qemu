@@ -1,169 +1,132 @@
-import time
-from functools import partial
-
 from avocado import fail_on
+from avocado.utils import process
 
-from virttest import utils_misc
-from virttest import utils_numeric
-from virttest import utils_scheduling
-from virttest import storage
-from virttest import data_dir
-from virttest import qemu_monitor
+from virttest import utils_libguestfs
 
-from provider import job_utils
 from provider import block_dirty_bitmap as block_bitmap
-
-MAX_JOB_TIMEOUT = 1200
-
-
-def blockdev_create(vm, options, job_id=None, wait=True):
-    """wrapper for blockdev-create QMP command"""
-    if not job_id:
-        job_id = "blk_%s" % utils_misc.generate_random_id()
-    qemu_monitor.get_monitor_function(vm, "blockdev-create")(job_id, options)
-    if wait:
-        def wait_func():
-            job_info = job_utils.get_job_by_id(vm, job_id)
-            if job_info and job_info["status"] == "concluded":
-                return True
-            return False
-
-        if not utils_misc.wait_for(wait_func, 5, 1):
-            return None
-    return job_id
-
-
-def blockdev_backup(vm, options, wait):
-    """
-    Live backup block device
-
-    :param vm: VM object
-    :param options: dict for blockdev-backup cmd
-    :param wait: bool type, wait for backup job finished or not
-    """
-    event = "BLOCK_JOB_COMPLETED"
-    job_id = utils_misc.generate_random_id()
-    options.setdefault("job-id", job_id)
-    out = qemu_monitor.get_monitor_function(vm, "blockdev-backup")(options)
-    wait and wait_for_event(vm.monitor, event)
-    return out
-
-
-def blockdev_add(vm, options):
-    """wrapper for blockdev-add QMP command"""
-    if "node-name" not in options:
-        options["node-name"] = utils_misc.generate_random_id()
-    qemu_monitor.get_monitor_function(vm, "blockdev-add")(options)
-    return options["node-name"]
-
-
-def get_block_node_by_name(vm, node):
-    """Get block node info by node name"""
-    out = query_named_block_nodes(vm)
-    info = [i for i in out if i["node-name"] == node]
-    if info:
-        return info[0]
-    return None
-
-
-def query_named_block_nodes(vm):
-    """Get all block nodes info of the VM"""
-    func = qemu_monitor.get_monitor_function(vm, "query-named-block-nodes")
-    return func()
+from provider.virt_storage.storage_admin import sp_admin
+from provider import job_utils
 
 
 @fail_on
-def incremental_backup(vm, node, target, bitmap=None, wait=True):
+def blockdev_create(vm, **options):
+    timeout = int(options.pop("timeout", 360))
+    vm.monitor.cmd("blockdev-create", options)
+    job_utils.job_dismiss(vm, options["job-id"], timeout)
+
+
+def blockdev_backup_qmp_cmd(source, target, **extra_options):
+    """Generate blockdev-backup command"""
+    if not isinstance(extra_options, dict):
+        extra_options = dict()
+    arguments = {"device": source, "target": target, "job-id": source}
+    arguments["sync"] = extra_options.get("sync", "full")
+    arguments["speed"] = int(extra_options.get("speed", 0))
+    arguments["compress"] = extra_options.get("compress", False)
+    arguments["auto-finalize"] = extra_options.get("auto-finalize", True)
+    arguments["auto-dismiss"] = extra_options.get("auto-dismiss", True)
+    arguments["on-source-error"] = extra_options.get(
+        "on-source-error", "report")
+    arguments["on-target-error"] = extra_options.get(
+        "on-target-error", "report")
+    if "bitmap" in extra_options:
+        arguments["bitmap"] = extra_options["bitmap"]
+        if "bitmap-mode" in extra_options:
+            arguments["bitmap-mode"] = extra_options["bitmap-mode"]
+    if "filter-node-name" in extra_options:
+        arguments["filter-node-name"] = extra_options["filter-node-name"]
+    return "blockdev-backup", arguments
+
+
+@fail_on
+def blockdev_backup(vm, source, target, **extra_options):
+    cmd, arguments = blockdev_backup_qmp_cmd(source, target, **extra_options)
+    timeout = int(extra_options.pop("timeout", 600))
+    if "bitmap" in arguments:
+        info = block_bitmap.get_bitmap_by_name(vm, source, arguments["bitmap"])
+        assert info, "Bitmap '%s' not exists in device '%s'" % (
+            arguments["bitmap"], source)
+        auto_disable_bitmap = extra_options.pop("auto_disable_bitmap", True)
+        if auto_disable_bitmap and info.get("status") != "disabled":
+            block_bitmap.block_dirty_bitmap_disable(
+                vm, source, arguments["bitmap"])
+    vm.monitor.cmd(cmd, arguments)
+    job_utils.wait_until_block_job_completed(vm, source, timeout)
+
+
+@fail_on
+def blockdev_batch_backup(vm, source_lst, target_lst,
+                          bitmap_lst, **extra_options):
+    actions = []
+    bitmap_add_cmd = "block-dirty-bitmap-add"
+    timeout = int(extra_options.pop("timeout", 600))
+    for idx, src in enumerate(source_lst):
+        backup_cmd, arguments = blockdev_backup_qmp_cmd(
+            src, target_lst[idx], **extra_options)
+        actions.append({"type": backup_cmd, "data": arguments})
+        bitmap_data = {"node": source_lst[idx], "name": bitmap_lst[idx]}
+        granularity = extra_options.get("granularity")
+        persistent = extra_options.get("persistent")
+        if granularity is not None:
+            bitmap_data["granularity"] = int(granularity)
+        if persistent is not None:
+            bitmap_data["persistent"] = persistent
+        actions.append({"type": bitmap_add_cmd, "data": bitmap_data})
+    arguments = {"actions": actions}
+    vm.monitor.cmd("transaction", arguments)
+    map(lambda job: job_utils.wait_until_block_job_completed(
+        vm, job, timeout), source_lst)
+
+
+@fail_on
+def incremental_backup(vm, source, target, bitmap, **extra_options):
     """
     Do incremental backup with bitmap
 
     :param vm: VM object
-    :param node: device ID or node-name
+    :param source: device ID or node-name
     :param target: target device node-name or ID
-    :param wait: wait for backup job finished or not
+    :params bitmap: bitmap name on source device
+    :param extra_options: extra arguments for blockdev-backup command
     """
-    options = {
-        "device": node,
-        "target": target,
-        "sync": "incremental"}
-    if bitmap:
-        options["bitmap"] = bitmap
-        info = block_bitmap.get_bitmap_by_name(vm, node, bitmap)
-        assert info, "Bitmap '%s' not exists in device '%s'" % (bitmap, node)
-        if info["status"] != "disabled":
-            block_bitmap.block_dirty_bitmap_disable(vm, node, bitmap)
-    return blockdev_backup(vm, options, wait)
+    if extra_options is None:
+        extra_options = dict()
+    extra_options["sync"] = "incremental"
+    extra_options["bitmap"] = bitmap
+    return blockdev_backup(vm, source, target, **extra_options)
 
 
 @fail_on
-def full_backup(vm, node, target, wait=True):
+def full_backup(vm, source, target, **extra_options):
     """ Do full backup for node"""
-    options = {
-        "device": node,
-        "target": target,
-        "sync": "full"}
-    return blockdev_backup(vm, options, wait)
+    if extra_options is None:
+        extra_options = dict()
+    extra_options["sync"] = "full"
+    return blockdev_backup(vm, source, target, **extra_options)
 
 
-@utils_scheduling.timeout(MAX_JOB_TIMEOUT)
-def wait_for_event(monitor, event):
-    """wait for get event in monitor timeout in seconds"""
-    monitor.clear_event(event)
-    while True:
-        if monitor.get_event(event):
-            break
-        time.sleep(0.1)
+def create_image_by_params(vm, params, image_name):
+    """Create blockd device with vm by params"""
+    image = sp_admin.volume_define_by_params(image_name, params)
+    vm.verify_alive()
+    image.hotplug(vm)
+    return image
 
 
-@fail_on
-def create_target_block_device(vm, params, backing_info):
-    """Create target backup device by qemu"""
-    jobs = list()
-    image_dir = data_dir.get_data_dir()
-    random_id = utils_misc.generate_random_id()
-    img_node_name = "img_%s" % random_id
-    dev_node_name = "dev_%s" % random_id
-    image_size = align_image_size(params["image_size"])
-    filename = storage.get_image_filename(params, image_dir)
-    image_create_options = {
-        "driver": params["image_type"],
-        "filename": filename,
-        "size": 0}
-    image_add_options = {
-        "driver": params["image_type"],
-        "filename": filename,
-        "node-name": img_node_name}
-    format_image_options = {
-        "driver": params["image_format"],
-        "size": image_size,
-        "file": img_node_name}
-    add_device_options = {
-        "driver": params["image_format"],
-        "file": image_add_options["node-name"],
-        "node-name": dev_node_name}
-    if backing_info:
-        format_image_options.update(
-            {"backing-file": backing_info["backing-file"],
-             "backing-fmt": backing_info["backing-fmt"]})
-        add_device_options.update({"backing": backing_info["backing"]})
+def format_storage_volume(img, filesystem, partition="mbr"):
+    """
+    format data disk with virt-format
+    :param img: qemuImg object will be format
+    :param filesystem:  filesystem want to make
+    :param partition: partition type MBR or GPT
+    """
+    selinux_mode = process.getoutput("getenforce", shell=True)
     try:
-        jobs += [blockdev_create(vm, image_create_options)]
-        blockdev_add(vm, image_add_options)
-        jobs += [blockdev_create(vm, format_image_options)]
-        blockdev_add(vm, add_device_options)
+        process.system("setenforce 0", shell=True)
+        utils_libguestfs.virt_format(
+            img.image_filename,
+            filesystem=filesystem,
+            image_format=img.image_format,
+            partition="mbr")
     finally:
-        list(map(partial(job_utils.job_dismiss, vm), jobs))
-    if get_block_node_by_name(vm, dev_node_name):
-        return dev_node_name, filename
-    return None, None
-
-
-def align_image_size(image_size):
-    """
-    Get target image size align with 512
-
-    :return: image size in Bytes
-    """
-    image_size = utils_numeric.normalize_data_size(
-        image_size, 'B', 1024)
-    return utils_numeric.align_value(image_size, 512)
+        process.system("setenforce %s" % selinux_mode, shell=True)

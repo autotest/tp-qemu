@@ -671,6 +671,7 @@ def run(test, params, env):
 
         # Create first VM
         params['smp'] = 1
+        params["vcpu_sockets"] = 1
         params['vms'] = "vm0"
         preprocess(test, params, env)
 

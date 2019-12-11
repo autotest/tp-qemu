@@ -22,6 +22,7 @@ from virttest import env_process
 from virttest import utils_net
 from virttest import data_dir
 from virttest import storage
+from avocado import TestCancel
 
 
 class BaseVirtTest(object):
@@ -111,12 +112,29 @@ class QemuGuestAgentTest(BaseVirtTest):
     @error_context.context_aware
     def _check_ga_pkg(self, session, cmd_check_pkg):
         '''
-        Check if the package is installed
+        Check if the package is installed, for rhel8 need to check
+        if the current pkg is the latest one.
+
         :param session: use for sending cmd
         :param cmd_check_pkg: cmd to check if ga pkg is installed
         '''
-        error_context.context("Check whether qemu-ga is installed.", logging.info)
+        error_context.context("Check whether qemu-ga is installed.",
+                              logging.info)
         s, o = session.cmd_status_output(cmd_check_pkg)
+        if s == 0 and self.params.get("os_variant", "") == 'rhel8':
+            # qemu-guest-agent-2.12.0-88.module+el8.1.0+4233+bc44be3f.x86_64
+            error_context.context("Check if the installed pkg is the latest"
+                                  " one for rhel8 guest.", logging.info)
+            version_list = []
+            build_latest = re.sub(r'/', '-', self.qga_pkg_latest_url)
+            for pkg in [o, build_latest]:
+                pattern = r"guest-agent-(\d+.\d+.\d+-\d+).module"
+                qga_v = re.findall(pattern, pkg, re.I)[0]
+                version_list.append(qga_v)
+            logging.info("The installed and the latest pkg version is"
+                         " %s" % version_list)
+            if version_list[1] != version_list[0]:
+                return False
         return s == 0
 
     @error_context.context_aware
@@ -126,11 +144,64 @@ class QemuGuestAgentTest(BaseVirtTest):
         :param session: use for sending cmd
         :param cmd_check_status: cmd to check if ga service is started
         '''
-        error_context.context("Check whether qemu-ga service is started.", logging.info)
+        error_context.context("Check whether qemu-ga service is started.",
+                              logging.info)
         s, o = session.cmd_status_output(cmd_check_status)
         return s == 0
 
     @error_context.context_aware
+    def _get_latest_pkg(self):
+        """
+        get latest qemu-guest-agent rpm package url.
+        :return: rpm pkg list
+        """
+        virt_module_stream = self.params.get("virt_module_stream", "")
+        guest_name = self.params.get("guest_name")
+        arch = self.params["vm_arch_name"]
+        download_root = self.params["download_root_url"]
+        query_timeout = 180
+
+        error_context.context("Check if brew command is presented.",
+                              logging.info)
+        try:
+            avo_path.find_command("brew")
+        except avo_path.CmdNotFoundError as detail:
+            raise TestCancel(str(detail))
+
+        error_context.context("Get latest virt module tag of %s"
+                              " stream." % virt_module_stream,
+                              logging.info)
+        # target release,such as 810,811
+        target_release = re.findall(r'rhel(\d+)-\d+', guest_name, re.I)[0]
+        # get tag pattern,such as module-virt-8.1-80101xxxxx
+        if virt_module_stream == "rhel":
+            # for slow train,didn't know 810 or 811.
+            # module-virt-rhel-801xxx
+            target_release = target_release[:-1]
+        tag_version = "0".join(target_release)
+        # module-virt-8.1-80101 or module-virt-rhel-801
+        platform_tag = "module-virt-%s-%s" % (virt_module_stream,
+                                              tag_version)
+        get_latest_mdl_tag_cmd = "brew list-targets |grep"
+        get_latest_mdl_tag_cmd += " %s |sort -r |head -n 1" % platform_tag
+        latest_mdl_tag = process.system_output(get_latest_mdl_tag_cmd,
+                                               shell=True,
+                                               timeout=query_timeout
+                                               ).strip().split()[0].decode()
+        error_context.context("Get qemu-guest-agent rpm pkg url.",
+                              logging.info)
+        get_brew_latest_pkg_cmd = "brew --quiet --topdir=%s" % download_root
+        get_brew_latest_pkg_cmd += " list-tagged %s" % latest_mdl_tag
+        get_brew_latest_pkg_cmd += " --path --arch=%s" % arch
+        get_brew_latest_pkg_cmd += " |grep qemu-guest-agent-[0-9]"
+
+        rpm_url = process.system_output(get_brew_latest_pkg_cmd,
+                                        shell=True,
+                                        timeout=query_timeout
+                                        ).strip().decode()
+        logging.info("Qemu-guest-agent rpm pkg url is %s" % rpm_url)
+        return rpm_url
+
     def gagent_install(self, session, vm):
         """
         install qemu-ga pkg in guest.
@@ -139,10 +210,30 @@ class QemuGuestAgentTest(BaseVirtTest):
         """
         error_context.context("Try to install 'qemu-guest-agent' package.",
                               logging.info)
-        s, o = session.cmd_status_output(self.gagent_install_cmd)
-        if s:
-            self.test.fail("Could not install qemu-guest-agent package"
-                           " in VM '%s', detail: '%s'" % (vm.name, o))
+        if self.params.get("os_variant", "") == 'rhel8':
+            cmd = self.params["gagent_pkg_check_cmd"]
+            s_check, o_check = session.cmd_status_output(cmd)
+            if s_check == 0:
+                error_context.context("Remove the original guest agent pkg.",
+                                      logging.info)
+                session.cmd("rpm -e %s" % o_check.strip())
+            self.gagent_install_cmd = "rpm -ivh %s" % self.qga_pkg_latest_url
+
+        error_context.context("Install qemu-guest-agent pkg in guest.",
+                              logging.info)
+        s_inst, o_inst = session.cmd_status_output(self.gagent_install_cmd)
+        if s_inst != 0:
+            self.test.fail("qemu-guest-agent install failed,"
+                           " the detailed info:\n%s." % o_inst)
+        if self.params.get("os_variant", "") == 'rhel8' and s_check == 0:
+            error_context.context("A new pkg is installed, so restart"
+                                  " qemu-guest-agent service.",
+                                  logging.info)
+            restart_cmd = self.params["gagent_restart_cmd"]
+            s_rst, o_rst = session.cmd_status_output(restart_cmd)
+            if s_rst != 0:
+                self.test.fail("qemu-guest-agent service restart failed,"
+                               " the detailed info:\n%s." % o_rst)
 
     @error_context.context_aware
     def gagent_uninstall(self, session, vm):
@@ -224,10 +315,14 @@ class QemuGuestAgentTest(BaseVirtTest):
         if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
             self._open_session_list.append(session)
+            if self.params.get("os_variant", "") == 'rhel8':
+                error_context.context("Get the latest qemu-guest-agent pkg"
+                                      " for rhel8 guest.", logging.info)
+                self.qga_pkg_latest_url = self._get_latest_pkg()
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 logging.info("qemu-ga is already installed.")
             else:
-                logging.info("qemu-ga is not installed.")
+                logging.info("qemu-ga is not installed or need to update.")
                 self.gagent_install(session, self.vm)
 
             if self._check_ga_service(session, params.get("gagent_status_cmd")):

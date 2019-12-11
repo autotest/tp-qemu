@@ -1,3 +1,5 @@
+import time
+
 from avocado import fail_on
 from virttest import utils_misc
 
@@ -68,18 +70,26 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
     assert finished, "wait for block job complete event timeout in %s seconds" % timeout
 
 
+@fail_on
 def block_job_dismiss(vm, job_id, timeout=120):
     """
     Dismiss block job when job in concluded state
     """
     job = get_block_job_by_id(vm, job_id)
     if job.get("auto-dismiss", True) is False:
-        return _job_dismiss(vm, job_id, True, timeout)
+        _job_dismiss(vm, job_id, True, timeout)
+        time.sleep(0.1)
+        job = get_block_job_by_id(vm, job_id)
+        assert not job, "Block job '%s' exists" % job_id
 
 
+@fail_on
 def job_dismiss(vm, job_id, timeout=120):
     """dismiss job when job status is concluded"""
-    return _job_dismiss(vm, job_id, False, timeout)
+    _job_dismiss(vm, job_id, False, timeout)
+    time.sleep(0.1)
+    job = get_job_by_id(vm, job_id)
+    assert not job, "Job '%s' exists" % job_id
 
 
 @fail_on

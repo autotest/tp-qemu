@@ -3,12 +3,12 @@ import re
 
 from virttest import error_context
 from virttest import utils_disk
+from virttest import env_process
 from virttest import utils_misc
 from virttest import utils_numeric
 from virttest import utils_test
 
-from virttest.qemu_capabilities import Flags
-from virttest.qemu_devices import qdevices
+from provider.block_devices_plug import BlockDevicesPlug
 
 
 @error_context.context_aware
@@ -17,79 +17,52 @@ def run(test, params, env):
     Test hotplug of block devices.
 
     1) Boot up guest with/without block device(s).
-    2) Hoplug block device and verify
+    2) Hotplug block device and verify.
     3) Do read/write data on hotplug block.
-    4) Unplug block device and verify
+    4) Unplug block device and verify.
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
-    def _find_all_disks(session):
-        """ Find all disks in guest. """
-        global all_disks
-        if windows:
-            all_disks = set(session.cmd('wmic diskdrive get index').split()[1:])
-        else:
-            all_disks = utils_misc.list_linux_guest_disks(session)
-        return all_disks
+    def configure_images_params():
+        """ Configure the images params. """
+        for i, name in enumerate(data_imgs):
+            boot_drive = params['boot_drive_%s' % name] if params.get(
+                    'boot_drive_%s' % name) else params['boot_drive']
+            drive_format = params['drive_format_%s' % name] if params.get(
+                    'drive_format_%s' % name) else params['drive_format']
+            image_name = params['image_name_%s' % name] if params.get(
+                    'image_name_%s' % name) else 'images/storage%d' % i
+            image_size = params['image_size_%s' % name] if params.get(
+                    'image_size_%s' % name) else '1G'
+            params['boot_drive_%s' % name] = boot_drive
+            params['drive_format_%s' % name] = drive_format
+            params['image_name_%s' % name] = image_name
+            params['image_size_%s' % name] = image_size
+            params['remove_image_%s' % name] = 'yes'
+            params['force_create_image_%s' % name] = 'yes'
+            if set_drive_bus:
+                params['drive_bus_%s' % name] = str(i + 1)
+            image_params = params.object_params(name)
+            env_process.preprocess_image(test, image_params, name)
 
     def run_sub_test(test_name):
         """ Run subtest before/after hotplug/unplug device. """
-        error_context.context("Running sub test '%s'." % test_name, logging.info)
+        error_context.context(
+                "Running sub test '%s'." % test_name, logging.info)
         utils_test.run_virt_sub_test(test, params, env, test_name)
-
-    def wait_plug_disks(session, action, disks_before_plug, excepted_num):
-        """ Wait plug disks completely. """
-        if not utils_misc.wait_for(lambda: len(disks_before_plug ^ _find_all_disks(
-                session)) == excepted_num, 60, step=1.5):
-            disks_info_win = ('wmic logicaldisk get drivetype,name,description '
-                              '& wmic diskdrive list brief /format:list')
-            disks_info_linux = 'lsblk -a'
-            disks_info = session.cmd(disks_info_win if windows else disks_info_linux)
-            logging.debug("The details of disks:\n %s" % disks_info)
-            test.fail("Failed to {0} devices from guest, need to {0}: {1}, "
-                      "actual {0}: {2}".format(action, excepted_num,
-                                               len(disks_before_plug ^ all_disks)))
-        return disks_before_plug ^ all_disks
-
-    def create_block_devices(image):
-        """ Create block devices. """
-        return vm.devices.images_define_by_params(
-            image, params.object_params(image), 'disk')
-
-    def get_block_devices(objs):
-        """ Get block devices. """
-        if isinstance(objs, str):
-            return [dev for dev in vm.devices if dev.get_param("id") == objs]
-        dtype = qdevices.QBlockdevNode if vm.check_capability(
-            Flags.BLOCKDEV) else qdevices.QDrive
-        return [dev for dev in objs if not isinstance(dev, dtype)]
-
-    def plug_block_devices(action, plug_devices):
-        """ Plug block devices. """
-        error_context.context("%s block device (iteration %d)" %
-                              (action.capitalize(), iteration), logging.info)
-        session = vm.wait_for_login(timeout=timeout)
-        disks_before_plug = _find_all_disks(session)
-        plug_devices = plug_devices if action == 'hotplug' else plug_devices[::-1]
-        for device in plug_devices:
-            if not getattr(vm.devices, 'simple_%s' % action)(device, vm.monitor)[1]:
-                test.fail("Failed to %s device '%s'." % (action, device))
-
-        num = 1 if action == 'hotplug' else len(data_imgs)
-        plugged_disks = wait_plug_disks(session, action, disks_before_plug, num)
-        session.close()
-        return plugged_disks
 
     def format_disk_win():
         """ Format disk in windows. """
-        error_context.context("Format disk %s in windows." % new_disk, logging.info)
-        session = vm.wait_for_login(timeout=timeout)
-        if disk_index is None and disk_letter is None:
+        error_context.context(
+                "Format disk %s in windows." % plug[0], logging.info)
+        session = vm.wait_for_login()
+        utils_disk.update_windows_disk_attributes(session, plug)
+        if not disk_index and not disk_letter:
             drive_letters.append(
                 utils_disk.configure_empty_windows_disk(
-                    session, new_disk, params['image_size_%s' % img])[0])
+                    session, plug[0], params['image_size_%s' % img])[0])
         elif disk_index and disk_letter:
             utils_misc.format_windows_disk(
                 session, disk_index[index], disk_letter[index])
@@ -100,30 +73,34 @@ def run(test, params, env):
         """ Run io test on the hot plugged disks. """
         error_context.context(
             "Run io test on the hot plugged disks.", logging.info)
-        session = vm.wait_for_login(timeout=timeout)
-        if windows:
+        session = vm.wait_for_login()
+        if is_windows:
             drive_letter = drive_letters[index]
             test_cmd = disk_op_cmd % (drive_letter, drive_letter)
             test_cmd = utils_misc.set_winutils_letter(session, test_cmd)
         else:
-            test_cmd = disk_op_cmd % (new_disk, new_disk)
+            test_cmd = disk_op_cmd % ('/dev/%s' % plug[0],
+                                      '/dev/%s' % plug[0])
         session.cmd(test_cmd, timeout=disk_op_timeout)
         session.close()
 
-    def get_disk_size(did):
+    def _get_disk_size(did):
         """
         Get the disk size from guest.
 
         :param did: the disk of id, e.g. sdb,sda for linux, 1, 2 for windows
         :return: the disk size
         """
-        session = vm.wait_for_login(timeout=timeout)
-        if windows:
-            script = '{}_{}'.format("disk", utils_misc.generate_random_string(6))
-            cmd = "echo %s > {0} && diskpart /s {0} && del /f {0}".format(script)
+        session = vm.wait_for_login()
+        if is_windows:
+            script = '{}_{}'.format(
+                    "disk",  utils_misc.generate_random_string(6))
             p = r'Disk\s+%s\s+[A-Z]+\s+(?P<size>\d+\s+[A-Z]+)\s+'
-            disk_info = session.cmd(cmd % 'list disk')
-            size = re.search(p % did, disk_info, re.I | re.M).groupdict()['size'].strip()
+            disk_info = session.cmd(
+                    "echo %s > {0} && diskpart /s {0} && "
+                    "del /f {0}".format(script) % 'list disk')
+            size = re.search(p % did, disk_info,
+                             re.I | re.M).groupdict()['size'].strip()
         else:
             size = utils_disk.get_linux_disks(session)[did][1].strip()
         logging.info('The size of disk %s is %s' % (did, size))
@@ -141,17 +118,17 @@ def run(test, params, env):
             'Check whether the size of the disk[%s] hot plugged is equal to '
             'excepted size(%s).' % (did, excepted_size), logging.info)
         value, unit = re.search(r"(\d+\.?\d*)\s*(\w?)", excepted_size).groups()
-        if utils_numeric.normalize_data_size(get_disk_size(did), unit) != value:
+        if utils_numeric.normalize_data_size(_get_disk_size(did), unit) != value:
             test.fail('The size of disk %s is not equal to excepted size(%s).'
                       % (did, excepted_size))
 
     data_imgs = params.get("images").split()[1:]
+    set_drive_bus = params.get("set_drive_bus", "no") == "yes"
     disk_index = params.objects("disk_index")
     disk_letter = params.objects("disk_letter")
     disk_op_cmd = params.get("disk_op_cmd")
     disk_op_timeout = int(params.get("disk_op_timeout", 360))
-    timeout = int(params.get("login_timeout", 360))
-    windows = params["os_type"] == 'windows'
+    is_windows = params["os_type"] == 'windows'
 
     sub_test_after_plug = params.get("sub_type_after_plug")
     sub_test_after_unplug = params.get("sub_type_after_unplug")
@@ -159,33 +136,27 @@ def run(test, params, env):
     shutdown_after_plug = sub_test_after_plug == 'shutdown'
     need_plug = params.get("need_plug", 'no') == "yes"
     need_check_disk_size = params.get('check_disk_size', 'no') == 'yes'
-
     drive_letters = []
-    unplug_devs = []
-    global all_disks
-    all_disks = set()
 
+    configure_images_params()
+    params["start_vm"] = "yes"
+    env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    vm.wait_for_login()
 
+    plug = BlockDevicesPlug(vm)
     for iteration in range(int(params.get("repeat_times", 3))):
-        data_imgs_devs = {img: create_block_devices(img) for img in data_imgs}
-        for index, img in enumerate(data_imgs_devs):
-            data_devs = data_imgs_devs[img]
+        for index, img in enumerate(data_imgs):
             if need_plug:
-                new_disk = plug_block_devices('hotplug', data_devs).pop()
-
-                if windows:
-                    if iteration == 0:
-                        format_disk_win()
+                plug.hotplug_devs_serial(img)
+                if is_windows and not iteration:
+                    format_disk_win()
                 if need_check_disk_size:
-                    check_disk_size(new_disk if windows else new_disk[5:],
+                    check_disk_size(plug[0] if is_windows else plug[0],
                                     params['image_size_%s' % img])
-
                 if disk_op_cmd:
                     run_io_test()
-            unplug_devs.extend(get_block_devices(
-                data_devs) if need_plug else get_block_devices(img))
         if sub_test_after_plug:
             run_sub_test(sub_test_after_plug)
         if shutdown_after_plug:
@@ -193,9 +164,6 @@ def run(test, params, env):
 
         if sub_test_before_unplug:
             run_sub_test(sub_test_before_unplug)
-
-        plug_block_devices('unplug', unplug_devs)
-        unplug_devs.clear()
-
+        plug.unplug_devs_serial(' '.join(data_imgs))
         if sub_test_after_unplug:
             run_sub_test(sub_test_after_unplug)

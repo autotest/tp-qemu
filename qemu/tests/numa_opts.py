@@ -15,19 +15,7 @@ def run(test, params, env):
 
     dbg("starting numa_opts test...")
 
-    # work around a test runner bug that makes it override test-specific "mem"
-    # and "smp" options unconditionally, so we override them manually if
-    # necessary, using the mem_override/smp_override options:
-    mem_override = params.get("mem_override")
-    if mem_override:
-        params["mem"] = mem_override
-    smp_override = params.get("smp_override")
-    if smp_override:
-        params["smp"] = smp_override
-
-    # we start the VM manually because of the mem/smp workaround above:
     vm = env.get_vm(params["main_vm"])
-    vm.create(params=params)
 
     numa = vm.monitors[0].info_numa()
     dbg("info numa reply: %r", numa)

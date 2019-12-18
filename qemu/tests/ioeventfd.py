@@ -12,6 +12,7 @@ from virttest import utils_test
 from virttest import qemu_qtree
 from avocado.utils import process
 from provider.storage_benchmark import generate_instance
+from qemu.tests.virtio_serial_file_transfer import transfer_data
 
 
 @error_context.context_aware
@@ -41,14 +42,35 @@ def run(test, params, env):
             2.6 Check the ioeventfd=on via /proc/$PID/fd/.
             2.7 Compare the output of 'ls -l /proc/$PID/fd/', the fds with
                 "off" should be less than the one with "on".
+        Scenario 3:
+            3.1 Boot guest with ioeventfd=off and port attched to virtio_serial_pci.
+            3.2 Execute info qtree in QMP monitor, info qtree should show the
+                ioeventfd = false.
+            3.3 Check the ioeventfd=off via /proc/$PID/fd/.
+            3.4 Transfer data via the virtserialport.
+            3.5 Boot guest with ioeventfd=on attched to one virtio_serial_pci.
+            3.6 Execute info qtree in QMP monitor, info qtree should show the
+                ioeventfd = true.
+            3.7 Check the ioeventfd=on via /proc/$PID/fd/.
+            3.8 Compare the output of 'ls -l /proc/$PID/fd/', the fds with
+                "off" should be less than the one with "on".
+            3.9 Transfer data via the virtserialport.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
     def _set_ioeventfd_options():
-        """ Set the ioeventfd options. """
-        if params['drive_format'] == 'virtio':
+        """
+        Set the ioeventfd options.
+
+        :return: device id with parameter ioeventfd
+        """
+        dev_type = params.get("dev_type")
+        if dev_type == "virtio_serial":
+            params['virtio_serial_extra_params_vs1'] = ioeventfd
+            dev_id = 'virtio_serial_pci0'
+        elif params['drive_format'] == 'virtio':
             params['blk_extra_params_image1'] = ioeventfd
             dev_id = 'image1'
         elif params['drive_format'] == 'scsi-hd':
@@ -166,6 +188,11 @@ def run(test, params, env):
         if params.get('reboot', 'no') == 'yes':
             error_context.context('Reboot the guest.', logging.info)
             session = _iozone_test(vm.reboot(session, timeout=timeout))
+        if params.get('data_transfer', 'no') == 'yes':
+            if os_type == 'windows':
+                session = utils_test.qemu.windrv_check_running_verifier(
+                    session, vm, test, params["driver_name"])
+            transfer_data(params, vm)
         session.close()
         vm.destroy(gracefully=True)
     if params.get('compare_fd', 'no') == 'yes':

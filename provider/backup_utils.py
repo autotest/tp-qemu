@@ -70,6 +70,32 @@ def blockdev_create(vm, **options):
     job_utils.job_dismiss(vm, options["job-id"], timeout)
 
 
+def blockdev_stream_qmp_cmd(device, **extra_options):
+    if not isinstance(extra_options, dict):
+        extra_options = dict()
+    random_id = utils_misc.generate_random_string(4)
+    job_id = "%s_%s" % (device, random_id)
+    arguments = {"device": device, "job-id": job_id}
+    arguments["speed"] = int(extra_options.get("speed", 0))
+    if "base" in extra_options:
+        arguments["base"] = extra_options["base"]
+    if "base-node" in extra_options:
+        arguments["base-node"] = extra_options["base-node"]
+    if "snapshot-file" in extra_options:
+        arguments["snapshot-file"] = extra_options["snapshot-file"]
+    arguments["auto-dismiss"] = extra_options.get("auto-dismiss", True)
+    arguments["auto-finalize"] = extra_options.get("auto-finalize", True)
+    return "block-stream", arguments
+
+
+def blockdev_stream(vm, device, **extra_options):
+    timeout = int(extra_options.pop("timeout", 600))
+    cmd, arguments = blockdev_stream_qmp_cmd(device, **extra_options)
+    vm.monitor.cmd(cmd, arguments)
+    job_id = arguments.get("job-id", device)
+    job_utils.wait_until_block_job_completed(vm, job_id, timeout)
+
+
 def blockdev_backup_qmp_cmd(source, target, **extra_options):
     """Generate blockdev-backup command"""
     if not isinstance(extra_options, dict):

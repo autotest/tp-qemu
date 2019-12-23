@@ -99,7 +99,7 @@ def run(test, params, env):
         free_mem = utils_misc.get_free_mem(session, "windows")
         free_disk = utils_misc.get_free_disk(session, "C:")
         start_cmd = r'"%s\heavyload.exe"' % params["install_path"]
-        start_cmd = add_option(start_cmd, 'CPU', params["smp"])
+        start_cmd = add_option(start_cmd, 'CPU', vm.cpuinfo.smp)
         start_cmd = add_option(start_cmd, 'MEMORY', free_mem)
         start_cmd = add_option(start_cmd, 'FILE', free_disk)
     else:

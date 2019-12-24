@@ -10,6 +10,37 @@ from provider.virt_storage.storage_admin import sp_admin
 from provider import job_utils
 
 
+def copy_out_dict_if_exists(params_in, keys):
+    """
+    get sub-dict from by keys
+
+    :param params_in: original dict
+    :param keys: list or dict, key list or key with default value
+    :return dict: sub-dict of params_in
+    """
+    params_out = dict()
+    if not isinstance(params_in, dict):
+        params_in = dict()
+    if isinstance(keys, list):
+        keys = params_in.fromkeys(keys, None)
+    for key, default in keys.items():
+        val = params_in.get(key, default)
+        if val is None:
+            continue
+        if key in ["speed", "granularity", "buf-size", "timeout"]:
+            params_out[key] = int(val)
+            continue
+        if key in ["auto-finalize", "auto-dismiss", "unmap", "persistent"]:
+            if val in ["yes", "true", "on", True]:
+                params_out[key] = True
+                continue
+            elif val in ["no", "false", "off", False]:
+                params_out[key] = False
+                continue
+        params_out[key] = val
+    return params_out
+
+
 @fail_on
 def generate_tempfile(vm, root_dir, filename, size="10M", timeout=720):
     """Generate temp data file in VM"""
@@ -68,6 +99,35 @@ def blockdev_create(vm, **options):
     timeout = int(options.pop("timeout", 360))
     vm.monitor.cmd("blockdev-create", options)
     job_utils.job_dismiss(vm, options["job-id"], timeout)
+
+
+def blockdev_mirror_qmp_cmd(source, target, **extra_options):
+    random_id = utils_misc.generate_random_string(4)
+    job_id = "%s_%s" % (source, random_id)
+    options = [
+        "format",
+        "node-name",
+        "replaces",
+        "sync",
+        "mode",
+        "granularity",
+        "speed",
+        "copy-mode",
+        "buf-size",
+        "unmap"]
+    arguments = copy_out_dict_if_exists(extra_options, options)
+    arguments["device"] = source
+    arguments["target"] = target
+    arguments["job-id"] = job_id
+    return "blockdev-mirror", arguments
+
+
+def blockdev_mirror(vm, source, target, **extra_options):
+    cmd, arguments = blockdev_mirror_qmp_cmd(source, target, **extra_options)
+    timeout = int(extra_options.pop("timeout", 600))
+    vm.monitor.cmd(cmd, arguments)
+    job_id = arguments.get("job-id", source)
+    job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
 
 def blockdev_stream_qmp_cmd(device, **extra_options):

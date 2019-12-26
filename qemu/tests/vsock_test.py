@@ -169,9 +169,6 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
     session = vm.wait_for_login()
-    # TODO: Close selinux as temporary workaround for qemu bug 1656738
-    # should be removed when fixed
-    session.cmd_output("setenforce 0")
     nc_vsock_bin = compile_nc_vsock(test, vm, session)
     vsock_dev = params["vsocks"].split()[0]
     guest_cid = vm.devices.get(vsock_dev).get_param("guest-cid")

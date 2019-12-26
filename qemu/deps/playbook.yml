@@ -1,0 +1,90 @@
+---
+- name: deploy kar on L1 guest
+  hosts: all
+  gather_facts: false
+  vars:
+    kar_repo: "{{kar_repo}}"
+    kar_local: /root/kar
+    root_ca_url: "{{cert_url}}"
+    ansible_ssh_pass: "{{guest_password}}"
+    setup_bridge_sh: "{{setup_br_sh}}"
+    host_log_dir: "{{host_log_files_dir}}"
+    cmd_line: "{{command_line}}"
+    flag: True
+
+  tasks:
+
+    - name: Configure swith
+      shell:
+        cmd: /usr/bin/bash '{{setup_bridge_sh}}'
+        creates: /etc/sysconfig/network-scripts/ifcfg-switch
+
+    - name: Install git
+      package:
+        name:
+          - git
+          - openssl
+        state: present
+
+    - name: Download cert
+      get_url:
+        url: '{{root_ca_url}}'
+        dest: /etc/pki/ca-trust/source/anchors/RH-IT-Root-CA.crt
+        mode: '0644'
+      register: dnld_cert_output
+
+    - name: Update certificate
+      shell: |
+        /usr/bin/update-ca-trust enable
+        /usr/bin/update-ca-trust extract
+      when: dnld_cert_output.changed
+
+# The following two tasks need to be modified, check if kar already deployed, if true, skip.
+    - name: clone kar
+      git:
+        repo: '{{kar_repo}}'
+        dest: '{{kar_local}}'
+        force: yes
+
+    - name: Run bootstrap script
+      command: './Bootstrap.sh'
+      args:
+        chdir: '{{kar_local}}'
+      register: bootstrap_result
+
+    - name: Run case
+      shell:
+        cmd: '{{cmd_line}}'
+        chdir: '{{kar_local}}'
+      register: run_case_result
+      ignore_errors: True
+
+    - name: Get log dir
+      shell:
+        cmd: python3  -c 'from avocado.core import data_dir; print(data_dir.get_logs_dir())'
+      register: guest_log_dir
+      failed_when: guest_log_dir.stdout == ""
+
+    - debug:
+        msg: "Log dir is created"
+      when: guest_log_dir.stdout != ""
+
+    - name: Compress log directory to log.bz2
+      archive:
+        path: '{{guest_log_dir.stdout}}/latest/'
+        dest: '{{guest_log_dir.stdout}}/latest/log.bz2'
+        format: bz2
+
+    - name: Copy log archive to host
+      fetch:
+        src: '{{guest_log_dir.stdout}}/latest/log.bz2'
+        dest: '{{host_log_dir}}'
+
+    - name: Remove local log dir
+      shell:
+        cmd: rm -rf '{{guest_log_dir.stdout}}'
+
+    - name: Check run case result
+      shell:
+        echo "Run test case failed"
+      failed_when: run_case_result is failed

@@ -1,16 +1,19 @@
 import logging
 import re
+import json
 
-from avocado.utils import cpu
-from virttest import error_context
+from avocado.utils import cpu, process
+from virttest import error_context, utils_misc, env_process
+from virttest.compat_52lts import decode_to_text
 
 
 @error_context.context_aware
 def run(test, params, env):
     """
     Qemu reboot test:
-    1) Start qemu to get cpu model supported by host
-    3) Boot guest with the cpu model
+    1) Get cpu model lists supported by host
+    2) Check if current cpu model is in the supported lists, if no, cancel test
+    3) Otherwise, boot guest with the cpu model
     4) Check cpu model name in guest
     5) Check cpu flags in guest(only for linux guest)
     6) Reboot guest
@@ -19,11 +22,18 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+    qemu_binary = utils_misc.get_qemu_binary(params)
+    qmp_cmds = ['{"execute": "qmp_capabilities"}',
+                '{"execute": "query-cpu-definitions", "id": "RAND91"}',
+                '{"execute": "quit"}']
+    cmd = "echo -e '{0}' | {1} -qmp stdio -vnc none -M none | grep return |"\
+          "grep RAND91".format(r"\n".join(qmp_cmds), qemu_binary)
+    output = decode_to_text(process.system_output(cmd, timeout=10,
+                                                  ignore_status=True,
+                                                  shell=True,
+                                                  verbose=False))
+    out = json.loads(output)["return"]
 
-    error_context.context("Start qemu to get support cpu model", logging.info)
-    vm = env.get_vm(params["main_vm"])
-    out = vm.monitor.info("cpu-definitions")
-    vm.destroy()
     model = params["model"]
     model_pattern = params["model_pattern"]
     flags = params["flags"]
@@ -47,11 +57,12 @@ def run(test, params, env):
     else:
         test.cancel("This host doesn't support cpu model %s" % model)
 
-    params["paused_after_start_vm"] = "no"
     params["cpu_model"] = cpu_model
+    params["start_vm"] = "yes"
+    vm_name = params['main_vm']
+    env_process.preprocess_vm(test, params, env, vm_name)
 
-    vm.create(params=params)
-    vm.verify_alive()
+    vm = env.get_vm(vm_name)
     error_context.context("Try to log into guest", logging.info)
     session = vm.wait_for_login()
 

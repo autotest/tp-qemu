@@ -94,13 +94,6 @@ def verify_file_md5(vm, root_dir, filename, timeout=720):
         session.close()
 
 
-@fail_on
-def blockdev_create(vm, **options):
-    timeout = int(options.pop("timeout", 360))
-    vm.monitor.cmd("blockdev-create", options)
-    job_utils.job_dismiss(vm, options["job-id"], timeout)
-
-
 def blockdev_mirror_qmp_cmd(source, target, **extra_options):
     random_id = utils_misc.generate_random_string(4)
     job_id = "%s_%s" % (source, random_id)
@@ -122,12 +115,23 @@ def blockdev_mirror_qmp_cmd(source, target, **extra_options):
     return "blockdev-mirror", arguments
 
 
-def blockdev_mirror(vm, source, target, **extra_options):
-    cmd, arguments = blockdev_mirror_qmp_cmd(source, target, **extra_options)
-    timeout = int(extra_options.pop("timeout", 600))
-    vm.monitor.cmd(cmd, arguments)
-    job_id = arguments.get("job-id", source)
-    job_utils.wait_until_block_job_completed(vm, job_id, timeout)
+def block_commit_qmp_cmd(device, **extra_options):
+    random_id = utils_misc.generate_random_string(4)
+    job_id = "%s_%s" % (device, random_id)
+    options = [
+        'base-node',
+        'base',
+        'top-node',
+        'top',
+        'backing-file',
+        'speed',
+        'filter-node-name',
+        'auto-finalize',
+        'auto-dismiss']
+    arguments = copy_out_dict_if_exists(extra_options, options)
+    arguments["device"] = device
+    arguments["job-id"] = job_id
+    return "block-commit", arguments
 
 
 def blockdev_stream_qmp_cmd(device, **extra_options):
@@ -146,14 +150,6 @@ def blockdev_stream_qmp_cmd(device, **extra_options):
     arguments["auto-dismiss"] = extra_options.get("auto-dismiss", True)
     arguments["auto-finalize"] = extra_options.get("auto-finalize", True)
     return "block-stream", arguments
-
-
-def blockdev_stream(vm, device, **extra_options):
-    timeout = int(extra_options.pop("timeout", 600))
-    cmd, arguments = blockdev_stream_qmp_cmd(device, **extra_options)
-    vm.monitor.cmd(cmd, arguments)
-    job_id = arguments.get("job-id", device)
-    job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
 
 def blockdev_backup_qmp_cmd(source, target, **extra_options):
@@ -179,6 +175,40 @@ def blockdev_backup_qmp_cmd(source, target, **extra_options):
     if "filter-node-name" in extra_options:
         arguments["filter-node-name"] = extra_options["filter-node-name"]
     return "blockdev-backup", arguments
+
+
+@fail_on
+def blockdev_create(vm, **options):
+    timeout = int(options.pop("timeout", 360))
+    vm.monitor.cmd("blockdev-create", options)
+    job_utils.job_dismiss(vm, options["job-id"], timeout)
+
+
+@fail_on
+def blockdev_mirror(vm, source, target, **extra_options):
+    cmd, arguments = blockdev_mirror_qmp_cmd(source, target, **extra_options)
+    timeout = int(extra_options.pop("timeout", 600))
+    vm.monitor.cmd(cmd, arguments)
+    job_id = arguments.get("job-id", source)
+    job_utils.wait_until_block_job_completed(vm, job_id, timeout)
+
+
+@fail_on
+def block_commit(vm, device, **extra_options):
+    cmd, arguments = block_commit_qmp_cmd(device, **extra_options)
+    timeout = int(extra_options.pop("timeout", 600))
+    vm.monitor.cmd(cmd, arguments)
+    job_id = arguments.get("job-id", device)
+    job_utils.wait_until_block_job_completed(vm, job_id, timeout)
+
+
+@fail_on
+def blockdev_stream(vm, device, **extra_options):
+    timeout = int(extra_options.pop("timeout", 600))
+    cmd, arguments = blockdev_stream_qmp_cmd(device, **extra_options)
+    vm.monitor.cmd(cmd, arguments)
+    job_id = arguments.get("job-id", device)
+    job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
 
 @fail_on

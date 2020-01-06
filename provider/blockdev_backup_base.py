@@ -11,6 +11,7 @@ from virttest import qemu_storage
 from virttest import error_context
 from virttest import utils_disk
 from virttest import qemu_vm
+from virttest.qemu_capabilities import Flags
 
 from provider import backup_utils
 from provider.virt_storage.storage_admin import sp_admin
@@ -49,6 +50,9 @@ class BlockdevBackupBaseTest(object):
         self.disks_info = dict()
         self._tmp_dir = data_dir.get_tmp_dir()
 
+    def is_blockdev_mode(self):
+        return self.main_vm.check_capability(Flags.BLOCKDEV)
+
     def get_backup_options(self, params):
         opts = params.objects("backup_options")
         extra_options = params.copy_from_keys(opts)
@@ -68,6 +72,14 @@ class BlockdevBackupBaseTest(object):
         return self.__disk_define_by_params(params, image_name)
 
     def __target_disk_define_by_params(self, params, image_name):
+        if params.get("random_cluster_size") == "yes":
+            blacklist = list(
+                map(int, params.objects("cluster_size_blacklist")))
+            cluster_size = generate_random_cluster_size(blacklist)
+            params["image_cluster_size"] = cluster_size
+            logging.info(
+                "set target image cluster size to '%s'" %
+                cluster_size)
         params.setdefault("target_path", data_dir.get_data_dir())
         return sp_admin.volume_define_by_params(image_name, params)
 

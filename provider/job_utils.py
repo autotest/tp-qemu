@@ -40,14 +40,15 @@ def wait_until_job_status_match(vm, status, device, timeout):
 def wait_until_block_job_completed(vm, job_id, timeout=900):
     """Block until block job completed"""
     def _wait_until_block_job_completed():
-        finished = None
+        finished = False
         status = get_job_status(vm, job_id)
         if status == "pending":
             block_job_finalize(vm, job_id)
+        if status == "ready":
+            block_job_complete(vm, job_id, timeout)
         try:
             for event in vm.monitor.get_events():
                 if event.get("event") != BLOCK_JOB_COMPLETED_EVENT:
-                    finished = False
                     continue
                 data = event.get("data", dict())
                 if job_id in [data.get("id"), data.get("device")]:
@@ -55,8 +56,6 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
                     assert not error, "block backup job finished with error: %s" % error
                     finished = True
                     break
-            else:
-                finished = False
         finally:
             status = get_job_status(vm, job_id)
             if status == "concluded":
@@ -68,6 +67,15 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
         first=0.1,
         timeout=timeout)
     assert finished, "wait for block job complete event timeout in %s seconds" % timeout
+
+
+@fail_on
+def block_job_complete(vm, job_id, timeout=120):
+    info = get_job_by_id(vm, job_id)
+    if info.get("type") == "mirror":
+        wait_until_job_status_match(vm, "ready", job_id, timeout)
+        arguments = {"device": job_id}
+        vm.monitor.cmd("block-job-complete", arguments)
 
 
 @fail_on

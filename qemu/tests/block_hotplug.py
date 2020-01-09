@@ -195,7 +195,7 @@ def run(test, params, env):
             run_sub_test(sub_test_before_unplug)
 
         plug_block_devices('unplug', unplug_devs)
-        unplug_devs.clear()
+        del unplug_devs[:]
 
         if sub_test_after_unplug:
             run_sub_test(sub_test_after_unplug)

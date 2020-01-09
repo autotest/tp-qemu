@@ -12,6 +12,7 @@ from virttest import utils_test
 from virttest.utils_numeric import normalize_data_size
 
 from provider.block_devices_plug import BlockDevicesPlug
+from virttest.qemu_capabilities import Flags
 from provider.storage_benchmark import generate_instance
 
 ENLARGE, SHRINK = ("enlarge", "shrink")
@@ -63,7 +64,9 @@ def run(test, params, env):
             data_image_size + resize_size) if resize_op == ENLARGE else str(
             data_image_size - resize_size)
         logging.info("Start to %s %s to %sB." % (resize_op, plug[0], size))
-        vm.monitor.block_resize(dev, size)
+        args = (None, size, dev) if vm.check_capability(
+                Flags.BLOCKDEV) else (dev, size)
+        vm.monitor.block_resize(*args)
         return size
 
     def _check_img_size(size):

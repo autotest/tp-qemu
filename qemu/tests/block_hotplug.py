@@ -73,9 +73,10 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=timeout)
         disks_before_plug = _find_all_disks(session)
         plug_devices = plug_devices if action == 'hotplug' else plug_devices[::-1]
-        for device in plug_devices:
-            if not getattr(vm.devices, 'simple_%s' % action)(device, vm.monitor)[1]:
-                test.fail("Failed to %s device '%s'." % (action, device))
+        for dev in plug_devices:
+            ret = getattr(vm.devices, 'simple_%s' % action)(dev, vm.monitor)
+            if ret[1] is False:
+                test.fail("Failed to %s device '%s', %s." % (action, dev, ret[0]))
 
         num = 1 if action == 'hotplug' else len(data_imgs)
         plugged_disks = wait_plug_disks(session, action, disks_before_plug, num)

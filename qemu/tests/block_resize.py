@@ -158,6 +158,8 @@ def run(test, params, env):
             error_context.context("Extend disk to %s in guest"
                                   % block_size, logging.info)
             if os_type == 'windows':
+                if int(block_size) >= 2199023256000:
+                    test.error("The volume exceed the maximum clusters.")
                 drive.extend_volume(session, mpoint)
             else:
                 utils_disk.resize_partition_linux(session, partition, str(block_size))

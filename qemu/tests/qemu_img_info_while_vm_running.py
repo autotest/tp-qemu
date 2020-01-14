@@ -16,7 +16,7 @@ def run(test, params, env):
 
     Verify it supports to get information of a running image.
     Including three tests:
-    1. Create a raw image.
+    1. Create a raw/luks image.
        Boot vm using this image.
        'qemu-info' the image.
     2. Create a base qcow2 image.

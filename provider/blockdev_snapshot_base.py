@@ -75,7 +75,6 @@ class BlockDevSnapshotTest(object):
             self.main_vm.destroy()
         if self.is_blockdev_mode():
             self.snapshot_image.base_tag = self.base_tag
-            self.snapshot_image.base_tag = self.base_tag
             self.snapshot_image.base_format = self.base_image.get_format()
             self.snapshot_image.base_image_filename = self.base_image.image_filename
             self.snapshot_image.rebase(self.snapshot_image.params)

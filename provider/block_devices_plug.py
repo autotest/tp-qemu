@@ -251,33 +251,34 @@ class BlockDevicesPlug(object):
         with _LOCK:
             self.vm.devices.set_dirty()
 
-        if isinstance(device, qdevices.QDevice):
-            dev_bus = device.get_param('bus')
-            if bus is None:
-                if self.vm.devices.is_pci_device(device['driver']):
-                    bus = self.vm.devices.get_buses({'aobject': 'pci.0'})[0]
-                if not isinstance(device.parent_bus, (list, tuple)):
-                    device.parent_bus = [device.parent_bus]
-                for parent_bus in device.parent_bus:
-                    for _bus in self.vm.devices.get_buses(parent_bus):
-                        if _bus.bus_item == 'bus':
-                            if dev_bus:
-                                dev_bus_name = dev_bus.rsplit('.')[0]
-                                if _bus.busid:
-                                    if dev_bus_name == _bus.busid:
-                                        bus = _bus
-                                        break
-                            else:
-                                bus = _bus
-                                break
+        with _LOCK:
+            if isinstance(device, qdevices.QDevice):
+                dev_bus = device.get_param('bus')
+                if bus is None:
+                    if self.vm.devices.is_pci_device(device['driver']):
+                        bus = self.vm.devices.get_buses({'aobject': 'pci.0'})[0]
+                    if not isinstance(device.parent_bus, (list, tuple)):
+                        device.parent_bus = [device.parent_bus]
+                    for parent_bus in device.parent_bus:
+                        for _bus in self.vm.devices.get_buses(parent_bus):
+                            if _bus.bus_item == 'bus':
+                                if dev_bus:
+                                    dev_bus_name = dev_bus.rsplit('.')[0]
+                                    if _bus.busid:
+                                        if dev_bus_name == _bus.busid:
+                                            bus = _bus
+                                            break
+                                else:
+                                    bus = _bus
+                                    break
 
-            if bus is not None:
-                with _LOCK:
+                if bus is not None:
                     bus.prepare_hotplug(device)
                     qdev_out = self.vm.devices.insert(device)
 
-        out = device.hotplug(monitor)
-        ver_out = device.verify_hotplug(out, monitor)
+            out = device.hotplug(monitor)
+            ver_out = device.verify_hotplug(out, monitor)
+
         if ver_out is False:
             with _LOCK:
                 self.vm.devices.set_clean()

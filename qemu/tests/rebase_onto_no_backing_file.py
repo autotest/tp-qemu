@@ -1,11 +1,11 @@
 import logging
 import json
 
+from avocado import fail_on
+from avocado.utils import process
+from provider import qemu_img_utils as img_utils
 from virttest import data_dir
-from virttest.qemu_storage import QemuImg
-
-from qemu.tests.qemu_disk_img import QemuImgTest
-from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
+from virttest import qemu_storage
 
 
 def run(test, params, env):
@@ -17,82 +17,104 @@ def run(test, params, env):
     2. boot the guest from the base
     3. create a file in the base disk, calculate its md5sum
     4. shut the guest down
-    5. rebase the snapshot to ""(empty string) onto no backing file
+    5. rebase the snapshot onto no backing file
     6. check the snapshot
     7. boot the guest from the snapshot and check whether the
-        file's md5sum stays same
+    file's md5sum stays same
 
     :param test: Qemu test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    def _get_img_obj_and_params(tag):
-        """Get an QemuImg object and its params based on the tag."""
-        img_param = params.object_params(tag)
-        img = QemuImg(img_param, data_dir.get_data_dir(), tag)
-        return img, img_param
+    def _verify_image_backing_file(info_output, base):
+        """Verify backing image filename and format."""
+        backing_filename = info_output["backing-filename"]
+        backing_format = info_output.get("backing-filename-format")
+        backing_filename_desired = qemu_storage.get_image_repr(base.tag,
+                                                               params,
+                                                               root_dir)
+        if backing_filename != backing_filename_desired:
+            test.fail("backing image name mismatch, got %s, expect %s" % (
+                backing_filename, backing_filename_desired
+                ))
+        if backing_format:
+            backing_format_desired = base.image_format
+            if backing_format != backing_format_desired:
+                test.fail(
+                    "backing image format mismatch, got %s, expect %s" % (
+                        backing_format, backing_format_desired
+                    ))
 
-    def _get_compat_version():
-        """Get snapshot compat version."""
-        if params.get("image_extra_params") is None:
-            # default compat version for now is 1.1
-            return "1.1"
-        return params.get("image_extra_params").split("=")[1]
+    def _verify_qcow2_compatible(info_output, image):
+        """Verify qcow2 compat version."""
+        compat = info_output["format-specific"]["data"]["compat"]
+        compat_desired = image.params.get("qcow2_compatible", "1.1")
+        if compat != compat_desired:
+            test.fail("%s image compat version mismatch, got %s, expect %s" % (
+                image.tag, compat, compat_desired
+            ))
 
-    def _verify_qemu_img_info(output, b_fmt, b_name):
-        """Verify qemu-img info output for this case."""
-        logging.info("Verify snapshot's backing file information.")
-        res = json.loads(output)
-        if (res["backing-filename-format"] != b_fmt or
-                res["backing-filename"] != b_name):
-            test.fail("Backing file information is not correct,"
-                      " got %s." % b_name)
-        compat = res["format-specific"]["data"]["compat"]
-        expected = _get_compat_version()
-        if compat != expected:
-            test.fail("Snapshot's compat mode is not correct,"
-                      " got %s, expected %s." % (compat, expected))
-
-    def _verify_no_backing_file(output):
+    def _verify_no_backing_file(info_output):
         """Verify snapshot has no backing file for this case."""
         logging.info("Verify snapshot has no backing file after rebase.")
-        for key in json.loads(output):
+        for key in info_output:
             if "backing" in key:
-                test.fail("The snapshot has backing file after rebase.")
+                test.fail("the snapshot has backing file after rebase.")
 
-    file = params["guest_file_name"]
-    gen = generate_base_snapshot_pair(params["image_chain"])
-    base, snapshot = next(gen)
-    base_img, _ = _get_img_obj_and_params(base)
-    sn_img, sn_img_params = _get_img_obj_and_params(snapshot)
+    images = params["image_chain"].split()
+    params["image_name_%s" % images[0]] = params["image_name"]
+    params["image_format_%s" % images[0]] = params["image_format"]
+    root_dir = data_dir.get_data_dir()
+    base, sn = (qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
+                for tag in images)
 
-    logging.info("Create a snapshot %s based on %s.", snapshot, base)
-    # workaround to assign system disk's image_name to image_name_image1
-    params["image_name_image1"] = params["image_name"]
-    sn_qit = QemuImgTest(test, params, env, snapshot)
-    sn_qit.create_snapshot()
-    _verify_qemu_img_info(sn_img.info(output="json"),
-                          base_img.image_format, base_img.image_filename)
+    md5sum_bin = params.get("md5sum_bin", "md5sum")
+    sync_bin = params.get("sync_bin", "sync")
 
-    logging.info("Boot a guest up from base image: %s, and create a"
-                 " file %s on the disk.", base, file)
-    base_qit = QemuImgTest(test, params, env, base)
-    base_qit.start_vm()
-    md5 = base_qit.save_file(file)
-    logging.info("Got %s's md5 %s from the base image disk.", file, md5)
-    base_qit.destroy_vm()
+    logging.info("boot guest from base image %s", base.image_filename)
+    vm = img_utils.boot_vm_with_images(test, params, env, (base.tag,))
 
-    sn_img.base_tag, sn_img.base_image_filename = ("null", "null")
-    sn_img.rebase(sn_img_params)
-    _verify_no_backing_file(sn_img.info(output="json"))
-    sn_img.check_image(sn_img_params, data_dir.get_data_dir())
+    guest_file = params["guest_tmp_filename"]
+    logging.info("save tmp file %s in guest", guest_file)
+    img_utils.save_random_file_to_vm(vm, guest_file, 2048 * 100, sync_bin)
 
-    sn_qit = QemuImgTest(test, params, env, snapshot)
-    sn_qit.start_vm()
-    if not sn_qit.check_file(file, md5):
-        test.fail("The file %s's md5 on base image and"
-                  " snapshot file are different." % file)
-    sn_qit.destroy_vm()
+    logging.info("get md5 value of tmp file %s", guest_file)
+    session = vm.wait_for_login()
+    hashval = img_utils.check_md5sum(guest_file, md5sum_bin, session)
+    logging.info("tmp file %s md5: %s", guest_file, hashval)
+    session.close()
+    vm.destroy()
 
-    for qit in (base_qit, sn_qit):
-        qit.clean()
+    logging.info("create a snapshot %s based on %s", sn.tag, base.tag)
+    sn.create(sn.params)
+
+    logging.info("verify backing chain")
+    info_output = json.loads(sn.info(output="json"))
+    _verify_image_backing_file(info_output, base)
+
+    logging.info("verify snapshot %s qcow2 compat version", sn.tag)
+    _verify_qcow2_compatible(info_output, sn)
+
+    logging.info("rebase snapshot %s to none", sn.tag)
+    sn.base_tag = "null"
+    fail_on((process.CmdError,))(sn.rebase)(sn.params)
+
+    logging.info("verify backing chain after rebase")
+    info_output = json.loads(sn.info(output="json"))
+    _verify_no_backing_file(info_output)
+
+    logging.info("check image %s after rebase", sn.tag)
+    sn.check_image(sn.params, root_dir)
+
+    logging.info("boot guest from snapshot %s", sn.tag)
+    vm = img_utils.boot_vm_with_images(test, params, env, (sn.tag,))
+
+    logging.info("check the md5 value of tmp file %s after rebase", guest_file)
+    session = vm.wait_for_login()
+    img_utils.check_md5sum(guest_file, md5sum_bin, session,
+                           md5_value_to_check=hashval)
+    session.close()
+    vm.destroy()
+
+    # if nothing goes wrong, remove snapshot
+    params["remove_image_%s" % sn.tag] = "yes"

@@ -44,8 +44,6 @@ def run(test, params, env):
         _create_os_snapshot()
         env_process.preprocess_vm(test, params, env, "avocado-vt-vm1")
         vm1 = env.get_vm("avocado-vt-vm1")
-        # remove sn in 'images' to prevent boot with two images
-        vm1.params["images"] = "image1"
     else:
         vm1 = env.get_vm("avocado-vt-vm1")
     vm2 = vm1.clone(name=params["second_vm_name"])
@@ -56,8 +54,8 @@ def run(test, params, env):
 
     if params.get("create_snapshot", "no") == "yes":
         # boot vm2 up using the external snapshot
-        vm2.params["image_name_image1"] = params["image_name_sn"]
-        vm2.params["image_format_image1"] = params["image_format_sn"]
+        vm2.params["boot_drive_image1"] = "no"
+        vm2.params["boot_drive_sn"] = "yes"
         img_file = None
         logging.info("Boot a seconde vm from the snapshot.")
     else:

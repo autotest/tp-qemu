@@ -5,7 +5,6 @@ import logging
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
-from qemu.tests import vioser_in_use
 
 
 @error_context.context_aware
@@ -19,7 +18,7 @@ def check_bg_running(vm, params):
              else return False
     """
     session = vm.wait_for_login()
-    target_process = params["target_process"]
+    target_process = params.get("target_process", "")
     if params['os_type'] == 'linux':
         output = session.cmd_output_safe('pgrep -l %s' % target_process)
     else:
@@ -58,7 +57,6 @@ def run(test, params, env):
                               logging.info)
         stress_thread = None
         wait_time = float(params.get("wait_bg_time", 60))
-        target_process = params.get("target_process", "")
         bg_stress_run_flag = params.get("bg_stress_run_flag")
         # Need to set bg_stress_run_flag in some cases to make sure all
         # necessary steps are active
@@ -113,6 +111,7 @@ def run(test, params, env):
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     driver = params["driver_name"]
+    extra_driver_verify = params.objects("extra_driver_verify")
     timeout = int(params.get("login_timeout", 360))
 
     vm = env.get_vm(params["main_vm"])
@@ -124,6 +123,11 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test, driver,
                                                                 timeout)
+        if extra_driver_verify:
+            for ext_driver in extra_driver_verify:
+                session = utils_test.qemu.setup_win_driver_verifier(session,
+                                                                    ext_driver, vm)
+
         session.close()
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")
@@ -154,6 +158,7 @@ def run(test, params, env):
                 stress_thread.join(timeout=timeout, suppress_exception=suppress_exception)
         if vm.is_alive():
             if driver == "vioser":
+                from qemu.tests import vioser_in_use
                 vioser_in_use.kill_host_serial_pid(params, vm)
             run_bg_test_sep(bg_stress_test)
     elif run_bg_flag == "after_bg_test":

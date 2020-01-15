@@ -4,6 +4,7 @@ import logging
 from virttest import error_context
 from virttest import utils_net
 from virttest import env_process
+from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -90,9 +91,20 @@ def run(test, params, env):
         # NICs matched.
         logging.info(msg)
 
+    def _check_ip_number():
+        for index, nic in enumerate(vm.virtnet):
+            guest_ip = utils_net.get_guest_ip_addr(session_srl, nic.mac, os_type,
+                                                   ip_version="ipv4")
+            if not guest_ip:
+                return False
+        return True
+
     # Check all the interfaces in guest get ips
-    nic_interface = []
     session_srl = vm.wait_for_serial_login(timeout=int(params.get("login_timeout", 360)))
+    if not utils_misc.wait_for(_check_ip_number, 1000, step=10):
+        test.error("Timeout when wait for nics to get ip")
+
+    nic_interface = []
     for index, nic in enumerate(vm.virtnet):
         logging.info("index %s nic" % index)
         guest_ip = utils_net.get_guest_ip_addr(session_srl, nic.mac, os_type,
@@ -103,3 +115,4 @@ def run(test, params, env):
         nic_interface.append(guest_ip)
     session_srl.close()
     logging.info("All the [ %s ] NICs get IPs." % nics_num)
+    vm.destroy()

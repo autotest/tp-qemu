@@ -281,7 +281,12 @@ class IozoneLinuxCfg(object):
         host_path = os.path.join(data_dir.get_deps_dir(), 'iozone', iozone_pkg)
         self.download_path = os.path.join('/home', iozone_pkg)
         self.iozone_inst = os.path.join('/home', 'iozone_inst')
-        self.arch = 'linux-AMD64' if 'x86_64' in machine() else 'linux-powerpc64'
+        if 'ppc64' in machine():
+            self.arch = 'linux-powerpc64'
+        elif 'aarch64' in machine():
+            self.arch = 'linux-arm'
+        else:
+            self.arch = 'linux-AMD64'
         self.cmd = 'cd %s/src/current && make clean && make %s' % (self.iozone_inst,
                                                                    self.arch)
         self.iozone_path = '%s/src/current/iozone' % self.iozone_inst

@@ -33,7 +33,18 @@ def get_bitmaps(output):
 
     :param output: query-block output
     """
-    return {d["device"]: d.get("dirty-bitmaps", []) for d in output}
+    bitmaps_dict, default = {}, []
+    for item in output:
+        # Notes:
+        #    if dirty-bitmaps in output, output is BlockInfo
+        #    format, else output is BlockDeviceInfo format
+        if "dirty-bitmaps" in item:
+            bitmaps = item.get("dirty-bitmaps", default)
+        else:
+            bitmaps = item["inserted"].get("dirty-bitmaps", default)
+        key = item["device"] or item["inserted"]["node-name"]
+        bitmaps_dict[key] = bitmaps
+    return bitmaps_dict
 
 
 def check_bitmap_existence(bitmaps, bitmap_params, expected_existence=True):
@@ -58,7 +69,11 @@ def block_dirty_bitmap_add(vm, bitmap_params):
     logging.debug("add dirty bitmap %s to %s", bitmap, target_device)
     mapping = {}
     for item in ["persistent", "disabled"]:
-        mapping[item] = {"on": {item: True}, "off": {item: False}, "default": {item: None}}
+        mapping[item] = {
+            "on": {
+                item: True}, "off": {
+                item: False}, "default": {
+                item: None}}
     kargs = dict(node=target_device, name=bitmap)
     for item in ["persistent", "disabled"]:
         kargs.update(mapping[item][bitmap_params.get(item, "default")])

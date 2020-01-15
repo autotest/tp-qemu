@@ -3,6 +3,8 @@ import time
 import os
 import re
 import base64
+import random
+import string
 
 import aexpect
 
@@ -10,6 +12,7 @@ from avocado.utils import genio
 from avocado.utils import path as avo_path
 from avocado.utils import process
 from avocado.core import exceptions
+from aexpect.exceptions import ShellTimeoutError
 
 from virttest import error_context
 from virttest import guest_agent
@@ -461,24 +464,34 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
-        error_context.context("Check can-offline field of guest agent.", logging.info)
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        error_context.context("Check can-offline field of guest agent.",
+                              logging.info)
         vcpus_info = self.gagent.get_vcpus()
         cpu_num_qga = len(vcpus_info)
         for vcpu in vcpus_info:
             if params.get("os_type") == "linux":
-                if vcpu["logical-id"] == 0 and vcpu["can-offline"] is True:
-                    test.fail("The first logical vcpu can't be offline.")
+                if vcpu["logical-id"] == 0:
+                    vcpu_can_offline_qga = vcpu["can-offline"]
+                    cmd = "find /sys/devices/system/cpu/cpu0/ -name online"
+                    if session.cmd_output(cmd):
+                        vcpu_can_offline_guest = True
+                    else:
+                        vcpu_can_offline_guest = False
+                    if vcpu_can_offline_qga != vcpu_can_offline_guest:
+                        test.fail("The first logical vcpu's can-offline field"
+                                  " isn't aligned with what it's in guest.")
                 if vcpu["logical-id"] != 0 and vcpu["can-offline"] is False:
-                    test.fail("Linux guest cpu can't be offline from qga "
-                              "which isn't expected.")
+                    test.fail("The vcpus should be able to offline "
+                              "except vcpu0.")
             if params.get("os_type") == "windows" and vcpu["can-offline"]:
-                test.fail("Windows guest cpu can be offline from qga "
-                          "which isn't expected.")
+                test.fail("All vcpus should not be able to offline in"
+                          " windows guest.")
 
         error_context.context("Check cpu number.", logging.info)
-        session = self._get_session(params, self.vm)
         output = session.cmd_output(params["get_cpu_cmd"])
-        session.close()
 
         if params.get("os_type") == "windows":
             cpu_list = output.strip().split('\n')
@@ -513,6 +526,133 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         vcpus_info = self.gagent.get_vcpus()
         if vcpus_info[vcpus_num - 1]["online"] is not False:
             test.fail("the vcpu status is not changed as expected")
+
+    @error_context.context_aware
+    def gagent_check_set_mem_blocks(self, test, params, env):
+        """
+        Get/set logical memory blocks via guest agent.
+        Steps:
+        1) Get the size of memory block unit via guest agent
+        2) Offline one memory block which can be removable in guest
+        3) Verify memory blocks via guest agent is offline
+        4) Verify memory block unit size
+        5) Offline some memory blocks which can be offline via guest agent
+        6) Verify memory are decreased in guest
+        7) Online the memory blocks which are offline before
+        8) Verify memory are the same as before
+        9) Offline a memroy block which can't be offline
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+        cmd_get_mem = "free -m |grep -i mem"
+        cmd_offline_mem = "echo 0 > /sys/devices/system/memory/memory%s/online"
+        # record the memory blocks phys-index which is set to offline
+        mem_off_phys_index_list = []
+
+        error_context.context("Get the size of memory block unit.",
+                              logging.info)
+        mem_block_info = self.gagent.get_memory_block_info()["size"]
+        mem_unit_size = mem_block_info / float(1024 * 1024)
+
+        error_context.context("Offline one memory block in guest.",
+                              logging.info)
+        mem_size_original = session.cmd_output(cmd_get_mem).strip().split()[1]
+        mem_blocks = self.gagent.get_memory_blocks()
+        mem_list_index = 0
+        for memory in mem_blocks:
+            if memory["online"] and memory["can-offline"]:
+                mem_phys_index = memory["phys-index"]
+                mem_off_phys_index_list.append(mem_phys_index)
+                break
+            mem_list_index += 1
+        else:
+            logging.info("All memory blocks are offline already.")
+            return
+        session.cmd(cmd_offline_mem % mem_phys_index)
+
+        error_context.context("Verify it's changed to offline status via"
+                              " agent.", logging.info)
+        mem_blocks = self.gagent.get_memory_blocks()
+        if mem_blocks[mem_list_index]["online"] is not False:
+            test.fail("%s phys-index memory block is still online"
+                      " via agent." % mem_phys_index)
+
+        error_context.context("Verify the memory block unit size.",
+                              logging.info)
+        mem_size = session.cmd_output(cmd_get_mem)
+        mem_size_aft_offline_guest = mem_size.strip().split()[1]
+        delta = float(mem_size_original) - float(mem_size_aft_offline_guest)
+        if delta != mem_unit_size:
+            test.fail("Memory block info is not correct\nit's %s via agent\n"
+                      "it's %s via guest." % (mem_unit_size, delta))
+
+        error_context.context("Offline some memory blocks which can be"
+                              " offline via agent.", logging.info)
+        # record the memory blocks which will be offline
+        mem_blocks_list = []
+        count = 0
+        # offline 5 or less memory blocks
+        for memory in mem_blocks:
+            if memory["online"] and memory["can-offline"]:
+                mem_phys_index = memory["phys-index"]
+                mem_off_phys_index_list.append(mem_phys_index)
+                mem_obj = {"online": False, "can-offline": True,
+                           "phys-index": mem_phys_index}
+                mem_blocks_list.append(mem_obj)
+                count += 1
+                if count >= 5:
+                    break
+        if mem_blocks_list is not None:
+            self.gagent.set_memory_blocks(mem_blocks_list)
+            error_context.context("Verify memory size is decreased after"
+                                  " offline.", logging.info)
+            mem_size = session.cmd_output(cmd_get_mem)
+            mem_size_aft_offline_qga = mem_size.strip().split()[1]
+            if float(mem_size_aft_offline_qga) >= \
+                    float(mem_size_aft_offline_guest):
+                test.fail("Memory isn't decreased\nsize before is %s\n"
+                          "size after is %s" % (mem_size_aft_offline_guest,
+                                                mem_size_aft_offline_qga))
+        else:
+            logging.info("The memory blocks are already offline,"
+                         " no need to do offline operation.")
+
+        error_context.context("Recovery the memory blocks which are set to"
+                              " offline before.", logging.info)
+        # record the memory blocks which will be online
+        mem_blocks_list = []
+        for mem_phys_index in mem_off_phys_index_list:
+            mem_obj = {"online": True, "can-offline": True,
+                       "phys-index": mem_phys_index}
+            mem_blocks_list.append(mem_obj)
+        self.gagent.set_memory_blocks(mem_blocks_list)
+        mem_size_final = session.cmd_output(cmd_get_mem).strip().split()[1]
+        if float(mem_size_final) != float(mem_size_original):
+            test.fail("Memory is not the same with original\n"
+                      "original size is %s\nfinal size is %s." %
+                      (mem_size_original, mem_size_final))
+
+        error_context.context("Offline one memory block which can't be"
+                              " offline.", logging.info)
+        mem_blocks = self.gagent.get_memory_blocks()
+        for memory in mem_blocks:
+            if memory["online"] and memory["can-offline"] is False:
+                mem_obj_index = memory["phys-index"]
+                break
+        else:
+            logging.info("There is no required memory block that can-offline"
+                         " attribute is False.")
+            return
+        mem_blocks_list = [{"online": False, "can-offline": True,
+                            "phys-index": mem_obj_index}]
+        result = self.gagent.set_memory_blocks(mem_blocks_list)
+        if "operation-failed" not in result[0]["response"]:
+            test.fail("Didn't return the suitable description,"
+                      " the output info is %s." % result)
 
     @error_context.context_aware
     def gagent_check_get_time(self, test, params, env):
@@ -1329,6 +1469,110 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.cmd(cmd_del_file)
 
     @error_context.context_aware
+    def gagent_check_with_selinux(self, test, params, env):
+        """
+        File operation via guest agent when selinux policy is in "Enforcing"
+         mode and "Permissive" mode.
+
+        Steps:
+        1) set selinux policy to "Enforcing" mode in guest
+        2) create and write content to temp file and non temp file
+        3) open the temp file with w+ mode and a+ mode
+        4) open the non temp file with w+ mode and a+ mode
+        5) set selinux policy to "Permissive" in guest
+        6) repeate step3-4
+        7) recovery the selinux policy
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def file_operation(guest_file, open_mode):
+            """
+            open/write/flush/close file test.
+
+            :param guest_file: file in guest
+            :param open_mode: open file mode, "r" is the default value
+            """
+            ret_handle = self.gagent.guest_file_open(guest_file,
+                                                     mode=open_mode)
+            self.gagent.guest_file_write(ret_handle, content)
+            self.gagent.guest_file_flush(ret_handle)
+            self.gagent.guest_file_close(ret_handle)
+
+        def result_check_enforcing():
+            """
+            Can't open guest file via guest agent with different open-mode
+            when selinux policy mode is enforcing.But can open temp file with
+            append mode via guest agent
+            """
+            def check(guest_file, open_mode):
+                error_context.context("Try to open %s with %s mode via"
+                                      " guest agent in enforcing"
+                                      " selinux policy." %
+                                      (guest_file, open_mode),
+                                      logging.info)
+                if "/tmp" in guest_file and open_mode == "a+":
+                    # can open and operate guest file successfully
+                    file_operation(guest_file, open_mode)
+                else:
+                    try:
+                        self.gagent.guest_file_open(guest_file,
+                                                    mode=open_mode)
+                    except guest_agent.VAgentCmdError as detail:
+                        msg = r"failed to open file.*Permission denied"
+                        if not re.search(msg, str(detail)):
+                            test.fail("This is not the desired information: "
+                                      "('%s')" % str(detail))
+                    else:
+                        test.fail("When selinux policy is 'Enforcing', guest"
+                                  " agent should not open %s with %s mode." %
+                                  (guest_file, open_mode))
+            for ch_file in [guest_temp_file, guest_file]:
+                check(ch_file, 'a+')
+                check(ch_file, 'w+')
+
+        def result_check_permissive():
+            """
+            Open guest file via guest agent with different open-mode
+            when selinux policy mode is permissive.
+            """
+            def check(guest_file, open_mode):
+                error_context.context("Try to open %s with %s mode via"
+                                      " guest agent in permissive"
+                                      " selinux policy." %
+                                      (guest_file, open_mode),
+                                      logging.info)
+                # can open and operate guest file successfully
+                file_operation(guest_file, open_mode)
+            for ch_file in [guest_temp_file, guest_file]:
+                check(ch_file, 'a+')
+                check(ch_file, 'w+')
+
+        content = "hello world\n"
+        guest_temp_file = "/tmp/testqga"
+        guest_file = "/home/testqga"
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+        logging.info("Change guest-file related cmd to white list.")
+        self._change_bl(session)
+
+        error_context.context("Create and write content to temp file and"
+                              " non temp file.", logging.info)
+        session.cmd("echo 'hello world' > %s" % guest_temp_file)
+        session.cmd("echo 'hello world' > %s" % guest_file)
+
+        error_context.context("Set selinux policy to 'Enforcing' mode in"
+                              " guest.", logging.info)
+        if session.cmd_output("getenforce").strip() != "Enforcing":
+            session.cmd("setenforce 1")
+        result_check_enforcing()
+
+        error_context.context("Set selinux policy to 'Permissive' mode in"
+                              " guest.", logging.info)
+        session.cmd("setenforce 0")
+        result_check_permissive()
+
+    @error_context.context_aware
     def gagent_check_guest_exec(self, test, params, env):
         """
         Execute a command in the guest via guest-exec cmd,
@@ -1931,6 +2175,52 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("Should return error info.")
 
     @error_context.context_aware
+    def gagent_check_log(self, test, params, env):
+        """
+        Check guest agent logs.
+        Steps:
+        1) start guest-agent to record logs
+        2) issue some guest agent commands
+        3) check agent log, if those commands are recorded
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameterspy
+        :param env: Dictionary with test environment.
+        """
+        def log_check(qga_cmd):
+            """
+            check guest agent log.
+            """
+            error_context.context("Check %s cmd in agent log." % qga_cmd,
+                                  logging.info)
+            log_str = session.cmd_output(get_log_cmd).strip().split('\n')[-1]
+            pattern = r"%s" % qga_cmd
+            if not re.findall(pattern, log_str, re.M | re.I):
+                test.fail("The %s command is not recorded in agent"
+                          " log." % qga_cmd)
+
+        get_log_cmd = params["get_log_cmd"]
+        session = self._get_session(self.params, self.vm)
+        self._open_session_list.append(session)
+        self._change_bl(session)
+
+        error_context.context("Issue some common guest agent commands.",
+                              logging.info)
+        self.gagent.get_time()
+        log_check("guest-get-time")
+
+        tmp_file = params["tmp_file"]
+        content = "hello world\n"
+        ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
+        log_check("guest-file-open")
+
+        self.gagent.guest_file_write(ret_handle, content)
+        log_check("guest-file-write")
+
+        self.gagent.guest_file_read(ret_handle)
+        log_check("guest-file-read")
+
+    @error_context.context_aware
     def gagent_check_with_migrate(self, test, params, env):
         """
         Migration test with guest agent service running.
@@ -1948,6 +2238,158 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent = None
         args = [params.get("gagent_serial_type"), params.get("gagent_name")]
         self.gagent_create(params, self.vm, *args)
+        error_context.context("Verify if guest agent works.", logging.info)
+        self.gagent_verify(self.params, self.vm)
+
+    @error_context.context_aware
+    def gagent_check_umount_frozen(self, test, params, env):
+        """
+        Umount file system while fs freeze.
+
+        Steps:
+        1) boot guest with a new data storage.
+        2) format disk and mount it.
+        3) freeze fs.
+        4) umount fs/offline the volume in guest,
+           for rhel6 guest will umount fail.
+        5) thaw fs.
+        6) mount fs and online it again.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+        def wrap_windows_cmd(cmd):
+            """
+            add header and footer for cmd in order to run it in diskpart tool.
+
+            :param cmd: cmd to be wrapped.
+            :return: wrapped cmd
+            """
+            disk = "disk_" + ''.join(random.sample(string.ascii_letters +
+                                                   string.digits, 4))
+            cmd_header = "echo list disk > " + disk
+            cmd_header += " && echo select disk %s >> " + disk
+            cmd_footer = " echo exit >> " + disk
+            cmd_footer += " && diskpart /s " + disk
+            cmd_footer += " && del /f " + disk
+            cmd += " >> " + disk
+            return " && ".join([cmd_header, cmd, cmd_footer])
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+        image_size_stg0 = params["image_size_stg0"]
+
+        error_context.context("Format the new data disk and mount it.",
+                              logging.info)
+        if params.get("os_type") == "linux":
+            disk_data = list(utils_disk.get_linux_disks(session).keys())
+            mnt_point = utils_disk.configure_empty_disk(
+                session, disk_data[0], image_size_stg0, "linux",
+                labeltype="msdos")
+            src = "/dev/%s1" % disk_data[0]
+        else:
+            disk_index = utils_misc.wait_for(
+                lambda: utils_disk.get_windows_disks_index(session,
+                                                           image_size_stg0),
+                120)
+            if disk_index:
+                logging.info("Clear readonly for disk and online it in windows"
+                             " guest.")
+                if not utils_disk.update_windows_disk_attributes(session,
+                                                                 disk_index):
+                    test.error("Failed to update windows disk attributes.")
+                mnt_point = utils_disk.configure_empty_disk(
+                    session, disk_index[0], image_size_stg0, "windows",
+                    labeltype="msdos")
+            else:
+                test.error("Didn't find any disk_index except system disk.")
+
+        error_context.context("Freeze fs.", logging.info)
+        self.gagent.fsfreeze()
+
+        error_context.context("Umount fs or offline disk in guest.",
+                              logging.info)
+        if params.get("os_type") == "linux":
+            if params['os_variant'] == 'rhel6':
+                try:
+                    session.cmd("umount %s" % mnt_point[0])
+                except ShellTimeoutError:
+                    logging.info("For rhel6 guest, umount fs will fail after"
+                                 " fsfreeze.")
+                else:
+                    test.error("For rhel6 guest, umount fs should fail after"
+                               " fsfreeze.")
+            else:
+                if not utils_disk.umount(src, mnt_point[0], session=session):
+                    test.fail("For rhel7+ guest, umount fs should success"
+                              " after fsfreeze.")
+        else:
+            detail_cmd = ' echo detail disk'
+            detail_cmd = wrap_windows_cmd(detail_cmd)
+            offline_cmd = ' echo offline disk'
+            offline_cmd = wrap_windows_cmd(offline_cmd)
+            did = disk_index[0]
+            logging.info("Detail for 'Disk%s'" % did)
+            details = session.cmd_output(detail_cmd % did)
+            if re.search("Status.*Online", details, re.I | re.M):
+                logging.info("Offline 'Disk%s'" % did)
+                status, output = session.cmd_status_output(offline_cmd % did,
+                                                           timeout=120)
+                if status != 0:
+                    test.fail("Can not offline disk: %s with"
+                              " fsfreeze." % output)
+
+        error_context.context("Thaw fs.", logging.info)
+        try:
+            self.gagent.fsthaw()
+        except guest_agent.VAgentCmdError as detail:
+            if not re.search("fsfreeze is limited up to 10 seconds",
+                             str(detail)):
+                test.error("guest-fsfreeze-thaw cmd failed with: ('%s')"
+                           % str(detail))
+
+        error_context.context("Mount fs or online disk in guest.",
+                              logging.info)
+        if params.get("os_type") == "linux":
+            if not utils_disk.mount(src, mnt_point[0], session=session):
+                if params['os_variant'] != 'rhel6':
+                    test.fail("For rhel7+ guest, mount fs should success"
+                              " after fsthaw.")
+            else:
+                if params['os_variant'] == 'rhel6':
+                    test.fail("For rhel6 guest, mount fs should fail after"
+                              " fsthaw.")
+        else:
+            if not utils_disk.update_windows_disk_attributes(session,
+                                                             disk_index):
+                test.fail("Can't online disk with fsthaw")
+
+    @error_context.context_aware
+    def gagent_check_user_logoff(self, test, params, env):
+        """
+        Check guest agent status when user is logged out.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Check which user is logged in.", logging.info)
+        user_info = session.cmd_output('query user | findstr /i "Active"')
+        login_user_id = user_info.strip().split()[2]
+
+        error_context.context("Make the user log out.", logging.info)
+        try:
+            session.cmd("logoff %s" % login_user_id)
+        except aexpect.ShellProcessTerminatedError as detail:
+            if not re.search("Connection reset by peer", str(detail)):
+                test.error("Error occured with %s." % str(detail))
+        else:
+            test.fail("The user logoff failed.")
+
         error_context.context("Verify if guest agent works.", logging.info)
         self.gagent_verify(self.params, self.vm)
 

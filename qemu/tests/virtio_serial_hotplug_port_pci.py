@@ -13,6 +13,30 @@ from qemu.tests.vioser_in_use import reboot_guest  # pylint: disable=W0611
 from qemu.tests.vioser_in_use import live_migration_guest  # pylint: disable=W0611
 
 
+def get_buses_and_serial_devices(vm, params, char_devices, serials):
+    """
+    Get buses list and serial devices list
+
+    :param vm: VM object to be operated
+    :param params: test params for the device
+    :param char_devices: CharDevice list
+    :param serials: serial device
+    :return: buses list and serial device object list
+    """
+    buses = []
+    serial_devices = []
+    for index, serial_id in enumerate(serials):
+        chardev_id = char_devices[index].get_qid()
+        params['serial_name_%s' % serial_id] = serial_id
+        devices = add_virtserial_device(vm, params, serial_id, chardev_id)
+        for device in devices:
+            if device.child_bus:
+                buses.append(device)
+            else:
+                serial_devices.append(device)
+    return buses, serial_devices
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -26,9 +50,10 @@ def run(test, params, env):
     6. Transfer data between guest and host via port1 and port2
     7. Reboot/system_reset/shudown guest after hotplug(optional)
     8. Transfer data between guest and host via port1 and port2
-    9. Hot-unplug virtio-serial-bus
-    10. Reboot/system_reset/shudown/migration guest after hot-unplug(optional)
-    11. Repeat step 2 to step 10 100 times
+    9. Hot-unplug relative port1 and port2
+    10. Hot-unplug virtio-serial-bus
+    11. Reboot/system_reset/shudown/migration guest after hot-unplug(optional)
+    12. Repeat step 2 to step 10 100 times
 
     :param test: kvm test object
     :param params: Dictionary with the test parameters
@@ -70,18 +95,8 @@ def run(test, params, env):
     vm = env.get_vm(params['main_vm'])
     vm.devices.insert(char_devices)
     serials = params.objects('extra_serials')
-    buses = []
-    serial_devices = []
-    for index, serial_id in enumerate(serials):
-        chardev_id = char_devices[index].get_qid()
-        params['serial_name_%s' % serial_id] = serial_id
-        devices = add_virtserial_device(vm, params, serial_id, chardev_id)
-        for device in devices:
-            if device.child_bus:
-                buses.append(device)
-            else:
-                serial_devices.append(device)
-
+    buses, serial_devices = get_buses_and_serial_devices(
+        vm, params, char_devices, serials)
     for i in range(repeat_times):
         error_context.context("Hotplug/unplug serial devices the %s time"
                               % (i+1), logging.info)
@@ -91,15 +106,19 @@ def run(test, params, env):
 
         # Try hotplug different device with same 'nr'
         if params.get("plug_same_nr") == "yes":
-            serial_devices[1].set_param('bus', serial_devices[0].get_param('bus'))
+            serial_devices[1].set_param('bus',
+                                        serial_devices[0].get_param('bus'))
             serial_devices[1].set_param('nr', pre_nr)
             try:
                 serial_devices[1].hotplug(vm.monitor)
             except QMPCmdError as e:
-                if 'A port already exists at id %d' % pre_nr not in str(e.data):
-                    test.fail('Hotplug fail for %s, not as expected' % str(e.data))
+                if 'A port already exists at id %d' % pre_nr not in str(
+                        e.data):
+                    test.fail(
+                        'Hotplug fail for %s, not as expected' % str(e.data))
             else:
-                test.fail('Hotplug with same "nr" option success while should fail')
+                test.fail(
+                    'Hotplug with same "nr" option success while should fail')
             serial_devices[1].set_param('nr', int(pre_nr) + 1)
         vm.devices.simple_hotplug(serial_devices[1], vm.monitor)
         for device in serial_devices:
@@ -115,10 +134,13 @@ def run(test, params, env):
             run_serial_data_transfer()
 
         if params.get("unplug_pci") == "yes":
+            vm.devices.simple_unplug(serial_devices[0], vm.monitor)
+            vm.devices.simple_unplug(serial_devices[1], vm.monitor)
             out = vm.devices.simple_unplug(buses[0], vm.monitor)
             if out[1] is False:
                 msg = "Still get %s in qtree after unplug" % device
                 test.fail(msg)
             if interrupt_test_after_unplug:
-                logging.info("Run %s after hot-unplug" % interrupt_test_after_unplug)
+                logging.info("Run %s after hot-unplug"
+                             % interrupt_test_after_unplug)
                 run_interrupt_test(interrupt_test_after_unplug)

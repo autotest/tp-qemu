@@ -1,8 +1,8 @@
 import logging
 import re
 
+from avocado.utils import cpu
 from virttest import error_context
-from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -27,7 +27,7 @@ def run(test, params, env):
     model = params["model"]
     model_pattern = params["model_pattern"]
     flags = params["flags"]
-    if utils_misc.get_cpu_vendor(verbose=False) == 'GenuineIntel':
+    if cpu.get_cpu_vendor_name() == 'intel':
         model_ib = "%s-IBRS" % model
         flag_ib = " ibpb ibrs"
         name_ib = ", IBRS( update)?"

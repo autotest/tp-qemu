@@ -80,13 +80,18 @@ def run(test, params, env):
     if not md5:
         test.error("Fail to save tmp file")
     convert_test.destroy_vm()
-    n_params = convert_test.convert()
-    convert_test.compare_test(n_params)
-    convert_test.verify_info(n_params)
-    convert_test.start_vm(n_params)
 
-    # check md5sum after conversion
-    ret = convert_test.check_file(t_file, md5)
-    if not ret:
-        test.error("image content changed after convert")
-    convert_test.clean()
+    cluster_size_lst = params.get("cluster_size_set", "").split()
+    if not cluster_size_lst:
+        cluster_size_lst.append(None)
+    for cluster_size in cluster_size_lst:
+        if cluster_size is not None:
+            logging.info("convert image file with cluster_size=%s." % cluster_size)
+        n_params = convert_test.convert({"image_cluster_size": cluster_size})
+        convert_test.compare_test(n_params)
+        convert_test.verify_info(n_params)
+        convert_test.start_vm(n_params)
+        # check md5sum after conversion
+        if not convert_test.check_file(t_file, md5):
+            test.error("image content changed after convert")
+        convert_test.clean()

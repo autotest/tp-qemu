@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 
@@ -37,7 +36,7 @@ def run(test, params, env):
         """Verify qemu-img info output for this case."""
         def _get_compat_version():
             """Get compat version from params."""
-            return params.get("image_extra_params", "compat=1.1").split("=")[1]
+            return params.get("qcow2_compatible", "1.1")
 
         logging.info("Verify snapshot's backing file information.")
         for image, img_info in zip(images, reversed(output)):
@@ -68,14 +67,18 @@ def run(test, params, env):
 
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
-    hashes = {}
     for image in images[1:]:
         logging.debug("Create snapshot %s based on %s",
                       image.image_filename, image.base_image_filename)
         image.create(image.params)
         info_output = json.loads(image.info(output="json"))
         verify_qemu_img_info_backing_chain(info_output)
-        if image is not active_layer:
+
+    hashes = {}
+    rebase_mode = params.get("rebase_mode", "safe")
+    for image in images:
+        # do not create temp file in intermediate images in unsafe rebase
+        if rebase_mode == "safe" or image in (base, active_layer):
             vm = img_utils.boot_vm_with_images(test, params, env, (image.tag,))
             guest_file = params["guest_tmp_filename"] % image.tag
             logging.debug("Create tmp file %s in image %s", guest_file,
@@ -88,6 +91,14 @@ def run(test, params, env):
                                                         md5sum_bin, session)
             session.close()
             vm.destroy()
+
+    # remove intermediate images before unsafe rebase
+    if rebase_mode == "unsafe":
+        for image in images:
+            if image not in (base, active_layer):
+                logging.debug("Remove the snapshot %s before rebase.",
+                              image.image_filename)
+                image.remove()
 
     cache_mode = params.get("cache_mode")
     msg = "Rebase the snapshot %s to %s"
@@ -102,7 +113,7 @@ def run(test, params, env):
         for image in images:
             if image not in (base, active_layer):
                 logging.info("Remove the snapshot %s.", image.image_filename)
-                os.unlink(image.image_filename)
+                image.remove()
 
     vm = img_utils.boot_vm_with_images(test, params, env, (active_layer.tag,))
     session = vm.wait_for_login(timeout=timeout)

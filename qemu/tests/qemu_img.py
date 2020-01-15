@@ -187,12 +187,12 @@ def run(test, params, env):
         logging.info("Send signal to qemu-img")
         end_time = time.time() + timeout
         while time.time() < end_time:
-            time.sleep(1)
             pid = process.system_output("pidof qemu-img",
                                         ignore_status=True,
                                         verbose=False).decode().strip()
             if bool(pid):
                 break
+            time.sleep(1)
         try:
             os.kill(int(pid), signal.SIGUSR1)
         except Exception as error:

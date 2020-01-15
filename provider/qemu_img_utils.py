@@ -1,20 +1,14 @@
 """qemu-img related functions."""
 import avocado
-import functools
+import contextlib
 import logging
 import tempfile
 
-from virttest import data_dir
+from avocado.utils import path
 from virttest import env_process
-from virttest import qemu_storage
 from virttest import utils_misc
 
 from avocado.utils import process
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
 
 def boot_vm_with_images(test, params, env, images=None, vm_name=None):
@@ -31,41 +25,6 @@ def boot_vm_with_images(test, params, env, images=None, vm_name=None):
     vm = env.get_vm(vm_name)
     vm.verify_alive()
     return vm
-
-
-def qemu_img_compare(params, image0, image1, strict=False, force_share=False):
-    """qemu-img compare command wrapper function."""
-    image0_params = params.object_params(image0)
-    image1_params = params.object_params(image1)
-    root_dir = data_dir.get_data_dir()
-    image0 = qemu_storage.QemuImg(image0_params, root_dir, image0)
-    image1 = qemu_storage.QemuImg(image1_params, root_dir, image1)
-    compare_cmd = ["qemu-img compare"]
-    secret_objects = image0._secret_objects + image1._secret_objects
-    if secret_objects:
-        compare_cmd.append(" ".join(secret_objects))
-    if strict:
-        compare_cmd.append("-s")
-    if force_share:
-        compare_cmd.append("-U")
-    filename0, filename1 = image0.image_filename, image1.image_filename
-    if image0.encryption_config.key_secret:
-        filename0 = "'%s'" % qemu_storage.get_image_json(
-            image0.tag, image0_params, root_dir)
-    if image1.encryption_config.key_secret:
-        filename1 = "'%s'" % qemu_storage.get_image_json(
-            image1.tag, image1_params, root_dir)
-    compare_cmd.extend((filename0, filename1))
-    logging.debug("Compare %s with %s, strict: %s",
-                  filename0, filename1, strict)
-    result = process.run(" ".join(compare_cmd), ignore_status=True, shell=True)
-    if result.exit_status == 0:
-        logging.debug(result.stdout_text)
-    else:
-        logging.error(result.stdout_text)
-        if result.exit_status == 1:
-            raise avocado.TestFail(result.stdout_text)
-        raise avocado.TestError(result.stdout_text)
 
 
 def save_random_file_to_vm(vm, save_path, count, sync_bin, blocksize=512):
@@ -106,36 +65,53 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
     return md5_value
 
 
-def strace(trace_events=None, output_file=None):
-    """
-    Add strace to trace subprocess calls of avocado.utils.process.
+def find_strace():
+    """Find strace path or cancel the test."""
+    logging.debug("Check if strace is available")
+    try:
+        return path.find_command("strace")
+    except path.CmdNotFoundError as detail:
+        raise avocado.TestCancel(str(detail))
 
-    :param trace_events: events tor trace
-    :param output_file: if presented, redirect the output to the file
-    """
-    def _subprocess(*args, **kargs):
-        if args:
-            args = list(args)
-            args[0] = "%s %s" % (strace_cmd, args[0])
-            args = tuple(args)
-        else:
-            kargs["cmd"] = "%s %s" % (strace_cmd, kargs["cmd"])
-        return cls(*args, **kargs)
 
-    strace_cmd = ["strace"]
+@contextlib.contextmanager
+def strace(image, trace_events=None, output_file=None, trace_child=False):
+    """
+    Add strace to trace image related operations.
+
+    :param image: image object
+    :param trace_events: events list to trace
+    :param output_file: if presented, redirect the output to file
+    :param trace_child: True to enable tracing child processes with -f
+    """
+    image_cmd = image.image_cmd
+    strace_prefix = ["strace"]
     if trace_events:
-        strace_cmd.extend(("-e", ",".join(trace_events)))
+        strace_prefix.extend(("-e", ",".join(trace_events)))
     if output_file:
-        strace_cmd.extend(("-o", output_file))
-    strace_cmd = " ".join(strace_cmd)
-    # store original object before patching.
-    cls = process.SubProcess
+        strace_prefix.extend(("-o", output_file))
+    if trace_child:
+        strace_prefix.append("-f")
+    strace_prefix = " ".join(strace_prefix)
+    image.image_cmd = strace_prefix + " " + image_cmd
+    try:
+        yield
+    finally:
+        image.image_cmd = image_cmd
 
-    def _add_strace(func):
-        @functools.wraps(func)
-        def func_wrapper(*args, **kargs):
-            with mock.patch("avocado.utils.process.SubProcess",
-                            side_effect=_subprocess):
-                return func(*args, **kargs)
-        return func_wrapper
-    return _add_strace
+
+def check_flag(strace_log, target_file, flag):
+    """
+    Check if flag is presented in the syscalls related to file.
+
+    :param strace_log: strace log file
+    :param target_file: syscall-related file
+    :param flag: flag to check
+    """
+    logging.debug("Check strace output: %s", strace_log)
+    with open(strace_log) as fd:
+        logging.debug("syscalls related to %s", target_file)
+        lines = [l for l in fd if target_file in l]
+        for line in lines:
+            logging.debug(line.strip())
+        return any(flag in line for line in lines)

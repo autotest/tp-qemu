@@ -513,7 +513,7 @@ def run(test, params, env):
                     if (speeds[i][j] == 0):
                         output[-1][0] = "INF"
                         output[-1][3] = "(inf)"
-                    elif distance(output[-1][4], speeds[i][j]) > limit:
+                    elif output[-1][4] > speeds[i][j]:
                         err += "vm%d:%d, " % (i, j)
                         output[-1][0] = "FAIL"
 

@@ -215,7 +215,6 @@ class QemuGuestAgentTest(BaseVirtTest):
         if not self.gagent:
             self.test.error("Could not find guest agent object "
                             "for VM '%s'" % vm.name)
-
         self.gagent.verify_responsive()
         logging.info(self.gagent.cmd("guest-info"))
 
@@ -2392,6 +2391,67 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         error_context.context("Verify if guest agent works.", logging.info)
         self.gagent_verify(self.params, self.vm)
+
+    @error_context.context_aware
+    def gagent_check_blacklist(self, test, params, env):
+        """
+        Verify the blacklist of config file, linux guest only
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def bl_check(qga_cmd):
+            """
+            check if qga cmd is disabled.
+            """
+            try:
+                if qga_cmd == "guest-file-open":
+                    self.gagent.guest_file_open(guest_file, mode="a+")
+                else:
+                    self.gagent.cmd(qga_cmd)
+            except guest_agent.VAgentCmdError as detail:
+                if re.search("%s has been disabled" % qga_cmd, str(detail)):
+                    logging.info("%s cmd is disabled." % qga_cmd)
+                else:
+                    test.fail("%s cmd failed with:"
+                              "('%s')" % (qga_cmd, str(detail)))
+            else:
+                test.fail("%s cmd is not in blacklist,"
+                          " pls have a check." % qga_cmd)
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Try to execute guest-file-open command which"
+                              " is in blacklist by default.", logging.info)
+
+        randstr = utils_misc.generate_random_string(5)
+        guest_file = "/tmp/qgatest" + randstr
+        bl_check("guest-file-open")
+
+        error_context.context("Try to execute guest-info command which is"
+                              " not in blacklist.",
+                              logging.info)
+        self.gagent.cmd("guest-info")
+
+        error_context.context("Change command in blacklist and restart"
+                              " agent service.", logging.info)
+        session.cmd("cp /etc/sysconfig/qemu-ga /etc/sysconfig/qemu-ga-bk")
+        try:
+            session.cmd(params["black_list_change_cmd"])
+            session.cmd(params["gagent_restart_cmd"])
+
+            error_context.context("Try to execute guest-file-open and "
+                                  "guest-info commands again.", logging.info)
+            ret_handle = int(self.gagent.guest_file_open(guest_file,
+                                                         mode="a+"))
+            self.gagent.guest_file_close(ret_handle)
+            bl_check("guest-info")
+        finally:
+            session.cmd("rm -rf %s" % guest_file)
+            cmd = "mv -f /etc/sysconfig/qemu-ga-bk /etc/sysconfig/qemu-ga"
+            session.cmd(cmd)
 
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)

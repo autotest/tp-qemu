@@ -236,7 +236,7 @@ class BlockDevicesPlug(object):
 
             for dev in reversed(devices_created):
                 if dev.get_qid().endswith(img):
-                    self._hotplugged_devs[img].insert(-1, dev)
+                    self._hotplugged_devs[img].insert(0, dev)
                     bus = dev.get_param('bus')
                     if bus:
                         bus_name = bus.rsplit('.')[0]

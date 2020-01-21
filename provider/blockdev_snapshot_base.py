@@ -76,12 +76,14 @@ class BlockDevSnapshotTest(object):
         if self.is_blockdev_mode():
             self.snapshot_image.base_tag = self.base_tag
             self.snapshot_image.base_format = self.base_image.get_format()
-            self.snapshot_image.base_image_filename = self.base_image.image_filename
+            base_image_filename = self.base_image.image_filename
+            self.snapshot_image.base_image_filename = base_image_filename
             self.snapshot_image.rebase(self.snapshot_image.params)
         self.clone_vm.create()
         self.clone_vm.verify_alive()
-        self.mount_data_disks()
-        self.verify_data_file()
+        if self.base_tag != "image1":
+            self.mount_data_disks()
+            self.verify_data_file()
 
     def create_snapshot(self):
         if self.is_blockdev_mode():
@@ -145,7 +147,8 @@ class BlockDevSnapshotTest(object):
         if not self.main_vm.is_alive():
             self.main_vm.create()
         self.main_vm.verify_alive()
-        self.configure_data_disk()
+        if self.base_tag != "image1":
+            self.configure_data_disk()
         self.prepare_snapshot_file()
 
     def post_test(self):

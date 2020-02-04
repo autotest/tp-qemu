@@ -1,6 +1,7 @@
 import time
 import logging
 
+from avocado.utils import process
 from virttest import error_context
 from qemu.tests.virtio_serial_file_transfer import transfer_data
 from qemu.tests.vioser_in_use import run_bg_test
@@ -71,8 +72,17 @@ def run(test, params, env):
                 error_context.context("Load  module %s" % module, logging.info)
                 session.cmd("modprobe %s" % module)
         session.close()
+    host_script = params['host_script']
+    check_pid_cmd = 'pgrep -f %s' % host_script
+    host_proc_pid = process.getoutput(check_pid_cmd, shell=True)
+    if host_proc_pid:
+        logging.info("Kill the first serial process on host")
+        result = process.system('kill -9 %s' % host_proc_pid, shell=True)
+        if result != 0:
+            logging.error("Failed to kill the first serial process on host!")
     if transfer_data(params, vm) is not True:
         test.fail("Serial data transfter test failed.")
     vm.reboot()
+    vm.verify_kernel_crash()
     session = vm.wait_for_login(timeout=timeout)
     session.close()

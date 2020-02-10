@@ -74,12 +74,17 @@ class BallooningTest(MemoryBaseTest):
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
         gcompare_threshold = int(self.params.get("guest_compare_threshold", 100))
-        # for windows illegal test:set windows guest balloon in (1,100),free memory will less than 150M
+        guest_mem_ratio = self.params.get("guest_mem_ratio")
+        if guest_mem_ratio:
+            gcompare_threshold = max(gcompare_threshold,
+                                     float(guest_mem_ratio) * self.ori_mem)
+        # for windows illegal test:set windows guest balloon in (1,100),free
+        # memory of the OS shoul be as small as possible.
         if ballooned_mem >= self.ori_mem - 100:
             timeout = float(self.params.get("login_timeout", 600))
             session = self.vm.wait_for_login(timeout=timeout)
             try:
-                if self.get_win_mon_free_mem(session) > 150:
+                if self.get_win_mon_free_mem(session) > gcompare_threshold:
                     self.test.fail("Balloon_min test failed %s" % step)
             finally:
                 session.close()

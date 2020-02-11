@@ -107,7 +107,7 @@ def run(test, params, env):
             logging.info)
         cmd = "%s info %s" % (qemu_img, snapshots[1])
         if re.search("backing file",
-                     process.system_output(cmd, ignore_status=True)):
+                     process.system_output(cmd, ignore_status=True).decode('utf-8')):
             test.fail("should no backing-file in this step")
     finally:
         files = " ".join(snapshots)

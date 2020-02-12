@@ -94,6 +94,16 @@ def verify_file_md5(vm, root_dir, filename, timeout=720):
         session.close()
 
 
+def blockdev_snapshot_qmp_cmd(source, target, **extra_options):
+    options = [
+        "node",
+        "overlay"]
+    arguments = copy_out_dict_if_exists(extra_options, options)
+    arguments["node"] = source
+    arguments["overlay"] = target
+    return "blockdev-snapshot", arguments
+
+
 def blockdev_mirror_qmp_cmd(source, target, **extra_options):
     random_id = utils_misc.generate_random_string(4)
     job_id = "%s_%s" % (source, random_id)
@@ -185,6 +195,14 @@ def blockdev_create(vm, **options):
 
 
 @fail_on
+def blockdev_snapshot(vm, source, target, **extra_options):
+    cmd, arguments = blockdev_snapshot_qmp_cmd(source, target, **extra_options)
+    timeout = int(extra_options.pop("timeout", 600))
+    vm.monitor.cmd(cmd, arguments)
+    job_utils.wait_until_block_job_completed(vm, timeout)
+
+
+@fail_on
 def blockdev_mirror(vm, source, target, **extra_options):
     cmd, arguments = blockdev_mirror_qmp_cmd(source, target, **extra_options)
     timeout = int(extra_options.pop("timeout", 600))
@@ -226,6 +244,20 @@ def blockdev_backup(vm, source, target, **extra_options):
     vm.monitor.cmd(cmd, arguments)
     job_id = arguments.get("job-id", source)
     job_utils.wait_until_block_job_completed(vm, job_id, timeout)
+
+
+@fail_on
+def blockdev_batch_snapshot(vm, source_lst, target_lst, **extra_options):
+    actions = []
+    timeout = int(extra_options.pop("timeout", 600))
+    jobs_id = []
+    for idx, src in enumerate(source_lst):
+        snapshot_cmd, arguments = blockdev_snapshot_qmp_cmd(
+            src, target_lst[idx], **extra_options)
+        actions.append({"type": snapshot_cmd, "data": arguments})
+    arguments = {"actions": actions}
+    vm.monitor.cmd("transaction", arguments)
+    list(map(lambda x: job_utils.wait_until_block_job_completed(vm, x, timeout), jobs_id))
 
 
 @fail_on

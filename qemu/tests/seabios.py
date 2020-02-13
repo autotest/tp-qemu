@@ -2,7 +2,6 @@ import re
 import logging
 
 from virttest import error_context
-
 from virttest import utils_misc
 
 
@@ -11,7 +10,7 @@ def run(test, params, env):
     """
     KVM Seabios test:
     1) Start guest with sga bios
-    2) Check the sgb bios messages(optional)
+    2) Check the sga bios messages(optional)
     3) Restart the vm, verify it's reset(optional)
     4) Display and check the boot menu order
     5) Start guest from the specified boot entry
@@ -42,7 +41,7 @@ def run(test, params, env):
     vm.create()
 
     timeout = float(params.get("login_timeout", 240))
-    boot_menu_key = params.get("boot_menu_key", 'f12')
+    boot_menu_key = params.get("boot_menu_key", 'esc')
     restart_key = params.get("restart_key")
     boot_menu_hint = params.get("boot_menu_hint")
     boot_device = params.get("boot_device", "")
@@ -67,17 +66,11 @@ def run(test, params, env):
 
     if restart_key:
         error_context.context("Restart vm and check it's ok", logging.info)
-
         seabios_text = get_output(seabios_session)
         headline = seabios_text.split("\n")[0] + "\n"
         headline_count = seabios_text.count(headline)
 
         vm.send_key(restart_key)
-
-        if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
-            test.fail("Could not get boot menu message after rebooting")
-        # Send boot menu key in monitor.
-        vm.send_key(boot_menu_key)
 
         def reboot_check():
             return get_output(seabios_session).count(headline) > headline_count
@@ -85,7 +78,11 @@ def run(test, params, env):
         if not utils_misc.wait_for(reboot_check, timeout, 1):
             test.fail("Could not restart the vm")
 
-        utils_misc.wait_for(boot_menu_check, timeout, 1)
+        if not (boot_menu_hint and utils_misc.wait_for(boot_menu_check, timeout, 1)):
+            test.fail("Could not get boot menu message after rebooting")
+
+    # Send boot menu key in monitor.
+    vm.send_key(boot_menu_key)
 
     error_context.context("Display and check the boot menu order", logging.info)
 

@@ -159,13 +159,16 @@ def run(test, params, env):
     tar_duplex = params.get("tar_duplex")
     modify_speed_param = params.get("modify_speed_param")
 
-    vm = env.get_vm(params["main_vm"])
-    session = vm.wait_for_login(timeout=timeout)
-    try:
-        run_test(session, default_tar_speed, tar_duplex)
-    finally:
-        session.close()
-    vm.destroy(gracefully=True)
+    # check default value only under windows guest
+    if os_type == "windows":
+        vm = env.get_vm(params["main_vm"])
+        session = vm.wait_for_login(timeout=timeout)
+        try:
+            run_test(session, default_tar_speed, tar_duplex)
+        finally:
+            session.close()
+        vm.destroy(gracefully=True)
+
     params["nic_extra_params"] = modify_speed_param
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])

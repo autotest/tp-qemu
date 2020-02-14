@@ -60,7 +60,10 @@ def run(test, params, env):
 
         guest_password = params.get("password")
 
+        bootstrap_options = params.get("nested_bs_options")
+
         kar_cmd = "python3 ./ConfigTest.py "
+
         test_type = params.get("test_type")
         if test_type:
             case_name = params.get("case_name")
@@ -82,6 +85,7 @@ def run(test, params, env):
         cert_url = params.get("cert_url")
 
         data = {"guest_password": guest_password,
+                "bootstrap_options": bootstrap_options,
                 "command_line": kar_cmd,
                 "setup_br_sh": setup_bridge_sh,
                 "host_log_files_dir": results_dir,

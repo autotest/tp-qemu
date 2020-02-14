@@ -43,7 +43,7 @@ def run(test, params, env):
 
         error_context.context("Start ping test", logging.info)
         guest_ip = vm.get_address()
-        status, output = utils_test.ping(guest_ip, 10, 15)
+        status, output = utils_test.ping(guest_ip, 10, timeout=15)
         if status:
             test.fail("Ping returns non-zero value %s" % output)
         package_lost = utils_test.get_loss_ratio(output)

@@ -8,6 +8,7 @@
     root_ca_url: "{{cert_url}}"
     ansible_ssh_pass: "{{guest_password}}"
     setup_bridge_sh: "{{setup_br_sh}}"
+    bs_options: "{{bootstrap_options}}"
     host_log_dir: "{{host_log_files_dir}}"
     cmd_line: "{{command_line}}"
     flag: True
@@ -47,7 +48,7 @@
         force: yes
 
     - name: Run bootstrap script
-      command: './Bootstrap.sh'
+      command: ./Bootstrap.sh {{bs_options}}
       args:
         chdir: '{{kar_local}}'
       register: bootstrap_result

@@ -33,13 +33,15 @@ def run(test, params, env):
                                                password=params.get("password"), prompt=params.get("shell_prompt"),
                                                linesep=params.get("shell_linesep", "\n").encode().decode(
                                                    'unicode_escape'),
-                                               status_test_command=params.get("status_test_command", ""))
+                                               status_test_command=params.get("status_test_command", ""),
+                                               compile_option=params.get("compile_option", ""))
 
         n_server = utils_netperf.NetperfServer(utils_net.get_host_ip_address(params),
                                                params.get("server_path", "/var/tmp"),
                                                netperf_source=os.path.join(data_dir.get_deps_dir("netperf"),
                                                                            params.get("netperf_server_link")),
-                                               password=params.get("hostpassword"))
+                                               password=params.get("hostpassword"),
+                                               compile_option=params.get("compile_option", ""))
 
         try:
             n_server.start()

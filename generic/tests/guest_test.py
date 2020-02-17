@@ -76,7 +76,10 @@ def run(test, params, env):
 
         try:
             logging.info("------------ Script output ------------")
-            session.cmd(cmd, print_func=logging.info, timeout=test_timeout)
+            s, o = session.cmd_status_output(cmd, print_func=logging.info,
+                                             timeout=test_timeout, safe=True)
+            if s != 0:
+                test.fail("Run script '%s' failed, script output is: %s" % (cmd, o))
         finally:
             logging.info("------------ End of script output ------------")
 

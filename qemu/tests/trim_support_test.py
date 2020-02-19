@@ -74,7 +74,7 @@ def run(test, params, env):
     if not disk_index:
         test.error("Failed to get the disk index of size %s" % image_size_str)
     if not utils_disk.update_windows_disk_attributes(session, disk_index):
-        test.error("Failed to bring data disk online")
+        test.error("Failed to enable data disk %s" % disk_index)
     drive_letter_list = utils_disk.configure_empty_windows_disk(
         session, disk_index[0], image_size_str, quick_format=False)
     if not drive_letter_list:

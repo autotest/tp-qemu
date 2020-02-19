@@ -42,7 +42,7 @@ def run(test, params, env):
     params['kernel'] = ''
     params['initrd'] = ''
     params['kernel_params'] = ''
-    params['image_boot'] == 'yes'
+    params['image_boot'] = 'yes'
     vm = env.get_vm(params['main_vm'])
     if vm:
         vm.destroy()

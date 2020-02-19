@@ -2,6 +2,7 @@ import os
 import logging
 import json
 
+from avocado.utils import cpu
 from avocado.utils import process
 from avocado.utils import software_manager
 
@@ -97,6 +98,10 @@ def run(test, params, env):
         json_file.close()
 
         return json_file.name
+
+    if (params.get('check_vendor', 'no') == 'yes' and
+            cpu.get_cpu_vendor_name() != 'intel'):
+        test.cancel("We only test this case with Intel platform now")
 
     sm = software_manager.SoftwareManager()
     if not sm.check_installed("ansible"):

@@ -40,7 +40,7 @@ def run(test, params, env):
         vms = get_live_vms(env)
         tmp_dir = virttest_data_dir.get_tmp_dir()
         file_name = "inventory_file"
-        ip_lst = list(map(lambda v: v.get_address(0), vms))
+        ip_lst = list(map(lambda v: v.wait_for_get_address(0, 240), vms))
         invent_file = open(os.path.join(tmp_dir, file_name), "w")
         invent_file.writelines(ip_lst)
         invent_file.close()

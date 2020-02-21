@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import logging
 
 from avocado.utils import process
@@ -47,6 +48,10 @@ class UEFIShellTest(object):
         params["cdroms"] = "%s %s" % ("uefishell", params["cdroms"])
         params["cdrom_uefishell"] = self.copy_uefishell()
         params["bootindex_uefishell"] = "0"
+        if params.get("secureboot_pk_kek"):
+            params["secureboot_pk_kek"] %= self.copy_secureboot_pk_kek(
+                    params["pk_kek_filename"])
+            params["extra_params"] %= params["secureboot_pk_kek"]
         params["start_vm"] = "yes"
         params["shell_prompt"] = r"(Shell|FS\d:\\.*)>"
         params["shell_linesep"] = r"\r\n"
@@ -76,6 +81,21 @@ class UEFIShellTest(object):
             process.system(cp_command)
         return uefishell_dst_path
 
+    def copy_secureboot_pk_kek(self, pk_kek_filename):
+        """
+        Copy SecureBootPkKek1.oemstr
+        :return SecureBootPkKek1.oemstr path
+        """
+        pk_kek_filepath = data_dir.get_deps_dir("edk2")
+        pk_kek_src_path = utils_misc.get_path(pk_kek_filepath,
+                                              pk_kek_filename)
+        pk_kek_dst_path = "images/%s" % pk_kek_filename
+        pk_kek_dst_path = utils_misc.get_path(data_dir.get_data_dir(),
+                                              pk_kek_dst_path)
+        cp_command = "cp -f %s %s" % (pk_kek_src_path, pk_kek_dst_path)
+        process.system(cp_command)
+        return pk_kek_dst_path
+
     def var_copy(self):
         """
         Copy a new VAR file for a cleaner environment to test,
@@ -93,7 +113,7 @@ class UEFIShellTest(object):
         else:
             self.test.cancel("fd source file %s does not exist." % source_var_path)
 
-    def send_command(self, command, check_result=False):
+    def send_command(self, command, check_result=False, interval=0.5):
         """
         Send a command line to uefi shell, and check the output
         if 'check_result' exists, and fail the case if the output
@@ -104,6 +124,7 @@ class UEFIShellTest(object):
         """
         logging.info("Send uefishell command: %s" % command)
         output = self.session.cmd_output_safe(command)
+        time.sleep(interval)
         #Judge if cmd is run successfully via environment variable 'lasterror'
         last_error = self.params["last_error"]
         env_var = self.session.cmd_output_safe("set")
@@ -152,12 +173,13 @@ def run(test, params, env):
     """
 
     uefishell_test = UEFIShellTest(test, params, env)
+    time_interval = float(params["time_interval"])
     under_fs0 = params.get("under_fs0", "yes")
     uefishell_test.setup(under_fs0)
     test_scenarios = params["test_scenarios"]
     for scenario in test_scenarios.split():
         command = params["command_%s" % scenario]
         check_result = params.get("check_result_%s" % scenario)
-        uefishell_test.send_command(command, check_result)
+        uefishell_test.send_command(command, check_result, time_interval)
     uefishell_test.post_test()
     uefishell_test.clean()

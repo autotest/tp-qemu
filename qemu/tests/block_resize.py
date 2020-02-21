@@ -158,6 +158,9 @@ def run(test, params, env):
             error_context.context("Extend disk to %s in guest"
                                   % block_size, logging.info)
             if os_type == 'windows':
+                max_block_size = int(params["max_block_size"])
+                if int(block_size) >= max_block_size:
+                    test.cancel("Cancel the test for more than maximum %dB disk." % max_block_size)
                 drive.extend_volume(session, mpoint)
             else:
                 utils_disk.resize_partition_linux(session, partition, str(block_size))

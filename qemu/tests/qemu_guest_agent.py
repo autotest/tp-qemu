@@ -202,8 +202,10 @@ class QemuGuestAgentTest(BaseVirtTest):
         gagent_name = args[1]
 
         filename = vm.get_serial_console_filename(gagent_name)
+        gagent_params = params.object_params(gagent_name)
+        gagent_params["monitor_filename"] = filename
         gagent = guest_agent.QemuAgent(vm, gagent_name, gagent_serial_type,
-                                       filename, get_supported_cmds=True)
+                                       gagent_params, get_supported_cmds=True)
         self.gagent = gagent
 
         return self.gagent

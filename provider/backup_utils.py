@@ -1,3 +1,6 @@
+import math
+import random
+
 from avocado import fail_on
 from avocado.utils import process
 
@@ -8,6 +11,29 @@ from virttest import utils_misc
 from provider import block_dirty_bitmap as block_bitmap
 from provider.virt_storage.storage_admin import sp_admin
 from provider import job_utils
+
+
+def generate_log2_value(start, end, step=1, blacklist=None):
+    if blacklist is None:
+        blacklist = list()
+    outlist = list(
+        filter(
+            lambda x: math.log2(x).is_integer(),
+            range(
+                start,
+                end,
+                step)))
+    pool = set(outlist) - set(blacklist)
+    return random.choice(list(pool))
+
+
+def generate_random_cluster_size(blacklist):
+    """
+    generate valid value for cluster size
+    :param blacklist: black list of cluster_size value
+    :return: int type valid cluster size
+    """
+    return generate_log2_value(512, 2097152, 1, blacklist)
 
 
 def copy_out_dict_if_exists(params_in, keys):

@@ -1,5 +1,3 @@
-import math
-import random
 import logging
 
 from avocado.core import exceptions
@@ -15,25 +13,6 @@ from virttest.qemu_capabilities import Flags
 
 from provider import backup_utils
 from provider.virt_storage.storage_admin import sp_admin
-
-
-def generate_random_cluster_size(blacklist):
-    """
-    generate valid value for cluster size
-    :param blacklist: black list of cluster_size value
-    :return: int type valid cluster size
-    """
-    if blacklist is None:
-        blacklist = list()
-    cluster_size = list(
-        filter(
-            lambda x: math.log2(x).is_integer(),
-            range(
-                512,
-                2097152,
-                1)))
-    pool = set(cluster_size) - set(blacklist)
-    return random.choice(list(pool))
 
 
 class BlockdevBackupBaseTest(object):
@@ -75,7 +54,7 @@ class BlockdevBackupBaseTest(object):
         if params.get("random_cluster_size") == "yes":
             blacklist = list(
                 map(int, params.objects("cluster_size_blacklist")))
-            cluster_size = generate_random_cluster_size(blacklist)
+            cluster_size = backup_utils.generate_random_cluster_size(blacklist)
             params["image_cluster_size"] = cluster_size
             logging.info(
                 "set target image cluster size to '%s'" %
@@ -89,7 +68,7 @@ class BlockdevBackupBaseTest(object):
             if params.get("random_cluster_size") == "yes":
                 blacklist = list(
                     map(int, params.objects("cluster_size_blacklist")))
-                cluster_size = generate_random_cluster_size(blacklist)
+                cluster_size = backup_utils.generate_random_cluster_size(blacklist)
                 params["image_cluster_size"] = cluster_size
                 logging.info(
                     "set image cluster size to '%s'" %

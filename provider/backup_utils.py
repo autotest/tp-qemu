@@ -1,3 +1,6 @@
+import math
+import random
+
 from avocado import fail_on
 from avocado.utils import process
 
@@ -8,6 +11,29 @@ from virttest import utils_misc
 from provider import block_dirty_bitmap as block_bitmap
 from provider.virt_storage.storage_admin import sp_admin
 from provider import job_utils
+
+
+def generate_log2_value(start, end, step=1, blacklist=None):
+    if blacklist is None:
+        blacklist = list()
+    outlist = list(
+        filter(
+            lambda x: math.log2(x).is_integer(),
+            range(
+                start,
+                end,
+                step)))
+    pool = set(outlist) - set(blacklist)
+    return random.choice(list(pool))
+
+
+def generate_random_cluster_size(blacklist):
+    """
+    generate valid value for cluster size
+    :param blacklist: black list of cluster_size value
+    :return: int type valid cluster size
+    """
+    return generate_log2_value(512, 2097152, 1, blacklist)
 
 
 def copy_out_dict_if_exists(params_in, keys):
@@ -264,24 +290,35 @@ def blockdev_batch_snapshot(vm, source_lst, target_lst, **extra_options):
 def blockdev_batch_backup(vm, source_lst, target_lst,
                           bitmap_lst, **extra_options):
     actions = []
+    jobs_id = []
     bitmap_add_cmd = "block-dirty-bitmap-add"
     timeout = int(extra_options.pop("timeout", 600))
-    jobs_id = []
+    completion_mode = extra_options.pop("completion_mode", None)
+    sync_mode = extra_options.get("sync")
     for idx, src in enumerate(source_lst):
+        if sync_mode == "incremental":
+            assert len(bitmap_lst) == len(
+                source_lst), "must provide a valid bitmap name for 'incremental' sync mode"
+            extra_options["bitmap"] = bitmap_lst[idx]
         backup_cmd, arguments = blockdev_backup_qmp_cmd(
             src, target_lst[idx], **extra_options)
         job_id = arguments.get("job-id", src)
         jobs_id.append(job_id)
         actions.append({"type": backup_cmd, "data": arguments})
-        bitmap_data = {"node": source_lst[idx], "name": bitmap_lst[idx]}
-        granularity = extra_options.get("granularity")
-        persistent = extra_options.get("persistent")
-        if granularity is not None:
-            bitmap_data["granularity"] = int(granularity)
-        if persistent is not None:
-            bitmap_data["persistent"] = persistent
-        actions.append({"type": bitmap_add_cmd, "data": bitmap_data})
+
+        if bitmap_lst and sync_mode == 'full':
+            bitmap_data = {"node": source_lst[idx], "name": bitmap_lst[idx]}
+            granularity = extra_options.get("granularity")
+            persistent = extra_options.get("persistent")
+            if granularity is not None:
+                bitmap_data["granularity"] = int(granularity)
+            if persistent is not None:
+                bitmap_data["persistent"] = persistent
+            actions.append({"type": bitmap_add_cmd, "data": bitmap_data})
+
     arguments = {"actions": actions}
+    if completion_mode == 'grouped':
+        arguments['properties'] = {"completion-mode": "grouped"}
     vm.monitor.cmd("transaction", arguments)
     list(map(lambda x: job_utils.wait_until_block_job_completed(vm, x, timeout), jobs_id))
 

@@ -530,9 +530,9 @@ class EventListenerWin(_EventListener):
             else:        # 'X'
                 xbutton = nevent['mouseDataText']
                 if xbutton == 'XBUTTON1':
-                    keycode = 'BTN_EXTRA'
-                elif xbutton == 'XBUTTON2':
                     keycode = 'BTN_SIDE'
+                elif xbutton == 'XBUTTON2':
+                    keycode = 'BTN_EXTRA'
                 else:
                     keycode = xbutton
             event[KeyEventData.KEYCODE] = keycode

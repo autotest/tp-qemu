@@ -8,7 +8,6 @@ from avocado.utils import cpu
 
 from virttest import utils_test
 from virttest import utils_time
-from virttest.compat_52lts import decode_to_text
 
 
 def run(test, params, env):
@@ -40,17 +39,18 @@ def run(test, params, env):
         :param mask: The CPU affinity mask.
         :return: A dict containing the previous mask for each thread.
         """
-        tids = decode_to_text(process.system_output("ps -L --pid=%s -o lwp=" % pid,
-                              verbose=False, ignore_status=True)).split()
+        tids = process.run("ps -L --pid=%s -o lwp=" % pid,
+                           verbose=False,
+                           ignore_status=True).stdout_text.split()
         prev_masks = {}
         for tid in tids:
-            prev_mask = decode_to_text(process.system_output("taskset -p %s" % tid,
-                                       verbose=False)).split()[-1]
+            prev_mask = process.run(
+                "taskset -p %s" % tid, verbose=False).stdout_text.split()[-1]
             prev_masks[tid] = prev_mask
             process.system("taskset -p %s %s" % (mask, tid), verbose=False)
-        children = decode_to_text(process.system_output("ps --ppid=%s -o pid=" % pid,
-                                  verbose=False,
-                                  ignore_status=True)).split()
+        children = process.run("ps --ppid=%s -o pid=" % pid,
+                               verbose=False,
+                               ignore_status=True).stdout_text.split()
         for child in children:
             prev_masks.update(set_cpu_affinity(child, mask))
         return prev_masks

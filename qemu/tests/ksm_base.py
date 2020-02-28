@@ -11,7 +11,6 @@ from avocado.utils import process
 from virttest import data_dir
 from virttest import error_context
 from virttest import utils_misc
-from virttest.compat_52lts import decode_to_text
 
 TMPFS_OVERHEAD = 0.0022
 
@@ -102,10 +101,10 @@ def run(test, params, env):
 
     query_cmd = re.sub("QEMU_PID", str(vm.process.get_pid()), query_cmd)
 
-    sharing_page_0 = decode_to_text(process.system_output(query_cmd,
-                                                          verbose=False,
-                                                          ignore_status=True,
-                                                          shell=True))
+    sharing_page_0 = process.run(query_cmd,
+                                 verbose=False,
+                                 ignore_status=True,
+                                 shell=True).stdout_text
     if query_regex:
         sharing_page_0 = re.findall(query_regex, sharing_page_0)[0]
 
@@ -118,10 +117,10 @@ def run(test, params, env):
     _execute_allocator(cmd, vm, session, fill_timeout)
     time.sleep(120)
 
-    sharing_page_1 = decode_to_text(process.system_output(query_cmd,
-                                                          verbose=False,
-                                                          ignore_status=True,
-                                                          shell=True))
+    sharing_page_1 = process.run(query_cmd,
+                                 verbose=False,
+                                 ignore_status=True,
+                                 shell=True).stdout_text
     if query_regex:
         sharing_page_1 = re.findall(query_regex, sharing_page_1)[0]
 
@@ -136,10 +135,10 @@ def run(test, params, env):
     _execute_allocator(cmd, vm, session, fill_timeout)
     time.sleep(120)
 
-    sharing_page_2 = decode_to_text(process.system_output(query_cmd,
-                                                          verbose=False,
-                                                          ignore_status=True,
-                                                          shell=True))
+    sharing_page_2 = process.run(query_cmd,
+                                 verbose=False,
+                                 ignore_status=True,
+                                 shell=True).stdout_text
     if query_regex:
         sharing_page_2 = re.findall(query_regex, sharing_page_2)[0]
 

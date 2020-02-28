@@ -1,13 +1,13 @@
 import logging
 import re
 
+from avocado.utils import astring
 from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_misc
 from virttest import env_process
 from virttest.staging import utils_memory
-from virttest.compat_52lts import decode_to_text
 from virttest.utils_numeric import normalize_data_size
 
 
@@ -77,7 +77,7 @@ def check_memory_in_procfs(test, params, vm):
         mem_size = int(float(utils_misc.normalize_data_size(mem_size, "K")))
         smaps = process.system_output("grep -1 %d /proc/%d/smaps"
                                       % (mem_size, qemu_pid))
-        smaps = decode_to_text(smaps).strip()
+        smaps = astring.to_text(smaps).strip()
         mem_path = memdev_params.get("mem-path")
         if mem_path and (mem_path not in smaps):
             test.fail("memdev = %s: mem-path '%s' is not in smaps '%s'!"
@@ -85,7 +85,7 @@ def check_memory_in_procfs(test, params, vm):
         mem_start = smaps.split('-')[0]
         numa_maps = process.system_output("grep %s /proc/%d/numa_maps"
                                           % (mem_start, qemu_pid))
-        numa_maps = decode_to_text(numa_maps).strip()
+        numa_maps = astring.to_text(numa_maps).strip()
         if mem_path and (mem_path not in numa_maps):
             test.fail("memdev = %s: mem-path '%s' is not in numa_maps '%s'!"
                       % (mem_dev, mem_path, numa_maps))

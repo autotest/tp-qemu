@@ -58,7 +58,7 @@ def run(test, params, env):
     if not os.path.exists(tsc_cmd_guest):
         process.run("gcc %s" % tsc_freq_path)
 
-    ncpu = cpu.online_cpus_count()
+    ncpu = cpu.online_count()
 
     logging.info("Interval is %s" % interval)
     logging.info("Determine the TSC frequency in the host")

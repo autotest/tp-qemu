@@ -36,7 +36,7 @@ def run(test, params, env):
     model = params["model"]
     model_pattern = params["model_pattern"]
     flags = params["flags"]
-    if cpu.get_cpu_vendor_name() == 'intel':
+    if cpu.get_vendor() == 'intel':
         model_ib = "%s-IBRS" % model
         flag_ib = " ibpb ibrs"
         name_ib = ", IBRS( update)?"

@@ -94,7 +94,7 @@ def run(test, params, env):
     guest_load_instances = params["guest_load_instances"]
     host_load_instances = params["host_load_instances"]
     if not guest_load_instances and not host_load_instances:
-        host_load_instances = cpu.total_cpus_count()
+        host_load_instances = cpu.total_count()
         guest_load_instances = vm.get_cpu_count()
     else:
         host_load_instances = int(host_load_instances)

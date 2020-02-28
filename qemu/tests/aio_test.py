@@ -95,7 +95,7 @@ def run_aio_tests(target):
         with chcwd(path):
             logging.debug("compile source code of QEMU")
             process.run("./configure")
-            cpu_count = cpu.online_cpus_count()
+            cpu_count = cpu.online_count()
             aio_path = "tests/test-aio"
             make_cmd = "make {aio_path} -j{cpu_count}".format(
                 aio_path=aio_path, cpu_count=cpu_count)

@@ -103,7 +103,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    if cpu.get_cpu_vendor_name() != 'intel':
+    if cpu.get_vendor() != 'intel':
         test.cancel("This case only support Intel platform")
 
     vm = env.get_vm(params["main_vm"])

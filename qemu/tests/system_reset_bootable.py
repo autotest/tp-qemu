@@ -26,6 +26,7 @@ def run(test, params, env):
     reset_times = int(params.get("reset_times", 20))
     interval = int(params.get("reset_interval", 10))
     wait_time = int(params.get("wait_time_for_reset", 60))
+    min_wait_time = int(params.get("min_wait_time", 0))
     params["start_vm"] = "yes"
 
     if params.get("get_boot_time") == "yes":
@@ -35,7 +36,7 @@ def run(test, params, env):
         bootup_time = time.time() - vm.start_time
         if params.get("reset_during_boot") == "yes":
             interval = int(bootup_time)
-            wait_time = random.randint(0, int(bootup_time))
+            wait_time = random.randint(min_wait_time, int(bootup_time))
         vm.destroy()
 
     error_context.context("Boot the guest", logging.info)

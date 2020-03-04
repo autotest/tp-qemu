@@ -7,6 +7,7 @@ from avocado.utils import process
 
 from virttest import storage
 from virttest import data_dir
+from virttest import utils_net
 from virttest import utils_misc
 from virttest import env_process
 
@@ -111,9 +112,10 @@ class UEFIShellTest(object):
             cmd = "cp -f %s %s" % (source_var_path, vars_path)
             process.system(cmd)
         else:
-            self.test.cancel("fd source file %s does not exist." % source_var_path)
+            self.test.cancel("fd source file %s does not exist."
+                             % source_var_path)
 
-    def send_command(self, command, check_result=False, interval=0.5):
+    def send_command(self, command, check_result=None, interval=0.5):
         """
         Send a command line to uefi shell, and check the output
         if 'check_result' exists, and fail the case if the output
@@ -121,21 +123,30 @@ class UEFIShellTest(object):
 
         :param command: the command string being executed
         :param check_result: the pattern to validate output
+        :param interval: time interval between commands
+        :return if check_result is not None, return matched string list
         """
         logging.info("Send uefishell command: %s" % command)
         output = self.session.cmd_output_safe(command)
         time.sleep(interval)
-        #Judge if cmd is run successfully via environment variable 'lasterror'
+        # Judge if cmd is run successfully via environment variable 'lasterror'
         last_error = self.params["last_error"]
         env_var = self.session.cmd_output_safe("set")
-        if not re.search(last_error, env_var):
+        if not re.search(last_error, env_var, re.S):
             self.test.fail("Following errors appear %s when running command %s"
                            % (output, command))
         if check_result:
+            value = []
             for result in check_result.split(", "):
-                if not re.search(result, output):
+                if not re.findall(result, output, re.S):
                     self.test.fail("The command result is: %s, which does not"
-                                   " match the expectation: %s" % (output, result))
+                                   " match the expectation: %s"
+                                   % (output, result))
+                else:
+                    result = re.findall(result, output, re.S)[0]
+                    value.append(result)
+            return value
+        return [output]
 
     def post_test(self):
         """
@@ -172,6 +183,23 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
 
+    def form_ping_args():
+        """
+        get target ip address ver4
+        """
+        return utils_net.get_host_ip_address(params)
+
+    def form_ping6_args():
+        """
+        get source ip address and target ip address ver6
+        """
+        src_ipv6 = uefishell_test.send_command(params["command_show6"],
+                                               params["check_result_show6"],
+                                               time_interval)
+        target_ipv6 = utils_net.get_host_ip_address(
+                params, "ipv6", True).split("%")[0]
+        return " ".join([src_ipv6[0], target_ipv6])
+
     uefishell_test = UEFIShellTest(test, params, env)
     time_interval = float(params["time_interval"])
     under_fs0 = params.get("under_fs0", "yes")
@@ -179,6 +207,9 @@ def run(test, params, env):
     test_scenarios = params["test_scenarios"]
     for scenario in test_scenarios.split():
         command = params["command_%s" % scenario]
+        if params.get("command_%s_%s" % (scenario, "args")):
+            func_name = params["command_%s_%s" % (scenario, "args")]
+            command += eval(func_name)
         check_result = params.get("check_result_%s" % scenario)
         uefishell_test.send_command(command, check_result, time_interval)
     uefishell_test.post_test()

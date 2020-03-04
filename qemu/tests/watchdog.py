@@ -51,6 +51,7 @@ def run(test, params, env):
         if watchdog_device == "i6300esb":
             error_context.context("checking pci info to ensure have WDT"
                                   " device", logging.info)
+            session.cmd("echo 1 > /sys/bus/pci/rescan")
             o = session.cmd_output("lspci")
             if o:
                 wdt_pci_info = re.findall(".*6300ESB Watchdog Timer", o)
@@ -283,8 +284,11 @@ def run(test, params, env):
                 test.fail("Can find watchdog pci")
 
         plug_watchdog_device = params.get("plug_watchdog_device", "i6300esb")
+        machine_type = params.get("machine_type")
         watchdog_device_add = ("device_add driver=%s, id=%s"
                                % (plug_watchdog_device, "watchdog"))
+        if machine_type == "q35":
+            watchdog_device_add += ",bus=pcie-pci-bridge-0,addr=0x1f"
         watchdog_device_del = ("device_del id=%s" % "watchdog")
 
         error_context.context(("Hotplug watchdog device '%s'" %

@@ -172,7 +172,7 @@ class QemuGuestAgentTest(BaseVirtTest):
                               " stream." % virt_module_stream,
                               logging.info)
         # target release,such as 810,811
-        target_release = re.findall(r'rhel(\d+)-\d+', guest_name, re.I)[0]
+        target_release = re.findall(r'rhel(\d+)-\w+', guest_name, re.I)[0]
         # get tag pattern,such as module-virt-8.1-80101xxxxx
         if virt_module_stream == "rhel":
             # for slow train,didn't know 810 or 811.

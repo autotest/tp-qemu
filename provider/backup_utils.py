@@ -296,7 +296,7 @@ def blockdev_batch_backup(vm, source_lst, target_lst,
     completion_mode = extra_options.pop("completion_mode", None)
     sync_mode = extra_options.get("sync")
     for idx, src in enumerate(source_lst):
-        if sync_mode == "incremental":
+        if sync_mode in ["incremental", "bitmap"]:
             assert len(bitmap_lst) == len(
                 source_lst), "must provide a valid bitmap name for 'incremental' sync mode"
             extra_options["bitmap"] = bitmap_lst[idx]

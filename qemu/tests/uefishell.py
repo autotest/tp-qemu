@@ -200,6 +200,23 @@ def run(test, params, env):
                 params, "ipv6", True).split("%")[0]
         return " ".join([src_ipv6[0], target_ipv6])
 
+    def handle_memory_map(output):
+        """
+        search all RT_Code lines from output, each line ends
+        with 800000000000000F;
+        search two adjacent RT_Code lines, the result should be None
+        """
+        attribute_values = re.findall(params["rt_code_lines"], output[0], re.M)
+        for value in attribute_values:
+            if params["attribute_value"] != value:
+                test.fail("The last column should be '%s' for all "
+                          "RT_Code entries. The actual value is '%s'"
+                          % (params["attribute_value"], value))
+        if re.search(params["adjacent_rt_code_lines"], output[0], re.M):
+            test.fail("Found two adjacent RT_Code lines in command output. "
+                      "The range of 'RT_Code' should be covered by just one"
+                      " entry. The command output is %s" % output[0])
+
     uefishell_test = UEFIShellTest(test, params, env)
     time_interval = float(params["time_interval"])
     under_fs0 = params.get("under_fs0", "yes")
@@ -211,6 +228,11 @@ def run(test, params, env):
             func_name = params["command_%s_%s" % (scenario, "args")]
             command += eval(func_name)
         check_result = params.get("check_result_%s" % scenario)
-        uefishell_test.send_command(command, check_result, time_interval)
+        output = uefishell_test.send_command(command,
+                                             check_result,
+                                             time_interval)
+        if params.get("%s_output_handler" % scenario):
+            func_name = params["%s_output_handler" % scenario]
+            eval(func_name)(output)
     uefishell_test.post_test()
     uefishell_test.clean()

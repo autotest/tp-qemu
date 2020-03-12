@@ -208,7 +208,7 @@ class StorageVolume(object):
         if self.format.TYPE == "qcow2":
             if self.backing:
                 options["backing-fmt"] = self.backing.format.TYPE
-                options["backing-file"] = self.backing.as_json()
+                options["backing-file"] = self.backing.path
             if self.encrypt:
                 options["encrypt"] = dict()
                 key_secret = self.format.get_param("encrypt.key-secret")

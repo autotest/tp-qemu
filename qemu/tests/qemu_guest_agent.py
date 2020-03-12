@@ -2680,6 +2680,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             else:
                 logging.info("qemu-ga service is not running.")
                 self.gagent_start(session, self.vm)
+                time.sleep(5)
 
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)

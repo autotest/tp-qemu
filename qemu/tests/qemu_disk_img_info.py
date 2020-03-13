@@ -4,7 +4,6 @@ from virttest import env_process
 from virttest import error_context
 from virttest import storage
 
-from avocado.utils import process
 from qemu.tests import qemu_disk_img
 
 
@@ -38,7 +37,7 @@ class InfoTest(qemu_disk_img.QemuImgTest):
         for sn in params.get("image_chain").split()[1:]:
             _params = params.object_params(sn)
             _image = storage.get_image_filename(_params, self.data_dir)
-            process.run("rm -f %s" % _image)
+            storage.file_remove(_params, _image)
 
 
 def run(test, params, env):
@@ -50,9 +49,38 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     base_image = params.get("images", "image1").split()[0]
-    params.update(
-        {"image_name_%s" % base_image: params["image_name"],
-         "image_format_%s" % base_image: params["image_format"]})
+
+    update_params = {
+        "image_name_%s" % base_image: params["image_name"],
+        "image_format_%s" % base_image: params["image_format"]
+    }
+
+    optval = (lambda opt, img, p, default: p.get('%s_%s' % (opt, img),
+                                                 p.get(opt, default)))
+    enable_ceph = params.get("enable_ceph") == "yes"
+    enable_iscsi = params.get("enable_iscsi") == "yes"
+    if enable_ceph:
+        update_params.update({
+             "enable_ceph_%s" % base_image: optval("enable_ceph",
+                                                   base_image,
+                                                   params, "no"),
+             "storage_type_%s" % base_image: optval("storage_type",
+                                                    base_image,
+                                                    params, "filesystem")})
+    elif enable_iscsi:
+        update_params.update({
+            "enable_iscsi_%s" % base_image: optval("enable_iscsi",
+                                                   base_image,
+                                                   params, "no"),
+            "storage_type_%s" % base_image: optval("storage_type",
+                                                   base_image,
+                                                   params, "filesystem"),
+            "image_raw_device_%s" % base_image: optval("image_raw_device",
+                                                       base_image,
+                                                       params, "no"),
+            "lun_%s" % base_image: optval("lun", base_image, params, "0")})
+    params.update(update_params)
+
     image_chain = params.get("image_chain", "").split()
     check_files = []
     md5_dict = {}
@@ -78,4 +106,4 @@ def run(test, params, env):
         # get the disk image information
         info_test.check_backingfile()
 
-    info_test.clean()
+        info_test.clean()

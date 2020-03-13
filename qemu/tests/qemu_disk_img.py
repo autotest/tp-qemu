@@ -1,4 +1,3 @@
-import os
 import re
 import logging
 
@@ -40,8 +39,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         if len(params.get("image_chain", "").split()) < 2:
             return {}
         snapshot = storage.get_image_filename(params, self.data_dir)
-        if os.path.exists(snapshot):
-            process.run("rm -f %s" % snapshot)
+        storage.file_remove(params, snapshot)
         super(QemuImgTest, self).create(params)
         self.trash.append(snapshot)
         return params

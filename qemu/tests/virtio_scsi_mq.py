@@ -2,8 +2,6 @@ import logging
 import re
 import time
 
-from avocado.utils import cpu as utils_cpu
-
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import env_process
@@ -216,7 +214,7 @@ def run(test, params, env):
 
     cpu_irq_map = {}
     timeout = float(params.get("login_timeout", 240))
-    num_queues = str(utils_cpu.online_cpus_count())
+    num_queues = params['vcpu_maxcpus']
     params['smp'] = num_queues
     params['num_queues'] = num_queues
     images_num = int(num_queues)

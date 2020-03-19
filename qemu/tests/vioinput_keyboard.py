@@ -78,6 +78,7 @@ def key_tap_test(test, params, vm):
 
     error_context.context("Start event listener in guest", logging.info)
     listener = input_event_proxy.EventListener(vm)
+    time.sleep(30)
 
     console = graphical_console.GraphicalConsole(vm)
     for key in key_check_cfg.keys():

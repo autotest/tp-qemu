@@ -62,7 +62,8 @@ def run(test, params, env):
             logging.debug(string)
             test.error("Could not find matched sub-string")
 
-        error_context.context("Verify matched string is same as expected")
+        error_context.context("Verify matched string is same as expected",
+                              logging.info)
         actual_result = m[0]
         if "removable" in regex_str:
             if actual_result in ["on", "yes", "true"]:
@@ -86,7 +87,7 @@ def run(test, params, env):
             test.fail("Could not find expected string:\n %s" %
                       ("\n".join(fail_log)))
 
-    def _do_io_test_guest(session):
+    def _do_io_test_guest():
         utils_test.run_virt_sub_test(test, params, env, "format_disk")
 
     @error_context.context_aware
@@ -119,20 +120,6 @@ def run(test, params, env):
         return "sda"
 
     @error_context.context_aware
-    def _check_and_umount_usb(session):
-        chk_status = session.cmd_status(params["chk_mount_cmd"],
-                                        timeout=login_timeout)
-        if chk_status:
-            return
-        error_context.context("Unmounting usb disk", logging.info)
-        # choose to umount usb disk instead of ejecting it
-        # because if usb is removable it will not available after ejection
-        status, output = session.cmd_status_output(params["umount_cmd"],
-                                                   timeout=login_timeout)
-        if status != 0:
-            test.error("Failed to umount with error: %s" % output)
-
-    @error_context.context_aware
     def _check_serial_option(serial, regex_str, expect_str):
         error_context.context("Set serial option to '%s'" % serial,
                               logging.info)
@@ -148,9 +135,6 @@ def run(test, params, env):
         if serial not in ["EMPTY_STRING", "NO_EQUAL_STRING"]:
             # Verify in guest when serial is set to empty/null is meaningless.
             _verify_string(serial, output, [serial])
-        _check_and_umount_usb(session)
-        _do_io_test_guest(session)
-
         session.close()
 
     @error_context.context_aware
@@ -170,9 +154,6 @@ def run(test, params, env):
         cmd = "dmesg | grep %s" % _get_usb_disk_name_in_guest(session)
         output = session.cmd(cmd)
         _verify_string(expect_str, output, [expect_str], re.I)
-        _check_and_umount_usb(session)
-        _do_io_test_guest(session)
-
         session.close()
 
     @error_context.context_aware
@@ -206,9 +187,6 @@ def run(test, params, env):
             expected_min_size = "512"
         _verify_string(r"(\d+)\n(\d+)", output,
                        [expected_min_size, opt_io_size])
-        _check_and_umount_usb(session)
-        _do_io_test_guest(session)
-
         session.close()
 
     vm = env.get_vm(params["main_vm"])
@@ -229,8 +207,8 @@ def run(test, params, env):
     # No bus specified, default using "usb.0" for "usb-storage"
     for i in params["chk_usb_info_keyword"].split(","):
         _verify_string(i, output, [i])
-    _do_io_test_guest(session)
     session.close()
+    _do_io_test_guest()
 
     # this part is linux only
     if params.get("check_serial_option") == "yes":

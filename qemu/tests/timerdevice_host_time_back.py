@@ -5,7 +5,6 @@ import logging
 from avocado.utils import process
 
 from virttest import error_context
-from virttest.compat_52lts import decode_to_text
 
 
 @error_context.context_aware
@@ -37,7 +36,7 @@ def run(test, params, env):
 
     error_context.context("Check time difference between host and guest", logging.info)
     guest_timestr_ = session.cmd_output(epoch_time_cmd, timeout=120)
-    host_timestr_ = decode_to_text(process.system_output(epoch_time_cmd, shell=True))
+    host_timestr_ = process.run(epoch_time_cmd, shell=True).stdout_text
     host_epoch_time_, guest_epoch_time_ = map(lambda x: re.findall(r"epoch:\s+(\d+)", x)[0],
                                               [host_timestr_, guest_timestr_])
     real_difference_ = abs(int(host_epoch_time_) - int(guest_epoch_time_))
@@ -59,7 +58,7 @@ def run(test, params, env):
             session.close()
         except Exception:
             test.error("Guest error after set host system time back")
-        host_timestr = decode_to_text(process.system_output(epoch_time_cmd, shell=True))
+        host_timestr = process.run(epoch_time_cmd, shell=True).stdout_text
         host_epoch_time, guest_epoch_time = map(lambda x: re.findall(r"epoch:\s+(\d+)", x)[0],
                                                 [host_timestr, guest_timestr])
         real_difference = abs(int(host_epoch_time) - int(guest_epoch_time))

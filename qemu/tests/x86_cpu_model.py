@@ -4,7 +4,6 @@ import json
 
 from avocado.utils import cpu, process
 from virttest import error_context, utils_misc, env_process
-from virttest.compat_52lts import decode_to_text
 
 
 @error_context.context_aware
@@ -28,10 +27,10 @@ def run(test, params, env):
                 '{"execute": "quit"}']
     cmd = "echo -e '{0}' | {1} -qmp stdio -vnc none -M none | grep return |"\
           "grep RAND91".format(r"\n".join(qmp_cmds), qemu_binary)
-    output = decode_to_text(process.system_output(cmd, timeout=10,
-                                                  ignore_status=True,
-                                                  shell=True,
-                                                  verbose=False))
+    output = process.run(cmd, timeout=10,
+                         ignore_status=True,
+                         shell=True,
+                         verbose=False).stdout_text
     out = json.loads(output)["return"]
 
     model = params["model"]

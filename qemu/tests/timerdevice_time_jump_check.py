@@ -2,7 +2,6 @@ import logging
 import time
 
 from virttest import error_context
-from virttest.compat_52lts import decode_to_text
 
 from avocado.utils import process
 
@@ -32,8 +31,8 @@ def run(test, params, env):
 
     error_context.context("Pin every vcpu to physical cpu", logging.info)
     host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
-    host_cpu_num = decode_to_text(process.system_output(host_cpu_cnt_cmd,
-                                                        shell=True)).strip()
+    host_cpu_num = process.run(host_cpu_cnt_cmd,
+                               shell=True).stdout_text.strip()
     host_cpu_list = (_ for _ in range(int(host_cpu_num)))
     if len(vm.vcpu_threads) > int(host_cpu_num):
         host_cpu_list = []

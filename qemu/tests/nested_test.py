@@ -62,7 +62,6 @@ def run(test, params, env):
         guest_password = params.get("password")
 
         bootstrap_options = params.get("nested_bs_options")
-
         kar_cmd = "python3 ./ConfigTest.py "
 
         test_type = params.get("test_type")
@@ -78,6 +77,12 @@ def run(test, params, env):
             kar_cmd += " --clone=yes"
         else:
             kar_cmd += " --clone=no"
+
+        l2_kar_options = params.get("l2_kar_options")
+        if l2_kar_options:
+            kar_cmd += " %s" % l2_kar_options
+
+        logging.info("Kar cmd: %s" % kar_cmd)
 
         results_dir = test.logdir
         logging.info("Result_dir: %s" % results_dir)

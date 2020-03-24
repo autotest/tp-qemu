@@ -2100,6 +2100,104 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.cmd("rm -rf %s" % qga_man_file)
 
     @error_context.context_aware
+    def gagent_check_fsfreeze_hook_script(self, test, params, env):
+        """
+        During fsfreeze,verify fsfreeze hook script works.
+
+        Steps:
+        1) Check fsfreeze hook related files.
+        2) Check fsfreeze hook path set in qemu-ga config file.
+        3) Fsfreeze hook should be with '-x' permission for all users.
+        4) Verify agent service is using the fsfreeze hook.
+        5) Create a simple user script in hook scripts path.
+        6) Get fsfreeze hook log file.
+        7) Issue freeze & thaw cmds.
+        8) Check fsfreeze hook logs.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+
+        def log_check(action):
+            msg = "testing %s:%s" % (user_script_path, action)
+            hook_log = session.cmd_output("cat %s" % log_path)
+            if msg not in hook_log.strip().splitlines()[-2]:
+                test.fail("Fsfreeze hook test failed\nthe fsfreeze"
+                          " hook log is %s." % hook_log)
+
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Checking fsfreeze hook related scripts.",
+                              logging.info)
+        cmd_get_hook_files = "rpm -ql qemu-guest-agent |grep fsfreeze-hook"
+        hook_files = session.cmd_output(cmd_get_hook_files)
+
+        if len(hook_files.strip().split()) != 4:
+            test.fail("Fsfreeze hook files are missed, the output is"
+                      " %s" % hook_files)
+
+        error_context.context("Checking fsfreeze hook path set in config"
+                              " file.", logging.info)
+        config_file = "/etc/sysconfig/qemu-ga"
+        cmd_get_hook_path = "cat %s | grep" \
+                            " ^FSFREEZE_HOOK_PATHNAME" % config_file
+        o_path = session.cmd_output(cmd_get_hook_path)
+        hook_path = o_path.strip().split("=")[1]
+
+        detail = session.cmd_output("ll %s" % hook_path)
+        if not re.search(r".*x.*x.*x", detail):
+            test.fail("Not all users have executable permission"
+                      " of fsfreeze hook, the detail is %s." % detail)
+
+        error_context.context("Checking if agent service is using the"
+                              " fsfreeze hook.", logging.info)
+        cmd_get_hook = "ps aux |grep /usr/bin/qemu-ga |grep fsfreeze-hook"
+        hook_path_info = session.cmd_output(cmd_get_hook).strip()
+        if params['os_variant'] == 'rhel6':
+            error_context.context("For rhel6 guest,need to enable fsfreeze"
+                                  " hook and restart agent service.",
+                                  logging.info)
+            if not session.cmd_output(cmd_get_hook):
+                cmd_enable_hook = "sed -i 's/FSFREEZE_HOOK_ENABLE=0/" \
+                                  "FSFREEZE_HOOK_ENABLE=1/g' %s" % \
+                                  config_file
+                session.cmd(cmd_enable_hook)
+                session.cmd(params["gagent_restart_cmd"])
+                hook_path_info = session.cmd_output(cmd_get_hook).strip()
+            hook_path_service = hook_path_info.split("--fsfreeze-hook=")[-1]
+        else:
+            hook_path_service = hook_path_info.split("-F")[-1]
+
+        if hook_path_service != hook_path:
+            test.fail("Fsfreeze hook in qemu-guest-agent service is different"
+                      " from config.\nit's %s from service\n"
+                      "it's %s from config." % (hook_path_service, hook_path))
+
+        error_context.context("Create a simple script to verify fsfreeze"
+                              " hook.", logging.info)
+        cmd_get_user_path = "rpm -ql qemu-guest-agent |grep fsfreeze-hook.d" \
+                            " |grep -v /usr/share"
+        output = session.cmd_output(cmd_get_user_path)
+        user_script_path = output.strip().split("\n")[-1]
+        user_script_path += "/user_script.sh"
+
+        cmd_create_script = 'echo "printf \'testing %%s:%%s\\n\' \\$0 \\$@"' \
+                            ' > %s' % user_script_path
+        session.cmd(cmd_create_script)
+        session.cmd("chmod +x %s" % user_script_path)
+
+        error_context.context("Issue fsfreeze and thaw commands and check"
+                              " logs.", logging.info)
+        cmd_get_log_path = "cat %s |grep ^LOGFILE" % hook_path
+        log_path = session.cmd_output(cmd_get_log_path).strip().split("=")[-1]
+        self.gagent.fsfreeze()
+        log_check("freeze")
+        self.gagent.fsthaw()
+        log_check("thaw")
+
+    @error_context.context_aware
     def gagent_check_query_chardev(self, test, params, env):
         """
         Check guest agent service status through QMP 'query-chardev'

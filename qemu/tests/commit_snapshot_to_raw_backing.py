@@ -82,18 +82,22 @@ def run(test, params, env):
     else:
         logging.info("Commit snapshot image %s back to %s.", snapshot, base)
 
-    org_size = json.loads(sn_img.info(output="json"))["actual-size"]
+    size_check = params.get("snapshot_size_check_after_commit") == "yes"
+    if size_check:
+        org_size = json.loads(sn_img.info(output="json"))["actual-size"]
     sn_img.commit(cache_mode=cache_mode)
-    remain_size = json.loads(sn_img.info(output="json"))["actual-size"]
 
-    """Verify the snapshot file whether emptied after committing"""
-    logging.info("Verify the snapshot file whether emptied after committing")
-    commit_size = org_size - remain_size
-    dd_size = eval(params["dd_total_size"])
-    if commit_size >= dd_size:
-        logging.info("The snapshot file was emptied!")
-    else:
-        test.fail("The snapshot file was not emptied, check pls!")
+    if size_check:
+        remain_size = json.loads(sn_img.info(output="json"))["actual-size"]
+
+        # Verify the snapshot file whether emptied after committing
+        logging.info("Verify the snapshot file whether emptied after committing")
+        commit_size = org_size - remain_size
+        dd_size = eval(params["dd_total_size"])
+        if commit_size >= dd_size:
+            logging.info("The snapshot file was emptied!")
+        else:
+            test.fail("The snapshot file was not emptied, check pls!")
 
     base_qit = QemuImgTest(test, params, env, base)
     base_qit.start_vm()

@@ -75,6 +75,10 @@ def run(test, params, env):
     if vm.check_capability(Flags.BLOCKDEV):
         change_insert_cmd = ("blockdev-change-medium id=%s,filename=%s" %
                              (vm.devices.get_qdev_by_drive(device_name), orig_img_name))
+
+    if not utils_misc.wait_for(lambda: not check_block_locked(device_name), 60):
+        test.error('Device %s is still locked.' % device_name)
+
     monitor.send_args_cmd(change_insert_cmd)
     logging.info("Wait until device is ready")
     exists = utils_misc.wait_for(lambda: (orig_img_name in

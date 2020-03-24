@@ -223,9 +223,8 @@ def blockdev_create(vm, **options):
 @fail_on
 def blockdev_snapshot(vm, source, target, **extra_options):
     cmd, arguments = blockdev_snapshot_qmp_cmd(source, target, **extra_options)
-    timeout = int(extra_options.pop("timeout", 600))
-    vm.monitor.cmd(cmd, arguments)
-    job_utils.wait_until_block_job_completed(vm, timeout)
+    out = vm.monitor.cmd(cmd, arguments)
+    assert out == {}, 'blockdev-snapshot-sync faild: %s' % out
 
 
 @fail_on

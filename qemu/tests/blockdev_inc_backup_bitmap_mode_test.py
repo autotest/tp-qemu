@@ -1,5 +1,3 @@
-import logging
-
 from provider import backup_utils
 from provider import blockdev_base
 from provider import block_dirty_bitmap
@@ -18,16 +16,18 @@ class BlockdevIncreamentalBackupBitmapTest(blockdev_base.BlockdevBaseTest):
         self.full_backups = []
         self.inc_backups = []
         self.bitmaps = []
-        for tag in params.objects('source_images'):
-            image_params = params.object_params(tag)
-            image_chain = image_params.objects("image_chain")
-            self.source_images.append("drive_%s" % tag)
-            self.full_backups.append("drive_%s" % image_chain[0])
-            self.inc_backups.append("drive_%s" % image_chain[1])
-            self.bitmaps.append("bitmap_%s" % tag)
-            inc_img_tag = image_chain[-1]
-            inc_img_params = params.object_params(inc_img_tag)
-            inc_img_params['image_chain'] = image_params['image_chain']
+        self.src_img_tags = params.objects("source_images")
+        self.sync_mode = params.get("sync_mode", "bitmap")
+        self.bitmap_mode = params.get("bitmap_mode", "always")
+        list(map(self._init_arguments_by_params, self.src_img_tags))
+
+    def _init_arguments_by_params(self, tag):
+        image_params = self.params.object_params(tag)
+        image_chain = image_params.objects("image_chain")
+        self.source_images.append("drive_%s" % tag)
+        self.full_backups.append("drive_%s" % image_chain[0])
+        self.inc_backups.append("drive_%s" % image_chain[1])
+        self.bitmaps.append("bitmap_%s" % tag)
 
     def do_full_backup(self):
         extra_options = {"sync": "full", "auto_disable_bitmap": False}
@@ -39,22 +39,38 @@ class BlockdevIncreamentalBackupBitmapTest(blockdev_base.BlockdevBaseTest):
             **extra_options)
 
     def generate_inc_files(self):
-        for tag in self.params.objects("source_images"):
-            self.generate_data_file(tag)
+        return list(map(self.generate_data_file, self.src_img_tags))
 
     def do_incremental_backup(self):
-        sync_mode = self.params.get("sync_mode", "bitmap")
-        bitmap_mode = self.params.get("bitmap_mode", "always")
-        extra_options = {'sync': sync_mode,
-                         'bitmap-mode': bitmap_mode,
+        extra_options = {'sync': self.sync_mode,
                          'auto_disable_bitmap': False}
-        logging.info("bitmap sync mode: %s" % bitmap_mode)
+        if self.sync_mode != "top":
+            extra_options["bitmap-mode"] = self.bitmap_mode
         backup_utils.blockdev_batch_backup(
             self.main_vm,
             self.source_images,
             self.inc_backups,
             self.bitmaps,
             **extra_options)
+
+    def create_snapshot(self, source):
+        snapshot_options = {}
+        source_node = "drive_%s" % source
+        source_params = self.params.object_params(source)
+        snapshot_tag = source_params["snapshot"]
+        snapshot_node = "drive_%s" % snapshot_tag
+        snapshot_img = self.target_disk_define_by_params(
+            self.params, snapshot_tag)
+        snapshot_img.hotplug(self.main_vm)
+        self.trash.append(snapshot_img)
+        backup_utils.blockdev_snapshot(
+            self.main_vm,
+            source_node,
+            snapshot_node,
+            **snapshot_options)
+
+    def create_snapshots(self):
+        return list(map(self.create_snapshot, self.src_img_tags))
 
     def get_bitmaps_info(self):
         out = []
@@ -67,33 +83,37 @@ class BlockdevIncreamentalBackupBitmapTest(blockdev_base.BlockdevBaseTest):
 
     def do_test(self):
         self.do_full_backup()
+        if self.sync_mode == "top":
+            self.create_snapshots()
         self.generate_inc_files()
         self.main_vm.pause()
         self.do_incremental_backup()
-        self.check_bitmaps()
-        self.compare_image()
+        if self.sync_mode != "top":
+            self.check_bitmaps()
+        self.compare_images()
 
     def check_bitmaps(self):
-        bitmap_mode = self.params.get("bitmap_mode", "always")
         for info in self.get_bitmaps_info():
-            if bitmap_mode == "never":
+            if self.bitmap_mode == "never":
                 keyword = "is"
                 condiction = info["count"] > 0
             else:
                 keyword = "is not"
                 condiction = info["count"] == 0
             assert condiction, "bitmap '%s' %s clear in '%s' mode: \n%s" % (
-                info["name"], keyword, bitmap_mode, info)
+                info["name"], keyword, self.bitmap_mode, info)
 
-    def compare_image(self):
+    def compare_images(self):
         self.main_vm.destroy()
-        for src_tag in self.params.objects("source_images"):
-            src_params = self.params.object_params(src_tag)
-            overlay_tag = src_params.objects("image_chain")[-1]
-            src_img = self.disk_define_by_params(self.params, src_tag)
-            dst_img = self.disk_define_by_params(self.params, overlay_tag)
-            result = src_img.compare_to(dst_img)
-            assert result.exit_status == 0, result.stdout
+        return list(map(self._compare_image, self.src_img_tags))
+
+    def _compare_image(self, src_tag):
+        src_params = self.params.object_params(src_tag)
+        overlay_tag = src_params.objects("image_chain")[-1]
+        src_img = self.disk_define_by_params(self.params, src_tag)
+        dst_img = self.disk_define_by_params(self.params, overlay_tag)
+        result = src_img.compare_to(dst_img)
+        assert result.exit_status == 0, result.stdout
 
 
 def run(test, params, env):

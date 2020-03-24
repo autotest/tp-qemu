@@ -342,11 +342,12 @@ class FioLinuxCfg(object):
         self.fio_path = '%s/bin/fio' % self.fio_inst
         scp_benckmark = attrgetter('scp_benckmark')
         unpack_file = attrgetter('unpack_file')
+        install_timeout = params.get_numeric('fio_install_timeout', 300)
         install = attrgetter('install')
         self.setups = {scp_benckmark: (params.get('username'), params.get('password'),
                                        host_path, self.download_path),
                        unpack_file: (TAR_UNPACK, self.download_path, self.fio_inst),
-                       install: (self.fio_inst, self.fio_inst)}
+                       install: (self.fio_inst, self.fio_inst, install_timeout)}
         self.setup_orders = (scp_benckmark, unpack_file, install)
 
 

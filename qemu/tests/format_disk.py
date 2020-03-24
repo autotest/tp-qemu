@@ -31,9 +31,10 @@ def run(test, params, env):
     error_context.context("Login to the guest", logging.info)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     cmd_timeout = int(params.get("cmd_timeout", 360))
+    os_type = params["os_type"]
 
     drive_path = ""
-    if params.get("os_type") == 'linux':
+    if os_type == 'linux':
         drive_name = params.objects("images")[-1]
         drive_id = params["blk_extra_params_%s" % drive_name].split("=")[1]
         # If a device option(bool/str) in qemu cmd line doesn't have a value,
@@ -50,7 +51,7 @@ def run(test, params, env):
     create_partition_cmd = params.get("create_partition_cmd")
     if create_partition_cmd:
         has_dispart = re.findall("diskpart", create_partition_cmd, re.I)
-        if (params.get("os_type") == 'windows' and has_dispart):
+        if (os_type == 'windows' and has_dispart):
             error_context.context("Get disk list in guest")
             list_disk_cmd = params.get("list_disk_cmd")
             status, output = session.cmd_status_output(list_disk_cmd,
@@ -72,6 +73,19 @@ def run(test, params, env):
 
     format_cmd = params.get("format_cmd", "").format(drive_path)
     if format_cmd:
+        if os_type == 'linux':
+            show_mount_cmd = params["show_mount_cmd"].format(drive_path)
+            status = session.cmd_status(show_mount_cmd)
+            if not status:
+                error_context.context("Umount before format", logging.info)
+                umount_cmd = params["umount_cmd"].format(drive_path)
+                status, output = session.cmd_status_output(umount_cmd,
+                                                           timeout=cmd_timeout)
+                if status != 0:
+                    test.fail("Failed to umount with error: %s" % output)
+            error_context.context("Wipe existing filesystem", logging.info)
+            wipefs_cmd = params["wipefs_cmd"].format(drive_path)
+            session.cmd(wipefs_cmd)
         error_context.context("Format the disk with cmd '%s'" % format_cmd,
                               logging.info)
         status, output = session.cmd_status_output(format_cmd,

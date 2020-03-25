@@ -3,6 +3,7 @@ import random
 
 from avocado import fail_on
 from avocado.utils import process
+from avocado.utils import network
 
 from virttest import utils_libguestfs
 from virttest import utils_numeric
@@ -375,3 +376,32 @@ def format_storage_volume(img, filesystem, partition="mbr"):
             partition="mbr")
     finally:
         process.system("setenforce %s" % selinux_mode, shell=True)
+
+
+def start_nbd_server(vm, addr_info=None, tls_info=None):
+    if not addr_info:
+        port = network.find_free_port(start_port=9000)
+        data = {'host': '127.0.0.1', 'port': str(port)}
+        addr_info = {'type': 'inet', 'data': data}
+    arguments = {'addr': addr_info}
+    tls_info = copy_out_dict_if_exists(tls_info, ['tls-creds', 'tls-authz'])
+    if tls_info:
+        arguments.update(tls_info)
+    vm.monitor.cmd('nbd-server-start', arguments)
+    return arguments['addr']
+
+
+def stop_nbd_server(vm):
+    return vm.monitor.cmd("nbd-server-stop")
+
+
+def add_nbd_server(vm, device, bitmap=None, writable=True):
+    arguments = {'device': device, 'writable': writable}
+    if bitmap:
+        arguments["bitmap"] = bitmap
+    return vm.monitor.cmd('nbd-server-add', arguments)
+
+
+def remove_nbd_server(vm, name):
+    arguments = {'name': name}
+    return vm.monitor.cmd('nbd-server-remove', arguments)

@@ -54,6 +54,11 @@ def run(test, params, env):
             output = str(err)
         return output
 
+    def get_qdev_by_filename(filename):
+        for info_dict in vm.monitor.info("block"):
+            if filename in str(info_dict):
+                return info_dict['qdev']
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     monitor = vm.get_monitors_by_type('qmp')
@@ -148,9 +153,8 @@ def run(test, params, env):
                                                         new_img_name)
     if vm.check_capability(Flags.BLOCKDEV):
         sys_image = QemuImg(params, data_dir.get_data_dir(), params['images'].split()[0])
-        device_name = vm.get_block({"filename": sys_image.image_filename})
         change_insert_cmd = ("blockdev-change-medium id=%s,filename=%s" % (
-            vm.devices.get_qdev_by_drive(device_name), new_img_name))
+            get_qdev_by_filename(sys_image.image_filename), new_img_name))
     output = change_block(change_insert_cmd)
     if "is not removable" not in output:
         test.fail("Could remove non-removable device!")

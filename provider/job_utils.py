@@ -66,7 +66,7 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
         _wait_until_block_job_completed,
         first=0.1,
         timeout=timeout)
-    assert finished, "wait for block job complete event timeout in %s seconds" % timeout
+    assert finished, "wait for block job (%s) complete event timeout in %s seconds" % (job_id, timeout)
 
 
 @fail_on

@@ -245,3 +245,6 @@ class StorageVolume(object):
     def as_json(self):
         _, options = self.format.hotplug_qmp()
         return "json: %s" % options
+
+    def remove(self):
+        return self.pool.remove_volume(self)

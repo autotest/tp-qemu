@@ -34,7 +34,6 @@ class BlockdevBaseTest(object):
         images_dir = data_dir.get_data_dir()
         image_params = params.object_params(image_name)
         img = qemu_storage.QemuImg(image_params, images_dir, image_name)
-        self.trash.append(img)
         return img
 
     def source_disk_define_by_params(self, params, image_name):
@@ -68,6 +67,7 @@ class BlockdevBaseTest(object):
                     cluster_size)
             disk = self.source_disk_define_by_params(params, tag)
             disk.create(params)
+            self.trash.append(disk)
 
     def prepare_main_vm(self):
         for vm in self.env.get_all_vms():
@@ -160,6 +160,7 @@ class BlockdevBaseTest(object):
             for img in image_params.objects("image_chain"):
                 disk = self.target_disk_define_by_params(self.params, img)
                 disk.hotplug(self.main_vm)
+                self.trash.append(disk)
 
     def prepare_test(self):
         self.preprocess_data_disks()
@@ -200,4 +201,4 @@ class BlockdevBaseTest(object):
             try:
                 img.remove()
             except Exception as e:
-                logging.warnning(str(e))
+                logging.warn(str(e))

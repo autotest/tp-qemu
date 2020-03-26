@@ -298,8 +298,8 @@ def blockdev_batch_backup(vm, source_lst, target_lst,
     sync_mode = extra_options.get("sync")
     for idx, src in enumerate(source_lst):
         if sync_mode in ["incremental", "bitmap"]:
-            assert len(bitmap_lst) == len(
-                source_lst), "must provide a valid bitmap name for 'incremental' sync mode"
+            msg = "must provide a valid bitmap name for '%s' sync mode" % sync_mode
+            assert len(bitmap_lst) == len(source_lst), msg
             extra_options["bitmap"] = bitmap_lst[idx]
         backup_cmd, arguments = blockdev_backup_qmp_cmd(
             src, target_lst[idx], **extra_options)
@@ -307,7 +307,7 @@ def blockdev_batch_backup(vm, source_lst, target_lst,
         jobs_id.append(job_id)
         actions.append({"type": backup_cmd, "data": arguments})
 
-        if bitmap_lst and sync_mode == 'full':
+        if bitmap_lst and sync_mode in ['full', 'none']:
             bitmap_data = {"node": source_lst[idx], "name": bitmap_lst[idx]}
             granularity = extra_options.get("granularity")
             persistent = extra_options.get("persistent")

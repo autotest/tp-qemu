@@ -51,6 +51,7 @@ class BlockdevBackupNbdTest(blockdev_backup_nbd.BlockdevBackupNbdBaseTest):
             if not jobs_id:
                 raise e
             return jobs_id
+        raise self.test.error("Block jobs are finished ahead of time!")
 
     def do_full_backup(self):
         jobs_id = self._do_backup(

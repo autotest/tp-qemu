@@ -23,11 +23,11 @@ class BlockdevBackupBaseTest(object):
         self.env = env
         self.test = test
         self.params = params
+        self.disks_info = dict()
+        self._tmp_dir = data_dir.get_tmp_dir()
         self.source_disks = params.objects("source_images")
         self.target_disks = params.objects("target_images")
         self.backup_options = self.get_backup_options(params)
-        self.disks_info = dict()
-        self._tmp_dir = data_dir.get_tmp_dir()
 
     def is_blockdev_mode(self):
         return self.main_vm.check_capability(Flags.BLOCKDEV)
@@ -36,9 +36,9 @@ class BlockdevBackupBaseTest(object):
         opts = params.objects("backup_options")
         extra_options = params.copy_from_keys(opts)
         for k, v in extra_options.items():
-            if v in ("yes", "true"):
+            if v in ("yes", "true", "on"):
                 extra_options[k] = True
-            if v in ("no", "false"):
+            if v in ("no", "false", "off"):
                 extra_options[k] = False
         return extra_options
 
@@ -68,7 +68,8 @@ class BlockdevBackupBaseTest(object):
             if params.get("random_cluster_size") == "yes":
                 blacklist = list(
                     map(int, params.objects("cluster_size_blacklist")))
-                cluster_size = backup_utils.generate_random_cluster_size(blacklist)
+                cluster_size = backup_utils.generate_random_cluster_size(
+                    blacklist)
                 params["image_cluster_size"] = cluster_size
                 logging.info(
                     "set image cluster size to '%s'" %
@@ -77,9 +78,9 @@ class BlockdevBackupBaseTest(object):
             disk.create(params)
 
     def prepare_main_vm(self):
-        for vm in self.env.get_all_vms():
-            if vm.is_alive():
-                vm.destroy()
+        all_vms = self.env.get_all_vms()
+        live_vms = filter(lambda x: x.is_alive(), all_vms)
+        list(map(lambda x: x.destroy(), live_vms))
         vm_name = self.params["main_vm"]
         vm_params = self.params.object_params(vm_name)
         env_process.preprocess_vm(self.test, vm_params, self.env, vm_name)
@@ -146,6 +147,7 @@ class BlockdevBackupBaseTest(object):
         for tag in self.target_disks:
             disk = self.__target_disk_define_by_params(self.params, tag)
             disk.hotplug(self.main_vm)
+            self.trash.append(disk)
 
     def prepare_test(self):
         self.preprocess_data_disks()

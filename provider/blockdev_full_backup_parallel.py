@@ -1,7 +1,8 @@
-from provider.blockdev_backup_parallel import BlockdevBackupParallelTest
-from provider.blockdev_full_backup_base import BlockdevFullBackupBaseTest
+from provider import blockdev_backup_parallel
+from provider import blockdev_full_backup_base
 
 
 class BlockdevFullBackupParallelTest(
-        BlockdevFullBackupBaseTest, BlockdevBackupParallelTest):
+        blockdev_full_backup_base.BlockdevFullBackupBaseTest,
+        blockdev_backup_parallel.BlockdevBackupParallelTest):
     pass

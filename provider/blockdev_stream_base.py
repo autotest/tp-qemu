@@ -2,10 +2,10 @@ import time
 import json
 
 from provider import backup_utils
-from provider.blockdev_snapshot_base import BlockDevSnapshotTest
+from provider import blockdev_snapshot_base
 
 
-class BlockDevStreamTest(BlockDevSnapshotTest):
+class BlockDevStreamTest(blockdev_snapshot_base.BlockDevSnapshotTest):
 
     def snapshot_test(self):
         for info in self.disks_info:

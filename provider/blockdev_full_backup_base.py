@@ -1,7 +1,7 @@
-from provider.blockdev_backup_base import BlockdevBackupBaseTest
+from provider import blockdev_backup_base
 
 
-class BlockdevFullBackupBaseTest(BlockdevBackupBaseTest):
+class BlockdevFullBackupBaseTest(blockdev_backup_base.BlockdevBackupBaseTest):
 
     def get_backup_options(self, params):
         extra_options = super(

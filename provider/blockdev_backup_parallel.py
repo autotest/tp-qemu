@@ -1,9 +1,9 @@
 from virttest import utils_misc
 
-from provider.blockdev_backup_base import BlockdevBackupBaseTest
+from provider import blockdev_backup_base
 
 
-class BlockdevBackupParallelTest(BlockdevBackupBaseTest):
+class BlockdevBackupParallelTest(blockdev_backup_base.BlockdevBackupBaseTest):
 
     def blockdev_backup(self):
         parallel_tests = self.params.objects("parallel_tests")

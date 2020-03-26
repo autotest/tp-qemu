@@ -19,12 +19,14 @@ class BlockdevBaseTest(object):
 
     def __init__(self, test, params, env):
         self.main_vm = None
+        self.clone_vm = None
         self.params = params
         self.test = test
         self.env = env
         self.disks_info = {}  # tag, [dev, mount_point]
         self.files_info = {}  # tag, [file]
         self._tmp_dir = data_dir.get_tmp_dir()
+        self.src_img_tag = params.object_params("source_images")
         self.trash = []
 
     def is_blockdev_mode(self):

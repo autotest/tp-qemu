@@ -78,6 +78,11 @@ def run(test, params, env):
         missing = [f for f in flags.split() if f not in out]
         if missing:
             test.fail("Flag %s not in guest" % missing)
+        no_flags = params.get("no_flags")
+        if no_flags:
+            err_flags = [f for f in no_flags.split() if f in out]
+            if err_flags:
+                test.fail("Flag %s should not be present in guest" % err_flags)
 
     if params.get("reboot_method"):
         error_context.context("Reboot guest '%s'." % vm.name, logging.info)

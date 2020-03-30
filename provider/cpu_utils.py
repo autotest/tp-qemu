@@ -38,7 +38,8 @@ def get_guest_cpu_ids(session, os_type):
         return set()
     cmd = "grep processor /proc/cpuinfo"
     output = session.cmd_output(cmd)
-    return set(map(int, re.findall(r"(\d+)$", output, re.M)))
+    return set(map(int, re.findall(r"processor\s+(?::\s)?(\d+)",
+                                   output, re.M)))
 
 
 def check_guest_cpu_topology(session, os_type, cpuinfo):

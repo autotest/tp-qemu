@@ -113,6 +113,7 @@ def run(test, params, env):
     hotpluggable_test = params["hotpluggable_test"]
     verify_wait_timeout = params.get_numeric("verify_wait_timeout", 60)
     sub_test_type = params.get("sub_test_type")
+    check_cpu_topology = params.get_boolean("check_cpu_topology", True)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -159,9 +160,9 @@ def run(test, params, env):
     if vm.is_alive():
         session = vm.wait_for_login(timeout=login_timeout)
         check_guest_cpu_count(expected_vcpus)
-        if (expected_vcpus == maxcpus and
-                not cpu_utils.check_guest_cpu_topology(session, os_type,
-                                                       vm.cpuinfo)):
-            session.close()
-            test.fail("CPU topology of guest is inconsistent with "
-                      "expectations.")
+        if expected_vcpus == maxcpus and check_cpu_topology:
+            if not cpu_utils.check_guest_cpu_topology(session, os_type,
+                                                      vm.cpuinfo):
+                session.close()
+                test.fail("CPU topology of guest is inconsistent with "
+                          "expectations.")

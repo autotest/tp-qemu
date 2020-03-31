@@ -44,11 +44,8 @@ def run(test, params, env):
 
     def _reboot_vm(session):
         """Reboot vm."""
-        reboot_cmd = params["reboot_cmd"]
-        error_context.context(
-            "Rebooting VM by \"%s\"." % reboot_cmd, logging.info)
-        session.sendline(reboot_cmd)
-        return vm.wait_for_login(timeout=360)
+        error_context.context("Rebooting VM.", logging.info)
+        return vm.reboot(session=session, timeout=360)
 
     def _check_cdrom_info_by_qmp(items):
         """Check the cdrom device info by qmp."""

@@ -139,7 +139,8 @@ def run(test, params, env):
         clonevm = vm.migrate(mig_timeout, mig_protocol,
                              not_wait_for_migration=True, env=env)
 
-        mig_speed = int(utils_misc.normalize_data_size(mig_speed, "M"))
+        mig_speed = int(float(
+            utils_misc.normalize_data_size(mig_speed, "M")))
 
         mig_stat = get_migration_statistic(vm)
 

@@ -87,6 +87,8 @@ def run(test, params, env):
         last_transfer_mem = 0
         transfered_mem = 0
         mig_stat = Statistic()
+        while vm.monitor.get_migrate_progress() == 0:
+            pass
         for _ in range(30):
             o = vm.monitor.info("migrate")
             warning_msg = ("Migration already ended. Migration speed is"

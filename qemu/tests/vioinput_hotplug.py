@@ -2,9 +2,7 @@ import logging
 import time
 
 from virttest import error_context
-from virttest.qemu_devices import qdevices
 from provider import input_tests
-#from avocado.core import exceptions
 
 
 @error_context.context_aware

@@ -199,11 +199,6 @@ def run(test, params, env):
                 test.error("migration bg check command failed")
             session2.close()
 
-            # run some functions before migrate start.
-            pre_migrate = get_functions(params.get("pre_migrate"), globals())
-            for func in pre_migrate:
-                func(vm, params, test)
-
             # Start stress test in guest.
             guest_stress_test = params.get("guest_stress_test")
             if guest_stress_test:
@@ -219,10 +214,14 @@ def run(test, params, env):
             target_mig_parameters = params.get("target_migrate_parameters", "None")
             target_mig_parameters = ast.literal_eval(target_mig_parameters)
             migrate_parameters = (mig_parameters, target_mig_parameters)
+            pre_migrate = get_functions(params.get("pre_migrate"), globals())
 
             # Migrate the VM
             ping_pong = params.get("ping_pong", 1)
             for i in range(int(ping_pong)):
+                # run some functions before migrate start
+                for func in pre_migrate:
+                    func(vm, params, test)
                 if i % 2 == 0:
                     logging.info("Round %s ping..." % str(i / 2))
                 else:

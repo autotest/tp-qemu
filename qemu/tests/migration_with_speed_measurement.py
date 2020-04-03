@@ -87,6 +87,8 @@ def run(test, params, env):
         last_transfer_mem = 0
         transfered_mem = 0
         mig_stat = Statistic()
+        while vm.monitor.get_migrate_progress() == 0:
+            pass
         for _ in range(30):
             o = vm.monitor.info("migrate")
             warning_msg = ("Migration already ended. Migration speed is"
@@ -127,7 +129,7 @@ def run(test, params, env):
         vm.monitor.migrate_set_speed(mig_speed)
 
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-               (os.path.join(install_path, "cpu_flags"),
+               (os.path.join(install_path, "cpu_flags", "src"),
                 vm_mem * 4, vm_mem / 2))
         logging.debug("Sending command: %s" % (cmd))
         session.sendline(cmd)
@@ -137,7 +139,8 @@ def run(test, params, env):
         clonevm = vm.migrate(mig_timeout, mig_protocol,
                              not_wait_for_migration=True, env=env)
 
-        mig_speed = int(utils_misc.normalize_data_size(mig_speed, "M"))
+        mig_speed = int(float(
+            utils_misc.normalize_data_size(mig_speed, "M")))
 
         mig_stat = get_migration_statistic(vm)
 

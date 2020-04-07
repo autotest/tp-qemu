@@ -14,12 +14,14 @@ def run(test, params, env):
     Test usb storage devices in the guest.
 
     1) Create a image file by qemu-img
-    2) Boot up a guest add this image as a usb device
-    3) Check usb device information via monitor
-    4) Check usb information by executing guest command
-    5) Check usb serial option (optional)
-    6) Check usb removable option (optional)
-    7) Check usb min_io_size/opt_io_size option (optional)
+    2) Boot up a guest
+    3) Hotplug a usb storage (optional)
+    4) Check usb storage information via monitor
+    5) Check usb information by executing guest command
+    6) Check usb serial option (optional)
+    7) Check usb removable option (optional)
+    8) Check usb min_io_size/opt_io_size option (optional)
+    9) Hotunplug the usb storage (optional)
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -193,56 +195,82 @@ def run(test, params, env):
     vm.verify_alive()
 
     login_timeout = int(params.get("login_timeout", 360))
-    error_context.context("Check usb device information in monitor",
-                          logging.info)
-    output = str(vm.monitor.info("usb"))
-    if "Product QEMU USB MSD" not in output:
-        logging.debug(output)
-        test.fail("Could not find mass storage device")
+    hotplug_unplug = (params["with_hotplug_unplug"] == "yes")
+    repeat_times = int(params.get("usb_repeat_times", "1"))
+    for rt in range(1, repeat_times+1):
+        disk_hotplugged = []
+        if hotplug_unplug:
+            error_context.context("Hotplug the %s times." % rt, logging.info)
+            image_name = params.objects("images")[-1]
+            image_params = params.object_params(image_name)
+            devices = vm.devices.images_define_by_params(image_name,
+                                                         image_params,
+                                                         'disk', None,
+                                                         False, None)
+            for dev in devices:
+                ret = vm.devices.simple_hotplug(dev, vm.monitor)
+                if ret[1] is False:
+                    test.fail("Failed to hotplug device '%s'. Output:\n%s"
+                              % (dev, ret[0]))
+            disk_hotplugged.append(devices[-1])
 
-    error_context.context("Check usb device information in guest",
-                          logging.info)
-    session = _login()
-    output = session.cmd(params["chk_usb_info_cmd"])
-    # No bus specified, default using "usb.0" for "usb-storage"
-    for i in params["chk_usb_info_keyword"].split(","):
-        _verify_string(i, output, [i])
-    session.close()
-    _do_io_test_guest()
+        error_context.context("Check usb device information in monitor",
+                              logging.info)
+        output = str(vm.monitor.info("usb"))
+        if "Product QEMU USB MSD" not in output:
+            logging.debug(output)
+            test.fail("Could not find mass storage device")
 
-    # this part is linux only
-    if params.get("check_serial_option") == "yes":
-        error_context.context("Check usb serial option", logging.info)
-        serial = str(uuid.uuid4())
-        regex_str = r'usb-storage.*?serial = "(.*?)"\s'
-        _check_serial_option(serial, regex_str, serial)
+        error_context.context("Check usb device information in guest",
+                              logging.info)
+        session = _login()
+        output = session.cmd(params["chk_usb_info_cmd"])
+        # No bus specified, default using "usb.0" for "usb-storage"
+        for i in params["chk_usb_info_keyword"].split(","):
+            _verify_string(i, output, [i])
+        session.close()
+        _do_io_test_guest()
 
-        logging.info("Check this option with some illegal string")
-        logging.info("Set usb serial to a empty string")
-        # An empty string, ""
-        serial = "EMPTY_STRING"
-        regex_str = r'usb-storage.*?serial = (.*?)\s'
-        _check_serial_option(serial, regex_str, '""')
+        # this part is linux only
+        if params.get("check_serial_option") == "yes":
+            error_context.context("Check usb serial option", logging.info)
+            serial = uuid.uuid4().hex
+            regex_str = r'usb-storage.*?serial = "(.*?)"\s'
+            _check_serial_option(serial, regex_str, serial)
 
-        logging.info("Leave usb serial option blank")
-        serial = "NO_EQUAL_STRING"
-        regex_str = r'usb-storage.*?serial = (.*?)\s'
-        _check_serial_option(serial, regex_str, '"on"')
+            logging.info("Check this option with some illegal string")
+            logging.info("Set usb serial to a empty string")
+            # An empty string, ""
+            serial = "EMPTY_STRING"
+            regex_str = r'usb-storage.*?serial = (.*?)\s'
+            _check_serial_option(serial, regex_str, '""')
 
-    if params.get("check_removable_option") == "yes":
-        error_context.context("Check usb removable option", logging.info)
-        removable = "on"
-        expect_str = "Attached SCSI removable disk"
-        _check_removable_option(removable, expect_str)
+            logging.info("Leave usb serial option blank")
+            serial = "NO_EQUAL_STRING"
+            _check_serial_option(serial, regex_str, '"on"')
 
-        removable = "off"
-        expect_str = "Attached SCSI disk"
-        _check_removable_option(removable, expect_str)
+        if params.get("check_removable_option") == "yes":
+            error_context.context("Check usb removable option", logging.info)
+            removable = "on"
+            expect_str = "Attached SCSI removable disk"
+            _check_removable_option(removable, expect_str)
 
-    if params.get("check_io_size_option") == "yes":
-        error_context.context("Check usb min/opt io_size option", logging.info)
-        _check_io_size_option("0", "0")
-        # Guest can't recognize correct value which we set now,
-        # So comment these test temporary.
-        # _check_io_size_option("1024", "1024")
-        # _check_io_size_option("4096", "4096")
+            removable = "off"
+            expect_str = "Attached SCSI disk"
+            _check_removable_option(removable, expect_str)
+
+        if params.get("check_io_size_option") == "yes":
+            error_context.context("Check usb min/opt io_size option", logging.info)
+            _check_io_size_option("0", "0")
+            # NOTE: Guest can't recognize correct value which we set now,
+            # So comment these test temporary.
+            # _check_io_size_option("1024", "1024")
+            # _check_io_size_option("4096", "4096")
+
+        if hotplug_unplug:
+            error_context.context("Hotunplug the %s times." % rt, logging.info)
+            for dev in disk_hotplugged:
+                ret = vm.devices.simple_unplug(dev, vm.monitor)
+                if ret[1] is False:
+                    test.fail("Failed to unplug device '%s'. Output:\n%s"
+                              % (dev, ret[0]))

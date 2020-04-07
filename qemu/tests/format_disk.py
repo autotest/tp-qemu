@@ -33,6 +33,9 @@ def run(test, params, env):
     cmd_timeout = int(params.get("cmd_timeout", 360))
     os_type = params["os_type"]
 
+    if os_type == 'linux':
+        session.cmd("dmesg -C")
+
     drive_path = ""
     if os_type == 'linux':
         drive_name = params.objects("images")[-1]
@@ -150,6 +153,14 @@ def run(test, params, env):
             mount_list = session.cmd_output_safe(show_mount_cmd)
             logging.debug("The mounted devices are: %s" % mount_list)
             test.fail("Failed to umount with error: %s" % output)
+
+    # Clean partition on disk
+    clean_partition_cmd = params.get("clean_partition_cmd")
+    if clean_partition_cmd:
+        status, output = session.cmd_status_output(clean_partition_cmd,
+                                                   timeout=cmd_timeout)
+        if status != 0:
+            test.fail("Failed to clean partition with error: %s" % output)
 
     output = ""
     try:

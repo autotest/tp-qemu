@@ -171,44 +171,46 @@ def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
     """
     session = vm.wait_for_login()
     os_type = params["os_type"]
-    guest_path = params.get("guest_script_folder", "C:\\")
-    guest_scripts = params.get("guest_scripts",
-                               "VirtIoChannel_guest_send_receive.py")
-    copy_scripts(guest_scripts, guest_path, vm)
-    port_name = params["file_transfer_serial_port"]
-    port_type, port_path = get_virtio_port_property(vm, port_name)
-    file_size = int(params.get("filesize", 10))
-    transfer_timeout = int(params.get("transfer_timeout", 720))
-    host_dir = data_dir.get_tmp_dir()
-    guest_dir = params.get("tmp_dir", '/var/tmp/')
-    host_file_size, guest_file_size, host_action, guest_action\
-        = get_command_options(sender, file_size)
-    if not host_file_name:
-        host_file_name = generate_data_file(host_dir, host_file_size)
-    if not guest_file_name:
-        guest_file_name = generate_data_file(
-            guest_dir, guest_file_size, session)
-    host_script = params.get("host_script", "serial_host_send_receive.py")
-    host_script = os.path.join(data_dir.get_root_dir(), "shared", "deps",
-                               "serial", host_script)
-    python_bin = '`command -v python python3 | head -1`'
-    host_cmd = ("%s %s -t %s -s %s -f %s -a %s" %
-                (python_bin, host_script, port_type, port_path,
-                 host_file_name, host_action))
-    guest_script = os.path.join(guest_path, params['guest_script'])
-    python_bin = params.get('python_bin', python_bin)
-    guest_cmd = ("%s %s -d %s -f %s -a %s" %
-                 (python_bin, guest_script,
-                  port_name, guest_file_name, guest_action))
-    result = _transfer_data(
-        session, host_cmd, guest_cmd, transfer_timeout, sender)
-    if os_type == "windows":
-        guest_file_name = guest_file_name.replace("/", "\\")
-    if clean_file:
-        clean_cmd = params['clean_cmd']
-        os.remove(host_file_name)
-        session.cmd('%s %s' % (clean_cmd, guest_file_name))
-    session.close()
+    try:
+        guest_path = params.get("guest_script_folder", "C:\\")
+        guest_scripts = params.get("guest_scripts",
+                                   "VirtIoChannel_guest_send_receive.py")
+        copy_scripts(guest_scripts, guest_path, vm)
+        port_name = params["file_transfer_serial_port"]
+        port_type, port_path = get_virtio_port_property(vm, port_name)
+        file_size = int(params.get("filesize", 10))
+        transfer_timeout = int(params.get("transfer_timeout", 720))
+        host_dir = data_dir.get_tmp_dir()
+        guest_dir = params.get("tmp_dir", '/var/tmp/')
+        host_file_size, guest_file_size, host_action, guest_action \
+            = get_command_options(sender, file_size)
+        if not host_file_name:
+            host_file_name = generate_data_file(host_dir, host_file_size)
+        if not guest_file_name:
+            guest_file_name = generate_data_file(
+                guest_dir, guest_file_size, session)
+        host_script = params.get("host_script", "serial_host_send_receive.py")
+        host_script = os.path.join(data_dir.get_root_dir(), "shared", "deps",
+                                   "serial", host_script)
+        python_bin = '`command -v python python3 | head -1`'
+        host_cmd = ("%s %s -t %s -s %s -f %s -a %s" %
+                    (python_bin, host_script, port_type, port_path,
+                     host_file_name, host_action))
+        guest_script = os.path.join(guest_path, params['guest_script'])
+        python_bin = params.get('python_bin', python_bin)
+        guest_cmd = ("%s %s -d %s -f %s -a %s" %
+                     (python_bin, guest_script,
+                      port_name, guest_file_name, guest_action))
+        result = _transfer_data(
+            session, host_cmd, guest_cmd, transfer_timeout, sender)
+    finally:
+        if os_type == "windows":
+            guest_file_name = guest_file_name.replace("/", "\\")
+        if clean_file:
+            clean_cmd = params['clean_cmd']
+            os.remove(host_file_name)
+            session.cmd('%s %s' % (clean_cmd, guest_file_name))
+        session.close()
     return result
 
 

@@ -1934,26 +1934,34 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             logging.info("FS is thawed as expected, can write in guest.")
 
     @error_context.context_aware
-    def gagent_check_fsfreeze(self, test, params, env):
+    def _fsfreeze(self, fsfreeze_list=False, mountpoints=None,
+                  check_mountpoints=None):
         """
-        Test guest agent commands "guest-fsfreeze-freeze/status/thaw"
+        Test guest agent commands "guest-fsfreeze-freeze/status/thaw/
+        fsfreeze-list"
 
         Test steps:
         1) Check the FS is thawed.
         2) Freeze the FS.
-        3) Check the FS is frozen from both guest agent side and guest os side.
+        3) Check the FS is frozen from both guest agent side and
+         guest os side.
         4) Thaw the FS.
-        5) Check the FS is unfrozen from both guest agent side and guest os side.
+        5) Check the FS is unfrozen from both guest agent side and
+         guest os side.
 
-        :param test: kvm test object
-        :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environmen.
+        :param fsfreeze_list: Freeze fs with guest-fsfreeze-freeze or
+                              guest-fsfreeze-freeze-list
+        :param mountpoints: an array of mountpoints of filesystems to be frozen.
+                            it's the parameter for guest-fsfreeze-freeze-list.
+                            if omitted, every mounted filesystem is frozen
+        :param check_mountpoints: an array of mountpoints, to check if they are
+                                  frozen/thaw, used to the following two sceanrio.
+                                  a.fsfreeze_list is true and mountpoints is none.
+                                  b.fsfreeze_list is true and mountpoints has
+                                    invalid value and valide value(only linux guest)
         """
-        error_context.context("Check guest agent command "
-                              "'guest-fsfreeze-freeze/thaw'",
-                              logging.info)
-        write_cmd = params.get("gagent_fs_test_cmd", "")
-        write_cmd_timeout = int(params.get("write_cmd_timeout", 60))
+        write_cmd = self.params.get("gagent_fs_test_cmd", "")
+        write_cmd_timeout = int(self.params.get("write_cmd_timeout", 60))
         try:
             expect_status = self.gagent.FSFREEZE_STATUS_THAWED
             self.gagent.verify_fsfreeze_status(expect_status)
@@ -1962,10 +1970,28 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.gagent.fsthaw(check_status=False)
 
         self._action_before_fsfreeze()
-        error_context.context("Freeze the FS.", logging.info)
-        self.gagent.fsfreeze()
+        error_context.context("Freeze the FS when fsfreeze_list is"
+                              " %s and mountpoints is %s." %
+                              (fsfreeze_list, mountpoints), logging.info)
+        self.gagent.fsfreeze(fsfreeze_list=fsfreeze_list,
+                             mountpoints=mountpoints)
         try:
-            self._action_after_fsfreeze(write_cmd, write_cmd_timeout)
+            if fsfreeze_list:
+                if check_mountpoints:
+                    # only for invalid mount_points
+                    # or mountpoints is none
+                    mountpoints = check_mountpoints
+                write_cmd_list = []
+                for mpoint in mountpoints:
+                    mpoint = "/tmp" if mpoint == "/" else mpoint
+                    write_cmd_m = write_cmd % mpoint
+                    write_cmd_list.append(write_cmd_m)
+                write_cmd_guest = ";".join(write_cmd_list)
+            else:
+                mountpoint_def = self.params["mountpoint_def"]
+                write_cmd_guest = write_cmd % mountpoint_def
+
+            self._action_after_fsfreeze(write_cmd_guest, write_cmd_timeout)
             # Next, thaw guest fs.
             self._action_before_fsthaw()
             error_context.context("Thaw the FS.", logging.info)
@@ -1979,8 +2005,126 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 logging.warn("Finally failed to thaw guest fs,"
                              " detail: '%s'", detail)
             raise
+        # check after fsthaw
+        self._action_after_fsthaw(write_cmd_guest, write_cmd_timeout)
 
-        self._action_after_fsthaw(write_cmd, write_cmd_timeout)
+    @error_context.context_aware
+    def gagent_check_fsfreeze(self, test, params, env):
+        """
+        Test guest agent commands "guest-fsfreeze-freeze"
+
+        Test steps:
+        1) Check the FS is thawed.
+        2) Freeze the FS.
+        3) Check the FS is frozen from both guest agent side and
+         guest os side.
+        4) Thaw the FS.
+        5) Check the FS is unfrozen from both guest agent side and
+         guest os side.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
+        """
+        self._fsfreeze()
+
+    @error_context.context_aware
+    def gagent_check_fsfreeze_list(self, test, params, env):
+        """
+        Test guest agent commands "guest-fsfreeze-freeze-list"
+
+        Test steps:
+        1) Check the FS is thawed.
+        2) Freeze the FS without mountpoint.
+        3) Check the FS is frozen from both guest agent side and
+         guest os side.
+        4) Thaw the FS.
+        5) Check the FS is unfrozen from both guest agent side and
+         guest os side.
+        6) Freeze the FS with one valid mountpoint.
+        7) repeate step4-5.
+        8) Freeze the FS with two valid mountpoints
+        9) repeate step4-5.
+        8) Freeze the FS with one valid mountpoint and
+         one invalid mountpoint.
+        9) Check the result.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
+        """
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+        image_size_stg0 = params["image_size_stg0"]
+
+        error_context.context("Format the new data disk and mount it.",
+                              logging.info)
+        if params.get("os_type") == "linux":
+            disk_data = list(utils_disk.get_linux_disks(session).keys())
+            mnt_point_data = utils_disk.configure_empty_disk(
+                session, disk_data[0], image_size_stg0, "linux",
+                labeltype="msdos")[0]
+            mount_points = ["/", mnt_point_data]
+        else:
+            disk_index = utils_misc.wait_for(
+                lambda: utils_disk.get_windows_disks_index(session,
+                                                           image_size_stg0),
+                120)
+            if disk_index:
+                logging.info("Clear readonly for disk and online it in"
+                             " windows guest.")
+                if not utils_disk.update_windows_disk_attributes(session,
+                                                                 disk_index):
+                    test.error("Failed to update windows disk attributes.")
+                mnt_point_data = utils_disk.configure_empty_disk(
+                    session, disk_index[0], image_size_stg0, "windows",
+                    labeltype="msdos")[0]
+                mount_points = ["C:\\", "%s:\\" % mnt_point_data]
+            else:
+                test.error("Didn't find any disk_index except system disk.")
+
+        error_context.context("Freeze fs without parameter of mountpoints.",
+                              logging.info)
+        self._fsfreeze(fsfreeze_list=True, check_mountpoints=mount_points)
+        error_context.context("Freeze fs with two mount point.",
+                              logging.info)
+        self._fsfreeze(fsfreeze_list=True, mountpoints=mount_points)
+        error_context.context("Freeze fs with every mount point.",
+                              logging.info)
+        for mpoint in mount_points:
+            mpoint = ["%s" % mpoint]
+            self._fsfreeze(fsfreeze_list=True, mountpoints=mpoint)
+
+        error_context.context("Freeze fs with one valid mountpoint and"
+                              " one invalid mountpoint.", logging.info)
+        if params.get("os_type") == "linux":
+            mount_points_n = ["/", "/invalid"]
+            check_mp = ["/"]
+            self._fsfreeze(fsfreeze_list=True, mountpoints=mount_points_n,
+                           check_mountpoints=check_mp)
+        else:
+            mount_points_n = ["C:\\", "X:\\"]
+            logging.info("Make sure the current status is thaw.")
+            try:
+                expect_status = self.gagent.FSFREEZE_STATUS_THAWED
+                self.gagent.verify_fsfreeze_status(expect_status)
+            except guest_agent.VAgentFreezeStatusError:
+                # Thaw guest FS if the fs status is incorrect.
+                self.gagent.fsthaw(check_status=False)
+            try:
+                self.gagent.fsfreeze(fsfreeze_list=True,
+                                     mountpoints=mount_points_n)
+            except guest_agent.VAgentCmdError as e:
+                expected = "failed to add X:\\ to snapshot set"
+                if expected not in e.edata["desc"]:
+                    test.fail(e)
+            else:
+                test.fail("Cmd 'guest-fsfreeze-freeze-list' is executed"
+                          " successfully, but it should return error.")
+            finally:
+                if self.gagent.get_fsfreeze_status() == \
+                        self.gagent.FSFREEZE_STATUS_FROZEN:
+                    self.gagent.fsthaw(check_status=False)
 
     @error_context.context_aware
     def gagent_check_thaw_unfrozen(self, test, params, env):

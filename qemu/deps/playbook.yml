@@ -11,7 +11,6 @@
     bs_options: "{{bootstrap_options}}"
     host_log_dir: "{{host_log_files_dir}}"
     cmd_line: "{{command_line}}"
-    flag: True
 
   tasks:
 
@@ -40,18 +39,40 @@
         /usr/bin/update-ca-trust extract
       when: dnld_cert_output.changed
 
-# The following two tasks need to be modified, check if kar already deployed, if true, skip.
-    - name: clone kar
+    - name: Check kar folder exists
+      stat:
+         path: '{{kar_local}}'
+      register: kar_folder
+
+    - name: Clone kar
       git:
         repo: '{{kar_repo}}'
         dest: '{{kar_local}}'
-        force: yes
+      when: not kar_folder.stat.exists
 
     - name: Run bootstrap script
       command: ./Bootstrap.sh {{bs_options}}
       args:
         chdir: '{{kar_local}}'
+      when: not kar_folder.stat.exists
       register: bootstrap_result
+      ignore_errors: True
+
+    - name: Remove kar folder when bootstrap failed
+      file:
+        path: '{{kar_local}}'
+        state: absent
+      when: bootstrap_result is failed
+
+    - name: Clean env when bootstrap failed
+      pip:
+        name: aexpect, avocado-framework, avocado-framework-plugin-vt, avocado-framework-plugin-result-html
+        state: absent
+      when: bootstrap_result is failed
+
+    - fail:
+        msg: "bootstrap script failed"
+      when: bootstrap_result is failed
 
     - name: Run case
       shell:

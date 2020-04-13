@@ -34,7 +34,8 @@ def run(test, params, env):
     os_type = params["os_type"]
     timeout = int(params.get("login_timeout", 360))
     module = params.get("modprobe_module")
-    check_module = params.get_boolean("check_module", "yes")
+    check_module = params.get_boolean("check_module", True)
+    bg_test = params.get_boolean("bg_test", True)
     session = vm.wait_for_login()
     if os_type == "windows":
         driver_name = params["driver_name"]
@@ -61,7 +62,8 @@ def run(test, params, env):
             test.error("Failed to get device %s" % chardev_qid)
         if port_params['serial_type'] == 'virtserialport':
             params['file_transfer_serial_port'] = port
-            run_bg_test(test, params, vm)
+            if bg_test:
+                run_bg_test(test, params, vm)
         for repeat in range(params.get_numeric("repeat_times", 1)):
             repeat += 1
             if module and check_module:

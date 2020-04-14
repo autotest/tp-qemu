@@ -94,6 +94,18 @@ class BlockDevCommitTest(object):
                 return kname
         return None
 
+    def configure_disk(self, tag):
+        """
+        support configuration on both system and data disk
+        """
+        if tag == self.params["images"].split()[0]:
+            self.configure_system_disk(tag)
+        else:
+            self.configure_data_disk(tag)
+
+    def configure_system_disk(self, tag):
+        self.disks_info.append(["", self.params["mount_point"], tag])
+
     def configure_data_disk(self, tag):
         os_type = self.params["os_type"]
         disk_params = self.params.object_params(tag)
@@ -132,7 +144,7 @@ class BlockDevCommitTest(object):
             device_params = self.params.object_params(device)
             snapshot_tags = device_params["snapshot_tags"].split()
             self.device_node = self.get_node_name(device)
-            self.configure_data_disk(device)
+            self.configure_disk(device)
             self.prepare_snapshot_file(snapshot_tags)
             self.create_snapshots(snapshot_tags, device)
 

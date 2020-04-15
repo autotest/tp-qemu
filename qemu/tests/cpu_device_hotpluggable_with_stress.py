@@ -5,6 +5,7 @@ import logging
 
 from provider import cpu_utils
 
+from virttest import arch
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_package
@@ -39,6 +40,7 @@ def run(test, params, env):
             session.cmd(install_cmd)
 
     os_type = params["os_type"]
+    vm_arch_name = params.get('vm_arch_name', arch.ARCH)
     login_timeout = params.get_numeric("login_timeout", 360)
     stress_duration = params.get_numeric("stress_duration", 180)
     verify_wait_timeout = params.get_numeric("verify_wait_timeout", 60)
@@ -88,14 +90,16 @@ def run(test, params, env):
                                "%.2f%%" % (cpu_id, cpu_usage_rate))
                 logging.info("Usage rate of vCPU(%s) is: %.2f%%", cpu_id,
                              cpu_usage_rate)
-        for vcpu_dev in vcpu_devices:
-            error_context.context("Hotunplug vcpu device: %s" % vcpu_dev,
-                                  logging.info)
-            vm.hotunplug_vcpu_device(vcpu_dev)
-            # Drift the running stress task to other vCPUs
-            time.sleep(random.randint(5, 10))
-        if vm.get_cpu_count() != smp:
-            test.fail("Actual number of guest CPUs is not equal to expected")
+        if not vm_arch_name.startswith("s390"):
+            for vcpu_dev in vcpu_devices:
+                error_context.context("Hotunplug vcpu device: %s" % vcpu_dev,
+                                      logging.info)
+                vm.hotunplug_vcpu_device(vcpu_dev)
+                # Drift the running stress task to other vCPUs
+                time.sleep(random.randint(5, 10))
+            if vm.get_cpu_count() != smp:
+                test.fail("Actual number of guest CPUs is not equal to "
+                          "expected")
         stress_tool.unload_stress()
         stress_tool.clean()
     else:

@@ -2686,6 +2686,160 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             cmd = "mv -f /etc/sysconfig/qemu-ga-bk /etc/sysconfig/qemu-ga"
             session.cmd(cmd)
 
+    @error_context.context_aware
+    def gagent_check_os_basic_info(self, test, params, env):
+        """
+        Get hostname, timezone and currently active users on the vm.
+        Steps:
+        1) Check host name.
+        2) Check timezone name.
+        3) check timezone's offset to UTS in seconds.
+        4) Check all active users number.
+        5) Check every user info.
+        6) Check every user's domain(windows only)
+        7) Get the earlier loggin time for the same user.
+        8) Check the login time for every user.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        def _result_check(rsult_qga, rsult_guest):
+            if rsult_qga != rsult_guest:
+                msg = "The result is different between qga and guest\n"
+                msg += "from qga: %s\n" % rsult_qga
+                msg += "from guest: %s\n" % rsult_guest
+                test.fail(msg)
+
+        error_context.context("Check host name of guest.", logging.info)
+        host_name_ga = self.gagent.get_host_name()["host-name"]
+        cmd_get_host_name = params["cmd_get_host_name"]
+        host_name_guest = session.cmd_output(cmd_get_host_name).strip()
+        _result_check(host_name_ga, host_name_guest)
+
+        error_context.context("Check timezone of guest.", logging.info)
+        timezone_ga = self.gagent.get_timezone()
+        timezone_name_ga = timezone_ga["zone"]
+        timezone_offset_ga = timezone_ga["offset"]
+
+        logging.info("Check timezone name.")
+        cmd_get_timezone_name = params["cmd_get_timezone_name"]
+        timezone_name_guest = session.cmd_output(
+            cmd_get_timezone_name).strip()
+        if params["os_type"] == "windows":
+            # there are standard name and daylight name for windows os,
+            # both are accepted.
+            cmd_dlight_name = params["cmd_get_timezone_dlight_name"]
+            timezone_dlight_name_guest = session.cmd_output(
+                cmd_dlight_name).strip()
+            timezone_name_list = [timezone_name_guest,
+                                  timezone_dlight_name_guest]
+            if timezone_name_ga not in timezone_name_list:
+                msg = "The result is different between qga and guest\n"
+                msg += "from qga: %s\n" % timezone_name_ga
+                msg += "from guest: %s\n" % timezone_name_list
+                test.fail(msg)
+        else:
+            _result_check(timezone_name_ga, timezone_name_guest)
+
+        logging.info("Check timezone offset.")
+        cmd_get_timezone_offset = params["cmd_get_timezone_offset"]
+        timezone_offset_guest = session.cmd_output(
+            cmd_get_timezone_offset).strip()
+        # +08:00
+        # (UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi
+        pattern = r"(\S)(\d\d):\d\d"
+        timezone_list = re.findall(pattern, timezone_offset_guest, re.I)
+        # if it's daylight save time, offset should be 1h early
+        if "daylight" in timezone_name_ga.lower():
+            offset_seconds = (int(timezone_list[0][1]) - 1) * 3600
+        else:
+            offset_seconds = int(timezone_list[0][1]) * 3600
+        if timezone_list[0][0] == "-":
+            timezone_offset_guest_seconds = int(timezone_list[0][0]
+                                                + str(offset_seconds))
+        else:
+            timezone_offset_guest_seconds = int(offset_seconds)
+        _result_check(timezone_offset_ga, timezone_offset_guest_seconds)
+
+        error_context.context("Check the current active users number.",
+                              logging.info)
+        user_qga_list = self.gagent.get_users()
+        user_num_qga = len(user_qga_list)
+        cmd_get_users = params["cmd_get_users"]
+        user_guest = session.cmd_output(cmd_get_users).strip()
+        user_guest_list = user_guest.splitlines()
+
+        logging.info("Get all users name in guest.")
+        if params["os_type"] == "linux":
+            cmd_get_user_name = params["cmd_get_users_name"]
+            user_name_guest = session.cmd_output(cmd_get_user_name).strip()
+            user_name_list_guest = user_name_guest.splitlines()
+        else:
+            user_name_list_guest = []
+            for user in user_guest_list:
+                user = user.strip(' >')
+                user_name = user.split()[0]
+                user_name_list_guest.append(user_name)
+        # get non duplicate user name
+        user_num_guest = len(set(user_name_list_guest))
+
+        if user_num_qga != user_num_guest:
+            msg = "Currently active users number are different"
+            msg += " between qga and guest\n"
+            msg += "from qga: %s\n" % len(user_num_qga)
+            msg += "from guest: %s\n" % len(user_num_guest)
+            test.fail(msg)
+
+        error_context.context("Check the current active users info.",
+                              logging.info)
+        for user_qga in user_qga_list:
+            login_time_qga = user_qga["login-time"]
+            user_name_qga = user_qga["user"]
+
+            error_context.context("Check %s user info." % user_name_qga,
+                                  logging.info)
+            # only have domain key in windows guest
+            if params["os_type"] == "windows":
+                # username is lowercase letters in windows guest
+                user_name = user_name_qga.lower()
+                logging.info("Check domain name of %s user." % user_name)
+                domain_qga = user_qga["domain"]
+                cmd_get_user_domain = params["cmd_get_user_domain"] % user_name
+                domain_guest = session.cmd_output(cmd_get_user_domain).strip()
+                _result_check(domain_qga, domain_guest)
+            else:
+                user_name = user_name_qga
+
+            # get this user's info in vm, maybe the same user
+            #  loggin many times.
+            cmd_get_user = params["cmd_get_user"] % user_name
+            records = session.cmd_output(cmd_get_user).strip().splitlines()
+            error_context.context("Check active users logging time, if "
+                                  "multiple instances of the user are "
+                                  "logged in, record the earliest one.",
+                                  logging.info)
+            first_login = float('inf')
+            time_pattern = params["time_pattern"]
+            cmd_time_trans = params["cmd_time_trans"]
+            for record in records:
+                login_time_guest = re.search(time_pattern, record).group(1)
+                cmd_time_trans_guest = cmd_time_trans % login_time_guest
+                login_time_guest = session.cmd_output(
+                    cmd_time_trans_guest).strip()
+                first_login = min(first_login, float(login_time_guest))
+
+            delta = abs(float(login_time_qga) - float(first_login))
+            if delta > 60:
+                msg = "%s login time are different between" % user_name_qga
+                msg += " qga and guest\n"
+                msg += "from qga: %s\n" % login_time_qga
+                msg += "from guest: %s\n" % first_login
+                test.fail(msg)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

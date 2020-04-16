@@ -250,6 +250,9 @@ def run(test, params, env):
             if host_arch == "ppc64le":
                 host_arch = host_arch[:5]
             expect_o = [{"arch": host_arch}]
+        elif qmp_cmd == "query-machines":
+            vm_machines = params["machine_type"]
+            expect_o = [{'alias': vm_machines}]
         check_result(qmp_o, expect_o)
     elif result_check.startswith("post_"):
         logging.info("Verify post qmp command '%s' works as designed." % post_cmd)

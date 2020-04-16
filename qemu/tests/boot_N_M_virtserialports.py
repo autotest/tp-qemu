@@ -2,6 +2,7 @@ import logging
 
 from virttest import error_context
 from virttest import utils_test
+from virttest import env_process
 from qemu.tests.virtio_serial_file_transfer import transfer_data
 
 
@@ -21,9 +22,18 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+    if params.get("start_vm") == 'no':
+        num_bus = params.get_numeric("numberic_bus")
+        for i in range(2, num_bus + 1):
+            serial_name = 'vs%d' % i
+            params['serials'] = '%s %s' % (params.get('serials', ''), serial_name)
+            params['serial_type_%s' % serial_name] = "virtserialport"
+            params['serial_bus_%s' % serial_name] = "<new>"
+        params['start_vm'] = "yes"
+        env_process.preprocess(test, params, env)
 
-    os_type = params["os_type"]
     vm = env.get_vm(params['main_vm'])
+    os_type = params["os_type"]
     if os_type == "windows":
         driver_name = params["driver_name"]
         session = vm.wait_for_login()

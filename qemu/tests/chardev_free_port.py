@@ -33,7 +33,8 @@ def run(test, params, env):
         extra_params = ' ' + char_device.cmdline()
         params['extra_params_%s' % vm] = params.get('extra_params', '') + extra_params
         params['start_vm_%s' % vm] = "yes"
-        env_process.preprocess(test, params, env)
+    env_process.preprocess(test, params, env)
+    for vm in vms:
         _vm = env.get_vm(vm)
         chardev_infos.append(_vm.monitor.info("chardev"))
     _port, _to = int(chardev_params['port']), int(chardev_params['to'])

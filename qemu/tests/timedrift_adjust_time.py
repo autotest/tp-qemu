@@ -130,6 +130,28 @@ class TimedriftTest(object):
                           "Guest Time: %s" % guest_timestr)
         return list(map(float, [epoch_host, epoch_guest]))
 
+    def get_hwtime(self, session):
+        """
+        Get guest's hardware clock in epoch.
+
+        :param session: VM session.
+        """
+        hwclock_time_command = self.params.get("hwclock_time_command",
+                                               "hwclock -u")
+        hwclock_time_filter_re = self.params.get("hwclock_time_filter_re",
+                                                 r"(\d+-\d+-\d+ \d+:\d+:\d+).*")
+        hwclock_time_format = self.params.get("hwclock_time_format",
+                                              "%Y-%m-%d %H:%M:%S")
+        output = session.cmd_output_safe(hwclock_time_command)
+        try:
+            str_time = re.findall(hwclock_time_filter_re, output)[0]
+            guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
+        except Exception as err:
+            logging.debug(
+                "(time_format, output): (%s, %s)", hwclock_time_format, output)
+            raise err
+        return guest_time
+
     @error_context.context_aware
     def verify_clock_source(self, session):
         """
@@ -198,14 +220,28 @@ class BackwardtimeTest(TimedriftTest):
         while time.time() < start_time + timeout:
             host_epoch_time, guest_epoch_time = self.get_epoch_seconds(session)
             real_difference = abs(host_epoch_time - guest_epoch_time)
-            if abs(real_difference - expect_difference) < tolerance:
-                return
+            if self.params["os_type"] == 'linux':
+                expect_difference_hwclock = float(self.params["time_difference_hwclock"])
+                guest_hwtime = self.get_hwtime(session)
+                real_difference_hw = abs(host_epoch_time - guest_hwtime)
+                if abs(real_difference - expect_difference) < tolerance and \
+                   abs(real_difference_hw - expect_difference_hwclock) < tolerance:
+                    return
+            else:
+                if abs(real_difference - expect_difference) < tolerance:
+                    return
         logging.info("Host epoch time: %s" % host_epoch_time)
         logging.info("Guest epoch time: %s" % guest_epoch_time)
-        err_msg = "Unexcept time difference between host and guest after"
-        err_msg += " testing.(actual difference: %s)" % real_difference
-        err_msg += " except difference: %s)" % expect_difference
-        self.test.fail(err_msg)
+        if self.params["os_type"] == 'linux':
+            logging.info("Guest hardware time: %s" % guest_hwtime)
+            err_msg = "Unexpected sys and hardware time difference (%s %s)\
+            between host and guest after adjusting time." \
+            % (real_difference, real_difference_hw)
+        else:
+            err_msg = "Unexpected time difference between host and guest after"
+            err_msg += " testing.(actual difference: %s)" % real_difference
+            err_msg += " expected difference: %s)" % expect_difference
+            self.test.fail(err_msg)
 
     @error_context.context_aware
     def check_dirft_before_adjust_time(self, session):
@@ -223,12 +259,24 @@ class BackwardtimeTest(TimedriftTest):
         tolerance = float(self.params.get("tolerance", 6))
         host_epoch_time, guest_epoch_time = self.get_epoch_seconds(session)
         real_difference = abs(host_epoch_time - guest_epoch_time)
-        if real_difference > tolerance:
-            logging.info("Host epoch time: %s" % host_epoch_time)
-            logging.info("Guest epoch time: %s" % guest_epoch_time)
-            err_msg = "Unexcept time difference (%s) " % real_difference
-            err_msg += " between host and guest before testing."
-            self.test.fail(err_msg)
+        if self.params["os_type"] == 'linux':
+            guest_hwtime = self.get_hwtime(session)
+            real_difference_hw = abs(host_epoch_time - guest_hwtime)
+            if real_difference > tolerance or real_difference_hw > tolerance:
+                logging.info("Host epoch time: %s" % host_epoch_time)
+                logging.info("Guest epoch time: %s" % guest_epoch_time)
+                logging.info("Guest hardware time: %s" % guest_hwtime)
+                err_msg = "Unexpected sys and hardware time difference (%s %s) \
+                between host and guest before testing."\
+                % (real_difference, real_difference_hw)
+                self.test.fail(err_msg)
+        else:
+            if real_difference > tolerance:
+                logging.info("Host epoch time: %s" % host_epoch_time)
+                logging.info("Guest epoch time: %s" % guest_epoch_time)
+                err_msg = "Unexcept time difference (%s) " % real_difference
+                err_msg += " between host and guest before testing."
+                self.test.fail(err_msg)
 
     def pre_test(self):
         """
@@ -243,6 +291,8 @@ class BackwardtimeTest(TimedriftTest):
         vm = self.get_vm(create=True)
         if self.params["os_type"] == 'windows':
             utils_time.sync_timezone_win(vm)
+        else:
+            utils_time.sync_timezone_linux(vm)
         session = self.get_session(vm)
         self.check_dirft_before_adjust_time(session)
         if self.params.get("read_clock_source_cmd"):

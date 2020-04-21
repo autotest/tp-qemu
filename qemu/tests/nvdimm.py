@@ -48,7 +48,7 @@ class NvdimmTest(object):
         if not dimms_expect.issubset(dimms_monitor):
             invisible_dimms = dimms_expect - dimms_monitor
             self.test.fail("%s dimms are invisible in monitor" % invisible_dimms)
-        check_cmd = "test -b %s" % self.params.get("pmem", "/dev/pmem0")
+        check_cmd = "test -b %s" % self.params.get("dev_path", "/dev/pmem0")
         self.run_guest_cmd(check_cmd)
 
     def format_nvdimm(self):
@@ -73,7 +73,7 @@ class NvdimmTest(object):
         """
         Umount nvdimm device in guest.
         """
-        umount_cmd = "umount %s" % self.params["pmem"]
+        umount_cmd = "umount %s" % self.params["dev_path"]
         self.run_guest_cmd(umount_cmd)
 
     def md5_hash(self, file):

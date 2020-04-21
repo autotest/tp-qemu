@@ -72,10 +72,9 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
 @fail_on
 def block_job_complete(vm, job_id, timeout=120):
     info = get_job_by_id(vm, job_id)
-    if info.get("type") == "mirror":
-        wait_until_job_status_match(vm, "ready", job_id, timeout)
-        arguments = {"device": job_id}
-        vm.monitor.cmd("block-job-complete", arguments)
+    wait_until_job_status_match(vm, "ready", job_id, timeout)
+    arguments = {"device": job_id}
+    vm.monitor.cmd("block-job-complete", arguments)
 
 
 @fail_on

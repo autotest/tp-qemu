@@ -1,7 +1,8 @@
 import re
 import logging
 
-from virttest.utils_test import VMStress
+from virttest import utils_misc
+from virttest.utils_test import VMStress, StressError
 
 
 class VMStressBinding(VMStress):
@@ -11,8 +12,7 @@ class VMStressBinding(VMStress):
     def __init__(self, vm, params, stress_args=""):
         super(VMStressBinding, self).__init__(vm, "stress", params,
                                               stress_args=stress_args)
-        self.install()  # pylint: disable=E0203
-        self.install = lambda: None
+        self.install()
 
     def load_stress_tool(self, cpu_id):
         """
@@ -20,8 +20,17 @@ class VMStressBinding(VMStress):
 
         :param cpu_id: CPU id you want to bind
         """
-        self.stress_cmds = "taskset -c %s stress" % cpu_id  # pylint: disable=W0201
-        super(VMStressBinding, self).load_stress_tool()
+        cmd = "setsid taskset -c {} {} {} > /dev/null".format(cpu_id,
+                                                              self.stress_cmds,
+                                                              self.stress_args)
+        logging.info("Launch stress with command: %s", cmd)
+        self.cmd_launch(cmd)
+        # wait for stress to start and then check, if not raise StressError
+        if not utils_misc.wait_for(self.app_running,
+                                   self.stress_wait_for_timeout,
+                                   first=2.0, step=1.0,
+                                   text="wait for stress app to start"):
+            raise StressError("Stress does not running as expected.")
 
 
 def get_guest_cpu_ids(session, os_type):

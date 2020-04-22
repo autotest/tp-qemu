@@ -2687,6 +2687,62 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session.cmd(cmd)
 
     @error_context.context_aware
+    def gagent_check_virtio_device(self, test, params, env):
+        """
+        check virtio device in windows guest.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        def _result_check(rsult_qga, rsult_guest):
+            if rsult_qga != rsult_guest:
+                msg = "The result is different between qga and guest\n"
+                msg += "from qga: %s\n" % rsult_qga
+                msg += "from guest: %s\n" % rsult_guest
+                test.fail(msg)
+
+        devs_list = self.gagent.get_virtio_device()
+        check_driver_cmd_org = params["check_driver_powershell_cmd"]
+        for device in devs_list:
+            driver_name = device["driver-name"]
+            error_context.context("Check %s info." % driver_name, logging.info)
+
+            driver_date = device["driver-date"]
+            driver_version = device["driver-version"]
+            device_address = device["address"]["data"]
+            device_id = device_address["device-id"]
+            vendor_id = device_address["vendor-id"]
+
+            filter_name = "friendlyname" if "Ethernet" in driver_name \
+                else "devicename"
+            check_driver_cmd = check_driver_cmd_org % (filter_name, driver_name)
+
+            driver_info_guest = session.cmd_output(check_driver_cmd)
+            # check driver date
+            # driverdate    : 20200219000000.******+***
+            date_group = re.search(r"driverdate.*\:\s(\d{4})(\d{2})(\d{2})",
+                                   driver_info_guest, re.I).groups()
+            driver_date_guest = "-".join(date_group)
+            _result_check(driver_date, driver_date_guest)
+
+            # check driver version
+            driver_ver_guest = re.search(r"driverversion.*\:\s(\S+)",
+                                         driver_info_guest, re.I).group(1)
+            _result_check(driver_version, driver_ver_guest)
+
+            # check vender id and device id
+            pattern_dev = r"deviceid.*VEN_([A-Za-z0-9]+)&DEV_([A-Za-z0-9]+)&"
+            id_dev = re.search(pattern_dev, driver_info_guest, re.I)
+            vender_id_guest = int(id_dev.group(1), 16)
+            device_id_guest = int(id_dev.group(2), 16)
+            _result_check(vendor_id, vender_id_guest)
+            _result_check(device_id, device_id_guest)
+
+    @error_context.context_aware
     def gagent_check_os_basic_info(self, test, params, env):
         """
         Get hostname, timezone and currently active users on the vm.

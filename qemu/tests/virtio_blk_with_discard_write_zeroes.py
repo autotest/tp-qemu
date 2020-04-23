@@ -2,9 +2,11 @@ import ast
 import re
 import logging
 
+from virttest import env_process
 from virttest import error_context
 from virttest import qemu_qtree
 from virttest import utils_misc
+from virttest import virt_vm
 
 
 @error_context.context_aware
@@ -67,14 +69,28 @@ def run(test, params, env):
 
     data_tag = params["images"].split()[1]
     vm = env.get_vm(params["main_vm"])
+
+    if params['start_vm'] == 'no':
+        params['start_vm'] = 'yes'
+        try:
+            env_process.preprocess_vm(test, params, env, params["main_vm"])
+        except virt_vm.VMCreateError as e:
+            error_msg = params.get('error_msg')
+            if error_msg not in str(e):
+                test.fail('No found "%s" from the output of qemu:%s.' %
+                          (error_msg, str(e)))
+        return
+
     vm.verify_alive()
     session = vm.wait_for_login()
     data_disk = get_data_disk_by_serial(session, data_tag)
 
-    for attr_name, val in ast.literal_eval(params['attributes_checked']).items():
-        check_attribute_in_qtree(data_tag, attr_name, val)
+    if params.get('attributes_checked'):
+        for attr_name, val in ast.literal_eval(params['attributes_checked']).items():
+            check_attribute_in_qtree(data_tag, attr_name, val)
 
-    for cmd, val in ast.literal_eval(params['status_checked']).items():
-        check_status_inside_guest(session, params[cmd].format(data_disk), val)
+    if params.get('status_checked'):
+        for cmd, val in ast.literal_eval(params['status_checked']).items():
+            check_status_inside_guest(session, params[cmd].format(data_disk), val)
 
     dd_test(session, data_disk)

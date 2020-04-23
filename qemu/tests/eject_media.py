@@ -36,6 +36,17 @@ def run(test, params, env):
     def check_block(block):
         return True if block in str(vm.monitor.info("block")) else False
 
+    def eject_non_cdrom(device_name, force=False):
+        if vm.check_capability(Flags.BLOCKDEV):
+            for info_dict in vm.monitor.info("block"):
+                if device_name in str(info_dict):
+                    qdev = info_dict['qdev']
+                    break
+            vm.monitor.blockdev_open_tray(qdev, force)
+            return vm.monitor.blockdev_remove_medium(qdev)
+        else:
+            vm.eject_cdrom(device_name, force)
+
     orig_img_name = params.get("cdrom_cd1")
     p_dict = {"file": orig_img_name}
     device_name = vm.get_block(p_dict)
@@ -104,9 +115,9 @@ def run(test, params, env):
         test.error("Could not find non-removable device")
     try:
         if params.get("force_eject", "no") == "yes":
-            vm.eject_cdrom(device_name, force=True)
+            eject_non_cdrom(device_name, force=True)
         else:
-            vm.eject_cdrom(device_name)
+            eject_non_cdrom(device_name)
     except Exception as e:
         if "is not removable" not in str(e):
             test.fail(e)

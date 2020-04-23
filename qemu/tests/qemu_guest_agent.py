@@ -2840,6 +2840,125 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 msg += "from guest: %s\n" % first_login
                 test.fail(msg)
 
+    @error_context.context_aware
+    def gagent_check_os_info(self, test, params, env):
+        """
+        Get operating system info of vm.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        def _result_check(rsult_qga, rsult_guest):
+            if rsult_qga.lower() != rsult_guest.lower():
+                msg = "The result is different between qga and guest\n"
+                msg += "from qga: %s\n" % rsult_qga
+                msg += "from guest: %s\n" % rsult_guest
+                test.fail(msg)
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Get os information from qga.", logging.info)
+
+        os_info_qga = self.gagent.get_osinfo()
+        os_id_qga = os_info_qga["id"]
+        os_name_qga = os_info_qga["name"]
+        os_pretty_name_qga = os_info_qga["pretty-name"]
+        os_version_qga = os_info_qga["version"]
+        os_version_id_qga = os_info_qga["version-id"]
+        kernel_version_qga = os_info_qga["kernel-version"]
+        kernel_release_qga = os_info_qga["kernel-release"]
+        # x86_64 or x86
+        machine_type_qga = os_info_qga["machine"]
+
+        cmd_get_full_name = params["cmd_get_full_name"]
+        os_name_full_guest = session.cmd_output(cmd_get_full_name).strip()
+
+        error_context.context("Check os basic id and name.", logging.info)
+        os_type = params["os_type"]
+        os_id = params["os_id"]
+        if os_type == "windows":
+            os_name = "Microsoft Windows"
+        else:
+            os_name = re.search(r'(Red Hat.*) release',
+                                os_name_full_guest, re.I).group(1)
+        _result_check(os_id_qga, os_id)
+        _result_check(os_name_qga, os_name)
+
+        error_context.context("Check os pretty name.", logging.info)
+        if os_type == "windows":
+            os_pretty_name_guest = re.search(
+                r'Microsoft (.*)', os_name_full_guest, re.M).group(1)
+        else:
+            os_pretty_name_guest = os_name_full_guest
+            if "release" in os_name_full_guest:
+                os_pretty_name_guest = re.sub(r'release ', '',
+                                              os_name_full_guest)
+        _result_check(os_pretty_name_qga, os_pretty_name_guest)
+
+        error_context.context("Check os version info.", logging.info)
+        # 2019, 8.1, 2012 R2, 8
+        pattern = r"(\d+(.)?(?(2)(\d+))( R2)?)"
+        os_version_id_guest = re.search(pattern,
+                                        os_name_full_guest, re.I).group(1)
+        if os_type == "windows":
+            os_version_guest = re.search(r'(Microsoft.*\d)',
+                                         os_name_full_guest, re.I).group(1)
+            # 2012 R2
+            if "R2" in os_version_id_guest:
+                os_version_id_guest = re.sub(r' R2', 'R2',
+                                             os_version_id_guest)
+        else:
+            os_version_guest = re.search(r'release (\d.*)',
+                                         os_name_full_guest, re.I).group(1)
+            if "Beta" in os_version_guest:
+                os_version_guest = re.sub(r'Beta ', '', os_version_guest)
+
+        _result_check(os_version_qga, os_version_guest)
+        _result_check(os_version_id_qga, os_version_id_guest)
+
+        error_context.context("Check kernel version and release version.",
+                              logging.info)
+        cmd_get_kernel_ver = params["cmd_get_kernel_ver"]
+        kernel_info_guest = session.cmd_output(cmd_get_kernel_ver).strip()
+        if os_type == "windows":
+            kernel_g = re.search(r'(\d+\.\d+)\.(\d+)',
+                                 kernel_info_guest, re.I)
+            kernel_version_guest = kernel_g.group(1)
+            kernel_release_guest = kernel_g.group(2)
+        else:
+            kernel_version_guest = kernel_info_guest
+            cmd_get_kernel_rel = params["cmd_get_kernel_rel"]
+            kernel_release_guest = session.cmd_output(
+                cmd_get_kernel_rel).strip()
+        _result_check(kernel_version_qga, kernel_version_guest)
+        _result_check(kernel_release_qga, kernel_release_guest)
+
+        error_context.context("Check variant and machine type.", logging.info)
+        if self.params.get("os_variant", "") != 'rhel8':
+            # for rhel8+ there is no variant info
+            # server or client
+            variant_qga = os_info_qga["variant"]
+            variant_id_qga = os_info_qga["variant-id"]
+            variant_guest = "server" \
+                if "server" in os_name_full_guest.lower() else "client"
+            _result_check(variant_qga, variant_guest)
+            _result_check(variant_id_qga, variant_guest)
+
+        cmd_get_machine_type = params["cmd_get_machine_type"]
+        machine_type_guest = session.cmd_output(cmd_get_machine_type).strip()
+        if os_type == "windows":
+            # one of x86, x86_64, arm, ia64
+            if "32-bit" in machine_type_guest:
+                machine_type_guest = "x86"
+            elif "64-bit" in machine_type_guest:
+                machine_type_guest = "x86_64"
+            else:
+                test.error("Only support x86 and x86_64 in this auto test now.")
+
+        _result_check(machine_type_qga, machine_type_guest)
+
     def run_once(self, test, params, env):
         QemuGuestAgentTest.run_once(self, test, params, env)
 

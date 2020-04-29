@@ -11,6 +11,7 @@
     bs_options: "{{bootstrap_options}}"
     host_log_dir: "{{host_log_files_dir}}"
     cmd_line: "{{command_line}}"
+    acc_cancel: "{{accept_cancel}}"
 
   tasks:
 
@@ -44,35 +45,30 @@
          path: '{{kar_local}}'
       register: kar_folder
 
-    - name: Clone kar
-      git:
-        repo: '{{kar_repo}}'
-        dest: '{{kar_local}}'
-      when: not kar_folder.stat.exists
+    - block:
+        - name: Clone kar
+          git:
+            repo: '{{kar_repo}}'
+            dest: '{{kar_local}}'
+          when: not kar_folder.stat.exists
 
-    - name: Run bootstrap script
-      command: ./Bootstrap.sh {{bs_options}}
-      args:
-        chdir: '{{kar_local}}'
-      when: not kar_folder.stat.exists
-      register: bootstrap_result
-      ignore_errors: True
-
-    - name: Remove kar folder when bootstrap failed
-      file:
-        path: '{{kar_local}}'
-        state: absent
-      when: bootstrap_result is failed
-
-    - name: Clean env when bootstrap failed
-      pip:
-        name: aexpect, avocado-framework, avocado-framework-plugin-vt, avocado-framework-plugin-result-html
-        state: absent
-      when: bootstrap_result is failed
-
-    - fail:
-        msg: "bootstrap script failed"
-      when: bootstrap_result is failed
+        - name: Run Bootstrap script
+          command: ./Bootstrap.sh {{bs_options}}
+          args:
+            chdir: '{{kar_local}}'
+          when: not kar_folder.stat.exists
+          register: bootstrap_result
+      rescue:
+         - name: Remove kar folder when bootstrap failed
+           file:
+             path: '{{kar_local}}'
+             state: absent
+         - name: Clean env when bootstrap failed 
+           pip:
+             name: aexpect, avocado-framework, avocado-framework-plugin-vt, avocado-framework-plugin-result-html
+             state: absent
+         - fail:
+             msg: "bootstrap script failed"
 
     - name: Run case
       shell:
@@ -90,6 +86,14 @@
     - debug:
         msg: "Log dir is created"
       when: guest_log_dir.stdout != ""
+
+    - name: Get results.json file from guest vm
+      slurp:
+        src: '{{ guest_log_dir.stdout}}/latest/results.json'
+      register: results_json
+
+    - set_fact:
+        results_json: "{{ results_json.content|b64decode|from_json }}"
 
     - name: Compress log directory to log.bz2
       archive:
@@ -110,3 +114,12 @@
       shell:
         echo "Run test case failed"
       failed_when: run_case_result is failed
+
+    - debug:
+        var: results_json.cancel
+
+    - name: Handle cancelled test cases
+      fail:
+        msg: "Test failed! There are unexpected cancelled test cases."
+      when: 
+        - results_json.cancel != 0 and not acc_cancel|bool 

@@ -8,6 +8,7 @@ from avocado.utils import software_manager
 
 from virttest import error_context
 from virttest import data_dir as virttest_data_dir
+from virttest import cpu as virttest_cpu
 
 
 @error_context.context_aware
@@ -62,13 +63,21 @@ def run(test, params, env):
         guest_password = params.get("password")
 
         bootstrap_options = params.get("nested_bs_options")
+        accept_cancel = params.get_boolean("accept_cancel")
+
         kar_cmd = "python3 ./ConfigTest.py "
 
         test_type = params.get("test_type")
-        if test_type:
-            case_name = params.get("case_name")
-            if case_name:
-                kar_cmd += " --%s=%s " % (test_type, case_name)
+        variant_name = params.get("nested_test")
+        case_name = params.get("case_name", "")
+
+        if variant_name == "check_cpu_model_l2":
+            host_cpu_models = virttest_cpu.get_host_cpu_models()
+            case_name = ','.join(["%s.%s" % (case_name, i)
+                                  for i in host_cpu_models])
+
+        kar_cmd += " --%s=%s " % (test_type, case_name)
+
         l2_guest_name = params.get("l2_guest_name")
         if l2_guest_name:
             kar_cmd += " --guestname=%s" % l2_guest_name
@@ -92,6 +101,7 @@ def run(test, params, env):
 
         data = {"guest_password": guest_password,
                 "bootstrap_options": bootstrap_options,
+                "accept_cancel": accept_cancel,
                 "command_line": kar_cmd,
                 "setup_br_sh": setup_bridge_sh,
                 "host_log_files_dir": results_dir,

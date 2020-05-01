@@ -152,6 +152,9 @@ def run(test, params, env):
             time.sleep(10)
             mems += target_mems
         error_context.context("Verify nvdimm in monitor and guest", logging.info)
+        nvdimm_ns_create_cmd = params.get("nvdimm_ns_create_cmd")
+        if nvdimm_ns_create_cmd:
+            nvdimm_test.run_guest_cmd(nvdimm_ns_create_cmd)
         nvdimm_test.verify_nvdimm(vm, mems)
         error_context.context("Format and mount nvdimm in guest", logging.info)
         nvdimm_test.mount_nvdimm()

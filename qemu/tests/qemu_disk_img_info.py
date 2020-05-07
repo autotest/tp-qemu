@@ -59,6 +59,7 @@ def run(test, params, env):
                                                  p.get(opt, default)))
     enable_ceph = params.get("enable_ceph") == "yes"
     enable_iscsi = params.get("enable_iscsi") == "yes"
+    enable_gluster = params.get("enable_gluster") == "yes"
     if enable_ceph:
         update_params.update({
              "enable_ceph_%s" % base_image: optval("enable_ceph",
@@ -79,6 +80,14 @@ def run(test, params, env):
                                                        base_image,
                                                        params, "no"),
             "lun_%s" % base_image: optval("lun", base_image, params, "0")})
+    elif enable_gluster:
+        update_params.update({
+             "enable_gluster_%s" % base_image: optval("enable_gluster",
+                                                      base_image,
+                                                      params, "no"),
+             "storage_type_%s" % base_image: optval("storage_type",
+                                                    base_image,
+                                                    params, "filesystem")})
     params.update(update_params)
 
     image_chain = params.get("image_chain", "").split()

@@ -55,7 +55,7 @@ def run(test, params, env):
         vm_pktgen = env.get_vm(pktgen_server)
         vm_pktgen.verify_alive()
         server_session = vm_pktgen.wait_for_login(timeout=login_timeout)
-        runner = server_session.cmd_output_safe
+        runner = server_session.cmd
         pktgen_ip = vm_pktgen.get_address()
         pktgen_mac = vm_pktgen.get_mac_address()
         server_interface = utils_net.get_linux_ifname(server_session,
@@ -66,7 +66,7 @@ def run(test, params, env):
         server_session = remote.wait_for_login(s_shell_client, pktgen_ip,
                                                s_shell_port, s_username,
                                                s_passwd, s_shell_prompt)
-        runner = server_session.cmd_output_safe
+        runner = server_session.cmd
         server_interface = params.get("server_interface")
         if not server_interface:
             test.cancel("Must config server interface before test")

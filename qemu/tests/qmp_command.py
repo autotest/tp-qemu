@@ -7,6 +7,7 @@ from avocado.utils import process
 
 from virttest import utils_misc
 from virttest import qemu_monitor
+from virttest.qemu_capabilities import Flags
 
 
 def run(test, params, env):
@@ -241,7 +242,10 @@ def run(test, params, env):
                 image_params = params.object_params(image)
                 image_format = image_params['image_format']
                 image_drive = "drive_%s" % image
-                image_info['device'] = image_drive
+                if vm.check_capability(Flags.BLOCKDEV):
+                    image_info['node-name'] = image_drive
+                else:
+                    image_info['device'] = image_drive
                 image_info['qdev'] = image
                 image_info['format'] = image_format
                 expect_o.append(image_info)

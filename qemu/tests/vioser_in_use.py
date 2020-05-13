@@ -2,6 +2,7 @@ import re
 import os
 import signal
 import logging
+import time
 
 from avocado.utils import process
 from virttest import utils_misc
@@ -43,6 +44,21 @@ def live_migration_guest(test, params, vm, session):
 
     vm.monitor.migrate_set_speed(params.get("mig_speed", "1G"))
     vm.migrate()
+
+
+@error_context.context_aware
+def vcpu_hotplug_guest(test, params, vm, session):
+    """
+    Vcpu hot plug test.
+    """
+
+    maxcpus = int(params["vcpu_maxcpus"])
+    current_cpus = int(params.get("smp", 2))
+    for cpuid in range(current_cpus, maxcpus):
+        error_context.context("hot-pluging vCPU %s" % cpuid, logging.info)
+        vm.hotplug_vcpu(cpu_id=cpuid)
+        # make the cpu hotplug has slot during data transfer
+        time.sleep(2)
 
 
 @error_context.context_aware
@@ -116,10 +132,21 @@ def run(test, params, env):
 
     bg_thread = run_bg_test(test, params, vm, sender)
     globals().get(params["interrupt_test"])(test, params, vm, session)
+
+    # for vcpu hotplug subtest, only check guest crash.
+    vcpu_hotplug = params.get_boolean("vcpu_hotplug")
+    if vcpu_hotplug:
+        error_context.context("Check if guest is alive.", logging.info)
+        vm.verify_kernel_crash()
+        session = vm.wait_for_login(timeout=timeout)
+        session.close()
+        return
+
     if bg_thread:
-        bg_thread.join(timeout=timeout, suppress_exception=suppress_exception)
+        bg_thread.join(timeout=timeout,
+                       suppress_exception=suppress_exception)
     if vm.is_alive():
         kill_host_serial_pid(params, vm)
-        if (virtio_serial_file_transfer.transfer_data(params, vm, sender=sender) is
-                not True):
+        if (virtio_serial_file_transfer.transfer_data(
+                params, vm, sender=sender) is not True):
             test.fail("Serial data transfter test failed.")

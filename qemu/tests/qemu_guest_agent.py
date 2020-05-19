@@ -779,6 +779,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     def gagent_check_set_time(self, test, params, env):
         """
         Execute "guest-set-time" command to guest agent
+        steps:
+        1) Query the timestamp of current time in guest
+        2) Move the guest time one week into the past with command "guest-set-time"
+        3) Check if the guest time is set
+        4) Set a invalid guest time if needed
+        5) Set the system time from the hwclock for rhel guest
+
         :param test: kvm test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
@@ -790,7 +797,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         guest_time_before = session.cmd_output(get_guest_time_cmd)
         if not guest_time_before:
             test.error("can't get the guest time for contrast")
-        error_context.context("the time before being moved back into past  is '%d' "
+        error_context.context("the time before being moved back into past is '%d' "
                               % int(guest_time_before), logging.info)
         # Need to move the guest time one week into the past
         target_time = (int(guest_time_before) - 604800) * 1000000000
@@ -801,7 +808,29 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         delta = abs(int(guest_time_after) - target_time / 1000000000)
         if delta > 3:
             test.fail("the time set for guest is not the same with target")
-        # Set the system time from the hwclock
+
+        # set invalid guest time if needed
+        invalid_time_test = params.get_boolean("invalid_time_test")
+        if invalid_time_test:
+            error_context.context("Set time to an invalid value.",
+                                  logging.info)
+            guest_time_before_invalid = session.cmd_output(get_guest_time_cmd)
+            target_time_invalid = int(guest_time_before) * 1000000000000
+            try:
+                self.gagent.set_time(target_time_invalid)
+            except guest_agent.VAgentCmdError as e:
+                expected = "Invalid parameter type"
+                if expected not in e.edata["desc"]:
+                    test.fail(str(e))
+            guest_time_after_invalid = session.cmd_output(get_guest_time_cmd)
+            delta = abs(int(guest_time_after_invalid) - int(
+                guest_time_before_invalid))
+            # time should have no change after invalid time set, 1min is
+            # acceptable as there are some check during test
+            if delta > 60:
+                test.fail("The guest time is changed after invalid time set.")
+            return
+        # Only for linux guest, set the system time from the hwclock
         if params["os_type"] != "windows":
             move_time_cmd = params["move_time_cmd"]
             session.cmd("hwclock -w")

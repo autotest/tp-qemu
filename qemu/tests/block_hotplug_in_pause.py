@@ -6,6 +6,7 @@ from virttest import utils_misc
 from virttest import utils_disk
 from virttest.qemu_devices import qdevices
 from virttest.qemu_capabilities import Flags
+from virttest.qemu_devices.utils import (DeviceError, DeviceUnplugError)
 
 
 @error_context.context_aware
@@ -76,17 +77,57 @@ def run(test, params, env):
         devs = [dev for dev in devs if not isinstance(dev, dtype)]
         return devs
 
-    def block_unplug(device_list):
+    def verify_unplug_devices_by_qtree(device_list, timeout=30):
+        """verify the unplug devices in qtree"""
+        for dev in device_list:
+            if not utils_misc.wait_for(
+                    lambda: dev.verify_unplug('', vm.monitor), timeout, 1, 5):
+                test.error('The %s is still in qtree after unplugging.' % dev)
+
+    def unplug_backend_devices(device_list):
+        """Unplug the backend devices"""
+        for dev in device_list:
+            try:
+                dev.unplug_hook()
+                drive = dev.get_param("drive")
+                if drive:
+                    if Flags.BLOCKDEV in vm.devices.caps:
+                        format_node = vm.devices[drive]
+                        nodes = [format_node]
+                        nodes.extend((n for n in format_node.get_child_nodes()))
+                        for node in nodes:
+                            if not node.verify_unplug(
+                                    node.unplug(vm.monitor), vm.monitor):
+                                raise DeviceUnplugError(
+                                        node, "Failed to unplug blockdev node.", vm.devices)
+                            vm.devices.remove(node, True if isinstance(
+                                    node, qdevices.QBlockdevFormatNode) else False)
+                            if not isinstance(node, qdevices.QBlockdevFormatNode):
+                                format_node.del_child_node(node)
+                    else:
+                        vm.devices.remove(drive)
+                vm.devices.remove(dev, True)
+
+            except (DeviceError, KeyError) as exc:
+                dev.unplug_unhook()
+                raise DeviceUnplugError(dev, exc, vm.devices)
+
+    def block_unplug(device_list, verify_qtree=True, unplug_backend=True):
         """
         Unplug disks and verify it in qtree
 
         :param device_list: List of objectes for unplug disks
         """
         for dev in reversed(device_list):
-            ret = vm.devices.simple_unplug(dev, vm.monitor)
-            if ret[1] is False:
-                test.fail("Failed to unplug device '%s'."
-                          "Ouptut:\n%s" % (dev, ret[0]))
+            out = dev.unplug(vm.monitor)
+            if out:
+                test.fail("Failed to unplug device '%s'.Ouptut:\n%s" % (dev, out))
+
+        if verify_qtree:
+            verify_unplug_devices_by_qtree(device_list)
+
+        if unplug_backend:
+            unplug_backend_devices(device_list)
 
     def block_check_in_guest(session, disks, blk_num,
                              get_disk_cmd, plug_tag="hotplug"):
@@ -165,6 +206,7 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    is_vm_paused = False
     session = vm.wait_for_login()
 
     for iteration in range(repeat_times):
@@ -178,6 +220,7 @@ def run(test, params, env):
             if params.get("stop_vm_before_hotplug", "no") == "yes":
                 error_context.context("Stop VM before hotplug")
                 vm.pause()
+                is_vm_paused = True
 
             for num in range(blk_num):
                 image_name = img_list[num + 1]
@@ -185,9 +228,10 @@ def run(test, params, env):
                 if devs:
                     device_list.extend(devs)
 
-            if vm.is_paused() and params.get("resume_vm_after_hotplug", "yes") == "yes":
+            if is_vm_paused and params.get("resume_vm_after_hotplug", "yes") == "yes":
                 error_context.context("Resume vm after hotplug")
                 vm.resume()
+                is_vm_paused = False
 
                 block_check_in_guest(session, disks_before_plug, blk_num, get_disk_cmd)
                 if params.get("disk_op_cmd"):
@@ -202,19 +246,25 @@ def run(test, params, env):
                         device_list.append(device)
 
         error_context.context("Unplug device", logging.info)
-        if not vm.is_paused():
+        if not is_vm_paused:
             disks_before_unplug = find_disk(session, get_disk_cmd)
             if params.get("stop_vm_before_unplug", "yes") == "yes":
                 error_context.context("Stop vm before unplug")
                 vm.pause()
+                is_vm_paused = True
         else:
             blk_num = 0
             disks_before_unplug = disks_before_plug
-        block_unplug(device_list)
+        block_unplug(device_list, not is_vm_paused, not is_vm_paused)
 
-        if vm.is_paused():
+        if is_vm_paused:
             error_context.context("Resume vm after unplug")
             vm.resume()
+            is_vm_paused = False
+            # verify the unplugged device in qtree and unplug
+            # the backend only under the running status.
+            verify_unplug_devices_by_qtree(device_list)
+            unplug_backend_devices(device_list)
 
         block_check_in_guest(session, disks_before_unplug,
                              blk_num, get_disk_cmd, plug_tag="unplug")

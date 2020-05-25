@@ -2,6 +2,7 @@ import re
 import logging
 import os
 import six
+import time
 
 from avocado.utils import process
 
@@ -10,6 +11,9 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
 from virttest.qemu_capabilities import Flags
+from virttest.qemu_monitor import QMPCmdError
+
+from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
 
 
 # This decorator makes the test function aware of context strings
@@ -141,12 +145,41 @@ def run(test, params, env):
                 msg += " Output: %s" % output
                 test.error(msg)
 
+    def is_tray_open(qdev):
+        for block in vm.monitor.info("block"):
+            if qdev == block.get('qdev'):
+                return block.get('tray_open')
+
+    def wait_for_tray_open(qdev):
+        if not utils_misc.wait_for(lambda: is_tray_open(qdev), 30, 1, 3):
+            test.error("The cdrom's tray did not open.")
+
+    def change_media(device, target):
+        try:
+            with change_check:
+                vm.change_media(device, target)
+        except QMPCmdError as e:
+            if excepted_qmp_err not in str(e):
+                test.error(str(e))
+            logging.warn(str(e))
+            wait_for_tray_open(cdroms)
+            with change_check:
+                vm.change_media(device, target)
+        # FIXME: sleep to wait to sync the status of CD-ROM to VM.
+        time.sleep(sleep_time_after_change)
+
+    def eject_cdrom(device):
+        with eject_check:
+            vm.eject_cdrom(device, True)
+
     cdroms = params["test_cdroms"]
     params["cdroms"] = cdroms
     params["start_vm"] = "yes"
     show_mount_cmd = params.get("show_mount_cmd")
     mount_cmd = params.get("mount_cdrom_cmd")
     umount_cmd = params.get("umount_cdrom_cmd")
+    excepted_qmp_err = params.get('excepted_qmp_err')
+    sleep_time_after_change = params.get_numeric('sleep_time_after_change', 30)
     os_type = params["os_type"]
     error_context.context("Get the main VM", logging.info)
     main_vm = params["main_vm"]
@@ -166,9 +199,12 @@ def run(test, params, env):
                                   file_size=file_size)
 
     cdrom_device = get_cdrom_device(vm)
+    eject_check = QMPEventCheckCDEject(vm, cdrom_device)
+    change_check = QMPEventCheckCDChange(vm, cdrom_device)
+
     error_context.context("Attach a small cd iso file to the cdrom.",
                           logging.info)
-    vm.change_media(cdrom_device, orig_cdrom)
+    change_media(cdrom_device, orig_cdrom)
     if mount_cmd:
         mount_cdrom(session, guest_cdrom, mount_point,
                     show_mount_cmd, mount_cmd)
@@ -188,7 +224,7 @@ def run(test, params, env):
             test.error(msg)
 
     error_context.context("eject the cdrom from monitor.", logging.info)
-    vm.eject_cdrom(cdrom_device)
+    eject_cdrom(cdrom_device)
 
     cdrom_name = params.get("final_cdrom", "images/final.iso")
     file_size = params.get("final_cdrom_size", 1000)
@@ -196,7 +232,7 @@ def run(test, params, env):
                                    file_size=file_size)
     error_context.context("Attach a bigger cd iso file to the cdrom.",
                           logging.info)
-    vm.change_media(cdrom_device, final_cdrom)
+    change_media(cdrom_device, final_cdrom)
     if mount_cmd:
         mount_cdrom(session, guest_cdrom, mount_point,
                     show_mount_cmd, mount_cmd)

@@ -117,8 +117,10 @@ def run(test, params, env):
     copy_cmd = params["copy_cmd"]
     run_gettime_cmd = params["run_gettime_cmd"]
     timeout = params.get("timeout", 360)
-    flags_without_hv_time = params["flags_without_hv_time"]
-    flags_with_hv_time = params["flags_with_hv_time"]
+    hv_time_flags = params["hv_time_flags"].split()
+    flags_with_hv_time = params["cpu_model_flags"]
+    flags_without_hv_time = ','.join(
+        [_ for _ in flags_with_hv_time.split(',') if _ not in hv_time_flags])
 
     error_context.context("Setting up environments", logging.info)
     _setup_environments()

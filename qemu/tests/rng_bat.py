@@ -37,6 +37,15 @@ def run(test, params, env):
         output = process.system_output(lsof_cmd, ignore_status=True).decode()
         return re.search(r"\s+%s\s+" % vm_pid, output, re.M)
 
+    def _is_rngd_running():
+        """
+        Check whether rngd is running
+        """
+        output = session.cmd_output(check_rngd_service)
+        if 'running' not in output:
+            return False
+        return True
+
     rng_data_rex = params.get("rng_data_rex", r".*")
     dev_file = params.get("filename_passthrough")
     timeout = float(params.get("login_timeout", 360))
@@ -94,8 +103,7 @@ def run(test, params, env):
     if os_type == "linux":
         check_rngd_service = params.get("check_rngd_service")
         if check_rngd_service:
-            output = session.cmd_output(check_rngd_service)
-            if 'running' not in output:
+            if not utils_misc.wait_for(_is_rngd_running, 30, first=5):
                 start_rngd_service = params["start_rngd_service"]
                 status, output = session.cmd_status_output(start_rngd_service)
                 if status:

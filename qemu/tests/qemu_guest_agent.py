@@ -2365,7 +2365,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         session = self._get_session(params, None)
         self._open_session_list.append(session)
-        serial_num = params["blk_extra_params"].split("=")[1]
+        serial_num = params["blk_extra_params_image1"].split("=")[1]
 
         error_context.context("Check all file system info in a loop.", logging.info)
         fs_info_qga = self.gagent.get_fsinfo()
@@ -2402,6 +2402,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 logging.info("Disk name is %s which is expected." % disk_name_qga)
 
             error_context.context("Check serial number of some disk.", logging.info)
+            if fs_type_qga == "UDF" or fs_type_qga == "CDFS":
+                logging.info("Only check block disk's serial info, no cdrom.")
+                continue
             serial_qga = fs["disk"][0]["serial"]
             if not re.findall(serial_num, serial_qga):
                 test.fail("Serial name is not correct via qga.\n"

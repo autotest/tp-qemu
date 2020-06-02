@@ -1,6 +1,7 @@
 import os
 import netaddr
 import logging
+import json
 
 from avocado.utils import process
 
@@ -23,9 +24,10 @@ def run(test, params, env):
                             " socket is supported by now.")
 
     hosts = []
-    if params.get("enable_gluster") == "yes":
+    if params.get_boolean("enable_gluster"):
         hosts.append(params["gluster_server"])
-        hosts.extend(params.get("gluster_peers", "").split())
+        hosts.extend([peer['host'] for peer in json.loads(
+            params.get('gluster_peers', '[]')) if 'host' in peer])
 
     _check_hosts(hosts)
     hosts.pop()  # The last server should be accessible

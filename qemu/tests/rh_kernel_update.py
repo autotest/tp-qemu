@@ -90,9 +90,9 @@ def run(test, params, env):
         for pkg_name in params["kernel_pkgs"].split():
             pkg_params = params.object_params(pkg_name)
             pkg_arch = pkg_params["pkg_arch"]
-            # package pattern: n-v-r.a
-            pkg_pattern = "%s-%s.%s." % (pkg_name, ver_rev, pkg_arch)
-            pkg_pattern = re.compile(".*/%s.*" % re.escape(pkg_pattern))
+            # package pattern: n-v-r.a.rpm
+            pkg_pattern = "%s-%s.%s.rpm" % (pkg_name, ver_rev, pkg_arch)
+            pkg_pattern = re.compile(".*/%s" % re.escape(pkg_pattern))
             match = pkg_pattern.search(buildinfo, re.M | re.I)
             if not match:
                 test.error("Could not get the link of '%s' in buildinfo"

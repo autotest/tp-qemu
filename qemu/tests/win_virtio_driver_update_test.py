@@ -3,6 +3,7 @@ import logging
 from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
+from virttest import utils_test
 
 from qemu.tests import single_driver_install
 
@@ -26,8 +27,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
 
     def change_virtio_media(cdrom_virtio):
         """
@@ -39,13 +38,20 @@ def run(test, params, env):
         logging.info("Changing virtio iso image to '%s'" % virtio_iso)
         vm.change_media("drive_virtio", virtio_iso)
 
+    vm = env.get_vm(params["main_vm"])
+    timeout = int(params.get("login_timeout", 360))
+    driver = params["driver_name"]
+    error_context.context("Enable driver verifier in guest.", logging.info)
+    session = vm.wait_for_login(timeout=timeout)
+    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
+                                                            test, driver,
+                                                            timeout)
+    session.close()
     if params.get("need_uninstall") != "yes":
         error_context.context("Downgrade virtio driver", logging.info)
         change_virtio_media(params["cdrom_virtio_downgrade"])
         single_driver_install.run(test, params, env)
-        error_context.context("Reboot guest after downgrade virtio driver",
-                              logging.info)
-        vm.reboot()
+        # vm is rebooted in single driver install function
         error_context.context("Upgrade virtio driver to original",
                               logging.info)
         change_virtio_media(params["cdrom_virtio"])

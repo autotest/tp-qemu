@@ -237,7 +237,11 @@ class BlockDevicesPlug(object):
                 img, img_params, self._dev_type['media'])
 
             for dev in reversed(devices_created):
-                if dev.get_qid().endswith(img):
+                qid = dev.get_qid()
+                if isinstance(dev, qdevices.QObject) and dev.get_param(
+                        'backend') == 'secret' and qid.startswith('%s_' % img):
+                    self._hotplugged_devs[img].insert(0, dev)
+                elif qid.endswith('_%s' % img) or qid == img:
                     self._hotplugged_devs[img].insert(0, dev)
                     bus = dev.get_param('bus')
                     if bus:
@@ -246,7 +250,6 @@ class BlockDevicesPlug(object):
                 elif bus_name == dev.get_qid() and dev not in self.vm.devices:
                     self._hotplugged_devs[img].insert(-1, dev)
                     HOTPLUGGED_HBAS[img] = dev
-                    break
 
     def _hotplug_atomic(self, device, monitor, bus=None):
         """ Function hot plug device to devices representation. """
@@ -373,13 +376,16 @@ class BlockDevicesPlug(object):
         Unplug the block devices which are defined by images.
         """
         self._unplugged_devs.clear()
-        devs = [dev for dev in self.vm.devices if isinstance(dev, qdevices.QDevice)]
+        devs = [dev for dev in self.vm.devices if isinstance(
+                dev, (qdevices.QDevice, qdevices.QObject))]
         for img in images:
             self._unplugged_devs[img] = []
             for dev in devs:
-                if dev.get_qid() == img:
-                    self._unplugged_devs[img].append(dev)
-                    break
+                qid = dev.get_qid()
+                if qid == img or qid.startswith('%s_' % img):
+                    self._unplugged_devs[img].insert(0, dev)
+                    if qid == img:
+                        break
             else:
                 raise TestError('No such device \'%s\' in VM\'s devices.' % img)
 

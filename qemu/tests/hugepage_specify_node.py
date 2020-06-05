@@ -63,7 +63,8 @@ def run(test, params, env):
             error_context.context("Setup huge pages for idle node%s." %
                                   idle_node, logging.info)
         params["setup_hugepages"] = "yes"
-        hp_config = test_setup.HugePageConfig(params).setup()
+        hp_config = test_setup.HugePageConfig(params)
+        hp_config.setup()
         params["qemu_command_prefix"] = "numactl --membind=%s" % node_id
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params["main_vm"])

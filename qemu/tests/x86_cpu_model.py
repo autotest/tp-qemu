@@ -6,6 +6,35 @@ from avocado.utils import cpu, process
 from virttest import error_context, utils_misc, env_process
 
 
+def check_flags(params, flags, test, session=None):
+    """
+    Check cpu flags on host or guest.(only for Linux now)
+    :param params: Dictionary with the test parameters
+    :param flags: checked flags
+    :param test: QEMU test object
+    :param session: guest session
+    """
+    cmd = params["check_flag_cmd"]
+    func = process.getoutput
+    if session:
+        func = session.cmd_output
+    out = func(cmd).split()
+    missing = [f for f in flags.split() if f not in out]
+    if session:
+        error_context.context("Check cpu flags inside guest", logging.info)
+        if missing:
+            test.fail("Flag %s not in guest" % missing)
+        no_flags = params.get("no_flags")
+        if no_flags:
+            err_flags = [f for f in no_flags.split() if f in out]
+            if err_flags:
+                test.fail("Flag %s should not be present in guest" % err_flags)
+    else:
+        error_context.context("Check cpu flags on host", logging.info)
+        if missing:
+            test.cancel("This host doesn't support flag %s" % missing)
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -72,21 +101,11 @@ def run(test, params, env):
         test.fail("Guest cpu model is not right")
 
     if params["os_type"] == "linux":
-        error_context.context("Check cpu flags inside guest", logging.info)
-        cmd = params["check_flag_cmd"]
-        out = session.cmd_output(cmd).split()
-        missing = [f for f in flags.split() if f not in out]
-        if missing:
-            test.fail("Flag %s not in guest" % missing)
-        no_flags = params.get("no_flags")
-        if no_flags:
-            err_flags = [f for f in no_flags.split() if f in out]
-            if err_flags:
-                test.fail("Flag %s should not be present in guest" % err_flags)
+        check_flags(params, flags, test, session)
 
     if params.get("reboot_method"):
         error_context.context("Reboot guest '%s'." % vm.name, logging.info)
-        vm.reboot(session=session)
+        session = vm.reboot(session=session)
 
     vm.verify_kernel_crash()
     session.close()

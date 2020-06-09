@@ -58,10 +58,10 @@ def run(test, params, env):
 
     def check_msg(keywords, msg):
         if not re.search(r"%s" % keywords, msg):
-            test.fail("No invalid keywords were found in the qemu prompt message")
+            test.fail("No valid keywords were found in the qemu prompt message")
 
     if params["size_mem"] == "<overcommit>":
-        overcommit_mem = normalize_data_size("%sK" % (memory.memtotal() * 1.2), "G")
+        overcommit_mem = normalize_data_size("%sK" % (memory.memtotal() * 2), "G")
         params["size_mem"] = "%sG" % round(float(overcommit_mem))
     if params["policy_mem"] == "bind":
         params["host-nodes"] = str(max(memory.numa_nodes()) + 1)

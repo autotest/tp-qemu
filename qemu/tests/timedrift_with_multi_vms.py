@@ -52,7 +52,7 @@ def run(test, params, env):
     vms = params.get("vms").split()
     vm_obj = []
     sessions = []
-    host_cpu_list = cpu.cpu_online_list()
+    host_cpu_list = cpu.online_list()
     if same_cpu == "no":
         if len(host_cpu_list) < len(vms):
             test.cancel("There aren't enough physical cpus to pin all guests")

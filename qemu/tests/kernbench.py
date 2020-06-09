@@ -127,7 +127,7 @@ def run(test, params, env):
         if "guest" in test_type:
             cpu_num = params.get("smp")
         else:
-            cpu_num = cpu.online_cpus_count()
+            cpu_num = cpu.online_count()
         test_cmd = params.get("test_cmd") % (int(cpu_num) * cpu_multiplier)
         logging.info("Start making the kernel ....")
         (s, o) = cmd_status_output(test_cmd, timeout=cmd_timeout)

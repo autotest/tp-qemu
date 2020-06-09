@@ -128,7 +128,7 @@ def run(test, params, env):
 
     check_type = params.get("check_type")
     smp_value = params.get_numeric("smp") or params.get_numeric("vcpu_maxcpus")
-    if cpu.online_cpus_count() < 2 * smp_value:
+    if cpu.online_count() < 2 * smp_value:
         test.cancel("The number of smp counts in this host is not big enough")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

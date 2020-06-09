@@ -81,7 +81,7 @@ def run(test, params, env):
 
         logging.info("Run stress on host")
         # stress_threads = 2 * n_cpus
-        threads_host = 2 * cpu.online_cpus_count()
+        threads_host = 2 * cpu.online_count()
         # Run stress test on host
         process.run(stress_cmd % (stress_dir, threads_host), shell=True)
 

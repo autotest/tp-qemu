@@ -42,11 +42,11 @@ def run(test, params, env):
                          utils_qemu.get_maxcpus_hard_limit(qemu_binary,
                                                            current_machine))
     if not params.get_boolean("allow_pcpu_overcommit"):
-        supported_maxcpus = min(supported_maxcpus, cpu.online_cpus_count())
+        supported_maxcpus = min(supported_maxcpus, cpu.online_count())
 
     logging.info("Define the CPU topology of guest")
     vcpu_devices = []
-    if (cpu.get_cpu_vendor_name() == "amd" and
+    if (cpu.get_vendor() == "amd" and
             params.get_numeric("vcpu_threads") != 1):
         test.cancel("AMD cpu does not support multi threads")
     elif machine_type.startswith("pseries"):

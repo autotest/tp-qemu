@@ -115,7 +115,7 @@ def run(test, params, env):
         return json_file.name
 
     if (params.get('check_vendor', 'no') == 'yes' and
-            cpu.get_cpu_vendor_name() != 'intel'):
+            cpu.get_vendor() != 'intel'):
         test.cancel("We only test this case with Intel platform now")
 
     sm = software_manager.SoftwareManager()

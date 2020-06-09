@@ -130,7 +130,7 @@ def run(test, params, env):
                                    "Active: active|running")
     vms = params["vms"].split()
     host_mem = utils_memory.memtotal() // (1024 * 1024)
-    host_cpu_count = cpu.total_cpus_count()
+    host_cpu_count = cpu.total_count()
     vhost_count = 0
     if params.get("vhost"):
         vhost_count = 1

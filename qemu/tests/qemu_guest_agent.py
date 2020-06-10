@@ -2074,7 +2074,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         session, disk_index[0], image_size_stg0, "windows", labeltype="msdos")
             session.cmd(disk_write_cmd % mnt_point[0])
             error_context.context("Unplug the added disk", logging.info)
-            self.vm.devices.simple_unplug(devs[0], self.vm.monitor)
+            self.vm.devices.simple_unplug(devs[-1], self.vm.monitor)
         finally:
             if self.gagent.get_fsfreeze_status() == self.gagent.FSFREEZE_STATUS_FROZEN:
                 try:

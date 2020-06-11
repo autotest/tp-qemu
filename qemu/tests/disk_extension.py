@@ -69,6 +69,10 @@ def run(test, params, env):
     size_unit = params["increment_size"][-1]
     guest_cmd = params["guest_cmd"]
 
+    loop_device = process.run("losetup -f").stdout.decode().strip()
+    params["image_name_stg1"] = loop_device
+    params["loop_device"] = loop_device
+
     loop_device_backend_img_tag = params["loop_device_backend_img_tag"]
     loop_device_img_tag = params["loop_device_img_tag"]
 

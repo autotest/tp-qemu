@@ -225,7 +225,7 @@ class BlockDevicesPlug(object):
                 'No \"DEVICE DELETED\" event generated after unplug \"%s\".' %
                 (';'.join(self.event_devs)))
 
-    def _create_devices(self, images):
+    def _create_devices(self, images, pci_bus={"aobject": "pci.0"}):
         """ Create the block devcies. """
         self._hotplugged_devs.clear()
         for img in images:
@@ -234,7 +234,7 @@ class BlockDevicesPlug(object):
             img_params = self.vm.params.object_params(img)
             devices_created = getattr(
                 self.vm.devices, '%s_define_by_params' % self._dev_type['name'])(
-                img, img_params, self._dev_type['media'])
+                img, img_params, self._dev_type['media'], pci_bus=pci_bus)
 
             for dev in reversed(devices_created):
                 qid = dev.get_qid()
@@ -368,7 +368,8 @@ class BlockDevicesPlug(object):
         """
         logging.info("Start to hotplug devices \"%s\" by monitor %s." % (
             ' '.join(images), monitor.name))
-        self._create_devices(images)
+        args = images if bus is None else (images, {'aobject': bus.aobject})
+        self._create_devices(*args)
         self._plug_devs(HOTPLUG, self._hotplugged_devs, monitor, bus)
 
     def _unplug_devs(self, images, monitor):

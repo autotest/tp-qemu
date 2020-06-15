@@ -61,6 +61,7 @@ def run(test, params, env):
     enable_iscsi = params.get("enable_iscsi") == "yes"
     enable_gluster = params.get("enable_gluster") == "yes"
     enable_nbd = params.get("enable_nbd") == "yes"
+    enable_curl = params.get("enable_curl") == "yes"
     if enable_ceph:
         update_params.update({
              "enable_ceph_%s" % base_image: optval("enable_ceph",
@@ -100,12 +101,24 @@ def run(test, params, env):
             "storage_type_%s" % base_image: optval("storage_type",
                                                    base_image,
                                                    params, "filesystem")})
+    elif enable_curl:
+        update_params.update({
+            "enable_curl_%s" % base_image: optval("enable_curl",
+                                                  base_image,
+                                                  params, "no"),
+            "storage_type_%s" % base_image: optval("storage_type",
+                                                   base_image,
+                                                   params, "filesystem")})
     params.update(update_params)
 
     image_chain = params.get("image_chain", "").split()
     check_files = []
     md5_dict = {}
     for idx, tag in enumerate(image_chain):
+        # VM cannot boot up from a readonly image
+        if params.object_params(tag).get('image_readonly') == 'yes':
+            continue
+
         params["image_chain"] = " ".join(image_chain[:idx + 1])
         info_test = InfoTest(test, params, env, tag)
         n_params = info_test.create_snapshot()

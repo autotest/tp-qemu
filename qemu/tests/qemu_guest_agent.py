@@ -155,6 +155,29 @@ class QemuGuestAgentTest(BaseVirtTest):
         get latest qemu-guest-agent rpm package url.
         :return: rpm pkg list
         """
+        def get_mdl_tag_build_status(get_mdl_tag_cmd):
+            """
+            Get module tag and qemu-kvm build status.
+            """
+            logging.info("Get the needed module tag.")
+            mdl_tag = process.system_output(get_mdl_tag_cmd,
+                                            shell=True,
+                                            timeout=query_timeout
+                                            ).strip().split()[0].decode()
+            logging.info("Check qemu-kvm build is ready or not")
+            get_qemu_name_cmd = "brew list-tagged %s" % mdl_tag
+            get_qemu_name_cmd += " | grep qemu-kvm"
+            qemu_bild_name = process.system_output(get_qemu_name_cmd,
+                                                   shell=True,
+                                                   timeout=query_timeout
+                                                   ).strip().split()[0].decode()
+            get_build_ready_cmd = "brew buildinfo %s | grep State" % qemu_bild_name
+            output = process.system_output(get_build_ready_cmd,
+                                           shell=True,
+                                           timeout=query_timeout
+                                           ).strip().decode()
+            return mdl_tag, "COMPLETE" in output
+
         virt_module_stream = self.params.get("virt_module_stream", "")
         guest_name = self.params.get("guest_name")
         arch = self.params["vm_arch_name"]
@@ -168,7 +191,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         except avo_path.CmdNotFoundError as detail:
             raise TestCancel(str(detail))
 
-        error_context.context("Get latest virt module tag of %s"
+        error_context.context("Get the latest qemu-guest-agent pkg of %s"
                               " stream." % virt_module_stream,
                               logging.info)
         # target release,such as 810,811
@@ -184,14 +207,23 @@ class QemuGuestAgentTest(BaseVirtTest):
                                               tag_version)
         get_latest_mdl_tag_cmd = "brew list-targets |grep"
         get_latest_mdl_tag_cmd += " %s |sort -r |head -n 1" % platform_tag
-        latest_mdl_tag = process.system_output(get_latest_mdl_tag_cmd,
-                                               shell=True,
-                                               timeout=query_timeout
-                                               ).strip().split()[0].decode()
-        error_context.context("Get qemu-guest-agent rpm pkg url.",
-                              logging.info)
+        mdl_tag, build_s = get_mdl_tag_build_status(get_latest_mdl_tag_cmd)
+
+        if not build_s:
+            logging.info("The qemu-kvm build's status is not ready,"
+                         " so we well check it in the previous virt module")
+            get_pre_mdl_tag_cmd = "brew list-targets |grep %s" % platform_tag
+            get_pre_mdl_tag_cmd += " |sort -r |head -n 2 |tail -n 1"
+            mdl_tag, build_s = get_mdl_tag_build_status(
+                get_pre_mdl_tag_cmd)
+            if not build_s:
+                self.test.error("Please check why the recent two modules'"
+                                " qemu-kvm build is not ready.")
+
+        error_context.context("Get qemu-guest-agent rpm pkg"
+                              " url of %s." % mdl_tag, logging.info)
         get_brew_latest_pkg_cmd = "brew --quiet --topdir=%s" % download_root
-        get_brew_latest_pkg_cmd += " list-tagged %s" % latest_mdl_tag
+        get_brew_latest_pkg_cmd += " list-tagged %s" % mdl_tag
         get_brew_latest_pkg_cmd += " --path --arch=%s" % arch
         get_brew_latest_pkg_cmd += " |grep qemu-guest-agent-[0-9]"
 

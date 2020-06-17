@@ -29,6 +29,7 @@ from virttest.qemu_capabilities import Flags
 from virttest.qemu_devices import qdevices
 from virttest.qemu_devices.utils import (DeviceError, DeviceHotplugError,
                                          DeviceUnplugError)
+from virttest.qemu_monitor import MonitorLockError
 
 HOTPLUG, UNPLUG = ('hotplug', 'unplug')
 HOTPLUGGED_HBAS = {}
@@ -157,6 +158,8 @@ class BlockDevicesPlug(object):
     The Block Devices Plug.
     """
 
+    ACQUIRE_LOCK_TIMEOUT = 20
+
     def __init__(self, vm):
         self.vm = vm
         self._imgs = vm.params.get("images").split()[1:]
@@ -251,6 +254,16 @@ class BlockDevicesPlug(object):
                     self._hotplugged_devs[img].insert(-1, dev)
                     HOTPLUGGED_HBAS[img] = dev
 
+    def _plug(self, plug_func, monitor):
+        end = time.time() + self.ACQUIRE_LOCK_TIMEOUT
+        while time.time() < end:
+            try:
+                return plug_func(monitor)
+            except MonitorLockError:
+                pass
+        else:
+            return plug_func(monitor)
+
     def _hotplug_atomic(self, device, monitor, bus=None):
         """ Function hot plug device to devices representation. """
         with _LOCK:
@@ -281,7 +294,7 @@ class BlockDevicesPlug(object):
                     bus.prepare_hotplug(device)
                     qdev_out = self.vm.devices.insert(device)
 
-        out = device.hotplug(monitor)
+        out = self._plug(device.hotplug, monitor)
         ver_out = device.verify_hotplug(out, monitor)
         if ver_out is False:
             with _LOCK:
@@ -310,7 +323,7 @@ class BlockDevicesPlug(object):
         with _LOCK:
             self.vm.devices.set_dirty()
 
-        out = device.unplug(monitor)
+        out = self._plug(device.unplug, monitor)
         if not utils_misc.wait_for(lambda: device.verify_unplug(
                 out, monitor) is True, first=1, step=5, timeout=60):
             with _LOCK:
@@ -327,7 +340,8 @@ class BlockDevicesPlug(object):
                     nodes = [format_node]
                     nodes.extend((n for n in format_node.get_child_nodes()))
                     for node in nodes:
-                        if not node.verify_unplug(node.unplug(monitor), monitor):
+                        if not node.verify_unplug(
+                                self._plug(node.unplug, monitor), monitor):
                             raise DeviceUnplugError(
                                 node, "Failed to unplug blockdev node.", self)
                         with _LOCK:

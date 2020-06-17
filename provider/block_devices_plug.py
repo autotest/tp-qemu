@@ -382,7 +382,7 @@ class BlockDevicesPlug(object):
         """
         logging.info("Start to hotplug devices \"%s\" by monitor %s." % (
             ' '.join(images), monitor.name))
-        args = images if bus is None else (images, {'aobject': bus.aobject})
+        args = (images, {'aobject': 'pci.0' if bus is None else bus.aobject})
         self._create_devices(*args)
         self._plug_devs(HOTPLUG, self._hotplugged_devs, monitor, bus)
 

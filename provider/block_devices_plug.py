@@ -406,7 +406,7 @@ class BlockDevicesPlug(object):
 
         # Search the corresponding HBA device to be unplugged.
         for img in list(self._unplugged_devs.keys()):
-            _dev = self._unplugged_devs[img][0]
+            _dev = next((_ for _ in self._unplugged_devs[img] if _.get_qid() == img))
             _dev_bus = _dev.get_param('bus')
             if _dev_bus:
                 bus_name = _dev_bus.rsplit('.')[0]

@@ -1,10 +1,12 @@
 import os
 import logging
+import time
 
 from avocado.utils import process
 
 from virttest import env_process
 from virttest import error_context
+from virttest.utils_test.qemu import MemoryHotplugTest
 
 
 class NvdimmTest(object):
@@ -37,13 +39,15 @@ class NvdimmTest(object):
             self.test.fail("Execute command '%s' failed, output: %s" % (cmd, output))
         return output.strip()
 
-    def verify_nvdimm(self, vm):
+    def verify_nvdimm(self, vm, mems):
         """
         verify nvdimm in monitor and guest
 
         :params vm: VM object
+        :params mems: memory objects
         """
-        dimms_expect = set(["dimm-%s" % dev for dev in self.params.objects("mem_devs")])
+        dimms_expect = set("dimm-%s" % mem for mem in mems)
+        logging.info("Check if dimm %s in memory-devices" % dimms_expect)
         dimms_monitor = set([info["data"]["id"] for info in vm.monitor.info("memory-devices")])
         if not dimms_expect.issubset(dimms_monitor):
             invisible_dimms = dimms_expect - dimms_monitor
@@ -139,8 +143,16 @@ def run(test, params, env):
         error_context.context("Login to the guest", logging.info)
         login_timeout = int(params.get("login_timeout", 360))
         nvdimm_test.session = vm.wait_for_login(timeout=login_timeout)
+        mems = params.objects("mem_devs")
+        target_mems = params.objects("target_mems")
+        if target_mems:
+            hotplug_test = MemoryHotplugTest(test, params, env)
+            for mem in target_mems:
+                hotplug_test.hotplug_memory(vm, mem)
+            time.sleep(10)
+            mems += target_mems
         error_context.context("Verify nvdimm in monitor and guest", logging.info)
-        nvdimm_test.verify_nvdimm(vm)
+        nvdimm_test.verify_nvdimm(vm, mems)
         error_context.context("Format and mount nvdimm in guest", logging.info)
         nvdimm_test.mount_nvdimm()
         nv_file = params.get("nv_file", "/mnt/nv")
@@ -152,7 +164,7 @@ def run(test, params, env):
         nvdimm_test.umount_nvdimm()
         nvdimm_test.session = vm.reboot()
         error_context.context("Verify nvdimm after reboot", logging.info)
-        nvdimm_test.verify_nvdimm(vm)
+        nvdimm_test.verify_nvdimm(vm, mems)
         nvdimm_test.mount_nvdimm(format_device="no")
         new_md5 = nvdimm_test.md5_hash(nv_file)
         error_context.context("Compare current md5 to original md5", logging.info)

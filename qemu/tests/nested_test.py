@@ -49,11 +49,13 @@ def run(test, params, env):
         return invent_file.name
 
     def copy_network_script(env):
+        login_timeout = params.get_numeric("login_timeout", 360)
         deps_dir = virttest_data_dir.get_deps_dir()
 
         file_name = os.path.basename(setup_bridge_sh)
         br_file = os.path.join(deps_dir, file_name)
         for vm in get_live_vms(env):
+            vm.wait_for_login(timeout=login_timeout)
             vm.copy_files_to(br_file, setup_bridge_sh)
 
     def generate_parameter_file(params):

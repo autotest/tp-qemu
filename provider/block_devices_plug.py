@@ -206,7 +206,12 @@ class BlockDevicesPlug(object):
         for dev_id in list(self._qmp_outputs.keys()):
             output = self._qmp_outputs.pop(dev_id)
             if output[1] is False:
-                raise TestError("Failed to %s device %s." % (action, dev_id))
+                err = "Failed to %s device %s. " % (action, dev_id)
+                if not output[0] and action == 'unplug':
+                    err += 'No deleted event generated and %s still in qtree' % dev_id
+                else:
+                    err += output[0]
+                raise TestError(err)
 
     def _get_events_deleted(self):
         """ Get the device deleted events. """

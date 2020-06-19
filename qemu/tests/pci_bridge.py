@@ -5,6 +5,7 @@ from virttest import env_process
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import utils_disk
+from virttest.qemu_capabilities import Flags
 
 
 def prepare_pci_bridge(test, params, pci_bridge_num):
@@ -152,6 +153,8 @@ def disk_hotplug(test, params, vm, session, image_name,
     if drive_format == 'virtio':
         return [devices[-1]]
     else:
+        if Flags.BLOCKDEV in vm.devices.caps:
+            return devices[::3]
         return devices[::2]
 
 

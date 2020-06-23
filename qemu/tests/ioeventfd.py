@@ -175,8 +175,20 @@ def run(test, params, env):
     ioeventfds = (params['orig_ioeventfd'], params['new_ioeventfd'])
     for ioeventfd in ioeventfds:
         dev_id = _set_ioeventfd_options()
+        # Disable iothread when ioeventfd=off
+        if ioeventfd == "ioeventfd=off" and params.get(
+                "iothread_scheme"):
+            error_context.context("Disable iothread under %s" % ioeventfd,
+                                  logging.info)
+            clone_params = params.copy()
+            clone_params["iothread_scheme"] = None
+            clone_params["image_iothread"] = None
+            clone_params["iothreads"] = ""
+        else:
+            clone_params = params
+
         error_context.context('Boot a guest with "%s".' % ioeventfd, logging.info)
-        env_process.preprocess_vm(test, params, env, params["main_vm"])
+        env_process.preprocess_vm(test, clone_params, env, params["main_vm"])
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)

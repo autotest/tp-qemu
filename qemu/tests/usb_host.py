@@ -48,6 +48,7 @@ def run(test, params, env):
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
         session = vm.wait_for_login()
+        usb_reply_msg_list = params.get("usb_reply_msg").split(";")
         usb_host_device_list = params["usb_host_device_list"].split(",")
         for dev in usb_host_device_list:
             vid, pid = dev.split(":")
@@ -55,7 +56,6 @@ def run(test, params, env):
             monitor_add += ",vendorid=%s" % vid
             monitor_add += ",productid=%s" % pid
             reply = vm.monitor.cmd(monitor_add)
-            usb_reply_msg_list = params.get("usb_reply_msg").split(";")
             negative_flag = False
             for msg in usb_reply_msg_list:
                 if msg in reply:
@@ -65,7 +65,6 @@ def run(test, params, env):
                 test.fail("Could not get expected warning"
                           " msg in negative test, monitor"
                           " returns: '%s'" % reply)
-        vm.reboot()
         return
 
     device = params["usb_host_device"]

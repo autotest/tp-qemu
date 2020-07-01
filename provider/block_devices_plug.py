@@ -275,6 +275,7 @@ class BlockDevicesPlug(object):
         with _LOCK:
             self.vm.devices.set_dirty()
 
+        qdev_out = ''
         if isinstance(device, qdevices.QDevice):
             dev_bus = device.get_param('bus')
             if bus is None:

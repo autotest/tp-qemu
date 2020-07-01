@@ -379,7 +379,11 @@ class BlockDevicesPlug(object):
         """ Plug devices. """
         for img, devices in devices_dict.items():
             for device in devices:
-                args = (device, monitor) if bus is None else (device, monitor, bus)
+                args = (device, monitor)
+                if (isinstance(device, qdevices.QDevice) and
+                        bus is not None and
+                        self.vm.devices.is_pci_device(device['driver'])):
+                    args += (bus,)
                 _QMP_OUTPUT[device.get_qid()] = getattr(
                     self, '_%s_atomic' % action)(*args)
                 time.sleep(self._interval)

@@ -11,6 +11,33 @@ from virttest.qemu_capabilities import Flags
 from virttest.qemu_devices import qdevices
 
 
+def find_all_disks(session, windows):
+    """ Find all disks in guest. """
+    global all_disks
+    if windows:
+        all_disks = set(session.cmd('wmic diskdrive get index').split()[1:])
+    else:
+        all_disks = utils_misc.list_linux_guest_disks(session)
+    return all_disks
+
+
+def wait_plug_disks(session, action, disks_before_plug, excepted_num,
+                    windows, test):
+    """ Wait plug disks completely. """
+    if not utils_misc.wait_for(lambda: len(disks_before_plug ^ find_all_disks(
+            session, windows)) == excepted_num, 60, step=1.5):
+        disks_info_win = ('wmic logicaldisk get drivetype,name,description '
+                          '& wmic diskdrive list brief /format:list')
+        disks_info_linux = 'lsblk -a'
+        disks_info = session.cmd(
+            disks_info_win if windows else disks_info_linux)
+        logging.debug("The details of disks:\n %s" % disks_info)
+        test.fail("Failed to {0} devices from guest, need to {0}: {1}, "
+                  "actual {0}: {2}".format(action, excepted_num,
+                                           len(disks_before_plug ^ all_disks)))
+    return disks_before_plug ^ all_disks
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -25,33 +52,11 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
-    def _find_all_disks(session):
-        """ Find all disks in guest. """
-        global all_disks
-        if windows:
-            all_disks = set(session.cmd('wmic diskdrive get index').split()[1:])
-        else:
-            all_disks = utils_misc.list_linux_guest_disks(session)
-        return all_disks
 
     def run_sub_test(test_name):
         """ Run subtest before/after hotplug/unplug device. """
         error_context.context("Running sub test '%s'." % test_name, logging.info)
         utils_test.run_virt_sub_test(test, params, env, test_name)
-
-    def wait_plug_disks(session, action, disks_before_plug, excepted_num):
-        """ Wait plug disks completely. """
-        if not utils_misc.wait_for(lambda: len(disks_before_plug ^ _find_all_disks(
-                session)) == excepted_num, 60, step=1.5):
-            disks_info_win = ('wmic logicaldisk get drivetype,name,description '
-                              '& wmic diskdrive list brief /format:list')
-            disks_info_linux = 'lsblk -a'
-            disks_info = session.cmd(disks_info_win if windows else disks_info_linux)
-            logging.debug("The details of disks:\n %s" % disks_info)
-            test.fail("Failed to {0} devices from guest, need to {0}: {1}, "
-                      "actual {0}: {2}".format(action, excepted_num,
-                                               len(disks_before_plug ^ all_disks)))
-        return disks_before_plug ^ all_disks
 
     def create_block_devices(image):
         """ Create block devices. """
@@ -71,7 +76,7 @@ def run(test, params, env):
         error_context.context("%s block device (iteration %d)" %
                               (action.capitalize(), iteration), logging.info)
         session = vm.wait_for_login(timeout=timeout)
-        disks_before_plug = _find_all_disks(session)
+        disks_before_plug = find_all_disks(session, windows)
         plug_devices = plug_devices if action == 'hotplug' else plug_devices[::-1]
         for dev in plug_devices:
             ret = getattr(vm.devices, 'simple_%s' % action)(dev, vm.monitor)
@@ -79,7 +84,7 @@ def run(test, params, env):
                 test.fail("Failed to %s device '%s', %s." % (action, dev, ret[0]))
 
         num = 1 if action == 'hotplug' else len(data_imgs)
-        plugged_disks = wait_plug_disks(session, action, disks_before_plug, num)
+        plugged_disks = wait_plug_disks(session, action, disks_before_plug, num, windows, test)
         session.close()
         return plugged_disks
 

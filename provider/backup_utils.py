@@ -294,6 +294,15 @@ def blockdev_batch_backup(vm, source_lst, target_lst,
     timeout = int(extra_options.pop("timeout", 600))
     completion_mode = extra_options.pop("completion_mode", None)
     sync_mode = extra_options.get("sync")
+
+    # we can disable dirty-map in a transaction
+    bitmap_disable_cmd = "block-dirty-bitmap-disable"
+    disabled_bitmap_lst = extra_options.pop("disabled_bitmaps", None)
+
+    # sometimes the job will never complete, e.g. backup in pull mode,
+    # export fleecing image by internal nbd server
+    wait_job_complete = extra_options.pop("wait_job_complete", True)
+
     for idx, src in enumerate(source_lst):
         if sync_mode in ["incremental", "bitmap"]:
             assert len(bitmap_lst) == len(
@@ -305,7 +314,7 @@ def blockdev_batch_backup(vm, source_lst, target_lst,
         jobs_id.append(job_id)
         actions.append({"type": backup_cmd, "data": arguments})
 
-        if bitmap_lst and sync_mode == 'full':
+        if bitmap_lst and (sync_mode == 'full' or sync_mode == 'none'):
             bitmap_data = {"node": source_lst[idx], "name": bitmap_lst[idx]}
             granularity = extra_options.get("granularity")
             persistent = extra_options.get("persistent")
@@ -315,11 +324,20 @@ def blockdev_batch_backup(vm, source_lst, target_lst,
                 bitmap_data["persistent"] = persistent
             actions.append({"type": bitmap_add_cmd, "data": bitmap_data})
 
+        if disabled_bitmap_lst:
+            bitmap_data = {"node": source_lst[idx],
+                           "name": disabled_bitmap_lst[idx]}
+            actions.append({"type": bitmap_disable_cmd, "data": bitmap_data})
+
     arguments = {"actions": actions}
     if completion_mode == 'grouped':
         arguments['properties'] = {"completion-mode": "grouped"}
     vm.monitor.cmd("transaction", arguments)
-    list(map(lambda x: job_utils.wait_until_block_job_completed(vm, x, timeout), jobs_id))
+
+    if wait_job_complete:
+        list(map(
+            lambda x: job_utils.wait_until_block_job_completed(vm, x, timeout),
+            jobs_id))
 
 
 @fail_on

@@ -38,6 +38,7 @@ DISK = {'name': 'images', 'media': 'disk'}
 CDROM = {'name': 'cdroms', 'media': 'cdrom'}
 
 _LOCK = threading.Lock()
+_QMP_OUTPUT = {}
 
 
 def _verify_plugged_num(action):
@@ -159,6 +160,7 @@ class BlockDevicesPlug(object):
     """
 
     ACQUIRE_LOCK_TIMEOUT = 20
+    VERIFY_UNPLUG_TIMEOUT = 60
 
     def __init__(self, vm):
         self.vm = vm
@@ -170,7 +172,6 @@ class BlockDevicesPlug(object):
         self._plugged_disks = []
         self._orig_disks = set()
         self._all_disks = set()
-        self._qmp_outputs = {}
         self._event_devs = []
         self._dev_type = DISK
         self._qdev_type = qdevices.QBlockdevNode if vm.check_capability(
@@ -203,8 +204,8 @@ class BlockDevicesPlug(object):
 
     def _check_qmp_outputs(self, action):
         """ Check the output of qmp commands. """
-        for dev_id in list(self._qmp_outputs.keys()):
-            output = self._qmp_outputs.pop(dev_id)
+        for dev_id in list(_QMP_OUTPUT.keys()):
+            output = _QMP_OUTPUT.pop(dev_id)
             if output[1] is False:
                 err = "Failed to %s device %s. " % (action, dev_id)
                 if not output[0] and action == 'unplug':
@@ -329,8 +330,9 @@ class BlockDevicesPlug(object):
             self.vm.devices.set_dirty()
 
         out = self._plug(device.unplug, monitor)
-        if not utils_misc.wait_for(lambda: device.verify_unplug(
-                out, monitor) is True, first=1, step=5, timeout=60):
+        if not utils_misc.wait_for(
+                lambda: device.verify_unplug(out, monitor) is True,
+                first=1, step=5, timeout=self.VERIFY_UNPLUG_TIMEOUT):
             with _LOCK:
                 self.vm.devices.set_clean()
             return out, device.verify_unplug(out, monitor)
@@ -377,7 +379,7 @@ class BlockDevicesPlug(object):
         for img, devices in devices_dict.items():
             for device in devices:
                 args = (device, monitor) if bus is None else (device, monitor, bus)
-                self._qmp_outputs[device.get_qid()] = getattr(
+                _QMP_OUTPUT[device.get_qid()] = getattr(
                     self, '_%s_atomic' % action)(*args)
                 time.sleep(self._interval)
 

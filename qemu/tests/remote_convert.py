@@ -69,13 +69,17 @@ def run(test, params, env):
         target_filename = storage.get_image_filename(target_params, root_dir)
         storage.file_remove(target_params, target_filename)
 
+        # skip nbd image creation
+        skip_target_creation = target_params.get_boolean("skip_target_creation")
+
         # Convert source to target
         cache_mode = params.get("cache_mode")
         source_cache_mode = params.get("source_cache_mode")
         logging.info("Convert %s to %s", source, target)
         fail_on((process.CmdError,))(source_image.convert)(
             params, root_dir, cache_mode=cache_mode,
-            source_cache_mode=source_cache_mode)
+            source_cache_mode=source_cache_mode,
+            skip_target_creation=skip_target_creation)
 
         _check_file(target, md5_value)
 

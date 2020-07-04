@@ -5,7 +5,7 @@ from virttest import error_context
 from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
 from virttest import data_dir
 from virttest.qemu_capabilities import Flags
-from virttest.qemu_storage import QemuImg
+from virttest.qemu_storage import QemuImg, get_image_json
 
 
 @error_context.context_aware
@@ -109,8 +109,13 @@ def run(test, params, env):
     p_dict = {"removable": False}
     device_name = vm.get_block(p_dict)
     if vm.check_capability(Flags.BLOCKDEV):
-        sys_image = QemuImg(params, data_dir.get_data_dir(), params['images'].split()[0])
-        device_name = vm.get_block({"filename": sys_image.image_filename})
+        img_tag = params['images'].split()[0]
+        root_dir = data_dir.get_data_dir()
+        sys_image = QemuImg(params, root_dir, img_tag)
+        filename = sys_image.image_filename
+        if sys_image.image_format == 'luks':
+            filename = get_image_json(img_tag, params, root_dir)
+        device_name = vm.get_block({"filename": filename})
     if device_name is None:
         test.error("Could not find non-removable device")
     try:

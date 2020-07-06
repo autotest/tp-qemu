@@ -77,6 +77,23 @@ def run(test, params, env):
         devs = [dev for dev in devs if not isinstance(dev, dtype)]
         return devs
 
+    def verify_deleted_event(device_list, timeout=120):
+        def get_deleted_event(dev_qid):
+            for event in vm.monitor.get_events():
+                if ('DEVICE_DELETED' in event.get("event") and
+                        'device' in event.get('data') and
+                        dev_qid == event.get('data')['device']):
+                    return True
+            return False
+
+        for dev in device_list:
+            dev_qid = dev.get_qid()
+            if not utils_misc.wait_for(
+                    lambda: get_deleted_event(dev_qid), timeout, 0, 0):
+                test.fail('Failed to get deleted event of %s '
+                          'during %s sec.' % (dev_qid, timeout))
+        vm.monitor.clear_event('DEVICE_DELETED')
+
     def verify_unplug_devices_by_qtree(device_list, timeout=30):
         """verify the unplug devices in qtree"""
         for dev in device_list:
@@ -112,7 +129,8 @@ def run(test, params, env):
                 dev.unplug_unhook()
                 raise DeviceUnplugError(dev, exc, vm.devices)
 
-    def block_unplug(device_list, verify_qtree=True, unplug_backend=True):
+    def block_unplug(device_list, verify_del_event=True,
+                     verify_qtree=True, unplug_backend=True):
         """
         Unplug disks and verify it in qtree
 
@@ -122,6 +140,9 @@ def run(test, params, env):
             out = dev.unplug(vm.monitor)
             if out:
                 test.fail("Failed to unplug device '%s'.Ouptut:\n%s" % (dev, out))
+
+        if verify_del_event:
+            verify_deleted_event(device_list)
 
         if verify_qtree:
             verify_unplug_devices_by_qtree(device_list)
@@ -255,7 +276,8 @@ def run(test, params, env):
         else:
             blk_num = 0
             disks_before_unplug = disks_before_plug
-        block_unplug(device_list, not is_vm_paused, not is_vm_paused)
+        block_unplug(device_list, not is_vm_paused,
+                     not is_vm_paused, not is_vm_paused)
 
         if is_vm_paused:
             error_context.context("Resume vm after unplug")
@@ -263,6 +285,7 @@ def run(test, params, env):
             is_vm_paused = False
             # verify the unplugged device in qtree and unplug
             # the backend only under the running status.
+            verify_deleted_event(device_list)
             verify_unplug_devices_by_qtree(device_list)
             unplug_backend_devices(device_list)
 

@@ -35,6 +35,7 @@ def run(test, params, env):
     image_format = params["image_format"]
     image_size = params.get("image_size", "10G")
     enable_gluster = params.get("enable_gluster", "no") == "yes"
+    enable_nvme = params.get("enable_nvme", "no") == "yes"
     image_name = storage.get_image_filename(params, data_dir.get_data_dir())
 
     def remove(path):
@@ -43,12 +44,14 @@ def run(test, params, env):
         except OSError:
             pass
 
-    def _get_image_filename(img_name, enable_gluster=False, img_fmt=None):
+    def _get_image_filename(img_name, enable_gluster=False,
+                            enable_nvme=False, img_fmt=None):
         """
         Generate an image path.
 
         :param image_name: Force name of image.
         :param enable_gluster: Enable gluster or not.
+        :param enable_nvme: Enable nvme or not.
         :param image_format: Format for image.
         """
         if enable_gluster:
@@ -56,6 +59,8 @@ def run(test, params, env):
             image_filename = "%s%s" % (gluster_uri, img_name)
             if img_fmt:
                 image_filename += ".%s" % img_fmt
+        elif enable_nvme:
+            image_filename = image_name
         else:
             if img_fmt:
                 img_name = "%s.%s" % (img_name, img_fmt)
@@ -170,7 +175,7 @@ def run(test, params, env):
         device = params.get("device")
         if not device:
             img = _get_image_filename(image_large, enable_gluster,
-                                      image_format)
+                                      enable_nvme, image_format)
         else:
             img = device
         _create(cmd, img_name=img, fmt=image_format,

@@ -29,6 +29,7 @@ from virttest.qemu_capabilities import Flags
 from virttest.qemu_devices import qdevices
 from virttest.qemu_devices.utils import (DeviceError, DeviceHotplugError,
                                          DeviceUnplugError)
+from virttest.qemu_monitor import MonitorLockError
 
 HOTPLUG, UNPLUG = ('hotplug', 'unplug')
 HOTPLUGGED_HBAS = {}
@@ -37,6 +38,7 @@ DISK = {'name': 'images', 'media': 'disk'}
 CDROM = {'name': 'cdroms', 'media': 'cdrom'}
 
 _LOCK = threading.Lock()
+_QMP_OUTPUT = {}
 
 
 def _verify_plugged_num(action):
@@ -157,6 +159,9 @@ class BlockDevicesPlug(object):
     The Block Devices Plug.
     """
 
+    ACQUIRE_LOCK_TIMEOUT = 20
+    VERIFY_UNPLUG_TIMEOUT = 60
+
     def __init__(self, vm):
         self.vm = vm
         self._imgs = vm.params.get("images").split()[1:]
@@ -167,7 +172,6 @@ class BlockDevicesPlug(object):
         self._plugged_disks = []
         self._orig_disks = set()
         self._all_disks = set()
-        self._qmp_outputs = {}
         self._event_devs = []
         self._dev_type = DISK
         self._qdev_type = qdevices.QBlockdevNode if vm.check_capability(
@@ -200,10 +204,15 @@ class BlockDevicesPlug(object):
 
     def _check_qmp_outputs(self, action):
         """ Check the output of qmp commands. """
-        for dev_id in list(self._qmp_outputs.keys()):
-            output = self._qmp_outputs.pop(dev_id)
+        for dev_id in list(_QMP_OUTPUT.keys()):
+            output = _QMP_OUTPUT.pop(dev_id)
             if output[1] is False:
-                raise TestError("Failed to %s device %s." % (action, dev_id))
+                err = "Failed to %s device %s. " % (action, dev_id)
+                if not output[0] and action == 'unplug':
+                    err += 'No deleted event generated and %s still in qtree' % dev_id
+                else:
+                    err += output[0]
+                raise TestError(err)
 
     def _get_events_deleted(self):
         """ Get the device deleted events. """
@@ -251,6 +260,16 @@ class BlockDevicesPlug(object):
                     self._hotplugged_devs[img].insert(-1, dev)
                     HOTPLUGGED_HBAS[img] = dev
 
+    def _plug(self, plug_func, monitor):
+        end = time.time() + self.ACQUIRE_LOCK_TIMEOUT
+        while time.time() < end:
+            try:
+                return plug_func(monitor)
+            except MonitorLockError:
+                pass
+        else:
+            return plug_func(monitor)
+
     def _hotplug_atomic(self, device, monitor, bus=None):
         """ Function hot plug device to devices representation. """
         with _LOCK:
@@ -281,7 +300,7 @@ class BlockDevicesPlug(object):
                     bus.prepare_hotplug(device)
                     qdev_out = self.vm.devices.insert(device)
 
-        out = device.hotplug(monitor)
+        out = self._plug(device.hotplug, monitor)
         ver_out = device.verify_hotplug(out, monitor)
         if ver_out is False:
             with _LOCK:
@@ -310,9 +329,10 @@ class BlockDevicesPlug(object):
         with _LOCK:
             self.vm.devices.set_dirty()
 
-        out = device.unplug(monitor)
-        if not utils_misc.wait_for(lambda: device.verify_unplug(
-                out, monitor) is True, first=1, step=5, timeout=60):
+        out = self._plug(device.unplug, monitor)
+        if not utils_misc.wait_for(
+                lambda: device.verify_unplug(out, monitor) is True,
+                first=1, step=5, timeout=self.VERIFY_UNPLUG_TIMEOUT):
             with _LOCK:
                 self.vm.devices.set_clean()
             return out, device.verify_unplug(out, monitor)
@@ -327,7 +347,8 @@ class BlockDevicesPlug(object):
                     nodes = [format_node]
                     nodes.extend((n for n in format_node.get_child_nodes()))
                     for node in nodes:
-                        if not node.verify_unplug(node.unplug(monitor), monitor):
+                        if not node.verify_unplug(
+                                self._plug(node.unplug, monitor), monitor):
                             raise DeviceUnplugError(
                                 node, "Failed to unplug blockdev node.", self)
                         with _LOCK:
@@ -358,7 +379,7 @@ class BlockDevicesPlug(object):
         for img, devices in devices_dict.items():
             for device in devices:
                 args = (device, monitor) if bus is None else (device, monitor, bus)
-                self._qmp_outputs[device.get_qid()] = getattr(
+                _QMP_OUTPUT[device.get_qid()] = getattr(
                     self, '_%s_atomic' % action)(*args)
                 time.sleep(self._interval)
 
@@ -368,7 +389,7 @@ class BlockDevicesPlug(object):
         """
         logging.info("Start to hotplug devices \"%s\" by monitor %s." % (
             ' '.join(images), monitor.name))
-        args = images if bus is None else (images, {'aobject': bus.aobject})
+        args = (images, {'aobject': 'pci.0' if bus is None else bus.aobject})
         self._create_devices(*args)
         self._plug_devs(HOTPLUG, self._hotplugged_devs, monitor, bus)
 
@@ -392,7 +413,7 @@ class BlockDevicesPlug(object):
 
         # Search the corresponding HBA device to be unplugged.
         for img in list(self._unplugged_devs.keys()):
-            _dev = self._unplugged_devs[img][0]
+            _dev = next((_ for _ in self._unplugged_devs[img] if _.get_qid() == img))
             _dev_bus = _dev.get_param('bus')
             if _dev_bus:
                 bus_name = _dev_bus.rsplit('.')[0]

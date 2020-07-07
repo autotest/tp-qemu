@@ -95,7 +95,11 @@ class BlockdevBaseTest(object):
         timeout = params.get_numeric("create_tempfile_timeout", 720)
         backup_utils.generate_tempfile(
             self.main_vm, self.disks_info[tag][1], filename, image_size, timeout)
-        self.files_info[tag] = [filename]
+
+        if tag not in self.files_info:
+            self.files_info[tag] = [filename]
+        else:
+            self.files_info[tag].append(filename)
 
     def prepare_data_disk(self, tag):
         """

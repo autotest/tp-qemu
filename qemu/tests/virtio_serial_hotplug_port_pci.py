@@ -138,7 +138,7 @@ def run(test, params, env):
             vm.devices.simple_unplug(serial_devices[1], vm.monitor)
             out = vm.devices.simple_unplug(buses[0], vm.monitor)
             if out[1] is False:
-                msg = "Still get %s in qtree after unplug" % device
+                msg = "Hot-unplug device %s failed" % buses[0]
                 test.fail(msg)
             if interrupt_test_after_unplug:
                 logging.info("Run %s after hot-unplug"

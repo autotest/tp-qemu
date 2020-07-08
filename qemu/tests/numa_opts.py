@@ -1,4 +1,5 @@
 import logging
+from virttest.utils_misc import normalize_data_size
 
 
 logger = logging.getLogger(__name__)
@@ -29,17 +30,19 @@ def run(test, params, env):
                 (len(numa), numa_nodes))
 
     for nodenr, node in enumerate(numa):
-        size = params.get("numa_node%d_size" % (nodenr))
-        if size is not None:
-            size = int(size)
-            if size != numa[nodenr][0]:
-                test.fail(
-                    "Wrong size of numa node %d: %d. Expected: %d" %
-                    (nodenr, numa[nodenr][0], size))
+        mdev = params.get("numa_memdev_node%d" % (nodenr))
+        if mdev:
+            mdev = mdev.split('-')[1]
+            size = float(normalize_data_size(params.get("size_%s" % mdev)))
+        else:
+            size = params.get_numeric("mem")
+        if size != numa[nodenr][0]:
+            test.fail("Wrong size of numa node %d: %d. Expected: %d" %
+                      (nodenr, numa[nodenr][0], size))
 
-        cpus = params.get("numa_node%d_cpus" % (nodenr))
+        cpus = params.get("numa_cpus_node%d" % (nodenr))
         if cpus is not None:
-            cpus = set([int(v) for v in cpus.split()])
+            cpus = set([int(v) for v in cpus.split(",")])
             if cpus != numa[nodenr][1]:
                 test.fail(
                     "Wrong CPU set on numa node %d: %s. Expected: %s" %

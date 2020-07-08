@@ -175,9 +175,8 @@ def run(test, params, env):
     vm.verify_alive()
 
     for iteration in range(int(params.get("repeat_times", 3))):
-        data_imgs_devs = {img: create_block_devices(img) for img in data_imgs}
-        for index, img in enumerate(data_imgs_devs):
-            data_devs = data_imgs_devs[img]
+        for index, img in enumerate(data_imgs):
+            data_devs = create_block_devices(img)
             if need_plug:
                 new_disk = plug_block_devices('hotplug', data_devs).pop()
 

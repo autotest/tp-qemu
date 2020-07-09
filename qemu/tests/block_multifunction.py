@@ -13,6 +13,58 @@ from qemu.tests import block_hotplug
 from provider.block_devices_plug import BlockDevicesPlug
 
 
+def set_addr(image_name, slot, function, params, multifunction='on'):
+    """
+    Specify the multifunciton address for image device
+
+    :param image_name: The image to be assigned address
+    :param slot: The slot of address
+    :param function: The function of addresss
+    :param params: Params object
+    :param multifunction: on/off
+    """
+    if params['drive_format'].startswith('scsi'):
+        param_name = 'bus_extra_params_%s' % image_name
+    else:
+        param_name = 'blk_extra_params_%s' % image_name
+    if function % 8 == 0:
+        logging.info('Set multifunction=on for %s' % image_name)
+        params[param_name] = 'multifunction=%s' % multifunction
+        if function == 0:
+            return
+    addr_pattern = 'addr=%s.%s' % (hex(slot), hex(function % 8))
+    logging.info('Set addr of %s to %s' % (image_name, addr_pattern))
+    extra_param = params.get(param_name)
+    if extra_param:
+        params[param_name] = extra_param + ',' + addr_pattern
+    else:
+        params[param_name] = addr_pattern
+
+
+def io_test(session, disk_op_cmd, disks,
+            windows=False, image_size=None):
+    """
+    Perform io test on disks
+    :param session: vm session
+    :param disk_op_cmd: The disk operation command
+    :param plug_disks: The list of disks
+    :param windows: If it is windows guest
+    :param image_size: The size of images, only for windows
+    """
+    for index, disk in enumerate(disks):
+        if windows:
+            if not utils_disk.update_windows_disk_attributes(session, disk):
+                raise exceptions.TestError("Failed to clear readonly for all"
+                                           " disks and online them in guest")
+            partition = utils_disk.configure_empty_windows_disk(
+                session, disk, image_size)
+            test_cmd = disk_op_cmd % (partition[0], partition[0])
+            test_cmd = utils_misc.set_winutils_letter(session, test_cmd)
+        else:
+            test_cmd = disk_op_cmd % (disk, disk)
+        session.cmd(test_cmd, timeout=360)
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -32,34 +84,6 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def set_addr(image_name, slot, function, multifunction='on', vm=None):
-        """
-        Specify the multifunciton address for image device
-
-        :param image_name: The image to be assigned address
-        :param slot: The slot of address
-        :param function: The function of addresss
-        :param multifunction: on/off
-        :param vm: The VM object
-        """
-        params_obj = vm.params if vm else params
-        if params_obj['drive_format'].startswith('scsi'):
-            param_name = 'bus_extra_params_%s' % image_name
-        else:
-            param_name = 'blk_extra_params_%s' % image_name
-        if function % 8 == 0:
-            logging.info('Set multifunction=on for %s' % image_name)
-            params_obj[param_name] = 'multifunction=%s' % multifunction
-            if function == 0:
-                return
-        addr_pattern = 'addr=%s.%s' % (hex(slot), hex(function % 8))
-        logging.info('Set addr of %s to %s' % (image_name, addr_pattern))
-        extra_param = params_obj.get(param_name)
-        if extra_param:
-            params_obj[param_name] = extra_param + ',' + addr_pattern
-        else:
-            params_obj[param_name] = addr_pattern
-
     def get_image_device(qdev, img_name):
         """
         Get the image device(virtio-blk-pci/virtio-scsi-pci)
@@ -75,7 +99,7 @@ def run(test, params, env):
 
     image = params.objects('images')[0]
     vm_name = params['main_vm']
-    set_addr(image, 0, 0)  # Add multifunction=on option before start vm
+    set_addr(image, 0, 0, params)  # Add multifunction=on option before start vm
     params['start_vm'] = 'yes'
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
@@ -98,7 +122,7 @@ def run(test, params, env):
         vm.params['force_create_image_%s' % stg] = 'yes'
         vm.params['boot_drive_%s' % stg] = 'no'
         # Specify the address of the device, plug them into same slot
-        set_addr(stg, dev_slot, i, vm=vm)
+        set_addr(stg, dev_slot, i, vm.params)
         if params['drive_format'].startswith('scsi'):
             # Create oen new scsi bus for each block device
             vm.params['drive_bus_%s' % stg] = i
@@ -110,18 +134,7 @@ def run(test, params, env):
     plug.hotplug_devs_serial(bus=parent_bus_obj)
 
     # Run io test on all the plugged disks
-    for index, disk in enumerate(plug):
-        if windows:
-            if not utils_disk.update_windows_disk_attributes(session, disk):
-                test.fail("Failed to clear readonly for all disks and online "
-                          "them in guest")
-            partition = utils_disk.configure_empty_windows_disk(
-                session, disk, image_size)
-            test_cmd = disk_op_cmd % (partition[0], partition[0])
-            test_cmd = utils_misc.set_winutils_letter(session, test_cmd)
-        else:
-            test_cmd = disk_op_cmd % (disk, disk)
-        session.cmd(test_cmd, timeout=360)
+    io_test(session, disk_op_cmd, plug, windows, image_size)
 
     # Reboot the guest and check if all the disks still exist
     disks_before_reboot = block_hotplug.find_all_disks(session, windows)
@@ -172,7 +185,7 @@ def run(test, params, env):
                 pass
 
     # Replug disk 8 on slot 0 with multifunction='off'
-    set_addr(images[-1], dev_slot, 0, multifunction='off', vm=vm)
+    set_addr(images[-1], dev_slot, 0, vm.params, multifunction='off')
     plug._create_devices(unplug_dev.split(), {'aobject': parent_bus})
     for img, devs in plug._hotplugged_devs.items():
         for dev in devs:

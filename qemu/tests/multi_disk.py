@@ -201,8 +201,9 @@ def run(test, params, env):
 
     error_context.context("Start the guest with those disks", logging.info)
     vm = env.get_vm(params["main_vm"])
-    vm.create(timeout=max(10, stg_image_num), params=params)
     login_timeout = int(params.get("login_timeout", 360))
+    create_timeout = int(params.get("create_timeout", 1800))
+    vm.create(timeout=create_timeout, params=params)
     session = vm.wait_for_login(timeout=login_timeout)
 
     n_repeat = int(params.get("n_repeat", "1"))
@@ -338,7 +339,7 @@ def run(test, params, env):
                     test.fail("Fail to shut down guest.")
                 error_context.context("Start the guest again.", logging.info)
                 vm = env.get_vm(params["main_vm"])
-                vm.create(params=params)
+                vm.create(timeout=create_timeout, params=params)
                 session = vm.wait_for_login(timeout=login_timeout)
             error_context.context("Delete partitions in guest.", logging.info)
             for disk in disks:

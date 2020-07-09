@@ -15,7 +15,7 @@ from virttest import env_process
 @error_context.context_aware
 def _capture_tftp(test, vm, timeout):
     error_context.context("Snoop packet in the tap device", logging.info)
-    output = aexpect.run_fg("tcpdump -nli %s" % vm.get_ifname(),
+    output = aexpect.run_fg("tcpdump -nli %s port '(tftp or bootps)'" % vm.get_ifname(),
                             logging.debug, "(pxe capture) ", timeout)[1]
 
     error_context.context("Analyzing the tcpdump result", logging.info)
@@ -84,7 +84,7 @@ def run(test, params, env):
         while True:
             count += 1
             try:
-                vm.monitor.info("cpus")
+                vm.monitor.info("cpus", debug=False)
                 vm.verify_status("running")
                 if not bg.is_alive():
                     break

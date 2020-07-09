@@ -24,7 +24,7 @@ def run(test, params, env):
     timeout = int(params.get("pxe_timeout", 60))
 
     error_context.context("Snoop packet in the tap device", logging.info)
-    tcpdump_cmd = "tcpdump -nli %s" % vm.get_ifname()
+    tcpdump_cmd = "tcpdump -nli %s port '(tftp or bootps)'" % vm.get_ifname()
     try:
         tcpdump_process = aexpect.run_bg(command=tcpdump_cmd,
                                          output_func=logging.debug,

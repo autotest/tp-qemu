@@ -62,6 +62,7 @@ def run(test, params, env):
     enable_gluster = params.get("enable_gluster") == "yes"
     enable_nbd = params.get("enable_nbd") == "yes"
     enable_curl = params.get("enable_curl") == "yes"
+    enable_ssh = params.get("enable_ssh") == "yes"
     if enable_ceph:
         update_params.update({
              "enable_ceph_%s" % base_image: optval("enable_ceph",
@@ -106,6 +107,14 @@ def run(test, params, env):
             "enable_curl_%s" % base_image: optval("enable_curl",
                                                   base_image,
                                                   params, "no"),
+            "storage_type_%s" % base_image: optval("storage_type",
+                                                   base_image,
+                                                   params, "filesystem")})
+    elif enable_ssh:
+        update_params.update({
+            "enable_ssh_%s" % base_image: optval("enable_ssh",
+                                                 base_image,
+                                                 params, "no"),
             "storage_type_%s" % base_image: optval("storage_type",
                                                    base_image,
                                                    params, "filesystem")})

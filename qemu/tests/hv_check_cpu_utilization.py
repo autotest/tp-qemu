@@ -105,6 +105,7 @@ def run(test, params, env):
     guest_check_timeout = host_check_times * host_check_interval
     thread_cpu_level = params.get_numeric("thread_cpu_level", 5)
     session = vm.wait_for_serial_login(timeout=timeout)
+    do_migration = params.get("do_migration", "no") == "yes"
 
     service_names = params.get("serives_to_stop").split()
 
@@ -116,6 +117,10 @@ def run(test, params, env):
     session.cmd(params["reg_cmd"])
 
     session = vm.reboot(session, timeout=timeout, serial=True)
+
+    if do_migration:
+        vm.migrate(env=env)
+        session = vm.wait_for_serial_login(timeout=timeout)
 
     # wait for the guest to chill
     time.sleep(900)

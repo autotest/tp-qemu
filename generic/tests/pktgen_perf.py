@@ -12,6 +12,7 @@ from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
 
+from functools import partial as Partial
 
 _system_output = functools.partial(process.system_output, shell=True)
 
@@ -92,6 +93,29 @@ def run(test, params, env):
     record_line = ""
     for record in record_list.split():
         record_line += "%s|" % format_result(record)
+
+    def install_package(ver, session=None):
+        """ check module pktgen, install kernel-modules-internal package """
+
+        output_cmd = Partial(process.system_output, timeout=timeout, shell=True)
+        kernel_ver = "kernel-modules-internal-%s" % ver
+        cmd_download = "cd /tmp && brew download-build %s --rpm" % kernel_ver
+        cmd_install = "cd /tmp && rpm -ivh  %s.rpm --force --nodeps" % kernel_ver
+        output_cmd(cmd_download).decode()
+        cmd_clean = "rm -rf /tmp/%s.rpm" % kernel_ver
+        if session:
+            output_cmd = session.cmd_output
+            local_path = "/tmp/%s.rpm" % kernel_ver
+            remote_path = "/tmp/"
+            vm.copy_files_to(local_path, remote_path)
+        output_cmd(cmd_install)
+        output_cmd(cmd_clean)
+
+    check_cmd = "uname -r |grep el8"
+    if process.run(check_cmd, shell=True):
+        install_package(host_ver)
+    if session.cmd(check_cmd):
+        install_package(guest_ver.strip(), session=session)
 
     # get result tested by each scenario
     for pkt_cate in category.split():

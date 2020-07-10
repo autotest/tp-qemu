@@ -33,9 +33,10 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Format disk", logging.info)
-    utils_misc.format_windows_disk(session, params["disk_index"],
-                                   mountpoint=params["disk_letter"])
+    if not params.get('image_backend') == 'nvme_direct':
+        error_context.context("Format disk", logging.info)
+        utils_misc.format_windows_disk(session, params["disk_index"],
+                                       mountpoint=params["disk_letter"])
     try:
         installed = session.cmd_status(check_installed_cmd) == 0
         if not installed:

@@ -40,6 +40,10 @@ def run(test, params, env):
                 test.error("Failed to get '%s' drive path" % data_image)
             yield drive_path[5:]
 
+    def _run_fio_test(target):
+        for option in params['fio_options'].split(';'):
+            fio.run('--filename=%s %s' % (target, option))
+
     data_images = params["images"].split()[1:]
     info = []
     for image in data_images:
@@ -53,9 +57,11 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=float(params.get("login_timeout", 240)))
     fio = generate_instance(params, vm, 'fio')
     try:
-        for did in _get_data_disks():
-            for option in params['fio_options'].split(';'):
-                fio.run('--filename=%s %s' % (did, option))
+        if params.get('image_backend') == 'nvme_direct':
+            _run_fio_test(params.get('fio_filename'))
+        else:
+            for did in _get_data_disks():
+                _run_fio_test(did)
     finally:
         fio.clean()
         session.close()

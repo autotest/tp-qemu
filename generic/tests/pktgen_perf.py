@@ -12,8 +12,6 @@ from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
 
-from functools import partial as Partial
-
 _system_output = functools.partial(process.system_output, shell=True)
 
 
@@ -97,7 +95,7 @@ def run(test, params, env):
     def install_package(ver, session=None):
         """ check module pktgen, install kernel-modules-internal package """
 
-        output_cmd = Partial(process.system_output, timeout=timeout, shell=True)
+        output_cmd = _system_output
         kernel_ver = "kernel-modules-internal-%s" % ver
         cmd_download = "cd /tmp && brew download-build %s --rpm" % kernel_ver
         cmd_install = "cd /tmp && rpm -ivh  %s.rpm --force --nodeps" % kernel_ver

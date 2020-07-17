@@ -529,13 +529,13 @@ def run(test, params, env):
                         " support 'rebase' subcommand")
         sn_fmt = params.get("snapshot_format", "qcow2")
         sn1 = params["image_name_snapshot1"]
-        sn1 = _get_image_filename(sn1, enable_gluster, sn_fmt)
+        sn1 = _get_image_filename(sn1, enable_gluster, img_fmt=sn_fmt)
         base_img = storage.get_image_filename(params, data_dir.get_data_dir())
         _create(cmd, sn1, sn_fmt, base_img=base_img, base_img_fmt=image_format)
 
         # Create snapshot2 based on snapshot1
         sn2 = params["image_name_snapshot2"]
-        sn2 = _get_image_filename(sn2, enable_gluster, sn_fmt)
+        sn2 = _get_image_filename(sn2, enable_gluster, img_fmt=sn_fmt)
         _create(cmd, sn2, sn_fmt, base_img=sn1, base_img_fmt=sn_fmt)
 
         rebase_mode = params.get("rebase_mode", "safe")
@@ -653,7 +653,7 @@ def run(test, params, env):
         except Exception:
             image_filename = _get_image_filename(img_name,
                                                  enable_gluster,
-                                                 img_fmt)
+                                                 img_fmt=img_fmt)
             backup_img_chain(image_filename)
             raise
         finally:

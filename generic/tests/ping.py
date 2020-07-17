@@ -68,13 +68,14 @@ def run(test, params, env):
     if ping_ext_host:
         ext_host = params.get("ext_host", "")
         ext_host_get_cmd = params.get("ext_host_get_cmd", "")
-        try:
-            ext_host = process.system_output(ext_host_get_cmd, shell=True)
-            ext_host = ext_host.decode()
-        except process.CmdError:
-            logging.warn("Can't get specified host with cmd '%s',"
-                         " Fallback to default host '%s'",
-                         ext_host_get_cmd, ext_host)
+        if ext_host_get_cmd:
+            try:
+                ext_host = process.system_output(ext_host_get_cmd, shell=True)
+                ext_host = ext_host.decode()
+            except process.CmdError:
+                logging.warn("Can't get specified host with cmd '%s',"
+                             " Fallback to default host '%s'",
+                             ext_host_get_cmd, ext_host)
         dest_ips = [ext_host]
         sessions = [session]
         interfaces = [None]

@@ -43,7 +43,8 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    guest_ip = vm.wait_for_get_address(0, get_ip_timeout)
+    vm.wait_for_login()
+    guest_ip = vm.get_address()
 
     logging.info("Cloning %s", playbook_repo)
     process.run("git clone {src} {dst}".format(src=playbook_repo,

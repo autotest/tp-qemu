@@ -5,6 +5,7 @@ import re
 from avocado.utils import process
 from virttest import utils_test
 from virttest import utils_time
+from virttest import env_process
 from virttest import funcatexit
 from virttest import error_context
 
@@ -134,12 +135,24 @@ def run(test, params, env):
     timerdevice_host_load_cmd = params.get("timerdevice_host_load_cmd")
     if timerdevice_host_load_cmd:
         error_context.context("Add some load on host", logging.info)
-        process.system(timerdevice_host_load_cmd, shell=True,
-                       ignore_bg_processes=True)
+        host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
+        host_cpu_cnt = int(process.system_output(host_cpu_cnt_cmd, shell=True).strip())
+        if params["os_type"] == "linux":
+            timerdevice_host_load_cmd = timerdevice_host_load_cmd % host_cpu_cnt
+            process.system(timerdevice_host_load_cmd, shell=True,
+                           ignore_bg_processes=True)
+        else:
+            timerdevice_host_load_cmd = timerdevice_host_load_cmd % int(host_cpu_cnt/2)
+            stress_bg = utils_test.HostStress("stress", params,
+                                              stress_args=timerdevice_host_load_cmd)
+            stress_bg.load_stress_tool()
         host_load_stop_cmd = params.get("timerdevice_host_load_stop_cmd",
                                         "pkill -f 'do X=1'")
         funcatexit.register(env, params["type"], _system,
                             host_load_stop_cmd)
+
+    params["start_vm"] = "yes"
+    env_process.preprocess_vm(test, params, env, params.get("main_vm"))
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -168,6 +181,15 @@ def run(test, params, env):
     verify_timedrift(session)
     if params["os_type"] == "linux":
         verify_timedrift(session, is_hardware=True)
+
+    repeat_nums = params.get_numeric("repeat_nums")
+    if repeat_nums:
+        sleep_time = params["sleep_time"]
+        for index in range(repeat_nums):
+            time.sleep(int(sleep_time))
+            verify_timedrift(session)
+            if params["os_type"] == "linux":
+                verify_timedrift(session, is_hardware=True)
 
     if params.get("timerdevice_reboot_test") == "yes":
         sleep_time = params.get("timerdevice_sleep_time")

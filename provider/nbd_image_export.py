@@ -53,9 +53,11 @@ class NBDExportImage(object):
             result = process.run(self._image_params['create_image_cmd'],
                                  ignore_status=True, shell=True)
         elif not self._image_params.get_boolean("force_create_image"):
-            _, result = qemu_storage.QemuImg(self._image_params,
-                                             data_dir.get_data_dir(),
-                                             self._tag).create(self._params)
+            _, result = qemu_storage.QemuImg(
+                self._image_params,
+                data_dir.get_data_dir(),
+                self._tag
+            ).create(self._image_params)
 
         if result.exit_status != 0:
             raise exceptions.TestFail('Failed to create image, error: %s'

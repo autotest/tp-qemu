@@ -1,6 +1,8 @@
+import re
 import logging
 
 from avocado.utils import process
+
 from virttest import error_context
 from virttest.qemu_devices import qdevices
 from virttest.qemu_monitor import QMPCmdError
@@ -22,6 +24,11 @@ def run(test, params, env):
                 if device.get_param("driver") == "usb-host":
                     device_list.append(device)
         return device_list
+
+    def get_vendorid_productid(bus, addr):
+        out = process.getoutput("lsusb -v -s %s:%s" % (bus, addr))
+        res = re.search(r"idVendor\s+0x(\w+).*idProduct\s+0x(\w+)", out, re.S)
+        return (res.group(1), res.group(2))
 
     @error_context.context_aware
     def usb_dev_hotplug(dev):
@@ -83,17 +90,24 @@ def run(test, params, env):
                           " should not succeed.")
         return
 
-    match_add = "New USB device found, "
-    match_del = "USB disconnect"
     usb_hostdev = params["usb_devices"].split()[-1]
     usb_options = params.get("options")
     if usb_options == "with_vendorid_productid":
         vendorid = params["usbdev_option_vendorid_%s" % usb_hostdev]
         productid = params["usbdev_option_productid_%s" % usb_hostdev]
-        lsusb_cmd = "lsusb -v -d %s:%s" % (vendorid, productid)
-        match_add += "idVendor=%s, idProduct=%s" % (vendorid, productid)
         usb_params["vendorid"] = "0x%s" % vendorid
         usb_params["productid"] = "0x%s" % productid
+    elif usb_options == "with_hostbus_hostaddr":
+        hostbus = params["usbdev_option_hostbus_%s" % usb_hostdev]
+        hostaddr = params["usbdev_option_hostaddr_%s" % usb_hostdev]
+        usb_params["hostbus"] = hostbus
+        usb_params["hostaddr"] = hostaddr
+        (vendorid, productid) = get_vendorid_productid(hostbus, hostaddr)
+
+    lsusb_cmd = "lsusb -v -d %s:%s" % (vendorid, productid)
+    match_add = "New USB device found, "
+    match_add += "idVendor=%s, idProduct=%s" % (vendorid, productid)
+    match_del = "USB disconnect"
 
     error_context.context("Log into guest", logging.info)
     vm = env.get_vm(params["main_vm"])

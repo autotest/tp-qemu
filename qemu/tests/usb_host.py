@@ -28,7 +28,7 @@ def run(test, params, env):
 
     @error_context.context_aware
     def usb_dev_verify():
-        error_context.context("Check usb device %s in guest" % device,
+        error_context.context("Check usb device [%s] in guest" % usb_options,
                               logging.info)
         session.cmd(lsusb_cmd)
 
@@ -67,29 +67,30 @@ def run(test, params, env):
                           " returns: '%s'" % reply)
         return
 
-    device = params["usb_host_device"]
-    (vendorid, productid) = device.split(":")
+    usb_hostdev = params["usb_devices"].split()[-1]
+    usb_options = params.get("options")
+    if usb_options == "with_vendorid_productid":
+        vendorid = params["usbdev_option_vendorid_%s" % usb_hostdev]
+        productid = params["usbdev_option_productid_%s" % usb_hostdev]
+        usb_options = "vendorid=%s,productid=%s" % (vendorid, productid)
 
     # compose strings
-    lsusb_cmd = "lsusb -v -d %s" % device
-    monitor_add = "device_add usb-host,bus=usbtest.0,id=usbhostdev"
+    lsusb_cmd = "lsusb -v -d %s:%s" % (vendorid, productid)
+    monitor_add = "device_add usb-host,bus=usbtest.0,id=usb-usbhostdev"
     monitor_add += ",vendorid=0x%s" % vendorid
     monitor_add += ",productid=0x%s" % productid
-    monitor_del = "device_del usbhostdev"
+    monitor_del = "device_del usb-usbhostdev"
     match_add = "New USB device found, "
     match_add += "idVendor=%s, idProduct=%s" % (vendorid, productid)
     match_del = "USB disconnect"
-
-    error_context.context("Check usb device %s on host" % device, logging.info)
-    try:
-        process.system(lsusb_cmd, shell=True)
-    except:
-        test.cancel("Device %s not present on host" % device)
 
     error_context.context("Log into guest", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
+
+    usb_dev_verify()
+    usb_dev_unplug()
 
     repeat_times = int(params.get("usb_repeat_times", "1"))
     for i in range(repeat_times):
@@ -99,7 +100,7 @@ def run(test, params, env):
         else:
             # The value of isobufs could only be in '4, 8, 16'
             isobufs = (2 << (i % 3 + 1))
-            monitor_add = "device_add usb-host,bus=usbtest.0,id=usbhostdev"
+            monitor_add = "device_add usb-host,bus=usbtest.0,id=usb-usbhostdev"
             monitor_add += ",vendorid=0x%s" % vendorid
             monitor_add += ",productid=0x%s" % productid
             monitor_add += ",isobufs=%d" % isobufs

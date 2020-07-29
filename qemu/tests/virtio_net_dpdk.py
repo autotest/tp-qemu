@@ -236,10 +236,10 @@ def run(test, params, env):
     host_ver = os.uname()[2]
     guest_ver = session.cmd_output(guest_ver_cmd)
     dpdk_ver = session.cmd_output(guest_dpdk_cmd)
-    result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
-    result_file.write("### kvm_version : %s\n" % host_ver)
-    result_file.write("### guest-kernel-ver :%s\n" % guest_ver)
-    result_file.write("### guest-dpdk-ver :%s\n" % dpdk_ver)
+    result_file.write("### kvm-userspace-ver : %s" % kvm_ver)
+    result_file.write("### kvm_version : %s" % host_ver)
+    result_file.write("### guest-kernel-ver :%s" % guest_ver)
+    result_file.write("### guest-dpdk-ver :%s" % dpdk_ver)
 
     # get result tested by each scenario
     for pkt_cate in category.split():

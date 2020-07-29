@@ -23,7 +23,7 @@ class BlockdevIncreamentalBackupBitmapTest(blockdev_base.BlockdevBaseTest):
 
     def _init_arguments_by_params(self, tag):
         image_params = self.params.object_params(tag)
-        image_chain = image_params.objects("image_chain")
+        image_chain = image_params.objects("image_backup_chain")
         self.source_images.append("drive_%s" % tag)
         self.full_backups.append("drive_%s" % image_chain[0])
         self.inc_backups.append("drive_%s" % image_chain[1])
@@ -109,7 +109,7 @@ class BlockdevIncreamentalBackupBitmapTest(blockdev_base.BlockdevBaseTest):
 
     def _compare_image(self, src_tag):
         src_params = self.params.object_params(src_tag)
-        overlay_tag = src_params.objects("image_chain")[-1]
+        overlay_tag = src_params.objects("image_backup_chain")[-1]
         src_img = self.disk_define_by_params(self.params, src_tag)
         dst_img = self.disk_define_by_params(self.params, overlay_tag)
         result = src_img.compare_to(dst_img)

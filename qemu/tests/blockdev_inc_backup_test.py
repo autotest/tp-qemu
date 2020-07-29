@@ -21,14 +21,16 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
         self.rebase_targets = []
         for tag in params.objects('source_images'):
             image_params = params.object_params(tag)
-            image_chain = image_params.objects("image_chain")
+            image_chain = image_params.objects("image_backup_chain")
             self.source_images.append("drive_%s" % tag)
             self.full_backups.append("drive_%s" % image_chain[0])
             self.inc_backups.append("drive_%s" % image_chain[1])
             self.bitmaps.append("bitmap_%s" % tag)
             inc_img_tag = image_chain[-1]
             inc_img_params = params.object_params(inc_img_tag)
-            inc_img_params['image_chain'] = image_params['image_chain']
+
+            # rebase 'inc' image onto 'base' image, so inc's backing is base
+            inc_img_params['image_chain'] = image_params['image_backup_chain']
             inc_img = self.source_disk_define_by_params(
                 inc_img_params, inc_img_tag)
             target_func = partial(inc_img.rebase, params=inc_img_params)
@@ -94,7 +96,7 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
         clone_params = self.main_vm.params.copy()
         for tag in self.params.objects("source_images"):
             img_params = self.params.object_params(tag)
-            image_chain = img_params.objects('image_chain')
+            image_chain = img_params.objects('image_backup_chain')
             images = images.replace(tag, image_chain[-1])
         clone_params["images"] = images
         clone_vm = self.main_vm.clone(params=clone_params)

@@ -56,6 +56,10 @@ class BlockdevBaseTest(object):
     def preprocess_data_disks(self):
         for tag in self.params.objects("source_images"):
             params = self.params.object_params(tag)
+            if params.get("force_create_image") == "yes":
+                # vt takes care of the image creation
+                continue
+
             if params.get("random_cluster_size") == "yes":
                 blacklist = list(
                     map(int, params.objects("cluster_size_blacklist")))

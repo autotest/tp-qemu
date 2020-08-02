@@ -27,6 +27,7 @@ def run(test, params, env):
     parameter_prefix = params.get("parameter_prefix", "")
     check_cmds = params["check_cmds"]
     convert_str = params.get("convert_str")
+    sg_vpd_cmd = params.get("sg_vpd_cmd")
 
     if params.get("start_vm") == "no":
         if parameter_value == "random":
@@ -108,6 +109,17 @@ def run(test, params, env):
             failed_log += ("Can not find option %s from guest."
                            " Guest output is '%s'" % (params_name,
                                                       output))
+
+        if sg_vpd_cmd:
+            error_context.context("Check serial number length with command %s"
+                                  % sg_vpd_cmd, logging.info)
+            sg_vpd_cmd = utils_misc.set_winutils_letter(session, sg_vpd_cmd)
+            output = session.cmd_output(sg_vpd_cmd)
+            actual_len = sum(len(_.split()[-1]) for _ in output.splitlines()[1:3])
+            expected_len = len(params.get("drive_serial_image1")) + 4
+            if actual_len != expected_len:
+                test.fail("Incorrect serial number length return."
+                          " Guest output serial number is %s" % actual_len)
 
     session.close()
 

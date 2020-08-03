@@ -22,7 +22,7 @@ def run(test, params, env):
     logging.info("Boot a guest up from initial image: %s, and create a"
                  " file %s on the disk.", initial_tag, file)
     for cache_size in cache_sizes:
-        params["drv_extra_params"] = "cache-size=%s" % cache_size
+        params["drv_extra_params_image1"] = "cache-size=%s" % cache_size
         vm = img_utils.boot_vm_with_images(test, params, env)
         session = vm.wait_for_login()
         guest_temp_file = params["guest_file_name"]

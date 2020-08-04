@@ -57,6 +57,7 @@ def run(test, params, env):
     vm.verify_alive()
     vcpu_threads = vm.vcpu_threads
     session = vm.wait_for_login(timeout=timeout)
+    threshold = params.get_numeric("threshold", target_type=float)
 
     dd_size = 256
     if dd_size * len(vcpu_threads) > int(params['mem']):
@@ -97,7 +98,7 @@ def run(test, params, env):
         page_size = resource.getpagesize() / 1024
         memory_allocated = (memory_used_after -
                             memory_used_before) * page_size / 1024
-        if 1 - float(memory_allocated) / float(dd_size) > 0.05:
+        if 1 - float(memory_allocated) / float(dd_size) > threshold:
             numa_hardware_cmd = params.get("numa_hardware_cmd")
             if numa_hardware_cmd:
                 numa_info = process.system_output(numa_hardware_cmd,

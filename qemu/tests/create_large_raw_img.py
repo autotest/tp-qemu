@@ -1,5 +1,6 @@
 import logging
 import os
+import six
 
 from avocado import TestError
 from avocado.utils import partition as p
@@ -25,6 +26,7 @@ def run(test, params, env):
     loop_img = os.path.join(root_dir, "loop.img")
     loop_size = int(params["loop_file_size"])
     file_sys = params["file_sys"]
+    err_info = params["err_info"].split(";")
 
     mnt_dir = os.path.join(root_dir, "tmp")
     large = QemuImg(params.object_params(large_img), mnt_dir, large_img)
@@ -38,11 +40,14 @@ def run(test, params, env):
     try:
         large.create(large.params)
     except TestError as err:
-        if params["err_info"] not in str(err):
+        for info in err_info:
+            if info in six.text_type(err):
+                break
+        else:
             test.fail("CML failed with unexpected output: %s" % err)
     else:
         test.fail("There is no error when creating an image with large size.")
-
-    part.unmount()
-    os.rmdir(mnt_dir)
-    os.remove(loop_img)
+    finally:
+        part.unmount()
+        os.rmdir(mnt_dir)
+        os.remove(loop_img)

@@ -59,6 +59,9 @@ class BlockdevBaseTest(object):
             if params.get("force_create_image") == "yes":
                 # vt takes care of the image creation
                 continue
+            elif params.get("image_create_support") == "no":
+                # image creation is not supported, e.g. nbd storage
+                continue
 
             if params.get("random_cluster_size") == "yes":
                 blacklist = list(

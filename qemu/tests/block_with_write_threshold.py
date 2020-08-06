@@ -5,10 +5,10 @@ from avocado.utils.wait import wait_for
 
 from virttest import data_dir
 from virttest import error_context
-from virttest import storage
 from virttest import utils_disk
 from virttest import utils_test
 from virttest import utils_misc
+from virttest.qemu_storage import QemuImg, get_image_json
 
 from provider.storage_benchmark import generate_instance
 
@@ -36,10 +36,12 @@ def run(test, params, env):
     def get_node_name(image_tag):
         """ Get the node name. """
         img_params = params.object_params(image_tag)
-        file = storage.get_image_filename(img_params, data_dir.get_data_dir())
-        for block in vm.monitor.info("block"):
-            if file == block['inserted']['file']:
-                return block['inserted']['node-name']
+        root_dir = data_dir.get_data_dir()
+        img = QemuImg(img_params, root_dir, image_tag)
+        filename = img.image_filename
+        if img.image_format == 'luks':
+            filename = get_image_json(image_tag, img_params, root_dir)
+        return vm.get_block({"filename": filename})
 
     def set_block_write_threshold(monitor, node_name, size):
         """ Set block write threshold for the block drive. """

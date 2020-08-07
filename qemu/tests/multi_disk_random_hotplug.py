@@ -279,6 +279,7 @@ def run(test, params, env):
     rp_times = int(params.get("repeat_times", 1))
     queues = params.get("multi_disk_type") == "parallel"
     timeout = params.get_numeric('plug_timeout', 300)
+    interval_time_unplug = params.get_numeric('interval_time_unplug', 0)
     if queues:  # parallel
         hotplug, unplug = 'hotplug_devs_threaded', 'unplug_devs_threaded'
     else:   # serial
@@ -320,7 +321,7 @@ def run(test, params, env):
         error_context.context("Unplug and remove the devices", logging.debug)
         if stress_cmd:
             session.cmd(params["stress_stop_cmd"])
-        getattr(plug, unplug)(timeout=timeout)
+        getattr(plug, unplug)(timeout=timeout, interval=interval_time_unplug)
         if stress_cmd:
             session.cmd(params["stress_cont_cmd"])
         _postprocess_images()

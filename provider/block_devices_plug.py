@@ -80,21 +80,23 @@ class _PlugThread(threading.Thread):
     Plug Thread that define a plug thread.
     """
 
-    def __init__(self, vm, action, images, monitor, exit_event, bus=None):
+    def __init__(self, vm, action, images, monitor, exit_event, bus=None, interval=0):
         threading.Thread.__init__(self)
         self._action = action
         self._images = images
         self._monitor = monitor
         self._bus = bus
+        self._interval = interval
         self._plug_manager = BlockDevicesPlug(vm)
         self.exit_event = exit_event
         self.exc_info = None
 
     def run(self):
         try:
-            args = (self._images, self._monitor)
-            if self._bus:
-                args = (self._images, self._monitor, self._bus)
+            args = (self._images, self._monitor, self._interval)
+            if self._action == HOTPLUG:
+                bus = self._bus if self._bus else None
+                args = (self._images, self._monitor, bus, self._interval)
             method = "_hotplug_devs" if self._action == HOTPLUG else "_unplug_devs"
             getattr(self._plug_manager, method)(*args)
         except Exception as e:
@@ -115,14 +117,13 @@ class _ThreadManager(object):
         self._threads = []
         self.exit_event = threading.Event()
 
-    def _initial_threads(self, action, imgs, bus=None):
+    def _initial_threads(self, action, imgs, bus=None, interval=0):
         """ Initial the threads. """
         max_threads = min(len(imgs), 2 * multiprocessing.cpu_count())
         for i in xrange(max_threads):
             mon = self._vm.monitors[i % len(self._vm.monitors)]
-            args = (self._vm, action, imgs[i::max_threads], mon, self.exit_event)
-            if bus:
-                args = (self._vm, action, imgs[i::max_threads], mon, self.exit_event, bus)
+            args = (self._vm, action, imgs[i::max_threads],
+                    mon, self.exit_event, bus, interval)
             self._threads.append(_PlugThread(*args))
 
     def _start_threads(self):
@@ -135,9 +136,9 @@ class _ThreadManager(object):
         for thread in self._threads:
             thread.join(timeout)
 
-    def run_threads(self, action, imgs, bus, timeout):
+    def run_threads(self, action, imgs, bus, timeout, interval=0):
         """ Run the threads. """
-        self._initial_threads(action, imgs, bus)
+        self._initial_threads(action, imgs, bus, interval)
         self._start_threads()
         self._join_threads(timeout)
 
@@ -383,7 +384,7 @@ class BlockDevicesPlug(object):
             raise DeviceUnplugError(device, exc, self)
         return out, ver_out
 
-    def _plug_devs(self, action, devices_dict, monitor, bus=None):
+    def _plug_devs(self, action, devices_dict, monitor, bus=None, interval=0):
         """ Plug devices. """
         for img, devices in devices_dict.items():
             for device in devices:
@@ -394,9 +395,9 @@ class BlockDevicesPlug(object):
                     args += (bus,)
                 _QMP_OUTPUT[device.get_qid()] = getattr(
                     self, '_%s_atomic' % action)(*args)
-                time.sleep(self._interval)
+                time.sleep(interval)
 
-    def _hotplug_devs(self, images, monitor, bus=None):
+    def _hotplug_devs(self, images, monitor, bus=None, interval=0):
         """
         Hot plug the block devices which are defined by images.
         """
@@ -404,9 +405,9 @@ class BlockDevicesPlug(object):
             ' '.join(images), monitor.name))
         args = (images, {'aobject': 'pci.0' if bus is None else bus.aobject})
         self._create_devices(*args)
-        self._plug_devs(HOTPLUG, self._hotplugged_devs, monitor, bus)
+        self._plug_devs(HOTPLUG, self._hotplugged_devs, monitor, bus, interval)
 
-    def _unplug_devs(self, images, monitor):
+    def _unplug_devs(self, images, monitor, interval=0):
         """
         Unplug the block devices which are defined by images.
         """
@@ -439,15 +440,15 @@ class BlockDevicesPlug(object):
 
         logging.info("Start to unplug devices \"%s\" by monitor %s." %
                      (' '.join(images), monitor.name))
-        self._plug_devs(UNPLUG, self._unplugged_devs, monitor)
+        self._plug_devs(UNPLUG, self._unplugged_devs, monitor, interval=interval)
 
-    def _plug_devs_threads(self, action, images, bus, timeout):
+    def _plug_devs_threads(self, action, images, bus, timeout, interval=0):
         """ Threads that plug blocks devices. """
         self._orig_disks = self._list_all_disks()
         if images:
             self._imgs = images.split()
         th_mgr = _ThreadManager(self.vm)
-        th_mgr.run_threads(action, self._imgs, bus, timeout)
+        th_mgr.run_threads(action, self._imgs, bus, timeout, interval=interval)
         if th_mgr.exit_event.is_set():
             th_mgr.raise_threads()
         th_mgr.clean_threads()
@@ -468,21 +469,20 @@ class BlockDevicesPlug(object):
         :param timeout: Timeout for hot plugging.
         :type timeout: float
         :param interval: Interval time for hot plugging.
-        :type interval: float
+        :type interval: int
         """
         self._timeout = timeout
-        self._interval = interval
         if monitor is None:
             monitor = self.vm.monitor
         if images:
             self._imgs = [img for img in images.split()]
         if set(self._imgs) <= set(self.vm.params['cdroms'].split()):
             self._dev_type = CDROM
-        self._hotplug_devs(self._imgs, monitor, bus)
+        self._hotplug_devs(self._imgs, monitor, bus, interval)
         self._check_qmp_outputs(HOTPLUG)
 
     @_verify_plugged_num(action=UNPLUG)
-    def unplug_devs_serial(self, images=None, monitor=None, timeout=300):
+    def unplug_devs_serial(self, images=None, monitor=None, timeout=300, interval=0):
         """
         Unplug the block devices by serial.
 
@@ -492,6 +492,8 @@ class BlockDevicesPlug(object):
         :type monitor: qemu_monitor.Monitor
         :param timeout: Timeout for hot plugging.
         :type timeout: int
+        :param interval: Interval time for hot plugging.
+        :type interval: int
         """
         self._timeout = timeout
         if monitor is None:
@@ -500,12 +502,12 @@ class BlockDevicesPlug(object):
             self._imgs = [img for img in images.split()]
         if set(self._imgs) <= set(self.vm.params['cdroms'].split()):
             self._dev_type = CDROM
-        self._unplug_devs(self._imgs, monitor)
+        self._unplug_devs(self._imgs, monitor, interval)
         self._check_qmp_outputs(UNPLUG)
         self._wait_events_deleted(timeout)
 
     @_verify_plugged_num(action=UNPLUG)
-    def hotplug_devs_threaded(self, images=None, timeout=300, bus=None):
+    def hotplug_devs_threaded(self, images=None, timeout=300, bus=None, interval=0):
         """
         Hot plug the block devices by threaded.
 
@@ -515,22 +517,26 @@ class BlockDevicesPlug(object):
         :type bus: qdevice.QSparseBus
         :param timeout: Timeout for hot plugging.
         :type timeout: float
+        :param interval: Interval time for hot plugging.
+        :type interval: int
         """
         self._timeout = timeout
-        self._plug_devs_threads(HOTPLUG, images, bus, timeout)
+        self._plug_devs_threads(HOTPLUG, images, bus, timeout, interval)
         self._check_qmp_outputs(HOTPLUG)
 
     @_verify_plugged_num(action=UNPLUG)
-    def unplug_devs_threaded(self, images=None, timeout=300):
+    def unplug_devs_threaded(self, images=None, timeout=300, interval=0):
         """
         Unplug the block devices by threaded.
 
         :param images: Image or cdrom tags, e.g, "stg0" or "stg0 stg1 stg3".
         :type images: str
-        :param timeout: Timeout for hot plugging.
+        :param timeout: Timeout for unplugging.
         :type timeout: int
+        :param interval: Interval time for unplugging.
+        :type interval: int
         """
         self._timeout = timeout
-        self._plug_devs_threads(UNPLUG, images, None, timeout)
+        self._plug_devs_threads(UNPLUG, images, None, timeout, interval)
         self._check_qmp_outputs(UNPLUG)
         self._wait_events_deleted(timeout)

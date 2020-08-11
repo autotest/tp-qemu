@@ -72,6 +72,7 @@ def run(test, params, env):
     session = vm.wait_for_login()
     cpuinfo = vm.cpuinfo
     smp = cpuinfo.smp
+    vcpus_count = vm.params.get_numeric("vcpus_count")
 
     error_context.context("Hotplug all vCPU devices", logging.info)
     for vcpu_device in vcpu_devices:
@@ -93,7 +94,7 @@ def run(test, params, env):
 
     error_context.context("Hotunplug all vCPU devices", logging.info)
     for vcpu_device in reversed(vcpu_devices):
-        vm.hotunplug_vcpu_device(vcpu_device)
+        vm.hotunplug_vcpu_device(vcpu_device, 10 * vcpus_count)
     if not utils_misc.wait_for(lambda: vm.get_cpu_count() == smp,
                                verify_wait_timeout, first=5, step=10):
         logging.error(not_equal_text, vm.get_cpu_count(), smp)

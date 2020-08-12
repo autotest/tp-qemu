@@ -26,12 +26,13 @@ def run(test, params, env):
     """
     def _check_meminfo(key):
         meminfo = session.cmd_output("grep %s /proc/meminfo" % key)
-        actual_value = re.search(r'\d+', meminfo)
+        actual_value = re.search(r'\d{4,}', meminfo)
         return actual_value.group(0) if actual_value else ""
 
+    timeout = params.get_numeric("login_timeout", 240)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login()
+    session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Check output Hugepage size.", logging.info)
     if _check_meminfo("Hugepagesize") != params["expected_value"]:

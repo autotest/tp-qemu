@@ -210,6 +210,10 @@ class BlockdevBaseTest(object):
         """
         for img in set(self.trash):
             try:
+                # A QemuImg object
                 img.remove()
+            except AttributeError:
+                # A StorageVolume object
+                sp_admin.remove_volume(img)
             except Exception as e:
                 logging.warn(str(e))

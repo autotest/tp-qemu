@@ -15,7 +15,7 @@ def run(test, params, env):
     Verify UEFI config setting in the GUI screen:
     1) Boot up a guest.
     2) If boot_splash_time not None, check splash-time in log output
-    3) If check_boot_info not None, check boot entry info in log output
+    3) If check_info_pattern not None, check info in log output
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
@@ -39,7 +39,7 @@ def run(test, params, env):
         process.run("rm -f test")
 
     boot_splash_time = params.get("boot_splash_time")
-    check_boot_info = params.get("boot_entry_info")
+    check_info_pattern = params.get("check_info_pattern")
     timeout = int(params.get("check_timeout", 360))
     cdrom_test = params.get("cdrom_test")
     if cdrom_test:
@@ -52,8 +52,8 @@ def run(test, params, env):
     vm.verify_alive()
 
     try:
-        if check_boot_info:
-            expect_result = check_boot_info
+        if check_info_pattern:
+            expect_result = check_info_pattern
         elif boot_splash_time:
             splash_time_pattern = params.get("splash_time_pattern")
             expect_result = (splash_time_pattern %

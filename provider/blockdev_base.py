@@ -59,6 +59,9 @@ class BlockdevBaseTest(object):
             if params.get("force_create_image") == "yes":
                 # vt takes care of the image creation
                 continue
+            elif params.get("image_create_support") == "no":
+                # image creation is not supported, e.g. nbd storage
+                continue
 
             if params.get("random_cluster_size") == "yes":
                 blacklist = list(
@@ -207,6 +210,10 @@ class BlockdevBaseTest(object):
         """
         for img in set(self.trash):
             try:
+                # A QemuImg object
                 img.remove()
+            except AttributeError:
+                # A StorageVolume object
+                sp_admin.remove_volume(img)
             except Exception as e:
                 logging.warn(str(e))

@@ -672,6 +672,7 @@ def run(test, params, env):
         # Create first VM
         params['smp'] = 1
         params["vcpu_sockets"] = 1
+        params["vcpu_maxcpus"] = host_cpus
         params['vms'] = "vm0"
         preprocess(test, params, env)
 
@@ -837,6 +838,7 @@ def run(test, params, env):
         host_cpus = open('/proc/cpuinfo').read().count('processor')
         # when smp <= 0 use smp = no_host_cpus
         vm_cpus = int(params.get('smp', 0))     # cpus per VM
+        params["vcpu_maxcpus"] = host_cpus
         # Use smp = no_host_cpu
         if vm_cpus <= 0 or params.get('cgroup_use_max_smp') == "yes":
             params['smp'] = host_cpus

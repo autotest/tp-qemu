@@ -344,6 +344,36 @@ class QemuGuestAgentTest(BaseVirtTest):
         logging.info(self.gagent.cmd("guest-info"))
 
     @error_context.context_aware
+    def gagent_setsebool_value(self, value, params, vm):
+        '''
+        Set selinux boolean 'virt_qemu_ga_read_nonsecurity_files'
+        as 'on' or 'off' for linux guest can access filesystem
+        successfully and restore guest original env when test is over.
+        :param value: value of selinux boolean.
+        :param params: Dictionary with the test parameters
+        :param vm: Virtual machine object.
+        '''
+        session = self._get_session(params, vm)
+        self._open_session_list.append(session)
+        if value == 'on':
+            # for accessing filesystem successfully.
+            error_context.context("Set seboolean virt_qemu_ga_read_nonsecurity_files "
+                                  "as on.", logging.info)
+            set_selinux_bool_cmd = params['setsebool_cmd']
+        else:
+            # for restoring linux guest env when test is over.
+            error_context.context("Set seboolean virt_qemu_ga_read_nonsecurity_files "
+                                  "as off.", logging.info)
+            set_selinux_bool_cmd = params['setsebool_back_cmd']
+        get_selinux_bool_cmd = params['getsebool_cmd']
+        session.cmd(set_selinux_bool_cmd).strip()
+        value_selinux_bool_guest = session.cmd_output(get_selinux_bool_cmd).strip()
+        if value_selinux_bool_guest != value:
+            self.test.error("Set selinux boolean virt_qemu_ga_read_nonsecurity_files failed.\n"
+                            "Selinux boolean virt_qemu_ga_read_nonsecurity_files is not %s."
+                            % value)
+
+    @error_context.context_aware
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
         if self.start_vm == "yes":
@@ -2060,6 +2090,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Format the new data disk and mount it.",
                               logging.info)
         if params.get("os_type") == "linux":
+            self.gagent_setsebool_value('on', params, self.vm)
             disk_data = list(utils_disk.get_linux_disks(session).keys())
             mnt_point_data = utils_disk.configure_empty_disk(
                 session, disk_data[0], image_size_stg0, "linux",
@@ -2125,6 +2156,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 if self.gagent.get_fsfreeze_status() == \
                         self.gagent.FSFREEZE_STATUS_FROZEN:
                     self.gagent.fsthaw(check_status=False)
+        self.gagent_setsebool_value('off', params, self.vm)
 
     @error_context.context_aware
     def gagent_check_thaw_unfrozen(self, test, params, env):
@@ -2601,6 +2633,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         session = self._get_session(params, None)
         self._open_session_list.append(session)
+
         error_context.context("Issue the no existed guest-agent "
                               "cmd via qga.", logging.info)
         cmd_wrong = params["wrong_cmd"]
@@ -2723,6 +2756,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Format the new data disk and mount it.",
                               logging.info)
         if params.get("os_type") == "linux":
+            self.gagent_setsebool_value('on', params, self.vm)
             disk_data = list(utils_disk.get_linux_disks(session).keys())
             mnt_point = utils_disk.configure_empty_disk(
                 session, disk_data[0], image_size_stg0, "linux",
@@ -2804,6 +2838,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             if not utils_disk.update_windows_disk_attributes(session,
                                                              disk_index):
                 test.fail("Can't online disk with fsthaw")
+        self.gagent_setsebool_value('off', params, self.vm)
 
     @error_context.context_aware
     def gagent_check_user_logoff(self, test, params, env):
@@ -3467,6 +3502,8 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
+        if params.get("os_type") == "linux":
+            self.gagent_setsebool_value('on', params, self.vm)
 
         error_context.context("Format data disk.", logging.info)
         image_size_stg = params["image_size_stg"]
@@ -3527,6 +3564,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             msg += "the blocks before fstrim is %s\n" % blocks_before_fstrim
             msg += "the blocks after fstrim is %s." % blocks_after_fstrim
             test.fail(msg)
+        self.gagent_setsebool_value('off', params, self.vm)
 
 
 def run(test, params, env):

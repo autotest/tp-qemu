@@ -931,7 +931,7 @@ def run(test, params, env):
             dist = distance(min(stats[i][:host_cpus]),
                             max(stats[i][:host_cpus]))
             # less vms, lower limit. Maximal limit is 0.2
-            if dist > min(0.10 + 0.01 * len(vms), 0.2):
+            if dist > min(0.15 + 0.01 * len(vms), 0.2):
                 err += "1, "
                 logging.error("1st part's limits broken. Utilisation should be"
                               " equal. stats = %s, distance = %s", stats[i],
@@ -942,7 +942,7 @@ def run(test, params, env):
             i += 1
             dist = distance(min(stats[i]), max(stats[i]))
             if host_cpus % no_speeds == 0 and no_speeds <= host_cpus:
-                if dist > min(0.10 + 0.01 * len(vms), 0.2):
+                if dist > min(0.15 + 0.01 * len(vms), 0.2):
                     err += "2, "
                     logging.error("2nd part's limits broken, Utilisation "
                                   "should be equal. stats = %s, distance = %s",
@@ -960,7 +960,7 @@ def run(test, params, env):
                 norm_stats = [float(stats[i][_]) / speeds[_]
                               for _ in range(len(stats[i]))]
                 dist = distance(min(norm_stats), max(norm_stats))
-                if dist > min(0.10 + 0.02 * len(vms), 0.25):
+                if dist > min(0.15 + 0.02 * len(vms), 0.25):
                     err += "3, "
                     logging.error("3rd part's limits broken; utilisation "
                                   "should be in accordance to self.speeds. "

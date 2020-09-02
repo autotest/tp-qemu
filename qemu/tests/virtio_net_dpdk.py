@@ -159,7 +159,7 @@ def run(test, params, env):
 
         if os.path.getsize(dst) > 0:
 
-            cmd = "grep -i %s %s | tail -1 | awk  -F ':'  '{print $2}'"\
+            cmd = "grep -i %s %s | tail -2 | awk  -F ':'  '{print $2}' | head -1"\
                   "| awk '{print $1}'" % (recode, dst)
             pps_results = process.system_output(cmd, shell=True)
             power = 10**6

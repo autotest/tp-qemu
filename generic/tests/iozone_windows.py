@@ -6,6 +6,7 @@ import time
 from virttest import postprocess_iozone
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import utils_disk
 from virttest import error_context
 
 
@@ -115,10 +116,19 @@ def run(test, params, env):
                                                                 timeout)
 
     if params.get("format_disk", "no") == "yes":
-        error_context.context("Format disk", logging.info)
         for index, letter, fstype in zip(disk_indexes, disk_letters, disk_fstypes):
-            utils_misc.format_windows_disk(session, index, letter, fstype=fstype,
-                                           labletype=labletype)
+            orig_letters = utils_disk.get_drive_letters(session, index)
+            if orig_letters:
+                orig_letter = orig_letters[0]
+                if orig_letter != letter:
+                    logging.info("Change the drive letter from %s to %s"
+                                 % (orig_letter, letter))
+                    utils_disk.drop_drive_letter(session, orig_letter)
+                    utils_disk.set_drive_letter(session, index, target_letter=letter)
+            else:
+                error_context.context("Format disk", logging.info)
+                utils_misc.format_windows_disk(session, index, letter, fstype=fstype,
+                                               labletype=labletype)
 
     if params.get("gpt_check", "no") == "yes":
         if not check_gpt_labletype(disk_indexes[0]):

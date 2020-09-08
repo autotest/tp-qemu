@@ -2553,7 +2553,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             error_context.context("Check file system type of '%s' mount point." %
                                   mount_pt, logging.info)
             fs_type_qga = fs["type"]
-            cmd_get_disk = params["cmd_get_disk"] % mount_pt
+            cmd_get_disk = params["cmd_get_disk"] % mount_pt.replace("/", r"\/")
             disk_info_guest = session.cmd(cmd_get_disk).strip().split()
             fs_type_guest = disk_info_guest[1]
             if fs_type_qga != fs_type_guest:

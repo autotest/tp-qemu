@@ -255,7 +255,8 @@ def run(test, params, env):
                 host_arch = host_arch[:5]
             expect_o = [{"arch": host_arch}]
         elif qmp_cmd == "query-machines":
-            vm_machines = params["machine_type"]
+            # Remove avocado machine type
+            vm_machines = params["machine_type"].split(':', 1)[-1]
             expect_o = [{'alias': vm_machines}]
         check_result(qmp_o, expect_o)
     elif result_check.startswith("post_"):

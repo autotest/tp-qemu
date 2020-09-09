@@ -344,19 +344,27 @@ class BlockDevicesPlug(object):
             drive = device.get_param("drive")
             if drive:
                 if self.vm.check_capability(Flags.BLOCKDEV):
-                    format_node = self.vm.devices[drive]
-                    nodes = [format_node]
-                    nodes.extend((n for n in format_node.get_child_nodes()))
+                    # top node
+                    node = self.vm.devices[drive]
+                    nodes = [node]
+
+                    # Build the full nodes list
                     for node in nodes:
+                        child_nodes = node.get_child_nodes()
+                        nodes.extend(child_nodes)
+
+                    for node in nodes:
+                        parent_node = node.get_parent_node()
+                        child_nodes = node.get_child_nodes()
+                        recursive = True if len(child_nodes) > 0 else False
                         if not node.verify_unplug(
                                 self._plug(node.unplug, monitor), monitor):
                             raise DeviceUnplugError(
                                 node, "Failed to unplug blockdev node.", self)
                         with _LOCK:
-                            self.vm.devices.remove(node, True if isinstance(
-                                node, qdevices.QBlockdevFormatNode) else False)
-                        if not isinstance(node, qdevices.QBlockdevFormatNode):
-                            format_node.del_child_node(node)
+                            self.vm.devices.remove(node, recursive)
+                        if parent_node:
+                            parent_node.del_child_node(node)
                 else:
                     with _LOCK:
                         self.vm.devices.remove(drive)

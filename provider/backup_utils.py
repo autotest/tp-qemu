@@ -227,11 +227,17 @@ def blockdev_snapshot(vm, source, target, **extra_options):
 
 
 @fail_on
-def blockdev_mirror(vm, source, target, **extra_options):
+def blockdev_mirror_nowait(vm, source, target, **extra_options):
+    """Don't wait mirror completed, return job id"""
     cmd, arguments = blockdev_mirror_qmp_cmd(source, target, **extra_options)
-    timeout = int(extra_options.pop("timeout", 600))
     vm.monitor.cmd(cmd, arguments)
-    job_id = arguments.get("job-id", source)
+    return arguments.get("job-id", source)
+
+
+@fail_on
+def blockdev_mirror(vm, source, target, **extra_options):
+    timeout = int(extra_options.pop("timeout", 600))
+    job_id = blockdev_mirror_nowait(vm, source, target, **extra_options)
     job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
 

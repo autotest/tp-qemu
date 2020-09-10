@@ -139,7 +139,8 @@ def run(test, params, env):
                    "pcus: %d, minimum of vcpus and vhost: %d" %
                    (host_cpu_count, (1 + vhost_count) * len(vms)))
     params['mem'] = host_mem // len(vms) * 1024
-    params['smp'] = host_cpu_count // len(vms) - vhost_count
+    params['smp'] = params['vcpu_maxcpus'] = \
+        host_cpu_count // len(vms) - vhost_count
     if params['smp'] % 2 != 0:
         params['vcpu_sockets'] = 1
     params["start_vm"] = "yes"

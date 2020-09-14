@@ -22,7 +22,7 @@ def run(test, params, env):
     unload_cmd = params["unload_cmd"]
     load_cmd = params["load_cmd"]
     read_cmd = params["read_cmd"]
-    ept_value = process.system_output(read_cmd % "ept")
+    ept_value = process.getoutput(read_cmd % "ept")
 
     try:
         process.system(unload_cmd)

@@ -77,13 +77,12 @@ def generate_tempfile(vm, root_dir, filename, size="10M", timeout=720):
         md5_cmd = "certutil -hashfile %s MD5 > %s.md5" % (file_path, file_path)
     else:
         file_path = "%s/%s" % (root_dir, filename)
-        size_str = int(
+        count = int(
             utils_numeric.normalize_data_size(
                 size,
-                order_magnitude="K",
+                order_magnitude="M",
                 factor=1024))
-        count = size_str // 4
-        mk_file_cmd = "dd if=/dev/urandom of=%s bs=4k count=%s oflag=direct" % (
+        mk_file_cmd = "dd if=/dev/urandom of=%s bs=1M count=%s oflag=direct" % (
             file_path, count)
         md5_cmd = "md5sum %s > %s.md5 && sync" % (file_path, file_path)
     try:
@@ -228,11 +227,17 @@ def blockdev_snapshot(vm, source, target, **extra_options):
 
 
 @fail_on
-def blockdev_mirror(vm, source, target, **extra_options):
+def blockdev_mirror_nowait(vm, source, target, **extra_options):
+    """Don't wait mirror completed, return job id"""
     cmd, arguments = blockdev_mirror_qmp_cmd(source, target, **extra_options)
-    timeout = int(extra_options.pop("timeout", 600))
     vm.monitor.cmd(cmd, arguments)
-    job_id = arguments.get("job-id", source)
+    return arguments.get("job-id", source)
+
+
+@fail_on
+def blockdev_mirror(vm, source, target, **extra_options):
+    timeout = int(extra_options.pop("timeout", 600))
+    job_id = blockdev_mirror_nowait(vm, source, target, **extra_options)
     job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
 

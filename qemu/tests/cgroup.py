@@ -1703,7 +1703,7 @@ def run(test, params, env):
 
         timeout = int(params.get("login_timeout", 360))
         vm = env.get_all_vms()[0]
-        vm_cpus = int(params.get('smp', 0))     # cpus per VM
+        vm_cpus = vm.cpuinfo.smp  # cpus per VM
         serial = vm.wait_for_serial_login(timeout=timeout)
         sessions = []
         for _ in range(vm_cpus):

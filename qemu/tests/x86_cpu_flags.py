@@ -2,7 +2,7 @@ import logging
 
 from avocado.utils import cpu
 from virttest import error_context, env_process
-from qemu.tests.x86_cpu_model import check_flags
+from provider.cpu_utils import check_cpu_flags
 
 
 @error_context.context_aware
@@ -26,7 +26,7 @@ def run(test, params, env):
     flags = params["flags"]
     check_host_flags = params.get_boolean("check_host_flags")
     if check_host_flags:
-        check_flags(params, flags, test)
+        check_cpu_flags(params, flags, test)
 
     params["start_vm"] = "yes"
     vm_name = params['main_vm']
@@ -36,7 +36,7 @@ def run(test, params, env):
     error_context.context("Try to log into guest", logging.info)
     session = vm.wait_for_login()
     if params["os_type"] == "linux":
-        check_flags(params, flags, test, session)
+        check_cpu_flags(params, flags, test, session)
 
     if params.get("reboot_method"):
         error_context.context("Reboot guest '%s'." % vm.name, logging.info)

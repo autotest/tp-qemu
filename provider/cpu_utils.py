@@ -1,6 +1,8 @@
 import re
 import logging
 
+from avocado.utils import process
+
 from virttest import utils_misc
 from virttest.utils_test import VMStress, StressError
 
@@ -99,3 +101,32 @@ def check_guest_cpu_topology(session, os_type, cpuinfo):
         logging.debug("CPU infomation of guest:\n%s", out)
 
     return is_matched
+
+
+def check_cpu_flags(params, flags, test, session=None):
+    """
+    Check cpu flags on host or guest.(only for Linux now)
+    :param params: Dictionary with the test parameters
+    :param flags: checked flags
+    :param test: QEMU test object
+    :param session: guest session
+    """
+    cmd = params["check_flag_cmd"]
+    func = process.getoutput
+    if session:
+        func = session.cmd_output
+    out = func(cmd).split()
+    missing = [f for f in flags.split() if f not in out]
+    if session:
+        logging.info("Check cpu flags inside guest")
+        if missing:
+            test.fail("Flag %s not in guest" % missing)
+        no_flags = params.get("no_flags")
+        if no_flags:
+            err_flags = [f for f in no_flags.split() if f in out]
+            if err_flags:
+                test.fail("Flag %s should not be present in guest" % err_flags)
+    else:
+        logging.info("Check cpu flags on host")
+        if missing:
+            test.cancel("This host doesn't support flag %s" % missing)

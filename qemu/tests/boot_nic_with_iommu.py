@@ -1,4 +1,3 @@
-from avocado.utils import cpu
 from virttest import error_context
 from virttest import utils_test
 
@@ -18,9 +17,6 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    if cpu.get_vendor() != 'intel':
-        test.cancel("This case only support Intel platform")
-
     login_timeout = int(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -35,7 +31,7 @@ def run(test, params, env):
             test.fail("Ping returns non-zero value %s" % output)
         package_lost = utils_test.get_loss_ratio(output)
         if package_lost != 0:
-            test.fail("%s packeage lost when ping guest ip %s " %
+            test.fail("%s package lost when ping guest ip %s " %
                       (package_lost, guest_ip))
     finally:
         session.close()

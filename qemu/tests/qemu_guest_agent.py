@@ -2956,14 +2956,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Get hostname, timezone and currently active users on the vm.
         Steps:
         1) Check host name.
-        2) Check timezone name.
-        3) check timezone's offset to UTS in seconds.
-        4) Check all active users number.
-        5) Check every user info.
-        6) Check every user's domain(windows only)
-        7) Get the earlier loggin time for the same user.
-        8) Check the login time for every user.
-
+        2) Check host name after setting new host name
+        3) Check timezone name.
+        4) check timezone's offset to UTS in seconds.
+        5) Check all active users number.
+        6) Check every user info.
+        7) Check every user's domain(windows only)
+        8) Get the earlier loggin time for the same user.
+        9) Check the login time for every user.
         :param test: kvm test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
@@ -2983,6 +2983,16 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         cmd_get_host_name = params["cmd_get_host_name"]
         host_name_guest = session.cmd_output(cmd_get_host_name).strip()
         _result_check(host_name_ga, host_name_guest)
+
+        if params["os_type"] == "linux":
+            # this step that set new hostname and
+            # check it out just for linux.
+            error_context.context("Check host name after setting new host name.",
+                                  logging.info)
+            cmd_set_host_name = params["cmd_set_host_name"]
+            host_name_guest = session.cmd_output(cmd_set_host_name).strip()
+            host_name_ga = self.gagent.get_host_name()["host-name"]
+            _result_check(host_name_ga, host_name_guest)
 
         error_context.context("Check timezone of guest.", logging.info)
         timezone_ga = self.gagent.get_timezone()

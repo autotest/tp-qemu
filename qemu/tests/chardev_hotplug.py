@@ -3,6 +3,7 @@ import os
 
 from avocado.utils import process
 
+from virttest import arch
 from virttest import error_context
 
 
@@ -91,32 +92,37 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login()
     session.cmd_status("dmesg -c")
+    ppc_host = 'ppc' in params.get('vm_arch_name', arch.ARCH)
 
     error_context.context("Test null chardev", logging.info)
     chardev_add(vm, "chardev-null", "null", {})
-    chardev_use(vm, "chardev-null")
+    if not ppc_host:
+        chardev_use(vm, "chardev-null")
     chardev_del(vm, "chardev-null")
 
     error_context.context("Test file chardev", logging.info)
     filename = "/tmp/chardev-file-%s" % vm.instance
     args = {'out': filename}
     chardev_add(vm, "chardev-file", "file", args)
-    chardev_use(vm, "chardev-file")
+    if not ppc_host:
+        chardev_use(vm, "chardev-file")
     chardev_del(vm, "chardev-file")
-    output = process.system_output("cat %s" % filename).decode()
-    if output.find("Hello virttest world") == -1:
-        test.fail("Guest message not found [%s]" % output)
+    if not ppc_host:
+        output = process.system_output("cat %s" % filename).decode()
+        if output.find("Hello virttest world") == -1:
+            test.fail("Guest message not found [%s]" % output)
 
     error_context.context("Test pty chardev", logging.info)
     reply = chardev_add(vm, "chardev-pty", "pty", {})
     filename = reply["return"]["pty"]
     logging.info("host pty device is '%s'" % filename)
-    fd_dst = os.open(filename, os.O_RDWR | os.O_NONBLOCK)
-    chardev_use(vm, "chardev-pty")
-    output = os.read(fd_dst, 256).decode()
-    os.close(fd_dst)
-    if output.find("Hello virttest world") == -1:
-        test.fail("Guest message not found [%s]" % output)
+    if not ppc_host:
+        fd_dst = os.open(filename, os.O_RDWR | os.O_NONBLOCK)
+        chardev_use(vm, "chardev-pty")
+        output = os.read(fd_dst, 256).decode()
+        os.close(fd_dst)
+        if output.find("Hello virttest world") == -1:
+            test.fail("Guest message not found [%s]" % output)
     chardev_del(vm, "chardev-pty")
 
     error_context.context("Cleanup", logging.info)

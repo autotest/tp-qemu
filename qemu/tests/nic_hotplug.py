@@ -115,9 +115,10 @@ def run(test, params, env):
             root_port_id = bus.get_free_root_port()
             if root_port_id:
                 pci_add_cmd += ",bus=%s" % root_port_id
-                root_port = vm.devices.get_buses({"aobject": root_port_id})[0]
-                root_port.insert(qdevices.QBaseDevice(pci_model,
-                                                      aobject=device_id))
+                if used_sameid != "yes":
+                    root_port = vm.devices.get_buses({"aobject": root_port_id})[0]
+                    root_port.insert(qdevices.QBaseDevice(pci_model,
+                                                          aobject=device_id))
             else:
                 test.error("No free root port for device %s to plug."
                            % device_id)

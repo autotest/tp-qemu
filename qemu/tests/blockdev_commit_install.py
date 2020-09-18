@@ -26,7 +26,7 @@ def run(test, params, env):
     def tag_for_install(vm, tag):
         if vm.serial_console:
             serial_output = vm.serial_console.get_output()
-            if tag in serial_output:
+            if serial_output and tag in serial_output:
                 return True
         logging.info("vm has not started yet")
         return False

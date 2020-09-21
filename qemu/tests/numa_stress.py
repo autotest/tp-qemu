@@ -83,10 +83,10 @@ def run(test, params, env):
     if test_count < len(host_numa_node.online_nodes):
         test_count = len(host_numa_node.online_nodes)
 
-    tmpfs_size = 0
+    tmpfs_size = params.get_numeric("tmpfs_size")
     for node in host_numa_node.nodes:
         node_mem = int(host_numa_node.read_from_node_meminfo(node, "MemTotal"))
-        if tmpfs_size < node_mem:
+        if tmpfs_size == 0:
             tmpfs_size = node_mem
     tmpfs_path = params.get("tmpfs_path", "tmpfs_numa_test")
     tmpfs_path = utils_misc.get_path(data_dir.get_tmp_dir(), tmpfs_path)

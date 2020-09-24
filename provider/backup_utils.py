@@ -253,11 +253,18 @@ def block_commit(vm, device, **extra_options):
 
 
 @fail_on
-def blockdev_stream(vm, device, **extra_options):
-    timeout = int(extra_options.pop("timeout", 600))
+def blockdev_stream_nowait(vm, device, **extra_options):
+    """Do block-stream and don't wait stream completed, return job id"""
     cmd, arguments = blockdev_stream_qmp_cmd(device, **extra_options)
     vm.monitor.cmd(cmd, arguments)
-    job_id = arguments.get("job-id", device)
+    return arguments.get("job-id", device)
+
+
+@fail_on
+def blockdev_stream(vm, device, **extra_options):
+    """Do block-stream and wait stream completed"""
+    timeout = int(extra_options.pop("timeout", 600))
+    job_id = blockdev_stream_nowait(vm, device, **extra_options)
     job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
 

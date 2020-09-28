@@ -4,6 +4,7 @@ import json
 from avocado.utils import process
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
+from virttest.qemu_storage import get_image_json
 from virttest.qemu_io import QemuIOSystem
 
 
@@ -34,8 +35,14 @@ def run(test, params, env):
 
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s" % img.image_filename)
-        q = QemuIOSystem(test, params, img.image_filename)
+        image_filename = img.image_filename
+        logging.info("Run qemu-io %s" % image_filename)
+        if img.image_format == "luks":
+            image_secret_object = img._secret_objects[-1]
+            image_json_str = get_image_json(img.tag, img.params, img.root_dir)
+            image_json_str = " '%s'" % image_json_str
+            image_filename = image_secret_object + image_json_str
+        q = QemuIOSystem(test, params, image_filename)
         q.cmd_output(cmd, 120)
 
     def _get_file_size(img):

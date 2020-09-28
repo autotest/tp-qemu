@@ -15,7 +15,10 @@ class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
     """
 
     def _is_install_started(self, start_msg):
-        out = self.main_vm.serial_console.get_output() if self.main_vm.serial_console else ''
+        # get_output can return None
+        out = self.main_vm.serial_console.get_output() \
+            if self.main_vm.serial_console else None
+        out = '' if out is None else out
         return start_msg in out
 
     def _install_vm_in_background(self):

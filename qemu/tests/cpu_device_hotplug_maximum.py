@@ -30,6 +30,7 @@ def run(test, params, env):
     os_type = params["os_type"]
     machine_type = params["machine_type"]
     reboot_timeout = params.get_numeric("reboot_timeout")
+    offline_vcpu_after_hotplug = params.get_boolean("offline_vcpu_after_hotplug")
     mismatch_text = "Actual number of guest CPUs is not equal to the expected"
     not_equal_text = "CPU quantity mismatched! Guest got %s but expected is %s"
     # Many vCPUs will be plugged, it takes some time to bring them online.
@@ -92,12 +93,20 @@ def run(test, params, env):
     if not cpu_utils.check_guest_cpu_topology(session, os_type, cpuinfo):
         test.fail("CPU topology of guest is not as expected after reboot.")
 
-    error_context.context("Hotunplug all vCPU devices", logging.info)
-    for vcpu_device in reversed(vcpu_devices):
-        vm.hotunplug_vcpu_device(vcpu_device, 10 * vcpus_count)
-    if not utils_misc.wait_for(lambda: vm.get_cpu_count() == smp,
-                               verify_wait_timeout, first=5, step=10):
-        logging.error(not_equal_text, vm.get_cpu_count(), smp)
-        test.fail(mismatch_text)
-    logging.info("CPU quantity is as expected after hotunplug: %s", smp)
-    session.close()
+    if os_type == "linux":
+        error_context.context("Hotunplug all vCPU devices", logging.info)
+        if offline_vcpu_after_hotplug:
+            hotplugged_vcpu = range(smp, supported_maxcpus)
+            vcpu_list = "%d-%d" % (hotplugged_vcpu[0], hotplugged_vcpu[-1])
+            logging.info("Offline vCPU: %s.", vcpu_list)
+            session.cmd("chcpu -d %s" % vcpu_list, timeout=len(hotplugged_vcpu))
+            if vm.get_cpu_count() != smp:
+                test.error("Failed to offline all hotplugged vCPU.")
+        for vcpu_device in reversed(vcpu_devices):
+            vm.hotunplug_vcpu_device(vcpu_device, 10 * vcpus_count)
+        if not utils_misc.wait_for(lambda: vm.get_cpu_count() == smp,
+                                   verify_wait_timeout, first=5, step=10):
+            logging.error(not_equal_text, vm.get_cpu_count(), smp)
+            test.fail(mismatch_text)
+        logging.info("CPU quantity is as expected after hotunplug: %s", smp)
+        session.close()

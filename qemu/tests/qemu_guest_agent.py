@@ -160,22 +160,22 @@ class QemuGuestAgentTest(BaseVirtTest):
             Get module tag and qemu-kvm build status.
             """
             logging.info("Get the needed module tag.")
-            mdl_tag = process.system_output(get_mdl_tag_cmd,
-                                            shell=True,
-                                            timeout=query_timeout
-                                            ).strip().split()[0].decode()
+            mdl_tag = process.getoutput(get_mdl_tag_cmd,
+                                        verbose=True,
+                                        timeout=query_timeout
+                                        ).strip().split()[0]
             logging.info("Check qemu-kvm build is ready or not")
             get_qemu_name_cmd = "brew list-tagged %s" % mdl_tag
             get_qemu_name_cmd += " | grep qemu-kvm"
-            qemu_bild_name = process.system_output(get_qemu_name_cmd,
-                                                   shell=True,
-                                                   timeout=query_timeout
-                                                   ).strip().split()[0].decode()
-            get_build_ready_cmd = "brew buildinfo %s | grep State" % qemu_bild_name
-            output = process.system_output(get_build_ready_cmd,
-                                           shell=True,
-                                           timeout=query_timeout
-                                           ).strip().decode()
+            status, output = process.getstatusoutput(get_qemu_name_cmd,
+                                                     verbose=True,
+                                                     timeout=query_timeout)
+            if status:
+                return mdl_tag, False
+            qemu_build_name = output.strip().split()[0]
+            get_build_ready_cmd = "brew buildinfo %s | grep State" % qemu_build_name
+            output = process.getoutput(get_build_ready_cmd, verbose=True,
+                                       timeout=query_timeout).strip()
             return mdl_tag, "COMPLETE" in output
 
         virt_module_stream = self.params.get("virt_module_stream", "")

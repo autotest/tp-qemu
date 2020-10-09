@@ -1,8 +1,8 @@
 import logging
+import os
 
 from virttest import error_context
 from virttest import utils_netperf
-from virttest import utils_misc
 from virttest import data_dir
 from virttest import utils_net
 
@@ -34,97 +34,73 @@ def run(test, params, env):
     guest_address = vm.get_address()
     host_address = utils_net.get_host_ip_address(params)
     remote_ip = params.get("remote_host", host_address)
-    netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                       params.get("netperf_link"))
-    md5sum = params.get("pkg_md5sum")
+    netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                params.get("netperf_link"))
     netperf_server_link = params.get("netperf_server_link_win")
     if netperf_server_link:
-        netperf_server_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                                  netperf_server_link)
-    server_md5sum_win = params.get("server_md5sum")
+        netperf_server_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                           netperf_server_link)
     netperf_client_link = params.get("netperf_client_link_win", netperf_link)
-    client_md5sum_win = params.get("client_md5sum", md5sum)
-    netperf_client_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                              netperf_client_link)
+    netperf_client_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                       netperf_client_link)
     server_path = params.get("server_path", "/var/tmp/")
     client_path = params.get("client_path", "/var/tmp/")
     server_path_win = params.get("server_path_win")
     client_path_win = params.get("client_path_win")
 
-    username = params.get("username", "root")
-    password = params.get("password", "redhat")
-    passwd = params.get("hostpassword", "redhat")
-    client = params.get("shell_client", "ssh")
-    port = params.get("shell_port", "22")
-    prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
-    linesep = params.get(
-        "shell_linesep", "\n").encode().decode('unicode_escape')
-    status_test_command = params.get("status_test_command", "echo $?")
-    compile_option_client_h = params.get("compile_option_client_h", "")
-    compile_option_server_h = params.get("compile_option_server_h", "")
-    compile_option_client_g = params.get("compile_option_client_g", "")
-    compile_option_server_g = params.get("compile_option_server_g", "")
     if params.get("os_type") == "linux":
         session.cmd("iptables -F", ignore_all_errors=True)
         g_client_link = netperf_link
         g_server_link = netperf_link
         g_server_path = server_path
         g_client_path = client_path
-        g_server_md5sum = md5sum
-        g_client_md5sum = md5sum
     elif params.get("os_type") == "windows":
         g_client_link = netperf_client_link
         g_server_link = netperf_server_link
         g_server_path = server_path_win
         g_client_path = client_path_win
-        g_server_md5sum = server_md5sum_win
-        g_client_md5sum = client_md5sum_win
+
     netperf_client_g = None
     netperf_client_h = None
     netperf_server_g = None
     netperf_server_h = None
     try:
-        netperf_client_g = utils_netperf.NetperfClient(guest_address,
-                                                       g_client_path,
-                                                       g_client_md5sum,
-                                                       g_client_link,
-                                                       client=client,
-                                                       port=port,
-                                                       username=username,
-                                                       password=password,
-                                                       prompt=prompt,
-                                                       linesep=linesep,
-                                                       status_test_command=status_test_command,
-                                                       compile_option=compile_option_client_g)
-        netperf_server_h = utils_netperf.NetperfServer(remote_ip,
-                                                       server_path,
-                                                       md5sum,
-                                                       netperf_link,
-                                                       password=passwd,
-                                                       prompt=prompt,
-                                                       linesep=linesep,
-                                                       status_test_command=status_test_command,
-                                                       install=False,
-                                                       compile_option=compile_option_server_h)
-        netperf_client_h = utils_netperf.NetperfClient(remote_ip, client_path,
-                                                       md5sum, netperf_link,
-                                                       password=passwd,
-                                                       prompt=prompt,
-                                                       linesep=linesep,
-                                                       status_test_command=status_test_command,
-                                                       compile_option=compile_option_client_h)
-        netperf_server_g = utils_netperf.NetperfServer(guest_address,
-                                                       g_server_path,
-                                                       g_server_md5sum,
-                                                       g_server_link,
-                                                       client=client,
-                                                       port=port,
-                                                       username=username,
-                                                       password=password,
-                                                       prompt=prompt,
-                                                       linesep=linesep,
-                                                       status_test_command=status_test_command,
-                                                       compile_option=compile_option_server_g)
+        netperf_client_g = utils_netperf.NetperfClient(
+            guest_address, g_client_path,
+            netperf_source=g_client_link,
+            client=params.get("shell_client"),
+            port=params.get("shell_port"),
+            prompt=params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#"),
+            username=params.get("username"),
+            password=params.get("password"),
+            linesep=params.get("shell_linesep", "\n").encode().decode(
+                'unicode_escape'),
+            status_test_command=params.get("status_test_command", ""),
+            compile_option=params.get("compile_option_client_g", ""))
+        netperf_server_h = utils_netperf.NetperfServer(
+            remote_ip,
+            server_path,
+            netperf_source=netperf_link,
+            password=params.get("hostpassword"),
+            compile_option=params.get("compile_option", ""))
+        netperf_client_h = utils_netperf.NetperfClient(
+            remote_ip, client_path,
+            netperf_source=netperf_link,
+            password=params.get("hostpassword"),
+            compile_option=params.get("compile_option", ""))
+        netperf_server_g = utils_netperf.NetperfServer(
+            guest_address,
+            g_server_path,
+            netperf_source=g_server_link,
+            username=params.get("username"),
+            password=params.get("password"),
+            client=params.get("shell_client"),
+            port=params.get("shell_port"),
+            prompt=params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#"),
+            linesep=params.get("shell_linesep", "\n").encode().decode(
+                'unicode_escape'),
+            status_test_command=params.get("status_test_command", "echo $?"),
+            compile_option=params.get("compile_option_server_g", ""))
         error_context.base_context("Run netperf test between host and guest")
         error_context.context("Start netserver in guest.", logging.info)
         netperf_server_g.start()

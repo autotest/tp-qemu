@@ -1341,8 +1341,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         for windows guest.
         """
         if self.params.get("os_type") == "linux":
-            black_list = self.params["black_list"]
-            for black_cmd in black_list.split():
+            cmd_black_list = self.params["black_list"]
+            cmd_blacklist_backup = self.params["black_list_backup"]
+            session.cmd(cmd_blacklist_backup)
+            for black_cmd in cmd_black_list.split():
                 bl_check_cmd = self.params["black_list_check_cmd"] % black_cmd
                 bl_change_cmd = self.params["black_list_change_cmd"] % black_cmd
                 session.cmd(bl_change_cmd)
@@ -1355,6 +1357,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             if s:
                 self.test.fail("Could not restart qemu-ga in VM after changing"
                                " list, detail: %s" % o)
+
+    def _change_bl_back(self, session):
+        """
+        Change the blacklist_bck back for recovering guest env.
+        """
+        if self.params.get("os_type") == "linux":
+            cmd_change_bl_back = self.params["recovery_black_list"]
+            session.cmd(cmd_change_bl_back)
 
     def _read_check(self, ret_handle, content, count=None):
         """
@@ -1444,6 +1454,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_file_write(self, test, params, env):
@@ -1494,6 +1505,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_file_read(self, test, params, env):
@@ -1605,6 +1617,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_with_fsfreeze(self, test, params, env):
@@ -1650,6 +1663,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_with_selinux(self, test, params, env):
@@ -1754,6 +1768,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               " guest.", logging.info)
         session.cmd("setenforce 0")
         result_check_permissive()
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_guest_exec(self, test, params, env):
@@ -1891,6 +1906,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                 capture_output=True)
         if result["exitcode"] == 0:
             test.fail("The cmd should be failed with wrong args.")
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def _action_before_fsfreeze(self, *args):
@@ -2659,6 +2675,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         self.gagent.guest_file_read(ret_handle)
         log_check("guest-file-read")
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_with_migrate(self, test, params, env):

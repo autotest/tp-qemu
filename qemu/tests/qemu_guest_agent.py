@@ -2539,6 +2539,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
 
         """
+
         session = self._get_session(params, None)
         self._open_session_list.append(session)
         serial_num = params["blk_extra_params_image1"].split("=")[1]
@@ -2546,6 +2547,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Check all file system info in a loop.", logging.info)
         fs_info_qga = self.gagent.get_fsinfo()
         for fs in fs_info_qga:
+            device_id = fs["name"]
             mount_pt = fs["mountpoint"]
             if params["os_type"] == "windows":
                 mount_pt = mount_pt[:2]
@@ -2554,6 +2556,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                   mount_pt, logging.info)
             fs_type_qga = fs["type"]
             cmd_get_disk = params["cmd_get_disk"] % mount_pt.replace("/", r"\/")
+            if params["os_type"] == "windows":
+                cmd_get_disk = params["cmd_get_disk"] % device_id.replace("\\", r"\\")
             disk_info_guest = session.cmd(cmd_get_disk).strip().split()
             fs_type_guest = disk_info_guest[1]
             if fs_type_qga != fs_type_guest:

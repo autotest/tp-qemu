@@ -2569,22 +2569,23 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             disk_usage_guest = qga_guest_diskusage(mount_point)
             diff_total_qgaguest = int(disk_usage_guest[0])
             diff_used_qgaguest = int(disk_usage_guest[1])
-            if (diff_total_qgaguest != 0 or
-                    diff_used_qgaguest != 0):
-                if mount_pt == 'C:' or mount_pt == '/':
-                    # Disk 'C:' and '/' usage have a floating interval,
+            if diff_total_qgaguest != 0:
+                test.fail("File System %s Total bytes doesn't match." %
+                          mount_point)
+            if diff_used_qgaguest != 0:
+                if mount_point != 'C:' and mount_point != '/':
+                    test.fail("File system %s used bytes doesn't match." %
+                              mount_point)
+                else:
+                    # Disk 'C:' and '/' used space usage have a floating interval,
                     # so set a safe value '10485760'.
-                    if (diff_total_qgaguest > 10485760 or
-                            diff_used_qgaguest > 10485760):
-                        test.fail("File System floating interval is too large.\n")
+                    logging.info("Need to check the floating interval for C: or /.")
+                    if diff_used_qgaguest > 10485760:
+                        test.fail("File System floating interval is too large,"
+                                  "Something must go wrong.")
                     else:
                         logging.info("File system '%s' usages are within the safe "
-                                     "floating range." % mount_pt)
-                        return
-                test.fail("File System Total bytes or Used bytes doesn't match.\n")
-            else:
-                logging.info("File system '%s' total and used usage are expected." %
-                             mount_pt)
+                                     "floating range." % mount_point)
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -2595,12 +2596,18 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         for fs in fs_info_qga:
             device_id = fs["name"]
             mount_pt = fs["mountpoint"]
-            if params["os_type"] == "windows":
+            if (params["os_type"] == "windows" and
+                    mount_pt != "System Reserved"):
                 mount_pt = mount_pt[:2]
 
             error_context.context("Check file system '%s' usage statistics." %
                                   mount_pt, logging.info)
-            check_usage_qga_guest(mount_pt)
+            if mount_pt != 'System Reserved':
+                # disk usage statistic for System Reserved
+                # volume is not supported.
+                check_usage_qga_guest(mount_pt)
+            else:
+                logging.info("'%s' disk usage statistic is not supported" % mount_pt)
 
             error_context.context("Check file system type of '%s' mount point." %
                                   mount_pt, logging.info)

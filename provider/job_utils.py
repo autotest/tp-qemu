@@ -70,10 +70,15 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
 
 
 @fail_on
-def block_job_complete(vm, job_id, timeout=120):
+def job_complete(vm, job_id, timeout=120):
     wait_until_job_status_match(vm, "ready", job_id, timeout)
-    arguments = {"device": job_id}
-    vm.monitor.cmd("block-job-complete", arguments)
+    arguments = {"id": job_id}
+    vm.monitor.cmd("job-complete", arguments)
+
+
+@fail_on
+def block_job_complete(vm, job_id, timeout=120):
+    job_complete(vm, job_id, timeout)
 
 
 @fail_on
@@ -83,7 +88,7 @@ def block_job_dismiss(vm, job_id, timeout=120):
     """
     job = get_block_job_by_id(vm, job_id)
     if job.get("auto-dismiss", True) is False:
-        _job_dismiss(vm, job_id, True, timeout)
+        _job_dismiss(vm, job_id, timeout)
         time.sleep(0.1)
         job = get_block_job_by_id(vm, job_id)
         assert not job, "Block job '%s' exists" % job_id
@@ -92,40 +97,37 @@ def block_job_dismiss(vm, job_id, timeout=120):
 @fail_on
 def job_dismiss(vm, job_id, timeout=120):
     """dismiss job when job status is concluded"""
-    _job_dismiss(vm, job_id, False, timeout)
+    _job_dismiss(vm, job_id, timeout)
     time.sleep(0.1)
     job = get_job_by_id(vm, job_id)
     assert not job, "Job '%s' exists" % job_id
 
 
-@fail_on
-def _job_dismiss(vm, job_id, is_block_job=False, timeout=120):
+def _job_dismiss(vm, job_id, timeout=120):
     """dismiss job when job status is concluded"""
     wait_until_job_status_match(vm, "concluded", job_id, timeout)
-    cmd = "block-job-dismiss" if is_block_job else "job-dismiss"
     arguments = {"id": job_id}
-    return vm.monitor.cmd(cmd, arguments)
+    return vm.monitor.cmd("job-dismiss", arguments)
 
 
 def block_job_finalize(vm, job_id, timeout=120):
     """Finalize block job when job in pending state"""
     job = get_block_job_by_id(vm, job_id)
     if job.get("auto-finalize", True) is False:
-        return _job_finalize(vm, job_id, True, timeout)
+        return _job_finalize(vm, job_id, timeout)
 
 
 def job_finalize(vm, job_id, timeout=120):
     """Finalize job when job in pending state"""
-    return _job_finalize(vm, job_id, False, timeout)
+    return _job_finalize(vm, job_id, timeout)
 
 
 @fail_on
 def _job_finalize(vm, job_id, is_block_job=False, timeout=120):
     """Finalize job when job in pending state"""
     wait_until_job_status_match(vm, "pending", job_id, timeout)
-    cmd = "block-job-finalize" if is_block_job else "job-finalize"
     arguments = {"id": job_id}
-    vm.monitor.cmd(cmd, arguments)
+    vm.monitor.cmd("job-finalize", arguments)
 
 
 @fail_on

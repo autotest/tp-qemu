@@ -88,9 +88,13 @@ def run(test, params, env):
         else:
             size = params.get_numeric("mem")
 
-        cpus = params.get("numa_cpus_node%d" % (nodenr))
-        if cpus is not None:
-            cpus = set([int(v) for v in cpus.split(",")])
+        numa_cpus = params.get("numa_cpus_node%d" % (nodenr))
+        if numa_cpus is not None:
+            cpus = []
+            for v in numa_cpus.split(","):
+                v = v.split('-')
+                cpus += [cpuid for cpuid in range(int(v[0]), int(v[-1]) + 1)]
+            cpus = set(cpus)
         else:
             cpus = set([int(v) for v in range(params.get_numeric('smp'))])
 

@@ -151,7 +151,7 @@ def run(test, params, env):
                                                          re.IGNORECASE), 30):
                 test.fail("Virtiofs service is failed to start.")
 
-            virtio_fs_disk_label = params["fs_target"]
+            virtio_fs_disk_label = fs_target
             error_context.context("Get Volume letter of virtio fs target, the disk"
                                   "lable is %s." % virtio_fs_disk_label,
                                   logging.info)

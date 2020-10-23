@@ -89,7 +89,7 @@ def run(test, params, env):
     host_addr = vm.get_address()
 
     if os_type == "windows":
-        cmd_timeout = int(params.get("cmd_timeout", 120))
+        cmd_timeout = params.get_numeric("cmd_timeout", 120)
         driver_name = params["driver_name"]
         install_path = params["install_path"]
         check_installed_cmd = params["check_installed_cmd"] % install_path

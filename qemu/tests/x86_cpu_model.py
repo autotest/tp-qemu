@@ -75,6 +75,22 @@ def run(test, params, env):
         test.fail("Guest cpu model is not right")
 
     if params["os_type"] == "linux":
+        check_cmd = params.get("check_cmd")
+        if check_cmd:
+            vul_host = process.getoutput(params.get("vulnerabilities")).split()
+            vul_guest = session.cmd_output(params.get("vulnerabilities")).split()
+            vulnerabilities = list(set(vul_host).intersection(set(vul_guest)))
+            check_items = params.get("check_items").split()
+            expect_result = params.get("expect_result")
+            for item in vulnerabilities:
+                h_out = re.search("Vulnerable|Mitigation|Not affected",
+                                  process.getoutput(check_cmd % item))[0]
+                g_out = re.search("Vulnerable|Mitigation|Not affected",
+                                  session.cmd_output(check_cmd % item))[0]
+                if h_out != g_out:
+                    test.fail("Guest is not equal to Host with '%s'" % item)
+                if item in check_items and g_out != expect_result:
+                    test.fail("'%s' can't get '%s'" % (item, expect_result))
         check_cpu_flags(params, flags, test, session)
 
     if params.get("reboot_method"):

@@ -2438,6 +2438,27 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.close()
 
     @error_context.context_aware
+    def gagent_check_qgastatus_after_remove_qga(self, test, params, env):
+        """
+        Check the qga.service status after removing qga.
+        """
+        session = self._get_session(self.params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Remove qga.service.", logging.info)
+        self.gagent_uninstall(session, self.vm)
+
+        error_context.context("Check qga.service after removing it.", logging.info)
+        try:
+            if self._check_ga_service(session, params.get("gagent_status_cmd")):
+                test.fail("QGA service should be removed.")
+        finally:
+            error_context.context("Recover test env that start qga.", logging.info)
+            self.gagent_install(session, self.vm)
+            self.gagent_start(session, self.vm)
+            self.gagent_verify(params, self.vm)
+
+    @error_context.context_aware
     def gagent_check_frozen_io(self, test, params, env):
         """
         fsfreeze test during disk io.

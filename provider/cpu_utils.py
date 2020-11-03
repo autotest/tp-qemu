@@ -111,7 +111,7 @@ def check_cpu_flags(params, flags, test, session=None):
     :param test: QEMU test object
     :param session: guest session
     """
-    cmd = params["check_flag_cmd"]
+    cmd = "lscpu | grep Flags | awk -F ':'  '{print $2}'"
     func = process.getoutput
     if session:
         func = session.cmd_output

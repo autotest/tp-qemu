@@ -344,6 +344,29 @@ class QemuGuestAgentTest(BaseVirtTest):
         logging.info(self.gagent.cmd("guest-info"))
 
     @error_context.context_aware
+    def gagent_setsebool_value(self, value, params, vm):
+        '''
+        Set selinux boolean 'virt_qemu_ga_read_nonsecurity_files'
+        as 'on' or 'off' for linux guest can access filesystem
+        successfully and restore guest original env when test is over.
+
+        :param value: value of selinux boolean.
+        :param params: Dictionary with the test parameters
+        :param vm: Virtual machine object.
+        '''
+        session = self._get_session(params, vm)
+        self._open_session_list.append(session)
+        error_context.context("Turn %s virt_qemu_ga_read_nonsecurity_files." %
+                              value, logging.info)
+        set_selinux_bool_cmd = params["setsebool_cmd"] % value
+        session.cmd(set_selinux_bool_cmd).strip()
+        get_sebool_cmd = params['getsebool_cmd']
+        value_selinux_bool_guest = session.cmd_output(get_sebool_cmd).strip()
+        if value_selinux_bool_guest != value:
+            self.test.error("Set boolean virt_qemu_ga_read_nonsecurity_files "
+                            "failed.")
+
+    @error_context.context_aware
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
         if self.start_vm == "yes":
@@ -1100,6 +1123,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         timeout = float(params.get("login_timeout", 240))
         session = self.vm.wait_for_login(timeout=timeout)
         device_name = get_guest_discard_disk(session)
+        self.gagent_setsebool_value('on', params, self.vm)
 
         error_context.context("format disk '%s' in guest" % device_name, logging.info)
         format_disk_cmd = params["format_disk_cmd"]
@@ -1133,6 +1157,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         error_context.context("execute the guest-fstrim cmd", logging.info)
         self.gagent.fstrim()
+        self.gagent_setsebool_value('off', params, self.vm)
 
         # check the bitmap after trim
         bitmap_after_trim = get_allocation_bitmap()
@@ -2060,6 +2085,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Format the new data disk and mount it.",
                               logging.info)
         if params.get("os_type") == "linux":
+            self.gagent_setsebool_value('on', params, self.vm)
             disk_data = list(utils_disk.get_linux_disks(session).keys())
             mnt_point_data = utils_disk.configure_empty_disk(
                 session, disk_data[0], image_size_stg0, "linux",
@@ -2102,6 +2128,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             check_mp = ["/"]
             self._fsfreeze(fsfreeze_list=True, mountpoints=mount_points_n,
                            check_mountpoints=check_mp)
+            self.gagent_setsebool_value('off', params, self.vm)
         else:
             mount_points_n = ["C:\\", "X:\\"]
             logging.info("Make sure the current status is thaw.")
@@ -2727,6 +2754,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Format the new data disk and mount it.",
                               logging.info)
         if params.get("os_type") == "linux":
+            self.gagent_setsebool_value('on', params, self.vm)
             disk_data = list(utils_disk.get_linux_disks(session).keys())
             mnt_point = utils_disk.configure_empty_disk(
                 session, disk_data[0], image_size_stg0, "linux",
@@ -2796,14 +2824,17 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Mount fs or online disk in guest.",
                               logging.info)
         if params.get("os_type") == "linux":
-            if not utils_disk.mount(src, mnt_point[0], session=session):
-                if params['os_variant'] != 'rhel6':
-                    test.fail("For rhel7+ guest, mount fs should success"
-                              " after fsthaw.")
-            else:
-                if params['os_variant'] == 'rhel6':
-                    test.fail("For rhel6 guest, mount fs should fail after"
-                              " fsthaw.")
+            try:
+                if not utils_disk.mount(src, mnt_point[0], session=session):
+                    if params['os_variant'] != 'rhel6':
+                        test.fail("For rhel7+ guest, mount fs should success"
+                                  " after fsthaw.")
+                else:
+                    if params['os_variant'] == 'rhel6':
+                        test.fail("For rhel6 guest, mount fs should fail after"
+                                  " fsthaw.")
+            finally:
+                self.gagent_setsebool_value('off', params, self.vm)
         else:
             if not utils_disk.update_windows_disk_attributes(session,
                                                              disk_index):

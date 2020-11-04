@@ -245,7 +245,7 @@ def run(test, params, env):
             time.sleep(0.5)   # wait for SIGHUP to be emitted
 
         # Enable sigio on specific port
-        guest_worker.cmd("virt.async('%s', True, 0)" % (port.name), 10)
+        guest_worker.cmd("virt.asynchronous('%s', True, 0)" % (port.name), 10)
 
         # Test sigio when port open
         guest_worker.cmd("virt.set_pool_want_return('%s', select.POLLOUT)" %
@@ -283,7 +283,7 @@ def run(test, params, env):
         guest_worker.cmd("virt.get_sigio_poll_return('%s')" % (port.name), 10)
 
         # Disable sigio on specific port
-        guest_worker.cmd("virt.async('%s', False, 0)" % (port.name), 10)
+        guest_worker.cmd("virt.asynchronous('%s', False, 0)" % (port.name), 10)
         virtio_test.cleanup(vm, guest_worker)
 
     def test_lseek():

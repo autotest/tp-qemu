@@ -1,6 +1,5 @@
 import logging
 
-from avocado.utils import cpu
 from virttest import error_context, env_process
 from provider.cpu_utils import check_cpu_flags
 
@@ -18,11 +17,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    vendor_id = params.get("vendor_id", "")
-    if vendor_id:
-        if vendor_id != cpu.get_vendor():
-            test.cancel("Need host vendor %s to support this test case" % vendor_id)
-
     flags = params["flags"]
     check_host_flags = params.get_boolean("check_host_flags")
     if check_host_flags:

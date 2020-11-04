@@ -2557,15 +2557,62 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         mountpoint,disk's name and serial number.
 
         steps:
-        1) check file system type of every mount point.
-        2) check disk name.
-        3) check disk's serial number.
+        1) Check filesystem usage statistics
+        2) check file system type of every mount point.
+        3) check disk name.
+        4) check disk's serial number.
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
 
         """
+        def qga_guest_diskusage(mountpoint):
+            """
+            Send cmd in guest to get disk usage.
+            :param mountpoint: the mountpoint of filesystem
+            """
+            cmd_get_diskusage = params["cmd_get_disk_usage"] % mountpoint
+            disk_usage_guest = session.cmd(cmd_get_diskusage).strip().split()
+            disk_total_guest = int(disk_usage_guest[0])
+            if params["os_type"] == "windows":
+                # Just can get total and freespace disk usage from windows.
+                disk_freespace_guest = int(disk_usage_guest[1])
+                disk_used_guest = int(disk_total_guest - disk_freespace_guest)
+            else:
+                disk_used_guest = int(disk_usage_guest[1])
+            disk_total_qga = int(fs["total-bytes"])
+            disk_used_qga = int(fs["used-bytes"])
+            diff_total_qga_guest = abs(disk_total_guest - disk_total_qga)
+            diff_used_qga_guest = abs(disk_used_guest - disk_used_qga)
+            return (diff_total_qga_guest, diff_used_qga_guest)
+
+        def check_usage_qga_guest(mount_point):
+            """
+            Contrast disk usage from guest and qga that needed
+            to call previous function 'qga_guest_diskusage'.
+            :param mountpoint: the mountpoint of filesystem
+            """
+            disk_usage_guest = qga_guest_diskusage(mount_point)
+            diff_total_qgaguest = int(disk_usage_guest[0])
+            diff_used_qgaguest = int(disk_usage_guest[1])
+            if diff_total_qgaguest != 0:
+                test.fail("File System %s Total bytes doesn't match." %
+                          mount_point)
+            if diff_used_qgaguest != 0:
+                if mount_point != 'C:' and mount_point != '/':
+                    test.fail("File system %s used bytes doesn't match." %
+                              mount_point)
+                else:
+                    # Disk 'C:' and '/' used space usage have a floating interval,
+                    # so set a safe value '10485760'.
+                    logging.info("Need to check the floating interval for C: or /.")
+                    if diff_used_qgaguest > 10485760:
+                        test.fail("File System floating interval is too large,"
+                                  "Something must go wrong.")
+                    else:
+                        logging.info("File system '%s' usages are within the safe "
+                                     "floating range." % mount_point)
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -2576,8 +2623,18 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         for fs in fs_info_qga:
             device_id = fs["name"]
             mount_pt = fs["mountpoint"]
-            if params["os_type"] == "windows":
+            if (params["os_type"] == "windows" and
+                    mount_pt != "System Reserved"):
                 mount_pt = mount_pt[:2]
+
+            error_context.context("Check file system '%s' usage statistics." %
+                                  mount_pt, logging.info)
+            if mount_pt != 'System Reserved':
+                # disk usage statistic for System Reserved
+                # volume is not supported.
+                check_usage_qga_guest(mount_pt)
+            else:
+                logging.info("'%s' disk usage statistic is not supported" % mount_pt)
 
             error_context.context("Check file system type of '%s' mount point." %
                                   mount_pt, logging.info)

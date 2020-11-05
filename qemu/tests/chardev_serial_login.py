@@ -10,8 +10,8 @@ from virttest import env_process
 @error_context.context_aware
 def run(test, params, env):
     """
-    Verify the login function of pci-serial (RHEL and x86 only):
-    1) Start guest with pci-serial with backend
+    Verify the login function of chardev-serial (RHEL only):
+    1) Start guest with chardev-serial with backend
     2) for pty and file backend:
       2.1) open and close chardev
     3) for unix_socket and tcp_socket
@@ -29,6 +29,9 @@ def run(test, params, env):
 
     serial_id = params.objects('serials')[-1]
     prompt = params.get("shell_prompt")
+    if params['serial_type'] == 'spapr-vty' \
+            and params['inactivity_watcher'] == 'none':
+        params['vga'] = 'none'
     params['start_vm'] = 'yes'
     for backend in ['tcp_socket', 'unix_socket', 'pty', 'file']:
         params['chardev_backend_%s' % serial_id] = backend

@@ -181,8 +181,8 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
 
     def cancel_backup_jobs(self):
         for job_id in self.backup_jobs:
-            arguments = {'device': job_id}
-            self.main_vm.monitor.cmd('block-job-cancel', arguments)
+            arguments = {'id': job_id}
+            self.main_vm.monitor.cmd('job-cancel', arguments)
 
     def generate_inc_files(self):
         return list(map(self.generate_data_file, self.src_img_tags))

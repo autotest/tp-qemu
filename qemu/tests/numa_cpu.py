@@ -1,6 +1,8 @@
 import logging
+import re
 
 from virttest import error_context
+from virttest import utils_package
 from virttest.utils_misc import NumaInfo
 
 
@@ -43,21 +45,42 @@ def run(test, params, env):
 
     def numa_cpu_guest():
         """
-        Get the cpu id list for each node in guest os, linux only
+        Get the cpu id list for each node in guest os, sort with node id.
         """
         error_context.context("Get cpus in guest os", logging.info)
-        numa_info_guest = NumaInfo(session=session)
-        nodes_guest = numa_info_guest.online_nodes
         numa_cpu_guest = []
-        for node in nodes_guest:
-            numa_cpus = numa_info_guest.online_nodes_cpus[node]
-            numa_cpus = set([int(v) for v in numa_cpus.split()])
-            numa_cpu_guest.append(numa_cpus)
+        if vm_arch in ('ppc64', 'ppc64le'):
+            numa_info_guest = NumaInfo(session=session)
+            nodes_guest = numa_info_guest.online_nodes
+            for node in nodes_guest:
+                numa_cpus = numa_info_guest.online_nodes_cpus[node]
+                numa_cpus = sorted([int(v) for v in numa_cpus.split()])
+                numa_cpu_guest.append(numa_cpus)
+        else:
+            error_context.context("Get SRAT ACPI table", logging.info)
+            if not utils_package.package_install("acpidump", session):
+                test.cancel("Please install acpidump in guest to proceed")
+            content = session.cmd_output('cd /tmp && acpidump -n SRAT -b && '
+                                         'iasl -d srat.dat && cat srat.dsl')
+            pattern = re.compile(r'Proximity Domain Low\(8\)\s+:\s+([0-9A-Fa-f]+)'
+                                 r'\n.*Apic ID\s+:\s+([0-9A-Fa-f]+)')
+            node_cpus = pattern.findall(content)
+
+            tmp = {}
+            for item in node_cpus:
+                nodeid = int(item[0], 16)
+                cpuid = int(item[1], 16)
+                if nodeid in tmp.keys():
+                    tmp[nodeid] += [cpuid]
+                else:
+                    tmp[nodeid] = [cpuid]
+            for item in sorted(tmp.items(), key=lambda item: item[0]):
+                numa_cpu_guest.append(sorted(item[1]))
         return numa_cpu_guest
 
     def numa_cpu_cli():
         """
-        Get the cpu id list for each node according to the qemu cli
+        Get the cpu id list for each node according to the qemu cli, sort with nodeid.
         """
         error_context.context("Get the expected cpus in qemu command line", logging.info)
         numa_cpus = params.objects("guest_numa_cpus")
@@ -76,15 +99,39 @@ def run(test, params, env):
             else:
                 tmp[nodeid] = cpu_list
         for item in sorted(tmp.items(), key=lambda item: item[0]):
-            numa_cpu_cli.append(set(sorted(item[1])))
+            numa_cpu_cli.append(sorted(item[1]))
         return numa_cpu_cli
+
+    def numa_cpu_setted(numa_cpu_options):
+        """
+        Get the new setted cpu id list for each node according to the set options,
+        sort with nodeid.
+        """
+        numa_cpu_setted = []
+        tmp = {}
+        for cpu in numa_cpu_options:
+            nodeid = cpu['node_id']
+            socket = cpu.get("socket_id")
+            die = cpu.get("die_id")
+            core = cpu.get("core_id")
+            thread = cpu.get("thread_id")
+            cpu_list = convert_cpu_topology_to_ids(socket, die, core, thread)
+            if nodeid in tmp.keys():
+                tmp[nodeid] += cpu_list
+            else:
+                tmp[nodeid] = cpu_list
+        for item in sorted(tmp.items(), key=lambda item: item[0]):
+            numa_cpu_setted.append(sorted(item[1]))
+        return numa_cpu_setted
 
     def get_hotpluggable_cpus():
         """
-        Get the cpu id list for each node with the output of "query-hotpluggable-cpus"
+        Get the specified cpu id list for each node that sort with node id and
+        unspecified cpu topology with the output of "query-hotpluggable-cpus".
         """
         error_context.context("Get the hotpluggable cpus", logging.info)
         specified_cpus = []
+        unspecified_cpus = []
         tmp = {}
         out = vm.monitor.info("hotpluggable-cpus")
         for vcpu_info in out:
@@ -101,12 +148,20 @@ def run(test, params, env):
                     tmp[nodeid] += cpu_list
                 else:
                     tmp[nodeid] = cpu_list
+            else:
+                options = {'socket_id': socket, 'die_id': die,
+                           'core_id': core, 'thread_id': thread}
+                for key in list(options.keys()):
+                    if options[key] is None:
+                        del options[key]
+                unspecified_cpus.append(options)
+
         for item in sorted(tmp.items(), key=lambda item: item[0]):
-            specified_cpus.append(set(sorted(item[1])))
-        return specified_cpus
+            specified_cpus.append(sorted(item[1]))
+        return specified_cpus, unspecified_cpus
 
     vm = env.get_vm(params["main_vm"])
-    session = vm.wait_for_login()
+    qemu_preconfig = params.get_boolean("qemu_preconfig")
     os_type = params["os_type"]
     vm_arch = params["vm_arch_name"]
 
@@ -122,18 +177,61 @@ def run(test, params, env):
         thread_weight = 1
 
     numa_cpu_cli = numa_cpu_cli()
-    specified_cpus = get_hotpluggable_cpus()
-    numa_cpu_monitor = [item[1] for item in vm.monitor.info_numa()]
+    specified_cpus, unspecified_cpus = get_hotpluggable_cpus()
 
     if specified_cpus != numa_cpu_cli:
         test.fail("cpu ids for each node with 'info hotpluggable-cpus' is: %s,"
-                  "but the expected result is: %s" % (specified_cpus, numa_cpu_cli))
-    if numa_cpu_monitor != numa_cpu_cli:
-        test.fail("cpu ids for each node with 'info numa' is: %s, but the "
-                  "expected result is: %s" % (numa_cpu_monitor, numa_cpu_cli))
+                  "but the seting in qemu cli is: %s"
+                  % (specified_cpus, numa_cpu_cli))
+
+    if qemu_preconfig:
+        node_ids = []
+        for node in params.objects('guest_numa_nodes'):
+            node_params = params.object_params(node)
+            node_ids.append(node_params.get_numeric('numa_nodeid'))
+        node_ids = sorted(node_ids)
+
+        # Set unspecified cpus from node 0 to max, and set the left cpus to node 0
+        set_numa_node_options = []
+        for index, cpu_option in enumerate(unspecified_cpus):
+            try:
+                cpu_option.update({'node_id': node_ids[index]})
+            except IndexError:
+                cpu_option.update({'node_id': 0})
+            set_numa_node_options.append(cpu_option)
+
+        for options in set_numa_node_options:
+            vm.monitor.set_numa_node('cpu', **options)
+
+        numa_cpu_setted = numa_cpu_setted(set_numa_node_options)
+
+        expected_cpus = []
+        # All nodes have corresponding cpus in qemu cli at the initial state
+        numa_cpu_setted.extend([[]] * (len(numa_cpu_cli) - len(numa_cpu_setted)))
+        for item in zip(numa_cpu_cli, numa_cpu_setted):
+            expected_cpus.append(sorted(item[0] + item[1]))
+
+        new_specified_cpus = get_hotpluggable_cpus()[0]
+        if new_specified_cpus != expected_cpus:
+            test.fail("cpu ids for each node with 'info hotpluggable-cpus' after"
+                      "numa_cpu_set is %s, but expected result is: %s"
+                      % (new_specified_cpus, expected_cpus))
+
+        vm.monitor.exit_preconfig()
+        vm.resume()
+    else:
+        expected_cpus = numa_cpu_cli
+
+    numa_cpu_monitor = [sorted(list(item[1])) for item in vm.monitor.info_numa()]
+    if numa_cpu_monitor != expected_cpus:
+        test.fail("cpu ids for each node with 'info numa' after setted is: %s, "
+                  "but expected result is: %s" % (numa_cpu_monitor, expected_cpus))
+
+    # check numa cpus in guest os, only for Linux
     if os_type == 'linux':
-        # Get numa cpus in guest os, only for Linux
+        session = vm.wait_for_login()
         numa_cpu_guest = numa_cpu_guest()
-        if numa_cpu_guest != numa_cpu_cli:
+        session.close()
+        if numa_cpu_guest != expected_cpus:
             test.fail("cpu ids for each node in guest os is: %s, but the "
-                      "expected result is: %s" % (numa_cpu_guest, numa_cpu_cli))
+                      "expected result is: %s" % (numa_cpu_guest, expected_cpus))

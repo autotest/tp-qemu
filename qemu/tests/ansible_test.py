@@ -22,11 +22,11 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     sm = software_manager.SoftwareManager()
     if not (sm.check_installed("ansible") or sm.install("ansible")):
         test.cancel("ansible package install failed")
 
-    get_ip_timeout = params.get_numeric("get_ip_timeout")
     guest_user = params["username"]
     guest_passwd = params["password"]
     ansible_callback_plugin = params.get("ansible_callback_plugin")
@@ -41,10 +41,11 @@ def run(test, params, env):
     # Use this directory to copy some logs back from the guest
     test_harness_log_dir = test.logdir
 
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
-    vm.wait_for_login()
-    guest_ip = vm.get_address()
+    guest_ip_list = []
+    for vm in env.get_all_vms():
+        vm.verify_alive()
+        vm.wait_for_login()
+        guest_ip_list.append(vm.get_address())
 
     logging.info("Cloning %s", playbook_repo)
     process.run("git clone {src} {dst}".format(src=playbook_repo,
@@ -59,7 +60,7 @@ def run(test, params, env):
 
     ansible_cmd_options = ["ansible-playbook",
                            "-u {}".format(guest_user),
-                           "-i {},".format(guest_ip),
+                           "-i {},".format(",".join(guest_ip_list)),
                            "-e '{}'".format(json.dumps(extra_vars)),
                            ansible_addl_opts,
                            toplevel_playbook]
@@ -72,7 +73,7 @@ def run(test, params, env):
     play_s, play_o = process.getstatusoutput(ansible_cmd,
                                              timeout=playbook_timeout,
                                              shell=False, env=env_vars)
-    ansible_log = "ansible_playbook-{}.log".format(vm.name)
+    ansible_log = "ansible_playbook.log"
     with open(os.path.join(test_harness_log_dir, ansible_log), "w") as log_file:
         log_file.write(play_o)
         log_file.flush()

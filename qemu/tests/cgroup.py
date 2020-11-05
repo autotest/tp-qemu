@@ -1185,6 +1185,7 @@ def run(test, params, env):
             sessions[-1].cmd("touch /tmp/cgroup-cpu-lock")
             sessions[-1].sendline(cmd)
 
+        cpu_time_type = params.get_numeric('cpu_time_type')
         try:
             logging.info("Test")
             for i in range(len(cpusets)):
@@ -1197,7 +1198,8 @@ def run(test, params, env):
                 _load = get_load_per_cpu()
                 time.sleep(test_time)
                 # Stats after test_time
-                stats.append(get_load_per_cpu(_load)[1:])
+                _load_diff = get_load_per_cpu(_load)
+                stats.append(list(map(list, zip(*_load_diff)))[cpu_time_type][1:])
 
             serial.cmd("rm -f /tmp/cgroup-cpu-lock")
             err = ""

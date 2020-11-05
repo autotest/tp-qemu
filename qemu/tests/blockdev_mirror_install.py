@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 import time
 
 from virttest import utils_test
@@ -19,7 +20,7 @@ class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
         out = self.main_vm.serial_console.get_output() \
             if self.main_vm.serial_console else None
         out = '' if out is None else out
-        return start_msg in out
+        return bool(re.search(start_msg, out, re.M))
 
     def _install_vm_in_background(self):
         """Install VM in background"""

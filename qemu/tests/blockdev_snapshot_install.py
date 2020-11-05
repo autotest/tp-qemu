@@ -1,6 +1,7 @@
 import time
 import logging
 import random
+import re
 
 from virttest import utils_test
 from virttest import utils_misc
@@ -24,7 +25,7 @@ def run(test, params, env):
     def tag_for_install(vm, tag):
         if vm.serial_console:
             serial_output = vm.serial_console.get_output()
-            if serial_output and tag in serial_output:
+            if serial_output and re.search(tag, serial_output, re.M):
                 return True
         logging.info("VM has not started yet")
         return False

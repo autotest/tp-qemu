@@ -344,16 +344,35 @@ class QemuGuestAgentTest(BaseVirtTest):
         logging.info(self.gagent.cmd("guest-info"))
 
     @error_context.context_aware
-    def log_persistence(self, params, session, vm):
+    def gagent_setsebool_value(self, value, params, vm):
+        '''
+        Set selinux boolean 'virt_qemu_ga_read_nonsecurity_files'
+        as 'on' or 'off' for linux guest can access filesystem
+        successfully and restore guest original env when test is over.
+
+        :param value: value of selinux boolean.
+        :param params: Dictionary with the test parameters
+        :param vm: Virtual machine object.
+        '''
+        session = self._get_session(params, vm)
+        self._open_session_list.append(session)
+        error_context.context("Turn %s virt_qemu_ga_read_nonsecurity_files." %
+                              value, logging.info)
+        set_selinux_bool_cmd = params["setsebool_cmd"] % value
+        session.cmd(set_selinux_bool_cmd).strip()
+        get_sebool_cmd = params['getsebool_cmd']
+        value_selinux_bool_guest = session.cmd_output(get_sebool_cmd).strip()
+        if value_selinux_bool_guest != value:
+            self.test.error("Set boolean virt_qemu_ga_read_nonsecurity_files "
+                            "failed.")
+
+    @error_context.context_aware
+    def log_persistence(self, params, session):
         """
         Create new log directory and make it as log persistence.
         """
         error_context.context("Make logs persistent.", logging.info)
-        session.cmd(self.params["cmd_create_log_dict"])
-        session.cmd(self.params["cmd_chgrp_chmod"])
-
-        logging.info("Restart systemd-journald to take effect.")
-        session.cmd(self.params["cmd_restart_journald"])
+        session.cmd(params["cmd_prepared_and_restart_journald"])
 
     @error_context.context_aware
     def setup(self, test, params, env):
@@ -497,36 +516,35 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environmen.
         """
+        def _gagent_check_shutdown(self):
+            self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
+            if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
+                test.fail("Could not shutdown VM via guest agent'")
+
         session = self._get_session(params, self.vm)
         self._open_session_list.append(session)
 
-        self.log_persistence(params, session, self.vm)
-        self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
-        if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
-            test.fail("Could not shutdown VM via guest agent'")
+        if params.get("os_type") == "linux":
+            self.log_persistence(params, session)
+            _gagent_check_shutdown(self)
 
-        time.sleep(20)
+            time.sleep(20)
+            env_process.preprocess_vm(test, params, env, params["main_vm"])
+            self.vm = env.get_vm(params["main_vm"])
+            session = self.vm.wait_for_login(timeout=int(params.get("login_timeout",
+                                             360)))
 
-        env_process.preprocess_vm(test, params, env, params["main_vm"])
-        vm = env.get_vm(params["main_vm"])
-        login_timeout = int(params.get("login_timeout", 360))
-        session = vm.wait_for_login(timeout=login_timeout)
-
-        start_vm = self.params["start_vm"]
-        self.start_vm = start_vm
-        if self.start_vm == "yes":
-            vm.verify_alive()
-            self.vm = vm
-
-        error_context.context("Check if guest-agent has crashed.", logging.info)
-        output = session.cmd_output(params["cmd_query_log"], timeout=10)
-        try:
-            if "core-dump" in output:
-                test.fail("Guest-agent aborts after guest-shutdown"
-                          " detail: '%s'" % output)
-        finally:
-            cmd = "rm -rf /var/log/journal"
-            session.cmd(cmd)
+            error_context.context("Check if guest-agent crash after reboot.",
+                                  logging.info)
+            output = session.cmd_output(params["cmd_query_log"], timeout=10)
+            try:
+                if "core-dump" in output:
+                    test.fail("Guest-agent aborts after guest-shutdown"
+                              " detail: '%s'" % output)
+            finally:
+                session.cmd('rm -rf %s' % params['journal_file'])
+        else:
+            _gagent_check_shutdown(self)
 
     @error_context.context_aware
     def gagent_check_reboot(self, test, params, env):
@@ -1140,6 +1158,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         timeout = float(params.get("login_timeout", 240))
         session = self.vm.wait_for_login(timeout=timeout)
         device_name = get_guest_discard_disk(session)
+        self.gagent_setsebool_value('on', params, self.vm)
 
         error_context.context("format disk '%s' in guest" % device_name, logging.info)
         format_disk_cmd = params["format_disk_cmd"]
@@ -1173,6 +1192,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         error_context.context("execute the guest-fstrim cmd", logging.info)
         self.gagent.fstrim()
+        self.gagent_setsebool_value('off', params, self.vm)
 
         # check the bitmap after trim
         bitmap_after_trim = get_allocation_bitmap()
@@ -1381,8 +1401,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         for windows guest.
         """
         if self.params.get("os_type") == "linux":
-            black_list = self.params["black_list"]
-            for black_cmd in black_list.split():
+            cmd_black_list = self.params["black_list"]
+            cmd_blacklist_backup = self.params["black_list_backup"]
+            session.cmd(cmd_blacklist_backup)
+            for black_cmd in cmd_black_list.split():
                 bl_check_cmd = self.params["black_list_check_cmd"] % black_cmd
                 bl_change_cmd = self.params["black_list_change_cmd"] % black_cmd
                 session.cmd(bl_change_cmd)
@@ -1395,6 +1417,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             if s:
                 self.test.fail("Could not restart qemu-ga in VM after changing"
                                " list, detail: %s" % o)
+
+    def _change_bl_back(self, session):
+        """
+        Change the blacklist_bck back for recovering guest env.
+        """
+        if self.params.get("os_type") == "linux":
+            cmd_change_bl_back = self.params["recovery_black_list"]
+            session.cmd(cmd_change_bl_back)
 
     def _read_check(self, ret_handle, content, count=None):
         """
@@ -1484,6 +1514,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_file_write(self, test, params, env):
@@ -1534,6 +1565,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_file_read(self, test, params, env):
@@ -1645,6 +1677,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_with_fsfreeze(self, test, params, env):
@@ -1690,6 +1723,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_close(ret_handle)
         cmd_del_file = "%s %s" % (params["cmd_del"], tmp_file)
         session.cmd(cmd_del_file)
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_with_selinux(self, test, params, env):
@@ -1794,6 +1828,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               " guest.", logging.info)
         session.cmd("setenforce 0")
         result_check_permissive()
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_guest_exec(self, test, params, env):
@@ -1931,6 +1966,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                 capture_output=True)
         if result["exitcode"] == 0:
             test.fail("The cmd should be failed with wrong args.")
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def _action_before_fsfreeze(self, *args):
@@ -2100,6 +2136,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Format the new data disk and mount it.",
                               logging.info)
         if params.get("os_type") == "linux":
+            self.gagent_setsebool_value('on', params, self.vm)
             disk_data = list(utils_disk.get_linux_disks(session).keys())
             mnt_point_data = utils_disk.configure_empty_disk(
                 session, disk_data[0], image_size_stg0, "linux",
@@ -2142,6 +2179,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             check_mp = ["/"]
             self._fsfreeze(fsfreeze_list=True, mountpoints=mount_points_n,
                            check_mountpoints=check_mp)
+            self.gagent_setsebool_value('off', params, self.vm)
         else:
             mount_points_n = ["C:\\", "X:\\"]
             logging.info("Make sure the current status is thaw.")
@@ -2570,15 +2608,62 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         mountpoint,disk's name and serial number.
 
         steps:
-        1) check file system type of every mount point.
-        2) check disk name.
-        3) check disk's serial number.
+        1) Check filesystem usage statistics
+        2) check file system type of every mount point.
+        3) check disk name.
+        4) check disk's serial number.
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
 
         """
+        def qga_guest_diskusage(mountpoint):
+            """
+            Send cmd in guest to get disk usage.
+            :param mountpoint: the mountpoint of filesystem
+            """
+            cmd_get_diskusage = params["cmd_get_disk_usage"] % mountpoint
+            disk_usage_guest = session.cmd(cmd_get_diskusage).strip().split()
+            disk_total_guest = int(disk_usage_guest[0])
+            if params["os_type"] == "windows":
+                # Just can get total and freespace disk usage from windows.
+                disk_freespace_guest = int(disk_usage_guest[1])
+                disk_used_guest = int(disk_total_guest - disk_freespace_guest)
+            else:
+                disk_used_guest = int(disk_usage_guest[1])
+            disk_total_qga = int(fs["total-bytes"])
+            disk_used_qga = int(fs["used-bytes"])
+            diff_total_qga_guest = abs(disk_total_guest - disk_total_qga)
+            diff_used_qga_guest = abs(disk_used_guest - disk_used_qga)
+            return (diff_total_qga_guest, diff_used_qga_guest)
+
+        def check_usage_qga_guest(mount_point):
+            """
+            Contrast disk usage from guest and qga that needed
+            to call previous function 'qga_guest_diskusage'.
+            :param mountpoint: the mountpoint of filesystem
+            """
+            disk_usage_guest = qga_guest_diskusage(mount_point)
+            diff_total_qgaguest = int(disk_usage_guest[0])
+            diff_used_qgaguest = int(disk_usage_guest[1])
+            if diff_total_qgaguest != 0:
+                test.fail("File System %s Total bytes doesn't match." %
+                          mount_point)
+            if diff_used_qgaguest != 0:
+                if mount_point != 'C:' and mount_point != '/':
+                    test.fail("File system %s used bytes doesn't match." %
+                              mount_point)
+                else:
+                    # Disk 'C:' and '/' used space usage have a floating interval,
+                    # so set a safe value '10485760'.
+                    logging.info("Need to check the floating interval for C: or /.")
+                    if diff_used_qgaguest > 10485760:
+                        test.fail("File System floating interval is too large,"
+                                  "Something must go wrong.")
+                    else:
+                        logging.info("File system '%s' usages are within the safe "
+                                     "floating range." % mount_point)
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -2589,8 +2674,18 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         for fs in fs_info_qga:
             device_id = fs["name"]
             mount_pt = fs["mountpoint"]
-            if params["os_type"] == "windows":
+            if (params["os_type"] == "windows" and
+                    mount_pt != "System Reserved"):
                 mount_pt = mount_pt[:2]
+
+            error_context.context("Check file system '%s' usage statistics." %
+                                  mount_pt, logging.info)
+            if mount_pt != 'System Reserved':
+                # disk usage statistic for System Reserved
+                # volume is not supported.
+                check_usage_qga_guest(mount_pt)
+            else:
+                logging.info("'%s' disk usage statistic is not supported" % mount_pt)
 
             error_context.context("Check file system type of '%s' mount point." %
                                   mount_pt, logging.info)
@@ -2703,6 +2798,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         self.gagent.guest_file_read(ret_handle)
         log_check("guest-file-read")
+        self._change_bl_back(session)
 
     @error_context.context_aware
     def gagent_check_with_migrate(self, test, params, env):
@@ -2767,6 +2863,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Format the new data disk and mount it.",
                               logging.info)
         if params.get("os_type") == "linux":
+            self.gagent_setsebool_value('on', params, self.vm)
             disk_data = list(utils_disk.get_linux_disks(session).keys())
             mnt_point = utils_disk.configure_empty_disk(
                 session, disk_data[0], image_size_stg0, "linux",
@@ -2836,14 +2933,17 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Mount fs or online disk in guest.",
                               logging.info)
         if params.get("os_type") == "linux":
-            if not utils_disk.mount(src, mnt_point[0], session=session):
-                if params['os_variant'] != 'rhel6':
-                    test.fail("For rhel7+ guest, mount fs should success"
-                              " after fsthaw.")
-            else:
-                if params['os_variant'] == 'rhel6':
-                    test.fail("For rhel6 guest, mount fs should fail after"
-                              " fsthaw.")
+            try:
+                if not utils_disk.mount(src, mnt_point[0], session=session):
+                    if params['os_variant'] != 'rhel6':
+                        test.fail("For rhel7+ guest, mount fs should success"
+                                  " after fsthaw.")
+                else:
+                    if params['os_variant'] == 'rhel6':
+                        test.fail("For rhel6 guest, mount fs should fail after"
+                                  " fsthaw.")
+            finally:
+                self.gagent_setsebool_value('off', params, self.vm)
         else:
             if not utils_disk.update_windows_disk_attributes(session,
                                                              disk_index):

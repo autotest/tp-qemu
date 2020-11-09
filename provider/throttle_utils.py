@@ -250,6 +250,29 @@ class ThrottleTester(object):
                        image in images},
             "expected": copy.deepcopy(ThrottleTester.raw_expected)}
         self._margin = 0.3
+        self._runtime = 30
+
+    @staticmethod
+    def _parse_eta_data(output):
+        """parse read/write iops """
+        print(output)
+        if len(output.split("][")) < 4:
+            return 0
+        data = output.split("][")[-2].split(" ")[0]
+        if len(data.split("/")) > 1:  # windows
+            rw_data = data.split("/")
+            return int(rw_data[0]) + int(rw_data[1])
+        else:
+            if data.find(",") == -1:  # read/write
+                val = int(data.split("=")[1])
+                # if data.find("r=") == -1:
+                #     return 0,val
+                return val
+            else:
+                rw_data = data.split(",")
+                read_data = int(rw_data[0].split("=")[1])
+                write_data = int(rw_data[1].split("=")[1])
+                return read_data + write_data
 
     @staticmethod
     def _generate_output_by_json(output):
@@ -313,14 +336,19 @@ class ThrottleTester(object):
 
         if not self._fio:
             self._test.error("Please set fio first")
-        image_info = args[0]
+        img=args[0]
+
+        image_info = self._throttle["images"][img]
         fio_option = image_info["fio_option"]
         session = self._vm.wait_for_login()
         cmd = ' '.join((self._fio.cfg.fio_path, fio_option))
-        cmd += " && " + cmd
+        # cmd += " && " + cmd
         logging.info("run_fio:" + cmd)
         out = session.cmd(cmd, 1800)
-        image_info["output"] = self._generate_output_by_json(out)
+        session.cmd("type %s.tmp" % img , 1800)
+        image_info["output"] = out
+        print(out)
+        # image_info["output"] = self._generate_output_by_json(out)
         return image_info["output"]
 
     def check_output(self, images):
@@ -346,25 +374,26 @@ class ThrottleTester(object):
         sum_normal = 0
         num_images = len(images)
         for image in images:
-            output = self._throttle["images"][image]["output"]  # type: dict
+            output = self._throttle["images"][image][
+                "output"].splitlines()  # type: list
             num_samples = len(output)
             logging.debug("Check %s in total %d images." % (image, num_images))
             if expected_burst:
-                if num_samples < 2:
+                if num_samples < 8:
                     self._test.error(
-                        "At lease 2 Data samples:%d" % num_samples)
-                read = output[1]["jobs"][0]["read"]["iops"]
-                write = output[1]["jobs"][0]["write"]["iops"]
-                total = read + write
+                        "At lease 8 Data samples:%d" % num_samples)
+                read = self._parse_eta_data(output[2])
+                write = self._parse_eta_data(output[3])
+                total = ceil((read + write) / 2)
                 sum_burst += total
             else:
-                if num_samples < 1:
+                if num_samples < 6:
                     self._test.error(
-                        "At lease 1 Data samples:%d" % num_samples)
+                        "At lease 6 Data samples:%d" % num_samples)
 
-            read = output[num_samples]["jobs"][0]["read"]["iops"]
-            write = output[num_samples]["jobs"][0]["write"]["iops"]
-            total = read + write
+            read = self._parse_eta_data(output[-3])
+            write = self._parse_eta_data(output[-4])
+            total = ceil((read + write) / 2)
             sum_normal += total
 
         logging.debug("expected_burst:%d %d expected_normal:%d %d" % (
@@ -387,6 +416,70 @@ class ThrottleTester(object):
 
         return True
 
+    # def check_output(self, images):
+    #     """
+    #     Check the output whether match the expected result.
+    #
+    #     :param images: list of participating images.
+    #     :return: True for succeed.
+    #     """
+    #
+    #     burst = self._throttle["expected"]["burst"]
+    #     expected_burst = burst["read"] + burst["write"] + burst["total"]
+    #
+    #     normal = self._throttle["expected"]["normal"]
+    #     expected_normal = normal["read"] + normal["write"] + normal["total"]
+    #
+    #     # Indeed no throttle
+    #     if expected_normal == 0:
+    #         logging.warning("Skipping checking on the empty throttle")
+    #         return True
+    #
+    #     sum_burst = 0
+    #     sum_normal = 0
+    #     num_images = len(images)
+    #     for image in images:
+    #         output = self._throttle["images"][image]["output"]  # type: dict
+    #         num_samples = len(output)
+    #         logging.debug("Check %s in total %d images." % (image, num_images))
+    #         if expected_burst:
+    #             if num_samples < 2:
+    #                 self._test.error(
+    #                     "At lease 2 Data samples:%d" % num_samples)
+    #             read = output[1]["jobs"][0]["read"]["iops"]
+    #             write = output[1]["jobs"][0]["write"]["iops"]
+    #             total = read + write
+    #             sum_burst += total
+    #         else:
+    #             if num_samples < 1:
+    #                 self._test.error(
+    #                     "At lease 1 Data samples:%d" % num_samples)
+    #
+    #         read = output[num_samples]["jobs"][0]["read"]["iops"]
+    #         write = output[num_samples]["jobs"][0]["write"]["iops"]
+    #         total = read + write
+    #         sum_normal += total
+    #
+    #     logging.debug("expected_burst:%d %d expected_normal:%d %d" % (
+    #         expected_burst, sum_burst, expected_normal, sum_normal))
+    #     if expected_burst:
+    #         real_gap = abs(expected_burst - sum_burst)
+    #         if real_gap <= expected_burst * self._margin:
+    #             logging.debug(
+    #                 "Passed burst %d %d" % (expected_burst, sum_burst))
+    #         else:
+    #             self._test.fail(
+    #                 "Failed burst %d %d" % (expected_burst, sum_burst))
+    #
+    #     if abs(expected_normal - sum_normal) <= expected_normal * self._margin:
+    #         logging.debug("Passed normal verification %d %d" % (
+    #             expected_normal, sum_normal))
+    #     else:
+    #         self._test.fail(
+    #             "Failed normal %d %d" % (expected_normal, sum_normal))
+    #
+    #     return True
+
     def start_one_image_test(self, image):
         """
         Process one disk throttle testing.
@@ -396,7 +489,7 @@ class ThrottleTester(object):
         """
 
         logging.debug("Start one image run_fio :" + image)
-        self.run_fio(self._throttle["images"][image])
+        self.run_fio(image)
         return self.check_output([image])
 
     def start_all_images_test(self):
@@ -411,7 +504,7 @@ class ThrottleTester(object):
 
         for img in self.images:
             logging.debug("Start all images run_fio :" + img)
-            pool.apply_async(self.run_fio, (self._throttle["images"][img],))
+            pool.apply_async(self.run_fio, (img,))
         pool.close()
         pool.join()
         return self.check_output(self.images)
@@ -490,7 +583,9 @@ class ThrottleTester(object):
         attrs = tgm.get_throttle_group_props(self.group)
 
         option = "--direct=1 --name=test --iodepth=1 --thread"
-        option += "  --output-format=json "
+        option += " --eta=always --eta-newline=3 "
+        if self._params.get("os_type") == 'linux':
+            option += " --eta-interval=3 "
 
         iops_size = attrs["iops-size"]
         iops_size = 4096 if iops_size == 0 else iops_size
@@ -586,7 +681,7 @@ class ThrottleTester(object):
 
         runtime = 30
         if burst_time:
-            runtime = burst_time
+            runtime = burst_time + runtime
             self.set_throttle_expected({"burst": {
                 "burst_time": burst_time,
                 "burst_empty_time": burst_empty_time}})
@@ -600,11 +695,12 @@ class ThrottleTester(object):
         else:
             mode = "randrw"
 
-        option += " --rw=%s --bs=%d --runtime=%d" % (mode, iops_size, runtime)
+        option += " --rw=%s --bs=%d --runtime=%d " % (mode, iops_size, runtime)
 
         logging.debug(self._throttle["expected"])
         logging.debug("fio_option:" + option)
         self._fio_option = option
+        self._runtime = runtime
 
     def build_image_fio_option(self, image):
         """
@@ -621,7 +717,9 @@ class ThrottleTester(object):
         name = _get_drive_path(self._session, self._params, image)
         image_data = self._throttle["images"][image]
         image_data["name"] = name
-        image_data["fio_option"] = self._fio_option + " --filename=%s" % name
+        option = self._fio_option + " --filename=%s" % name
+        option += " --output={0} > {0}.tmp ".format(image)
+        image_data["fio_option"] = option
         return image_data
 
     def build_images_fio_option(self):

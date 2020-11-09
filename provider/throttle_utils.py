@@ -317,7 +317,10 @@ class ThrottleTester(object):
         fio_option = image_info["fio_option"]
         session = self._vm.wait_for_login()
         cmd = ' '.join((self._fio.cfg.fio_path, fio_option))
-        cmd += " && " + cmd
+        burst = self._throttle["expected"]["burst"]
+        expected_burst = burst["read"] + burst["write"] + burst["total"]
+        if expected_burst:
+            cmd += " && " + cmd
         logging.info("run_fio:" + cmd)
         out = session.cmd(cmd, 1800)
         image_info["output"] = self._generate_output_by_json(out)
@@ -584,7 +587,7 @@ class ThrottleTester(object):
         burst_total_iops, burst_empty_time, burst_time = _count_burst_iops(
             local_vars, "total")
 
-        runtime = 30
+        runtime = 60
         if burst_time:
             runtime = burst_time
             self.set_throttle_expected({"burst": {

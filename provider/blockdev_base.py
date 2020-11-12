@@ -1,6 +1,8 @@
 import logging
 import time
 
+from functools import partial
+
 from avocado.core import exceptions
 from avocado.utils import memory
 
@@ -241,7 +243,8 @@ class BlockdevBaseTest(object):
         """
         Test failed if any block job failed to start
         """
-        if not all(list(map(self.is_block_job_started, jobid_list))):
+        func = partial(self.is_block_job_started, tmo=tmo)
+        if not all(list(map(func, jobid_list))):
             self.test.fail('Not all block jobs start successfully')
 
     def is_block_job_running(self, jobid, tmo=200):
@@ -269,7 +272,8 @@ class BlockdevBaseTest(object):
         """
         Test failed if any block job's offset never increased
         """
-        if not all(list(map(self.is_block_job_running, jobid_list))):
+        func = partial(self.is_block_job_running, tmo=tmo)
+        if not all(list(map(func, jobid_list))):
             self.test.fail('Not all block jobs are running')
 
     def is_block_job_paused(self, jobid, tmo=50):
@@ -298,5 +302,6 @@ class BlockdevBaseTest(object):
         """
         Test failed if any block job's offset changed
         """
-        if not all(list(map(self.is_block_job_paused, jobid_list))):
+        func = partial(self.is_block_job_paused, tmo=tmo)
+        if not all(list(map(func, jobid_list))):
             self.test.fail('Not all block jobs are paused')

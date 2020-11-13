@@ -169,11 +169,11 @@ def run(test, params, env):
                 session.cmd(cmd_dd % guest_file, io_timeout)
 
                 if os_type == "linux":
-                    cmd_md5 = cmd_md5 % guest_file
+                    cmd_md5_vm = cmd_md5 % guest_file
                 else:
                     guest_file_win = guest_file.replace("/", "\\")
-                    cmd_md5 = cmd_md5 % (volume_letter, guest_file_win)
-                md5_guest = session.cmd_output(cmd_md5, io_timeout).strip().split()[0]
+                    cmd_md5_vm = cmd_md5 % (volume_letter, guest_file_win)
+                md5_guest = session.cmd_output(cmd_md5_vm, io_timeout).strip().split()[0]
 
                 logging.info(md5_guest)
                 md5_host = process.run("md5sum %s" % host_data,

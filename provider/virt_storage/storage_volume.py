@@ -137,6 +137,10 @@ class StorageVolume(object):
                 self.format.set_param("backing", backing_node)
         self.format.set_param("file", self.protocol.get_param("node-name"))
 
+        # keep the same setting with libvirt when blockdev-add a format node
+        readonly = params.get("image_readonly", "off")
+        self.format.set_param("read-only", readonly)
+
     def refresh_protocol_by_params(self, params):
         if self.protocol.TYPE == "file":
             aio = params.get("image_aio", "threads")
@@ -144,6 +148,12 @@ class StorageVolume(object):
             self.protocol.set_param("aio", aio)
         else:
             raise NotImplementedError
+
+        # keep the same setting with libvirt when blockdev-add a protocol node
+        auto_readonly = params.get("image_auto_readonly", "on")
+        discard = params.get("image_discard_request", "unmap")
+        self.protocol.set_param("auto-read-only", auto_readonly)
+        self.protocol.set_param("discard", discard)
 
     def info(self):
         out = dict()

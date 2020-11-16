@@ -121,7 +121,7 @@ class BlockdevMirrorBaseTest(blockdev_base.BlockdevBaseTest):
     def _check_mirrored_block_node_attached(self, source_qdev, target_node):
         out = self.main_vm.monitor.query("block")
         for item in out:
-            if (item["qdev"] == source_qdev
+            if (source_qdev in item["qdev"]
                     and item["inserted"].get("node-name") == target_node):
                 break
         else:

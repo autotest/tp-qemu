@@ -1,3 +1,5 @@
+import time
+
 from virttest.qemu_monitor import QMPCmdError
 
 from provider.blockdev_mirror_nowait import BlockdevMirrorNowaitTest
@@ -15,10 +17,27 @@ class BlockdevMirrorHotunplugTest(BlockdevMirrorNowaitTest):
         """
         def _device_del(device):
             self.main_vm.monitor.cmd('device_del', {'id': device})
-            if 'qdev: %s' % device in self.main_vm.monitor.cmd("query-block"):
-                self.test.fail('Failed to hotunplug the frontend device')
 
         list(map(_device_del, self._source_images))
+
+    def wait_till_frontend_devices_deleted(self):
+        """Wait till devices removed from output of query-block"""
+        def _is_device_deleted(device):
+            for item in self.main_vm.monitor.query("block"):
+                if device in item["qdev"]:
+                    return False
+            return True
+
+        def _wait_till_device_deleted(device):
+            tmo = self.params.get_numeric('device_del_timeout', 60)
+            for i in range(tmo):
+                if _is_device_deleted(device):
+                    break
+                time.sleep(1)
+            else:
+                self.test.fail('Failed to hotunplug the frontend device')
+
+        list(map(_wait_till_device_deleted, self._source_images))
 
     def hotunplug_format_nodes(self):
         """
@@ -41,6 +60,7 @@ class BlockdevMirrorHotunplugTest(BlockdevMirrorNowaitTest):
         self.blockdev_mirror()
         self.check_block_jobs_started(self._jobs)
         self.hotunplug_frontend_devices()
+        self.wait_till_frontend_devices_deleted()
         self.hotunplug_format_nodes()
         self.check_block_jobs_running(self._jobs)
         self.wait_mirror_jobs_completed()

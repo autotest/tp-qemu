@@ -1,4 +1,5 @@
 import logging
+import re
 
 from avocado.utils import crypto
 from avocado.utils import process
@@ -6,11 +7,17 @@ from avocado.utils import process
 from virttest import error_context
 from virttest import utils_misc
 
-from qemu.tests.live_snapshot_basic import LiveSnapshot
+from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheckWin
 
 
 class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
+
+    def __init__(self, test, params, env):
+        super(QemuGuestAgentSnapshotTest, self).__init__(test, params,
+                                                         env)
+        self.snapshot_create = BlockDevSnapshotTest(self.test, self.params,
+                                                    self.env)
 
     @error_context.context_aware
     def setup(self, test, params, env):
@@ -41,18 +48,39 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
             dict(verbose=True, timeout=copy_timeout))
         self.bg.start()
 
+    def check_snapshot(self):
+        """
+        Check whether the snapshot is created successfully.
+        """
+        snapshot_info = str(self.vm.monitor.info("block"))
+        snapshot_node_name = self.params.get("snapshot_node_name")
+        if self.params.get("snapshot_file") not in snapshot_info:
+            self.test.fail("Snapshot doesn't exist:%s" % snapshot_info)
+        logging.info("Found snapshot in guest")
+        if snapshot_node_name:
+            match_string = "u?'node-name': u?'%s'" % snapshot_node_name
+            if not re.search(match_string, snapshot_info):
+                self.test.fail("Can not find node name %s of"
+                               " snapshot in block info %s"
+                               % (snapshot_node_name, snapshot_info))
+            logging.info("Match node-name if they are same with expected")
+
+    def cleanup(self, test, params, env):
+        super(QemuGuestAgentSnapshotTest, self).cleanup(test, params, env)
+        self.snapshot_create.snapshot_image.remove()
+
     @error_context.context_aware
     def _action_after_fsfreeze(self, *args):
         if self.bg.isAlive():
             image_tag = self.params.get("image_name", "image1")
             image_params = self.params.object_params(image_tag)
-            snapshot_test = LiveSnapshot(self.test, self.params,
-                                         self.env, image_tag)
+
             error_context.context("Creating snapshot", logging.info)
-            snapshot_test.create_snapshot()
+            self.snapshot_create.prepare_snapshot_file()
+            self.snapshot_create.create_snapshot()
             error_context.context("Checking snapshot created successfully",
                                   logging.info)
-            snapshot_test.check_snapshot()
+            self.check_snapshot()
 
     @error_context.context_aware
     def _action_before_fsthaw(self, *args):

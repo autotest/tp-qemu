@@ -4,6 +4,8 @@ from avocado import fail_on
 from virttest import utils_misc
 
 BLOCK_JOB_COMPLETED_EVENT = "BLOCK_JOB_COMPLETED"
+BLOCK_JOB_ERROR_EVENT = "BLOCK_JOB_ERROR"
+BLOCK_IO_ERROR_EVENT = "BLOCK_IO_ERROR"
 
 
 def get_job_status(vm, device):
@@ -172,3 +174,29 @@ def make_transaction_action(cmd, data):
             if k.startswith(prefix):
                 data[k.lstrip(prefix)] = data.pop(k)
     return {"type": cmd, "data": data}
+
+
+@fail_on
+def get_event_by_condition(vm, event_name, tmo=30, **condition):
+    """
+    Get event by the event name and other conditions in some time
+
+    :param vm: VM object
+    :param event_name: event name
+    :param tmo: getting job event timeout
+    :param condition: id or device or node-name
+
+    :return: The event dict or None
+    """
+    event = None
+    for i in range(tmo):
+        all_events = vm.monitor.get_events()
+        events = [e for e in all_events if e.get('event') == event_name]
+        if condition:
+            events = [e for e in events if e.get('data') and all(
+                item in e['data'].items() for item in condition.items())]
+        if events:
+            event = events[0]
+            break
+        time.sleep(1)
+    return event

@@ -30,6 +30,8 @@ def run(test, params, env):
     error_context.context("Try to log into guest", logging.info)
     session = vm.wait_for_login()
     if params["os_type"] == "linux":
+        if params.get("no_flags", "") == flags:
+            flags = ""
         check_guest_cmd = params.get("check_guest_cmd")
         check_cpu_flags(params, flags, test, session)
         if check_guest_cmd:

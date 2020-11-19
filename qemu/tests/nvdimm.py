@@ -6,6 +6,7 @@ from avocado.utils import process
 
 from virttest import env_process
 from virttest import error_context
+from virttest import utils_package
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 
@@ -26,7 +27,7 @@ class NvdimmTest(object):
         self.params = params
         self.env = env
 
-    def run_guest_cmd(self, cmd, check_status=True):
+    def run_guest_cmd(self, cmd, check_status=True, timeout=240):
         """
         Run command in guest
 
@@ -34,7 +35,7 @@ class NvdimmTest(object):
         :param check_status: If true, check the status after running the cmd
         :return: The output after running the cmd
         """
-        status, output = self.session.cmd_status_output(cmd)
+        status, output = self.session.cmd_status_output(cmd, timeout=timeout)
         if check_status and status != 0:
             self.test.fail("Execute command '%s' failed, output: %s" % (cmd, output))
         return output.strip()
@@ -158,6 +159,15 @@ def run(test, params, env):
         nvdimm_test.verify_nvdimm(vm, mems)
         error_context.context("Format and mount nvdimm in guest", logging.info)
         nvdimm_test.mount_nvdimm()
+        if params.get("nvml_test", "no") == "yes":
+            pkgs = params["depends_pkgs"].split()
+            if not utils_package.package_install(pkgs, nvdimm_test.session):
+                test.cancel("Install dependency packages failed")
+            nvdimm_test.run_guest_cmd(params["get_nvml"])
+            nvdimm_test.run_guest_cmd(params["compile_nvml"])
+            nvdimm_test.run_guest_cmd(params["config_nvml"])
+            nvdimm_test.run_guest_cmd(params["run_test"], timeout=3600)
+            return
         nv_file = params.get("nv_file", "/mnt/nv")
         error_context.context("Create a file in nvdimm mount dir in guest, and get "
                               "original md5 of the file", logging.info)
@@ -180,6 +190,8 @@ def run(test, params, env):
 
     finally:
         if nvdimm_test.session:
+            if params.get("nvml_dir"):
+                nvdimm_test.run_guest_cmd("rm -rf %s" % params.get("nvml_dir"))
             nvdimm_test.session.close()
         vm.destroy()
         if params.get("nvdimm_dax") == "yes":

@@ -1,0 +1,101 @@
+import logging
+import os
+
+from avocado.utils import process
+
+from virttest import utils_package
+from virttest import utils_misc
+
+
+def run(test, params, env):
+    """
+    Test dump-guest-core, this case will:
+
+    1) Start VM with dump-guest-core option.
+    2) Check host env.
+    3) Trigger a core dump in host.
+    4) Use gdb to check core dump file.
+    5) If dump-guest-core=on, use crash to check vmcore file
+
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environmen.
+    """
+
+    def check_env():
+        """
+        Check if host kernel version is same with guest
+        """
+        guest_kernel_version = session.cmd("uname -r").strip()
+        if host_kernel_version != guest_kernel_version:
+            test.cancel("Please update your host and guest kernel "
+                        "to same version.The host kernel version is %s"
+                        "The guest kernel version is %s"
+                        % (host_kernel_version, guest_kernel_version))
+
+    def check_core_file():
+        """
+        Use gdb to check core dump file
+        """
+        arch = 'X86_64'
+        arch = 'ppc64-le' if params['vm_arch_name'] == 'ppc64le' else arch
+        command = ('echo -e "source %s\nset height 0\ndump-guest-memory'
+                   ' %s %s\nbt\nquit" > %s' % (dump_guest_memory_file,
+                                               vmcore_file, arch,
+                                               gdb_command_file))
+        process.run(command, shell=True)
+        status, output = process.getstatusoutput(gdb_command, timeout=360)
+        os.remove(gdb_command_file)
+        os.remove(core_file)
+        logging.debug(output)
+        if status != 0:
+            test.fail("gdb command execute failed")
+        elif "<class 'gdb.MemoryError'>" in output:
+            if dump_guest_core == "on":
+                test.fail("Cannot access memory")
+
+    def check_vmcore_file():
+        """
+        Use crash to check vmcore file
+        """
+        process.run('echo -e "bt\ntask 0\ntask 1\nquit" > %s'
+                    % crash_script, shell=True)
+        output = process.getoutput(crash_cmd, timeout=60)
+        os.remove(crash_script)
+        os.remove(vmcore_file)
+        logging.debug(output)
+        if "systemd" in output and 'swapper' in output:
+            logging.info("Crash command works as expected")
+        else:
+            test.fail("Vmcore corrupt")
+
+    # install crash/gdb/kernel-debuginfo in host
+    packages = ["crash", "gdb", "kernel-debuginfo*", "qemu-kvm-debuginfo",
+                "qemu-kvm-debugsource", "qemu-kvm-core-debuginfo"]
+    utils_package.package_install(packages)
+
+    trigger_core_dump_command = params["trigger_core_dump_command"]
+    core_file = params["core_file"]
+    dump_guest_memory_file = params["dump_guest_memory_file"]
+    gdb_command = params["gdb_command"]
+    gdb_command_file = params["gdb_command_file"]
+    dump_guest_core = params["dump_guest_core"]
+    crash_script = params["crash_script"]
+    crash_cmd = params["crash_cmd"]
+    vmcore_file = params["vmcore_file"]
+    host_kernel_version = process.getoutput("uname -r").strip()
+    vm = env.get_vm(params["main_vm"])
+    session = vm.wait_for_login()
+    check_env()
+
+    qemu_id = vm.get_pid()
+    core_file += str(qemu_id)
+    gdb_command %= str(qemu_id)
+    trigger_core_dump_command %= str(qemu_id)
+    logging.info("trigger core dump command: %s" % trigger_core_dump_command)
+    process.run(trigger_core_dump_command)
+    utils_misc.wait_for(lambda: os.path.exists(core_file), timeout=60)
+    check_core_file()
+    if dump_guest_core == 'on':
+        crash_cmd %= host_kernel_version
+        check_vmcore_file()

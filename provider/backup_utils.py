@@ -144,6 +144,8 @@ def blockdev_mirror_qmp_cmd(source, target, **extra_options):
         "buf-size",
         "on-source-error",
         "on-target-error",
+        "auto-finalize",
+        "auto-dismiss",
         "unmap"]
     arguments = copy_out_dict_if_exists(extra_options, options)
     arguments["device"] = source

@@ -14,7 +14,19 @@ class BlockdevMirrorSimpleTest(BlockdevMirrorWaitTest):
     def __init__(self, test, params, env):
         self._set_granularity(params)
         self._set_bufsize(params)
+        self._set_auto_finalize(params)
+        self._set_auto_dismiss(params)
         super(BlockdevMirrorSimpleTest, self).__init__(test, params, env)
+
+    def _set_auto_finalize(self, params):
+        auto_finalize = params.get('auto_finalize')
+        if auto_finalize:
+            params['auto-finalize'] = auto_finalize
+
+    def _set_auto_dismiss(self, params):
+        auto_dismiss = params.get('auto_dismiss')
+        if auto_dismiss:
+            params['auto-dismiss'] = auto_dismiss
 
     def _set_granularity(self, params):
         granularities = params.objects("granularity_list")

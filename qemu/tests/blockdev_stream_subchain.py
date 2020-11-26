@@ -100,7 +100,7 @@ class BlockdevStreamSubChainTest(BlockDevStreamTest):
         """after block-stream, the backing chain: data->datasn1->dtasn3"""
         out = self.main_vm.monitor.query("block")
         for item in out:
-            if item["qdev"] == self.base_tag:
+            if self.base_tag in item["qdev"]:
                 backing = item["inserted"].get("backing_file")
                 if not backing:
                     self.test.fail("Failed to get backing_file for qdev %s"

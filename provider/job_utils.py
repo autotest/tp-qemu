@@ -1,9 +1,12 @@
+import logging
 import time
 
 from avocado import fail_on
 from virttest import utils_misc
 
 BLOCK_JOB_COMPLETED_EVENT = "BLOCK_JOB_COMPLETED"
+BLOCK_JOB_ERROR_EVENT = "BLOCK_JOB_ERROR"
+BLOCK_IO_ERROR_EVENT = "BLOCK_IO_ERROR"
 
 
 def get_job_status(vm, device):
@@ -172,3 +175,119 @@ def make_transaction_action(cmd, data):
             if k.startswith(prefix):
                 data[k.lstrip(prefix)] = data.pop(k)
     return {"type": cmd, "data": data}
+
+
+@fail_on
+def get_event_by_condition(vm, event_name, tmo=30, **condition):
+    """
+    Get event by the event name and other conditions in some time
+
+    :param vm: VM object
+    :param event_name: event name
+    :param tmo: getting job event timeout
+    :param condition: id or device or node-name
+
+    :return: The event dict or None
+    """
+    event = None
+    for i in range(tmo):
+        all_events = vm.monitor.get_events()
+        events = [e for e in all_events if e.get('event') == event_name]
+        if condition:
+            events = [e for e in events if e.get('data') and all(
+                item in e['data'].items() for item in condition.items())]
+        if events:
+            event = events[0]
+            break
+        time.sleep(1)
+    return event
+
+
+def is_block_job_started(vm, jobid, tmo=10):
+    """
+    offset should be greater than 0 when block job starts,
+    return True if offset > 0 in tmo, or return False
+    """
+    for i in range(tmo):
+        job = get_block_job_by_id(vm, jobid)
+        if not job:
+            logging.warn('job %s was not found' % jobid)
+            break
+        elif job['offset'] > 0:
+            return True
+        time.sleep(1)
+    else:
+        logging.warn('block job %s never starts in %s' % (jobid, tmo))
+    return False
+
+
+def check_block_jobs_started(vm, jobid_list, tmo=10):
+    """
+    Test failed if any block job failed to start
+    """
+    started = all(list(map(lambda j: is_block_job_started(vm, j, tmo),
+                           jobid_list)))
+    assert started, "Not all block jobs start successfully"
+
+
+def is_block_job_running(vm, jobid, tmo=200):
+    """
+    offset should keep increasing when block job keeps running,
+    return True if offset increases in tmo, or return False
+    """
+    offset = None
+    for i in range(tmo):
+        job = get_block_job_by_id(vm, jobid)
+        if not job:
+            logging.warn('job %s cancelled unexpectedly' % jobid)
+            break
+        elif offset is None:
+            offset = job['offset']
+        elif job['offset'] > offset:
+            return True
+        time.sleep(1)
+    else:
+        logging.warn('offset never changed for block job %s in %s'
+                     % (jobid, tmo))
+    return False
+
+
+def check_block_jobs_running(vm, jobid_list, tmo=200):
+    """
+    Test failed if any block job's offset never increased
+    """
+    running = all(list(map(lambda j: is_block_job_running(vm, j, tmo),
+                           jobid_list)))
+    assert running, "Not all block jobs are running"
+
+
+def is_block_job_paused(vm, jobid, tmo=50):
+    """
+    offset should stay the same when block job paused,
+    return True if offset never changed in tmo, or return False
+    """
+    offset = None
+    time.sleep(10)
+
+    for i in range(tmo):
+        job = get_block_job_by_id(vm, jobid)
+        if not job:
+            logging.warn('job %s cancelled unexpectedly' % jobid)
+            return False
+        elif offset is None:
+            offset = job['offset']
+        elif offset != job['offset']:
+            logging.warn('offset %s changed for job %s in %s'
+                         % (offset, jobid, tmo))
+            return False
+        time.sleep(1)
+    return True
+
+
+def check_block_jobs_paused(vm, jobid_list, tmo=50):
+    """
+    Test failed if any block job's offset changed
+    """
+    paused = all(list(map(lambda j: is_block_job_paused(vm, j, tmo),
+                          jobid_list)))
+    assert paused, "Not all block jobs are paused"

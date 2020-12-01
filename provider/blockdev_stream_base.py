@@ -20,10 +20,18 @@ class BlockDevStreamTest(BlockDevSnapshotTest):
     def _init_stream_options(self):
         if self.params.get("speed"):
             self._stream_options["speed"] = int(self.params["speed"])
+        if self.params.get("base"):
+            self._stream_options["base"] = self.params["base"]
         if self.params.get("base_node"):
             self._stream_options["base-node"] = self.params["base_node"]
         if self.params.get("on_error"):
             self._stream_options["on-error"] = self.params["on_error"]
+        if self.params.get("auto_finalize"):
+            self._stream_options["auto-finalize"] = self.params["auto_finalize"]
+        if self.params.get("auto_dismiss"):
+            self._stream_options["auto-dismiss"] = self.params["auto_dismiss"]
+        if self.params.get("backing_file"):
+            self._stream_options["backing-file"] = self.params["backing_file"]
         if self.params.get("block_stream_timeout"):
             self._stream_options["timeout"] = int(
                 self.params["block_stream_timeout"])

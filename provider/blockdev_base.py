@@ -1,7 +1,4 @@
 import logging
-import time
-
-from functools import partial
 
 from avocado.core import exceptions
 from avocado.utils import memory
@@ -15,7 +12,7 @@ from virttest import utils_disk
 from virttest.qemu_capabilities import Flags
 
 from provider import backup_utils
-from provider.job_utils import get_block_job_by_id
+from provider import job_utils
 from provider.virt_storage.storage_admin import sp_admin
 
 
@@ -222,86 +219,20 @@ class BlockdevBaseTest(object):
             except Exception as e:
                 logging.warn(str(e))
 
-    def is_block_job_started(self, jobid, tmo=10):
-        """
-        offset should greater than 0 when block job starts,
-        return True if offset > 0 in tmo, or return False
-        """
-        for i in range(tmo):
-            time.sleep(1)
-            job = get_block_job_by_id(self.main_vm, jobid)
-            if not job:
-                logging.warn('job %s cancelled unexpectedly' % jobid)
-                break
-            elif job['offset'] > 0:
-                return True
-        else:
-            logging.warn('block job %s never starts in %s' % (jobid, tmo))
-        return False
-
     def check_block_jobs_started(self, jobid_list, tmo=10):
         """
         Test failed if any block job failed to start
         """
-        func = partial(self.is_block_job_started, tmo=tmo)
-        if not all(list(map(func, jobid_list))):
-            self.test.fail('Not all block jobs start successfully')
-
-    def is_block_job_running(self, jobid, tmo=200):
-        """
-        offset should increase when block job keeps running,
-        return True if offset increases in tmo, or return False
-        """
-        offset = None
-        for i in range(tmo):
-            job = get_block_job_by_id(self.main_vm, jobid)
-            if not job:
-                logging.warn('job %s cancelled unexpectedly' % jobid)
-                break
-            elif offset is None:
-                offset = job['offset']
-            elif job['offset'] > offset:
-                return True
-            time.sleep(1)
-        else:
-            logging.warn('offset never changed for block job %s in %s'
-                         % (jobid, tmo))
-        return False
+        job_utils.check_block_jobs_started(self.main_vm, jobid_list, tmo)
 
     def check_block_jobs_running(self, jobid_list, tmo=200):
         """
         Test failed if any block job's offset never increased
         """
-        func = partial(self.is_block_job_running, tmo=tmo)
-        if not all(list(map(func, jobid_list))):
-            self.test.fail('Not all block jobs are running')
-
-    def is_block_job_paused(self, jobid, tmo=50):
-        """
-        offset should stay the same when mirror job paused,
-        return True if offset never changed in tmo, or return False
-        """
-        offset = None
-        time.sleep(10)
-
-        for i in range(tmo):
-            time.sleep(1)
-            job = get_block_job_by_id(self.main_vm, jobid)
-            if not job:
-                logging.warn('job %s cancelled unexpectedly' % jobid)
-                break
-            elif offset is None:
-                offset = job['offset']
-            elif offset != job['offset']:
-                logging.warn('offset %s changed for job %s in %s'
-                             % (offset, jobid, tmo))
-                return False
-        return True
+        job_utils.check_block_jobs_running(self.main_vm, jobid_list, tmo)
 
     def check_block_jobs_paused(self, jobid_list, tmo=50):
         """
         Test failed if any block job's offset changed
         """
-        func = partial(self.is_block_job_paused, tmo=tmo)
-        if not all(list(map(func, jobid_list))):
-            self.test.fail('Not all block jobs are paused')
+        job_utils.check_block_jobs_paused(self.main_vm, jobid_list, tmo)

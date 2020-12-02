@@ -250,7 +250,7 @@ def run(test, params, env):
         if ostype == "windows":
             error_context.context("Get windows disk index that to "
                                   "be formatted", logging.info)
-            disks = utils_disk.get_windows_disks_index(session, stg_image_size)
+            disks = utils_disk.get_windows_disks_index(session, stg_image_size, 300)
             if len(disks) < stg_image_num:
                 test.fail("Fail to list all the volumes"
                           ", %s" % err_msg % len(disks))

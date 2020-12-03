@@ -158,12 +158,12 @@ def run(test, params, env):
     vm.verify_alive()
 
     error_context.context("Sync guest timezone before test", logging.info)
-    if params["os_type"] == 'linux':
-        utils_time.sync_timezone_linux(vm)
-    else:
-        utils_time.sync_timezone_win(vm)
-
     timeout = int(params.get("login_timeout", 360))
+    if params["os_type"] == 'linux':
+        utils_time.sync_timezone_linux(vm, timeout)
+    else:
+        utils_time.sync_timezone_win(vm, timeout)
+
     session = vm.wait_for_serial_login(timeout=timeout)
 
     timerdevice_clksource = params.get("timerdevice_clksource")

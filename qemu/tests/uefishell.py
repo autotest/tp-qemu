@@ -5,7 +5,6 @@ import logging
 
 from avocado.utils import process
 
-from virttest import storage
 from virttest import data_dir
 from virttest import utils_net
 from virttest import utils_misc
@@ -39,7 +38,6 @@ class UEFIShellTest(object):
         :param under_fs0: most uefi command executed under fs0:\
         """
         params = self.params
-        self.var_copy()
         for cdrom in params.objects("cdroms"):
             boot_index = params.get("boot_index_%s" % cdrom)
             if boot_index is not None:
@@ -96,24 +94,6 @@ class UEFIShellTest(object):
         cp_command = "cp -f %s %s" % (pk_kek_src_path, pk_kek_dst_path)
         process.system(cp_command)
         return pk_kek_dst_path
-
-    def var_copy(self):
-        """
-        Copy a new VAR file for a cleaner environment to test,
-        since the operations inside uefishell will be recorded
-        into VAR file and may affact later test cases.
-        """
-        source_var_path = "/usr/share/OVMF/OVMF_VARS.fd"
-        path = storage.get_image_filename_filesytem(
-            self.params, data_dir.get_data_dir())
-        vars_path = "%s.fd" % path
-        if os.path.exists(source_var_path):
-            logging.debug("Use new var file, copied from %s", source_var_path)
-            cmd = "cp -f %s %s" % (source_var_path, vars_path)
-            process.system(cmd)
-        else:
-            self.test.cancel("fd source file %s does not exist."
-                             % source_var_path)
 
     def send_command(self, command, check_result=None, interval=0.5):
         """

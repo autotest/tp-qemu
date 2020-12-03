@@ -33,12 +33,13 @@ def run(test, params, env):
                         "The guest kernel version is %s"
                         % (host_kernel_version, guest_kernel_version))
 
-    def check_core_file():
+    def check_core_file(arch):
         """
         Use gdb to check core dump file
         """
-        arch = 'X86_64'
-        arch = 'ppc64-le' if params['vm_arch_name'] == 'ppc64le' else arch
+        arch_map = {'x86_64': 'X86_64', 'ppc64le': 'ppc64-le'}
+        arch_name = arch_map.get(arch)
+        arch = arch_name if arch_name else arch
         command = ('echo -e "source %s\nset height 0\ndump-guest-memory'
                    ' %s %s\nbt\nquit" > %s' % (dump_guest_memory_file,
                                                vmcore_file, arch,
@@ -83,10 +84,12 @@ def run(test, params, env):
     crash_script = params["crash_script"]
     crash_cmd = params["crash_cmd"]
     vmcore_file = params["vmcore_file"]
+    arch = params["vm_arch_name"]
     host_kernel_version = process.getoutput("uname -r").strip()
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
-    check_env()
+    if params.get('check_env', 'yes') == 'yes':
+        check_env()
 
     qemu_id = vm.get_pid()
     core_file += str(qemu_id)
@@ -95,7 +98,8 @@ def run(test, params, env):
     logging.info("trigger core dump command: %s" % trigger_core_dump_command)
     process.run(trigger_core_dump_command)
     utils_misc.wait_for(lambda: os.path.exists(core_file), timeout=60)
-    check_core_file()
-    if dump_guest_core == 'on':
-        crash_cmd %= host_kernel_version
-        check_vmcore_file()
+    if params.get('check_core_file', 'yes') == 'yes':
+        check_core_file(arch)
+        if dump_guest_core == 'on':
+            crash_cmd %= host_kernel_version
+            check_vmcore_file()

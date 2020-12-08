@@ -40,33 +40,36 @@ def run(test, params, env):
             image_image_name = '%s_%s' % ('image_name', image_name)
             params[image_image_name] = '%s_%s' % ('storage', i)
             image_image_format = '%s_%s' % ('image_format', image_name)
-            params[image_image_format] = params.get('image_format_extra', 'qcow2')
+            params[image_image_format] = params.get('image_format_extra',
+                                                    'qcow2')
             image_image_size = '%s_%s' % ('image_size', image_name)
             params[image_image_size] = params.get('image_size_extra', '128K')
         return params
 
-    def find_new_device(check_cmd, device_string, chk_timeout=5.0):
+    def find_new_device(check_cmd, device_string, chk_timeout=30):
         end_time = time.time() + chk_timeout
         idx = ("wmic" in check_cmd and [0] or [-1])[0]
+        time.sleep(2)
         while time.time() < end_time:
             new_line = session.cmd_output(check_cmd)
             for line in re.split("\n+", new_line.strip()):
                 dev_name = re.split(r"\s+", line.strip())[idx]
                 if dev_name not in device_string:
                     return dev_name
-            time.sleep(0.1)
+            time.sleep(3)
         return None
 
-    def find_del_device(check_cmd, device_string, chk_timeout=5.0):
+    def find_del_device(check_cmd, device_string, chk_timeout=30):
         end_time = time.time() + chk_timeout
         idx = ("wmic" in check_cmd and [0] or [-1])[0]
+        time.sleep(2)
         while time.time() < end_time:
             new_line = session.cmd_output(check_cmd)
             for line in re.split("\n+", device_string.strip()):
                 dev_name = re.split(r"\s+", line.strip())[idx]
                 if dev_name not in new_line:
                     return dev_name
-            time.sleep(0.1)
+            time.sleep(3)
         return None
 
     # Select an image file
@@ -130,6 +133,10 @@ def run(test, params, env):
 
         pci_model = params.get("pci_model")
         controller_model = None
+        bus_option = ""
+        if machine_type == "q35" and drive_format == "virtio":
+            bus_option = ",bus=pcie_extra_root_port_%d" % pci_num
+
         if pci_model == "virtio":
             pci_model = "virtio-blk-pci"
 
@@ -139,15 +146,26 @@ def run(test, params, env):
                 controller_model = "spapr-vscsi"
             else:
                 controller_model = "lsi53c895a"
-            verify_supported_device(controller_model)
+            if nonlocal_vars["verify_device_flag"]:
+                verify_supported_device(controller_model)
             controller_id = "controller-" + device_id
             controller_add_cmd = ("device_add %s,id=%s" %
                                   (controller_model, controller_id))
             error_context.context("Adding SCSI controller.")
             vm.monitor.send_args_cmd(controller_add_cmd)
 
-        verify_supported_device(pci_model)
-        if drive_cmd_type == "drive_add":
+        if nonlocal_vars["verify_device_flag"]:
+            verify_supported_device(pci_model)
+        nonlocal_vars["verify_device_flag"] = False
+
+        if drive_cmd_type == "blockdev-add":
+            add_cmd = "{0} driver=file,filename={1},node-name=file_{2}".format(
+                drive_cmd_type, image_filename, pci_info[pci_num][0])
+            add_cmd += ";{0} driver={1},node-name={2},file=file_{2}".format(
+                drive_cmd_type, image_format, pci_info[pci_num][0])
+            driver_add_cmd = add_cmd
+
+        elif drive_cmd_type == "drive_add":
             driver_add_cmd = ("%s auto file=%s,if=none,format=%s,id=%s" %
                               (drive_cmd_type, image_filename, image_format,
                                pci_info[pci_num][0]))
@@ -157,13 +175,14 @@ def run(test, params, env):
                                pci_info[pci_num][0]))
         # add driver.
         error_context.context("Adding driver.")
-        vm.monitor.send_args_cmd(driver_add_cmd, convert=False)
+        if drive_cmd_type != "blockdev-add":
+            vm.monitor.send_args_cmd(driver_add_cmd, convert=False)
+        elif pci_id is None:
+            vm.monitor.send_args_cmd(driver_add_cmd, convert=False)
 
-        pci_add_cmd = ("device_add id=%s,driver=%s,drive=%s" %
-                       (pci_info[pci_num][1],
-                        pci_model,
-                        pci_info[pci_num][0])
-                       )
+        pci_add_cmd = ("device_add id=%s,driver=%s,drive=%s%s" %
+                       (pci_info[pci_num][1], pci_model,
+                        pci_info[pci_num][0], bus_option))
         return device_add(pci_num, pci_add_cmd, pci_id=pci_id)
 
     def device_add(pci_num, pci_add_cmd, pci_id=None):
@@ -174,6 +193,8 @@ def run(test, params, env):
         else:
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         guest_device = find_new_device(chk_cmd, guest_devices)
+        if guest_device is None:
+            test.fail("Failed add disk for %d" % pci_num)
         if pci_id is None:
             pci_info[pci_num].append(add_output)
             pci_info[pci_num].append(pci_model)
@@ -239,6 +260,7 @@ def run(test, params, env):
 
             # Test the newly added device
             try:
+                error_context.context("Check disk in guest", logging.info)
                 session.cmd(params.get("pci_test_cmd") % (pci_num + 1))
             except aexpect.ShellError as e:
                 test.fail("Check for %s device failed" % pci_type +
@@ -263,11 +285,14 @@ def run(test, params, env):
             cmd = "device_del id=%s" % pci_info[pci_num][1]
             vm.monitor.send_args_cmd(cmd)
 
-        if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1) and
+        if (not utils_misc.wait_for(_device_removed, test_timeout, 2, 3) and
                 not ignore_failure):
             test.fail("Failed to hot remove PCI device: %s. "
                       "Monitor command: %s" % (pci_info[pci_num][3], cmd))
 
+    nonlocal_vars = {"verify_device_flag": True}
+    machine_type = params.get("machine_type")
+    drive_format = params.get("drive_format")
     params = prepare_image_params(params)
     env_process.process_images(env_process.preprocess_image, test, params)
     vm = env.get_vm(params["main_vm"])
@@ -303,16 +328,19 @@ def run(test, params, env):
     # Determine syntax of drive hotplug
     # __com.redhat_drive_add == qemu-kvm-0.12 on RHEL 6
     # drive_add == qemu-kvm-0.13 onwards
-    drive_cmd_type = utils_misc.find_substring(str(cmd_output),
-                                               "__com.redhat_drive_add",
-                                               "drive_add")
+    drive_cmd_type = utils_misc.find_substring(str(cmd_output), "blockdev-add")
+
+    if not drive_cmd_type:
+        drive_cmd_type = utils_misc.find_substring(str(cmd_output),
+                                                   "__com.redhat_drive_add",
+                                                   "drive_add")
     if not drive_cmd_type:
         test.error("Unknown version of qemu")
 
     local_functions = locals()
 
     pci_num_range = int(params.get("pci_num"))
-    rp_times = int(params.get("repeat_times"))
+    rp_times = int(params.get("rp_times"))
     img_list = params.get("images").split()
     chk_cmd = params.get("guest_check_cmd")
     mark_cmd = params.get("mark_cmd")
@@ -341,13 +369,17 @@ def run(test, params, env):
         # pci_info[i][3] == device module name.
         # pci_info[i][4] == partition id in guest
         pci_num = random.randint(0, len(pci_info) - 1)
-        error_context.context("start unplug pci device, repeat %d" % j,
-                              logging.info)
+        error_context.context(
+            "start unplug device, repeat %d of %d-%d" % (j, rp_times, pci_num),
+            logging.info)
         guest_devices = session.cmd_output(chk_cmd)
         pci_del(pci_num)
         device_del = find_del_device(chk_cmd, guest_devices)
         if device_del != pci_info[pci_num][4]:
             test.fail("Device is not deleted in guest.")
+
+        #sleep to wait delete event
+        time.sleep(5)
         error_context.context("Start plug pci device, repeat %d" % j,
                               logging.info)
         guest_devices = session.cmd_output(chk_cmd)

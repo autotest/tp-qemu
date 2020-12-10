@@ -45,20 +45,26 @@ def run(test, params, env):
     stress_duration = params.get_numeric("stress_duration", 180)
     verify_wait_timeout = params.get_numeric("verify_wait_timeout", 60)
     vcpu_devices = params.objects("vcpu_devices")
+    vcpus_count = params.get_numeric("vcpus_count", 1)
+    pluggable_count = len(vcpu_devices) * vcpus_count
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
-    smp = vm.cpuinfo.smp
-    maxcpus = vm.cpuinfo.maxcpus
+    if not cpu_utils.check_if_vm_vcpu_match(vm.cpuinfo.smp, vm):
+        test.error("The number of guest CPUs is not equal to the qemu command "
+                   "line configuration")
 
+    cpu_count_before_test = vm.get_cpu_count()
+    expected_count = pluggable_count + cpu_count_before_test
     guest_cpu_ids = cpu_utils.get_guest_cpu_ids(session, os_type)
     for vcpu_dev in vcpu_devices:
         error_context.context("Hotplug vcpu device: %s" % vcpu_dev,
                               logging.info)
         vm.hotplug_vcpu_device(vcpu_dev)
-    if not utils_misc.wait_for(lambda: vm.get_cpu_count() == maxcpus,
-                               verify_wait_timeout):
+    if not utils_misc.wait_for(
+            lambda: cpu_utils.check_if_vm_vcpu_match(expected_count, vm),
+            verify_wait_timeout):
         test.fail("Actual number of guest CPUs is not equal to expected")
 
     if os_type == "linux":
@@ -97,7 +103,7 @@ def run(test, params, env):
                 vm.hotunplug_vcpu_device(vcpu_dev)
                 # Drift the running stress task to other vCPUs
                 time.sleep(random.randint(5, 10))
-            if vm.get_cpu_count() != smp:
+            if not cpu_utils.check_if_vm_vcpu_match(cpu_count_before_test, vm):
                 test.fail("Actual number of guest CPUs is not equal to "
                           "expected")
         stress_tool.unload_stress()
@@ -108,7 +114,7 @@ def run(test, params, env):
         heavyload_install()
         error_context.context("Run heavyload inside guest.", logging.info)
         heavyload_bin = r'"%s\heavyload.exe" ' % install_path
-        heavyload_options = ["/CPU %d" % maxcpus,
+        heavyload_options = ["/CPU %d" % expected_count,
                              "/DURATION %d" % (stress_duration // 60),
                              "/AUTOEXIT",
                              "/START"]

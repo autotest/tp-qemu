@@ -130,3 +130,24 @@ def check_cpu_flags(params, flags, test, session=None):
         logging.info("Check cpu flags on host")
         if missing:
             test.cancel("This host doesn't support flag %s" % missing)
+
+
+# Copied from unstable module "virttest/cpu.py"
+def check_if_vm_vcpu_match(vcpu_desire, vm):
+    """
+    This checks whether the VM vCPU quantity matches the value desired.
+
+    :param vcpu_desire: vcpu value to be checked
+    :param vm: VM Object
+
+    :return: Boolean, True if actual vcpu value matches with vcpu_desire
+    """
+    vcpu_actual = vm.get_cpu_count("cpu_chk_cmd")
+    if isinstance(vcpu_desire, str) and vcpu_desire.isdigit():
+        vcpu_desire = int(vcpu_desire)
+    if vcpu_desire != vcpu_actual:
+        logging.debug("CPU quantity mismatched !!! guest said it got %s "
+                      "but we assigned %s" % (vcpu_actual, vcpu_desire))
+        return False
+    logging.info("CPU quantity matched: %s" % vcpu_actual)
+    return True

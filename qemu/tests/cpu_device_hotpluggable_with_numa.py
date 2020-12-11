@@ -1,8 +1,11 @@
 import re
 import logging
 
+from virttest import utils_misc
 from virttest import error_context
 from virttest import utils_package
+
+from provider import cpu_utils
 
 
 @error_context.context_aware
@@ -49,6 +52,7 @@ def run(test, params, env):
     os_type = params["os_type"]
     machine = params["machine_type"]
     vcpu_devices = params.objects("vcpu_devices")
+    vcpus_count = params.get_numeric("vcpus_count", 1)
     login_timeout = params.get_numeric("login_timeout", 360)
     vm = env.get_vm(params["main_vm"])
     vm.create()
@@ -70,6 +74,14 @@ def run(test, params, env):
                           logging.info)
     vm.create(params=params)
     session = vm.wait_for_login(timeout=login_timeout)
+
+    error_context.context("Check the number of guest CPUs after startup",
+                          logging.info)
+    if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
+        test.error("The number of guest CPUs is not equal to the qemu command "
+                   "line configuration")
+
+    cpu_count_before_test = vm.get_cpu_count()
     if os_type == "linux" and not utils_package.package_install("numactl",
                                                                 session):
         test.cancel("Please install numactl to proceed")
@@ -78,8 +90,9 @@ def run(test, params, env):
         error_context.context("hotplug vcpu device: %s" % vcpu_dev,
                               logging.info)
         vm.hotplug_vcpu_device(vcpu_dev)
-    if vm.get_cpu_count() != maxcpus:
-        test.fail("Actual number of guest CPUs is not equal to expected.")
+    if not utils_misc.wait_for(
+            lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 10):
+        test.fail("Actual number of guest CPUs is not equal to expected")
 
     if os_type == "linux":
         error_context.context("Check the CPU information of each numa node",
@@ -100,9 +113,9 @@ def run(test, params, env):
             error_context.context("hotunplug vcpu device: %s" % vcpu_dev,
                                   logging.info)
             vm.hotunplug_vcpu_device(vcpu_dev)
-        if vm.get_cpu_count() != vm.cpuinfo.smp:
-            test.fail("Actual number of guest CPUs is not equal to the "
-                      "expected.")
+        if not utils_misc.wait_for(
+                lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 10):
+            test.fail("Actual number of guest CPUs is not equal to expected")
         if get_guest_numa_cpus_info() != numa_before_plug:
             logging.debug("Current guest numa info:\n%s",
                           session.cmd_output("numactl -H"))

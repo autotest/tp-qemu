@@ -1,11 +1,12 @@
 import logging
 
-from provider import cpu_utils
-
 from aexpect import ShellCmdError
+
 from virttest import error_context
 from virttest import utils_misc
 from virttest.virt_vm import VMDeviceCheckError
+
+from provider import cpu_utils
 
 
 @error_context.context_aware
@@ -24,15 +25,11 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
-    def check_guest_cpu_count(expected_count):
+    def check_guest_cpu_count():
         if not utils_misc.wait_for(
-                lambda: vm.get_cpu_count() == expected_count,
+                lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm),
                 verify_wait_timeout, first=sleep_after_change):
-            logging.error("CPU quantity mismatched! Guest got %s but the"
-                          " expected is %s", vm.get_cpu_count(),
-                          expected_count)
             test.fail("Actual number of guest CPUs is not equal to expected")
-        logging.info("CPU quantity matched: %s", expected_count)
 
     def sub_hotunplug():
         error_context.context("Hotunplug vcpu devices after vcpu %s"
@@ -46,6 +43,7 @@ def run(test, params, env):
                 logging.warning("%s can not be unplugged directly because "
                                 "guest is paused, will check again after "
                                 "resume", plugged_dev)
+                vm.params["vcpu_enable_%s" % plugged_dev] = "no"
 
     def sub_reboot():
         error_context.context("Reboot guest after vcpu %s"
@@ -78,7 +76,7 @@ def run(test, params, env):
         vm.verify_alive()
         sub_test_after_migrate = params.objects("sub_test_after_migrate")
         while sub_test_after_migrate:
-            check_guest_cpu_count(expected_vcpus)
+            check_guest_cpu_count()
             sub_test = sub_test_after_migrate.pop(0)
             error_context.context("%s after migration completed" % sub_test)
             eval("sub_migrate_%s" % sub_test)()
@@ -92,7 +90,9 @@ def run(test, params, env):
         try:
             for cpu_id in cpu_ids[::-1]:
                 session.cmd(cmd % (0, cpu_id))
-            check_guest_cpu_count(smp)
+            if not cpu_utils.check_if_vm_vcpu_match(cpu_count_before_test, vm):
+                test.fail(
+                    "Actual number of guest CPUs is not equal to expected")
             for cpu_id in cpu_ids:
                 session.cmd(cmd % (1, cpu_id))
         except ShellCmdError as err:
@@ -118,19 +118,21 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
-    smp = vm.cpuinfo.smp
+    cpu_count_before_test = vm.get_cpu_count()
     maxcpus = vm.cpuinfo.maxcpus
-    vcpus_count = vm.params.get_numeric("vcpus_count", 1)
     vcpu_devices = params.objects("vcpu_devices")
     guest_cpu_ids = cpu_utils.get_guest_cpu_ids(session, os_type)
 
+    error_context.context("Check the number of guest CPUs after startup",
+                          logging.info)
+    if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
+        test.error("The number of guest CPUs is not equal to the qemu command "
+                   "line configuration")
+
     if hotpluggable_test == "hotplug":
         pluggable_vcpu_dev = vcpu_devices
-        pluggable_vcpu = vcpus_count * len(pluggable_vcpu_dev)
     else:
         pluggable_vcpu_dev = vcpu_devices[::-1]
-        pluggable_vcpu = -(vcpus_count * len(pluggable_vcpu_dev))
-    expected_vcpus = vm.get_cpu_count() + pluggable_vcpu
 
     if params.get("pause_vm_before_hotplug", "no") == "yes":
         error_context.context("Pause guest before %s" % hotpluggable_test,
@@ -145,7 +147,7 @@ def run(test, params, env):
                               logging.info)
         vm.resume()
 
-    check_guest_cpu_count(expected_vcpus)
+    check_guest_cpu_count()
     current_guest_cpu_ids = cpu_utils.get_guest_cpu_ids(session, os_type)
 
     if sub_test_type:
@@ -153,14 +155,11 @@ def run(test, params, env):
         # Close old session since guest maybe dead/reboot
         if session:
             session.close()
-        if ("hotunplug" in params.objects("sub_test_after_migrate")
-                or sub_test_type == "pause_resume"):
-            expected_vcpus -= pluggable_vcpu
 
     if vm.is_alive():
         session = vm.wait_for_login(timeout=login_timeout)
-        check_guest_cpu_count(expected_vcpus)
-        if expected_vcpus == maxcpus and check_cpu_topology:
+        check_guest_cpu_count()
+        if vm.get_cpu_count() == maxcpus and check_cpu_topology:
             if not cpu_utils.check_guest_cpu_topology(session, os_type,
                                                       vm.cpuinfo):
                 session.close()

@@ -2,6 +2,8 @@ import logging
 
 from virttest import error_context
 
+from provider import cpu_utils
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -27,8 +29,6 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    smp = vm.cpuinfo.smp
-    maxcpus = vm.cpuinfo.maxcpus
 
     error_context.base_context("Hotplug vCPU devices during boot stage.",
                                logging.info)
@@ -42,12 +42,8 @@ def run(test, params, env):
     vm.wait_for_login().close()
 
     error_context.context("Check number of CPU inside guest.", logging.info)
-    current_guest_cpus = vm.get_cpu_count()
-    if current_guest_cpus != maxcpus:
-        test.fail("Actual number of guest CPUs(%s) is not equal to"
-                  " expected(%s) after hotplug." % (current_guest_cpus,
-                                                    maxcpus))
-    logging.info("CPU quantity(%s) in guest is correct.", current_guest_cpus)
+    if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
+        test.fail("Actual number of guest CPUs is not equal to expected")
 
     if unplug_during_boot:
         # 1) vm.reboot() will return a new session, which is not what we want.
@@ -70,10 +66,6 @@ def run(test, params, env):
 
         error_context.context("Check number of CPU inside guest after unplug.",
                               logging.info)
-        current_guest_cpus = vm.get_cpu_count()
-        if current_guest_cpus != smp:
-            test.fail("Actual number of guest CPUs(%s) is not equal to "
-                      "expected(%s) after hotunplug." % (current_guest_cpus,
-                                                         smp))
-        logging.info("CPU quantity(%s) in guest is correct.",
-                     current_guest_cpus)
+        if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
+            test.fail("Actual number of guest CPUs is not equal to expected "
+                      "after hotunplug.")

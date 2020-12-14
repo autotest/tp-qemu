@@ -7,12 +7,12 @@ from avocado.utils import process
 from avocado.utils import service
 from virttest import utils_misc
 from virttest import utils_net
-from virttest import env_process
 from virttest import error_context
 from virttest import utils_disk
 from virttest import utils_numeric
 from virttest import virt_vm
 from virttest import qemu_monitor
+from virttest.qemu_storage import QemuImg
 
 
 class NFSCorruptError(Exception):
@@ -194,19 +194,21 @@ def run(test, params, env):
         config.setup()
     except NFSCorruptError as e:
         test.error(str(e))
-    image_name = os.path.join(config.mnt_dir, "nfs_corrupt")
-    params["image_name_stg"] = image_name
-    params["force_create_image_stg"] = "yes"
-    params["create_image_stg"] = "yes"
+
+    image_stg_dir = config.mnt_dir
     stg_params = params.object_params("stg")
+    stg_img = QemuImg(stg_params, image_stg_dir, "stg")
+    stg_img.create(stg_params)
 
     error_context.context("Boot vm with image on NFS server", logging.info)
-    env_process.preprocess_image(test, stg_params, image_name)
+    image_name = os.path.join(image_stg_dir, "nfs_corrupt")
+    params["image_name_stg"] = image_name
 
     vm = env.get_vm(params["main_vm"])
     try:
         vm.create(params=params)
     except Exception:
+        stg_img.remove()
         config.cleanup()
         test.error("failed to create VM")
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
@@ -261,4 +263,6 @@ def run(test, params, env):
     finally:
         session.close()
         vm.destroy(gracefully=True)
+        stg_img.check_image(params, image_stg_dir)
+        stg_img.remove()
         config.cleanup()

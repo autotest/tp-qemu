@@ -1,10 +1,11 @@
 import logging
 import time
+import os
 import random
 
 import aexpect
 
-from virttest import utils_test
+from avocado.utils import crypto, process
 from virttest import utils_net
 from virttest import utils_misc
 
@@ -18,16 +19,19 @@ def run(test, params, env):
     3) Execute file transfer test between guest and host.
     4) Repeatedly put down/up interfaces by 'ip link'
     5) Execute file transfer test between guest and host.
+    6) Check md5 value after transfered.
 
     :param test: Kvm test object.
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-
-    timeout = int(params.get("login_timeout", 1200))
+    tmp_dir = params["tmp_dir"]
+    filesize = params.get_numeric("filesize")
+    dd_cmd = params["dd_cmd"]
+    login_timeout = params.get_numeric("login_timeout", 1200)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session_serial = vm.wait_for_serial_login(timeout=timeout)
+    session_serial = vm.wait_for_serial_login(timeout=login_timeout)
     ifnames = utils_net.get_linux_ifname(session_serial)
 
     ssh_login_cmd = (
@@ -59,16 +63,23 @@ def run(test, params, env):
         time.sleep(1)
 
     session_serial.cmd_output_safe("dhclient bond0")
+    # prepare test data
+    guest_path = os.path.join(tmp_dir + "dst-%s" %
+                              utils_misc.generate_random_string(8))
+    host_path = os.path.join(test.tmpdir, "tmp-%s" %
+                             utils_misc.generate_random_string(8))
+    logging.info("Test setup: Creating %dMB file on host", filesize)
+    process.run(dd_cmd % host_path, shell=True)
 
     # get_bonding_nic_mac and ip
     try:
         link_set_cmd = "ip link set dev %s %s"
-        logging.info("Test file transferring:")
-        utils_test.run_file_transfer(test, params, env)
-
+        # transfer data
+        original_md5 = crypto.hash_file(host_path, algorithm="md5")
+        logging.info("md5 value of data original: %s" % original_md5)
         logging.info("Failover test with file transfer")
         transfer_thread = utils_misc.InterruptedThread(
-            utils_test.run_file_transfer, (test, params, env))
+            vm.copy_files_to, (host_path, guest_path))
         transfer_thread.start()
         try:
             while transfer_thread.isAlive():
@@ -77,34 +88,41 @@ def run(test, params, env):
                     time.sleep(random.randint(1, 30))
                     session_serial.cmd(link_set_cmd % (ifname, "up"))
                     time.sleep(random.randint(1, 30))
-
-        except Exception:
+        except aexpect.ShellProcessTerminatedError:
             transfer_thread.join(suppress_exception=True)
             raise
         else:
             transfer_thread.join()
 
+        logging.info('Cleaning temp file on host')
+        os.remove(host_path)
         logging.info("Failover test 2 with file transfer")
         transfer_thread = utils_misc.InterruptedThread(
-            utils_test.run_file_transfer, (test, params, env))
+            vm.copy_files_from, (guest_path, host_path))
         transfer_thread.start()
         try:
             nic_num = len(ifnames)
             up_index = 0
             while transfer_thread.isAlive():
+                nic_indexes = list(range(nic_num))
                 up_index = up_index % nic_num
-                for num in range(nic_num):
-                    if num == up_index:
-                        session_serial.cmd(link_set_cmd % (ifnames[num], "up"))
-                    else:
-                        session_serial.cmd(link_set_cmd % (ifnames[num], "down"))
-                time.sleep(random.randint(1, 5))
+                session_serial.cmd(link_set_cmd % (ifnames[up_index], "up"))
+                nic_indexes.remove(up_index)
+                for num in nic_indexes:
+                    session_serial.cmd(link_set_cmd % (ifnames[num], "down"))
+                time.sleep(random.randint(3, 5))
                 up_index += 1
-        except Exception:
+        except aexpect.ShellProcessTerminatedError:
             transfer_thread.join(suppress_exception=True)
             raise
         else:
             transfer_thread.join()
+        current_md5 = crypto.hash_file(host_path, algorithm="md5")
+        logging.info("md5 value of data current: %s" % current_md5)
+        if original_md5 != current_md5:
+            test.fail("File changed after transfer host -> guest "
+                      "and guest -> host")
+
     finally:
         session_serial.sendline("ifenslave -d bond0 " + " ".join(ifnames))
         session_serial.sendline("kill -9 `pgrep dhclient`")

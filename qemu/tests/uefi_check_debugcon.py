@@ -2,6 +2,7 @@ import logging
 
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import utils_package
 from virttest import env_process
 from virttest import error_context
 from avocado.utils import process
@@ -58,10 +59,8 @@ def run(test, params, env):
         """
         process.system(trace_record_cmd)
 
-    error_context.context("Check whether trace-cmd has been "
-                          "installed on host.", logging.info)
-    if process.system("which trace-cmd", ignore_status=True):
-        test.error("Please install trace-cmd on host.")
+    # install trace-cmd in host
+    utils_package.package_install("trace-cmd")
     if params.get("ovmf_log"):
         error_context.context("Append debugcon parameter to "
                               "qemu command lines.", logging.info)

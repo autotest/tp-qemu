@@ -2,10 +2,14 @@ import logging
 import os
 import re
 
+import aexpect
+
 from avocado.utils import process
 
 from virttest import data_dir
+from virttest import env_process
 from virttest import error_context
+from virttest import nfs
 from virttest import utils_disk
 from virttest import utils_misc
 from virttest import utils_test
@@ -82,6 +86,31 @@ def run(test, params, env):
     fio_options = params.get('fio_options')
     io_timeout = params.get_numeric('io_timeout')
 
+    # xfstest config
+    cmd_xfstest = params.get('cmd_xfstest')
+    fs_dest_fs2 = params.get('fs_dest_fs2')
+    xfstest_pkg = params.get('xfstest_pkg')
+    cmd_unpack_xfstest = params.get('cmd_unpack_xfstest')
+    cmd_yum_install = params.get('cmd_yum_install')
+    cmd_make_xfs = params.get('cmd_make_xfs')
+    cmd_setenv = params.get('cmd_setenv')
+    cmd_useradd = params.get('cmd_useradd')
+    fs_dest_fs1 = params.get('fs_dest_fs1')
+
+    # xfstest-nfs config
+    setup_local_nfs = params.get('setup_local_nfs')
+
+    if setup_local_nfs:
+        for fs in params.objects("filesystems"):
+            nfs_params = params.object_params(fs)
+            params["export_dir"] = nfs_params.get("export_dir")
+            params["nfs_mount_src"] = nfs_params.get("nfs_mount_src")
+            params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
+            nfs_local = nfs.Nfs(params)
+            nfs_local.setup()
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params["main_vm"])
+
     os_type = params.get("os_type")
     vm = env.get_vm(params.get("main_vm"))
     vm.verify_alive()
@@ -129,11 +158,11 @@ def run(test, params, env):
             error_context.context("Create a destination directory %s "
                                   "inside guest." % fs_dest, logging.info)
             utils_misc.make_dirs(fs_dest, session)
-
-            error_context.context("Mount virtiofs target %s to %s inside"
-                                  " guest." % (fs_target, fs_dest),
-                                  logging.info)
-            utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session)
+            if not cmd_xfstest:
+                error_context.context("Mount virtiofs target %s to %s inside"
+                                      " guest." % (fs_target, fs_dest),
+                                      logging.info)
+                utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session)
 
         else:
             error_context.context("Start virtiofs service in guest.", logging.info)
@@ -200,7 +229,42 @@ def run(test, params, env):
                 session.cmd(cmd_configure.format(fs_dest), 180)
                 session.cmd(cmd_make % fs_dest, io_timeout)
                 session.cmd(cmd_pjdfstest % fs_dest, io_timeout)
+
+            if cmd_xfstest:
+                error_context.context("Run xfstest on guest.", logging.info)
+                utils_misc.make_dirs(fs_dest_fs2, session)
+                host_path = os.path.join(data_dir.get_deps_dir('xfstest'),
+                                         xfstest_pkg)
+                scp_to_remote(host_addr, port, username, password, host_path, fs_dest_fs1)
+                session.cmd(cmd_unpack_xfstest.format(fs_dest), 180)
+                session.cmd(cmd_yum_install, 180)
+                session.cmd(cmd_make_xfs, 360)
+                session.cmd(cmd_setenv, 180)
+                session.cmd(cmd_useradd, 180)
+
+                try:
+                    output = session.cmd_output(cmd_xfstest, io_timeout)
+                    logging.info("%s", output)
+                    if 'Failed' in output:
+                        test.fail('The xfstest failed.')
+                    else:
+                        break
+                except (aexpect.ShellStatusError, aexpect.ShellTimeoutError):
+                    test.fail('The xfstest failed.')
+
         finally:
             if os_type == "linux":
                 utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
                 utils_misc.safe_rmdir(fs_dest, session=session)
+            if setup_local_nfs:
+                session.close()
+                vm.destroy()
+                for fs in params.objects("filesystems"):
+                    nfs_params = params.object_params(fs)
+                    params["export_dir"] = nfs_params.get("export_dir")
+                    params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
+                    params["rm_export_dir"] = nfs_params.get("export_dir")
+                    params["rm_mount_dir"] = nfs_params.get("fs_source_dir")
+                    nfs_local = nfs.Nfs(params)
+                    nfs_local.cleanup()
+                    utils_misc.safe_rmdir(params["export_dir"])

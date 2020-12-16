@@ -181,6 +181,16 @@ def block_dirty_bitmap_disable(vm, node, name):
     assert bitmap["status"] == "disabled", msg
 
 
+@fail_on
+def block_dirty_bitmap_enable(vm, node, name):
+    """Enable named block dirty bitmap in the node"""
+    func = qemu_monitor.get_monitor_function(vm, "block-dirty-bitmap-enable")
+    func(node, name)
+    bitmap = get_bitmap_by_name(vm, node, name)
+    msg = "block dirty bitmap '%s' is not enabled" % name
+    assert bitmap["status"] == "active", msg
+
+
 def get_bitmaps_in_device(vm, device):
     """Get bitmap info list in given device"""
     out = vm.monitor.cmd("query-block")

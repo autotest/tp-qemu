@@ -273,8 +273,7 @@ class BlockDevicesPlug(object):
 
     def _hotplug_atomic(self, device, monitor, bus=None):
         """ Function hot plug device to devices representation. """
-        with _LOCK:
-            self.vm.devices.set_dirty()
+        self.vm.devices.set_dirty()
 
         qdev_out = ''
         if isinstance(device, qdevices.QDevice):
@@ -298,28 +297,24 @@ class BlockDevicesPlug(object):
                                 break
 
             if bus is not None:
-                with _LOCK:
-                    bus.prepare_hotplug(device)
-                    qdev_out = self.vm.devices.insert(device)
+                bus.prepare_hotplug(device)
+                qdev_out = self.vm.devices.insert(device)
 
         out = self._plug(device.hotplug, monitor)
         ver_out = device.verify_hotplug(out, monitor)
         if ver_out is False:
-            with _LOCK:
-                self.vm.devices.set_clean()
+            self.vm.devices.set_clean()
             return out, ver_out
 
         try:
-            with _LOCK:
-                if device not in self.vm.devices:
-                    qdev_out = self.vm.devices.insert(device)
+            if device not in self.vm.devices:
+                qdev_out = self.vm.devices.insert(device)
             if not isinstance(qdev_out, list) or len(qdev_out) != 1:
                 raise NotImplementedError(
                     "This device %s require to hotplug multiple devices %s, "
                     "which is not supported." % (device, out))
             if ver_out is True:
-                with _LOCK:
-                    self.vm.devices.set_clean()
+                self.vm.devices.set_clean()
         except DeviceError as exc:
             raise DeviceHotplugError(
                 device, 'According to qemu_device: %s' % exc, self, ver_out)
@@ -328,15 +323,13 @@ class BlockDevicesPlug(object):
     def _unplug_atomic(self, device, monitor):
         """ Function unplug device to devices representation. """
         device = self.vm.devices[device]
-        with _LOCK:
-            self.vm.devices.set_dirty()
+        self.vm.devices.set_dirty()
 
         out = self._plug(device.unplug, monitor)
         if not utils_misc.wait_for(
                 lambda: device.verify_unplug(out, monitor) is True,
                 first=1, step=5, timeout=self.VERIFY_UNPLUG_TIMEOUT):
-            with _LOCK:
-                self.vm.devices.set_clean()
+            self.vm.devices.set_clean()
             return out, device.verify_unplug(out, monitor)
         ver_out = device.verify_unplug(out, monitor)
 
@@ -362,19 +355,15 @@ class BlockDevicesPlug(object):
                                 self._plug(node.unplug, monitor), monitor):
                             raise DeviceUnplugError(
                                 node, "Failed to unplug blockdev node.", self)
-                        with _LOCK:
-                            self.vm.devices.remove(node, recursive)
+                        self.vm.devices.remove(node, recursive)
                         if parent_node:
                             parent_node.del_child_node(node)
                 else:
-                    with _LOCK:
-                        self.vm.devices.remove(drive)
+                    self.vm.devices.remove(drive)
 
-            with _LOCK:
-                self.vm.devices.remove(device, True)
+            self.vm.devices.remove(device, True)
             if ver_out is True:
-                with _LOCK:
-                    self.vm.devices.set_clean()
+                self.vm.devices.set_clean()
             elif out is False:
                 raise DeviceUnplugError(
                     device, "Device wasn't unplugged in qemu, but it was "
@@ -393,8 +382,9 @@ class BlockDevicesPlug(object):
                         bus is not None and
                         self.vm.devices.is_pci_device(device['driver'])):
                     args += (bus,)
-                _QMP_OUTPUT[device.get_qid()] = getattr(
-                    self, '_%s_atomic' % action)(*args)
+                with _LOCK:
+                    _QMP_OUTPUT[device.get_qid()] = getattr(
+                        self, '_%s_atomic' % action)(*args)
                 time.sleep(interval)
 
     def _hotplug_devs(self, images, monitor, bus=None, interval=0):

@@ -17,7 +17,10 @@ from virttest import virt_vm
 from virttest import data_dir
 from virttest import utils_misc
 from virttest import cpu
+from virttest import qemu_migration
 from virttest.utils_test.qemu import migration
+from virttest.qemu_capabilities import Flags
+from virttest.utils_numeric import normalize_data_size
 
 
 def run(test, params, env):
@@ -838,7 +841,11 @@ def run(test, params, env):
 
             time.sleep(5)
 
-            self.vm.monitor.migrate_set_speed(mig_speed)
+            if self.vm.check_capability(Flags.MIGRATION_PARAMS):
+                return qemu_migration.set_migrate_parameter_max_bandwidth(
+                        self.vm, int(normalize_data_size(mig_speed, 'B')))
+            else:
+                self.vm.monitor.migrate_set_speed(mig_speed)
             self.clone = self.vm.migrate(
                 mig_timeout, mig_protocol, offline=False,
                 not_wait_for_migration=True)
@@ -848,7 +855,11 @@ def run(test, params, env):
             try:
                 self.vm.wait_for_migration(10)
             except virt_vm.VMMigrateTimeoutError:
-                self.vm.monitor.migrate_set_downtime(1)
+                if self.vm.check_capability(Flags.MIGRATION_PARAMS):
+                    qemu_migration.set_migrate_parameter_downtime_limit(
+                            self.vm, 1000)
+                else:
+                    self.vm.monitor.migrate_set_downtime(1)
                 self.vm.wait_for_migration(mig_timeout)
 
             self.clone.resume()

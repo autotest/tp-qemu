@@ -22,7 +22,11 @@ from virttest import env_process
 from virttest import utils_net
 from virttest import data_dir
 from virttest import storage
+from virttest import qemu_migration
 from avocado import TestCancel
+
+from virttest.qemu_capabilities import Flags
+from virttest.utils_numeric import normalize_data_size
 
 
 class BaseVirtTest(object):
@@ -2798,7 +2802,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         error_context.context("Migrate guest while guest agent service is"
                               " running.", logging.info)
-        self.vm.monitor.migrate_set_speed(params.get("mig_speed", "1G"))
+        mig_speed = params.get("mig_speed", "1G")
+        if self.vm.check_capability(Flags.MIGRATION_PARAMS):
+            qemu_migration.set_migrate_parameter_max_bandwidth(
+                    self.vm, int(normalize_data_size(mig_speed, 'B')))
+        else:
+            self.vm.monitor.migrate_set_speed(mig_speed)
         self.vm.migrate()
         error_context.context("Recreate a QemuAgent object after vm"
                               " migration.", logging.info)

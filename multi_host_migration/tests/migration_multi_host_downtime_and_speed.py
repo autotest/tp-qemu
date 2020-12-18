@@ -6,7 +6,10 @@ from autotest.client.shared import utils
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import virt_vm
+from virttest import qemu_migration
 from virttest.utils_test.qemu import migration
+from virttest.qemu_capabilities import Flags
+from virttest.utils_numeric import normalize_data_size
 
 
 @error.context_aware
@@ -96,7 +99,11 @@ def run(test, params, env):
             if self.is_src:
                 vm = env.get_vm(params["main_vm"])
                 error.context("Set downtime before migration.", logging.info)
-                vm.monitor.migrate_set_downtime(self.mig_downtime)
+                if vm.check_capability(Flags.MIGRATION_PARAMS):
+                    qemu_migration.set_migrate_parameter_downtime_limit(
+                            vm, self.mig_downtime * 1000)
+                else:
+                    vm.monitor.migrate_set_downtime(self.mig_downtime)
 
         @error.context_aware
         def post_migration_before_downtime(self, vm, cancel_delay, mig_offline,
@@ -127,7 +134,11 @@ def run(test, params, env):
                     break
                 except virt_vm.VMMigrateTimeoutError:
                     logging.info("Set downtime to %d seconds.", downtime)
-                    vm.monitor.migrate_set_downtime(downtime)
+                    if vm.check_capability(Flags.MIGRATION_PARAMS):
+                        qemu_migration.set_migrate_parameter_downtime_limit(
+                                vm, downtime * 1000)
+                    else:
+                        vm.monitor.migrate_set_downtime(downtime)
 
             try:
                 vm.wait_for_migration(self.mig_timeout)
@@ -154,7 +165,11 @@ def run(test, params, env):
                     vm.wait_for_migration(self.wait_mig_timeout)
                     break
                 except virt_vm.VMMigrateTimeoutError:
-                    vm.monitor.migrate_set_speed("%sB" % (mig_speed))
+                    if vm.check_capability(Flags.MIGRATION_PARAMS):
+                        qemu_migration.set_migrate_parameter_max_bandwidth(
+                                vm, int(normalize_data_size("%sB" % (mig_speed), 'B')))
+                    else:
+                        vm.monitor.migrate_set_speed("%sB" % (mig_speed))
 
             # Test migration status. If migration is not completed then
             # it kill program which creates guest load.

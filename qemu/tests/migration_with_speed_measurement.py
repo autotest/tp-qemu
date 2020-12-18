@@ -5,6 +5,9 @@ import logging
 import time
 
 from virttest import utils_misc
+from virttest import qemu_migration
+from virttest.qemu_capabilities import Flags
+from virttest.utils_numeric import normalize_data_size
 
 from provider import cpuflags
 
@@ -126,7 +129,11 @@ def run(test, params, env):
         cpuflags.install_cpuflags_util_on_vm(test, vm, install_path,
                                              extra_flags="-msse3 -msse2")
 
-        vm.monitor.migrate_set_speed(mig_speed)
+        if vm.check_capability(Flags.MIGRATION_PARAMS):
+            qemu_migration.set_migrate_parameter_max_bandwidth(
+                    vm, int(normalize_data_size(mig_speed, 'B')))
+        else:
+            vm.monitor.migrate_set_speed(mig_speed)
 
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
                (os.path.join(install_path, "cpu_flags", "src"),

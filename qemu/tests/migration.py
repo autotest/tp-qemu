@@ -11,6 +11,9 @@ from virttest import utils_test
 from virttest import utils_package
 from virttest import error_context
 from virttest import qemu_monitor     # For MonitorNotSupportedMigCapError
+from virttest import qemu_migration
+from virttest.qemu_capabilities import Flags
+from virttest.utils_numeric import normalize_data_size
 
 
 # Define get_function-functions as global to allow importing from other tests
@@ -30,6 +33,9 @@ def get_functions(func_names, locals_dict):
 
 def mig_set_speed(vm, params, test):
     mig_speed = params.get("mig_speed", "1G")
+    if vm.check_capability(Flags.MIGRATION_PARAMS):
+        return qemu_migration.set_migrate_parameter_max_bandwidth(
+                vm, int(normalize_data_size(mig_speed, 'B')))
     return vm.monitor.migrate_set_speed(mig_speed)
 
 

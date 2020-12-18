@@ -4,6 +4,9 @@ import logging
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
+from virttest import qemu_migration
+from virttest.qemu_capabilities import Flags
+from virttest.utils_numeric import normalize_data_size
 from qemu.tests.virtio_serial_file_transfer import transfer_data
 
 
@@ -51,7 +54,13 @@ def run(test, params, env):
     mig_exec_file += "-%s" % utils_misc.generate_random_string(8)
     mig_exec_cmd_src = mig_exec_cmd_src % mig_exec_file
     mig_exec_cmd_dst = mig_exec_cmd_dst % mig_exec_file
-    vm.monitor.migrate_set_speed(params.get("mig_speed", "1G"))
+
+    mig_speed = params.get("mig_speed", "1G")
+    if vm.check_capability(Flags.MIGRATION_PARAMS):
+        qemu_migration.set_migrate_parameter_max_bandwidth(
+                vm, int(normalize_data_size(mig_speed, 'B')))
+    else:
+        vm.monitor.migrate_set_speed(mig_speed)
     try:
         vm.migrate(protocol=mig_protocol, offline=True,
                    migration_exec_cmd_src=mig_exec_cmd_src,

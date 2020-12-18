@@ -80,21 +80,23 @@ class _PlugThread(threading.Thread):
     Plug Thread that define a plug thread.
     """
 
-    def __init__(self, vm, action, images, monitor, exit_event, bus=None):
+    def __init__(self, vm, action, images, monitor, exit_event, bus=None, interval=0):
         threading.Thread.__init__(self)
         self._action = action
         self._images = images
         self._monitor = monitor
         self._bus = bus
+        self._interval = interval
         self._plug_manager = BlockDevicesPlug(vm)
         self.exit_event = exit_event
         self.exc_info = None
 
     def run(self):
         try:
-            args = (self._images, self._monitor)
-            if self._bus:
-                args = (self._images, self._monitor, self._bus)
+            args = (self._images, self._monitor, self._interval)
+            if self._action == HOTPLUG:
+                bus = self._bus if self._bus else None
+                args = (self._images, self._monitor, bus, self._interval)
             method = "_hotplug_devs" if self._action == HOTPLUG else "_unplug_devs"
             getattr(self._plug_manager, method)(*args)
         except Exception as e:
@@ -115,14 +117,13 @@ class _ThreadManager(object):
         self._threads = []
         self.exit_event = threading.Event()
 
-    def _initial_threads(self, action, imgs, bus=None):
+    def _initial_threads(self, action, imgs, bus=None, interval=0):
         """ Initial the threads. """
         max_threads = min(len(imgs), 2 * multiprocessing.cpu_count())
         for i in xrange(max_threads):
             mon = self._vm.monitors[i % len(self._vm.monitors)]
-            args = (self._vm, action, imgs[i::max_threads], mon, self.exit_event)
-            if bus:
-                args = (self._vm, action, imgs[i::max_threads], mon, self.exit_event, bus)
+            args = (self._vm, action, imgs[i::max_threads],
+                    mon, self.exit_event, bus, interval)
             self._threads.append(_PlugThread(*args))
 
     def _start_threads(self):
@@ -135,9 +136,9 @@ class _ThreadManager(object):
         for thread in self._threads:
             thread.join(timeout)
 
-    def run_threads(self, action, imgs, bus, timeout):
+    def run_threads(self, action, imgs, bus, timeout, interval=0):
         """ Run the threads. """
-        self._initial_threads(action, imgs, bus)
+        self._initial_threads(action, imgs, bus, interval)
         self._start_threads()
         self._join_threads(timeout)
 
@@ -272,8 +273,7 @@ class BlockDevicesPlug(object):
 
     def _hotplug_atomic(self, device, monitor, bus=None):
         """ Function hot plug device to devices representation. """
-        with _LOCK:
-            self.vm.devices.set_dirty()
+        self.vm.devices.set_dirty()
 
         qdev_out = ''
         if isinstance(device, qdevices.QDevice):
@@ -297,28 +297,24 @@ class BlockDevicesPlug(object):
                                 break
 
             if bus is not None:
-                with _LOCK:
-                    bus.prepare_hotplug(device)
-                    qdev_out = self.vm.devices.insert(device)
+                bus.prepare_hotplug(device)
+                qdev_out = self.vm.devices.insert(device)
 
         out = self._plug(device.hotplug, monitor)
         ver_out = device.verify_hotplug(out, monitor)
         if ver_out is False:
-            with _LOCK:
-                self.vm.devices.set_clean()
+            self.vm.devices.set_clean()
             return out, ver_out
 
         try:
-            with _LOCK:
-                if device not in self.vm.devices:
-                    qdev_out = self.vm.devices.insert(device)
+            if device not in self.vm.devices:
+                qdev_out = self.vm.devices.insert(device)
             if not isinstance(qdev_out, list) or len(qdev_out) != 1:
                 raise NotImplementedError(
                     "This device %s require to hotplug multiple devices %s, "
                     "which is not supported." % (device, out))
             if ver_out is True:
-                with _LOCK:
-                    self.vm.devices.set_clean()
+                self.vm.devices.set_clean()
         except DeviceError as exc:
             raise DeviceHotplugError(
                 device, 'According to qemu_device: %s' % exc, self, ver_out)
@@ -327,15 +323,13 @@ class BlockDevicesPlug(object):
     def _unplug_atomic(self, device, monitor):
         """ Function unplug device to devices representation. """
         device = self.vm.devices[device]
-        with _LOCK:
-            self.vm.devices.set_dirty()
+        self.vm.devices.set_dirty()
 
         out = self._plug(device.unplug, monitor)
         if not utils_misc.wait_for(
                 lambda: device.verify_unplug(out, monitor) is True,
                 first=1, step=5, timeout=self.VERIFY_UNPLUG_TIMEOUT):
-            with _LOCK:
-                self.vm.devices.set_clean()
+            self.vm.devices.set_clean()
             return out, device.verify_unplug(out, monitor)
         ver_out = device.verify_unplug(out, monitor)
 
@@ -361,19 +355,15 @@ class BlockDevicesPlug(object):
                                 self._plug(node.unplug, monitor), monitor):
                             raise DeviceUnplugError(
                                 node, "Failed to unplug blockdev node.", self)
-                        with _LOCK:
-                            self.vm.devices.remove(node, recursive)
+                        self.vm.devices.remove(node, recursive)
                         if parent_node:
                             parent_node.del_child_node(node)
                 else:
-                    with _LOCK:
-                        self.vm.devices.remove(drive)
+                    self.vm.devices.remove(drive)
 
-            with _LOCK:
-                self.vm.devices.remove(device, True)
+            self.vm.devices.remove(device, True)
             if ver_out is True:
-                with _LOCK:
-                    self.vm.devices.set_clean()
+                self.vm.devices.set_clean()
             elif out is False:
                 raise DeviceUnplugError(
                     device, "Device wasn't unplugged in qemu, but it was "
@@ -383,7 +373,7 @@ class BlockDevicesPlug(object):
             raise DeviceUnplugError(device, exc, self)
         return out, ver_out
 
-    def _plug_devs(self, action, devices_dict, monitor, bus=None):
+    def _plug_devs(self, action, devices_dict, monitor, bus=None, interval=0):
         """ Plug devices. """
         for img, devices in devices_dict.items():
             for device in devices:
@@ -392,11 +382,12 @@ class BlockDevicesPlug(object):
                         bus is not None and
                         self.vm.devices.is_pci_device(device['driver'])):
                     args += (bus,)
-                _QMP_OUTPUT[device.get_qid()] = getattr(
-                    self, '_%s_atomic' % action)(*args)
-                time.sleep(self._interval)
+                with _LOCK:
+                    _QMP_OUTPUT[device.get_qid()] = getattr(
+                        self, '_%s_atomic' % action)(*args)
+                time.sleep(interval)
 
-    def _hotplug_devs(self, images, monitor, bus=None):
+    def _hotplug_devs(self, images, monitor, bus=None, interval=0):
         """
         Hot plug the block devices which are defined by images.
         """
@@ -404,9 +395,9 @@ class BlockDevicesPlug(object):
             ' '.join(images), monitor.name))
         args = (images, {'aobject': 'pci.0' if bus is None else bus.aobject})
         self._create_devices(*args)
-        self._plug_devs(HOTPLUG, self._hotplugged_devs, monitor, bus)
+        self._plug_devs(HOTPLUG, self._hotplugged_devs, monitor, bus, interval)
 
-    def _unplug_devs(self, images, monitor):
+    def _unplug_devs(self, images, monitor, interval=0):
         """
         Unplug the block devices which are defined by images.
         """
@@ -439,15 +430,15 @@ class BlockDevicesPlug(object):
 
         logging.info("Start to unplug devices \"%s\" by monitor %s." %
                      (' '.join(images), monitor.name))
-        self._plug_devs(UNPLUG, self._unplugged_devs, monitor)
+        self._plug_devs(UNPLUG, self._unplugged_devs, monitor, interval=interval)
 
-    def _plug_devs_threads(self, action, images, bus, timeout):
+    def _plug_devs_threads(self, action, images, bus, timeout, interval=0):
         """ Threads that plug blocks devices. """
         self._orig_disks = self._list_all_disks()
         if images:
             self._imgs = images.split()
         th_mgr = _ThreadManager(self.vm)
-        th_mgr.run_threads(action, self._imgs, bus, timeout)
+        th_mgr.run_threads(action, self._imgs, bus, timeout, interval=interval)
         if th_mgr.exit_event.is_set():
             th_mgr.raise_threads()
         th_mgr.clean_threads()
@@ -468,21 +459,20 @@ class BlockDevicesPlug(object):
         :param timeout: Timeout for hot plugging.
         :type timeout: float
         :param interval: Interval time for hot plugging.
-        :type interval: float
+        :type interval: int
         """
         self._timeout = timeout
-        self._interval = interval
         if monitor is None:
             monitor = self.vm.monitor
         if images:
             self._imgs = [img for img in images.split()]
         if set(self._imgs) <= set(self.vm.params['cdroms'].split()):
             self._dev_type = CDROM
-        self._hotplug_devs(self._imgs, monitor, bus)
+        self._hotplug_devs(self._imgs, monitor, bus, interval)
         self._check_qmp_outputs(HOTPLUG)
 
     @_verify_plugged_num(action=UNPLUG)
-    def unplug_devs_serial(self, images=None, monitor=None, timeout=300):
+    def unplug_devs_serial(self, images=None, monitor=None, timeout=300, interval=0):
         """
         Unplug the block devices by serial.
 
@@ -492,6 +482,8 @@ class BlockDevicesPlug(object):
         :type monitor: qemu_monitor.Monitor
         :param timeout: Timeout for hot plugging.
         :type timeout: int
+        :param interval: Interval time for hot plugging.
+        :type interval: int
         """
         self._timeout = timeout
         if monitor is None:
@@ -500,12 +492,12 @@ class BlockDevicesPlug(object):
             self._imgs = [img for img in images.split()]
         if set(self._imgs) <= set(self.vm.params['cdroms'].split()):
             self._dev_type = CDROM
-        self._unplug_devs(self._imgs, monitor)
+        self._unplug_devs(self._imgs, monitor, interval)
         self._check_qmp_outputs(UNPLUG)
         self._wait_events_deleted(timeout)
 
     @_verify_plugged_num(action=UNPLUG)
-    def hotplug_devs_threaded(self, images=None, timeout=300, bus=None):
+    def hotplug_devs_threaded(self, images=None, timeout=300, bus=None, interval=0):
         """
         Hot plug the block devices by threaded.
 
@@ -515,22 +507,26 @@ class BlockDevicesPlug(object):
         :type bus: qdevice.QSparseBus
         :param timeout: Timeout for hot plugging.
         :type timeout: float
+        :param interval: Interval time for hot plugging.
+        :type interval: int
         """
         self._timeout = timeout
-        self._plug_devs_threads(HOTPLUG, images, bus, timeout)
+        self._plug_devs_threads(HOTPLUG, images, bus, timeout, interval)
         self._check_qmp_outputs(HOTPLUG)
 
     @_verify_plugged_num(action=UNPLUG)
-    def unplug_devs_threaded(self, images=None, timeout=300):
+    def unplug_devs_threaded(self, images=None, timeout=300, interval=0):
         """
         Unplug the block devices by threaded.
 
         :param images: Image or cdrom tags, e.g, "stg0" or "stg0 stg1 stg3".
         :type images: str
-        :param timeout: Timeout for hot plugging.
+        :param timeout: Timeout for unplugging.
         :type timeout: int
+        :param interval: Interval time for unplugging.
+        :type interval: int
         """
         self._timeout = timeout
-        self._plug_devs_threads(UNPLUG, images, None, timeout)
+        self._plug_devs_threads(UNPLUG, images, None, timeout, interval)
         self._check_qmp_outputs(UNPLUG)
         self._wait_events_deleted(timeout)

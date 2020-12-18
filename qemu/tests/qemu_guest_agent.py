@@ -149,6 +149,19 @@ class QemuGuestAgentTest(BaseVirtTest):
         s, o = session.cmd_status_output(cmd_check_status)
         return s == 0
 
+    def _get_main_qga_version(self, session, vm):
+        """
+        Get qemu-guest-agent version in guest
+        :param session: use for sending cmd
+        :param vm: guest object.
+        :return: main qga version
+        """
+        logging.info("Get guest agent's main version for linux guest.")
+        qga_ver = session.cmd_output(self.params["gagent_pkg_check_cmd"])
+        pattern = r"guest-agent-(\d+).\d+.\d+-\d+"
+        ver_main = int(re.findall(pattern, qga_ver)[0])
+        return ver_main
+
     @error_context.context_aware
     def _get_latest_pkg(self):
         """
@@ -1549,6 +1562,21 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
+        def _read_guest_file_with_count(count_num):
+            """
+            Read a guest file with count number.
+
+            :params: count_num: read file with count number on demand.
+            """
+            try:
+                self.gagent.guest_file_read(ret_handle, count=int(count_num))
+            except guest_agent.VAgentCmdError as detail:
+                info_insuffi = "Insufficient system resources exist to"
+                info_insuffi += " complete the requested service"
+                if info_insuffi not in detail.edata['desc']:
+                    test.fail("Return error but is not the desired information: "
+                              "('%s')" % str(detail))
+
         error_context.context("Change guest-file related cmd to white list"
                               " and get guest file name.")
         session, tmp_file = self._guest_file_prepare()
@@ -1577,11 +1605,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Read the big file with an invalid count number",
                               logging.info)
         if params.get("os_type") == "linux":
-            logging.info("Get guest agent's main version for linux guest.")
-            qga_ver = session.cmd_output(params["gagent_pkg_check_cmd"])
-            pattern = r"guest-agent-(\d+).\d+.\d+-\d+"
-            ver_main = int(re.findall(pattern, qga_ver)[0])
-        if params.get("os_type") == "linux" and ver_main <= 2:
+            main_qga_ver = self._get_main_qga_version(session, self.vm)
+        if params.get("os_type") == "linux" and main_qga_ver <= 2:
             # if resource is sufficient can read file,
             # else file handle will not be found.
             self.gagent.guest_file_read(ret_handle, count=10000000000)
@@ -1617,14 +1642,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         # if guest os resource is enough, will return no error.
         # else it will return error like "insufficient system resource"
         # which is expected
-        try:
-            self.gagent.guest_file_read(ret_handle, count=1000000000)
-        except guest_agent.VAgentCmdError as detail:
-            info_insuffi = "Insufficient system resources exist to"
-            info_insuffi += " complete the requested service"
-            if not re.search(info_insuffi, str(detail)):
-                test.fail("Return error but is not the desired information: "
-                          "('%s')" % str(detail))
+        count = 1000000000 if (params["os_type"] == 'linux' and
+                               main_qga_ver < 5) else 10000000
+        _read_guest_file_with_count(count)
         self.gagent.guest_file_close(ret_handle)
 
         error_context.context("Open a none existing file with read only mode.",

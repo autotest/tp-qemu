@@ -78,8 +78,10 @@ def run(test, params, env):
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         orig_img_name)
     if vm.check_capability(Flags.BLOCKDEV):
+        qdev = vm.devices.get_qdev_by_drive(device_name)
+        monitor.blockdev_open_tray(qdev, force=True)
         change_insert_cmd = ("blockdev-change-medium id=%s,filename=%s" %
-                             (vm.devices.get_qdev_by_drive(device_name), orig_img_name))
+                             (qdev, orig_img_name))
     monitor.send_args_cmd(change_insert_cmd)
     logging.info("Wait until device is ready")
     exists = utils_misc.wait_for(lambda: (orig_img_name in
@@ -88,9 +90,6 @@ def run(test, params, env):
     if not exists:
         msg = "Fail to insert device %s to guest" % orig_img_name
         test.fail(msg)
-
-    if check_block_locked(device_name):
-        test.fail("Unused device is locked.")
 
     if params.get("os_type") != "windows":
         error_context.context("mount cdrom to make status to locked",

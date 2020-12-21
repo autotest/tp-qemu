@@ -60,7 +60,7 @@ def run(test, params, env):
     # eject first time
     error_context.context("Eject original device.", logging.info)
     with eject_check:
-        vm.eject_cdrom(device_name)
+        vm.eject_cdrom(device_name, force=True)
     if check_block(orig_img_name):
         test.fail("Fail to eject cdrom %s. " % orig_img_name)
 

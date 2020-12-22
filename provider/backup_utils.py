@@ -1,9 +1,12 @@
+import json
 import math
 import random
 
 from avocado import fail_on
 from avocado.utils import process
 
+from virttest import data_dir
+from virttest import qemu_storage
 from virttest import utils_libguestfs
 from virttest import utils_numeric
 from virttest import utils_misc
@@ -409,3 +412,65 @@ def format_storage_volume(img, filesystem, partition="mbr"):
             partition="mbr")
     finally:
         process.system("setenforce %s" % selinux_mode, shell=True)
+
+
+def copyif(params, nbd_image, target_image, bitmap=None):
+    """
+    Python implementation of copyif3.sh
+    :params params: utils_params.Params object
+    :params nbd_image: nbd image tag
+    :params target_image: target image tag
+    :params bitmap: bitmap name
+    """
+    def _qemu_io_read(qemu_io, s, l, img):
+        cmd = '{io} -C -c "r {s} {l}" -f {fmt} {f}'.format(
+            io=qemu_io, s=s, l=l, fmt=img.image_format,
+            f=img.image_filename
+        )
+        process.system(cmd, ignore_status=False, shell=True)
+
+    qemu_io = utils_misc.get_qemu_io_binary(params)
+    qemu_img = utils_misc.get_qemu_img_binary(params)
+    img_obj = qemu_storage.QemuImg(params.object_params(target_image),
+                                   data_dir.get_data_dir(), target_image)
+    nbd_img_obj = qemu_storage.QemuImg(params.object_params(nbd_image),
+                                       None, nbd_image)
+    max_len = int(params.get('qemu_io_max_len', 2147483136))
+
+    if bitmap is None:
+        args = '-f %s %s' % (nbd_img_obj.image_format,
+                             nbd_img_obj.image_filename)
+        state = True
+    else:
+        opts = qemu_storage.filename_to_file_opts(
+            nbd_img_obj.image_filename)
+        opt = params.get('dirty_bitmap_opt', 'x-dirty-bitmap')
+        opts[opt] = 'qemu:dirty-bitmap:%s' % bitmap
+        args = "'json:%s'" % json.dumps(opts)
+        state = False
+
+    img_obj.base_image_filename = nbd_img_obj.image_filename
+    img_obj.base_format = nbd_img_obj.image_format
+    img_obj.base_tag = nbd_img_obj.tag
+    img_obj.rebase(img_obj.params)
+
+    map_cmd = '{qemu_img} map --output=json {args}'.format(
+        qemu_img=qemu_img, args=args)
+    result = process.run(map_cmd, ignore_status=False, shell=True)
+
+    for item in json.loads(result.stdout.decode().strip()):
+        if item['data'] is not state:
+            continue
+
+        # qemu-io can only handle length less than 2147483136,
+        # so here we need to split 'large length' into several parts
+        start, length = item['start'], item['length']
+        while length > max_len:
+            _qemu_io_read(qemu_io, start, max_len, img_obj)
+            start, length = start+max_len, length-max_len
+        else:
+            if length > 0:
+                _qemu_io_read(qemu_io, start, length, img_obj)
+
+    img_obj.base_tag = 'null'
+    img_obj.rebase(img_obj.params)

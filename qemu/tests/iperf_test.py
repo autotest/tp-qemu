@@ -23,6 +23,7 @@ def run(test, params, env):
     3) Select guest or host to start iperf server/client
     4) Execute iperf tests, analyze the result
     5) Finish test and cleanup host environment
+    6) Add rss test for virtio-net dirver
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -85,6 +86,18 @@ def run(test, params, env):
             status = process.system("pgrep -f %s" % name_pattern,
                                     ignore_status=True, verbose=False)
         return status == 0
+
+    def rss_test():
+        logging.info('Run the command "netkvm-wmi.cmd rss" to collect statistics')
+        rss_test_cmd = utils_misc.set_winutils_letter(
+                guest_session, params["rss_test_cmd"])
+        output = guest_session.cmd_output(rss_test_cmd)
+        rss_statistics = output.splitlines()[1].split()
+        rxerrors = int(rss_statistics[-4])
+        rxmissed = int(rss_statistics[-2])
+        if not (rxerrors == 0 and rxmissed == 0):
+            test.fail("Rss support for virtio-net driver is bad")
+        logging.info("Rss support for virtio-net driver is works well")
 
     os_type = params["os_type"]
     login_timeout = int(params.get("login_timeout", 360))
@@ -163,6 +176,10 @@ def run(test, params, env):
                             "Waiting for iperf test to finish.")
         bg_server.join(timeout=60)
         bg_client.join(timeout=60)
+
+        if params.get_boolean("rss_test"):
+            rss_test()
+
     finally:
         logging.info("Cleanup host environment...")
         if is_iperf_running(search_pattern["host"]):

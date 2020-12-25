@@ -332,10 +332,13 @@ def blockdev_batch_backup(vm, source_lst, target_lst,
             bitmap_data = {"node": source_lst[idx], "name": bitmap_lst[idx]}
             granularity = extra_options.get("granularity")
             persistent = extra_options.get("persistent")
+            disabled = extra_options.get("disabled")
             if granularity is not None:
                 bitmap_data["granularity"] = int(granularity)
             if persistent is not None:
                 bitmap_data["persistent"] = persistent
+            if disabled is not None:
+                bitmap_data["disabled"] = disabled
             actions.append({"type": bitmap_add_cmd, "data": bitmap_data})
 
         if disabled_bitmap_lst:

@@ -380,6 +380,14 @@ class QemuGuestAgentTest(BaseVirtTest):
                             "failed.")
 
     @error_context.context_aware
+    def log_persistence(self, params, session):
+        """
+        Create new log directory and make it as log persistence.
+        """
+        error_context.context("Make logs persistent.", logging.info)
+        session.cmd(params["cmd_prepared_and_restart_journald"])
+
+    @error_context.context_aware
     def setup(self, test, params, env):
         BaseVirtTest.setup(self, test, params, env)
         if self.start_vm == "yes":
@@ -512,6 +520,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 return True
         return False
 
+    @error_context.context_aware
     def gagent_check_powerdown(self, test, params, env):
         """
         Shutdown guest with guest agent command "guest-shutdown"
@@ -520,9 +529,35 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environmen.
         """
-        self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
-        if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
-            test.fail("Could not shutdown VM via guest agent'")
+        def _gagent_check_shutdown(self):
+            self.__gagent_check_shutdown(self.gagent.SHUTDOWN_MODE_POWERDOWN)
+            if not utils_misc.wait_for(self.vm.is_dead, self.vm.REBOOT_TIMEOUT):
+                test.fail("Could not shutdown VM via guest agent'")
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        if params.get("os_type") == "linux":
+            self.log_persistence(params, session)
+            _gagent_check_shutdown(self)
+
+            time.sleep(20)
+            env_process.preprocess_vm(test, params, env, params["main_vm"])
+            self.vm = env.get_vm(params["main_vm"])
+            session = self.vm.wait_for_login(timeout=int(params.get("login_timeout",
+                                             360)))
+
+            error_context.context("Check if guest-agent crash after reboot.",
+                                  logging.info)
+            output = session.cmd_output(params["cmd_query_log"], timeout=10)
+            try:
+                if "core-dump" in output:
+                    test.fail("Guest-agent aborts after guest-shutdown"
+                              " detail: '%s'" % output)
+            finally:
+                session.cmd('rm -rf %s' % params['journal_file'])
+        else:
+            _gagent_check_shutdown(self)
 
     @error_context.context_aware
     def gagent_check_reboot(self, test, params, env):

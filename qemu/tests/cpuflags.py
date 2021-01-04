@@ -13,6 +13,7 @@ import aexpect
 from avocado.utils import process
 
 from virttest import qemu_vm
+from virttest import qemu_migration
 from virttest import virt_vm
 from virttest import data_dir
 from virttest import utils_misc
@@ -838,7 +839,7 @@ def run(test, params, env):
 
             time.sleep(5)
 
-            self.vm.monitor.migrate_set_speed(mig_speed)
+            qemu_migration.set_speed(self.vm, mig_speed)
             self.clone = self.vm.migrate(
                 mig_timeout, mig_protocol, offline=False,
                 not_wait_for_migration=True)
@@ -848,7 +849,7 @@ def run(test, params, env):
             try:
                 self.vm.wait_for_migration(10)
             except virt_vm.VMMigrateTimeoutError:
-                self.vm.monitor.migrate_set_downtime(1)
+                qemu_migration.set_downtime(self.vm, 1)
                 self.vm.wait_for_migration(mig_timeout)
 
             self.clone.resume()

@@ -8,6 +8,7 @@ from virttest import error_context
 from virttest.qemu_monitor import QMPCmdError
 
 from provider import cpu_utils
+from provider import win_wora
 
 
 @error_context.context_aware
@@ -122,7 +123,10 @@ def run(test, params, env):
     error_desc = params["error_desc"]
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    vm.wait_for_login()
+    session = vm.wait_for_login()
+
+    if params.get_boolean("workaround_need"):
+        win_wora.modify_driver(params, session)
 
     error_context.context("Check the number of guest CPUs after startup",
                           logging.info)
@@ -139,3 +143,4 @@ def run(test, params, env):
                              "invalid_vcpu": hotplug_invalid_vcpu,
                              "out_of_range_vcpu": hotplug_outofrange_vcpu}
     invalid_hotplug_tests[params["execute_test"]]()
+    session.close()

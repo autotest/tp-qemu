@@ -6,6 +6,7 @@ from virttest import error_context
 from virttest import utils_package
 
 from provider import cpu_utils
+from provider import win_wora
 
 
 @error_context.context_aware
@@ -74,6 +75,9 @@ def run(test, params, env):
                           logging.info)
     vm.create(params=params)
     session = vm.wait_for_login(timeout=login_timeout)
+
+    if params.get_boolean("workaround_need"):
+        win_wora.modify_driver(params, session)
 
     error_context.context("Check the number of guest CPUs after startup",
                           logging.info)

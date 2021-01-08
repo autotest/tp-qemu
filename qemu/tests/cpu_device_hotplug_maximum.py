@@ -10,6 +10,7 @@ from virttest import utils_qemu
 from virttest.utils_version import VersionInterval
 
 from provider import cpu_utils
+from provider import win_wora
 
 
 @error_context.context_aware
@@ -73,6 +74,9 @@ def run(test, params, env):
     cpuinfo = vm.cpuinfo
     smp = cpuinfo.smp
     vcpus_count = vm.params.get_numeric("vcpus_count")
+
+    if params.get_boolean("workaround_need"):
+        win_wora.modify_driver(params, session)
 
     error_context.context("Check the number of guest CPUs after startup",
                           logging.info)

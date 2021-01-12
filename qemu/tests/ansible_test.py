@@ -3,9 +3,10 @@ import json
 import logging
 
 from avocado.utils import process
-from avocado.utils import software_manager
 
 from virttest import error_context
+
+from provider.ansible import PlaybookExecutor
 
 
 @error_context.context_aware
@@ -18,17 +19,14 @@ def run(test, params, env):
     4) Generate the ansible-playbook command
     5) Execute the playbook and verify the return status
 
-    :param test: QEMU test object
-    :param params: Dictionary with the test parameters
+    :param test: QEMU test object.
+    :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
 
-    sm = software_manager.SoftwareManager()
-    if not (sm.check_installed("ansible") or sm.install("ansible")):
-        test.cancel("ansible package install failed")
-
     guest_user = params["username"]
     guest_passwd = params["password"]
+    step_time = params.get_numeric("step_time", 60)
     ansible_callback_plugin = params.get("ansible_callback_plugin")
     ansible_addl_opts = params.get("ansible_addl_opts", "")
     ansible_ssh_extra_args = params["ansible_ssh_extra_args"]
@@ -41,8 +39,9 @@ def run(test, params, env):
     # Use this directory to copy some logs back from the guest
     test_harness_log_dir = test.logdir
 
+    vms = env.get_all_vms()
     guest_ip_list = []
-    for vm in env.get_all_vms():
+    for vm in vms:
         vm.verify_alive()
         vm.wait_for_login()
         guest_ip_list.append(vm.get_address())
@@ -58,27 +57,22 @@ def run(test, params, env):
                   "test_harness_log_dir": test_harness_log_dir}
     extra_vars.update(json.loads(ansible_extra_vars))
 
-    ansible_cmd_options = ["ansible-playbook",
-                           "-u {}".format(guest_user),
-                           "-i {},".format(",".join(guest_ip_list)),
-                           "-e '{}'".format(json.dumps(extra_vars)),
-                           ansible_addl_opts,
-                           toplevel_playbook]
-    ansible_cmd = r" ".join(ansible_cmd_options)
-
     error_context.context("Execute the ansible playbook.", logging.info)
-    env_vars = ({"ANSIBLE_STDOUT_CALLBACK": ansible_callback_plugin}
-                if ansible_callback_plugin else None)
-    logging.info("Command of ansible playbook: '%s'", ansible_cmd)
-    play_s, play_o = process.getstatusoutput(ansible_cmd,
-                                             timeout=playbook_timeout,
-                                             shell=False, env=env_vars)
-    ansible_log = "ansible_playbook.log"
-    with open(os.path.join(test_harness_log_dir, ansible_log), "w") as log_file:
-        log_file.write(play_o)
-        log_file.flush()
+    playbook_executor = PlaybookExecutor(
+        inventory="{},".format(",".join(guest_ip_list)),
+        site_yml=toplevel_playbook,
+        remote_user=guest_user,
+        extra_vars=json.dumps(extra_vars),
+        callback_plugin=ansible_callback_plugin,
+        addl_opts=ansible_addl_opts
+    )
 
-    if play_s != 0:
+    playbook_executor.wait_for_completed(playbook_timeout, step_time)
+
+    ansible_log = "ansible_playbook.log"
+    playbook_executor.store_playbook_log(test_harness_log_dir, ansible_log)
+    if playbook_executor.get_status() != 0:
         test.fail("Ansible playbook execution failed, please check the {} "
                   "for details.".format(ansible_log))
     logging.info("Ansible playbook execution passed.")
+    playbook_executor.close()

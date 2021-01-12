@@ -3,10 +3,13 @@ import json
 import logging
 
 from avocado.utils import process
+from avocado.utils.network.ports import find_free_port
 
 from virttest import error_context
+from virttest.virt_vm import VMMigrateFailedError
 
 from provider import ansible
+from provider import message_queuing
 
 
 @error_context.context_aware
@@ -39,6 +42,10 @@ def run(test, params, env):
     # Use this directory to copy some logs back from the guest
     test_harness_log_dir = test.logdir
 
+    # Responsive migration specific parameters
+    mq_listen_port = params.get_numeric("mq_listen_port", find_free_port())
+    wait_response_timeout = params.get_numeric("wait_response_timeout", 600)
+
     vms = env.get_all_vms()
     guest_ip_list = []
     for vm in vms:
@@ -54,6 +61,7 @@ def run(test, params, env):
                                logging.info)
     extra_vars = {"ansible_ssh_extra_args": ansible_ssh_extra_args,
                   "ansible_ssh_pass": guest_passwd,
+                  "mq_port": mq_listen_port,
                   "test_harness_log_dir": test_harness_log_dir}
     extra_vars.update(json.loads(ansible_extra_vars))
 
@@ -67,16 +75,43 @@ def run(test, params, env):
         addl_opts=ansible_addl_opts
     )
 
-    ansible_log = "ansible_playbook.log"
+    mq_publisher = message_queuing.MQPublisher(mq_listen_port)
     try:
-        playbook_executor.wait_for_completed(playbook_timeout, step_time)
-    except ansible.ExecutorTimeoutError as err:
-        test.error(str(err))
+        error_context.base_context('Confirm remote subscriber has accessed to '
+                                   'activate migrating guests.', logging.info)
+        try:
+            mq_publisher.confirm_access(wait_response_timeout)
+        except message_queuing.MessageNotFoundError as err:
+            logging.error(err)
+            test.fail("Failed to capture the 'ACCESS' message.")
+        logging.info("Already captured the 'ACCESS' message.")
+
+        error_context.context("Migrate guests after subscriber accessed.",
+                              logging.info)
+        for vm in vms:
+            vm.migrate()
+    except VMMigrateFailedError:
+        error_context.context("Send the 'ALERT' message to notify the remote "
+                              "subscriber to stop the test.", logging.info)
+        mq_publisher.alert()
+        raise
     else:
-        if playbook_executor.get_status() != 0:
-            test.fail("Ansible playbook execution failed, please check the {} "
-                      "for details.".format(ansible_log))
-        logging.info("Ansible playbook execution passed.")
+        error_context.context("Send the 'APPROVE' message to notify the remote "
+                              "subscriber to continue the test.", logging.info)
+        mq_publisher.approve()
     finally:
-        playbook_executor.store_playbook_log(test_harness_log_dir, ansible_log)
-        playbook_executor.close()
+        ansible_log = "ansible_playbook.log"
+        try:
+            playbook_executor.wait_for_completed(playbook_timeout, step_time)
+        except ansible.ExecutorTimeoutError as err:
+            test.error(str(err))
+        else:
+            if playbook_executor.get_status() != 0:
+                test.fail("Ansible playbook execution failed, please check the "
+                          "{} for details.".format(ansible_log))
+            logging.info("Ansible playbook execution passed.")
+        finally:
+            playbook_executor.store_playbook_log(test_harness_log_dir,
+                                                 ansible_log)
+            playbook_executor.close()
+            mq_publisher.close()

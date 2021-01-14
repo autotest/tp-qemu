@@ -32,7 +32,6 @@ def run(test, params, env):
     reboot_timeout = params.get_numeric("reboot_timeout")
     offline_vcpu_after_hotplug = params.get_boolean("offline_vcpu_after_hotplug")
     mismatch_text = "Actual number of guest CPUs is not equal to the expected"
-    not_equal_text = "CPU quantity mismatched! Guest got %s but expected is %s"
     # Many vCPUs will be plugged, it takes some time to bring them online.
     verify_wait_timeout = params.get_numeric("verify_wait_timeout", 300)
     qemu_binary = utils_misc.get_qemu_binary(params)
@@ -75,16 +74,21 @@ def run(test, params, env):
     smp = cpuinfo.smp
     vcpus_count = vm.params.get_numeric("vcpus_count")
 
+    error_context.context("Check the number of guest CPUs after startup",
+                          logging.info)
+    if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
+        test.error("The number of guest CPUs is not equal to the qemu command "
+                   "line configuration")
+
     error_context.context("Hotplug all vCPU devices", logging.info)
     for vcpu_device in vcpu_devices:
         vm.hotplug_vcpu_device(vcpu_device)
 
     error_context.context("Check Number of vCPU in guest", logging.info)
-    if not utils_misc.wait_for(lambda: vm.get_cpu_count() == supported_maxcpus,
-                               verify_wait_timeout, first=5, step=10):
-        logging.error(not_equal_text, vm.get_cpu_count(), supported_maxcpus)
+    if not utils_misc.wait_for(
+            lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm),
+            verify_wait_timeout, first=5, step=10):
         test.fail(mismatch_text)
-    logging.info("CPU quantity is as expected: %s", supported_maxcpus)
 
     error_context.context("Check CPU topology of guest", logging.info)
     if not cpu_utils.check_guest_cpu_topology(session, os_type, cpuinfo):
@@ -104,9 +108,8 @@ def run(test, params, env):
                 test.error("Failed to offline all hotplugged vCPU.")
         for vcpu_device in reversed(vcpu_devices):
             vm.hotunplug_vcpu_device(vcpu_device, 10 * vcpus_count)
-        if not utils_misc.wait_for(lambda: vm.get_cpu_count() == smp,
-                                   verify_wait_timeout, first=5, step=10):
-            logging.error(not_equal_text, vm.get_cpu_count(), smp)
+        if not utils_misc.wait_for(
+                lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm),
+                verify_wait_timeout, first=5, step=10):
             test.fail(mismatch_text)
-        logging.info("CPU quantity is as expected after hotunplug: %s", smp)
         session.close()

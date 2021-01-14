@@ -3,8 +3,11 @@ import json
 import logging
 
 from virttest import arch
+from virttest import utils_misc
 from virttest import error_context
 from virttest.qemu_monitor import QMPCmdError
+
+from provider import cpu_utils
 
 
 @error_context.context_aware
@@ -51,8 +54,9 @@ def run(test, params, env):
         error_context.context("hotplug vcpu device: %s" % vcpu_device_id,
                               logging.info)
         vm.hotplug_vcpu_device(vcpu_device_id)
-        if vm.get_cpu_count() != maxcpus:
-            test.fail("Actual number of guest CPUs is not equal to expected.")
+        if not utils_misc.wait_for(
+                lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 10):
+            test.fail("Actual number of guest CPUs is not equal to expected")
 
         # Duplicate vCPU
         duplicate_vcpu_params = vm.devices.get_by_qid(
@@ -119,6 +123,13 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login()
+
+    error_context.context("Check the number of guest CPUs after startup",
+                          logging.info)
+    if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
+        test.error("The number of guest CPUs is not equal to the qemu command "
+                   "line configuration")
+
     vcpu_bus = vm.devices.get_buses({'aobject': 'vcpu'})[0]
     vcpu_props = vcpu_bus.addr_items
     maxcpus = vm.cpuinfo.maxcpus

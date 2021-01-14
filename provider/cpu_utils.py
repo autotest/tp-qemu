@@ -151,3 +151,17 @@ def check_if_vm_vcpu_match(vcpu_desire, vm):
         return False
     logging.info("CPU quantity matched: %s" % vcpu_actual)
     return True
+
+
+def check_if_vm_vcpus_match_qemu(vm):
+    vcpus_count = vm.params.get_numeric("vcpus_count", 1)
+    vcpu_devices = vm.params.objects("vcpu_devices")
+    enabled_vcpu_devices = []
+
+    for vcpu_device in vcpu_devices:
+        vcpu_params = vm.params.object_params(vcpu_device)
+        if vcpu_params.get_boolean("vcpu_enable"):
+            enabled_vcpu_devices.append(vcpu_device)
+    enabled_count = vm.cpuinfo.smp + (len(enabled_vcpu_devices) * vcpus_count)
+
+    return check_if_vm_vcpu_match(enabled_count, vm)

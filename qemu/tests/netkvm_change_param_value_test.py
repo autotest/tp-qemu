@@ -50,6 +50,17 @@ def run(test, params, env):
         if package_lost != 0:
             test.fail("Ping test got %s package lost" % package_lost)
 
+    def _get_driver_version(session):
+        """
+        Get current installed virtio driver version
+        return: a int value of version, e.g. 191
+        """
+        query_version_cmd = params["query_version_cmd"]
+        output = session.cmd_output(query_version_cmd)
+        version_str = output.strip().split('=')[1]
+        version = version_str.split('.')[-1][0:3]
+        return int(version)
+
     timeout = params.get("timeout", 360)
     param_names = params.get("param_names").split()
     param_values_default = params.get("param_values")
@@ -64,9 +75,14 @@ def run(test, params, env):
                                                             test,
                                                             driver_name,
                                                             timeout)
+    driver_version = _get_driver_version(session)
     session.close()
 
     virtio_win.prepare_netkvmco(vm)
+    if driver_version <= 189:
+        param_names.remove("*JumboPacket")
+    else:
+        param_names.remove("MTU")
     for name in param_names:
         attr_name = "param_values_%s" % name
         param_values = params.get(attr_name, param_values_default)

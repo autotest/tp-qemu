@@ -116,6 +116,17 @@ def run(test, params, env):
         param_value = param_values[index]
         utils_net.set_netkvm_param_value(vm, param_name, param_value)
 
+    def _get_driver_version(session):
+        """
+        Get current installed virtio driver version
+        return: a int value of version, e.g. 191
+        """
+        query_version_cmd = params["query_version_cmd"]
+        output = session.cmd_output(query_version_cmd)
+        version_str = output.strip().split('=')[1]
+        version = version_str.split('.')[-1][0:3]
+        return int(version)
+
     timeout = params.get("timeout", 360)
     driver_name = params.get("driver_name", "netkvm")
     wireshark_name = params.get("wireshark_name")
@@ -140,6 +151,11 @@ def run(test, params, env):
                                                             test,
                                                             driver_name,
                                                             timeout)
+
+    if _get_driver_version(session) > 189:
+        param_names.append("*JumboPacket")
+    else:
+        param_names.append("MTU")
 
     error_context.context("Install winpcap", logging.info)
     install_winpcap_cmd = params.get("install_winpcap_cmd")

@@ -22,6 +22,8 @@ from virttest import env_process
 from virttest import utils_net
 from virttest import data_dir
 from virttest import storage
+from virttest import qemu_migration
+
 from avocado import TestCancel
 
 
@@ -2918,7 +2920,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         error_context.context("Migrate guest while guest agent service is"
                               " running.", logging.info)
-        self.vm.monitor.migrate_set_speed(params.get("mig_speed", "1G"))
+        qemu_migration.set_speed(self.vm, params.get("mig_speed", "1G"))
         self.vm.migrate()
         error_context.context("Recreate a QemuAgent object after vm"
                               " migration.", logging.info)

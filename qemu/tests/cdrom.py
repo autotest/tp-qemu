@@ -25,6 +25,7 @@ from virttest import gluster
 from virttest import env_process
 from virttest import data_dir
 from virttest import utils_test
+from virttest import qemu_migration
 from virttest.utils_test.qemu import migration
 from virttest.qemu_capabilities import Flags
 
@@ -956,7 +957,7 @@ def run(test, params, env):
 
             if self.is_src:  # Starts in source
                 vm = env.get_vm(self.vms[0])
-                vm.monitor.migrate_set_speed("1G")
+                qemu_migration.set_speed(vm, "1G")
                 session = vm.wait_for_login(timeout=login_timeout)
                 cdrom_dev_list = list_guest_cdroms(session)
                 logging.debug("cdrom_dev_list: %s", cdrom_dev_list)

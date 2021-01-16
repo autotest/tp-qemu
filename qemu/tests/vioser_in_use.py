@@ -8,6 +8,7 @@ from avocado.utils import process
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
+from virttest import qemu_migration
 
 from qemu.tests import virtio_serial_file_transfer
 from qemu.tests.timedrift_no_net import subw_guest_pause_resume  # pylint: disable=W0611
@@ -42,7 +43,7 @@ def live_migration_guest(test, params, vm, session):
     Run migrate_set_speed, then migrate guest.
     """
 
-    vm.monitor.migrate_set_speed(params.get("mig_speed", "1G"))
+    qemu_migration.set_speed(vm, params.get("mig_speed", "1G"))
     vm.migrate()
 
 

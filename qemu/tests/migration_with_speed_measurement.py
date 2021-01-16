@@ -5,6 +5,7 @@ import logging
 import time
 
 from virttest import utils_misc
+from virttest import qemu_migration
 
 from provider import cpuflags
 
@@ -126,7 +127,7 @@ def run(test, params, env):
         cpuflags.install_cpuflags_util_on_vm(test, vm, install_path,
                                              extra_flags="-msse3 -msse2")
 
-        vm.monitor.migrate_set_speed(mig_speed)
+        qemu_migration.set_speed(vm, mig_speed)
 
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
                (os.path.join(install_path, "cpu_flags", "src"),

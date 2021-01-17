@@ -43,7 +43,7 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
 
     @error_context.context_aware
     def _action_after_fsfreeze(self, *args):
-        if self.bg.isAlive():
+        if self.bg.is_alive():
             image_tag = self.params.get("image_name", "image1")
             image_params = self.params.object_params(image_tag)
             snapshot_test = LiveSnapshot(self.test, self.params,

@@ -47,7 +47,7 @@ def run(test, params, env):
         def run_and_migrate(bg):
             bg.start()
             try:
-                while bg.isAlive():
+                while bg.is_alive():
                     logging.info("File transfer not ended, starting a round of "
                                  "migration...")
                     if migrate_between_vhost_novhost == "yes":

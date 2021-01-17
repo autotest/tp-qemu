@@ -82,7 +82,7 @@ def run(test, params, env):
             vm.copy_files_to, (host_path, guest_path))
         transfer_thread.start()
         try:
-            while transfer_thread.isAlive():
+            while transfer_thread.is_alive():
                 for ifname in ifnames:
                     session_serial.cmd(link_set_cmd % (ifname, "down"))
                     time.sleep(random.randint(1, 30))
@@ -103,7 +103,7 @@ def run(test, params, env):
         try:
             nic_num = len(ifnames)
             up_index = 0
-            while transfer_thread.isAlive():
+            while transfer_thread.is_alive():
                 nic_indexes = list(range(nic_num))
                 up_index = up_index % nic_num
                 session_serial.cmd(link_set_cmd % (ifnames[up_index], "up"))

@@ -49,7 +49,7 @@ def run(test, params, env):
             vm.reboot, kwargs={'session': session, 'timeout': login_timeout})
         bg.start()
         try:
-            while bg.isAlive():
+            while bg.is_alive():
                 for func in pre_migrate:
                     func(vm, params, test)
                 vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,

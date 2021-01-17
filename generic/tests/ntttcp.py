@@ -178,7 +178,7 @@ def run(test, params, env):
     try:
         bg = utils_misc.InterruptedThread(receiver, ())
         bg.start()
-        if bg.isAlive():
+        if bg.is_alive():
             sender()
             bg.join(suppress_exception=True)
         else:

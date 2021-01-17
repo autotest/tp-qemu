@@ -318,7 +318,7 @@ class BlockCopy(object):
                 fun = getattr(self, test)
                 bg = utils_misc.InterruptedThread(fun)
                 bg.start()
-                if bg.isAlive():
+                if bg.is_alive():
                     self.processes.append(bg)
 
     def job_finished(self):

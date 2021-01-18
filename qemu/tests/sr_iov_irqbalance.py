@@ -302,7 +302,7 @@ def run(test, params, env):
                         msg += "Just now: %s" % post_irq_nums_dict
                         test.fail(msg)
     finally:
-        if bg_stress.isAlive():
+        if bg_stress.is_alive():
             bg_stress.join(suppress_exception=True)
         else:
             logging.warn("Background stress test already finished")

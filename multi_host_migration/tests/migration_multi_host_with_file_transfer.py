@@ -160,7 +160,7 @@ def run(test, params, env):
         def _run_and_migrate(self, bg, end_event, sync, migrate_count):
             bg.start()
             try:
-                while bg.isAlive():
+                while bg.is_alive():
                     logging.info("File transfer not ended, starting"
                                  " a round of migration...")
                     sync.sync(True, timeout=d_transfer_timeout)

@@ -29,7 +29,7 @@ class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
                 fun = getattr(self, test)
                 bg = utils_misc.InterruptedThread(fun)
                 bg.start()
-                if bg.isAlive():
+                if bg.is_alive():
                     self.create_snapshot()
                     bg.join()
 

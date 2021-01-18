@@ -39,7 +39,7 @@ def run(test, params, env):
         Check whether all threads have finished
         """
         for thread in threads:
-            if thread.isAlive():
+            if thread.is_alive():
                 return False
             else:
                 continue
@@ -50,7 +50,7 @@ def run(test, params, env):
         Check whether all threads is alive
         """
         for thread in threads:
-            if not thread.isAlive():
+            if not thread.is_alive():
                 return False
             else:
                 continue

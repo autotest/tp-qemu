@@ -576,7 +576,7 @@ def run(test, params, env):
                     err += "main(vmdied), "
                 _transfered = []
                 for i in range(no_threads):
-                    if not threads[i].isAlive():
+                    if not threads[i].is_alive():
                         err += "main(th%s died), " % threads[i]
                     _transfered.append(threads[i].idx)
                 if (_transfered == transferred and
@@ -597,7 +597,7 @@ def run(test, params, env):
             workaround_unfinished_threads = False
             logging.debug('Joining %s', threads[0])
             threads[0].join(5)
-            if threads[0].isAlive():
+            if threads[0].is_alive():
                 logging.error('Send thread stuck, destroing the VM and '
                               'stopping loopback test to prevent autotest '
                               'freeze.')
@@ -609,7 +609,7 @@ def run(test, params, env):
             for thread in threads[1:]:
                 logging.debug('Joining %s', thread)
                 thread.join(5)
-                if thread.isAlive():
+                if thread.is_alive():
                     workaround_unfinished_threads = True
                     logging.debug("Unable to destroy the thread %s", thread)
                 tmp += "%d, " % thread.idx
@@ -625,7 +625,7 @@ def run(test, params, env):
             guest_worker.safe_exit_loopback_threads([send_pt], recv_pts)
 
             for thread in threads:
-                if thread.isAlive():
+                if thread.is_alive():
                     vm.destroy()
                     del threads[:]
                     test.error("Not all threads finished.")
@@ -967,9 +967,9 @@ def run(test, params, env):
                      (4 + no_repeats * (intr_time + test_time)))
         # Lets transfer some data before the interruption
         time.sleep(2)
-        if not threads[0].isAlive():
+        if not threads[0].is_alive():
             test.fail("Sender thread died before interruption.")
-        if not threads[0].isAlive():
+        if not threads[0].is_alive():
             test.fail("Receiver thread died before interruption.")
 
         # 0s interruption without any measurements
@@ -991,14 +991,14 @@ def run(test, params, env):
                 for _ in range(10):
                     time.sleep(test_time)
                     logging.debug('Transfered data2: %s', threads[1].idx)
-                    if count == threads[1].idx and threads[1].isAlive():
+                    if count == threads[1].idx and threads[1].is_alive():
                         logging.warn('No data received after %ds, extending '
                                      'test_time', test_time)
                     else:
                         break
                 threads[1].reload_loss_idx()
-                if count == threads[1].idx or not threads[1].isAlive():
-                    if not threads[1].isAlive():
+                if count == threads[1].idx or not threads[1].is_alive():
+                    if not threads[1].is_alive():
                         logging.error('RecvCheck thread stopped unexpectedly.')
                     if count == threads[1].idx:
                         logging.error(
@@ -1030,7 +1030,7 @@ def run(test, params, env):
         funcatexit.unregister(env, params.get('type'), __set_exit_event)
         workaround_unfinished_threads = False
         threads[0].join(5)
-        if threads[0].isAlive():
+        if threads[0].is_alive():
             workaround_unfinished_threads = True
             logging.error('Send thread stuck, destroing the VM and '
                           'stopping loopback test to prevent autotest freeze.')
@@ -1038,7 +1038,7 @@ def run(test, params, env):
         for thread in threads[1:]:
             logging.debug('Joining %s', thread)
             thread.join(5)
-            if thread.isAlive():
+            if thread.is_alive():
                 workaround_unfinished_threads = True
                 logging.debug("Unable to destroy the thread %s", thread)
         if not err:     # Show only on success
@@ -1060,7 +1060,7 @@ def run(test, params, env):
         guest_worker.safe_exit_loopback_threads([send_pt], [recv_pt])
 
         for thread in threads:
-            if thread.isAlive():
+            if thread.is_alive():
                 vm.destroy()
                 del threads[:]
                 test.error("Not all threads finished.")
@@ -1365,7 +1365,7 @@ def run(test, params, env):
                               tmp[:-2])
                 i += 1
                 time.sleep(2)
-            if not threads[0].isAlive():
+            if not threads[0].is_alive():
                 if EXIT_EVENT.isSet():
                     test.fail("Exit event emitted, check the log "
                               "for send/recv thread failure.")
@@ -1374,7 +1374,7 @@ def run(test, params, env):
                     test.fail("Send thread died unexpectedly in "
                               "migration %d" % (j + 1))
             for i in range(0, len(ports[1:])):
-                if not threads[i + 1].isAlive():
+                if not threads[i + 1].is_alive():
                     EXIT_EVENT.set()
                     test.fail("Recv thread %d died unexpectedly in "
                               "migration %d" % (i, (j + 1)))
@@ -1397,7 +1397,7 @@ def run(test, params, env):
         # Send thread might fail to exit when the guest stucks
         workaround_unfinished_threads = False
         threads[0].join(5)
-        if threads[0].isAlive():
+        if threads[0].is_alive():
             workaround_unfinished_threads = True
             logging.error('Send thread stuck, destroing the VM and '
                           'stopping loopback test to prevent autotest freeze.')
@@ -1407,7 +1407,7 @@ def run(test, params, env):
 
         for thread in threads[1:]:
             thread.join(5)
-            if thread.isAlive():
+            if thread.is_alive():
                 workaround_unfinished_threads = True
                 logging.debug("Unable to destroy the thread %s", thread)
             tmp += "%d, " % thread.idx
@@ -1425,7 +1425,7 @@ def run(test, params, env):
         guest_worker.safe_exit_loopback_threads([ports[0]], ports[1:])
 
         for thread in threads:
-            if thread.isAlive():
+            if thread.is_alive():
                 vm.destroy()
                 del threads[:]
                 test.error("Not all threads finished.")

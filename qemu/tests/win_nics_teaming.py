@@ -66,7 +66,7 @@ def run(test, params, env):
             vm.copy_files_to, (host_path, guest_path))
         transfer_thread.start()
         try:
-            while transfer_thread.isAlive():
+            while transfer_thread.is_alive():
                 for ifname in ifnames:
                     session_serial.cmd(netsh_set_cmd % (ifname, "disable"))
                     time.sleep(random.randint(1, 30))
@@ -87,7 +87,7 @@ def run(test, params, env):
         try:
             nic_num = len(ifnames)
             index = 0
-            while transfer_thread.isAlive():
+            while transfer_thread.is_alive():
                 index = index % nic_num
                 for i in range(nic_num):
                     session_serial.cmd(netsh_set_cmd % (ifnames[i], "enable"))

@@ -1355,6 +1355,147 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               "between guest and qga." % diskname)
 
     @error_context.context_aware
+    def gagent_check_ssh_public_key_injection(self, test, params, env):
+        """
+        Execute commands related inject ssh_public_keys to guest agent,
+        and all of these following commands need to be checked via another
+        family command "guest-ssh-get-authorized-keys".
+        Steps:
+        1) Check basic function whether can work well.
+        2) check the result of adding new ssh keys that
+         one of them was existed.
+        3) remove ssh keys
+        4) reset ssh keys.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+
+        def ssh_key_test(operation, *keys, **kwargs):
+            """
+            Do ssh_key generation and ssh_login test to confirm
+            whether the ssh_key api work well or not.
+
+            :param operation: the action for executing ssh_key
+            :param keys: value of public keys
+            :param kwargs: optional keyword arguments
+            """
+
+            guest_user = params['guest_user']
+            op_func = getattr(self.gagent, 'ssh_%s_authorized_keys' %
+                              operation)
+            op_func(guest_user, *keys, **kwargs)
+            keys_ga = self.gagent.ssh_get_authorized_keys(guest_user)
+            session.cmd(params["add_line_at_end"])
+            keys_guest = session.cmd_output(cmd_guest_keys).strip()
+            _value_compared_ga_guest(keys_ga, keys_guest, operation)
+            return keys_ga, keys_guest
+
+        def _prepared_n_restore_env(prepare=True):
+            """
+            Preparing the test env.
+
+            :param prepare: bool value to determine to prepare.
+            """
+
+            if prepare:
+                session.cmd(params["cmd_add_user_set_passwd"])
+                session.cmd(params["set_setenforce"] % 0)
+            else:
+                session.cmd(params["cmd_del_key_file"])
+                session.cmd(params["cmd_remove_user"])
+
+        def _generate_host_keys():
+            """
+            Generate host ssh public key.
+            """
+
+            process.system(params["cmd_clean_keys"], shell=True)
+            status = process.system(params["ssh_keygen_cmd"],
+                                    shell=True, timeout=3)
+            if status:
+                test.error("Can not generate ssh key with no "
+                           "interaction, please have a check.")
+            cmd_get_hostkey = params["cmd_get_hostkey"]
+            host_key = process.getoutput(cmd_get_hostkey,
+                                         timeout=3)
+            return host_key
+
+        def _login_guest_test(guest_ip):
+            """
+            Login guest to test whether basic function works well.
+
+            :param guest_ip: guest ip address.
+            """
+
+            cmd_login_guest = params["test_login_guest"] % guest_ip
+            login_user = process.system_output(cmd_login_guest,
+                                               shell=True, timeout=5)
+            login_user = login_user.strip().decode(encoding="utf-8",
+                                                   errors="strict")
+            if login_user != params["guest_user"]:
+                test.error("Can not login guest without interaction, "
+                           "basic function test is fail.")
+
+        def _value_compared_ga_guest(return_value_ga,
+                                     return_value_guest, status):
+            """
+            Compare the return value from guest and ga.
+
+            :param return_value_ga: return value from ga
+            :param return_value_guest: return value from guest
+            :param status: operation for ssh_key
+            """
+
+            keys_ga_list = return_value_ga["keys"]
+            keys_guest = return_value_guest.replace("\n", ",")
+            for keys_ga in keys_ga_list:
+                if keys_ga not in keys_guest:
+                    test.fail("Key %s is not same with guest, "
+                              "%s ssh keys failed." % keys_ga, status)
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+        _prepared_n_restore_env()
+        cmd_guest_keys = params["cmd_get_guestkey"]
+        mac_addr = self.vm.get_mac_address()
+        os_type = self.params["os_type"]
+        guest_ip_ipv4 = utils_net.get_guest_ip_addr(session, mac_addr,
+                                                    os_type)
+
+        error_context.context("Check the basic function ",
+                              logging.info)
+        host_key1 = _generate_host_keys()
+        ssh_key_test("add", host_key1, reset=False)
+        _login_guest_test(guest_ip_ipv4)
+
+        error_context.context("Check whether can add existed key.",
+                              logging.info)
+        host_key2 = _generate_host_keys()
+        ssh_key_test("add", host_key1, host_key2, reset=False)
+        _login_guest_test(guest_ip_ipv4)
+
+        error_context.context("Check whether can remove keys",
+                              logging.info)
+        host_key3 = "ssh-rsa ANotExistKey"
+        keys_qga, keys_guest = ssh_key_test("remove", host_key1,
+                                            host_key3)
+        for key in [host_key1, host_key3]:
+            if key in keys_guest.replace("\n", ","):
+                test.fail("Key %s is still in guest,"
+                          "Can not remove key in guest." % key)
+        _login_guest_test(guest_ip_ipv4)
+
+        error_context.context("Check whether can reset keys",
+                              logging.info)
+        host_key4 = _generate_host_keys()
+        ssh_key_test("add", host_key4, reset=True)
+        _login_guest_test(guest_ip_ipv4)
+
+        _prepared_n_restore_env(False)
+
+    @error_context.context_aware
     def gagent_check_get_interfaces(self, test, params, env):
         """
         Execute "guest-network-get-interfaces" command to guest agent

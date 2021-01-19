@@ -4,6 +4,7 @@ import random
 import logging
 
 from provider import cpu_utils
+from provider import win_wora
 
 from virttest import arch
 from virttest import error_context
@@ -49,6 +50,9 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
+
+    if params.get_boolean("workaround_need"):
+        win_wora.modify_driver(params, session)
 
     error_context.context("Check the number of guest CPUs after startup",
                           logging.info)

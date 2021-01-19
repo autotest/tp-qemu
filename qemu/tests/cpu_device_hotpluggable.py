@@ -7,6 +7,7 @@ from virttest import utils_misc
 from virttest.virt_vm import VMDeviceCheckError
 
 from provider import cpu_utils
+from provider import win_wora
 
 
 @error_context.context_aware
@@ -134,10 +135,14 @@ def run(test, params, env):
     else:
         pluggable_vcpu_dev = vcpu_devices[::-1]
 
+    if params.get_boolean("workaround_need"):
+        win_wora.modify_driver(params, session)
+
     if params.get("pause_vm_before_hotplug", "no") == "yes":
         error_context.context("Pause guest before %s" % hotpluggable_test,
                               logging.info)
         vm.pause()
+
     error_context.context("%s all vcpu devices" % hotpluggable_test,
                           logging.info)
     for vcpu_dev in pluggable_vcpu_dev:

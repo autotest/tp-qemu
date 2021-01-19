@@ -16,9 +16,35 @@ Available methods:
 - hotplug_image: Hotplug local image to be exported
 - get_export_name: Get export name for internal nbd export
 - start_nbd_server: Start internal nbd server
-- add_nbd_image: Add image to internal nbd server
-- remove_nbd_image: Remove image from internal nbd server
+- add_nbd_image: Add image export to internal nbd server
+- remove_nbd_image: Remove image export from internal nbd server
 - stop_nbd_server: Stop internal nbd server
+- wait_till_export_removed: Wait till BLOCK_EXPORT_DELETED is received,
+                            this event will be emitted when a block export
+                            is removed and its id can be reused.
+- query_nbd_export: Get the nbd export information, please refer to
+                    BlockExportInfo for details (since 5.2)
+
+Use new block-export-add/block-export-del qmp commands to
+create/delete block exports (since 5.2):
+- The following params may be defined for block export
+  block_export_uid: The uniqu block export id
+  block_export_iothread: The name of the iothread object
+  block_export_writable: 'yes' or 'no', 'yes' if clients should be able
+                         to write to the export
+  block_export_writethrough: 'yes' or 'no', 'yes' if caches flushed after
+                             every write to the export
+  block_export_fixed_iothread: 'yes' or 'no', 'yes' if the block node is
+                               prevented from being moved to another thread
+                               while the export is active
+  block_export_remove_mode: 'safe' or 'hard'
+  block_export_del_timeout: timeout when waiting for BLOCK_EXPORT_DELETED
+- The following params may be defined for nbd export
+  nbd_export_name: The export name
+  nbd_export_description: Free-form description of the export(up to 4096b)
+  nbd_export_bitmaps: bitmap names seperated by space, e.g. 'b1 b2 b3'
+  nbd_allocation_exported: 'yes' or 'no', 'yes' if the allocation depth map
+                           will be exported
 """
 
 import os
@@ -33,6 +59,10 @@ from virttest import data_dir
 from virttest import qemu_storage
 from virttest import utils_misc
 from virttest import qemu_devices
+
+from virttest.qemu_monitor import MonitorNotSupportedCmdError
+
+from provider.job_utils import get_event_by_condition
 
 
 class NBDExportImage(object):
@@ -120,6 +150,7 @@ class InternalNBDExportImage(NBDExportImage):
         self._node_name = None
         self._image_devices = None
         self._vm = vm
+        self._export_uid = None
 
     def get_export_name(self):
         """export name is the node name if nbd_export_name is not set"""
@@ -174,6 +205,61 @@ class InternalNBDExportImage(NBDExportImage):
         logging.info("Start internal nbd server")
         return self._vm.monitor.nbd_server_start(server, self._tls_creds_id)
 
+    def _block_export_add(self):
+        # block export arguments
+        self._export_uid = self._image_params.get(
+            'block_export_uid', 'block_export_%s' % self._node_name)
+        iothread = self._image_params.get('block_export_iothread')
+        writethrough = self._image_params['block_export_writethrough'] == 'yes' \
+            if self._image_params.get('block_export_writethrough') else None
+        fixed = self._image_params['block_export_fixed_iothread'] == 'yes' \
+            if self._image_params.get('block_export_fixed_iothread') else None
+
+        # to be compatible with the original test cases using nbd-server-add
+        export_writable = self._image_params.get(
+            'block_export_writable',
+            self._image_params.get('nbd_export_writable')
+        )
+        writable = export_writable == 'yes' if export_writable else None
+
+        # nbd specified arguments
+        kw = {
+            'name': self._image_params.get('nbd_export_name'),
+            'description': self._image_params.get('nbd_export_description')
+        }
+        if self._image_params.get('nbd_export_bitmaps') is not None:
+            kw['bitmaps'] = self._image_params.objects('nbd_export_bitmaps')
+        if self._image_params.get('nbd_allocation_exported') is not None:
+            kw['allocation-depth'] = self._image_params['nbd_allocation_exported'] == 'yes'
+
+        return self._vm.monitor.block_export_add(self._export_uid, 'nbd',
+                                                 self._node_name, iothread,
+                                                 fixed, writable, writethrough,
+                                                 **kw)
+
+    def _block_export_del(self):
+        return self._vm.monitor.block_export_del(
+            self._export_uid,
+            self._image_params.get('block_export_remove_mode')
+        )
+
+    def wait_till_export_removed(self):
+        """
+        When we remove an export with block-export-del, the export may still
+        stay around after this command returns, BLOCK_EXPORT_DELETED will be
+        emitted when a block export is removed and its id can be reused.
+        """
+        if self._export_uid is not None:
+            cond = {'id': self._export_uid}
+            tmo = self._image_params.get_numeric('block_export_del_timeout',
+                                                 60)
+            event = get_event_by_condition(self._vm, 'BLOCK_EXPORT_DELETED',
+                                           tmo, **cond)
+            if event is None:
+                raise exceptions.TestFail(
+                    'Failed to receive BLOCK_EXPORT_DELETED')
+            self._export_uid = None
+
     def add_nbd_image(self, node_name=None):
         """
         Add an image(to be exported) to internal nbd server.
@@ -185,19 +271,27 @@ class InternalNBDExportImage(NBDExportImage):
             self._node_name = node_name
 
         logging.info("Add image node to nbd server")
-        return self._vm.monitor.nbd_server_add(
-            self._node_name,
-            self._image_params.get('nbd_export_name'),
-            self._image_params.get('nbd_export_writable'),
-            self._image_params.get('nbd_export_bitmap'))
+        try:
+            return self._block_export_add()
+        except MonitorNotSupportedCmdError:
+            self._export_uid = None
+            return self._vm.monitor.nbd_server_add(
+                self._node_name,
+                self._image_params.get('nbd_export_name'),
+                self._image_params.get('nbd_export_writable'),
+                self._image_params.get('nbd_export_bitmaps')
+            )
 
     def remove_nbd_image(self):
         """Remove the exported image from internal nbd server"""
         logging.info("Remove image from nbd server")
-        return self._vm.monitor.nbd_server_remove(
-            self.get_export_name(),
-            self._image_params.get('nbd_remove_mode')
-        )
+        try:
+            return self._block_export_del()
+        except MonitorNotSupportedCmdError:
+            return self._vm.monitor.nbd_server_remove(
+                self.get_export_name(),
+                self._image_params.get('nbd_remove_mode')
+            )
 
     def stop_nbd_server(self):
         """Stop internal nbd server, it also unregisters all devices"""
@@ -214,4 +308,11 @@ class InternalNBDExportImage(NBDExportImage):
 
     def stop_export(self):
         self.remove_nbd_image()
+        self.wait_till_export_removed()
         self.stop_nbd_server()
+
+    def query_nbd_export(self):
+        """Get the nbd export info"""
+        exports = self._vm.monitor.query_block_exports()
+        nbd_exports = [e for e in exports if e['id'] == self._export_uid]
+        return nbd_exports[0] if nbd_exports else None

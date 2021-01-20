@@ -277,7 +277,7 @@ class StorageBenchmark(object):
 
 class IozoneLinuxCfg(object):
     def __init__(self, params, session):
-        iozone_pkg = params.get("iozone_pkg", 'iozone3_487.tar.bz2')
+        iozone_pkg = params.get("iozone_pkg", 'iozone3_490.tar.bz2')
         host_path = os.path.join(data_dir.get_deps_dir(), 'iozone', iozone_pkg)
         self.download_path = os.path.join('/home', iozone_pkg)
         self.iozone_inst = os.path.join('/home', 'iozone_inst')

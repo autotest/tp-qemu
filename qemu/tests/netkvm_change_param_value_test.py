@@ -79,9 +79,9 @@ def run(test, params, env):
     session.close()
 
     virtio_win.prepare_netkvmco(vm)
-    if driver_version <= 189:
+    if driver_version <= 189 and "*JumboPacket" in param_names:
         param_names.remove("*JumboPacket")
-    else:
+    elif driver_version > 189 and "MTU" in param_names:
         param_names.remove("MTU")
     for name in param_names:
         attr_name = "param_values_%s" % name

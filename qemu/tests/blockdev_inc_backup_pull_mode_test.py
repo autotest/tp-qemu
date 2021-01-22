@@ -1,5 +1,4 @@
 import six
-import json
 import socket
 import logging
 
@@ -12,9 +11,6 @@ from provider.virt_storage.storage_admin import sp_admin
 
 from virttest import qemu_storage
 from virttest import utils_disk
-from virttest import utils_misc
-
-from avocado.utils import process
 
 
 class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
@@ -101,52 +97,14 @@ class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
 
     def full_copyif(self):
         for i, nbd_obj in enumerate(self.full_backup_nbd_images):
-            self.copyif(nbd_obj, self.full_backup_client_images[i])
+            backup_utils.copyif(self.params, nbd_obj.tag,
+                                self.full_backup_client_images[i].tag)
 
     def inc_copyif(self):
         for i, nbd_obj in enumerate(self.inc_backup_nbd_images):
-            self.copyif(nbd_obj, self.inc_backup_client_images[i],
-                        self.full_backup_bitmaps[i])
-
-    def copyif(self, nbd_img_obj, img_obj, bitmap=None):
-        qemu_img = utils_misc.get_qemu_img_binary(self.params)
-        qemu_io = utils_misc.get_qemu_io_binary(self.params)
-
-        args = ''
-        if bitmap is None:
-            args = '-f %s %s' % (nbd_img_obj.image_format,
-                                 nbd_img_obj.image_filename)
-        else:
-            opts = qemu_storage.filename_to_file_opts(
-                nbd_img_obj.image_filename)
-            opts[self.params['dirty_bitmap_opt']
-                 ] = 'qemu:dirty-bitmap:%s' % bitmap
-            args = "'json:%s'" % json.dumps(opts)
-
-        img_obj.base_image_filename = nbd_img_obj.image_filename
-        img_obj.base_format = nbd_img_obj.image_format
-        img_obj.base_tag = nbd_img_obj.tag
-        img_obj.rebase(img_obj.params)
-
-        map_cmd = '{qemu_img} map --output=json {args}'.format(
-            qemu_img=qemu_img, args=args)
-        result = process.run(map_cmd, ignore_status=True, shell=True)
-        if result.exit_status != 0:
-            self.test.fail('Failed to run map command: %s'
-                           % result.stderr.decode())
-
-        for item in json.loads(result.stdout.decode().strip()):
-            io_cmd = '{io} -C -c "read {s} {l}" -f {fmt} {fn}'.format(
-                io=qemu_io, s=item['start'], l=item['length'],
-                fmt=img_obj.image_format, fn=img_obj.image_filename
-            )
-            result = process.run(io_cmd, ignore_status=True, shell=True)
-            if result.exit_status != 0:
-                self.test.fail('Failed to run qemu-io command: %s'
-                               % result.stderr.decode())
-
-        img_obj.base_tag = 'null'
-        img_obj.rebase(img_obj.params)
+            backup_utils.copyif(self.params, nbd_obj.tag,
+                                self.inc_backup_client_images[i].tag,
+                                self.full_backup_bitmaps[i])
 
     def export_full_backups(self):
         for i, obj in enumerate(self.full_backup_nbd_objs):

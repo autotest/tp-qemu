@@ -1,5 +1,4 @@
 import six
-import json
 import socket
 
 from functools import partial
@@ -11,11 +10,8 @@ from provider import block_dirty_bitmap
 
 from provider.nbd_image_export import InternalNBDExportImage
 
-from virttest import qemu_storage
 from virttest import utils_disk
 from virttest import utils_misc
-
-from avocado.utils import process
 
 
 class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
@@ -103,9 +99,11 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
     def _copy_data_from_export(self, nbd_imgs, target_imgs, bitmaps=None):
         for i, nbd_obj in enumerate(nbd_imgs):
             if bitmaps is None:
-                self.copyif(nbd_obj, target_imgs[i])
+                backup_utils.copyif(self.params, nbd_obj.tag,
+                                    target_imgs[i].tag)
             else:
-                self.copyif(nbd_obj, target_imgs[i], bitmaps[i])
+                backup_utils.copyif(self.params, nbd_obj.tag,
+                                    target_imgs[i].tag, bitmaps[i])
 
     def copy_full_data_from_export(self):
         self._copy_data_from_export(self.full_backup_nbd_images,
@@ -115,46 +113,6 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
         self._copy_data_from_export(self.inc_backup_nbd_images,
                                     self.inc_backup_client_images,
                                     self.merged_bitmaps)
-
-    def copyif(self, nbd_img_obj, img_obj, bitmap=None):
-        qemu_img = utils_misc.get_qemu_img_binary(self.params)
-        qemu_io = utils_misc.get_qemu_io_binary(self.params)
-
-        args = ''
-        if bitmap is None:
-            args = '-f %s %s' % (nbd_img_obj.image_format,
-                                 nbd_img_obj.image_filename)
-        else:
-            opts = qemu_storage.filename_to_file_opts(
-                nbd_img_obj.image_filename)
-            opts[self.params['dirty_bitmap_opt']
-                 ] = 'qemu:dirty-bitmap:%s' % bitmap
-            args = "'json:%s'" % json.dumps(opts)
-
-        img_obj.base_image_filename = nbd_img_obj.image_filename
-        img_obj.base_format = nbd_img_obj.image_format
-        img_obj.base_tag = nbd_img_obj.tag
-        img_obj.rebase(img_obj.params)
-
-        map_cmd = '{qemu_img} map --output=json {args}'.format(
-            qemu_img=qemu_img, args=args)
-        result = process.run(map_cmd, ignore_status=True, shell=True)
-        if result.exit_status != 0:
-            self.test.fail('Failed to run map command: %s'
-                           % result.stderr.decode())
-
-        for item in json.loads(result.stdout.decode().strip()):
-            io_cmd = '{io} -C -c "read {s} {l}" -f {fmt} {fn}'.format(
-                io=qemu_io, s=item['start'], l=item['length'],
-                fmt=img_obj.image_format, fn=img_obj.image_filename
-            )
-            result = process.run(io_cmd, ignore_status=True, shell=True)
-            if result.exit_status != 0:
-                self.test.fail('Failed to run qemu-io command: %s'
-                               % result.stderr.decode())
-
-        img_obj.base_tag = 'null'
-        img_obj.rebase(img_obj.params)
 
     def _export_fleecing_images(self, nbd_objs, nodes):
         for i, obj in enumerate(nbd_objs):

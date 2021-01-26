@@ -389,7 +389,7 @@ class BallooningTest(MemoryBaseTest):
         """
         Get Memory status inside guest.
         """
-        pass
+        raise NotImplementedError
 
     def _balloon_post_action(self):
         """

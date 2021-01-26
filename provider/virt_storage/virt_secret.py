@@ -67,12 +67,12 @@ class StorageSecretAdmin(object):
 
     @classmethod
     def find_secret_by_name(cls, name):
-        secrets = filter(lambda x: x.name == name, cls.__secrets)
+        secrets = list(filter(lambda x: x.name == name, cls.__secrets))
         return secrets[0] if secrets else None
 
     @classmethod
     def find_secret_by_uuid(cls, _uuid):
-        secrets = filter(lambda x: str(x.uuid) == _uuid, cls.__secrets)
+        secrets = list(filter(lambda x: str(x.uuid) == _uuid, cls.__secrets))
         return secrets[0] if secrets else None
 
 

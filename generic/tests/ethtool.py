@@ -236,7 +236,7 @@ def run(test, params, env):
         test.error("No supported features set on the parameters")
 
     test_matrix = {
-        # type:(callback,    (dependence), (exclude)
+        # 'type: (callback,    (dependence), (exclude)'
         "tx": (tx_callback, (), ()),
         "rx": (rx_callback, (), ()),
         "sg": (tx_callback, ("tx",), ()),

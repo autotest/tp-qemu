@@ -2,10 +2,11 @@ import logging
 import time
 import os
 
+from aexpect import rss_client
+
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import remote
-from virttest import rss_client
 from virttest import data_dir
 
 

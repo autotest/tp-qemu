@@ -3,9 +3,10 @@ import os
 import re
 
 import aexpect
+from aexpect import rss_client
+
 from virttest import utils_misc
 from virttest import remote
-from virttest import rss_client
 
 
 def run(test, params, env):

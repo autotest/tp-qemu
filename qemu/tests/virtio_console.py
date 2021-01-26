@@ -412,7 +412,7 @@ def run(test, params, env):
             guest_worker.cmd("virt.recv('%s', 10, 1024, False)"
                              % port.name, 10)
         except qemu_virtio_port.VirtioPortException as details:
-            if '[Errno 11] Resource temporarily unavailable' in details:
+            if '[Errno 11] Resource temporarily unavailable' in str(details):
                 # Give the VM second chance
                 time.sleep(0.01)
                 guest_worker.cmd("virt.recv('%s', 10, 1024, False)"

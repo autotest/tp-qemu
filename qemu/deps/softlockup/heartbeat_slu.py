@@ -15,7 +15,7 @@ def daemonize(output_file):
     try:
         pid = os.fork()
     except OSError as e:
-        raise Exception("error %d: %s" % (e.strerror, e.errno))
+        raise Exception("error %d: %s" % (e.errno, e.strerror))
 
     if pid:
         os._exit(0)

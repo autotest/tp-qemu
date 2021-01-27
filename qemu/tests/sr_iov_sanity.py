@@ -168,7 +168,7 @@ def run(test, params, env):
         msg = "Check whether VFs still get ip in host."
         error_context.context(msg, logging.info)
         for ethname in ips:
-            utils_net.bring_up_ifname(ethname, action="up")
+            utils_net.bring_up_ifname(ethname)
             _ip = utils_net.get_ip_address_by_interface(ethname, ip_ver="ipv4")
             if not _ip:
                 msg = "Interface '%s' could not get IP." % ethname

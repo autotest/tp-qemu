@@ -11,6 +11,7 @@ class VMStressBinding(VMStress):
     """
     Run stress tool on VMs, and bind the process to the specified cpu
     """
+
     def __init__(self, vm, params, stress_args=""):
         super(VMStressBinding, self).__init__(vm, "stress", params,
                                               stress_args=stress_args)

@@ -8,7 +8,6 @@ from qemu.tests.qemu_guest_agent import run as guest_agent_run
 
 @error_context.context_aware
 def run(test, params, env):
-
     """
     hotplug guest agent device
 

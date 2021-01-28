@@ -190,7 +190,8 @@ def run(test, params, env):
     if check_dump == "True":
         # query dump status and wait for dump completed
         utils_misc.wait_for(lambda: execute_qmp_cmd(query_qmp_cmd,
-                            query_cmd_return_value), dump_file_timeout)
+                                                    query_cmd_return_value),
+                            dump_file_timeout)
         check_dump_file()
         os.remove(dump_file)
 

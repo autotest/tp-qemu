@@ -48,7 +48,7 @@ def run_whql_hck_client_install(test, params, env):
         session.cmd(cmd, timeout=600)
 
     error_context.context(("Setting up auto logon for user '%s'" %
-                          client_username), logging.info)
+                           client_username), logging.info)
     cmd = ('reg add '
            '"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\winlogon"'
            ' /v "%s" /d "%s" /t REG_SZ /f')
@@ -66,7 +66,7 @@ def run_whql_hck_client_install(test, params, env):
 
     install_cmd = params["install_cmd"]
     error_context.context(("Installing HCK client (timeout=%ds)" %
-                          install_timeout), logging.info)
+                           install_timeout), logging.info)
     session.cmd(install_cmd, timeout=install_timeout)
     reboot_timeout = login_timeout + 1500
     session = vm.reboot(session, timeout=reboot_timeout)

@@ -43,7 +43,8 @@ def run(test, params, env):
         test.error(output)
 
     if not utils_misc.wait_for(lambda: system.file_exists(session,
-                               sigverif_log), 180, 0, 5):
+                                                          sigverif_log),
+                               180, 0, 5):
         test.error("sigverif logs are not created")
 
     try:

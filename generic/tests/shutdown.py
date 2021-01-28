@@ -31,8 +31,8 @@ def run(test, params, env):
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
-        error_context.base_context("shutting down the VM %s/%s" % (i + 1,
-                                   shutdown_count), logging.info)
+        error_context.base_context("shutting down the VM %s/%s" %
+                                   (i + 1, shutdown_count), logging.info)
         if params.get("setup_runlevel") == "yes":
             error_context.context("Setup the runlevel for guest", logging.info)
             utils_test.qemu.setup_runlevel(params, session)

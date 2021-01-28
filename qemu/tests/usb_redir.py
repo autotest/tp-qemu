@@ -96,7 +96,7 @@ def run(test, params, env):
             usbredir_dev.set_param('bootindex', usbredir_bootindex)
             usbredir_dev.set_param('bus', usbredir_bus)
             extra_params += ' '.join([chardev.cmdline(),
-                                     usbredir_dev.cmdline()])
+                                      usbredir_dev.cmdline()])
             return extra_params
         extra_params = _generate_usb_redir_cmdline()
         params["extra_params"] = extra_params
@@ -239,7 +239,7 @@ def run(test, params, env):
             error_context.context("Boot from redirected USB stick",
                                   logging.info)
             boot_entry_info = params["boot_entry_info"]
-            vm.send_key(str(bootindex+1))
+            vm.send_key(str(bootindex + 1))
             if not utils_misc.wait_for(lambda: boot_check(boot_entry_info),
                                        timeout, 1):
                 test.fail("Could not boot from redirected USB stick")

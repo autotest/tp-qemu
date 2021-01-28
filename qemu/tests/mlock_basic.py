@@ -10,6 +10,7 @@ class MlockBasic(object):
     """
     Base class for mlock test
     """
+
     def __init__(self, test, params, env):
         self.test = test
         self.params = params

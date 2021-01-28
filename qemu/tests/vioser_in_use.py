@@ -69,7 +69,7 @@ def kill_host_serial_pid(params, vm):
     simultaneously.
     """
     port_path = virtio_serial_file_transfer.get_virtio_port_property(
-            vm, params["file_transfer_serial_port"])[1]
+        vm, params["file_transfer_serial_port"])[1]
 
     host_process = 'ps aux | grep "serial_host_send_receive.py"'
     host_process = process.system_output(host_process,
@@ -95,13 +95,14 @@ def run_bg_test(test, params, vm, sender="both"):
     error_context.context("Run serial transfer test in background",
                           logging.info)
     stress_thread = utils_misc.InterruptedThread(
-            virtio_serial_file_transfer.transfer_data, (params, vm),
-            {"sender": sender})
+        virtio_serial_file_transfer.transfer_data, (params, vm),
+        {"sender": sender})
     stress_thread.start()
 
     check_bg_timeout = float(params.get('check_bg_timeout', 120))
     if not utils_misc.wait_for(lambda: driver_in_use.check_bg_running(vm,
-                               params), check_bg_timeout, 0, 1):
+                                                                      params),
+                               check_bg_timeout, 0, 1):
         test.fail("Backgroud test is not alive!")
     return stress_thread
 

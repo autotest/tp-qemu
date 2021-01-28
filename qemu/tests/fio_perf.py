@@ -50,7 +50,8 @@ def check_disk_status(session, timeout, num):
         return disks
 
 
-def get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, type, driver_format, timeout):
+def get_version(session, result_file, kvm_ver_chk_cmd,
+                guest_ver_cmd, type, driver_format, timeout):
     """
     collect qemu, kernel and driver version info and write them info results file
 
@@ -71,15 +72,20 @@ def get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, type, driv
     if driver_format != "ide":
         result = session.cmd_output(guest_ver_cmd, timeout)
         if type == "windows":
-            guest_ver = re.findall(r".*?(\d{2}\.\d{2}\.\d{3}\.\d{4}).*?", result)
-            result_file.write("### guest-kernel-ver :Microsoft Windows [Version %s]\n" % guest_ver[0])
+            guest_ver = re.findall(r".*?(\d{2}\.\d{2}\.\d{3}\.\d{4}).*?",
+                                   result)
+            result_file.write(
+                "### guest-kernel-ver :Microsoft Windows [Version %s]\n" %
+                guest_ver[0])
         else:
             result_file.write("### guest-kernel-ver :%s" % result)
     else:
-        result_file.write("### guest-kernel-ver : Microsoft Windows [Version ide driver format]\n")
+        result_file.write("### guest-kernel-ver : Microsoft Windows "
+                          "[Version ide driver format]\n")
 
 
-def clean_tmp_files(session, check_install_fio, tarball, os_type, guest_result_file, fio_path, timeout):
+def clean_tmp_files(session, check_install_fio, tarball,
+                    os_type, guest_result_file, fio_path, timeout):
     """
     del temporary files in guest
 
@@ -94,13 +100,17 @@ def clean_tmp_files(session, check_install_fio, tarball, os_type, guest_result_f
 
     if not session.cmd_status(check_install_fio):
         if os_type == "linux":
-            session.cmd("rm -rf %s /tmp/%s %s" % (guest_result_file, os.path.basename(tarball), fio_path), timeout)
+            session.cmd("rm -rf %s /tmp/%s %s" %
+                        (guest_result_file, os.path.basename(tarball),
+                         fio_path), timeout)
         elif os_type == "windows":
-            session.cmd("del /f/s/q %s && rd /s/q %s" % (guest_result_file, fio_path), timeout)
+            session.cmd("del /f/s/q %s && rd /s/q %s" % (guest_result_file,
+                                                         fio_path), timeout)
 
 
 def uninstall_fio():
-    # TODO there is no command like "make uninstall" for fio, so will implement steps of uninstall fio later.
+    # TODO there is no command like "make uninstall" for fio, so will
+    # implement steps of uninstall fio later.
     pass
 
 
@@ -108,7 +118,8 @@ def run(test, params, env):
     """
     Block performance test with fio
     Steps:
-    1) boot up guest with one data disk on specified backend and pin qemu-kvm process to the last numa node on host
+    1) boot up guest with one data disk on specified backend and pin qemu-kvm
+       process to the last numa node on host
     2) pin guest vcpu and vhost threads to cpus of last numa node repectively
     3) format data disk and run fio in guest
     4) collect fio results and host info
@@ -145,8 +156,10 @@ def run(test, params, env):
             tarball = os.path.join(data_dir.get_deps_dir(), tarball)
             if os_type == "linux":
                 vm.copy_files_to(tarball, "/tmp")
-                session.cmd("cd /tmp/ && tar -zxvf /tmp/%s" % os.path.basename(tarball), cmd_timeout)
-                session.cmd("cd %s && %s" % (fio_path, compile_cmd), cmd_timeout)
+                session.cmd("cd /tmp/ && tar -zxvf /tmp/%s" %
+                            os.path.basename(tarball), cmd_timeout)
+                session.cmd("cd %s && %s" % (fio_path, compile_cmd),
+                            cmd_timeout)
             elif os_type == "windows":
                 session.cmd("md %s" % fio_path)
                 vm.copy_files_to(tarball, fio_path)
@@ -228,7 +241,8 @@ def run(test, params, env):
                     line += "%s|" % format_result(numjobs)
                     if format == "True":
                         file_name = io_pattern + "_" + bs + "_" + io_depth
-                        run_cmd = fio_cmd % (io_pattern, bs, io_depth, file_name, numjobs)
+                        run_cmd = fio_cmd % (io_pattern, bs, io_depth,
+                                             file_name, numjobs)
                     else:
                         run_cmd = fio_cmd % (io_pattern, bs, io_depth, numjobs)
 
@@ -239,35 +253,48 @@ def run(test, params, env):
                         if s:
                             test.fail("Failed to free memory: %s" % o)
                     cpu_file = os.path.join(data_dir.get_tmp_dir(), "cpus")
-                    io_exits_b = int(process.system_output("cat /sys/kernel/debug/kvm/exits"))
+                    io_exits_b = int(process.system_output(
+                        "cat /sys/kernel/debug/kvm/exits"))
                     fio_t = threading.Thread(target=fio_thread)
                     fio_t.start()
-                    process.system_output("mpstat 1 60 > %s" % cpu_file, shell=True)
+                    process.system_output("mpstat 1 60 > %s" % cpu_file,
+                                          shell=True)
                     fio_t.join()
 
-                    io_exits_a = int(process.system_output("cat /sys/kernel/debug/kvm/exits"))
-                    vm.copy_files_from(guest_result_file, data_dir.get_tmp_dir())
-                    fio_result_file = os.path.join(data_dir.get_tmp_dir(), "fio_result")
+                    io_exits_a = int(process.system_output(
+                        "cat /sys/kernel/debug/kvm/exits"))
+                    vm.copy_files_from(guest_result_file,
+                                       data_dir.get_tmp_dir())
+                    fio_result_file = os.path.join(data_dir.get_tmp_dir(),
+                                                   "fio_result")
                     o = process.system_output("egrep '(read|write)' %s" %
                                               fio_result_file).decode()
                     results = re.findall(pattern, o)
                     o = process.system_output("egrep 'lat' %s" %
                                               fio_result_file).decode()
-                    laten = re.findall(r"\s{5}lat\s\((\wsec)\).*?avg=[\s]?(\d+(?:[\.][\d]+)?).*?", o)
+                    laten = re.findall(
+                        r"\s{5}lat\s\((\wsec)\).*?avg=[\s]?(\d+(?:[\.][\d]+)?).*?", o)
                     bw = float(utils_numeric.normalize_data_size(results[0][1]))
-                    iops = float(utils_numeric.normalize_data_size(results[0][0],
-                                 order_magnitude="B", factor=1000))
+                    iops = float(utils_numeric.normalize_data_size(
+                        results[0][0], order_magnitude="B", factor=1000))
                     if os_type == "linux":
                         o = process.system_output("egrep 'util' %s" %
                                                   fio_result_file).decode()
-                        util = float(re.findall(r".*?util=(\d+(?:[\.][\d]+))%", o)[0])
+                        util = float(re.findall(r".*?util=(\d+(?:[\.][\d]+))%",
+                                                o)[0])
 
-                    lat = float(laten[0][1]) / 1000 if laten[0][0] == "usec" else float(laten[0][1])
+                    lat = float((laten[0][1]) / 1000 if laten[0][0] == "usec"
+                                else float(laten[0][1]))
                     if re.findall("rw", io_pattern):
-                        bw = bw + float(utils_numeric.normalize_data_size(results[1][1]))
-                        iops = iops + float(utils_numeric.normalize_data_size(results[1][0],
-                                            order_magnitude="B", factor=1000))
-                        lat1 = float(laten[1][1]) / 1000 if laten[1][0] == "usec" else float(laten[1][1])
+                        bw = bw + float(
+                            utils_numeric.normalize_data_size(results[1][1]))
+                        iops = iops + float(
+                            utils_numeric.normalize_data_size(
+                                results[1][0], order_magnitude="B",
+                                factor=1000))
+                        lat1 = float(
+                            (laten[1][1]) / 1000 if laten[1][0] == "usec"
+                            else float(laten[1][1]))
                         lat = lat + lat1
 
                     ret = process.system_output("tail -n 1 %s" % cpu_file)
@@ -286,7 +313,8 @@ def run(test, params, env):
                     result_file.write("%s\n" % line)
 
     # del temporary files in guest
-    clean_tmp_files(session, check_install_fio, tarball, os_type, guest_result_file, fio_path, cmd_timeout)
+    clean_tmp_files(session, check_install_fio, tarball, os_type,
+                    guest_result_file, fio_path, cmd_timeout)
 
     result_file.close()
     session.close()

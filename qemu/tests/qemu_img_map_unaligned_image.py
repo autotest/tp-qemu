@@ -30,7 +30,7 @@ def run(test, params, env):
         """Verify qemu-img map's output."""
         logging.info("Verify the dumped mete-data of the unaligned image.")
         expected = [{"start": 0, "length": str_len, "depth": 0,
-                    "zero": False, "data": True, "offset": 0},
+                     "zero": False, "data": True, "offset": 0},
                     {"start": str_len, "length": 512 - (str_len % 512),
                      "depth": 0, "zero": True, "data": False,
                      "offset": str_len}]

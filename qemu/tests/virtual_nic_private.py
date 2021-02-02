@@ -20,6 +20,21 @@ def run(test, params, env):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
     """
+    def _is_process_finished(session, process_name):
+        """
+        Check whether the target process is finished running
+        param session: a guest session to send command
+        param process_name: the target process name
+
+        return: True if process does not exists,
+                False if still exists
+        """
+        check_proc_cmd = check_proc_temp % process_name
+        status, output = session.cmd_status_output(check_proc_cmd)
+        if status:
+            return False
+        return process_name not in output
+
     def data_mon(session, cmd, timeout):
         try:
             session.cmd(cmd, timeout)
@@ -36,6 +51,8 @@ def run(test, params, env):
     clean_cmd = params.get("clean_cmd", "rm -f")
     filesize = int(params.get("filesize", '100'))
 
+    wireshark_name = params.get("wireshark_name")
+    check_proc_temp = params.get("check_proc_temp")
     tcpdump_cmd = params.get("tcpdump_cmd")
     dd_cmd = params.get("dd_cmd")
     catch_date = params.get("catch_data", "%s.* > %s.ssh")
@@ -68,6 +85,20 @@ def run(test, params, env):
         else:
             if_func = utils_net.get_windows_nic_attribute
             args = (mon_session, "macaddress", mon_macaddr, "netconnectionid")
+            error_context.context("Install wireshark", logging.info)
+            install_wireshark_cmd = params.get("install_wireshark_cmd")
+            install_wireshark_cmd = utils_misc.set_winutils_letter(
+                    sessions[2], install_wireshark_cmd)
+            status, output = sessions[2].cmd_status_output(install_wireshark_cmd,
+                                                           timeout=timeout)
+            if status:
+                test.error("Failed to install wireshark, status=%s, output=%s"
+                           % (status, output))
+            logging.info("Wait for wireshark installation to complete")
+            utils_misc.wait_for(
+                lambda: _is_process_finished(sessions[2], wireshark_name),
+                timeout, 20, 3)
+            logging.info("Wireshark is already installed")
         interface_name = if_func(*args)
         tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
                                      interface_name)

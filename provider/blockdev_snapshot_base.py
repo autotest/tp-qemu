@@ -18,7 +18,7 @@ class BlockDevSnapshotTest(object):
         self.params = params
         self.snapshot_tag = params["snapshot_tag"]
         self.base_tag = params["base_tag"]
-        self.disks_info = list()
+        self.disks_info = {}  # {tag, [dev, mnt]}
         self.files_info = list()
         self.main_vm = self.prepare_main_vm()
         self.clone_vm = self.prepare_clone_vm()
@@ -58,7 +58,8 @@ class BlockDevSnapshotTest(object):
             return
         session = self.clone_vm.wait_for_login()
         try:
-            for info in self.disks_info:
+            backup_utils.refresh_mounts(self.disks_info, self.params, session)
+            for info in self.disks_info.values():
                 disk_path = info[0]
                 mount_point = info[1]
                 utils_disk.mount(disk_path, mount_point, session=session)
@@ -109,7 +110,7 @@ class BlockDevSnapshotTest(object):
 
     def configure_data_disk(self):
         os_type = self.params["os_type"]
-        disk_params = self.params.object_params(self.snapshot_tag)
+        disk_params = self.params.object_params(self.base_tag)
         disk_size = disk_params["image_size"]
         session = self.main_vm.wait_for_login()
         try:
@@ -118,16 +119,15 @@ class BlockDevSnapshotTest(object):
                 assert disk_id, "Disk not found in guest!"
                 mount_point = utils_disk.configure_empty_linux_disk(
                     session, disk_id, disk_size)[0]
-                self.disks_info.append([
-                    r"/dev/%s1" %
-                    disk_id, mount_point])
+                self.disks_info[self.base_tag] = [r"/dev/%s1" % disk_id,
+                                                  mount_point]
             else:
                 disk_id = utils_disk.get_windows_disks_index(
                     session, disk_size)
                 driver_letter = utils_disk.configure_empty_windows_disk(
                     session, disk_id, disk_size)[0]
                 mount_point = r"%s:\\" % driver_letter
-                self.disks_info.append([disk_id, mount_point])
+                self.disks_info[self.base_tag] = [disk_id, mount_point]
         finally:
             session.close()
 
@@ -139,7 +139,7 @@ class BlockDevSnapshotTest(object):
 
     def snapshot_test(self):
         self.create_snapshot()
-        for info in self.disks_info:
+        for info in self.disks_info.values():
             self.generate_tempfile(info[1])
         self.verify_snapshot()
 

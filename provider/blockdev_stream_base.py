@@ -13,9 +13,9 @@ class BlockDevStreamTest(BlockDevSnapshotTest):
         self._top_device = "drive_%s" % self.snapshot_tag
         self._init_stream_options()
         if self.base_tag == self.params.objects("images")[0]:
-            self.disks_info.append(
-                ["system", self.params.get("mnt_on_sys_dsk", "/var/tmp")]
-            )
+            self.disks_info[self.base_tag] = [
+                "system", self.params.get("mnt_on_sys_dsk", "/var/tmp")
+            ]
 
     def _init_stream_options(self):
         if self.params.get("speed"):
@@ -37,10 +37,10 @@ class BlockDevStreamTest(BlockDevSnapshotTest):
                 self.params["block_stream_timeout"])
 
     def snapshot_test(self):
-        for info in self.disks_info:
+        for info in self.disks_info.values():
             self.generate_tempfile(info[1], filename="base")
         self.create_snapshot()
-        for info in self.disks_info:
+        for info in self.disks_info.values():
             self.generate_tempfile(info[1], filename="sn1")
 
     def blockdev_stream(self):

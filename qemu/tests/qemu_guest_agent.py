@@ -14,6 +14,7 @@ from avocado.utils import process
 from avocado.core import exceptions
 from aexpect.exceptions import ShellTimeoutError
 
+from virttest import utils_package
 from virttest import error_context
 from virttest import guest_agent
 from virttest import utils_misc
@@ -501,6 +502,56 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
         error_context.context("Check guest agent command 'guest-sync'", logging.info)
         self.gagent.sync()
+
+    @error_context.context_aware
+    def gagent_check_container(self, test, params, env):
+        """
+        Start qga container behavior only for linux guest
+        and release version above rhel8.2.0 now:
+        steps:
+        1) Prepare for container that stop qga.service and
+         install podman.
+        2) Create qga container.
+        3) start qga container.
+        4) Check target qga pkg we aim to test.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environmen.
+        """
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Prepare env for qemu-ga container.",
+                              logging.info)
+        self.gagent_stop(session, self.vm)
+        utils_package.package_install('podman', session)
+
+        error_context.context("Create a qemu-ga container.", logging.info)
+        cmd_create_container = params["create_container_cmd"]
+        s, o = session.cmd_status_output(cmd_create_container, timeout=120)
+        if s or "ERROR" in o:
+            test.fail("Could not create qemu-ga container in VM '%s',"
+                      " detail: '%s'" % (self.vm.name, o))
+
+        error_context.context("Try to start qemu-guest-agent container.",
+                              logging.info)
+        s, o = session.cmd_status_output(params["gagent_container_start_cmd"])
+        if s or "qemu-guest-agent" not in o:
+            test.fail("Could not start qemu-ga container in VM '%s',"
+                      " detail: '%s'" % (self.vm.name, o))
+
+        error_context.context("Check the latest version of qemu-ga container.",
+                              logging.info)
+        target_ver = session.cmd_output(params["get_target_ver_cmd"]).strip()
+        cmd_get_container_ver_guest = params["get_container_ver_cmd"] % target_ver
+        s, o = session.cmd_status_output(cmd_get_container_ver_guest)
+        if s or target_ver not in o:
+            test.fail("The latest qemu-ga container's version is not same as"
+                      " the target version.")
+
+        self.gagent_verify(self.params, self.vm)
 
     @error_context.context_aware
     def __gagent_check_shutdown(self, shutdown_mode):

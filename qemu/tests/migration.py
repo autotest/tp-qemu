@@ -2,6 +2,7 @@ import logging
 import time
 import types
 import re
+import random
 
 import aexpect
 import ast
@@ -11,6 +12,7 @@ from virttest import utils_test
 from virttest import utils_package
 from virttest import error_context
 from virttest import qemu_monitor     # For MonitorNotSupportedMigCapError
+from virttest import utils_net
 
 
 # Define get_function-functions as global to allow importing from other tests
@@ -154,6 +156,7 @@ def run(test, params, env):
     mig_timeout = float(params.get("mig_timeout", "3600"))
     mig_protocol = params.get("migration_protocol", "tcp")
     mig_cancel_delay = int(params.get("mig_cancel") == "yes") * 2
+    migrate_parameters = params.get("migrate_parameters")
     mig_exec_cmd_src = params.get("migration_exec_cmd_src")
     mig_exec_cmd_dst = params.get("migration_exec_cmd_dst")
     if mig_exec_cmd_src and "gzip" in mig_exec_cmd_src:
@@ -217,39 +220,68 @@ def run(test, params, env):
             pre_migrate = get_functions(params.get("pre_migrate"), globals())
 
             # Migrate the VM
-            ping_pong = params.get("ping_pong", 1)
+            ping_pong = params.get("ping_pong", random.randrange(4, 8, 1))
+            dst_vm = None
             for i in range(int(ping_pong)):
                 # run some functions before migrate start
                 for func in pre_migrate:
-                    func(vm, params, test)
+                    func(vm if vm else dst_vm, params, test)
                 if i % 2 == 0:
                     logging.info("Round %s ping..." % str(i / 2))
                 else:
                     logging.info("Round %s pong..." % str(i / 2))
                 try:
-                    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                               offline, check,
-                               migration_exec_cmd_src=mig_exec_cmd_src,
-                               migration_exec_cmd_dst=mig_exec_cmd_dst,
-                               migrate_capabilities=capabilities,
-                               mig_inner_funcs=inner_funcs,
-                               env=env, migrate_parameters=migrate_parameters)
+                    if dst_vm is None and vm:
+                        if params.get('migration_protocol') == 'unix':
+                            dest_host = "localhost"
+                        else:
+                            dest_host = params.get('dest_host')
+                        dst_vm = vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                                   offline, check,
+                                   migration_exec_cmd_src=mig_exec_cmd_src,
+                                   migration_exec_cmd_dst=mig_exec_cmd_dst,
+                                   migrate_capabilities=capabilities,
+                                   mig_inner_funcs=inner_funcs,
+                                   env=env, migrate_parameters=migrate_parameters,
+                                   dest_host=dest_host)
+                        if params.get('mig_cancel') == 'yes':
+                            break
+                        vm = None
+                    elif vm is None and dst_vm:
+                        # migrate guest from dest host to local host.
+                        if params.get('migration_protocol') == 'unix':
+                            dest_host = "localhost"
+                        else:
+                            dest_host = utils_net.get_host_ip_address(params)
+                        vm = dst_vm.migrate(mig_timeout, mig_protocol,
+                                            mig_cancel_delay,
+                                            offline, check,
+                                            migration_exec_cmd_src=mig_exec_cmd_src,
+                                            migration_exec_cmd_dst=mig_exec_cmd_dst,
+                                            migrate_capabilities=capabilities,
+                                            mig_inner_funcs=inner_funcs,
+                                            env=env,
+                                            migrate_parameters=migrate_parameters,
+                                            dest_host=dest_host)
+                        dst_vm = None
                 except qemu_monitor.MonitorNotSupportedMigCapError as e:
                     test.cancel("Unable to access capability: %s" % e)
                 except:
                     raise
-
+            dst_vm = dst_vm if dst_vm else vm
             # Set deamon thread action to stop after migrate
             params["action"] = "stop"
 
             # run some functions after migrate finish.
             post_migrate = get_functions(params.get("post_migrate"), globals())
             for func in post_migrate:
-                func(vm, params, test)
+                func(dst_vm, params, test)
 
             # Log into the guest again
             logging.info("Logging into guest after migration...")
-            session2 = vm.wait_for_login(timeout=30)
+            # better use serial way to login guest in case dest vm's
+            # network is not reachable
+            session2 = dst_vm.wait_for_serial_login(timeout=360)
             logging.info("Logged in after migration")
 
             # Make sure the background process is still running
@@ -289,8 +321,8 @@ def run(test, params, env):
                             raise
                     except aexpect.ShellTimeoutError:
                         logging.debug("Remote session not responsive, "
-                                      "shutting down VM %s", vm.name)
-                        vm.destroy(gracefully=True)
+                                      "shutting down VM %s", dst_vm.name)
+                        dst_vm.destroy(gracefully=True)
             if deamon_thread is not None:
                 # Set deamon thread action to stop after migrate
                 params["action"] = "stop"

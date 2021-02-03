@@ -43,19 +43,33 @@ def run(test, params, env):
         migration_exec_cmd_src %= mig_file
         migration_exec_cmd_dst %= mig_file
 
+    if params.get('migration_protocol') == 'unix':
+        dest_host = "localhost"
+    else:
+        dest_host = params.get('dest_host')
+
     try:
         # Reboot the VM in the background
         bg = utils_misc.InterruptedThread(
             vm.reboot, kwargs={'session': session, 'timeout': login_timeout})
         bg.start()
+        dst_vm = None
+        src_vm = vm
         try:
             while bg.isAlive():
                 for func in pre_migrate:
                     func(vm, params, test)
-                vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                           env=env,
-                           migration_exec_cmd_src=migration_exec_cmd_src,
-                           migration_exec_cmd_dst=migration_exec_cmd_dst)
+                if src_vm:
+                    dst_vm = src_vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                                            env=env,
+                                            migration_exec_cmd_src=migration_exec_cmd_src,
+                                            migration_exec_cmd_dst=migration_exec_cmd_dst,
+                                            dest_host=dest_host)
+                    src_vm = None
+                elif dst_vm:
+                    src_vm = dst_vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
+                                            env=env)
+                    dst_vm = None
                 # run some functions after migrate finish.
                 for func in post_migrate:
                     func(vm, params, test)

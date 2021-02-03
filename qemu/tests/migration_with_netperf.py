@@ -115,12 +115,18 @@ def run(test, params, env):
             error_context.context("Start Netperf in guest", logging.info)
             netperf_client_g.bg_start(host_address, test_option, client_num)
 
+        if params.get('migration_protocol') == 'unix':
+            dest_host = "localhost"
+        else:
+            dest_host = params.get('dest_host')
+
         m_count = 0
         while netperf_client_h.is_netperf_running():
             m_count += 1
             error_context.context("Start migration iterations: %s " % m_count,
                                   logging.info)
-            vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
+            vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env,
+                       dest_host=dest_host)
     finally:
         if netperf_server_g:
             if netperf_server_g.is_server_running():

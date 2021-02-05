@@ -116,10 +116,12 @@ def run(test, params, env):
                             if not node.verify_unplug(
                                     node.unplug(vm.monitor), vm.monitor):
                                 raise DeviceUnplugError(
-                                        node, "Failed to unplug blockdev node.", vm.devices)
+                                    node, "Failed to unplug blockdev node.",
+                                    vm.devices)
                             vm.devices.remove(node, True if isinstance(
-                                    node, qdevices.QBlockdevFormatNode) else False)
-                            if not isinstance(node, qdevices.QBlockdevFormatNode):
+                                node, qdevices.QBlockdevFormatNode) else False)
+                            if not isinstance(node,
+                                              qdevices.QBlockdevFormatNode):
                                 format_node.del_child_node(node)
                     else:
                         vm.devices.remove(drive)
@@ -139,7 +141,8 @@ def run(test, params, env):
         for dev in reversed(device_list):
             out = dev.unplug(vm.monitor)
             if out:
-                test.fail("Failed to unplug device '%s'.Ouptut:\n%s" % (dev, out))
+                test.fail("Failed to unplug device '%s'.Ouptut:\n%s" % (dev,
+                                                                        out))
 
         if verify_del_event:
             verify_deleted_event(device_list)
@@ -163,9 +166,10 @@ def run(test, params, env):
         """
         logging.info("Check block device in guest after %s." % plug_tag)
         pause = float(params.get("virtio_block_pause", 30.0))
-        status = utils_misc.wait_for(lambda: len(get_plug_unplug_disks(disks,
-                                     find_disk(session, get_disk_cmd))) == blk_num,
-                                     pause)
+        status = utils_misc.wait_for(
+            lambda: len(
+                get_plug_unplug_disks(
+                    disks, find_disk(session, get_disk_cmd))) == blk_num, pause)
         disks = get_plug_unplug_disks(disks, find_disk(session, get_disk_cmd))
         if not status:
             test.fail("Failed to %s device to guest, expected: %d,"
@@ -188,7 +192,8 @@ def run(test, params, env):
         for item in index_sizes:
             did, size = item.split()
             drive_letter = utils_disk.configure_empty_windows_disk(session,
-                                                                   did, size + "B")
+                                                                   did,
+                                                                   size + "B")
             windows_drive_letters.extend(drive_letter)
 
     def rw_disk_in_guest(session, plug_disks, iteration):
@@ -249,15 +254,18 @@ def run(test, params, env):
                 if devs:
                     device_list.extend(devs)
 
-            if is_vm_paused and params.get("resume_vm_after_hotplug", "yes") == "yes":
+            if is_vm_paused and params.get("resume_vm_after_hotplug",
+                                           "yes") == "yes":
                 error_context.context("Resume vm after hotplug")
                 vm.resume()
                 is_vm_paused = False
 
-                block_check_in_guest(session, disks_before_plug, blk_num, get_disk_cmd)
+                block_check_in_guest(session, disks_before_plug, blk_num,
+                                     get_disk_cmd)
                 if params.get("disk_op_cmd"):
                     plug_disks = get_plug_unplug_disks(disks_before_plug,
-                                                       find_disk(session, get_disk_cmd))
+                                                       find_disk(session,
+                                                                 get_disk_cmd))
                     rw_disk_in_guest(session, plug_disks, iteration)
 
         else:

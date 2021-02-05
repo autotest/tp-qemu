@@ -67,7 +67,7 @@ def run(test, params, env):
         test.error("Cannot find device to resize.")
 
     block_virtual_size = json.loads(img.info(force_share=True,
-                                    output="json"))["virtual-size"]
+                                             output="json"))["virtual-size"]
 
     session = vm.wait_for_login(timeout=timeout)
     disk = sorted(utils_disk.get_linux_disks(session).keys())[0]
@@ -90,7 +90,8 @@ def run(test, params, env):
             session = vm.reboot(session=session)
 
         if not wait.wait_for(lambda: verify_disk_size(session, os_type,
-                             disk), 20, 0, 1, "Block Resizing"):
+                                                      disk), 20, 0, 1,
+                             "Block Resizing"):
             test.fail("The current block size is not the same as expected.\n")
 
     session.close()

@@ -23,7 +23,7 @@ def run(test, params, env):
     logging.info("starting vm according to the usb topology")
     error_info = params["error_info"]
     error_context.context(("verify [%s] is reported by QEMU..." %
-                          error_info), logging.info)
+                           error_info), logging.info)
     try:
         env_process.process(test, params, env,
                             env_process.preprocess_image,

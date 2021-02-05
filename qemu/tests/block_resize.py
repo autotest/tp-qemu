@@ -90,7 +90,7 @@ def run(test, params, env):
     data_image_dev = vm.get_block({'file': data_image_filename})
     img = QemuImg(data_image_params, data_dir.get_data_dir(), data_image)
     block_virtual_size = json.loads(img.info(force_share=True,
-                                    output="json"))["virtual-size"]
+                                             output="json"))["virtual-size"]
 
     session = vm.wait_for_login(timeout=timeout)
 
@@ -132,8 +132,10 @@ def run(test, params, env):
                     block_size), 'M').split(".")[0]
                 drive.shrink_volume(session, mpoint, shr_size)
             else:
-                utils_disk.resize_filesystem_linux(session, partition, str(block_size))
-                utils_disk.resize_partition_linux(session, partition, str(block_size))
+                utils_disk.resize_filesystem_linux(session, partition,
+                                                   str(block_size))
+                utils_disk.resize_partition_linux(session, partition,
+                                                  str(block_size))
 
         error_context.context("Change disk size to %s in monitor"
                               % block_size, logging.info)
@@ -160,16 +162,20 @@ def run(test, params, env):
             if os_type == 'windows':
                 max_block_size = int(params["max_block_size"])
                 if int(block_size) >= max_block_size:
-                    test.cancel("Cancel the test for more than maximum %dB disk." % max_block_size)
+                    test.cancel(
+                        "Cancel the test for more than maximum %dB disk." %
+                        max_block_size)
                 drive.extend_volume(session, mpoint)
             else:
-                utils_disk.resize_partition_linux(session, partition, str(block_size))
+                utils_disk.resize_partition_linux(session, partition,
+                                                  str(block_size))
                 utils_disk.resize_filesystem_linux(session, partition,
                                                    utils_disk.SIZE_AVAILABLE)
         global current_size
         current_size = 0
         if not wait.wait_for(lambda: verify_disk_size(session, os_type,
-                             disk), 20, 0, 1, "Block Resizing"):
+                                                      disk), 20, 0, 1,
+                             "Block Resizing"):
             test.fail("Block size get from guest is not same as expected.\n"
                       "Reported: %s\nExpect: %s\n" % (current_size, block_size))
         session = vm.reboot(session=session)

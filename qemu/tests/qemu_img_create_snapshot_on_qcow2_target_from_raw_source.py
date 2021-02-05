@@ -34,24 +34,24 @@ def run(test, params, env):
     c_tag = params["convert_target"]
 
     logging.info("Boot a guest up with initial image: %s, and create a"
-                 " file %s on the disk." % (initial_tag, file))
+                 " file %s on the disk.", initial_tag, file)
     base_qit = QemuImgTest(test, params, env, initial_tag)
     base_qit.start_vm()
     md5 = base_qit.save_file(file)
-    logging.info("Got %s's md5 %s from the initial image disk." % (file, md5))
+    logging.info("Got %s's md5 %s from the initial image disk.", file, md5)
     base_qit.destroy_vm()
 
-    logging.info("Convert initial image %s to %s" % (initial_tag, c_tag))
+    logging.info("Convert initial image %s to %s", initial_tag, c_tag)
     img, img_param = _get_img_obj_and_params(initial_tag)
     img.convert(img_param, data_dir.get_data_dir())
 
-    logging.info("Check image %s." % (c_tag))
+    logging.info("Check image %s.", c_tag)
     tgt, tgt_img_param = _get_img_obj_and_params(c_tag)
     tgt.check_image(tgt_img_param, data_dir.get_data_dir())
 
     gen = generate_base_snapshot_pair(params["image_chain"])
     _, snapshot = next(gen)
-    logging.info("Create a snapshot %s based on %s." % (snapshot, c_tag))
+    logging.info("Create a snapshot %s based on %s.", snapshot, c_tag)
     sn_qit = QemuImgTest(test, params, env, snapshot)
     sn_qit.create_snapshot()
     sn_qit.start_vm()

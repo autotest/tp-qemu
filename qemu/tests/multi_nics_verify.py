@@ -55,7 +55,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    logging.info("[ %s ] NICs card specified in config file" % nics_num)
+    logging.info("[ %s ] NICs card specified in config file", nics_num)
 
     os_type = params.get("os_type", "linux")
     if os_type == "linux":
@@ -106,7 +106,7 @@ def run(test, params, env):
 
     nic_interface = []
     for index, nic in enumerate(vm.virtnet):
-        logging.info("index %s nic" % index)
+        logging.info("index %s nic", index)
         guest_ip = utils_net.get_guest_ip_addr(session_srl, nic.mac, os_type,
                                                ip_version="ipv4")
         if not guest_ip:
@@ -114,5 +114,5 @@ def run(test, params, env):
             test.fail(err_log)
         nic_interface.append(guest_ip)
     session_srl.close()
-    logging.info("All the [ %s ] NICs get IPs." % nics_num)
+    logging.info("All the [ %s ] NICs get IPs.", nics_num)
     vm.destroy()

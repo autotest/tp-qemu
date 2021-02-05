@@ -127,7 +127,7 @@ def run(test, params, env):
         run_serial_data_transfer()
 
         if interrupt_test_after_plug:
-            logging.info("Run %s after hotplug" % interrupt_test_after_plug)
+            logging.info("Run %s after hotplug", interrupt_test_after_plug)
             run_interrupt_test(interrupt_test_after_plug)
             if not vm.is_alive():
                 return
@@ -141,6 +141,6 @@ def run(test, params, env):
                 msg = "Hot-unplug device %s failed" % buses[0]
                 test.fail(msg)
             if interrupt_test_after_unplug:
-                logging.info("Run %s after hot-unplug"
-                             % interrupt_test_after_unplug)
+                logging.info("Run %s after hot-unplug",
+                             interrupt_test_after_unplug)
                 run_interrupt_test(interrupt_test_after_unplug)

@@ -53,8 +53,8 @@ def run(test, params, env):
     (exec_uid, exec_gid) = get_user_ugid(exec_username)
 
     error_context.context("Run the qemu as user '%s'" % exec_username)
-    logging.info("The user %s :uid='%s', gid='%s'" %
-                 (exec_username, exec_uid, exec_gid))
+    logging.info("The user %s :uid='%s', gid='%s'",
+                 exec_username, exec_uid, exec_gid)
 
     params["extra_params"] = " -runas %s" % exec_username
     params["start_vm"] = "yes"
@@ -66,10 +66,10 @@ def run(test, params, env):
         error_context.context("Get the process '%s' u/gid, using 'cat "
                               "/proc/%s/status'" % (pid, pid), logging.info)
         qemu_ugid = get_ugid_from_processid(pid)
-        logging.info("Process run as uid=%s,euid=%s,suid=%s,fsuid=%s"
-                     % tuple(qemu_ugid[0:4]))
-        logging.info("Process run as gid=%s,egid=%s,sgid=%s,fsgid=%s"
-                     % tuple(qemu_ugid[4:]))
+        logging.info("Process run as uid=%s,euid=%s,suid=%s,fsuid=%s",
+                     *tuple(qemu_ugid[0:4]))
+        logging.info("Process run as gid=%s,egid=%s,sgid=%s,fsgid=%s",
+                     *tuple(qemu_ugid[4:]))
 
         error_context.context("Check if the user %s ugid is equal to the "
                               "process %s" % (exec_username, pid))

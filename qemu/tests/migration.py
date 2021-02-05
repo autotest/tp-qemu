@@ -224,9 +224,9 @@ def run(test, params, env):
                 for func in pre_migrate:
                     func(vm, params, test)
                 if i % 2 == 0:
-                    logging.info("Round %s ping..." % str(i / 2))
+                    logging.info("Round %s ping...", str(i / 2))
                 else:
-                    logging.info("Round %s pong..." % str(i / 2))
+                    logging.info("Round %s pong...", str(i / 2))
                 try:
                     vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                                offline, check,
@@ -266,9 +266,9 @@ def run(test, params, env):
                 logging.info("Command output before migration differs from "
                              "command output after migration")
                 logging.info("Command: %s", test_command)
-                logging.info("Output before:" +
+                logging.info("Output before: %s",
                              utils_misc.format_str_for_message(reference_output))
-                logging.info("Output after:" +
+                logging.info("Output after: %s",
                              utils_misc.format_str_for_message(output))
                 test.fail("Command '%s' produced different output "
                           "before and after migration" % test_command)

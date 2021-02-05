@@ -82,7 +82,7 @@ def run(test, params, env):
                 vm = env.get_vm(params["main_vm"])
 
                 session = vm.wait_for_login(timeout=self.login_timeout)
-                logging.debug("Sending command: '%s'" % self.mig_bg_command)
+                logging.debug("Sending command: '%s'", self.mig_bg_command)
                 s, o = session.cmd_status_output(self.mig_bg_command)
                 if s != 0:
                     raise error.TestError("Failed to run bg cmd in guest,"

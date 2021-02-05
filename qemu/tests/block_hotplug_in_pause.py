@@ -164,7 +164,7 @@ def run(test, params, env):
         :param get_disk_cmd: Cmd to get disks info in guest.
         :param plug_tag: Tag for hotplug/unplug
         """
-        logging.info("Check block device in guest after %s." % plug_tag)
+        logging.info("Check block device in guest after %s.", plug_tag)
         pause = float(params.get("virtio_block_pause", 30.0))
         status = utils_misc.wait_for(
             lambda: len(

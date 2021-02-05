@@ -39,11 +39,11 @@ def run(test, params, env):
             except QMPCmdError as err:
                 qmp_desc = err.data["desc"]
                 if qmp_desc.find(err_msg) >= 0:
-                    logging.info("Find expected result for %s" % name)
+                    logging.info("Find expected result for %s", name)
                     continue
                 logging.error(
-                    "Cannot got expected wrong result on %s: %s in %s" % (
-                        name, err_msg, qmp_desc))
+                    "Cannot got expected wrong result on %s: %s in %s",
+                    name, err_msg, qmp_desc)
                 raise err
             else:
                 test.fail("Can not got expected wrong result")
@@ -115,7 +115,7 @@ def run(test, params, env):
         tgm.get_throttle_group_props(group)
         images = params.get("throttle_group_member_%s" % group, "").split()
         if len(images) == 0:
-            logging.warning("No images in group %s" % group)
+            logging.warning("No images in group %s", group)
             continue
         tester = ThrottleTester(test, params, vm, session, group, images)
         error_context.context("Build test stuff for %s:%s" % (group, images),

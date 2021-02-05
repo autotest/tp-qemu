@@ -59,4 +59,4 @@ def run(test, params, env):
     finally:
         for se in sessions:
             se.close()
-        logging.info("Total number booted: %d" % (num - 1))
+        logging.info("Total number booted: %d", (num - 1))

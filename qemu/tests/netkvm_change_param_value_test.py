@@ -34,7 +34,7 @@ def run(test, params, env):
                               logging.info)
         utils_net.set_netkvm_param_value(vm, param_name, param_value)
 
-        logging.info("Check value after setting %s" % param_name)
+        logging.info("Check value after setting %s", param_name)
         cur_value = utils_net.get_netkvm_param_value(vm, param_name)
         if cur_value != param_value:
             err_msg = "Current value: %s is not equal to target value: %s"

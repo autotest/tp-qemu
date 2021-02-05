@@ -54,7 +54,7 @@ def run(test, params, env):
                                                     "system_reset")
                 reboot_timeout = float(mig_data.params.get("reboot_timeout", 30))
                 if self.is_src:
-                    logging.info("Do '%s' before migraion..." % reboot_method)
+                    logging.info("Do '%s' before migraion...", reboot_method)
 
                     end_time = time.time() + reboot_timeout
                     while time.time() < end_time:

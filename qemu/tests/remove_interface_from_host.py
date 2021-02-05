@@ -98,7 +98,7 @@ def run(test, params, env):
     error_context.context("Shutdown the VM.", logging.info)
     session = vm.wait_for_serial_login()
     shutdown_cmd = params.get("shutdown_command", "shutdown")
-    logging .debug("Shutdown guest with command %s" % shutdown_cmd)
+    logging .debug("Shutdown guest with command %s", shutdown_cmd)
     session.sendline(shutdown_cmd)
 
     error_context.context("Waiting VM to go down", logging.info)

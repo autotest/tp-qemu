@@ -233,7 +233,7 @@ def run(test, params, env):
         for cpu_model in cpu_models:
             out = get_guest_cpuid(self, cpu_model)
             guest_vendor = cpuid_to_vendor(out, 0x00000000)
-            logging.debug("Guest's vendor: " + guest_vendor)
+            logging.debug("Guest's vendor: %s", guest_vendor)
             if guest_vendor != vendor:
                 test.fail("Guest vendor [%s], doesn't match "
                           "required vendor [%s] for CPU [%s]" %
@@ -250,8 +250,8 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "vendor=" + vendor)
             guest_vendor0 = cpuid_to_vendor(out, 0x00000000)
             guest_vendor80000000 = cpuid_to_vendor(out, 0x80000000)
-            logging.debug("Guest's vendor[0]: " + guest_vendor0)
-            logging.debug("Guest's vendor[0x80000000]: " +
+            logging.debug("Guest's vendor[0]: %s", guest_vendor0)
+            logging.debug("Guest's vendor[0x80000000]: %s",
                           guest_vendor80000000)
             if guest_vendor0 != vendor:
                 test.fail("Guest vendor[0] [%s], doesn't match "
@@ -457,8 +457,8 @@ def run(test, params, env):
                     signature = signature + c
                 else:
                     signature = "%s\\x%02x" % (signature, ord(c))
-        logging.debug("(%s.%s:%s: signature: %s" % (leaf, idx, str(regs),
-                                                    signature))
+        logging.debug("(%s.%s:%s: signature: %s", leaf, idx, str(regs),
+                      signature)
         return signature
 
     def cpuid_signature(self):
@@ -498,7 +498,7 @@ def run(test, params, env):
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
             r = out[leaf, idx][reg]
-            logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
+            logging.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
             for i in bits:
                 if (r & (1 << int(i))) == 0:
                     test.fail("CPUID(%s.%s).%s[%s] is not set" %
@@ -523,7 +523,7 @@ def run(test, params, env):
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
             r = out[leaf, idx][reg]
-            logging.debug("CPUID(%s.%s).%s=0x%08x" % (leaf, idx, reg, r))
+            logging.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
             if r != val:
                 test.fail("CPUID(%s.%s).%s is not 0x%08x" %
                           (leaf, idx, reg, val))

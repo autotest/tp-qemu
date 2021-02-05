@@ -64,7 +64,7 @@ def run(test, params, env):
         # RHEL7 uses gsettings and RHEL6 uses gconftool-2
         try:
             release = guest_session.cmd("cat /etc/redhat-release")
-            logging.info("Redhat Release: %s" % release)
+            logging.info("Redhat Release: %s", release)
         except:
             test.cancel("Test is only currently supported on "
                         "RHEL and Fedora operating systems")
@@ -104,7 +104,7 @@ def run(test, params, env):
         # Finally test copying text within the guest
         cmd = "%s %s %s %s" % (interpreter, script_call,
                                script_params, testing_text)
-        logging.info("This command here: " + cmd)
+        logging.info("This command here: %s", cmd)
 
         try:
             logging.debug("------------ Script output ------------")

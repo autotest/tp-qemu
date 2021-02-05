@@ -46,8 +46,8 @@ def check_mem_increase(session, params, orig_mem, increase_mem):
     if (new_mem - orig_mem) == increase_mem:
         error_context.context(
             'Get guest free memory size after hotplug pc-dimm.', logging.info)
-        logging.debug('Guest free memory size is %d bytes' % new_mem)
-        logging.info("Guest memory size is increased %s." % params['size'])
+        logging.debug('Guest free memory size is %d bytes', new_mem)
+        logging.info("Guest memory size is increased %s.", params['size'])
         return True
     return False
 
@@ -94,7 +94,7 @@ def run(test, params, env):
         test.fail("Fail to get HPT value")
     hpt_size = int(get_hpt_def)
     hpt_default = int(get_hpt_def)
-    logging.debug("Default hpt order : '%s'" % get_hpt_def)
+    logging.debug("Default hpt order : '%s'", get_hpt_def)
     increment_sequence = params.get("increment_sequence").split()
     error_context.context("hpt changes according to increment",
                           logging.info)
@@ -104,7 +104,7 @@ def run(test, params, env):
         hpt_mem = MemoryHotplugTest(test, params, env)
         hpt_mem.hotplug_memory(vm, "hpt_mem")
         increase_mem = int(params['size'])
-        logging.debug('Guest free memory size is %d bytes' % orig_mem)
+        logging.debug('Guest free memory size is %d bytes', orig_mem)
         plug_timeout = float(params.get('plug_timeout', 20))
         if not utils_misc.wait_for(lambda: check_mem_increase(
                 session, params, orig_mem, increase_mem), plug_timeout):

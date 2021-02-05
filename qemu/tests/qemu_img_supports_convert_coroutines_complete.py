@@ -29,12 +29,12 @@ def run(test, params, env):
 
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s" % img.image_filename)
+        logging.info("Run qemu-io %s", img.image_filename)
         q = QemuIOSystem(test, params, img.image_filename)
         q.cmd_output(cmd, 120)
 
     def _create_error_cfg(file):
-        logging.info("Create error cfg %s." % file)
+        logging.info("Create error cfg %s.", file)
         error_cfg = ('[inject-error]\nevent = "write_aio"\n'
                      'sector = "819200"\nonce = "on"')
         with open(file, "w") as cfg:

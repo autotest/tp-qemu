@@ -102,7 +102,7 @@ def run(test, params, env):
         :params qmp_cmd: qmp command
         """
         output = qmp_port.send_args_cmd(qmp_cmd)
-        logging.info("QMP command: '%s' \n Output: '%s'" % (qmp_cmd, output))
+        logging.info("QMP command: '%s' \n Output: '%s'", qmp_cmd, output)
 
     def query_ntp_time():
         """

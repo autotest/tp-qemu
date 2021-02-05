@@ -33,8 +33,8 @@ def run(test, params, env):
         drive_id = match.group(2)
         drive_path = utils_misc.get_linux_drive_path(session, drive_id)
         did = drive_path[5:]
-        logging.info("Format %s(size=%s) with %s type." % (did, stg_size,
-                                                           stg_fstype))
+        logging.info("Format %s(size=%s) with %s type.", did, stg_size,
+                     stg_fstype)
         mnts = utils_disk.configure_empty_linux_disk(session, did, stg_size,
                                                      fstype=stg_fstype)
         if not mnts:

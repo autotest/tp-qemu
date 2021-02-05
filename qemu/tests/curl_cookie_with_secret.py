@@ -47,7 +47,7 @@ def run(test, params, env):
     dump_file = utils_misc.generate_tmp_file_name('%s_access_tcpdump' % tag,
                                                   'out')
 
-    logging.info('start tcpdump, save packets in %s' % dump_file)
+    logging.info('start tcpdump, save packets in %s', dump_file)
     process.system(
         params['tcpdump_cmd'].format(server=img_params['curl_server'],
                                      dump_file=dump_file),
@@ -61,8 +61,8 @@ def run(test, params, env):
             for line in fd:
                 line = line.decode('utf-8', 'ignore')
                 if 'Cookie: %s' % img_params['curl_cookie_secret'] in line:
-                    logging.info('get "%s" from "%s"'
-                                 % (img_params['curl_cookie_secret'], line))
+                    logging.info('get "%s" from "%s"',
+                                 img_params['curl_cookie_secret'], line)
                     break
             else:
                 test.fail('Failed to get cookie data from tcpdump output')

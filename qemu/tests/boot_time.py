@@ -44,7 +44,7 @@ def run(test, params, env):
         boot_time = utils_misc.monotonic_time() - vm.start_monotonic_time
         test.write_test_keyval({'result': "%ss" % boot_time})
         expect_time = int(params.get("expect_bootup_time", "17"))
-        logging.info("Boot up time: %ss" % boot_time)
+        logging.info("Boot up time: %ss", boot_time)
 
     finally:
         try:

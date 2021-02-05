@@ -100,7 +100,7 @@ def run(test, params, env):
             continue
         output = se.cmd_output_safe(ntp_query_cmd)
         offset = float(re.findall(r"[+-]?(\d+\.\d+)", output, re.M)[-1])
-        logging.info("The time drift of guest %s is %ss." % (vmid, offset))
+        logging.info("The time drift of guest %s is %ss.", vmid, offset)
         if offset > float(expected_time_drift):
             fail_offset.append((vmid, offset))
     if fail_offset:

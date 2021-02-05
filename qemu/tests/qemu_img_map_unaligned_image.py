@@ -42,13 +42,12 @@ def run(test, params, env):
     img_param = params.object_params("test")
     img = QemuImg(img_param, data_dir.get_data_dir(), "test")
 
-    logging.info("Create a new file %s using truncate." % img.image_filename)
+    logging.info("Create a new file %s using truncate.", img.image_filename)
     process.run("rm -f %s" % img.image_filename)
     process.run("truncate -s 1G %s " % img.image_filename)
 
     random_str, str_len = _generate_random_string()
-    logging.info("Write '%s' into the file %s." % (random_str,
-                                                   img.image_filename))
+    logging.info("Write '%s' into the file %s.", random_str, img.image_filename)
     process.run("echo -n '%s' > %s" % (random_str, img.image_filename),
                 shell=True)
     res = img.map(output="json")

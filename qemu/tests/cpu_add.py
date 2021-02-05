@@ -69,8 +69,8 @@ def run(test, params, env):
             online = 0
         online_file = "/sys/devices/system/cpu/cpu%s/online" % cpu_id
         if session.cmd_status("test -f %s" % online_file):
-            logging.info("online file %s not exist, just pass the cpu%s" %
-                         (online_file, cpu_id))
+            logging.info("online file %s not exist, just pass the cpu%s",
+                         online_file, cpu_id)
             return
         session.cmd("echo %s > %s " % (online, online_file))
 
@@ -144,8 +144,8 @@ def run(test, params, env):
         if status:
             if not qmp_check_info and not human_check_info:
                 vcpu_been_pluged += 1
-                logging.info("Cpu%s hotplug successfully" % plug_cpu_id)
-                logging.info("Now '%s' cpus have been hotpluged" %
+                logging.info("Cpu%s hotplug successfully", plug_cpu_id)
+                logging.info("Now '%s' cpus have been hotpluged",
                              vcpu_been_pluged)
                 continue
             else:
@@ -157,21 +157,21 @@ def run(test, params, env):
                 test.error(warn_msg)
             if qmp_check_info and re.findall(qmp_check_info, output, re.I):
                 msg = "Hotplug vcpu(id:'%s') error, qemu report the error."
-                logging.info(msg % plug_cpu_id)
-                logging.debug("QMP error info: '%s'" % output)
+                logging.info(msg, plug_cpu_id)
+                logging.debug("QMP error info: '%s'", output)
                 continue
             elif (human_check_info and
                   re.findall(human_check_info, output, re.I)):
                 msg = "Hotplug vcpu(id:'%s') error, qemu report the error"
-                logging.info(msg % plug_cpu_id)
-                logging.debug("Error info: '%s'" % output)
+                logging.info(msg, plug_cpu_id)
+                logging.debug("Error info: '%s'", output)
                 continue
             else:
                 err_msg = "Hotplug error! "
                 err_msg += "the hotplug cpu_id is: '%s', " % plug_cpu_id
                 err_msg += "the maxcpus allowed is: '%s', " % maxcpus
                 err_msg += "qemu cpu list is:'%s'" % vm.monitor.info("cpus")
-                logging.debug("The error info is:\n '%s'" % output)
+                logging.debug("The error info is:\n '%s'", output)
                 test.fail(err_msg)
 
     if stop_before_hotplug == "yes":
@@ -202,10 +202,10 @@ def run(test, params, env):
 
     if offline:
         offline_list = onoff_para_opt(offline)
-        logging.debug("Cpu offline list is %s " % offline_list)
+        logging.debug("Cpu offline list is %s ", offline_list)
     if online:
         online_list = onoff_para_opt(online)
-        logging.debug("Cpu online list is %s " % offline_list)
+        logging.debug("Cpu online list is %s ", offline_list)
 
     for i in range(repeat_time):
         for offline_cpu in offline_list:

@@ -39,13 +39,13 @@ def run(test, params, env):
                 bridge = params.get("netdst", "switch")
                 utils_net.del_from_bridge(exp.ifname, bridge)
             except Exception as warning:
-                logging.warn("Error occurent when clean tap " +
-                             "device(%s)" % str(warning))
+                logging.warn("Error occurent when clean tap device(%s)",
+                             str(warning))
         error_context.context("Check Qemu not coredump", logging.info)
         if "(core dumped)" in message:
             test.fail("Qemu core dumped when boot with invalid parameters.")
         error_context.context("Check Qemu quit with except message",
                               logging.info)
         if not re.search(params['key_words'], message, re.M | re.I):
-            logging.info("Error message: %s" % message)
+            logging.info("Error message: %s", message)
             test.fail("Can't detect expect error")

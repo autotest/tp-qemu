@@ -36,7 +36,7 @@ class TestPMD(object):
                " --rxq=%d --txq=%d" % (
                    nic1_driver, nic2_driver, nic1, nic2, cores, queues, queues))
         cmd_str = self.testpmd_exec + cmd
-        logging.info("[cmd] %s" % cmd_str)
+        logging.info("[cmd] %s", cmd_str)
         try:
             self.proc = pexpect.spawn(cmd_str)
             self.proc.expect("testpmd>")
@@ -83,7 +83,7 @@ class TestPMD(object):
     def command(self, cmd):
         self.proc.sendline(cmd)
         self.proc.expect("testpmd>")
-        logging.info("testpmd> %s" % cmd)
+        logging.info("testpmd> %s", cmd)
         print("testpmd> %s" % cmd)
         logging.info(self.proc.before)
         line_list = to_text(self.proc.before).split("\n")

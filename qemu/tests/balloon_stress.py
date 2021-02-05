@@ -70,7 +70,7 @@ def run(test, params, env):
     error_context.context("balloon vm memory in loop", logging.info)
     try:
         for i in range(1, int(repeat_times+1)):
-            logging.info("repeat times: %d" % i)
+            logging.info("repeat times: %d", i)
             balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
             if not check_bg_running():
                 test.error("Background stress process is not alive")

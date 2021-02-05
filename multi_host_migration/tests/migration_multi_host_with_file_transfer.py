@@ -240,7 +240,7 @@ def run(test, params, env):
                         if check_sum != orig_hash:
                             wrong_check_sum = True
                             logging.error("Checksum in transfer number"
-                                          " %d if wrong." % (i))
+                                          " %d if wrong.", i)
 
                     if wrong_check_sum:
                         raise error.TestFail("Returned file hash (%s) differs"
@@ -259,7 +259,7 @@ def run(test, params, env):
             else:
                 self._hosts_barrier(self.hosts, self.id, "befor_mig", 260)
                 address_cache.update(sync.sync(timeout=120)[self.master_id()])
-                logging.debug("Address cache updated to %s" % address_cache)
+                logging.debug("Address cache updated to %s", address_cache)
                 self._slave_migrate(sync)
 
                 # Wait for check if guest lives.

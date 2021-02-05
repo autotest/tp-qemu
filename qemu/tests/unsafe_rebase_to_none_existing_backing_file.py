@@ -64,7 +64,7 @@ def run(test, params, env):
     base_img, _ = _get_img_obj_and_params(base)
     sn_img, sn_img_params = _get_img_obj_and_params(snapshot)
 
-    logging.info("Create a snapshot %s based on %s." % (snapshot, base))
+    logging.info("Create a snapshot %s based on %s.", snapshot, base)
     # workaround to assign system disk's image_name to image_name_image1
     params["image_name_image1"] = params["image_name"]
     QemuImgTest(test, params, env, snapshot).create_snapshot()

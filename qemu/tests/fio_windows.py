@@ -61,6 +61,6 @@ def run(test, params, env):
         try:
             vm.copy_files_from(fio_log_file, test.resultsdir)
         except Exception as err:
-            logging.warn("Log file copy failed: %s" % err)
+            logging.warn("Log file copy failed: %s", err)
         if session:
             session.close()

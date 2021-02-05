@@ -126,7 +126,7 @@ def run(test, params, env):
     except Exception as e:
         if "is not removable" not in str(e):
             test.fail(e)
-        logging.debug("Catch exception message: %s" % e)
+        logging.debug("Catch exception message: %s", e)
     if not check_block(device_name):
         test.fail("Could remove non-removable device!")
 

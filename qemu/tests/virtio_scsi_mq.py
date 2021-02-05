@@ -69,8 +69,8 @@ def run(test, params, env):
                     break
                 vcpu_tid = vm.vcpu_threads[vcpu_num]
                 logging.debug(
-                    "pin vcpu thread(%s) to cpu(%s)" % (
-                        vcpu_tid, numa_node.pin_cpu(vcpu_tid)))
+                    "pin vcpu thread(%s) to cpu(%s)",
+                    vcpu_tid, numa_node.pin_cpu(vcpu_tid))
                 vcpu_num += 1
 
     def verify_num_queues():
@@ -187,7 +187,7 @@ def run(test, params, env):
                 diff_interrupts[cpu] = diff_val
         logging.debug('The changed number of interrupts:')
         for k, v in sorted(diff_interrupts.items()):
-            logging.debug('  CPU%s: %d' % (k, v))
+            logging.debug('  CPU%s: %d', k, v)
         if cpu_not_used:
             cpus = " ".join(cpu_not_used)
             error_msg = ("%s are not used during test. "

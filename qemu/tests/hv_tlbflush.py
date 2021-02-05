@@ -162,7 +162,7 @@ def run(test, params, env):
         total_time = datetime.timedelta(hours=s_t.tm_hour,
                                         minutes=s_t.tm_min,
                                         seconds=s_t.tm_sec).total_seconds()
-        logging.info("Runing result: %f" % total_time)
+        logging.info("Running result: %f", total_time)
         return total_time
 
     timeout = params.get_numeric("timeout", 360)

@@ -148,9 +148,9 @@ def check_if_vm_vcpu_match(vcpu_desire, vm):
         vcpu_desire = int(vcpu_desire)
     if vcpu_desire != vcpu_actual:
         logging.debug("CPU quantity mismatched !!! guest said it got %s "
-                      "but we assigned %s" % (vcpu_actual, vcpu_desire))
+                      "but we assigned %s", vcpu_actual, vcpu_desire)
         return False
-    logging.info("CPU quantity matched: %s" % vcpu_actual)
+    logging.info("CPU quantity matched: %s", vcpu_actual)
     return True
 
 

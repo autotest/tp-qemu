@@ -59,14 +59,14 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         data = {"node": self.device, "name": bitmap}
         if isinstance(extra_options, dict):
             data.update(extra_options)
-        logging.debug("%s bitmap %s" % (operator.capitalize, bitmap))
+        logging.debug("%s bitmap %s", operator.capitalize, bitmap)
         return job_utils.make_transaction_action(action, data)
 
     def _bitmap_batch_operate_by_transaction(self, action, bitmap_index_list):
         bitmap_lists = ",".join(
             map(lambda x: "bitmap_%d" % x, bitmap_index_list))
-        logging.info("%s %s in a transaction" %
-                     (action.capitalize(), bitmap_lists))
+        logging.info("%s %s in a transaction",
+                     action.capitalize(), bitmap_lists)
         func = partial(self._make_bitmap_transaction_action, action)
         actions = list(map(func, bitmap_index_list))
         return self.vm.monitor.transaction(actions)
@@ -193,12 +193,12 @@ def run(test, params, env):
         record_counts_bitmap4 = backup_test.get_record_counts_of_bitmap(
             "bitmap_4")
         if sha256_bitmap4 != sha256_bitmap1:
-            logging.debug("sha256_bitmap1: %s, sha256_bitmap4: %s" %
-                          (sha256_bitmap1, sha256_bitmap4))
+            logging.debug("sha256_bitmap1: %s, sha256_bitmap4: %s",
+                          sha256_bitmap1, sha256_bitmap4)
             raise test.fail("sha256 of bitmap4 not equal sha256 of bitmap1")
         if record_counts_bitmap4 != record_counts_bitmap1:
-            logging.debug("count_bitmap1: %d, count_bitmap4: %d" %
-                          (record_counts_bitmap1, record_counts_bitmap4))
+            logging.debug("count_bitmap1: %d, count_bitmap4: %d",
+                          record_counts_bitmap1, record_counts_bitmap4)
             raise test.fail("counts of bitmap4 not equal counts of bitmap4")
         error_context.context("track file3 in bitmap5", logging.info)
         backup_test.track_file3_with_bitmap5()

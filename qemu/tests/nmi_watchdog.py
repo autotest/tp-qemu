@@ -53,8 +53,8 @@ def run(test, params, env):
 
         error_context.context("")
         for i in range(int(guest_cpu_num)):
-            logging.info("vcpu: %s, nmi_counter1: %s, nmi_counter2: %s" %
-                         (i, nmi_counter1[i], nmi_counter2[i]))
+            logging.info("vcpu: %s, nmi_counter1: %s, nmi_counter2: %s",
+                         i, nmi_counter1[i], nmi_counter2[i])
             if int(nmi_counter2[i]) <= int(nmi_counter1[i]):
                 test.fail("Guest's NMI counter did not increase "
                           "after 60 seconds")

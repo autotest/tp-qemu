@@ -187,7 +187,7 @@ def run_test(session_serial, runner, remote_path, pktgen_ip, dsc,
     exec_cmd = "%s %s %s %s %s" % (remote_path, dsc, interface,
                                    run_threads, size)
     packets = "cat /sys/class/net/%s/statistics/tx_packets" % interface
-    logging.info("Start pktgen test by cmd '%s'" % exec_cmd)
+    logging.info("Start pktgen test by cmd '%s'", exec_cmd)
     try:
         packet_b = runner(packets)
         runner(exec_cmd, timeout)

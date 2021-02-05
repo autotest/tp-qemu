@@ -30,7 +30,7 @@ def connect_to_vm(vm_name, env, params):
     vm_root_session = vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)),
         username="root", password="123456")
-    logging.info("VM %s is up and running" % vm_name)
+    logging.info("VM %s is up and running", vm_name)
     return (vm, vm_root_session)
 
 
@@ -44,17 +44,17 @@ def install_req_pkgs(pkgsRequired, vm_root_session, params):
     """
 
     for pkgName in pkgsRequired:
-        logging.info("Checking to see if %s is installed" % pkgName)
+        logging.info("Checking to see if %s is installed", pkgName)
         try:
             vm_root_session.cmd("rpm -q %s" % pkgName)
         except:
             rpm = params.get(re.sub("-", "_", pkgName) + "_url")
-            logging.info("Installing %s from %s" % (pkgName, rpm))
+            logging.info("Installing %s from %s", pkgName, rpm)
             try:
                 vm_root_session.cmd("yum -y localinstall %s" % rpm,
                                     timeout=300)
             except:
-                logging.info("Could not install %s" % pkgName)
+                logging.info("Could not install %s", pkgName)
 
 
 def build_install_spiceprotocol(test, vm_root_session, vm_script_path, params):
@@ -123,13 +123,13 @@ def build_install_virtviewer(test, vm_root_session, vm_script_path, params):
         output = vm_root_session.cmd("killall remote-viewer")
         logging.info(output)
     except ShellCmdError as err:
-        logging.error("Could not kill remote-viewer " + err.output)
+        logging.error("Could not kill remote-viewer %s", err.output)
 
     try:
         output = vm_root_session.cmd("yum -y remove virt-viewer", timeout=120)
         logging.info(output)
     except ShellCmdError as err:
-        logging.error("virt-viewer package couldn't be removed! " + err.output)
+        logging.error("virt-viewer package couldn't be removed! %s", err.output)
 
     if "release 7" in vm_root_session.cmd("cat /etc/redhat-release"):
         pkgsRequired = ["libogg-devel", "celt051-devel",
@@ -152,7 +152,7 @@ def build_install_virtviewer(test, vm_root_session, vm_script_path, params):
                                      " remote-viewer --version")
         logging.info(output)
     except ShellCmdError as err:
-        logging.error("Can't get version number!" + err.output)
+        logging.error("Can't get version number! %s", err.output)
 
 
 def build_install_spicegtk(test, vm_root_session, vm_script_path, params):

@@ -62,7 +62,7 @@ class BlockReconnectTest(BlockdevBaseTest):
         find_disk_cmd = data_disk_cmd % system_disk_name
         data_disk_name = session.cmd(find_disk_cmd,
                                      timeout=self.disk_op_timeout).strip()
-        logging.info('The data disk is %s' % data_disk_name)
+        logging.info('The data disk is %s', data_disk_name)
         session.close()
         return system_disk_name, data_disk_name
 
@@ -78,7 +78,7 @@ class BlockReconnectTest(BlockdevBaseTest):
     def run_iptables(self, cmd):
         result = process.run(cmd, ignore_status=True, shell=True)
         if result.exit_status != 0:
-            logging.error('command error: %s' % result.stderr.decode())
+            logging.error('command error: %s', result.stderr.decode())
 
     def break_net_with_iptables(self):
         self.run_iptables(self.params['net_break_cmd'])
@@ -101,7 +101,7 @@ class BlockReconnectTest(BlockdevBaseTest):
         error_context.context(
             "check data disk resumed", logging.info)
         for iteration in range(self.repeat_times):
-            logging.info("Wait %s seconds" % self.reconnect_time_wait)
+            logging.info("Wait %s seconds", self.reconnect_time_wait)
             time.sleep(self.reconnect_time_wait)
             self.run_io_test(test_disk)
 

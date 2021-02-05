@@ -38,10 +38,10 @@ def run(test, params, env):
                                                      iperf_source_path)
         try:
             if session:
-                logging.info("Compiling %s in guest..." % iperf_version)
+                logging.info("Compiling %s in guest...", iperf_version)
                 session.cmd(compile_cmd)
             else:
-                logging.info("Compiling %s in host..." % iperf_version)
+                logging.info("Compiling %s in host...", iperf_version)
                 process.run(compile_cmd, shell=True, verbose=False)
         except (process.CmdError, ShellCmdError) as err_msg:
             logging.error(err_msg)
@@ -56,10 +56,10 @@ def run(test, params, env):
         try:
             info_text = "Start iperf session in %s with cmd: %s"
             if session:
-                logging.info(info_text % ("guest", iperf_cmd))
+                logging.info(info_text, "guest", iperf_cmd)
                 data_info = session.cmd_output(iperf_cmd, timeout=120)
             else:
-                logging.info(info_text % ("host", iperf_cmd))
+                logging.info(info_text, "host", iperf_cmd)
                 data_info = process.system_output(iperf_cmd, timeout=120,
                                                   verbose=False).decode()
         except Exception as err_msg:
@@ -67,7 +67,7 @@ def run(test, params, env):
             test.error("Failed to start iperf session")
         else:
             if catch_data:
-                logging.debug("Full connection log:\n%s" % data_info)
+                logging.debug("Full connection log:\n%s", data_info)
                 parallel_cur = len(re.findall(catch_data, data_info))
                 parallel_exp = int(params.get("parallel_num", 0))
                 if not parallel_cur:

@@ -57,7 +57,7 @@ def run(test, params, env):
                 wdt_pci_info = re.findall(".*6300ESB Watchdog Timer", o)
                 if not wdt_pci_info:
                     test.fail("Can not find watchdog pci")
-            logging.info("Found watchdog pci device : %s" % wdt_pci_info)
+            logging.info("Found watchdog pci device : %s", wdt_pci_info)
 
         # checking watchdog init info using dmesg
         error_context.context("Checking watchdog load info", logging.info)
@@ -68,9 +68,9 @@ def run(test, params, env):
         if s != 0:
             error_msg = "Wactchdog device '%s' load/initialization failed "
             test.error(error_msg % watchdog_device)
-        logging.info("Watchdog device '%s' add and init successfully"
-                     % watchdog_device)
-        logging.debug("Init info : '%s'" % o)
+        logging.info("Watchdog device '%s' add and init successfully",
+                     watchdog_device)
+        logging.debug("Init info : '%s'", o)
 
     def _trigger_watchdog(session, trigger_cmd=None):
         """
@@ -109,7 +109,7 @@ def run(test, params, env):
                     test.fail("Guest didn't receive dmesg with 'NMI received',"
                               "after action '%s'." % watchdog_action)
                 msg = session.cmd_output("dmesg").splitlines()[-8:]
-                logging.info("Guest received dmesg info: %s" % msg)
+                logging.info("Guest received dmesg info: %s", msg)
             elif (vm_arch_name in ("ppc64", "ppc64le")):
                 rebooted = check_guest_reboot(params["guest_reboot_pattern"])
                 if not rebooted:
@@ -147,7 +147,7 @@ def run(test, params, env):
             if not utils_misc.wait_for(
                 lambda: vm.monitor.verify_status(f_param),
                     response_timeout, 0, 1):
-                logging.debug("Monitor status is:%s" % vm.monitor.get_status())
+                logging.debug("Monitor status is:%s", vm.monitor.get_status())
                 txt = "It seems action '%s' took no effect" % watchdog_action
                 txt += " , Wrong monitor status!"
                 test.fail(txt)
@@ -156,7 +156,7 @@ def run(test, params, env):
         if watchdog_action == "reset":
             logging.info("Try to login the guest after reboot")
             vm.wait_for_login(timeout=relogin_timeout)
-        logging.info("Watchdog action '%s' come into effect." %
+        logging.info("Watchdog action '%s' come into effect.",
                      watchdog_action)
 
     def check_watchdog_support():
@@ -179,11 +179,11 @@ def run(test, params, env):
                                                 shell=True).decode()
         if watchdog_device:
             if re.findall(watchdog_device_type, watchdog_device, re.I):
-                logging.info("The host support '%s' type watchdog device" %
+                logging.info("The host support '%s' type watchdog device",
                              watchdog_device_type)
             else:
-                logging.info("The host support watchdog device type is: '%s'"
-                             % watchdog_device)
+                logging.info("The host support watchdog device type is: '%s'",
+                             watchdog_device)
                 test.cancel("watdog %s isn't supported" % watchdog_device_type)
         else:
             test.cancel("No watchdog device supported by the host!")
@@ -331,7 +331,7 @@ def run(test, params, env):
             test.fail("Watchdog action '%s' still took effect after pausing "
                       "VM." % watchdog_action)
         logging.info("Watchdog action '%s' didn't take effect after pausing "
-                     "VM, it is expected." % watchdog_action)
+                     "VM, it is expected.", watchdog_action)
         vm.resume()
         if not utils_misc.wait_for(lambda: vm.monitor.get_event("WATCHDOG"),
                                    timeout=response_timeout):
@@ -402,7 +402,7 @@ def run(test, params, env):
             o = session.cmd_output("dmesg | grep -i 'i6300esb.*invalid'")
             if o:
                 logging.info("Heartbeat value %s is out of range, it is "
-                             "expected." % heartbeat)
+                             "expected.", heartbeat)
             else:
                 test.fail("No invalid heartbeat info in dmesg.")
         elif -2147483648 <= heartbeat < 1 or 2046 < heartbeat <= 2147483647:
@@ -429,8 +429,8 @@ def run(test, params, env):
                 time.sleep(1)
             guest_pause_time = time.time() - start_time
             if abs(guest_pause_time - float(heartbeat)) <= 2:
-                logging.info("Watchdog action '%s' took effect after '%s's." %
-                             (watchdog_action, guest_pause_time))
+                logging.info("Watchdog action '%s' took effect after '%s's.",
+                             watchdog_action, guest_pause_time)
             else:
                 test.fail("Watchdog action '%s' took effect after '%s's, it is earlier"
                           " than expected." % (watchdog_action, guest_pause_time))

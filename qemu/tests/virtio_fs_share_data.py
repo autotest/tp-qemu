@@ -190,11 +190,11 @@ def run(test, params, env):
             fs_dest = "%s:" % volume_letter
 
         guest_file = os.path.join(fs_dest, 'fs_test')
-        logging.info("The guest file in shared dir is %s" % guest_file)
+        logging.info("The guest file in shared dir is %s", guest_file)
 
         try:
             if cmd_dd:
-                logging.info("Creating file under %s inside guest." % fs_dest)
+                logging.info("Creating file under %s inside guest.", fs_dest)
                 session.cmd(cmd_dd % guest_file, io_timeout)
 
                 if os_type == "linux":

@@ -21,7 +21,7 @@ def run(test, params, env):
         vm = env.get_vm(vm_name)
         ip = vm.get_address()
         path = params.get("download_url")
-        logging.info("kernel path = %s" % path)
+        logging.info("kernel path = %s", path)
         get_kernel_cmd = "wget %s" % path
         try:
             status, output = session.cmd_status_output(get_kernel_cmd,
@@ -31,7 +31,7 @@ def run(test, params, env):
                 test.fail("Fail to download the kernel in %s" % vm_name)
             else:
                 logging.info("Completed download the kernel src"
-                             " in %s" % vm_name)
+                             " in %s", vm_name)
             test_cmd = params.get("test_cmd")
             status, output = session.cmd_status_output(test_cmd, timeout=1200)
             if status != 0:

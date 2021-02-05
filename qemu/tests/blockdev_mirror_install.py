@@ -29,7 +29,7 @@ class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
         self._bg = utils_test.BackgroundTest(unattended_install.run, args)
         self._bg.start()
 
-        logging.info("Wait till '%s'" % self.params["tag_for_install_start"])
+        logging.info("Wait till '%s'", self.params["tag_for_install_start"])
         if utils_misc.wait_for(
                 lambda: self._is_install_started(
                     self.params["tag_for_install_start"]),

@@ -58,7 +58,7 @@ def run(test, params, env):
         """
         Create the file to verify md5 value.
         """
-        logging.debug("create md5 file %s" % filename)
+        logging.debug("create md5 file %s", filename)
         if os_type == 'windows':
             vm.copy_files_to(params["tmp_md5_file"], filename)
         else:
@@ -120,7 +120,7 @@ def run(test, params, env):
             md5_filename = mpoint + junction + md5_file
             create_md5_file(md5_filename)
             md5 = get_md5_of_file(md5_filename)
-            logging.debug("Got md5 %s ratio:%s on %s" % (md5, ratio, disk))
+            logging.debug("Got md5 %s ratio:%s on %s", md5, ratio, disk)
 
         # We need shrink the disk in guest first, than in monitor
         if float(ratio) < 1.0:

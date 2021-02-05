@@ -31,8 +31,8 @@ def run(test, params, env):
             hp_config.target_hugepages = h_size
             hp_config.set_hugepages()
             if params.get('on_numa_node'):
-                logging.info('Set hugepage size %s to target node %s' % (
-                    h_size, target_node))
+                logging.info('Set hugepage size %s to target node %s',
+                             h_size, target_node)
                 hp_config.set_node_num_huge_pages(h_size, target_node,
                                                   hugepage_size)
 
@@ -51,13 +51,13 @@ def run(test, params, env):
                 break
             logging.info(
                 'The free memory of node %s is %s, is not enough for'
-                ' guest memory: %s' % (target_node, node_mem_free, mem))
+                ' guest memory: %s', target_node, node_mem_free, mem)
         else:
             test.cancel("No node on your host has sufficient free memory for "
                         "this test.")
     hp_config = test_setup.HugePageConfig(params)
     hp_config.target_hugepages = origin_nr
-    logging.info('Setup hugepage number to %s' % origin_nr)
+    logging.info('Setup hugepage number to %s', origin_nr)
     hp_config.setup()
     hugepage_size = utils_memory.get_huge_page_size()
 

@@ -27,7 +27,7 @@ def run(test, params, env):
                           logging.info)
     cmd = "cat /sys/devices/system/clocksource/"
     cmd += "clocksource0/current_clocksource"
-    logging.info("%s is current clocksource." % session.cmd_output(cmd))
+    logging.info("%s is current clocksource.", session.cmd_output(cmd))
 
     error_context.context("Pin every vcpu to physical cpu", logging.info)
     host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]

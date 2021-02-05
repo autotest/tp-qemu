@@ -40,7 +40,7 @@ def run(test, params, env):
             port_params = params.object_params(serial_port)
             if not port_params['serial_type'].startswith('virtserial'):
                 continue
-            logging.info("transfer data with port %s" % serial_port)
+            logging.info("transfer data with port %s", serial_port)
             params['file_transfer_serial_port'] = serial_port
             transfer_data(params, vm, sender='both')
 

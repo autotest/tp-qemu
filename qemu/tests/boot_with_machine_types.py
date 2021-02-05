@@ -31,7 +31,7 @@ def run(test, params, env):
     if not machine_types:
         test.fail("Failed to get machine types")
     else:
-        logging.info("Actual supported machine types are: " + ', '.join(map(str, machine_types)))
+        logging.info("Actual supported machine types are: %s", ', '.join(map(str, machine_types)))
 
         for m_type in machine_types:
             params["machine_type"] = m_type

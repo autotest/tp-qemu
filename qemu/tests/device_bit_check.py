@@ -62,7 +62,7 @@ def run(test, params, env):
             option_regex = r"%s\s+=\s+(\w+)" % option
             option_value = re.findall(option_regex, dev_info[0], re.M)
             if not option_value:
-                logging.debug("dev info in qtree: %s" % dev_info[0])
+                logging.debug("dev info in qtree: %s", dev_info[0])
                 test.error("Can't get the property info from qtree result")
             if option_value[0] not in convert_dict[properties[index]]:
                 msg = "'%s' value get '%s', " % (option, option_value)
@@ -70,7 +70,7 @@ def run(test, params, env):
                 logging.debug(msg)
                 test.fail("Properity bit for %s is wrong." % option)
 
-            logging.info("Properity bit in qtree is right for %s." % option)
+            logging.info("Properity bit in qtree is right for %s.", option)
             if params.get("check_in_guest", "yes") == "yes":
                 pci_info = session.cmd_output("lspci")
                 pci_n = re.findall(pci_id_pattern, pci_info)
@@ -88,6 +88,6 @@ def run(test, params, env):
                     test.fail("Properity bit for %s is wrong"
                               " inside guest." % option)
             logging.info("Properity bit in qtree is right for %s"
-                         " in guest." % option)
+                         " in guest.", option)
         session.close()
         vm.destroy()

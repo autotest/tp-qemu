@@ -61,7 +61,7 @@ def run(test, params, env):
         stress_test.load_stress_tool()
         time.sleep(int(params.get("stress_time", 120)))
         nr_ah.append(int(utils_memory.read_from_meminfo('AnonHugePages')))
-        logging.debug("The huge page using for guest is: %s" % nr_ah)
+        logging.debug("The huge page using for guest is: %s", nr_ah)
 
         if nr_ah[1] <= nr_ah[0]:
             logging.warn(

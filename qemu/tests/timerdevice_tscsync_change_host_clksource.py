@@ -110,4 +110,4 @@ def run(test, params, env):
             process.system(cmd, shell=True)
         except Exception as detail:
             logging.error("Failed to restore host clocksource."
-                          "Detail: %s" % detail)
+                          "Detail: %s", detail)

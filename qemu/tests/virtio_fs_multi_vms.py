@@ -94,7 +94,7 @@ def run(test, params, env):
                                   logging.info)
             installed = session.cmd_status(check_installed_cmd) == 0
             if installed:
-                logging.info("%s: Winfsp tool is already installed." % vm)
+                logging.info("%s: Winfsp tool is already installed.", vm)
             else:
                 install_cmd = utils_misc.set_winutils_letter(session,
                                                              wfsp_install_cmd)
@@ -148,15 +148,15 @@ def run(test, params, env):
                 fs_dest = "%s:" % volume_letter
 
             guest_file = os.path.join(fs_dest, 'fs_test')
-            logging.info("%s: The guest file in shared dir is %s" %
-                         (vm, guest_file))
+            logging.info("%s: The guest file in shared dir is %s",
+                         vm, guest_file)
             mapping[vm]['filesystems'].append({'fs_target': fs_target,
                                                'fs_dest': fs_dest,
                                                'guest_file': guest_file})
 
             if cmd_dd:
-                logging.info("%s: Creating file under %s inside guest." %
-                             (vm, fs_dest))
+                logging.info("%s: Creating file under %s inside guest.",
+                             vm, fs_dest)
                 session.cmd(cmd_dd % guest_file, io_timeout)
 
             if shared_fs_source_dir:

@@ -55,7 +55,7 @@ def run(test, params, env):
                 temp = re.findall(
                     "%s: (.*)" % feature_pattern.get(f), o)[0]
                 if temp.find("[fixed]") != -1:
-                    logging.debug("%s is fixed" % f)
+                    logging.debug("%s is fixed", f)
                     continue
                 status[f] = temp
             except IndexError:

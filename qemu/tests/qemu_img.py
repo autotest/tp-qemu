@@ -425,7 +425,7 @@ def run(test, params, env):
                 process.system(create_cmd, verbose=False)
             except process.CmdError:
                 test.fail("Could not create a overlay file!")
-            logging.info("overlay file (%s) created!" % overlay_file_name)
+            logging.info("overlay file (%s) created!", overlay_file_name)
 
             # Set the qemu harddisk to the overlay file
             logging.info(
@@ -463,7 +463,7 @@ def run(test, params, env):
                 process.system(cmitcmd, verbose=False)
             except process.CmdError:
                 test.fail("Could not commit the overlay file")
-            logging.info("overlay file (%s) committed!" % overlay_file_name)
+            logging.info("overlay file (%s) committed!", overlay_file_name)
 
             msg = "Start a new VM, using image_name as its harddisk"
             error_context.context(msg, logging.info)
@@ -671,7 +671,7 @@ def run(test, params, env):
             gluster.glusterfs_mount(g_uri, mount_point)
             image_name = os.path.basename(image_file)
             image_file = os.path.join(mount_point, image_name)
-        logging.warn("backup %s to %s" % (image_file, test.resultsdir))
+        logging.warn("backup %s to %s", image_file, test.resultsdir)
         shutil.copy(image_file, test.resultsdir)
         backing_file = _info(qemu_img, image_file, "backing file", None)
         if backing_file:

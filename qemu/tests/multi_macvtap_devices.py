@@ -25,7 +25,7 @@ def guest_ping(test, session, dst_ip, count=None, os_type="linux",
             ping_cmd += " -t "
         ping_cmd += " -l %s %s" % (p_size, dst_ip)
     try:
-        logging.debug("Ping dst vm with cmd: '%s'" % ping_cmd)
+        logging.debug("Ping dst vm with cmd: '%s'", ping_cmd)
         session.cmd(ping_cmd, timeout=timeout)
     except aexpect.ShellTimeoutError as err:
         if count:

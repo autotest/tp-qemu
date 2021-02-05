@@ -44,7 +44,7 @@ def run(test, params, env):
             if _e is None:
                 raise
             else:
-                logging.error("Cleaning function raised exception too: \n" +
+                logging.error("Cleaning function raised exception too: \n%s",
                               "".join(traceback.format_exception(e[0],
                                                                  e[1],
                                                                  e[2])))

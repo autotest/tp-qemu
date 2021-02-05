@@ -48,7 +48,7 @@ class NvdimmTest(object):
         :params mems: memory objects
         """
         dimms_expect = set("dimm-%s" % mem for mem in mems)
-        logging.info("Check if dimm %s in memory-devices" % dimms_expect)
+        logging.info("Check if dimm %s in memory-devices", dimms_expect)
         dimms_monitor = set([info["data"]["id"] for info in vm.monitor.info("memory-devices")])
         if not dimms_expect.issubset(dimms_monitor):
             invisible_dimms = dimms_expect - dimms_monitor

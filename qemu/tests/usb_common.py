@@ -115,17 +115,17 @@ def verify_usb_device_in_guest(params, session, devs):
         # each dev must in the output
         for dev in devs:
             if dev[1] not in output:
-                logging.info("%s does not exist" % dev[1])
+                logging.info("%s does not exist", dev[1])
                 return False
         # match number of devices
         dev_list = [dev[1] for dev in devs]
         dev_nums = dict((i, dev_list.count(i)) for i in dev_list)
         for k, v in dev_nums.items():
-            logging.info("the number of %s is %s" % (k, v))
+            logging.info("the number of %s is %s", k, v)
             count = output.count(k)
             if count != v:
-                logging.info("expected %s %s, got %s in the guest" %
-                             (v, k, count))
+                logging.info("expected %s %s, got %s in the guest",
+                             v, k, count)
                 return False
         return True
 

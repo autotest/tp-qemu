@@ -105,7 +105,7 @@ def block_dirty_bitmap_merge(vm, device, bitmaps, target):
     """
     func = qemu_monitor.get_monitor_function(vm, "block-dirty-bitmap-merge")
     cmd = func.__name__.replace("_", "-")
-    logging.debug("Merge %s into %s" % (bitmaps, target))
+    logging.debug("Merge %s into %s", bitmaps, target)
     if not cmd.startswith("x-"):
         return func(device, bitmaps, target)
     # handle 'x-block-dirty-bitmap-merge' command

@@ -37,13 +37,13 @@ def run(test, params, env):
         tmp_dir = params.get("tmp_dir", "/var/tmp")
         install_cmd = params.get("install_cmd")
 
-        logging.info("Fetch package: '%s'" % link)
+        logging.info("Fetch package: '%s'", link)
         pkg_name = os.path.basename(link)
         pkg_path = os.path.join(test.tmpdir, pkg_name)
         download.get_file(link, pkg_path, hash_expected=md5sum)
         vm.copy_files_to(pkg_path, tmp_dir)
 
-        logging.info("Install app: '%s' in guest." % install_cmd)
+        logging.info("Install app: '%s' in guest.", install_cmd)
         s, o = session.cmd_status_output(install_cmd, timeout=300)
         if s != 0:
             test.error("Fail to install stress app(%s)" % o)
@@ -73,7 +73,7 @@ def run(test, params, env):
             install_stress_app(session)
 
             cmd = params.get("start_cmd")
-            logging.info("Launch stress app in guest with command: '%s'" % cmd)
+            logging.info("Launch stress app in guest with command: '%s'", cmd)
             session.sendline(cmd)
 
         running = utils_misc.wait_for(lambda: stress_running(session),

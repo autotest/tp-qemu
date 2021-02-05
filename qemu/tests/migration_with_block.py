@@ -226,7 +226,7 @@ def run(test, params, env):
     def change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
-        logging.info('Sending command(%s): %s' % (method, command))
+        logging.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             p_session = vm.wait_for_login(timeout=360)
             p_session.sendline(command)
@@ -250,9 +250,9 @@ def run(test, params, env):
         for i in range(repeat_times):
             set_dst_params()
             if i % 2 == 0:
-                logging.info("Round %s ping..." % str(i / 2))
+                logging.info("Round %s ping...", str(i / 2))
             else:
-                logging.info("Round %s pong..." % str(i / 2))
+                logging.info("Round %s pong...", str(i / 2))
             if do_migration_background:
                 args = (mig_timeout, mig_protocol, mig_cancel_delay)
                 kwargs = {'migrate_capabilities': capabilities,

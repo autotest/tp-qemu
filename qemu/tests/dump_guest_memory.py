@@ -108,8 +108,8 @@ def run(test, params, env):
         :return check result
         :rtype: bool
         """
-        logging.info("Expect result is %s" % expect_o)
-        logging.info("Actual result that get from qmp_cmd is %s" % qmp_o)
+        logging.info("Expect result is %s", expect_o)
+        logging.info("Actual result that get from qmp_cmd is %s", qmp_o)
         result = None
         if result_check == "equal":
             if not operator.eq(qmp_o, expect_o):
@@ -147,7 +147,7 @@ def run(test, params, env):
             logging.info(err)
 
         if result_check:
-            logging.info("Verify qmp command '%s'." % qmp_cmd)
+            logging.info("Verify qmp command '%s'.", qmp_cmd)
             return check_result([qmp_o], eval(expect_result))
 
     def check_dump_file():

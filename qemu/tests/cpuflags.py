@@ -499,10 +499,10 @@ def run(test, params, env):
 
     def print_exception(called_object):
         exc_type, exc_value, exc_traceback = sys.exc_info()
-        logging.error("In function (" + called_object.__name__ + "):")
-        logging.error("Call from:\n" +
+        logging.error("In function (%s):", called_object.__name__)
+        logging.error("Call from:\n%s",
                       traceback.format_stack()[-2][:-1])
-        logging.error("Exception from:\n" +
+        logging.error("Exception from:\n%s",
                       "".join(traceback.format_exception(
                               exc_type, exc_value,
                               exc_traceback.tb_next)))
@@ -1089,7 +1089,7 @@ def run(test, params, env):
                                 logging.warning("There is no enouth cpu"
                                                 " in Guest. It is trying to"
                                                 "remove cpu:%s from guest with"
-                                                " smp:%s." % (cpu, smp))
+                                                " smp:%s.", cpu, smp)
                         logging.debug("Guest_flags: %s",
                                       str(flags.guest_flags))
                         logging.debug("Working_flags: %s", str(Flags[0]))
@@ -1142,7 +1142,7 @@ def run(test, params, env):
                           set(cpu_model_black_list))
             if not cpu_models:
                 test.cancel("No cpu_models detected, nothing to test.")
-            logging.info("Start test with cpu models %s" % (str(cpu_models)))
+            logging.info("Start test with cpu models %s", str(cpu_models))
             failed = []
             for cpumodel in cpu_models:
                 params["cpu_model"] = cpumodel

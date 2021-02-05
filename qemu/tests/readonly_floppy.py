@@ -73,13 +73,13 @@ def run(test, params, env):
             error_context.context("Check the %s floppy is readonly"
                                   % floppy_index, logging.info)
             found = re.search('(Read-only)|(protected)', o)
-            logging.debug("Output of format command: %s" % o)
+            logging.debug("Output of format command: %s", o)
             if not found:
                 test.error("Floppy disk %s cannot be formatted"
                            " for reasons other than readonly" % floppy_index)
             else:
                 logging.info("Floppy disk %s is Read-only and cannot be"
-                             " formatted" % floppy_index)
+                             " formatted", floppy_index)
 
     finally:
         if session:

@@ -98,7 +98,7 @@ def run(test, params, env):
     def netdriver_kill_problem(test, session_serial):
         times = int(params.get("repeat_times", 10))
         modules = get_ethernet_driver(session_serial)
-        logging.debug("Guest network driver(s): %s" % modules)
+        logging.debug("Guest network driver(s): %s", modules)
         msg = "Repeatedly load/unload network driver(s) for %s times." % times
         error_context.context(msg, logging.info)
         for i in range(times):

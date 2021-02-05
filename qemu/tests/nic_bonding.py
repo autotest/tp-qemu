@@ -76,7 +76,7 @@ def run(test, params, env):
         link_set_cmd = "ip link set dev %s %s"
         # transfer data
         original_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data original: %s" % original_md5)
+        logging.info("md5 value of data original: %s", original_md5)
         logging.info("Failover test with file transfer")
         transfer_thread = utils_misc.InterruptedThread(
             vm.copy_files_to, (host_path, guest_path))
@@ -118,7 +118,7 @@ def run(test, params, env):
         else:
             transfer_thread.join()
         current_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data current: %s" % current_md5)
+        logging.info("md5 value of data current: %s", current_md5)
         if original_md5 != current_md5:
             test.fail("File changed after transfer host -> guest "
                       "and guest -> host")

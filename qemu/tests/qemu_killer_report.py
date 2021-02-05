@@ -22,9 +22,9 @@ def run(test, params, env):
 
     def kill_vm_by_signal_15():
         vm_pid = vm.get_pid()
-        logging.info("VM: %s, PID: %s" % (vm.name, vm_pid))
+        logging.info("VM: %s, PID: %s", vm.name, vm_pid)
         thread_pid = os.getpid()
-        logging.info("Main Process ID is %s" % thread_pid)
+        logging.info("Main Process ID is %s", thread_pid)
         utils_misc.kill_process_tree(vm_pid, 15)
         return thread_pid
 

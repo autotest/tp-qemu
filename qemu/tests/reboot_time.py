@@ -53,7 +53,7 @@ def run(test, params, env):
         reboot_time = utils_misc.monotonic_time() - before_reboot_stamp
         test.write_test_keyval({'result': "%ss" % reboot_time})
         expect_time = int(params.get("expect_reboot_time", "30"))
-        logging.info("Reboot time: %ss" % reboot_time)
+        logging.info("Reboot time: %ss", reboot_time)
 
     finally:
         try:

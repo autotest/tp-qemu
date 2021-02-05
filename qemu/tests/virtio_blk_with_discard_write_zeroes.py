@@ -40,7 +40,7 @@ def run(test, params, env):
                                   (dev_id, name))
                     elif _node.qtree.get(name) == excepted_val:
                         logging.info('The "%s" matches with qtree device "%s"'
-                                     '(%s).' % (name, dev_id, excepted_val))
+                                     '(%s).', name, dev_id, excepted_val)
                         break
                     else:
                         test.fail('The "%s" mismatches with qtree device "%s"'

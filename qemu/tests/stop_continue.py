@@ -106,5 +106,5 @@ def run(test, params, env):
                 session_bg.close()
         except Exception as details:
             logging.warn(
-                "Exception occur when clean test environment: %s" %
+                "Exception occur when clean test environment: %s",
                 details)

@@ -53,7 +53,7 @@ def nc_vsock_listen(nc_vsock_bin, port, session):
     """
     nc_vsock_cmd = "%s -l %s" % (nc_vsock_bin, port)
     session.read_nonblocking(0, timeout=10)
-    logging.info("Listening to the vsock port from guest: %s" % nc_vsock_cmd)
+    logging.info("Listening to the vsock port from guest: %s", nc_vsock_cmd)
     session.sendline(nc_vsock_cmd)
 
 
@@ -86,7 +86,7 @@ def nc_vsock_connect(nc_vsock_bin, guest_cid, port):
     :return: The vsock session from host side, being waiting for input
     """
     nc_vsock_cmd = "%s %s %s" % (nc_vsock_bin, guest_cid, port)
-    logging.info("Connect to the vsock port on host: %s" % nc_vsock_cmd)
+    logging.info("Connect to the vsock port on host: %s", nc_vsock_cmd)
     return aexpect.Expect(
         nc_vsock_cmd,
         auto_close=False,

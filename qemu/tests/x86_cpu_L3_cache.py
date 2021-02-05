@@ -34,7 +34,7 @@ def run(test, params, env):
         vm_name = params['main_vm']
         L3_existence = 'present' if check_L3 else 'not present'
         logging.info('Boot guest with machine type %s and expect L3 cache %s'
-                     ' inside guest' % (machine_type, L3_existence))
+                     ' inside guest', machine_type, L3_existence)
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         session = vm.wait_for_login()

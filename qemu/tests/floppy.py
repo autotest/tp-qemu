@@ -149,7 +149,7 @@ def run(test, params, env):
 
             self.session.cmd("%s %s %s" % (params["copy_cmd"], source_file,
                                            dest_file))
-            logging.info("Succeed to copy file '%s' into floppy disk" %
+            logging.info("Succeed to copy file '%s' into floppy disk",
                          source_file)
 
             error_context.context("Checking if the file is unchanged "

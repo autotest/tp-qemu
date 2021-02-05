@@ -29,7 +29,7 @@ def run(test, params, env):
         :param host_ip: the IP of the host
         """
         flood_minutes = int(params["flood_minutes"])
-        logging.info("Flood ping for %s minutes" % flood_minutes)
+        logging.info("Flood ping for %s minutes", flood_minutes)
         try:
             utils_net.ping(host_ip, flood=True,
                            session=session, timeout=flood_minutes * 60)

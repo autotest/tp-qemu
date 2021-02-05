@@ -106,7 +106,7 @@ class StorageBenchmark(object):
         """
         proc_name = self.name if self.os_type == 'linux' else (
                 self.name.upper() + '.EXE')
-        logging.info('Checking the running %s processes.' % self.name)
+        logging.info('Checking the running %s processes.', self.name)
         if not utils_misc.wait_for(
                 lambda: not re.search(
                     proc_name.lower(), session.cmd_output(
@@ -121,7 +121,7 @@ class StorageBenchmark(object):
         :param session: vm session
         :type session: aexpect.client.ShellSession
         """
-        logging.info('Killing all %s processes by force.' % self.name)
+        logging.info('Killing all %s processes by force.', self.name)
         session.cmd_output(self._kill_pid % self.name, timeout=120)
 
     def __remove_env_files(self, session, timeout=300):

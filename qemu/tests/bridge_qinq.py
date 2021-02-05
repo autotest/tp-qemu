@@ -70,7 +70,7 @@ def run(test, params, env):
         sum = 0
         for i in range(len(lines)):
             if enable_logging:
-                logging.info("line %s: %s" % (i, lines[i]))
+                logging.info("line %s: %s", i, lines[i])
             if not ethertype2:
                 if "ICMP echo re" in lines[i] and \
                         ethertype in lines[i-1]:
@@ -138,10 +138,10 @@ def run(test, params, env):
         utils_net.Interface(brname).down()
         host_bridges.del_bridge(brname)
 
-    logging.debug("Create private bridge %s" % brname)
+    logging.debug("Create private bridge %s", brname)
     host_bridges.add_bridge(brname)
     host_bridge_iface = utils_net.Interface(brname)
-    logging.debug("Bring up %s" % brname)
+    logging.debug("Bring up %s", brname)
     netmask = params["net_mask"]
     host_bridge_iface.up()
     host_bridge_iface.set_ip("192.168.1.1")
@@ -234,7 +234,7 @@ def run(test, params, env):
     session.cmd_output("ip addr add %s/%s dev %s" % (L2tag_iface_ip, netmask,
                                                      L2tag_iface))
     output = session.cmd_output("ifconfig %s" % L2tag_iface, timeout=120)
-    logging.info("%s" % output)
+    logging.info(output)
 
     # Start tcpdump on L1tag interface, L2tag interface and first_nic in guest
     error_context.context("Start tcpdump in %s" % params["main_vm"],
@@ -260,7 +260,7 @@ def run(test, params, env):
     qvlan_iface.set_netmask(int(netmask))
     qvlan_iface.up()
     output = process.getoutput("ifconfig %s" % qvlan_ifname)
-    logging.info("%s" % output)
+    logging.info(output)
 
     # Ping guest from host via 802.1q vlan interface
     error_context.context("Start ping test from host to %s via %s" %

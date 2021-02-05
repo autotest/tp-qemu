@@ -121,7 +121,7 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
             ssh_connection.conn_setup()
             ssh_connection.conn_check()
 
-        logging.info("Trying to propagate with command '%s'" %
+        logging.info("Trying to propagate with command '%s'",
                      kdump_propagate_cmd)
         session.cmd(kdump_propagate_cmd, timeout=120)
 

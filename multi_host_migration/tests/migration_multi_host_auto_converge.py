@@ -114,7 +114,7 @@ def run(test, params, env):
             vm = self.env.get_vm(self.params["main_vm"])
             self.session = vm.wait_for_login(timeout=self.login_timeout)
             if pre_action:
-                logging.info("run cmd '%s' in guest" % pre_action)
+                logging.info("run cmd '%s' in guest", pre_action)
                 self.session.cmd(pre_action)
 
             error.context("Do stress test before migration.", logging.info)
@@ -166,8 +166,8 @@ def run(test, params, env):
                                      "sar output: '%s'" % (sar_cpu_str,
                                                            sar_memory_str,
                                                            output))
-            logging.info("cpu average list: %s" % cpu_average)
-            logging.info("memory average list: %s" % memory_average)
+            logging.info("cpu average list: %s", cpu_average)
+            logging.info("memory average list: %s", memory_average)
             sar_output.append(cpu_average)
             sar_output.append(memory_average)
 
@@ -199,7 +199,7 @@ def run(test, params, env):
             effected obviously with auto-converge on. (30% is acceptance)
             """
 
-            logging.info("The sar output list: %s" % sar_output)
+            logging.info("The sar output list: %s", sar_output)
             cpu_average = zip(sar_output[0], sar_output[2])
             memory_average = zip(sar_output[1], sar_output[3])
             for i in cpu_average:
@@ -225,7 +225,7 @@ def run(test, params, env):
                           logging.info)
             cpu_throttling_percentage = vm.monitor.info("migrate").get(
                 "cpu-throttle-percentage")
-            logging.info("The cpu throttling percentage is %s%%" %
+            logging.info("The cpu throttling percentage is %s%%",
                          cpu_throttling_percentage)
             return cpu_throttling_percentage
 
@@ -237,7 +237,7 @@ def run(test, params, env):
 
             error.context("check cpu throttling percentage during migration",
                           logging.info)
-            logging.info("The cpu throttling percentage list is %s" %
+            logging.info("The cpu throttling percentage list is %s",
                          cpu_throttling_percentage_list)
             if ((self.parameters_value[0] not in cpu_throttling_percentage_list) or
                     (sum(self.parameters_value) not in cpu_throttling_percentage_list)):
@@ -429,7 +429,7 @@ def run(test, params, env):
             try:
                 vm.wait_for_migration(self.migration_timeout)
                 logging.info("Migration completed with set auto-converge: "
-                             "%s" % set_auto_converge)
+                             "%s", set_auto_converge)
             except virt_vm.VMMigrateTimeoutError:
                 raise error.TestFail("Migration failed with set auto-converge"
                                      ": %s" % set_auto_converge)

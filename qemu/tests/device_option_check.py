@@ -42,8 +42,7 @@ def run(test, params, env):
             parameter_value = func_generate_random_string(*args)
 
         params[params_name] = parameter_prefix + parameter_value
-        logging.debug("Setup '%s' to '%s'" % (params_name,
-                                              params[params_name]))
+        logging.debug("Setup '%s' to '%s'", params_name, params[params_name])
 
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, vm.name)

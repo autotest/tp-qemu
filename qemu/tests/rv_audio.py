@@ -49,10 +49,9 @@ def verify_recording(recording, params):
         if len(pauses):
             logging.error("%d pauses detected:", len(pauses))
             for i in pauses:
-                logging.info("start: %10fs     duration: %10fs" % (
+                logging.info("start: %10fs     duration: %10fs",
                              (float(i[0]) / (2 * 2 * 44100)),
-                             (float(i[1] - i[0]) / (2 * 2 * 44100))
-                             ))
+                             (float(i[1] - i[0]) / (2 * 2 * 44100)))
             # Two small hiccups are allowed when migrating
             if len(pauses) < 3 and config_test == "migration":
                 return True

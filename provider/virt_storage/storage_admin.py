@@ -79,7 +79,7 @@ class StoragePoolAdmin(object):
                     cls.list_pools()))
             return pools[0]
         except IndexError:
-            logging.warning("no storage pool with matching path '%s'" % path)
+            logging.warning("no storage pool with matching path '%s'", path)
         return None
 
     @staticmethod

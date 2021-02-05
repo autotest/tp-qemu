@@ -35,7 +35,7 @@ def run(test, params, env):
         :param max_sz: guest maximal memory size
         """
         repeat_times = int(params.get("repeat_times", 5))
-        logging.info("repeat times: %d" % repeat_times)
+        logging.info("repeat times: %d", repeat_times)
 
         while repeat_times:
             for tag in params.objects('test_tags'):

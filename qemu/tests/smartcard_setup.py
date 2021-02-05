@@ -33,7 +33,7 @@ def run(test, params, env):
     for cert in cert_list:
         logging.debug(cert)
         logging.debug(cert_trustargs)
-        logging.debug("CN=" + cert)
+        logging.debug("CN=%s", cert)
         logging.debug(cert_db)
 
     client_vm = env.get_vm(params["client_vm"])
@@ -64,11 +64,11 @@ def run(test, params, env):
         cmd += " -z " + "/tmp/randomtext.txt"
         logging.debug(cmd)
         output = client_session.cmd(cmd)
-        logging.debug("Cert Created: " + output)
+        logging.debug("Cert Created: %s", output)
 
     cmd = "certutil -L -d " + cert_db
     output = client_session.cmd(cmd)
-    logging.info("Listing all certs on the client: " + output)
+    logging.info("Listing all certs on the client: %s", output)
 
     # Verify that all the certs have been generated on the client
     for cert in cert_list:

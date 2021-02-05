@@ -41,13 +41,13 @@ def run(test, params, env):
     read_cmd = params['read_cmd'].format(fmt=image_object.image_format,
                                          uri=image_object.image_filename)
 
-    logging.info("Write file '%s'" % testfile)
+    logging.info("Write file '%s'", testfile)
     result = process.run(write_cmd, ignore_status=True, shell=True)
     if result.exit_status != 0:
         test.fail('Failed to write a file, error message: %s'
                   % result.stderr.decode())
 
-    logging.info("Read file '%s'" % testfile)
+    logging.info("Read file '%s'", testfile)
     result = process.run(read_cmd, ignore_status=True, shell=True)
     if result.exit_status != 0:
         test.fail('Failed to read a file, error message: %s'

@@ -108,8 +108,8 @@ def run(test, params, env):
             mig_total_time_list.append(total_time)
             transferred_ram_list.append(transferred_ram)
             logging.info("The total time is %d, downtime is %d and "
-                         "transferred ram is %d after migration" %
-                         (total_time, downtime, transferred_ram))
+                         "transferred ram is %d after migration",
+                         total_time, downtime, transferred_ram)
 
         @error.context_aware
         def check_mig_totaltime_downtime_transferred_ram(self):
@@ -121,9 +121,9 @@ def run(test, params, env):
             if self.is_src:
                 error.context("Check total time, downtime and transferred ram"
                               " after migration.", logging.info)
-                logging.info("Total time list: %s" % str(mig_total_time_list))
-                logging.info("Downtime list: %s" % str(mig_downtime_list))
-                logging.info("Transferred ram list: %s" %
+                logging.info("Total time list: %s", str(mig_total_time_list))
+                logging.info("Downtime list: %s", str(mig_downtime_list))
+                logging.info("Transferred ram list: %s",
                              str(transferred_ram_list))
                 for i in range(len(mig_total_time_list)):
                     if min(mig_total_time_list) != mig_total_time_list[-1]:
@@ -253,7 +253,7 @@ def run(test, params, env):
                 raise error.TestFail("Migration failed with setting cache "
                                      "size to %s." % cache_size)
             logging.info("Migration completed with cache size %s"
-                         "" % cache_size)
+                         "", cache_size)
             self.get_mig_totaltime_downtime_transferred_ram(vm)
             vm.destroy(gracefully=False)
 
@@ -284,7 +284,7 @@ def run(test, params, env):
                 vm.wait_for_migration(5)
             except virt_vm.VMMigrateTimeoutError:
                 logging.info("Set cache size to %s during migration"
-                             "." % self.cache_size[1])
+                             ".", self.cache_size[1])
                 self.set_migration_cache_size(int(self.cache_size[1]))
             try:
                 vm.wait_for_migration(self.mig_timeout)
@@ -292,7 +292,7 @@ def run(test, params, env):
                 raise error.TestFail("Migration failed with setting cache "
                                      "size to %s." % self.cache_size[1])
             logging.info("Migration completed with cache size %s"
-                         "" % self.cache_size[1])
+                         "", self.cache_size[1])
             self.get_migration_cache_size(1)
             self.get_mig_totaltime_downtime_transferred_ram(vm)
             self.get_migration_info(vm)

@@ -127,8 +127,8 @@ def run(test, params, env):
                               % dev_id)
                 elif node.qtree['ioeventfd'] == ioevent_qtree_val:
                     logging.info(
-                        'The \"%s\" matches with qtree device \"%s\"(%s).' %
-                        (ioeventfd_opt, dev_id, ioevent_qtree_val))
+                        'The \"%s\" matches with qtree device \"%s\"(%s).',
+                        ioeventfd_opt, dev_id, ioevent_qtree_val)
                     break
                 else:
                     test.fail(
@@ -141,10 +141,10 @@ def run(test, params, env):
         """
         Get the number of ioeventfds inside host.
         """
-        logging.info('Check the \"%s\" via /proc/$PID/fd/.' % ioeventfd)
+        logging.info('Check the \"%s\" via /proc/$PID/fd/.', ioeventfd)
         dst_log = 'off' if 'off' in ioeventfd_opt else 'on'
         cmd = 'ls -l /proc/$(pgrep qemu-kvm)/fd > /tmp/{0}; cat /tmp/{0}'.format(dst_log)
-        logging.debug('Running \'%s\'' % cmd)
+        logging.debug('Running \'%s\'', cmd)
         s, o = process.getstatusoutput(cmd)
         logging.debug(o)
         if s:
@@ -157,7 +157,7 @@ def run(test, params, env):
         error_context.context(
             'Compare the output of \'ls -l /proc/$PID/fd/\'.', logging.info)
         cmd = 'grep -c eventfd /tmp/off /tmp/on;rm -rf /tmp/off /tmp/on'
-        logging.debug('Running \'%s\'' % cmd)
+        logging.debug('Running \'%s\'', cmd)
         s, o = process.getstatusoutput(cmd)
         logging.debug(o)
         if s:

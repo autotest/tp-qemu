@@ -86,7 +86,7 @@ def wait_for_loaded(vm, test, start_pos=0, start_str=START_PATTERN,
     while time.time() < end_time:
         content, start_pos = get_boot_content(vm, start_pos, start_str, end_str)
         if content:
-            logging.info('Output of SLOF:\n%s' % ''.join(content))
+            logging.info('Output of SLOF:\n%s', ''.join(content))
             return content, start_pos
     test.fail(
         'No found corresponding SLOF info in serial log during %s sec.' %
@@ -142,7 +142,7 @@ def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
     devices = get_booted_devices(content)
     for k, v in devices.items():
         if int(k) == position:
-            logging.info('Position [%d]: %s' % (k, v))
+            logging.info('Position [%d]: %s', k, v)
             break
 
     if position in devices:
@@ -175,7 +175,7 @@ def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
             return False
     else:
         logging.debug(
-            'No such device at position %s in all devices in SLOF contents.' %
+            'No such device at position %s in all devices in SLOF contents.',
             position)
         return False
 

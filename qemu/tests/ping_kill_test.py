@@ -50,7 +50,7 @@ def run(test, params, env):
                 ping_cmd += " -t "
             ping_cmd += " -l %s %s" % (packetsize, dst_ip)
         try:
-            logging.debug("Ping dst vm with cmd: '%s'" % ping_cmd)
+            logging.debug("Ping dst vm with cmd: '%s'", ping_cmd)
             test_runner(ping_cmd)
         except aexpect.ShellTimeoutError as err:
             if count:

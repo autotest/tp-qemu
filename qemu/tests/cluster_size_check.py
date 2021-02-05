@@ -53,8 +53,8 @@ def run(test, params, env):
 
         if status_error:
             if result.exit_status == 0:
-                logging.error("Create image sucessfully with invalid size: %s"
-                              % csize_set)
+                logging.error("Create image sucessfully with invalid size: %s",
+                              csize_set)
                 cfail += 1
                 fail_log += "Succeed in creating image unexpectedly.\n"
         else:
@@ -64,14 +64,14 @@ def run(test, params, env):
             cluster_size = re.findall(parttern, output)
             if cluster_size:
                 if cluster_size[0] != expect:
-                    logging.error("Cluster size %s is not expected value %s"
-                                  % (cluster_size, expect))
+                    logging.error("Cluster size %s is not expected value %s",
+                                  cluster_size, expect)
                     cfail += 1
                     fail_log += "Cluster size mismatch the specified value "
                     fail_log += "%s.\n" % csize_set
             else:
-                logging.error("Can not get the cluster size from command: %s"
-                              % output)
+                logging.error("Can not get the cluster size from command: %s",
+                              output)
                 cfail += 1
                 fail_log += "Can not get the cluster size from command:"
                 fail_log += " %s\n" % output

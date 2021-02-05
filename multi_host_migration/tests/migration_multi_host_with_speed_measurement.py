@@ -81,7 +81,7 @@ def run(test, params, env):
 
             last_transfer_mem = transfered_mem
 
-            logging.debug("Migration speed: %s MB/s" % (real_mig_speed))
+            logging.debug("Migration speed: %s MB/s", real_mig_speed)
             mig_stat.record(real_mig_speed)
             time.sleep(1)
 
@@ -138,7 +138,7 @@ def run(test, params, env):
                 cmd = ("%s/cpuflags-test --stressmem %d,%d" %
                        (os.path.join(install_path, "cpu_flags"),
                         vm_mem * 4, vm_mem / 2))
-                logging.debug("Sending command: %s" % (cmd))
+                logging.debug("Sending command: %s", cmd)
                 session.sendline(cmd)
 
             if self.master_id() == self.hostid:
@@ -153,12 +153,12 @@ def run(test, params, env):
                 client.close()
                 server.close()
                 self.link_speed = data_len / (30 * 1024 * 1024)
-                logging.info("Link speed %d MB/s" % (self.link_speed))
+                logging.info("Link speed %d MB/s", self.link_speed)
                 ms = utils.convert_data_size(mig_speed, 'M')
                 if (ms > data_len / 30):
                     logging.warn("Migration speed %s MB/s is set faster than "
-                                 "real link speed %d MB/s" % (mig_speed,
-                                                              self.link_speed))
+                                 "real link speed %d MB/s",
+                                 mig_speed, self.link_speed)
                 else:
                     self.link_speed = ms / (1024 * 1024)
             else:

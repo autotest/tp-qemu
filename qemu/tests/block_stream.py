@@ -53,8 +53,8 @@ def run(test, params, env):
         if not backingfile:
             test.fail("Backing file is not available in the "
                       "backdrive image")
-        logging.info("Image file: %s" % stream_test.get_image_file())
-        logging.info("Backing file: %s" % backingfile)
+        logging.info("Image file: %s", stream_test.get_image_file())
+        logging.info("Backing file: %s", backingfile)
         stream_test.start()
         stream_test.wait_for_finished()
         backingfile = stream_test.get_backingfile()

@@ -93,7 +93,7 @@ def run(test, params, env):
                     msg = "Could not find '%s' in" % neg_msg
                     msg += " command output '%s'" % add_output
                     test.fail(msg)
-            logging.debug("Could not boot up vm, %s" % err)
+            logging.debug("Could not boot up vm, %s", err)
         if case_fail:
             if neg_msg:
                 msg = "Check negative hotplug error message"
@@ -102,7 +102,7 @@ def run(test, params, env):
                     msg = "Could not find '%s' in" % neg_msg
                     msg += " command output '%s'" % add_output
                     test.fail(msg)
-            logging.debug("Could not boot up vm, %s" % add_output)
+            logging.debug("Could not boot up vm, %s", add_output)
 
     if modprobe_cmd:
         # negative test, both guest and host should still work well.

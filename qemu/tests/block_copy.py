@@ -80,7 +80,7 @@ class BlockCopy(object):
         """
         image_file = storage.get_image_filename(self.parser_test_args(),
                                                 self.data_dir)
-        logging.info("image filename: %s" % image_file)
+        logging.info("image filename: %s", image_file)
         return self.vm.get_block({"file": image_file})
 
     def get_session(self):
@@ -116,7 +116,7 @@ class BlockCopy(object):
                 else:
                     self.test.error("undefined step %s" % step)
         except KeyError:
-            logging.warn("Undefined test phase '%s'" % tag)
+            logging.warn("Undefined test phase '%s'", tag)
 
     @error_context.context_aware
     def cancel(self):
@@ -283,8 +283,8 @@ class BlockCopy(object):
                 if block['device'] == self.device:
                     return block['inserted']['file']
         except KeyError:
-            logging.warn("Image file not found for device '%s'" % self.device)
-            logging.debug("Blocks info: '%s'" % blocks)
+            logging.warn("Image file not found for device '%s'", self.device)
+            logging.debug("Blocks info: '%s'", blocks)
         return None
 
     def get_backingfile(self, method="monitor"):
@@ -301,7 +301,7 @@ class BlockCopy(object):
             matched = re.search(r"backing file: +(.*)", info, re.M)
             return matched.group(1)
         except AttributeError:
-            logging.warn("No backingfile found, cmd output: %s" % info)
+            logging.warn("No backingfile found, cmd output: %s", info)
 
     def action_before_start(self):
         """
@@ -464,7 +464,7 @@ class BlockCopy(object):
 
         def is_unplugged():
             event_list = self.vm.monitor.get_events()
-            logging.debug("event_list: %s" % event_list)
+            logging.debug("event_list: %s", event_list)
             device_deleted = job_cancelled = False
             for event_str in event_list:
                 event = event_str.get("event")
@@ -478,7 +478,7 @@ class BlockCopy(object):
         device = qdev.get_by_params({"drive": self.device})
         if not device:
             self.test.fail("Device does not exist.")
-        logging.info("Hot unplug device %s" % self.device)
+        logging.info("Hot unplug device %s", self.device)
         qdev.simple_unplug(device[0], self.vm.monitor)
         timeout = self.params.get("cancel_timeout", 10)
         unplugged = utils_misc.wait_for(is_unplugged, timeout=timeout)

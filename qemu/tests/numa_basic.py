@@ -53,7 +53,7 @@ def run(test, params, env):
                 memory_sz_used_most = memory_status[index]
                 node_used_most = node_list[index]
             logging.debug("Qemu used %s pages in node"
-                          " %s" % (memory_status[index], node_list[index]))
+                          " %s", memory_status[index], node_list[index])
         if node_used_most != node_id:
             test.fail("Qemu still use memory from other node. "
                       "Expect: %s, used: %s" % (node_id, node_used_most))

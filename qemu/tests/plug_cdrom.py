@@ -61,7 +61,7 @@ def run(test, params, env):
 
     def _check_cdrom_info_by_guest():
         """Check cdrom info inside guest."""
-        logging.info('Check if the file \"%s\" is in the cdrom.' % iso_name)
+        logging.info('Check if the file \"%s\" is in the cdrom.', iso_name)
         cmd_map = {'linux': 'mount /dev/sr{0} /mnt && ls /mnt && umount /mnt',
                    'windows': 'dir {0}:\\'}
         if is_windows:

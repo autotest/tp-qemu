@@ -92,7 +92,7 @@ class TimedriftTest(object):
         else:
             ret = process.system_output(cmd, shell=True).decode()
         target = session and "guest" or "host"
-        logging.debug("(%s) Execute command('%s')" % (target, cmd))
+        logging.debug("(%s) Execute command('%s')", target, cmd)
         return ret
 
     @error_context.context_aware
@@ -230,10 +230,10 @@ class BackwardtimeTest(TimedriftTest):
             else:
                 if abs(real_difference - expect_difference) < tolerance:
                     return
-        logging.info("Host epoch time: %s" % host_epoch_time)
-        logging.info("Guest epoch time: %s" % guest_epoch_time)
+        logging.info("Host epoch time: %s", host_epoch_time)
+        logging.info("Guest epoch time: %s", guest_epoch_time)
         if self.params["os_type"] == 'linux':
-            logging.info("Guest hardware time: %s" % guest_hwtime)
+            logging.info("Guest hardware time: %s", guest_hwtime)
             err_msg = "Unexpected sys and hardware time difference (%s %s)\
             between host and guest after adjusting time." \
             % (real_difference, real_difference_hw)
@@ -263,17 +263,17 @@ class BackwardtimeTest(TimedriftTest):
             guest_hwtime = self.get_hwtime(session)
             real_difference_hw = abs(host_epoch_time - guest_hwtime)
             if real_difference > tolerance or real_difference_hw > tolerance:
-                logging.info("Host epoch time: %s" % host_epoch_time)
-                logging.info("Guest epoch time: %s" % guest_epoch_time)
-                logging.info("Guest hardware time: %s" % guest_hwtime)
+                logging.info("Host epoch time: %s", host_epoch_time)
+                logging.info("Guest epoch time: %s", guest_epoch_time)
+                logging.info("Guest hardware time: %s", guest_hwtime)
                 err_msg = "Unexpected sys and hardware time difference (%s %s) \
                 between host and guest before testing."\
                 % (real_difference, real_difference_hw)
                 self.test.fail(err_msg)
         else:
             if real_difference > tolerance:
-                logging.info("Host epoch time: %s" % host_epoch_time)
-                logging.info("Guest epoch time: %s" % guest_epoch_time)
+                logging.info("Host epoch time: %s", host_epoch_time)
+                logging.info("Guest epoch time: %s", guest_epoch_time)
                 err_msg = "Unexcept time difference (%s) " % real_difference
                 err_msg += " between host and guest before testing."
                 self.test.fail(err_msg)

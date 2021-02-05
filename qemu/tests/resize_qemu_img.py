@@ -35,8 +35,8 @@ def run(test, params, env):
 
     def _verify_resize_image(img_size, expected_size):
         """Verify the image size is as expected after resize."""
-        logging.info("Verify the size of  %s is %s." %
-                     (img.image_filename, expected_size))
+        logging.info("Verify the size of  %s is %s.",
+                     img.image_filename, expected_size)
         if img_size != expected_size:
             test.fail("Got image virtual size: %s, should be: %s." %
                       (img_size, expected_size))
@@ -45,8 +45,8 @@ def run(test, params, env):
         """
         Verify the disk size is as expected after resize.
         """
-        logging.info("Verify the disk size of the image %s is %sG."
-                     % (img.image_filename, expected_size))
+        logging.info("Verify the disk size of the image %s is %sG.",
+                     img.image_filename, expected_size)
         if disk_size != expected_size:
             test.fail("Got image actual size: %sG, should be: %sG."
                       % (disk_size, expected_size))
@@ -54,8 +54,8 @@ def run(test, params, env):
     def _resize(size_changes, preallocation):
         """Resize the image and verify its size."""
         for idx, size in enumerate(size_changes):
-            logging.info("Resize the raw image %s %s with preallocation %s."
-                         % (img.image_filename, size, preallocation))
+            logging.info("Resize the raw image %s %s with preallocation %s.",
+                         img.image_filename, size, preallocation)
             shrink = True if "-" in size else False
             img.resize(size, shrink=shrink, preallocation=preallocation)
 
@@ -77,7 +77,7 @@ def run(test, params, env):
     size_changes = params["size_changes"].split()
     preallocation = params.get("preallocation")
 
-    logging.info("Create a raw image %s." % img.image_filename)
+    logging.info("Create a raw image %s.", img.image_filename)
     img.create(img_param)
 
     _resize(size_changes, preallocation)

@@ -117,10 +117,10 @@ def run(test, params, env):
                           "interfaces in %s" % bond_br_name, logging.info)
     while True:
         for op_iface in op_ifaces:
-            logging.debug("Turn down %s" % op_iface.name)
+            logging.debug("Turn down %s", op_iface.name)
             op_iface.down()
             time.sleep(bonding_timeout)
-            logging.debug("Bring up %s" % op_iface.name)
+            logging.debug("Bring up %s", op_iface.name)
             op_iface.up()
             time.sleep(bonding_timeout)
         if not f_transfer.is_alive():

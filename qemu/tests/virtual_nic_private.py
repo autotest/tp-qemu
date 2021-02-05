@@ -41,7 +41,7 @@ def run(test, params, env):
         except ShellCmdError as e:
             if re.findall(catch_date % (addresses[1], addresses[0]), str(e)):
                 test.fail("God! Capture the transfet data:'%s'" % str(e))
-            logging.info("Guest3 catch data is '%s'" % str(e))
+            logging.info("Guest3 catch data is '%s'", str(e))
 
     timeout = int(params.get("login_timeout", '360'))
     password = params.get("password")
@@ -133,7 +133,7 @@ def run(test, params, env):
             debug_msg = "Files md5sum mismatch!"
             debug_msg += "source file md5 is '%s', after transfer md5 is '%s'"
             test.fail(debug_msg % (src_md5, dst_md5), logging.info)
-        logging.info("Files md5sum match, file md5 is '%s'" % src_md5)
+        logging.info("Files md5sum match, file md5 is '%s'", src_md5)
 
         error_context.context("Checking network private", logging.info)
         tcpdump_check_cmd = params["tcpdump_check_cmd"]

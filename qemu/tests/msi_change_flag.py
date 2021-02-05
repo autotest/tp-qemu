@@ -114,14 +114,14 @@ def run(test, params, env):
 
     try:
         src_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data from src: %s" % src_md5)
+        logging.info("md5 value of data from src: %s", src_md5)
         # transfer data
         error_context.context("Transfer data from host to %s" % vm.name,
                               logging.info)
         vm.copy_files_to(host_path, guest_path)
         dst_md5 = get_file_md5sum(guest_path, session,
                                   timeout=file_md5_check_timeout)
-        logging.info("md5 value of data in %s: %s" % (vm.name, dst_md5))
+        logging.info("md5 value of data in %s: %s", vm.name, dst_md5)
         if dst_md5 != src_md5:
             test.fail("File changed after transfer host -> %s" % vm.name)
     finally:

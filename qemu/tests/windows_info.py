@@ -25,15 +25,15 @@ def run(test, params, env):
 
     error_context.context("Get OS version and name.", logging.info)
     output = session.cmd("ver")
-    logging.info("Windows version: %s" % output.strip())
+    logging.info("Windows version: %s", output.strip())
     output = session.cmd("wmic os get Name")
     output = output.strip().split()[-1]
-    logging.info("Windows name: %s" % output)
+    logging.info("Windows name: %s", output)
 
     error_context.context("Get driver version information in guest.",
                           logging.info)
     system_drivers = session.cmd("wmic sysdriver get DisplayName,PathName")
-    logging.debug("Drivers exist in the system:\n %s" % system_drivers)
+    logging.debug("Drivers exist in the system:\n %s", system_drivers)
     for i in system_drivers.splitlines():
         if re.findall(drivers_pattern, i, re.I):
             driver_info = i.strip().split()

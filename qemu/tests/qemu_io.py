@@ -124,8 +124,8 @@ def run(test, params, env):
                                'scripts/qemu_iotests.sh')
     test_image = params.get("test_image",
                             os.path.join(test.tmpdir, "test.qcow2"))
-    logging.info("Run script(%s) with image(%s)"
-                 % (test_script, test_image))
+    logging.info("Run script(%s) with image(%s)",
+                 test_script, test_image)
     s, test_result = aexpect.run_fg("sh %s %s" % (test_script,
                                                   test_image),
                                     logging.debug, timeout=1800)

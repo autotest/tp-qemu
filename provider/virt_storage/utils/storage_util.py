@@ -18,5 +18,5 @@ def create_volume(volume):
                         volume.capacity, volume.pool.name, volume.pool.available))
     options = volume.generate_qemu_img_options()
     cmd = "qemu-img create %s %s %sB" % (options, volume.key, volume.capacity)
-    logging.debug("create volume cmd: %s" % cmd)
+    logging.debug("create volume cmd: %s", cmd)
     process.system(cmd, shell=True, ignore_status=False)

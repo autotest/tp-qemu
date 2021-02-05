@@ -34,7 +34,7 @@ def run(test, params, env):
         if sleep:
             time.sleep(10)
         buddy_info = utils_memory.get_buddy_info('0', session=session)['0']
-        logging.info('Checked buddy info, value is %s' % buddy_info)
+        logging.info('Checked buddy info, value is %s', buddy_info)
         return buddy_info
 
     fragement_dir = params['fragement_dir']

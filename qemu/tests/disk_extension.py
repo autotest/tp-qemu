@@ -121,7 +121,7 @@ def run(test, params, env):
             guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             disk = utils_disk.get_windows_disks_index(session, img_size)[0]
             utils_disk.update_windows_disk_attributes(session, disk)
-            logging.info("Formatting disk:%s" % disk)
+            logging.info("Formatting disk:%s", disk)
             driver = utils_disk.configure_empty_disk(session, disk, img_size,
                                                      os_type)[0]
             output_path = driver + ":\\test.dat"
@@ -132,7 +132,7 @@ def run(test, params, env):
         if not output_path:
             test.fail("Can not get output file path in guest.")
 
-        logging.debug("Get output file path %s" % output_path)
+        logging.debug("Get output file path %s", output_path)
 
         guest_cmd = guest_cmd % output_path
         wait_timeout = int(params.get("wait_timeout", 60))

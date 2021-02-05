@@ -59,13 +59,13 @@ def run(test, params, env):
     # Determine if the test is to shutdown from cli or qemu monitor
     if shutdownfrom == "cmd":
         logging.info("Shutting down guest from command line:"
-                     " %s\n" % cmd_cli_shutdown)
+                     " %s\n", cmd_cli_shutdown)
         output = guest_session.cmd(cmd_cli_shutdown)
-        logging.debug("Guest is being shutdown: %s" % output)
+        logging.debug("Guest is being shutdown: %s", output)
     elif shutdownfrom == "qemu_monitor":
         logging.info("Shutting down guest from qemu monitor\n")
         output = guest_vm.monitor.cmd(cmd_qemu_shutdown)
-        logging.debug("Output of %s: %s" % (cmd_qemu_shutdown, output))
+        logging.debug("Output of %s: %s", cmd_qemu_shutdown, output)
     else:
         test.fail("shutdownfrom var not set, valid values are"
                   " cmd or qemu_monitor")

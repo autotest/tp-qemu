@@ -41,7 +41,7 @@ def run(test, params, env):
 
     error_context.context("Boot the guest", logging.info)
     env_process.preprocess_vm(test, params, env, vm.name)
-    logging.info("Wait for %d seconds before reset" % wait_time)
+    logging.info("Wait for %d seconds before reset", wait_time)
     time.sleep(wait_time)
 
     for i in range(1, reset_times + 1):
@@ -55,7 +55,7 @@ def run(test, params, env):
             interval_tmp = random.randint(0, interval * 1000) / 1000.0
 
         logging.debug("Reset the system by monitor cmd"
-                      " after %ssecs" % interval_tmp)
+                      " after %ssecs", interval_tmp)
         time.sleep(interval_tmp)
 
     error_context.context("Try to login guest after reset", logging.info)

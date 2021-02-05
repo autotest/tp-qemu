@@ -60,7 +60,7 @@ def run(test, params, env):
 
     check_cur_kernel_cmd = params.get("check_cur_kernel_cmd")
     cur_kernel_version = session.cmd_output(check_cur_kernel_cmd).strip()
-    logging.info("Current kernel is: %s" % cur_kernel_version)
+    logging.info("Current kernel is: %s", cur_kernel_version)
     cmd = params.get("check_installed_kernel")
     output = session.cmd_output(cmd, timeout=cmd_timeout)
     kernels = output.split()
@@ -84,7 +84,7 @@ def run(test, params, env):
     session.sendline(cmd)
     session = vm.wait_for_login(timeout=login_timeout)
     kernel = session.cmd_output(check_cur_kernel_cmd).strip()
-    logging.info("Current kernel is: %s" % kernel)
+    logging.info("Current kernel is: %s", kernel)
     if kernel.strip() != new_kernel.strip():
         test.fail("Fail to boot to kernel %s, current kernel is %s"
                   % (new_kernel, kernel))

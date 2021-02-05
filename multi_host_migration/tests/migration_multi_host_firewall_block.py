@@ -134,7 +134,7 @@ def run(test, params, env):
                     stat.append(vm.monitor.get_status())
             except (qemu_monitor.MonitorProtocolError,
                     qemu_monitor.QMPCmdError):
-                logging.debug("Guest %s not working" % (vm))
+                logging.debug("Guest %s not working", vm)
 
         def check_vms_src(self, mig_data):
             """
@@ -190,7 +190,7 @@ def run(test, params, env):
                 cmd = ("nohup %s/cpuflags-test --stressmem %d,%d &" %
                        (os.path.join(self.install_path, "cpu_flags"),
                         self.vm_mem * 100, self.vm_mem / 2))
-                logging.debug("Sending command: %s" % (cmd))
+                logging.debug("Sending command: %s", cmd)
                 session.sendline(cmd)
                 time.sleep(3)
 
@@ -249,7 +249,7 @@ def run(test, params, env):
                     vm.monitor.get_status()
             except (qemu_monitor.MonitorProtocolError,
                     qemu_monitor.QMPCmdError):
-                logging.debug("Guest %s not working" % (vm))
+                logging.debug("Guest %s not working", vm)
 
         def check_vms_dst(self, mig_data):
             """

@@ -28,12 +28,12 @@ def set_addr(image_name, slot, function, params, multifunction='on'):
     else:
         param_name = 'blk_extra_params_%s' % image_name
     if function % 8 == 0:
-        logging.info('Set multifunction=on for %s' % image_name)
+        logging.info('Set multifunction=on for %s', image_name)
         params[param_name] = 'multifunction=%s' % multifunction
         if function == 0:
             return
     addr_pattern = 'addr=%s.%s' % (hex(slot), hex(function % 8))
-    logging.info('Set addr of %s to %s' % (image_name, addr_pattern))
+    logging.info('Set addr of %s to %s', image_name, addr_pattern)
     extra_param = params.get(param_name)
     if extra_param:
         params[param_name] = extra_param + ',' + addr_pattern

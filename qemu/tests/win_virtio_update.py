@@ -34,7 +34,7 @@ def run(test, params, env):
                 if nic_idx < 0:
                     raise
                 logging.warn("Unable to login guest, "
-                             "try to login via nic %d" % nic_idx)
+                             "try to login via nic %d", nic_idx)
 
     def check_cdrom(timeout):
         cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"

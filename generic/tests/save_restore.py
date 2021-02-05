@@ -94,10 +94,10 @@ def run(test, params, env):
         try:
             vm.verify_kernel_crash()
             check_system(test, vm, 120)  # networking needs time to recover
-            logging.info("Save/restores left: %d (or %0.4f more seconds)" %
-                         (repeat, (time_to_stop - time.time())))
+            logging.info("Save/restores left: %d (or %0.4f more seconds)",
+                         repeat, (time_to_stop - time.time()))
             if start_delay:
-                logging.debug("Sleeping %0.4f seconds start_delay" %
+                logging.debug("Sleeping %0.4f seconds start_delay",
                               start_delay)
                 time.sleep(start_delay)
             vm.pause()
@@ -106,7 +106,7 @@ def run(test, params, env):
             vm.save_to_file(save_file)
             vm.verify_kernel_crash()
             if restore_delay:
-                logging.debug("Sleeping %0.4f seconds restore_delay" %
+                logging.debug("Sleeping %0.4f seconds restore_delay",
                               restore_delay)
                 time.sleep(restore_delay)
             vm.restore_from_file(save_file)
@@ -130,7 +130,7 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=120)
         status = session.cmd_status('kill %d' % bg_command_pid)
         if status != 0:
-            logging.warning("Background guest command kill %d failed" %
+            logging.warning("Background guest command kill %d failed",
                             bg_command_pid)
         del session
     if repeat > 0:  # time_to_stop reached but itterations didn't complete

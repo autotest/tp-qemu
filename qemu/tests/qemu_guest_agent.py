@@ -135,7 +135,7 @@ class QemuGuestAgentTest(BaseVirtTest):
                 qga_v = re.findall(pattern, pkg, re.I)[0]
                 version_list.append(qga_v)
             logging.info("The installed and the latest pkg version is"
-                         " %s" % version_list)
+                         " %s", version_list)
             if version_list[1] != version_list[0]:
                 return False
         return s == 0
@@ -247,7 +247,7 @@ class QemuGuestAgentTest(BaseVirtTest):
                                         shell=True,
                                         timeout=query_timeout
                                         ).strip().decode()
-        logging.info("Qemu-guest-agent rpm pkg url is %s" % rpm_url)
+        logging.info("Qemu-guest-agent rpm pkg url is %s", rpm_url)
         return rpm_url
 
     def gagent_install(self, session, vm):
@@ -447,9 +447,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
         """
         repeats = int(params.get("repeat_times", 1))
-        logging.info(
-            "Repeat install/uninstall qemu-ga pkg for %s times" %
-            repeats)
+        logging.info("Repeat install/uninstall qemu-ga pkg for %s times", repeats)
 
         if not self.vm:
             self.vm = self.env.get_vm(params["main_vm"])
@@ -477,9 +475,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
         """
         repeats = int(params.get("repeat_times", 1))
-        logging.info(
-            "Repeat stop/restart qemu-ga service for %s times" %
-            repeats)
+        logging.info("Repeat stop/restart qemu-ga service for %s times", repeats)
 
         if not self.vm:
             self.vm = self.env.get_vm(params["main_vm"])
@@ -1044,8 +1040,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             host_time = process.system_output("date +%s")
             get_guest_time_cmd = params["get_guest_time_cmd"]
             guest_time = session.cmd_output(get_guest_time_cmd)
-            logging.info("Host time is %s,guest time is %s." % (host_time,
-                                                                guest_time))
+            logging.info("Host time is %s,guest time is %s.", host_time,
+                         guest_time)
             time_diff = abs(int(host_time) - int(guest_time))
             return time_diff
 
@@ -1105,7 +1101,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
 
         output = session.cmd_output(cmd)
-        logging.info("The process details: %s" % output)
+        logging.info("The process details: %s", output)
         try:
             memory_usage = int(output.split(" ")[-2].replace(",", ""))
             return memory_usage
@@ -1214,7 +1210,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         logging.info("Current provisioning_mode = '%s'", provisioning_mode)
         bitmap = get_allocation_bitmap()
         if bitmap:
-            logging.debug("block allocation bitmap: %s" % bitmap)
+            logging.debug("block allocation bitmap: %s", bitmap)
             test.error("block allocation bitmap not empty before test.")
         vm_name = params["main_vm"]
         test_image = "scsi_debug"
@@ -1338,7 +1334,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         test.error("Disk %s dependencies "
                                    "should be null." % diskname)
                 except IndexError:
-                    logging.info("Disk %s dependencies is null" % diskname)
+                    logging.info("Disk %s dependencies is null", diskname)
             else:
                 if disk_info['dependencies'][0] != disk_info_guest['pkname']:
                     test.fail("Disk %s dependencies is different "
@@ -1588,8 +1584,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         logging.info("Read content and do check.")
         ret_read = self.gagent.guest_file_read(ret_handle, count=count)
         content_read = base64.b64decode(ret_read["buf-b64"]).decode()
-        logging.info("The read content is '%s'; the real content is '%s'."
-                     % (content_read, content))
+        logging.info("The read content is '%s'; the real content is '%s'.",
+                     content_read, content)
         if not content_read.strip() == content.strip():
             self.test.fail("The read content is '%s'; the real content is '%s'."
                            % (content_read, content))
@@ -2051,7 +2047,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         out_data = base64.b64decode(result["out-data"]).\
                             decode()
                         logging.info("The guest cmd is executed successfully,"
-                                     "the output is:\n%s." % out_data)
+                                     "the output is:\n%s.", out_data)
                     elif "err-data" in result:
                         test.fail("When exitcode is 0, should not return"
                                   " error data.")
@@ -2066,7 +2062,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         err_data = base64.b64decode(result["err-data"]).\
                             decode()
                         logging.info("The guest cmd failed,"
-                                     "the error info is:\n%s" % err_data)
+                                     "the error info is:\n%s", err_data)
                     else:
                         test.fail("There is no output with capture_output is "
                                   "true.")
@@ -2076,7 +2072,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 if "out-data" in result:
                     out_data = base64.b64decode(result["out-data"]).decode()
                     logging.info("The guest cmd is executed successfully,"
-                                 "the output is:\n%s." % out_data)
+                                 "the output is:\n%s.", out_data)
                 else:
                     test.fail("There is no output with capture_output is true.")
             return result
@@ -2863,7 +2859,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                   "Something must go wrong.")
                     else:
                         logging.info("File system '%s' usages are within the safe "
-                                     "floating range." % mount_point)
+                                     "floating range.", mount_point)
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -2886,8 +2882,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 # volume is not supported.
                 check_usage_qga_guest(mount_pt)
             else:
-                logging.info("'%s' disk usage statistic is not supported" %
-                             mount_pt)
+                logging.info("'%s' disk usage statistic is not supported", mount_pt)
 
             error_context.context("Check file system type of '%s' mount point."
                                   % mount_pt, logging.info)
@@ -2903,8 +2898,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                           "from guest-agent is %s.\nfrom guest os is %s."
                           % (fs_type_qga, fs_type_guest))
             else:
-                logging.info("File system type is %s which is expected." %
-                             fs_type_qga)
+                logging.info("File system type is %s which is expected.", fs_type_qga)
 
             error_context.context("Check disk name.", logging.info)
             disk_name_qga = fs["name"]
@@ -2919,8 +2913,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                           "from guest-agent is %s.\nit's from guest os is %s."
                           % (disk_name_qga, disk_name_guest))
             else:
-                logging.info("Disk name is %s which is expected." %
-                             disk_name_qga)
+                logging.info("Disk name is %s which is expected.", disk_name_qga)
 
             error_context.context("Check serial number of some disk.",
                                   logging.info)
@@ -2933,8 +2926,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                           "from guest-agent is %s.\n"
                           "but it should include %s." % (serial_qga, serial_num))
             else:
-                logging.info("Serial number is %s which is expected." %
-                             serial_qga)
+                logging.info("Serial number is %s which is expected.", serial_qga)
 
     @error_context.context_aware
     def gagent_check_nonexistent_cmd(self, test, params, env):
@@ -3120,10 +3112,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             offline_cmd = ' echo offline disk'
             offline_cmd = wrap_windows_cmd(offline_cmd)
             did = disk_index[0]
-            logging.info("Detail for 'Disk%s'" % did)
+            logging.info("Detail for 'Disk%s'", did)
             details = session.cmd_output(detail_cmd % did)
             if re.search("Status.*Online", details, re.I | re.M):
-                logging.info("Offline 'Disk%s'" % did)
+                logging.info("Offline 'Disk%s'", did)
                 status, output = session.cmd_status_output(offline_cmd % did,
                                                            timeout=120)
                 if status != 0:
@@ -3206,7 +3198,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                     self.gagent.cmd(qga_cmd)
             except guest_agent.VAgentCmdError as detail:
                 if re.search("%s has been disabled" % qga_cmd, str(detail)):
-                    logging.info("%s cmd is disabled." % qga_cmd)
+                    logging.info("%s cmd is disabled.", qga_cmd)
                 else:
                     test.fail("%s cmd failed with:"
                               "('%s')" % (qga_cmd, str(detail)))
@@ -3434,7 +3426,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             if params["os_type"] == "windows":
                 # username is lowercase letters in windows guest
                 user_name = user_name_qga.lower()
-                logging.info("Check domain name of %s user." % user_name)
+                logging.info("Check domain name of %s user.", user_name)
                 domain_qga = user_qga["domain"]
                 cmd_get_user_domain = params["cmd_get_user_domain"] % user_name
                 domain_guest = session.cmd_output(cmd_get_user_domain).strip()
@@ -3656,7 +3648,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             test.error("Only support 'url' and 'virtio-win' method to "
                        "download qga installer now.")
 
-        logging.info("The qemu-ga pkg full path is %s" % qemu_ga_pkg_path)
+        logging.info("The qemu-ga pkg full path is %s", qemu_ga_pkg_path)
         return qemu_ga_pkg_path
 
     @error_context.context_aware
@@ -3856,7 +3848,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         image_filename_stg = storage.get_image_filename(
             image_params_stg, data_dir.get_data_dir())
         blocks_init = get_blocks()
-        logging.info("The blocks original is %s" % blocks_init)
+        logging.info("The blocks original is %s", blocks_init)
 
         error_context.context("Create fragment in data disk.", logging.info)
         guest_dir = r"%s:" % mnt_point[0]
@@ -3865,7 +3857,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                                  utils_misc.generate_random_string(5))
         for i in range(5):
             count = 1000 * (i + 1)
-            logging.info("Create %sM file in guest." % count)
+            logging.info("Create %sM file in guest.", count)
             cmd = "dd if=/dev/random of=%s bs=1M count=%d" % (data_file, count)
             session.cmd(cmd, timeout=600)
             delete_file_cmd = "%s %s" % (params["delete_file_cmd"],

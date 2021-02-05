@@ -43,7 +43,7 @@ def check_disk_status(session, timeout, num):
     end_time = time.time() + timeout
     while time.time() < end_time:
         disks_str = session.cmd_output_safe(disk_status_cmd)
-        logging.info("disks_str is %s" % disks_str)
+        logging.info("disks_str is %s", disks_str)
         disks = re.findall("Disk %s.*\n" % num, disks_str)
         if not disks:
             continue
@@ -246,7 +246,7 @@ def run(test, params, env):
                     else:
                         run_cmd = fio_cmd % (io_pattern, bs, io_depth, numjobs)
 
-                    logging.info("run_cmd is: %s" % run_cmd)
+                    logging.info("run_cmd is: %s", run_cmd)
                     if os_type == "linux":
                         (s, o) = session.cmd_status_output(drop_cache,
                                                            timeout=cmd_timeout)

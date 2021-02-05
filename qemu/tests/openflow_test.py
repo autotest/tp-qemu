@@ -69,9 +69,9 @@ def run(test, params, env):
             err_msg += "%s " % (packet_receive and "can" or "can not")
             err_msg += "receive the packets"
             test.error(err_msg)
-        logging.info("Correct, flow %s dropped, tcpdump %s receive the packet"
-                     % ((drop_flow and "was" or "was not"),
-                         (packet_receive and "can" or "can not")))
+        logging.info("Correct, flow %s dropped, tcpdump %s receive the packet",
+                     (drop_flow and "was" or "was not"),
+                     (packet_receive and "can" or "can not"))
 
     def arp_entry_clean(entry=None):
         """
@@ -119,9 +119,9 @@ def run(test, params, env):
 
         info_msg = "Correct, icmp flow %s dropped, ping '%s', "
         info_msg += "packets lost rate is: '%s'"
-        logging.info(info_msg % ((drop_flow and "was" or "was not"),
-                                 (ping_status and "failed" or "success"),
-                                 packets_lost))
+        logging.info(info_msg, (drop_flow and "was" or "was not"),
+                     (ping_status and "failed" or "success"),
+                     packets_lost)
 
     def run_ping_bg(vm, dst):
         """
@@ -129,7 +129,7 @@ def run(test, params, env):
         """
         ping_cmd = "ping %s" % dst
         session = vm.wait_for_login()
-        logging.info("Ping %s in background" % dst)
+        logging.info("Ping %s in background", dst)
         session.sendline(ping_cmd)
         return session
 
@@ -202,9 +202,9 @@ def run(test, params, env):
                 err_msg += " '%s'" % (nc_connect and "failed" or "success")
                 test.error(err_msg)
 
-            logging.info("Correct, '%s' flow %s dropped, and nc connect %s" %
-                         (nc_protocol, (drop_flow and "was" or "was not"),
-                          (nc_connect and "success" or "failed")))
+            logging.info("Correct, '%s' flow %s dropped, and nc connect %s",
+                         nc_protocol, (drop_flow and "was" or "was not"),
+                         (nc_connect and "success" or "failed"))
         finally:
             for session in sessions:
                 session.cmd_output_safe("killall nc || killall ncat")

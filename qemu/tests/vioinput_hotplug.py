@@ -24,14 +24,14 @@ def run(test, params, env):
         out, ver_out = vm.devices.simple_hotplug(dev, vm.monitor)
         if not ver_out:
             test.fail("No % device in qtree after hotplug" % dev)
-        logging.info("%s is hotpluged successfully" % dev)
+        logging.info("%s is hotpluged successfully", dev)
 
     def unplug_input_dev(vm, dev):
         error_context.context("Unplug %s" % dev, logging.info)
         out, ver_out = vm.devices.simple_unplug(dev, vm.monitor)
         if not ver_out:
             test.fail("Still get %s in qtree after unplug" % dev)
-        logging.info("%s is unpluged successfully" % dev)
+        logging.info("%s is unpluged successfully", dev)
 
     def run_subtest(sub_test):
         """

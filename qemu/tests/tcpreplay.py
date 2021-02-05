@@ -32,7 +32,7 @@ def run(test, params, env):
         param timeout: the timeout for running this command
         return: the output of the host_cmd
         """
-        logging.info("Executing host command: %s" % host_cmd)
+        logging.info("Executing host command: %s", host_cmd)
         cmd_result = process.run(host_cmd, timeout=timeout, shell=True)
         output = cmd_result.stdout_text
         return output
@@ -73,13 +73,13 @@ def run(test, params, env):
     shutil.rmtree(uncompress_full_path, ignore_errors=True)
 
     logging.info(
-        "Uncompress %s to %s" % (tcpreplay_full_path, uncompress_full_path))
+        "Uncompress %s to %s", tcpreplay_full_path, uncompress_full_path)
     uncompress_dir = archive.uncompress(
         tcpreplay_full_path, tmp_dir)
     if not uncompress_dir:
         test.error("Can't uncompress %s" % tcpreplay_full_path)
 
-    logging.info("Compile files at %s" % uncompress_full_path)
+    logging.info("Compile files at %s", uncompress_full_path)
     execute_host_cmd(tcpreplay_compile_cmd % uncompress_full_path)
 
     error_context.context("Copy %s to %s" % (pcap_file_name, tmp_dir),

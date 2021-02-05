@@ -29,7 +29,7 @@ def run(test, params, env):
 
     def _get_file_size(img):
         """Get the image file size of a given QemuImg object."""
-        logging.info("Get %s's file size." % img.image_filename)
+        logging.info("Get %s's file size.", img.image_filename)
         cmd = "stat -c %s {0}".format(img.image_filename)
         return int(process.system_output(cmd).decode())
 
@@ -37,7 +37,7 @@ def run(test, params, env):
         """Verify image file size with the qemu-img measure benchmark."""
         logging.info("Verify the %s's size with benchmark.\n"
                      "The image size %s does not exceed the benchmark '%s'"
-                     " size %s." % (tag, file_size, key, benchmark[key]))
+                     " size %s.", tag, file_size, key, benchmark[key])
         if file_size > benchmark[key]:
             test.fail("The %s's file size should not exceed benchmark '%s'"
                       " size %s, got %s." % (tag, key,

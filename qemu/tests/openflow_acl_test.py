@@ -42,7 +42,7 @@ def run(test, params, env):
         err_type = ""
         for asys in access_sys:
             for atgt in access_targets:
-                logging.debug("Try to access target %s from %s" % (atgt, asys))
+                logging.debug("Try to access target %s from %s", atgt, asys)
 
                 access_params = access_sys[asys]
                 atgt_disabled = access_params['disabled_%s' % atgt]
@@ -189,7 +189,7 @@ def run(test, params, env):
         src_name = src
         if src != "localhost":
             src_name = src.name
-        logging.info("Login %s from %s" % (host, src_name))
+        logging.info("Login %s from %s", host, src_name)
         port = params_login["target_port"]
         username = params_login["username"]
         password = params_login["password"]
@@ -216,7 +216,7 @@ def run(test, params, env):
             raise remote.LoginBadClientError(client)
 
         if src == "localhost":
-            logging.debug("Login with command %s" % cmd)
+            logging.debug("Login with command %s", cmd)
             session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
         else:
             if params_login.get("os_type") == "windows":
@@ -228,7 +228,7 @@ def run(test, params, env):
             else:
                 cmd += " || sleep 5"
             session = src.wait_for_login()
-            logging.debug("Sending login command: %s" % cmd)
+            logging.debug("Sending login command: %s", cmd)
             session.sendline(cmd)
         try:
             out = remote.handle_prompts(session, username, password,

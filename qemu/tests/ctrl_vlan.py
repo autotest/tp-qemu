@@ -65,7 +65,7 @@ def run(test, params, env):
         find_cmd = 'dir /b /s %s\\netkvmco.dll | findstr "\\%s\\\\"'
         find_cmd %= (viowin_ltr,  middle_path)
         netkvmco_path = session.cmd(find_cmd).strip()
-        logging.info("Found netkvmco.dll file at %s" % netkvmco_path)
+        logging.info("Found netkvmco.dll file at %s", netkvmco_path)
         return netkvmco_path
 
     login_timeout = float(params.get("login_timeout", 360))

@@ -15,4 +15,4 @@ install:
     - pip install -r requirements-travis.txt
 
 script:
-    - inspekt checkall --disable-style E501,E265,W601,E402,E722,E741 --no-license-check
+    - inspekt checkall --disable-style E501,E265,W601,E402,E722,E741 --enable-lint W0611,W1201 --no-license-check

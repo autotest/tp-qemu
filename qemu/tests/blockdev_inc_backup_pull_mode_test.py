@@ -88,7 +88,7 @@ class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
             self.full_backup_nbd_objs.append(
                 InternalNBDExportImage(self.main_vm, self.params, bk_tags[0]))
 
-            self.params['nbd_export_bitmap_%s' %
+            self.params['nbd_export_bitmaps_%s' %
                         bk_tags[1]] = "full_bitmap_%s" % tag
             self.inc_backup_nbd_objs.append(
                 InternalNBDExportImage(self.main_vm, self.params, bk_tags[1]))

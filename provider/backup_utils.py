@@ -85,8 +85,9 @@ def generate_tempfile(vm, root_dir, filename, size="10M", timeout=720):
                 size,
                 order_magnitude="M",
                 factor=1024))
-        mk_file_cmd = "dd if=/dev/urandom of=%s bs=1M count=%s oflag=direct" % (
-            file_path, count)
+        dd_cmd = vm.params.get(
+            "dd_cmd", "dd if=/dev/urandom of=%s bs=1M count=%s oflag=direct")
+        mk_file_cmd = dd_cmd % (file_path, count)
         md5_cmd = "md5sum %s > %s.md5 && sync" % (file_path, file_path)
     try:
         session.cmd(mk_file_cmd, timeout=timeout)

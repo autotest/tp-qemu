@@ -49,7 +49,7 @@ def run(test, params, env):
 
     error_context.context("Hotplug a vcpu to guest", logging.info)
     if int(params["smp"]) < int(params["vcpus_maxcpus"]):
-        vm.hotplug_vcpu()
+        vm.hotplug_vcpu_device(params["vcpu_devices"])
         time.sleep(1)
     else:
         test.error("Invalid operation, valid index range 0:%d, used range 0:%d"

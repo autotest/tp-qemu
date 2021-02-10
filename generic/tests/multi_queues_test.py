@@ -100,7 +100,7 @@ def run(test, params, env):
                 if len(re.findall(r"Combined:\s+%d\s" % queues, o)) != 2:
                     test.error("Fail to enable MQ feature of (%s)" %
                                nic.nic_name)
-                logging.info("MQ feature of (%s) is enabled" % nic.nic_name)
+                logging.info("MQ feature of (%s) is enabled", nic.nic_name)
 
         taskset_cpu = params.get("netperf_taskset_cpu")
         if taskset_cpu:
@@ -181,10 +181,10 @@ def run(test, params, env):
 
                     irq_number = cpu_irq_affinity[taskset_cpu]
                     irq_ori = get_cpu_irq_statistics(session, irq_number)
-                    logging.info("Cpu irq info: %s" % irq_ori)
+                    logging.info("Cpu irq info: %s", irq_ori)
                     time.sleep(10)
                     irq_cur = get_cpu_irq_statistics(session, irq_number)
-                    logging.info("After 10s, cpu irq info: %s" % irq_cur)
+                    logging.info("After 10s, cpu irq info: %s", irq_cur)
 
                     irq_change_list = [x[0] - x[1] for x in zip(irq_cur, irq_ori)]
                     cpu_affinity = irq_change_list.index(max(irq_change_list))

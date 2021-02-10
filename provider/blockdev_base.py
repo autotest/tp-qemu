@@ -48,7 +48,7 @@ class BlockdevBaseTest(object):
             cluster_size = backup_utils.generate_random_cluster_size(blacklist)
             params["image_cluster_size"] = cluster_size
             logging.info(
-                "set target image cluster size to '%s'" %
+                "set target image cluster size to '%s'",
                 cluster_size)
         params.setdefault("target_path", data_dir.get_data_dir())
         vol = sp_admin.volume_define_by_params(image_name, params)
@@ -71,7 +71,7 @@ class BlockdevBaseTest(object):
                     blacklist)
                 params["image_cluster_size"] = cluster_size
                 logging.info(
-                    "set image cluster size to '%s'" %
+                    "set image cluster size to '%s'",
                     cluster_size)
             disk = self.source_disk_define_by_params(params, tag)
             disk.create(params)

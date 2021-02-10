@@ -241,7 +241,7 @@ def run(test, params, env):
                                                                   disk_size))
             status, output = session.cmd_status_output("setenforce 0")
             if status not in [0, 127]:
-                logging.warn("Function setenforce fails.\n %s" % (output))
+                logging.warn("Function setenforce fails.\n %s", output)
 
             config = self.config % (self.server_name, disk_path,
                                     self.user, self.passwd)

@@ -57,7 +57,7 @@ def run(test, params, env):
         vm.resume()
 
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("Round %s -> Guest is up successfully." % str(i + 1))
+        logging.info("Round %s -> Guest is up successfully.", str(i + 1))
         if vm.get_pid() != qemu_process_id:
             test.fail("Qemu pid changed after system_reset & cont!")
     if session:

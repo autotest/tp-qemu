@@ -35,7 +35,7 @@ def run(test, params, env):
         """
         virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                          cdrom_virtio)
-        logging.info("Changing virtio iso image to '%s'" % virtio_iso)
+        logging.info("Changing virtio iso image to '%s'", virtio_iso)
         vm.change_media("drive_virtio", virtio_iso)
 
     vm = env.get_vm(params["main_vm"])

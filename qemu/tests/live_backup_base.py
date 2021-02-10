@@ -60,7 +60,7 @@ class LiveBackup(block_copy.BlockCopy):
         backup_params["base_format"] = self.params.get("format")
         qemu_image = qemu_storage.QemuImg(backup_params,
                                           self.data_dir, backup_image)
-        logging.info("create backup image for %s" % backup_image)
+        logging.info("create backup image for %s", backup_image)
         backup_image_name, _ = qemu_image.create(backup_params)
         self.backup_index += 1
         self.trash_files.append(backup_image_name)
@@ -98,17 +98,17 @@ class LiveBackup(block_copy.BlockCopy):
                                "speed": speed}
                 self.transaction_add(args_list, "drive-backup", backup_args)
                 logging.info("Create bitmap and drive-backup with transaction "
-                             "for %s" % drive_name)
+                             "for %s", drive_name)
                 self.vm.monitor.transaction(args_list)
                 if not self.get_status():
                     self.test.fail("full backup job not found")
                 return None
 
-            logging.info("Create bitmap for %s" % drive_name)
+            logging.info("Create bitmap for %s", drive_name)
             self.vm.monitor.operate_dirty_bitmap("add", drive_name, bitmap_name, granularity)
         if not backup_image_name:
             self.test.error("No backup target provided.")
-        logging.info("Create %s backup for %s" % (sync, drive_name))
+        logging.info("Create %s backup for %s", sync, drive_name)
         self.vm.monitor.drive_backup(drive_name, backup_image_name, backup_format,
                                      sync, speed, mode, bitmap_name)
         if not self.get_status():
@@ -167,7 +167,7 @@ class LiveBackup(block_copy.BlockCopy):
             self.test.error("Get image info failed.")
         image_size = re.findall(r"disk size: (\d\.?\d*?.*)", image_info)[0]
         image_size = int(float(utils_misc.normalize_data_size(image_size, "B")))
-        logging.info("Image size of %s is %s" % (image, image_size))
+        logging.info("Image size of %s is %s", image, image_size)
         return image_size
 
     def reopen(self):

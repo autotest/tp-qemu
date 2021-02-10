@@ -64,7 +64,7 @@ def run(test, params, env):
                     if self.bg and self.bg.is_alive():
                         self.bg.join()
                     output = session.cmd_output("ipconfig || ifconfig")
-                    logging.info("Guest network status:\n %s" % output)
+                    logging.info("Guest network status:\n %s", output)
                     session.cmd(self.driver_load_cmd)
                 else:
                     s, o = session.cmd_status_output(kill_bg_stress_cmd)

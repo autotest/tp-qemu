@@ -40,7 +40,7 @@ def run(test, params, env):
         addr_info = session.cmd("lsscsi | grep %s | awk '{print $1}'" % product_name)
         addr = re.search(r'((\d+\:){3}\d+)', addr_info).group(1)
         logging.info(
-            "The scsi address of the product %s is %s." % (product_name, addr))
+            "The scsi address of the product %s is %s.", product_name, addr)
         return addr
 
     def check_scsi_disk_by_address(scsi_addr):

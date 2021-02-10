@@ -46,7 +46,7 @@ def run(test, params, env):
     error_context.context("run benchmark test in background", logging.info)
     params["test_timeout"] = test_timeout * 2 + sec_per_day
     logging.info("set Yonit bitmap test timeout to"
-                 " %ss" % params["test_timeout"])
+                 " %ss", params["test_timeout"])
     pid = guest_test.run_guest_test_background(test, params, env)
     if pid < 0:
         session.close()

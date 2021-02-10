@@ -232,7 +232,7 @@ def run(test, params, env):
     sender = params['file_sender']
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    logging.info('Transfer data from %s' % sender)
+    logging.info('Transfer data from %s', sender)
     result = transfer_data(params, vm, sender=sender)
     vm.destroy()
     if result is not True:

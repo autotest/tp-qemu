@@ -95,7 +95,7 @@ def run(test, params, env):
     core_file += str(qemu_id)
     gdb_command %= str(qemu_id)
     trigger_core_dump_command %= str(qemu_id)
-    logging.info("trigger core dump command: %s" % trigger_core_dump_command)
+    logging.info("trigger core dump command: %s", trigger_core_dump_command)
     process.run(trigger_core_dump_command)
     utils_misc.wait_for(lambda: os.path.exists(core_file), timeout=60)
     if params.get('check_core_file', 'yes') == 'yes':

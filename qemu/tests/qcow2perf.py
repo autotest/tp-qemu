@@ -105,5 +105,5 @@ def run(test, params, env):
     result_file = open("%s/%s_%s_results" %
                        (test.resultsdir, "qcow2perf", op_type), 'w')
     result_file.write("%s:%s\n" % (op_type, output))
-    logging.info("%s takes %s" % (op_type, output))
+    logging.info("%s takes %s", op_type, output)
     result_file.close()

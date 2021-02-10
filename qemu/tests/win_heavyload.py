@@ -115,7 +115,7 @@ def run(test, params, env):
     start_cmd = add_option(start_cmd, 'DURATION', test_timeout / 60)
     start_cmd = add_option(start_cmd, 'START', '')
     start_cmd = add_option(start_cmd, 'AUTOEXIT', '')
-    logging.info("heavyload cmd: %s" % start_cmd)
+    logging.info("heavyload cmd: %s", start_cmd)
     session.sendline(start_cmd)
     if not loop_session_cmd(session, check_running_cmd):
         test.error("heavyload process is not started")

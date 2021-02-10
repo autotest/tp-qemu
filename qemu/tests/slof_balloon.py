@@ -38,7 +38,7 @@ def run(test, params, env):
         """ Check virtio balloon device info. """
         error_context.context('Check virtio balloon device info.')
         balloon_size = qmp.query('balloon')['actual']
-        logging.debug('The balloon size is %s' % balloon_size)
+        logging.debug('The balloon size is %s', balloon_size)
         mem = int(params["mem"]) * 1024 ** 2
         if int(balloon_size) != mem:
             test.error(
@@ -59,14 +59,14 @@ def run(test, params, env):
             test.fail('The balloon size is not changed to %s in %s sec.'
                       % (changed_ballon_size, balloon_timeout))
         logging.debug(
-            'The balloon size is %s after changed.' % changed_ballon_size)
+            'The balloon size is %s after changed.', changed_ballon_size)
 
     def _ping_host():
         """ Ping host from guest. """
         error_context.context("Try to ping external host.", logging.info)
         extra_host_ip = utils_net.get_host_ip_address(params)
         session.cmd('ping %s -c 5' % extra_host_ip)
-        logging.info("Ping host(%s) successfully." % extra_host_ip)
+        logging.info("Ping host(%s) successfully.", extra_host_ip)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -77,7 +77,7 @@ def run(test, params, env):
 
     error_context.context("Try to log into guest '%s'." % vm.name, logging.info)
     session = vm.wait_for_login(timeout=float(params.get("login_timeout", 240)))
-    logging.info("log into guest '%s' successfully." % vm.name)
+    logging.info("log into guest '%s' successfully.", vm.name)
 
     qmp = _get_qmp_port()
     _check_balloon_info()

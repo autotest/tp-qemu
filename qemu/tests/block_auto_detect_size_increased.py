@@ -27,8 +27,8 @@ def run(test, params, env):
     """
     def increase_block_device(dev):
         """Increase the block device."""
-        logging.info("Start to increase image '%s' to %s."
-                     % (img, img_resize_size))
+        logging.info("Start to increase image '%s' to %s.",
+                     img, img_resize_size)
         resize_size = int(float(normalize_data_size(re.search(
             r'(\d+\.?(\d+)?\w)', img_resize_size).group(1), "B")))
         args = (dev, resize_size)

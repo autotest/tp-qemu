@@ -38,8 +38,7 @@ def run(test, params, env):
                          current_size, block_size)
             return True
         else:
-            logging.error("Current: %s\nExpect: %s\n" % (current_size,
-                                                         block_size))
+            logging.error("Current: %s\nExpect: %s\n", current_size, block_size)
             return False
 
     vm = env.get_vm(params["main_vm"])

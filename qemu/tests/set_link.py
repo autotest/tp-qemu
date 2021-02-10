@@ -119,7 +119,7 @@ def run(test, params, env):
             err_msg = "currently interface status is '%s', " % if_operstate
             err_msg += "but expect status is '%s'" % expect_status
             test.fail(err_msg)
-        logging.info("Guest interface operstate '%s' is exactly as expected" %
+        logging.info("Guest interface operstate '%s' is exactly as expected",
                      if_operstate)
 
     def guest_interface_operstate_check(expect_status, guest_ifname="",
@@ -150,7 +150,7 @@ def run(test, params, env):
         ip_addr = utils_net.get_net_if_addrs_win(session, mac_addr)
         guest_ipv4 = ip_addr["ipv4"]
         for ip in guest_ipv4:
-            logging.debug("Check address: %s" % ip)
+            logging.debug("Check address: %s", ip)
             if len(ip) != 0 and not ip.startswith("169.254"):
                 return True
         return False

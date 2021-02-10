@@ -65,8 +65,8 @@ def run(test, params, env):
                   " %s" % guest_res_raw)
 
     logging.info("Here's the information I have: ")
-    logging.info("\nClient Resolution: " + client_res)
-    logging.info("\nGuest Resolution: " + guest_res)
+    logging.info("\nClient Resolution: %s", client_res)
+    logging.info("\nGuest Resolution: %s", guest_res)
 
     # Positive Test, verify the guest takes the resolution of the client
     if full_screen == "yes":

@@ -1084,13 +1084,13 @@ def run(test, params, env):
             elif testing_text.isdigit():
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copying a String of size "
-                                 "%s from the Client to Guest" % testing_text)
+                                 "%s from the Client to Guest", testing_text)
                     restart_cppaste_lrgtext(test, client_session,
                                             guest_session,
                                             guest_root_session, params)
                 else:
-                    logging.info("Copying a String of size " + testing_text +
-                                 " from the Client to Guest")
+                    logging.info("Copying a String of size %s"
+                                 " from the Client to Guest", testing_text)
                     copy_and_paste_largetext(test, client_session,
                                              guest_session,
                                              guest_root_session, params)
@@ -1118,13 +1118,13 @@ def run(test, params, env):
             elif testing_text.isdigit():
                 if "restart" in test_type:
                     logging.info("Restart Vdagent, Copying a String of size "
-                                 "%s from the Guest to Client" % testing_text)
+                                 "%s from the Guest to Client", testing_text)
                     restart_cppaste_lrgtext(test, guest_session,
                                             client_session,
                                             guest_root_session, params)
                 else:
-                    logging.info("Copying a String of size " + testing_text +
-                                 " from the Guest to Client")
+                    logging.info("Copying a String of size %s"
+                                 " from the Guest to Client", testing_text)
                     copy_and_paste_largetext(test, guest_session,
                                              client_session,
                                              guest_root_session, params)

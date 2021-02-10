@@ -170,7 +170,7 @@ def run(test, params, env):
     need_restore_clksrc = False
     if timerdevice_clksource:
         origin_clksrc = get_current_clksrc(session)
-        logging.info("guest is booted with %s" % origin_clksrc)
+        logging.info("guest is booted with %s", origin_clksrc)
 
         if timerdevice_clksource != origin_clksrc:
             update_clksrc(session, timerdevice_clksource)

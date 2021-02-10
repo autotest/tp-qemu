@@ -125,7 +125,7 @@ class _EventListener(object):
         self._agent_sh.set_output_func(None)
         self._agent_sh = None
         self._agent_state = AgentState.STOPPED
-        logging.info('Stopped listening input events on %s' % self._vm.name)
+        logging.info('Stopped listening input events on %s', self._vm.name)
 
     def is_listening(self):
         '''Return `True` if listening.'''
@@ -136,7 +136,7 @@ class _EventListener(object):
         self._launch()
         if not utils_misc.wait_for(self.is_listening, timeout=10, step=1):
             raise AssertionError('agent program is not running')
-        logging.info('Listening input events on %s' % self._vm.name)
+        logging.info('Listening input events on %s', self._vm.name)
 
     def cleanup(self):
         '''Cleanup the event listener.'''

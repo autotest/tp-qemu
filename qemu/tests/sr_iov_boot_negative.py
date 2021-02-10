@@ -35,6 +35,6 @@ def run(test, params, env):
                 msg = "Could not find '%s' in error message '%s'" % (
                     neg_msg, e)
                 test.fail(msg)
-        logging.debug("Could not boot up vm, %s" % e)
+        logging.debug("Could not boot up vm, %s", e)
     if case_fail:
         test.fail("Did not raise exception during vm boot up")

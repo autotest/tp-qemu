@@ -407,7 +407,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                 else:
                     logging.debug(
                         "Not all netperf clients start to work, please enlarge"
-                        " '%s' number or skip this tests" % int(j))
+                        " '%s' number or skip this tests", int(j))
                     continue
     fd.close()
 
@@ -437,7 +437,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                 netserver_path = params.get("netserver_path")
                 netperf_install_cmd = params.get("netperf_install_cmd")
                 start_session = server_cyg
-                logging.info("Start netserver with cygwin, cmd is: %s" %
+                logging.info("Start netserver with cygwin, cmd is: %s",
                              netserv_start_cmd)
                 if "netserver" not in server_ctl.cmd_output("tasklist"):
                     netperf_pack = "netperf-%s" % params.get("netperf_version")
@@ -461,7 +461,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             else:
                 start_session = server_ctl
                 netserv_start_cmd = params.get("netserv_start_cmd") % cdrom_drv
-                logging.info("Start netserver without cygwin, cmd is: %s" %
+                logging.info("Start netserver without cygwin, cmd is: %s",
                              netserv_start_cmd)
 
             error_context.context("Start netserver on windows guest",
@@ -469,7 +469,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             start_netserver_win(start_session, netserv_start_cmd, test)
 
         else:
-            logging.info("Netserver start cmd is '%s'" % server_path)
+            logging.info("Netserver start cmd is '%s'", server_path)
             netperf_base.ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
             ncpu = netperf_base.ssh_cmd(
                     server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
@@ -595,7 +595,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             if "Interim" in this:
                 result += float(re.findall(r"Interim result: *(\S+)", this)[0])
         result = result / niteration
-        logging.debug("niteration: %s" % niteration)
+        logging.debug("niteration: %s", niteration)
         return result
 
     tries = int(params.get("tries", 1))
@@ -657,4 +657,4 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         else:
             stop_netperf_clients()
             tries = tries - 1
-            logging.debug("left %s times" % tries)
+            logging.debug("left %s times", tries)

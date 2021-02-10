@@ -104,7 +104,7 @@ def run(test, params, env):
     error_context.context("Format disk in guest.", logging.info)
     session.cmd(guest_format_command)
     count = get_blocks()
-    logging.info("The initial blocks is %d" % count)
+    logging.info("The initial blocks is %d", count)
 
     error_context.context("Fill data disk in guest.", logging.info)
     session.cmd(guest_dd_command, ignore_all_errors=True)

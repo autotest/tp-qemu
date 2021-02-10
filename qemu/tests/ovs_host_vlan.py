@@ -71,7 +71,7 @@ def ping(test, os_type, match_error, dest, count, session, same_vlan):
                                          session=session)
         loss_ratio = utils_test.get_loss_ratio(output)
         ping_result_check(test, loss_ratio, same_vlan)
-        logging.debug("%s" % output)
+        logging.debug(output)
     elif os_type == "windows":  # TODO, not supported by now
         status, output = utils_test.ping(dest, count, timeout=60,
                                          session=session)

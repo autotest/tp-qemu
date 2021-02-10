@@ -39,7 +39,7 @@ def run(test, params, env):
     def _change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
-        logging.info('Sending command(%s): %s' % (method, command))
+        logging.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             power_session = vm.wait_for_login()
             power_session.sendline(command)
@@ -63,8 +63,8 @@ def run(test, params, env):
         size = str(
             data_image_size + resize_size) if resize_op == ENLARGE else str(
             data_image_size - resize_size)
-        logging.info("Start to %s image '%s' to %sB." %
-                     (resize_op, data_image, size))
+        logging.info("Start to %s image '%s' to %sB.",
+                     resize_op, data_image, size)
         if vm.check_capability(Flags.BLOCKDEV):
             args = (None, size, dev)
         else:

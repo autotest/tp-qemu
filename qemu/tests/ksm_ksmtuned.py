@@ -57,8 +57,8 @@ def run(test, params, env):
         ksm_status = process.getoutput(params['cmd_check_ksm_status'])
         vm.destroy()
         logging.info('The ksm threshold is %s, the memory allocated by qemu is'
-                     ' %s, and the total free memory on host is %s.' %
-                     (ksm_thres, qemu_used_mem, free_mem_host))
+                     ' %s, and the total free memory on host is %s.',
+                     ksm_thres, qemu_used_mem, free_mem_host)
         if free_mem_host >= ksm_thres:
             if ksm_status != '0':
                 test.fail('Ksm should not start.')

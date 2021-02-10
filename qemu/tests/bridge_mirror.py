@@ -79,8 +79,8 @@ def run(test, params, env):
             logging.debug("Unexpected request or reply number. "
                           "current request number is: %d, "
                           "current reply number is: %d, "
-                          "expected request and reply number is: %d. "
-                          % (request_num, reply_num, ping_count))
+                          "expected request and reply number is: %d. ",
+                          request_num, reply_num, ping_count)
             return False
         return True
 
@@ -140,7 +140,7 @@ def run(test, params, env):
         error_context.context("Start tcpdump in %s"
                               % vm_mirror, logging.info)
         tcpdump_cmd = tcpdump_cmd % (vms_info[vm_des][2], tcpdump_log)
-        logging.info("tcpdump command: %s" % tcpdump_cmd)
+        logging.info("tcpdump command: %s", tcpdump_cmd)
         vms_info[vm_mirror][3].sendline(tcpdump_cmd)
         time.sleep(5)
 

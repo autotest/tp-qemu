@@ -74,7 +74,7 @@ def run(test, params, env):
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
                 error.context("Load stress in guest before migration.", logging.info)
-                logging.debug("Sending command: %s" % (stress_cmd))
+                logging.debug("Sending command: %s", stress_cmd)
                 session.sendline(stress_cmd)
 
             self.migrate_wait([self.vm], self.srchost, self.dsthost, worker)

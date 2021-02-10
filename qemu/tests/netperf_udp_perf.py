@@ -134,7 +134,7 @@ def start_test(server, server_ctl, host, client, resultsdir,
     netperf_version = params.get("netperf_version", "2.6.0")
     client_path = "/tmp/netperf-%s/src/netperf" % netperf_version
     server_path = "/tmp/netperf-%s/src/netserver" % netperf_version
-    logging.info("Netserver start cmd is '%s'" % server_path)
+    logging.info("Netserver start cmd is '%s'", server_path)
     netperf_base.ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
 
     base = params.get("format_base", "18")

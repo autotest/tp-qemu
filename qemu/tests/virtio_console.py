@@ -1160,8 +1160,8 @@ def run(test, params, env):
                     stats.append(thread.idx)
                     time.sleep(time_slice)
                 _time = time.time() - _time - duration
-                logging.info("\n" + loads.get_cpu_status_string()[:-1])
-                logging.info("\n" + loads.get_mem_status_string()[:-1])
+                logging.info(loads.get_cpu_status_string()[:-1])
+                logging.info(loads.get_mem_status_string()[:-1])
                 EXIT_EVENT.set()
                 thread.join()
                 if thread.ret_code:
@@ -1212,8 +1212,8 @@ def run(test, params, env):
                     stats.append(thread.idx)
                     time.sleep(time_slice)
                 _time = time.time() - _time - duration
-                logging.info("\n" + loads.get_cpu_status_string()[:-1])
-                logging.info("\n" + loads.get_mem_status_string()[:-1])
+                logging.info(loads.get_cpu_status_string()[:-1])
+                logging.info(loads.get_mem_status_string()[:-1])
                 guest_worker.cmd("virt.exit_threads()", 10)
                 EXIT_EVENT.set()
                 thread.join()

@@ -76,7 +76,7 @@ def run(test, params, env):
 
     def change_vm_status():
         method, command = params.get('command_opts').split(',')
-        logging.info('Sending command(%s): %s' % (method, command))
+        logging.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             vm.wait_for_login(timeout=360).sendline(command)
         else:

@@ -62,7 +62,7 @@ def run(test, params, env):
     try:
         cmd = params["run_unixbench"]
         scores_on = run_unixbench(cmd)
-        logging.info("Unixbench scores are %s when ple is on" % scores_on)
+        logging.info("Unixbench scores are %s when ple is on", scores_on)
         vm.destroy()
 
         error_context.context("Disable ple on host", logging.info)
@@ -70,7 +70,7 @@ def run(test, params, env):
         vm.create(params=params)
         session = vm.wait_for_login()
         scores_off = run_unixbench(cmd)
-        logging.info("Unixbench scores are %s when ple is off" % scores_off)
+        logging.info("Unixbench scores are %s when ple is off", scores_off)
         scores_off = [x*0.96 for x in scores_off]
         if scores_on[0] < scores_off[0] or scores_on[1] < scores_off[1]:
             test.fail("Scores is much lower when ple is on than off")

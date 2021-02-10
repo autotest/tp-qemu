@@ -104,8 +104,8 @@ def run(test, params, env):
         :param expect_o: the expect result.
         :type expect_o: list
         """
-        logging.info("Expect result is %s" % expect_o)
-        logging.info("Actual result that get from qmp_cmd/post_cmd is %s" % qmp_o)
+        logging.info("Expect result is %s", expect_o)
+        logging.info("Actual result that get from qmp_cmd/post_cmd is %s", qmp_o)
         if result_check == "equal":
             if not operator.eq(qmp_o, expect_o):
                 test.fail("QMP output does not equal to the expect result.\n "
@@ -122,7 +122,7 @@ def run(test, params, env):
                     result = check_list(qmp_o, o, check_item_in_pair=False)
 
                 if result:
-                    logging.info("QMP output contain the expect value %s" % o)
+                    logging.info("QMP output contain the expect value %s", o)
                 else:
                     test.fail("QMP output does not contain the expect value.\n"
                               "Missed expect value: '%s'\n"
@@ -223,7 +223,7 @@ def run(test, params, env):
         logging.debug("Post-command: '%s'\n Output: '%s'", post_cmd, post_o)
 
     if result_check == "equal" or result_check == "contain":
-        logging.info("Verify qmp command '%s' works as designed." % qmp_cmd)
+        logging.info("Verify qmp command '%s' works as designed.", qmp_cmd)
         if qmp_cmd == "query-name":
             vm_name = params["main_vm"]
             expect_o = [{'name': vm_name}]
@@ -260,7 +260,7 @@ def run(test, params, env):
             expect_o = [{'alias': vm_machines}]
         check_result(qmp_o, expect_o)
     elif result_check.startswith("post_"):
-        logging.info("Verify post qmp command '%s' works as designed." % post_cmd)
+        logging.info("Verify post qmp command '%s' works as designed.", post_cmd)
         result_check = result_check.split('_', 1)[1]
         check_result(post_o, expect_o)
     session.close()

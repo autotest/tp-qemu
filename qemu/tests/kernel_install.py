@@ -47,7 +47,7 @@ def run(test, params, env):
         try:
             default_kernel = session.cmd_output("grubby --default-kernel")
         except Exception as e:
-            logging.warn("Save grub config failed: '%s'" % e)
+            logging.warn("Save grub config failed: '%s'", e)
 
         return default_kernel
 

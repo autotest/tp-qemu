@@ -38,7 +38,7 @@ def run(test, params, env):
         session.cmd(udev_refresh_cmd)
         messages_add = session.cmd(query_syslog_cmd)
         for line in messages_add.splitlines():
-            logging.debug("[Guest add] %s" % line)
+            logging.debug("[Guest add] %s", line)
         if not re.search(match_add, messages_add, re.I):
             test.fail("Guest didn't detect plugin")
 
@@ -49,7 +49,7 @@ def run(test, params, env):
         time.sleep(sleep_time)
         messages_del = session.cmd(query_syslog_cmd)
         for line in messages_del.splitlines():
-            logging.debug("[Guest del] %s" % line)
+            logging.debug("[Guest del] %s", line)
         if messages_del.find(match_del) == -1:
             test.fail("Guest didn't detect unplug")
 

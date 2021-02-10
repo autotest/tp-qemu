@@ -192,8 +192,8 @@ def run(test, params, env):
             if vthread_num >= len(thread_list):
                 break
             vcpu_tid = thread_list[vthread_num]
-            logging.debug("pin vcpu/vhost thread(%s) to cpu(%s)" %
-                          (vcpu_tid, numa_node.pin_cpu(vcpu_tid)))
+            logging.debug("pin vcpu/vhost thread(%s) to cpu(%s)",
+                          vcpu_tid, numa_node.pin_cpu(vcpu_tid))
             vthread_num += 1
 
     nic_interface_list_len = len(nic_interface_list)

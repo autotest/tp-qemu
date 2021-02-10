@@ -121,8 +121,8 @@ def run(test, params, env):
             if orig_letters:
                 orig_letter = orig_letters[0]
                 if orig_letter != letter:
-                    logging.info("Change the drive letter from %s to %s"
-                                 % (orig_letter, letter))
+                    logging.info("Change the drive letter from %s to %s",
+                                 orig_letter, letter)
                     utils_disk.drop_drive_letter(session, orig_letter)
                     utils_disk.set_drive_letter(session, index, target_letter=letter)
             else:

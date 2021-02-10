@@ -105,7 +105,7 @@ class BallooningTestPause(BallooningTest):
         :param monitor_value: memory size report from monitor
         :param guest_value: memory size report from guest
         """
-        logging.error("Memory size mismatch %s:\n" % step)
+        logging.error("Memory size mismatch %s:\n", step)
         error_msg = "Wanted to be changed: %s\n" % abs(self.old_mmem -
                                                        expect_value)
         error_msg += "Changed in monitor: %s\n" % abs(self.old_mmem -

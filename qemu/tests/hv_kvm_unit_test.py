@@ -34,7 +34,7 @@ def run(test, params, env):
     for unit_test, unit_test_result in json.loads(unit_tests_mapping).items():
         if unit_test in skip_tests:
             continue
-        logging.info("Start running unit test %s" % unit_test)
+        logging.info("Start running unit test %s", unit_test)
         unit_test_cmd = test_cmd % (tmp_dir, unit_test, cpu_param)
         result_output = process.system_output(unit_test_cmd, shell=True)
         result_output = result_output.decode()

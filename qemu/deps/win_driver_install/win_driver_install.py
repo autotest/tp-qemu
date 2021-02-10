@@ -13,7 +13,7 @@ def cmd_output(cmd):
 
     :param cmd: Cmd which will be executed.
     """
-    logger.debug("Sending command: %s" % cmd)
+    logger.debug("Sending command: %s", cmd)
     try:
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception:
@@ -23,7 +23,7 @@ def cmd_output(cmd):
         logger.error(error_msg)
         sys.exit(1)
     stdoutput = p.stdout.readlines()
-    logger.debug("Command output is %s" % stdoutput)
+    logger.debug("Command output is %s", stdoutput)
 
 
 def getdpinst(vol_utils):
@@ -72,7 +72,7 @@ def install_driver(driver_path, driver_name, vol_utils):
     """
     install_driver_cmd = r"C:\dpinst.exe /A /PATH %s /C /LM /Q /F" % driver_path
     certutil(vol_utils)
-    logger.info("Install driver %s!" % driver_name)
+    logger.info("Install driver %s!", driver_name)
     cmd_output(install_driver_cmd)
 
 
@@ -104,7 +104,7 @@ def uninstall_driver(driver_name):
     driver_store = r"C:\Windows\system32\DriverStore\FileRepository"
     uninstall_driver_cmd = r"C:\dpinst.exe /U %s /C /LM /Q /D"
     if not os.path.exists(driver_store):
-        logger.error("Driver store path %s does not exist." % driver_store)
+        logger.error("Driver store path %s does not exist.", driver_store)
         sys.exit(1)
     logger.info("Uninstall driver !")
     inf_files = get_inf_files(driver_store, driver_name)
@@ -159,7 +159,7 @@ def verify_driver_ver(driver_path, device_name, driver_name):
                      " to the expected %s." % (current_driver_ver, expected_driver_ver))
         logger.error(error_msg)
         sys.exit(1)
-    logger.info("Current driver version %s is same as expected." % current_driver_ver)
+    logger.info("Current driver version %s is same as expected.", current_driver_ver)
 
 
 def show_log_output(result_file):
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     logger.addHandler(fh)
 
     if not os.path.exists(arguments.driver_path):
-        logger.error("Driver path %s does not exist" % arguments.driver_path)
+        logger.error("Driver path %s does not exist", arguments.driver_path)
         sys.exit(1)
 
     if arguments.uninstall_driver:

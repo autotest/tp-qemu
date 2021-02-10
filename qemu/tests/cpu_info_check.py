@@ -32,7 +32,7 @@ def run(test, params, env):
                 cpu_types.remove(model)
             except ValueError:
                 logging.warning('The model to be removed is not'
-                                ' in the list: %s' % model)
+                                ' in the list: %s', model)
                 continue
 
     def get_patterns(p_list):
@@ -86,7 +86,7 @@ def run(test, params, env):
     missing = dict.fromkeys(output_list.keys(), [])
     for cpu_model in cpu_types:
         logging.info('Check cpu model %s from qemu command output and'
-                     ' qemu monitor output' % cpu_model)
+                     ' qemu monitor output', cpu_model)
         for key, value in output_list.items():
             if cpu_model not in value:
                 missing[key].append(cpu_model)
@@ -116,7 +116,7 @@ def run(test, params, env):
                   ' wrong model: %s' % model_name)
     model_prop = model.get('props')
     for flag in cpu.CPU_TYPES_RE.get(model_name).split(','):
-        logging.info('Check flag %s from qemu monitor output' % flag)
+        logging.info('Check flag %s from qemu monitor output', flag)
         flags = get_patterns(flag.split('|'))
         for f in flags:
             if model_prop.get(f) is True:

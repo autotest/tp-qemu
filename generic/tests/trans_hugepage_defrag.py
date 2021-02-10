@@ -47,12 +47,12 @@ def run(test, params, env):
         with open("/proc/sys/vm/nr_hugepages", "w+") as f:
             pre_ret = f.read()
             logging.debug("Number of huge pages on libhugetlbfs"
-                          " (pre-write): %s" % pre_ret.strip())
+                          " (pre-write): %s", pre_ret.strip())
             f.write(str(number))
             f.seek(0)
             ret = f.read()
             logging.debug("Number of huge pages on libhugetlbfs:"
-                          " (post-write): %s" % ret.strip())
+                          " (post-write): %s", ret.strip())
             return int(ret)
 
     def change_feature_status(test, status, feature_path, test_config):
@@ -145,7 +145,7 @@ def run(test, params, env):
         change_feature_status(test, "on", "defrag", test_config)
 
         sleep_time = 10
-        logging.debug("Sleeping %s s to settle things out" % sleep_time)
+        logging.debug("Sleeping %s s to settle things out", sleep_time)
         time.sleep(sleep_time)
 
         nr_hp_after = set_libhugetlbfs(nr_full)

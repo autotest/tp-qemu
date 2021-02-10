@@ -35,8 +35,7 @@ def run(test, params, env):
             else:
                 check_value = False
                 unsupport_param += 1
-                logging.warn("Disk %s not support parameter %s" % (disk,
-                                                                   param))
+                logging.warn("Disk %s not support parameter %s", disk, param)
             if check_value and value not in output:
                 test.fail("Fail to set %s parameter to value: %s"
                           % (param, value))
@@ -51,8 +50,8 @@ def run(test, params, env):
             if s != 0:
                 test.fail("Fail to perform device/cache read"
                           " timings \nOutput is: %s\n" % output)
-            logging.info("Output of device/cache read timing check (%s of %s):"
-                         % (i + 1, num))
+            logging.info("Output of device/cache read timing check (%s of %s):",
+                         i + 1, num)
             for line in output.strip().splitlines():
                 logging.info(line)
             (result, unit) = re.findall("= *([0-9]*.+[0-9]*) ([a-zA-Z]*)",
@@ -88,7 +87,7 @@ def run(test, params, env):
         check_setting_result(cmd, timeout)
         low_result = perform_read_timing(disk, timeout)
         logging.info("Average buffered disk read speed under low performance "
-                     "settings: %.2f MB/sec" % low_result)
+                     "settings: %.2f MB/sec", low_result)
 
         error_context.context("Setting hard disk to higher performance")
         cmd = params["high_status_cmd"] % disk
@@ -106,7 +105,7 @@ def run(test, params, env):
         check_setting_result(cmd, timeout)
         high_result = perform_read_timing(disk, timeout)
         logging.info("Average buffered disk read speed under high performance "
-                     "settings: %.2f MB/sec" % high_result)
+                     "settings: %.2f MB/sec", high_result)
 
         if not float(high_result) > float(low_result):
             test.fail("High performance setting does not increase read speed")

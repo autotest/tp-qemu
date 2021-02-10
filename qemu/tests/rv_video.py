@@ -24,7 +24,7 @@ def launch_totem(test, guest_session, params):
     """
 
     totem_version = guest_session.cmd_output("totem --version")
-    logging.info("Totem version: %s" % totem_version)
+    logging.info("Totem version: %s", totem_version)
 
     # repeat parameters for totem
     logging.info("Set up video repeat to '%s' to the Totem.",
@@ -34,7 +34,7 @@ def launch_totem(test, guest_session, params):
     # RHEL7 uses gsettings and RHEL6 uses gconftool-2
     try:
         release = guest_session.cmd("cat /etc/redhat-release")
-        logging.info("Redhat Release: %s" % release)
+        logging.info("Redhat Release: %s", release)
     except:
         test.cancel("Test is only currently supported on "
                     "RHEL and Fedora operating systems")
@@ -73,7 +73,7 @@ def launch_totem(test, guest_session, params):
     cmd = "pgrep totem"
     pid = guest_session.cmd_output(cmd)
     if pid:
-        logging.info("PID: %s" % pid)
+        logging.info("PID: %s", pid)
 
         if not re.search(r"^(\d+)", pid):
             logging.info("Could not find Totem running! Try starting again!")
@@ -83,7 +83,7 @@ def launch_totem(test, guest_session, params):
             guest_session.cmd(cmd)
             cmd = "pgrep totem"
             pid = guest_session.cmd_output(cmd)
-            logging.info("PID: %s" % pid)
+            logging.info("PID: %s", pid)
 
 
 def deploy_video_file(test, vm_obj, params):

@@ -60,7 +60,7 @@ def run(test, params, env):
 
     ncpu = cpu.online_count()
 
-    logging.info("Interval is %s" % interval)
+    logging.info("Interval is %s", interval)
     logging.info("Determine the TSC frequency in the host")
     for i in range(ncpu):
         tsc1 = get_tsc("host", i)
@@ -68,12 +68,12 @@ def run(test, params, env):
         tsc2 = get_tsc("host", i)
 
         delta = tsc2 - tsc1
-        logging.info("Host TSC delta for cpu %s is %s" % (i, delta))
+        logging.info("Host TSC delta for cpu %s is %s", i, delta)
         if delta < 0:
             test.error("Host TSC for cpu %s warps %s" % (i, delta))
 
         host_freq += delta / ncpu
-    logging.info("Average frequency of host's cpus: %s" % host_freq)
+    logging.info("Average frequency of host's cpus: %s", host_freq)
 
     if session.cmd_status("test -x %s" % tsc_cmd_guest):
         vm.copy_files_to(tsc_freq_path, '/tmp/get_tsc.c')
@@ -91,14 +91,14 @@ def run(test, params, env):
         tsc2 = get_tsc("guest", i)
 
         delta = tsc2 - tsc1
-        logging.info("Guest TSC delta for vcpu %s is %s" % (i, delta))
+        logging.info("Guest TSC delta for vcpu %s is %s", i, delta)
         if delta < 0:
-            logging.error("Guest TSC for vcpu %s warps %s" % (i, delta))
+            logging.error("Guest TSC for vcpu %s warps %s", i, delta)
 
         ratio = 100 * (delta - host_freq) / host_freq
-        logging.info("TSC drift ratio for vcpu %s is %s" % (i, ratio))
+        logging.info("TSC drift ratio for vcpu %s is %s", i, ratio)
         if abs(ratio) > drift_threshold:
-            logging.error("TSC drift found for vcpu %s ratio %s" % (i, ratio))
+            logging.error("TSC drift found for vcpu %s ratio %s", i, ratio)
             success = False
 
     if not success:

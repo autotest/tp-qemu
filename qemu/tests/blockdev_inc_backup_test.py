@@ -52,7 +52,7 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
         granularity = self.get_granularity()
         if granularity is not None:
             extra_options['granularity'] = granularity
-            logging.info("bitmap granularity is '%s' " % granularity)
+            logging.info("bitmap granularity is '%s' ", granularity)
         backup_utils.blockdev_batch_backup(
             self.main_vm,
             self.source_images,

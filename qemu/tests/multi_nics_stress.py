@@ -117,7 +117,7 @@ def run(test, params, env):
         if params.get("dhcp_cmd"):
             status, output = client_ctl.cmd_status_output(params["dhcp_cmd"], timeout=600)
             if status:
-                logging.warn("Failed to execute dhcp-command, output:\n %s" %
+                logging.warn("Failed to execute dhcp-command, output:\n %s",
                              output)
         error_context.context("Stop fireware on netperf client guest.",
                               logging.info)

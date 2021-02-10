@@ -61,7 +61,7 @@ def run(test, params, env):
         """
         o = session.cmd_output_safe(run_gettime_cmd, timeout=timeout)
         cycles = int(re.search(r'\d+', o).group(0))
-        logging.info("The cycles with out hv_time is %d" % cycles)
+        logging.info("The cycles with out hv_time is %d", cycles)
         return cycles
 
     def _boot_guest_with_cpu_flag(hv_flag):
@@ -86,7 +86,7 @@ def run(test, params, env):
         param cpu_flag: the cpu flags to set
         return: the cpu cycles returned by gettime_cycle.exe
         """
-        logging.info("Boot the guest with cpu_model_flags= %s" % cpu_flag)
+        logging.info("Boot the guest with cpu_model_flags= %s", cpu_flag)
         vm = _boot_guest_with_cpu_flag(cpu_flag)
         session = vm.wait_for_login(timeout=timeout)
         logging.info("Run gettime_cycle.exe")

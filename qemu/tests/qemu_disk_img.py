@@ -110,7 +110,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         cmd = "%s %s" % (md5bin, dst)
         status, output = session.cmd_status_output(cmd, timeout=300)
         if status != 0:
-            logging.error("Execute '%s' with failures('%s') " % (cmd, output))
+            logging.error("Execute '%s' with failures('%s') ", cmd, output)
             return None
         md5 = re.findall(r"\w{32}", output)[0]
         return md5
@@ -127,7 +127,7 @@ class QemuImgTest(qemu_storage.QemuImg):
         cmd = utils_misc.set_winutils_letter(session, cmd)
         status, output = session.cmd_status_output(cmd, timeout=300)
         if status != 0:
-            logging.error("Execute '%s' with failures('%s') " % (cmd, output))
+            logging.error("Execute '%s' with failures('%s') ", cmd, output)
             return None
         session.close()
         return self.__md5sum(dst)

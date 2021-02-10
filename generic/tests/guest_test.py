@@ -128,11 +128,11 @@ def run_guest_test_background(test, params, env):
         run(test, params, env)
         os.remove(flag_fname)
     except exceptions.TestFail as message_fail:
-        logging.info("[Guest_test Background FAIL] %s" % message_fail)
+        logging.info("[Guest_test Background FAIL] %s", message_fail)
         os.remove(flag_fname)
         os._exit(1)
     except exceptions.TestError as message_error:
-        logging.info("[Guest_test Background ERROR] %s" % message_error)
+        logging.info("[Guest_test Background ERROR] %s", message_error)
         os.remove(flag_fname)
         os._exit(2)
     except Exception:

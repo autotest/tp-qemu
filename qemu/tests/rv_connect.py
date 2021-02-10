@@ -99,8 +99,8 @@ def launch_rv(test, client_vm, guest_vm, params):
     qemu_ticket = params.get("qemu_password")
     if qemu_ticket:
         guest_vm.monitor.cmd("set_password spice %s" % qemu_ticket)
-        logging.info("Sending to qemu monitor: set_password spice %s"
-                     % qemu_ticket)
+        logging.info("Sending to qemu monitor: set_password spice %s",
+                     qemu_ticket)
 
     gencerts = params.get("gencerts")
     certdb = params.get("certdb")
@@ -205,11 +205,11 @@ def launch_rv(test, client_vm, guest_vm, params):
 
         if certdb is not None:
             logging.debug("Remote Viewer set to use the following certificate"
-                          " database: " + certdb)
+                          " database: %s", certdb)
             cmd += " --spice-smartcard-db " + certdb
 
         if gencerts is not None:
-            logging.debug("Remote Viewer set to use the following certs: " +
+            logging.debug("Remote Viewer set to use the following certs: %s",
                           gencerts)
             cmd += " --spice-smartcard-certificates " + gencerts
 

@@ -45,12 +45,12 @@ def run(test, params, env):
                               logging.info)
         timeout = float(params.get("login_timeout", 240))
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("log into guest '%s' successfully." % vm.name)
+        logging.info("log into guest '%s' successfully.", vm.name)
 
         error_context.context("Try to ping external host.", logging.info)
         extra_host_ip = utils_net.get_host_ip_address(params)
         session.cmd('ping %s -c 5' % extra_host_ip)
-        logging.info("Ping host(%s) successfully." % extra_host_ip)
+        logging.info("Ping host(%s) successfully.", extra_host_ip)
 
         session.close()
         vm.destroy(gracefully=True)

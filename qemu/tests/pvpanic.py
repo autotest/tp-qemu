@@ -48,8 +48,8 @@ def check_qmp_events(vm, event_name, timeout=360):
     :param timeout: check time
     """
     end_time = time.time() + timeout
-    logging.info("Try to get qmp events %s in %s seconds!" %
-                 (event_name, timeout))
+    logging.info("Try to get qmp events %s in %s seconds!",
+                 event_name, timeout)
     while time.time() < end_time:
         if vm.monitor.get_event(event_name):
             logging.info("Receive qmp %s event notification", event_name)

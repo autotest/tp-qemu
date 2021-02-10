@@ -50,7 +50,7 @@ def run(test, params, env):
         txt = "Transfer data betwwen guest and host for %s times" % n_time
         error_context.context(txt, logging.info)
         for num in range(n_time):
-            logging.info("Data transfer repeat %s/%s." % (num + 1, n_time))
+            logging.info("Data transfer repeat %s/%s.", num + 1, n_time)
             try:
                 args = (test, session, receive_cmd, data_file)
                 guest_receive = utils_misc.InterruptedThread(receive_data,

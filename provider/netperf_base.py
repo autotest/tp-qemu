@@ -116,7 +116,7 @@ def netperf_thread(params, numa_enable, client_s, option, fname):
         cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
     cmd += option
     cmd += " >> %s" % fname
-    logging.info("Start netperf thread by cmd '%s'" % cmd)
+    logging.info("Start netperf thread by cmd '%s'", cmd)
     ssh_cmd(client_s, cmd)
 
 

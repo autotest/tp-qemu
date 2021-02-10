@@ -18,7 +18,7 @@ def run(test, params, env):
 
     def check_status_unplug(out, dev):
         if out is True:
-            logging.debug("Unplug %s successfully" % dev)
+            logging.debug("Unplug %s successfully", dev)
         else:
             test.fail("Error occurred while unpluging %s" % dev)
 

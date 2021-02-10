@@ -88,7 +88,7 @@ class ThrottleGroupManager(object):
 
         devs = self._vm.devices.get_by_qid(group_id)
         if len(devs) != 1:
-            logging.error("There are %d devices %s" % (len(devs), group_id))
+            logging.error("There are %d devices %s", len(devs), group_id)
             return None
         return devs[0]
 
@@ -103,7 +103,7 @@ class ThrottleGroupManager(object):
         try:
             return self._monitor.qom_get(group_id, "limits")
         except QMPCmdError as e:
-            logging.error("qom_get %s %s " % (group_id, str(e)))
+            logging.error("qom_get %s %s ", group_id, str(e))
 
     # qom-set
     def update_throttle_group(self, group_id, props):
@@ -321,7 +321,7 @@ class ThrottleTester(object):
         expected_burst = burst["read"] + burst["write"] + burst["total"]
         if expected_burst:
             cmd += " && " + cmd
-        logging.info("run_fio:" + cmd)
+        logging.info("run_fio:%s", cmd)
         out = session.cmd(cmd, 1800)
         image_info["output"] = self._generate_output_by_json(out)
         return image_info["output"]
@@ -351,7 +351,7 @@ class ThrottleTester(object):
         for image in images:
             output = self._throttle["images"][image]["output"]  # type: dict
             num_samples = len(output)
-            logging.debug("Check %s in total %d images." % (image, num_images))
+            logging.debug("Check %s in total %d images.", image, num_images)
             if expected_burst:
                 if num_samples < 2:
                     self._test.error(
@@ -370,20 +370,20 @@ class ThrottleTester(object):
             total = read + write
             sum_normal += total
 
-        logging.debug("expected_burst:%d %d expected_normal:%d %d" % (
-            expected_burst, sum_burst, expected_normal, sum_normal))
+        logging.debug("expected_burst:%d %d expected_normal:%d %d",
+                      expected_burst, sum_burst, expected_normal, sum_normal)
         if expected_burst:
             real_gap = abs(expected_burst - sum_burst)
             if real_gap <= expected_burst * self._margin:
                 logging.debug(
-                    "Passed burst %d %d" % (expected_burst, sum_burst))
+                    "Passed burst %d %d", expected_burst, sum_burst)
             else:
                 self._test.fail(
-                    "Failed burst %d %d" % (expected_burst, sum_burst))
+                    "Failed burst %d %d", expected_burst, sum_burst)
 
         if abs(expected_normal - sum_normal) <= expected_normal * self._margin:
-            logging.debug("Passed normal verification %d %d" % (
-                expected_normal, sum_normal))
+            logging.debug("Passed normal verification %d %d",
+                          expected_normal, sum_normal)
         else:
             self._test.fail(
                 "Failed normal %d %d" % (expected_normal, sum_normal))
@@ -398,7 +398,7 @@ class ThrottleTester(object):
         :return: True for succeed,False or test error raised if failed.
         """
 
-        logging.debug("Start one image run_fio :" + image)
+        logging.debug("Start one image run_fio :%s", image)
         self.run_fio(self._throttle["images"][image])
         return self.check_output([image])
 
@@ -413,7 +413,7 @@ class ThrottleTester(object):
         pool = ThreadPool(num)
 
         for img in self.images:
-            logging.debug("Start all images run_fio :" + img)
+            logging.debug("Start all images run_fio :%s", img)
             pool.apply_async(self.run_fio, (self._throttle["images"][img],))
         pool.close()
         pool.join()
@@ -442,7 +442,7 @@ class ThrottleTester(object):
         """
         burst = self._throttle["expected"]["burst"]
         if "burst_empty_time" in burst.keys():
-            logging.debug("Wait empty %d" % burst["burst_empty_time"])
+            logging.debug("Wait empty %d", burst["burst_empty_time"])
             sleep(burst["burst_empty_time"])
 
     def set_image_fio_option(self, image, option):
@@ -606,7 +606,7 @@ class ThrottleTester(object):
         option += " --rw=%s --bs=%d --runtime=%d" % (mode, iops_size, runtime)
 
         logging.debug(self._throttle["expected"])
-        logging.debug("fio_option:" + option)
+        logging.debug("fio_option:%s", option)
         self._fio_option = option
 
     def build_image_fio_option(self, image):
@@ -709,7 +709,7 @@ class ThrottleGroupsTester(object):
 
         results = {}
         for tester in self.testers:
-            logging.debug("Start tester :" + tester.group)
+            logging.debug("Start tester :%s", tester.group)
             result = pool.apply_async(self.proc_wrapper, (tester.start,))
             results[tester.group] = result
         pool.close()

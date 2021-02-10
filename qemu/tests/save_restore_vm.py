@@ -45,7 +45,7 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=timeout)
         restore_time = utils_misc.monotonic_time() - vm.start_monotonic_time
         test.write_test_keyval({'result': "%ss" % restore_time})
-        logging.info("Restore time: %ss" % restore_time)
+        logging.info("Restore time: %ss", restore_time)
 
     finally:
         try:

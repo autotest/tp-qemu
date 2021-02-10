@@ -31,7 +31,7 @@ def run(test, params, env):
     if device_name is None:
         test.fail("Fail to get cdrom device with drv throttle")
 
-    logging.info("Found cdrom device %s" % device_name)
+    logging.info("Found cdrom device %s", device_name)
 
     eject_check = QMPEventCheckCDEject(vm, device_name)
     change_check = QMPEventCheckCDChange(vm, device_name)

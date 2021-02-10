@@ -21,7 +21,7 @@ def run(test, params, env):
     """
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s" % img.image_filename)
+        logging.info("Run qemu-io %s", img.image_filename)
         try:
             QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
         except process.CmdError as err:
@@ -30,8 +30,8 @@ def run(test, params, env):
     def _check_img_size(img_info, defined_sizes, size_keys):
         """Check the size info of the image"""
         for defined_size, size_key in zip(defined_sizes, size_keys):
-            logging.info("Check the '%s' size info of %s"
-                         % (size_key, source.image_filename))
+            logging.info("Check the '%s' size info of %s",
+                         size_key, source.image_filename)
             defined_size = normalize_data_size(defined_size, "B")
             get_size = img_info[size_key]
             if int(defined_size) != int(get_size):

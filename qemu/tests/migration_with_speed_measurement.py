@@ -116,7 +116,7 @@ def run(test, params, env):
 
             last_transfer_mem = transfered_mem
 
-            logging.debug("Migration speed: %s MB/s" % (real_mig_speed))
+            logging.debug("Migration speed: %s MB/s", real_mig_speed)
             mig_stat.record(real_mig_speed)
             time.sleep(1)
 
@@ -132,7 +132,7 @@ def run(test, params, env):
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
                (os.path.join(install_path, "cpu_flags", "src"),
                 vm_mem * 4, vm_mem / 2))
-        logging.debug("Sending command: %s" % (cmd))
+        logging.debug("Sending command: %s", cmd)
         session.sendline(cmd)
 
         time.sleep(2)

@@ -40,7 +40,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
             :param cdrom_virtio: iso file
             """
-            logging.info("Change cdrom to %s" % cdrom_virtio)
+            logging.info("Change cdrom to %s", cdrom_virtio)
             virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                              cdrom_virtio)
             vm.change_media("drive_virtio", virtio_iso)
@@ -79,7 +79,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
             # qemu-ga-win-7.5.0-2.el7ev
             qga_pattern = re.compile(r"%s" % params["qga_pattern"])
             qga_pre_pkg = qga_pattern.findall(tgt_line)[0]
-            logging.info("The previous qemu-ga version is %s." % qga_pre_pkg)
+            logging.info("The previous qemu-ga version is %s.", qga_pre_pkg)
 
             # https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/
             #   archive-qemu-ga/qemu-ga-win-7.5.0-2.el7ev/

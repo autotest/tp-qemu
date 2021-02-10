@@ -187,12 +187,12 @@ def run(test, params, env):
                 machine_type_map[type_pair[0][0]] = type_pair[0][1]
             else:
                 logging.warn("Unexpect output from qemu-kvm -M "
-                             "?: '%s'" % machine_type)
+                             "?: '%s'", machine_type)
         try:
             expect_mtype = machine_type_map[params['machine_type']].strip()
         except KeyError:
             logging.warn("Can not find machine type '%s' from qemu-kvm -M ?"
-                         " output. Skip this test." % params['machine_type'])
+                         " output. Skip this test.", params['machine_type'])
             return f_fail
 
         if expect_mtype not in actual_mtype:
@@ -201,8 +201,8 @@ def run(test, params, env):
             f_fail.append(fail_log)
             logging.error(fail_log)
         else:
-            logging.info("MachineType check pass. Expected: %s, Actual: %s" %
-                         (expect_mtype, actual_mtype))
+            logging.info("MachineType check pass. Expected: %s, Actual: %s",
+                         expect_mtype, actual_mtype)
         return f_fail
 
     if params.get("catch_serial_cmd") is not None:

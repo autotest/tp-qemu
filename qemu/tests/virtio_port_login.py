@@ -69,7 +69,7 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
                            "channel to login")
         except remote.LoginTimeoutError:
             self.__sessions__.append(session)
-            logging.info("Can't login via %s" % port)
+            logging.info("Can't login via %s", port)
         return session
 
     def serial_login(self, port="vc1"):
@@ -102,13 +102,13 @@ def run(test, params, env):
         console_test.pre_step()
         port_type = console_params.get("virtio_port_type")
         login_func = "%s_login" % port_type
-        logging.info("Login function: %s" % login_func)
+        logging.info("Login function: %s", login_func)
         session = getattr(console_test, login_func)(login_console)
         if "serial" not in port_type:
             for cmd in params.get("shell_cmd_list", "dir").split(","):
-                logging.info("sending command: %s" % cmd)
+                logging.info("sending command: %s", cmd)
                 output = session.cmd_output(cmd, timeout=240)
-                logging.info("output:%s" % output)
+                logging.info("output:%s", output)
             clean_cmd = params["clean_cmd"]
             session.cmd(clean_cmd, timeout=180)
             session.close()

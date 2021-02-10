@@ -48,9 +48,9 @@ def run(test, params, env):
         capabilities = ast.literal_eval(params.get("migrate_capabilities", "{}"))
         for i in range(repeat_times):
             if i % 2 == 0:
-                logging.info("Round %s ping..." % str(i / 2))
+                logging.info("Round %s ping...", str(i / 2))
             else:
-                logging.info("Round %s pong..." % str(i / 2))
+                logging.info("Round %s pong...", str(i / 2))
             vm.migrate(
                 mig_timeout,
                 mig_protocol,

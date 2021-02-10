@@ -146,7 +146,7 @@ def run(test, params, env):
 
     login_timeout = int(params.get("login_timeout", 360))
     repeat_times = int(params.get("repeat_times", 1))
-    logging.info("repeat_times: %s" % repeat_times)
+    logging.info("repeat_times: %s", repeat_times)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     primary_nic = [nic for nic in vm.virtnet]

@@ -185,7 +185,7 @@ def run(test, params, env):
                 logging.debug("Remove the file with os.remove().")
                 os.remove("%s" % path)
             except OSError as err:
-                logging.warn("Fail to delete %s" % path)
+                logging.warn("Fail to delete %s", path)
             if "gluster" in path:
                 try:
                     umount_cmd = "umount %s" % g_mount_point

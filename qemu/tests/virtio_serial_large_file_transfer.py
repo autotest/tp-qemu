@@ -46,7 +46,7 @@ def run(test, params, env):
     check_pid_cmd = 'ps aux | grep "%s"| grep -v "grep"'
     host_script = params['host_script']
     guest_script = params["guest_script"]
-    logging.info('Transfer data from %s' % sender)
+    logging.info('Transfer data from %s', sender)
     try:
         test_time = time.time() + continue_time
         while time.time() < test_time:

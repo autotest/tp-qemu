@@ -203,7 +203,7 @@ def run(test, params, env):
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][1] not in str(after_add):
             logging.error("Could not find matched id in monitor:"
-                          " %s" % pci_info[pci_num][1])
+                          " %s", pci_info[pci_num][1])
             test.fail("Add device failed. Monitor command is: %s"
                       ". Output: %r" % (pci_add_cmd, add_output))
         return after_add

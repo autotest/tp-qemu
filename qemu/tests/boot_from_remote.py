@@ -65,7 +65,7 @@ def run(test, params, env):
             logfile = utils_misc.get_log_filename("debug.level%s" % level)
             params["gluster_debug"] = level
             params["gluster_logfile"] = logfile
-            logging.info("debug level: %d, log: %s" % (level, logfile))
+            logging.info("debug level: %d, log: %s", level, logfile)
 
             try:
                 env_process.preprocess_vm(test, params, env, params["main_vm"])
@@ -114,8 +114,8 @@ def run(test, params, env):
             if not single_img_memory:
                 raise exceptions.TestError("Failed to get memory when "
                                            "booting with one remote image.")
-            logging.debug("memory consumption(only one remote image): %s"
-                          % single_img_memory)
+            logging.debug("memory consumption(only one remote image): %s",
+                          single_img_memory)
 
             vm.destroy()
 
@@ -130,8 +130,8 @@ def run(test, params, env):
             if not multi_img_memory:
                 raise exceptions.TestError("Failed to get memory when booting"
                                            " with several remote images.")
-            logging.debug("memory consumption(total 4 remote images): %s"
-                          % multi_img_memory)
+            logging.debug("memory consumption(total 4 remote images): %s",
+                          multi_img_memory)
 
             diff = int(float(utils_numeric.normalize_data_size(
                 params['memory_diff'], order_magnitude="K")))

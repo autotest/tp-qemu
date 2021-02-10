@@ -24,7 +24,7 @@ def run(test, params, env):
     """
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s" % img.image_filename)
+        logging.info("Run qemu-io %s", img.image_filename)
         try:
             QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
         except process.CmdError as err:
@@ -45,7 +45,7 @@ def run(test, params, env):
     top_cmd = params["top_cmd"]
     _qemu_io(top, top_cmd)
 
-    logging.info("Commit %s image file." % top.image_filename)
+    logging.info("Commit %s image file.", top.image_filename)
     fail_on((process.CmdError,))(top.commit)()
 
     _qemu_io(mid, top_cmd)

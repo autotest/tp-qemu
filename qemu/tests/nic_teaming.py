@@ -73,8 +73,8 @@ def run(test, params, env):
                       "output is %s" % (ratio, status, output))
         elif ratio > int(params["failed_ratio"]):
             test.fail("The loss raito is %s, test failed" % ratio)
-        logging.info("ping pass with loss raito:%s, that less than %s" %
-                     (ratio, params["failed_ratio"]))
+        logging.info("ping pass with loss raito:%s, that less than %s",
+                     ratio, params["failed_ratio"])
 
     def team_if_exist():
         """ judge if team is alive well."""
@@ -103,13 +103,13 @@ def run(test, params, env):
         test.fail("Interface %s is not created." % team_if)
     # check if team0 is created successfully
     ports, team_ip = team_port_add(ifnames, team_if)
-    logging.debug("The list of the ports that added to %s : %s"
-                  % (team_if, ports))
-    logging.debug("The ip address of %s : %s" % (team_if, team_ip))
+    logging.debug("The list of the ports that added to %s : %s",
+                  team_if, ports)
+    logging.debug("The ip address of %s : %s", team_if, team_ip)
     output = session_serial.cmd_output_safe(params["team_debug_cmd"])
-    logging.debug("team interface configuration: %s" % output)
+    logging.debug("team interface configuration: %s", output)
     route_cmd = session_serial.cmd_output_safe(params["route_cmd"])
-    logging.debug("The route table of guest: %s" % route_cmd)
+    logging.debug("The route table of guest: %s", route_cmd)
     # this is not this case checkpoint, just to check if route works fine
     # steps of building finished
 
@@ -156,7 +156,7 @@ def run(test, params, env):
         session_serial.cmd_output_safe(params["killteam_cmd"])
         if team_if_exist():
             test.fail("Remove %s failed" % team_if)
-        logging.info("%s removed" % team_if)
+        logging.info("%s removed", team_if)
         # remove the team0 and the daemon, check if succeed
     finally:
         if session:

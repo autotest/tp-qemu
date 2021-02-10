@@ -29,11 +29,11 @@ def _setup_hugepage(params):
     error_context.context('Assign %sMB hugepages in host.' % size, logging.info)
 
     hugepage_size = huge_page.get_hugepage_size()
-    logging.debug('Hugepage size is %skB in host.' % hugepage_size)
+    logging.debug('Hugepage size is %skB in host.', hugepage_size)
 
     huge_page.target_hugepages = int((int(size) * 1024) // hugepage_size)
-    logging.debug('Set hugepages to %d pages in host.'
-                  % huge_page.target_hugepages)
+    logging.debug('Set hugepages to %d pages in host.',
+                  huge_page.target_hugepages)
     huge_page.set_node_num_huge_pages(huge_page.target_hugepages,
                                       0, hugepage_size)
 
@@ -50,8 +50,8 @@ def _check_mem_increase(session, params, orig_mem):
     if (new_mem - orig_mem) == increase_mem:
         error_context.context(
             'Get guest free memory size after hotplug pc-dimm.', logging.info)
-        logging.debug('Guest free memory size is %d bytes' % new_mem)
-        logging.info("Guest memory size is increased %s." % params['size_plug'])
+        logging.debug('Guest free memory size is %d bytes', new_mem)
+        logging.info("Guest memory size is increased %s.", params['size_plug'])
         return True
     return False
 
@@ -89,7 +89,7 @@ def run(test, params, env):
                               logging.info)
         timeout = float(params.get("login_timeout", 240))
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("log into guest '%s' successfully." % vm.name)
+        logging.info("log into guest '%s' successfully.", vm.name)
         return session, next_pos
 
     _setup_hugepage(params)
@@ -104,7 +104,7 @@ def run(test, params, env):
     error_context.context('Get guest free memory size before hotplug pc-dimm.',
                           logging.info)
     orig_mem = int(session.cmd_output(cmd=params['free_mem_cmd']))
-    logging.debug('Guest free memory size is %d bytes' % orig_mem)
+    logging.debug('Guest free memory size is %d bytes', orig_mem)
 
     error_context.context('Hotplug pc-dimm for guest.', logging.info)
     htp_mem = MemoryHotplugTest(test, params, env)
@@ -125,7 +125,7 @@ def run(test, params, env):
     error_context.context("Try to ping external host.", logging.info)
     extra_host_ip = utils_net.get_host_ip_address(params)
     session.cmd('ping %s -c 5' % extra_host_ip)
-    logging.info("Ping host(%s) successfully." % extra_host_ip)
+    logging.info("Ping host(%s) successfully.", extra_host_ip)
 
     session.close()
     vm.destroy(gracefully=True)

@@ -56,7 +56,7 @@ def run(test, params, env):
     vhost_pids = process.system_output("pgrep vhost", shell=True).decode()
     if not vhost_pids:
         test.error("Vhost process does not exist")
-    logging.info("Vhost have started with pid %s" % vhost_pids)
+    logging.info("Vhost have started with pid %s", vhost_pids)
     for vhost_pid in vhost_pids.strip().split():
         cgroup.set_cgroup(int(vhost_pid))
 

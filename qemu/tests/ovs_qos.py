@@ -37,7 +37,7 @@ def run(test, params, env):
         Set OVS port attribute.
         """
         cmd = "ovs-vsctl set interface %s %s=%s" % (iface, attribute, value)
-        logging.info("execute host command: %s" % cmd)
+        logging.info("execute host command: %s", cmd)
         status = process.system(cmd, ignore_status=True)
         if status != 0:
             err_msg = "set %s to %s for interface '%s' " % (
@@ -85,7 +85,7 @@ def run(test, params, env):
                               logging.info)
         server_ip = server_vm.get_address()
         output = netperf_client.start(server_ip, client_options)
-        logging.debug("netperf client output: %s" % output)
+        logging.debug("netperf client output: %s", output)
         regex = r"\d+\s+\d+\s+\d+\s+[\d.]+\s+([\d.]+)"
         try:
             throughout = float(re.search(regex, output, re.M).groups()[0])
@@ -120,7 +120,7 @@ def run(test, params, env):
                               logging.info)
         clear_cmd = "ovs-vsctl clear Port %s qos" % iface
         process.system(clear_cmd)
-        logging.info("Clear ovs command: %s" % clear_cmd)
+        logging.info("Clear ovs command: %s", clear_cmd)
 
     def setup_netperf_env():
         """

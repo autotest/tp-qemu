@@ -47,7 +47,7 @@ def run(test, params, env):
 
     try:
         for host in hosts:
-            logging.info("Disconnect to %s" % host)
+            logging.info("Disconnect to %s", host)
             process.system(disconn_cmd.format(source=host),
                            ignore_status=True, shell=True)
             if process.system(conn_check_cmd.format(source=host),
@@ -61,12 +61,12 @@ def run(test, params, env):
                 test.fail("Failed to do I/O in VM: %s" % o)
     finally:
         for host in disconn_hosts:
-            logging.info("Recover connection to %s" % host)
+            logging.info("Recover connection to %s", host)
             process.system(recover_cmd.format(source=host),
                            ignore_status=True, shell=True)
             if process.system(conn_check_cmd.format(source=host),
                               ignore_status=True, shell=True) != 0:
-                logging.warn("Failed to recover connection to %s" % host)
+                logging.warn("Failed to recover connection to %s", host)
         if session:
             session.close()
         vm.destroy()

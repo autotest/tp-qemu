@@ -376,7 +376,7 @@ def run(test, params, env):
             logging.info("Write test")
             err += _test("write")
             if err:
-                logging.error("Results:\n" + err)
+                logging.error("Results:\n%s", err)
             else:
                 logging.info("Speeds distributed accordingly to blkio.weight.")
 
@@ -622,7 +622,7 @@ def run(test, params, env):
             err += _test("write", blkio)
 
             if err:
-                logging.error("Results\n" + err)
+                logging.error("Results\n%s", err)
 
         finally:
             logging.info("Cleanup")
@@ -775,7 +775,7 @@ def run(test, params, env):
                 # Utilisation should be 100% - allowed treshold (limit)
                 if stats[i] < limit:
                     logging.debug("%d: the utilisation of guest time is %s, "
-                                  "smaller than limit %s" % (i, stats[i], limit))
+                                  "smaller than limit %s", i, stats[i], limit)
                     err.append(i)
 
         finally:
@@ -2119,7 +2119,7 @@ def run(test, params, env):
                                       shell=True).decode()
             if float(o.split()[-4]) <= 51:
                 count = count + 1
-                logging.debug("CPU utilization of guest is: %.2f%%" %
+                logging.debug("CPU utilization of guest is: %.2f%%",
                               float(o.split()[-4]))
             else:
                 test.fail("CPU utilization of guest is: %.2f%%, it should be about "

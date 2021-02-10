@@ -31,7 +31,7 @@ def wait_plug_disks(session, action, disks_before_plug, excepted_num,
         disks_info_linux = 'lsblk -a'
         disks_info = session.cmd(
             disks_info_win if windows else disks_info_linux)
-        logging.debug("The details of disks:\n %s" % disks_info)
+        logging.debug("The details of disks:\n %s", disks_info)
         test.fail("Failed to {0} devices from guest, need to {0}: {1}, "
                   "actual {0}: {2}".format(action, excepted_num,
                                            len(disks_before_plug ^ all_disks)))
@@ -132,7 +132,7 @@ def run(test, params, env):
             size = re.search(p % did, disk_info, re.I | re.M).groupdict()['size'].strip()
         else:
             size = utils_disk.get_linux_disks(session)[did][1].strip()
-        logging.info('The size of disk %s is %s' % (did, size))
+        logging.info('The size of disk %s is %s', did, size)
         session.close()
         return size
 

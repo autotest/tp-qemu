@@ -219,6 +219,6 @@ def run(test, params, env):
                         shell=True)
             logging.info("Removing the temporary ARP entry successfully")
 
-        logging.info("Change back Bridge NICs MTU to %s" % mtu_default)
+        logging.info("Change back Bridge NICs MTU to %s", mtu_default)
         for iface in target_ifaces:
             process.run(host_mtu_cmd % (iface, mtu_default), shell=True)

@@ -32,8 +32,8 @@ def run(test, params, env):
         :param vm: vm object
         """
         pid = vm.process.get_pid()
-        logging.debug("Ending VM %s process (killing PID %s)"
-                      % (vm.name, pid))
+        logging.debug("Ending VM %s process (killing PID %s)",
+                      vm.name, pid)
         try:
             utils_misc.kill_process_tree(pid, 9, timeout=60)
             logging.debug("VM %s down (process killed)", vm.name)

@@ -28,9 +28,9 @@ def run(test, params, env):
     """
 
     def cmd_qmp_log(vm, cmd, args):
-        logging.debug("[qmp cmd %s] %s" % (cmd, args))
+        logging.debug("[qmp cmd %s] %s", cmd, args)
         reply = vm.monitor.cmd_qmp(cmd, args)
-        logging.debug("[qmp reply] %s" % reply)
+        logging.debug("[qmp reply] %s", reply)
         if "error" in reply:
             if reply["error"]["class"] == "CommandNotFound":
                 test.cancel("qmp command %s not supported" % cmd)
@@ -68,15 +68,15 @@ def run(test, params, env):
         session.cmd_status("udevadm settle")
         msg_add = session.cmd("dmesg -c | grep %s" % addr)
         for line in msg_add.splitlines():
-            logging.debug("[dmesg add] %s" % line)
+            logging.debug("[dmesg add] %s", line)
         lspci = session.cmd("lspci -vs %s" % addr)
         for line in lspci.splitlines():
-            logging.debug("[lspci] %s" % line)
+            logging.debug("[lspci] %s", line)
 
         # send message
         device = session.cmd("ls /sys/bus/pci/devices/*%s/tty" % addr)
         device = device.strip()
-        logging.info("guest tty device is '%s'" % device)
+        logging.info("guest tty device is '%s'", device)
         session.cmd("test -c /dev/%s" % device)
         session.cmd("echo 'Hello virttest world' > /dev/%s" % device)
 
@@ -85,7 +85,7 @@ def run(test, params, env):
         session.cmd_status("sleep 1")
         msg_del = session.cmd("dmesg -c")
         for line in msg_del.splitlines():
-            logging.debug("[dmesg del] %s" % line)
+            logging.debug("[dmesg del] %s", line)
 
     error_context.context("Log into guest", logging.info)
     vm = env.get_vm(params["main_vm"])
@@ -115,7 +115,7 @@ def run(test, params, env):
     error_context.context("Test pty chardev", logging.info)
     reply = chardev_add(vm, "chardev-pty", "pty", {})
     filename = reply["return"]["pty"]
-    logging.info("host pty device is '%s'" % filename)
+    logging.info("host pty device is '%s'", filename)
     if not ppc_host:
         fd_dst = os.open(filename, os.O_RDWR | os.O_NONBLOCK)
         chardev_use(vm, "chardev-pty")

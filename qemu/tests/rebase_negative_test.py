@@ -48,8 +48,8 @@ def run(test, params, env):
                 test.fail(msg)
         except process.CmdError as err:
             output = err.result.stderr.decode()
-            logging.info("Rebase image('%s') failed: %s." %
-                         (image, output))
+            logging.info("Rebase image('%s') failed: %s.",
+                         image, output)
             if negtive_test == "no":
                 msg = "Fail to rebase image('%s'): %s" % (image, output)
                 test.fail(msg)

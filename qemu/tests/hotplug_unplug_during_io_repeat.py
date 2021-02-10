@@ -53,7 +53,7 @@ def run(test, params, env):
     need_format = True
     try:
         for i in range(int(params['repeat_time'])):
-            logging.info('Start to run testing.(iteration: %d).' % (i + 1))
+            logging.info('Start to run testing.(iteration: %d).', (i + 1))
             plug.hotplug_devs_serial()
             if need_format:
                 if os_type == 'windows':

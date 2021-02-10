@@ -83,7 +83,7 @@ def run(test, params, env):
     readlink_cmd = params.get("readlink_command", "readlink -e")
     driver = os.path.basename(session.cmd("%s %s" % (readlink_cmd,
                                                      sys_path)).strip())
-    logging.info("The guest interface %s using driver %s" % (ethname, driver))
+    logging.info("The guest interface %s using driver %s", ethname, driver)
 
     error_context.context("Host test file prepare, create %dMB file on host" %
                           filesize, logging.info)

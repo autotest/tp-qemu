@@ -104,8 +104,8 @@ def run(test, params, env):
         # ping with different size & interval
         for size in packet_sizes:
             for interval in interval_times:
-                logging.info("Ping with packet size: %s and interval: %s" %
-                             (size, interval))
+                logging.info("Ping with packet size: %s and interval: %s",
+                             size, interval)
                 _ping_with_params(test, params, ip, interface, size,
                                   interval, session=session, count=counts)
 

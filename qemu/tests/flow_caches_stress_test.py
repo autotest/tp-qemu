@@ -41,10 +41,10 @@ def run(test, params, env):
         """
         cmd = "ethtool -l %s" % ifname
         out = session.cmd_output(cmd)
-        logging.info("%s" % out)
+        logging.info(out)
 
     nf_conntrack_max_set_cmd = params.get("nf_conntrack_max_set")
-    logging.info("nf_conntrack_max_set_cmd is %s" % nf_conntrack_max_set_cmd)
+    logging.info("nf_conntrack_max_set_cmd is %s", nf_conntrack_max_set_cmd)
     msg = "Make sure nf_conntrack is disabled in host and guest."
     error_context.context(msg, logging.info)
     if str.encode("nf_conntrack") in process.system_output("lsmod"):
@@ -96,7 +96,7 @@ def run(test, params, env):
             msg = "Fail to enable multi queues support in guest."
             msg += "Command %s fail output: %s" % (cmd, out)
             test.error(msg)
-        logging.info("Command %s set queues succeed" % cmd)
+        logging.info("Command %s set queues succeed", cmd)
 
     error_context.context("Setup netperf in guest", logging.info)
     if params.get("os_type") == "linux":

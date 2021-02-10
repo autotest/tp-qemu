@@ -85,7 +85,7 @@ def run(test, params, env):
                                    check_bg_timeout, 0, 1):
             test.fail("Backgroud test %s is not alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
-            logging.info("Wait %s test start" % bg_stress_test)
+            logging.info("Wait %s test start", bg_stress_test)
             if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
                                        wait_time, 0, 0.5):
                 err = "Fail to start %s test" % bg_stress_test

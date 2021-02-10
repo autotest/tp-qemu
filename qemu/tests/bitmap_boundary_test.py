@@ -27,7 +27,7 @@ def run(test, params, env):
     def full_backup(vm, source_node, target_node, bitmap_count):
         """start full backup job with 65535 bitmaps"""
 
-        logging.info("Begin full backup %s to %s" % (source_node, target_node))
+        logging.info("Begin full backup %s to %s", source_node, target_node)
         actions, extra_options = [], {"sync": "full"}
         cmd, args = backup_utils.blockdev_backup_qmp_cmd(
             source_node, target_node, **extra_options)
@@ -45,7 +45,7 @@ def run(test, params, env):
     def verify_bitmap_counts(vm, source_node, bitmap_count):
         """Verify bitmap count after backup job is start"""
 
-        logging.info("Verify bitmap counts in device '%s'" % source_node)
+        logging.info("Verify bitmap counts in device '%s'", source_node)
         out = vm.monitor.query("block")
         bitmaps_dict = block_dirty_bitmap.get_bitmaps(out)
         if source_node not in bitmaps_dict:
@@ -57,7 +57,7 @@ def run(test, params, env):
     def verify_persistent_bitmaps(params, image_name, bitmap_count):
         """Verify bitmap count by qemu-img command"""
 
-        logging.info("Verify bitmaps info save in image '%s'" % image_name)
+        logging.info("Verify bitmaps info save in image '%s'", image_name)
         image_dir = data_dir.get_data_dir()
         image_params = params.object_params(image_name)
         data_img = qemu_storage.QemuImg(image_params, image_dir, image_name)

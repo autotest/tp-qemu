@@ -168,7 +168,7 @@ def run(test, params, env):
                        (os.path.join(self.install_path, "cpu_flags"),
                         self.stress_memory,
                         self.cpuflags_test_out))
-                logging.debug("Sending command: %s" % (cmd))
+                logging.debug("Sending command: %s", cmd)
                 session.sendline(cmd)
                 if session.cmd_status("killall -s 0 cpuflags-test") != 0:
                     cpu_flags_out = ("\n cpuflags_test_output: \n" +
@@ -191,7 +191,7 @@ def run(test, params, env):
                        (os.path.join(self.install_path, "disktest", "src"),
                         self.disk_usage,
                         self.disktest_out))
-                logging.debug("Sending command: %s" % (cmd))
+                logging.debug("Sending command: %s", cmd)
                 session.sendline(cmd)
                 if session.cmd_status("killall -s 0 disktest") != 0:
                     disk_out = ("\n cpuflags_test_output: \n" +

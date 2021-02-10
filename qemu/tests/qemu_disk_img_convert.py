@@ -86,7 +86,7 @@ def run(test, params, env):
         cluster_size_lst.append(None)
     for cluster_size in cluster_size_lst:
         if cluster_size is not None:
-            logging.info("convert image file with cluster_size=%s." % cluster_size)
+            logging.info("convert image file with cluster_size=%s.", cluster_size)
         n_params = convert_test.convert({"image_cluster_size": cluster_size})
         convert_test.compare_test(n_params)
         convert_test.verify_info(n_params)

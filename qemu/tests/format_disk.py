@@ -105,8 +105,8 @@ def run(test, params, env):
         if status != 0:
             show_dev_cmd = params.get("show_dev_cmd", "").format(drive_path)
             device_list = session.cmd_output_safe(show_dev_cmd)
-            logging.debug("The devices which will be mounted are: %s"
-                          % device_list)
+            logging.debug("The devices which will be mounted are: %s",
+                          device_list)
             test.fail("Failed to mount with error: %s" % output)
 
     testfile_name = params.get("testfile_name")
@@ -151,7 +151,7 @@ def run(test, params, env):
             show_mount_cmd = params.get(
                 "show_mount_cmd", "").format(drive_path)
             mount_list = session.cmd_output_safe(show_mount_cmd)
-            logging.debug("The mounted devices are: %s" % mount_list)
+            logging.debug("The mounted devices are: %s", mount_list)
             test.fail("Failed to umount with error: %s" % output)
 
     # Clean partition on disk

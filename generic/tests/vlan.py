@@ -167,7 +167,7 @@ def run(test, params, env):
         find_cmd = 'dir /b /s %s\\netkvmco.dll | findstr "\\%s\\\\"'
         find_cmd %= (viowin_ltr,  middle_path)
         netkvmco_path = session.cmd(find_cmd).strip()
-        logging.info("Found netkvmco.dll file at %s" % netkvmco_path)
+        logging.info("Found netkvmco.dll file at %s", netkvmco_path)
         return netkvmco_path
 
     vms = []
@@ -216,7 +216,7 @@ def run(test, params, env):
             vm_ip.append(utils_net.get_guest_ip_addr(session, dev_mac,
                                                      os_type="windows",
                                                      linklocal=True))
-            logging.debug("IP address is %s in %s" % (vm_ip, vm.name))
+            logging.debug("IP address is %s in %s", vm_ip, vm.name)
             session_ctl.append(session)
             continue
 
@@ -226,13 +226,13 @@ def run(test, params, env):
             err_msg = "Could not log into guest %s" % vm.name
             test.error(err_msg)
         sessions.append(session)
-        logging.info("Logged in %s successful" % vm.name)
+        logging.info("Logged in %s successful", vm.name)
         session_ctl.append(vm.wait_for_login(timeout=login_timeout))
         ifname.append(utils_net.get_linux_ifname(session,
                                                  vm.get_mac_address()))
         # get guest ip
         vm_ip.append(vm.get_address())
-        logging.debug("IP address is %s in %s" % (vm_ip, vm.name))
+        logging.debug("IP address is %s in %s", vm_ip, vm.name)
         # produce sized file in vm
         dd_cmd = "dd if=/dev/urandom of=file bs=1M count=%s"
         session.cmd(dd_cmd % file_size)
@@ -312,7 +312,7 @@ def run(test, params, env):
                 status = rem_vlan(test, sessions[vm_index], vlan,
                                   ifname[vm_index], cmd_type)
                 if status:
-                    logging.error("Remove vlan %s failed" % vlan)
+                    logging.error("Remove vlan %s failed", vlan)
 
     # Plumb/unplumb maximal number of vlan interfaces
     if params.get("do_maximal_test", "no") == "yes":
@@ -329,7 +329,7 @@ def run(test, params, env):
         finally:
             for vlan_index in range(1, vlan_added + 1):
                 if rem_vlan(test, sessions[0], vlan_index, ifname[0], cmd_type):
-                    logging.error("Remove vlan %s failed" % vlan_index)
+                    logging.error("Remove vlan %s failed", vlan_index)
 
         error_context.base_context("Vlan negative test")
         error_context.context("Create vlan with ID %s in guest" % bound,

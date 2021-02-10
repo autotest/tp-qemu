@@ -32,8 +32,8 @@ class BlockStreamNegative(blk_stream.BlockStream):
         if match_str not in response:
             self.test.fail("Fail to get expected result. %s is expected in %s"
                            % (match_str, response))
-        logging.info("Keyword '%s' is found in QMP output '%s'." %
-                     (match_str, response))
+        logging.info("Keyword '%s' is found in QMP output '%s'.",
+                     match_str, response)
 
 
 def run(test, params, env):

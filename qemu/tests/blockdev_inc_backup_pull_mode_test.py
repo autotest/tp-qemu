@@ -214,7 +214,7 @@ class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
                 file_path = "%s/%s" % (info[1], non_existed_files[tag])
                 cat_cmd = "cat %s" % file_path
 
-                logging.info('Check %s should not exist' % file_path)
+                logging.info('Check %s should not exist', file_path)
                 s, o = session.cmd_status_output(cat_cmd)
                 if s == 0:
                     self.test.fail('File (%s) exists' % non_existed_files[tag])

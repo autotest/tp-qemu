@@ -36,7 +36,7 @@ def run(test, params, env):
     part.mkfs(file_sys)
     part.mount()
 
-    logging.info("Test creating an image with large size over %s." % file_sys)
+    logging.info("Test creating an image with large size over %s.", file_sys)
     try:
         large.create(large.params)
     except TestError as err:

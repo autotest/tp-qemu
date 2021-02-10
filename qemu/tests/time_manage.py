@@ -88,7 +88,7 @@ def run(test, params, env):
                 vm = env.get_vm(vmnames[vmid])
                 # Run current iteration
                 logging.info(
-                    "Rebooting:vm%d iteration %d " % ((vmid + 1), itr))
+                    "Rebooting:vm%d iteration %d ", (vmid + 1), itr)
                 se = vm.reboot(se, timeout=timeout)
                 # Remember the current changed session
                 sessions[vmid] = se
@@ -117,9 +117,9 @@ def run(test, params, env):
             itr += 1
 
         logging.info("The time drift values for all VM sessions/iterations")
-        logging.info("VM-Name:%s" % vmnames)
+        logging.info("VM-Name:%s", vmnames)
         for idx, value in enumerate(totaldrift):
-            logging.info("itr-%2d:%s" % (idx + 1, value))
+            logging.info("itr-%2d:%s", idx + 1, value)
 
     finally:
         for se in sessions:

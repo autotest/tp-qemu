@@ -208,7 +208,7 @@ def run(test, params, env):
                       session=session)
         except NetPingError:
             logging.info("Guest ping fail to host as expected with "
-                         "interface '%s'" % interface)
+                         "interface '%s'", interface)
         else:
             test.fail("Guest ping to host should fail with interface"
                       " '%s'" % interface)

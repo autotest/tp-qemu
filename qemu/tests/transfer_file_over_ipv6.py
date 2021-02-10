@@ -39,7 +39,7 @@ def run(test, params, env):
         """
         Get file md5sum from guest.
         """
-        logging.info("Get md5sum of the file:'%s'" % file_name)
+        logging.info("Get md5sum of the file:'%s'", file_name)
         s, o = session.cmd_status_output("md5sum %s" % file_name, timeout=timeout)
         if s != 0:
             test.error("Get file md5sum failed as %s" % o)

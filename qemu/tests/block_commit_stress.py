@@ -56,7 +56,7 @@ class BlockCommitStress(blk_commit.BlockCommit):
         logging.info("Check image backing-file")
         exp_img_file = self.params["expected_image_file"]
         exp_img_file = utils_misc.get_path(self.data_dir, exp_img_file)
-        logging.debug("Expected image file read from config file is '%s'" % exp_img_file)
+        logging.debug("Expected image file read from config file is '%s'", exp_img_file)
 
         backingfile = self.get_backingfile("monitor")
         if backingfile:

@@ -40,7 +40,7 @@ def run(test, params, env):
                 return process.system(cmd, shell=True)
             except process.CmdError as detail:
                 msg = "Fail to execute command"
-                logging.error("%s: %s." % (msg, detail))
+                logging.error("%s: %s.", msg, detail)
         raise exceptions.TestError("%s after %s times retry: %s" %
                                    (msg, max_retry, detail))
 

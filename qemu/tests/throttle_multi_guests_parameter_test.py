@@ -48,9 +48,9 @@ def run(test, params, env):
     def fio_on_vm(vm_t, session_t):
         error_context.context("Deploy fio", logging.info)
         fio = generate_instance(params, vm_t, 'fio')
-        logging.info("fio: %s" % fio)
+        logging.info("fio: %s", fio)
         tgm = ThrottleGroupManager(vm_t)
-        logging.info("tgm: %s" % tgm)
+        logging.info("tgm: %s", tgm)
         groups = params["throttle_groups"].split()
         testers = []
         for group in groups:

@@ -76,8 +76,8 @@ def run(test, params, env):
         uuid = process.system_output(mirror_cmd)
         output = process.system_output("ovs-vsctl list mirror")
         if uuid not in output:
-            logging.debug("Create OVS Mirror CMD: %s " % mirror_cmd)
-            logging.debug("Ovs Info: %s " % output)
+            logging.debug("Create OVS Mirror CMD: %s ", mirror_cmd)
+            logging.debug("Ovs Info: %s ", output)
             test.fail("Setup mirorr port failed")
 
     def check_tcpdump(output, target_ip, host_ip, direction):
@@ -99,7 +99,7 @@ def run(test, params, env):
             rex = r".*IP %s > %s.*ICMP echo request.*" % (target_ip, host_ip)
         for idx, _ in enumerate(output.splitlines()):
             if not re.match(rex, _):
-                logging.debug("Unexpect packet in line %d: %s" % (idx, _))
+                logging.debug("Unexpect packet in line %d: %s", idx, _)
                 return False
         return True
 
@@ -148,8 +148,8 @@ def run(test, params, env):
         status, output = session.cmd_status_output(ping_cmd, timeout=60)
         if status == 0:
             ifcfg = session.cmd_output_safe("ifconfig")
-            logging.debug("Guest network info: %s" % ifcfg)
-            logging.debug("Ping results: %s" % output)
+            logging.debug("Guest network info: %s", ifcfg)
+            logging.debug("Ping results: %s", output)
             test.fail("All packets from %s to host should lost" % mirror_vm)
 
         error_context.context("Start tcpdump threads in %s" % mirror_vm,
@@ -159,7 +159,7 @@ def run(test, params, env):
         for vm, ip in [(target_vm, target_ip), (refer_vm, refer_ip)]:
             tcpdump_cmd = "tcpdump -l -n host %s and icmp >" % ip
             tcpdump_cmd += "/tmp/tcpdump-%s.txt &" % vm
-            logging.info("tcpdump command: %s" % tcpdump_cmd)
+            logging.info("tcpdump command: %s", tcpdump_cmd)
             session.sendline(tcpdump_cmd)
 
         error_context.context("Start ping threads in %s %s"
@@ -171,7 +171,7 @@ def run(test, params, env):
             ifup_cmd = "ifconfig %s %s/%s up" % (nic_name, ip, net_mask)
             ses.cmd(ifup_cmd)
             time.sleep(0.5)
-            logging.info("Ping host from %s" % vm)
+            logging.info("Ping host from %s", vm)
             ses.cmd("ping %s -c 100" % host_ip, timeout=150)
 
         error_context.context("Check tcpdump results", logging.info)

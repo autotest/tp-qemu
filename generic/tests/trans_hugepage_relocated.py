@@ -132,8 +132,7 @@ def run(test, params, env):
             mem_increase += last_value - current
             count = 0
         if count > w_step:
-            logging.warning("Memory didn't increase in %s s" % (count *
-                                                                s_time))
+            logging.warning("Memory didn't increase in %s s", (count * s_time))
     if mem_increase < file_size * 0.5:
         test.error("Hugepages allocated can not reach a half: %s/%s"
                    % (mem_increase, file_size))

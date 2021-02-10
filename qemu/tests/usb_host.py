@@ -45,7 +45,7 @@ def run(test, params, env):
         session.cmd_status("udevadm settle")
         messages_add = session.cmd("dmesg")
         for line in messages_add.splitlines():
-            logging.debug("[dmesg add] %s" % line)
+            logging.debug("[dmesg add] %s", line)
         if messages_add.find(match_add) == -1:
             test.fail("kernel didn't detect plugin")
 
@@ -62,7 +62,7 @@ def run(test, params, env):
         session.cmd_status("sleep 2")
         messages_del = session.cmd("dmesg -c")
         for line in messages_del.splitlines():
-            logging.debug("[dmesg del] %s" % line)
+            logging.debug("[dmesg del] %s", line)
         if messages_del.find(match_del) == -1:
             test.fail("kernel didn't detect unplug")
 

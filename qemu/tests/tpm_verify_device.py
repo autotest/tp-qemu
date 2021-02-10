@@ -38,7 +38,7 @@ def run(test, params, env):
         if cmd_get_tpm_ver:
             actual_tpm_ver = process.system_output(cmd_get_tpm_ver,
                                                    shell=True).decode().strip()
-            logging.info('The TPM device version is %s.' % actual_tpm_ver)
+            logging.info('The TPM device version is %s.', actual_tpm_ver)
             required_tmp_ver = params.get('required_tmp_version')
             if actual_tpm_ver != required_tmp_ver:
                 test.cancel('Cancel to test due to require TPM device version %s, '

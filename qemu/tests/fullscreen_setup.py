@@ -64,8 +64,7 @@ def run(test, params, env):
 
     maximum = "2560x1600"
 
-    logging.info("Minimum: " + minimum + " Current: " + current +
-                 " Maximum: " + maximum)
+    logging.info("Minimum: %s Current: %s Maximum: %s", minimum, current, maximum)
     if(current != minimum):
         newClientResolution = minimum
     else:
@@ -73,8 +72,8 @@ def run(test, params, env):
 
     # Changing the guest resolution
     client_session.cmd("xrandr -s " + newClientResolution)
-    logging.info("The resolution on the client has been changed from " +
-                 current + " to: " + newClientResolution)
+    logging.info("The resolution on the client has been changed from %s to: %s",
+                 current, newClientResolution)
 
     logging.debug("Exporting guest display")
     guest_session.cmd("export DISPLAY=:0.0")
@@ -87,7 +86,7 @@ def run(test, params, env):
     currentGuestRes = outputlist[current_index + 1]
     currentGuestRes += outputlist[current_index + 2]
     currentGuestRes += outputlist[current_index + 3].replace(",", "")
-    logging.info("Current Resolution of Guest: " + currentGuestRes)
+    logging.info("Current Resolution of Guest: %s", currentGuestRes)
 
     if (newClientResolution == currentGuestRes):
         test.fail("Client resolution is same as guest resolution!")

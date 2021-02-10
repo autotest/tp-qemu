@@ -72,7 +72,7 @@ def run(test, params, env):
                     current_clocksource = session.cmd(check_clocksource_cmd)
                     current_clocksource = re.findall(clocksource, current_clocksource)
                     current_clocksource = "".join(current_clocksource)
-                    logging.info("current_clocksource in guest is: '%s'" %
+                    logging.info("current_clocksource in guest is: '%s'",
                                  current_clocksource)
                     if clocksource == "kvm-clock":
                         s = current_clocksource == "kvm-clock"
@@ -92,11 +92,10 @@ def run(test, params, env):
                     (self.start_ht[vm.name], self.start_gt[vm.name]) = (ht, gt)
                     if abs(ht - gt) > self.diff_limit:
                         logging.warning("Host and %s time diff %s is greater "
-                                        "than time_diff_limit:%s" %
-                                        (vm.name, abs(ht - gt),
-                                         self.diff_limit))
-                        logging.warning("Host time:%s   Guest %s time:%s" %
-                                        (ht, vm.name, gt))
+                                        "than time_diff_limit:%s",
+                                        vm.name, abs(ht - gt), self.diff_limit)
+                        logging.warning("Host time:%s   Guest %s time:%s",
+                                        ht, vm.name, gt)
                 else:
                     self.diff_ht[vm.name] = ht - self.start_ht[vm.name]
                     self.diff_gt[vm.name] = gt - self.start_gt[vm.name]

@@ -87,7 +87,7 @@ def run(test, params, env):
     logging.info("Current provisioning_mode = '%s'", provisioning_mode)
     bitmap = get_allocation_bitmap()
     if bitmap:
-        logging.debug("block allocation bitmap: %s" % bitmap)
+        logging.debug("block allocation bitmap: %s", bitmap)
         test.error("block allocation bitmap not empty before test.")
 
     # prepare params to boot vm with scsi_debug disk.
@@ -118,7 +118,7 @@ def run(test, params, env):
 
     bitmap_before_trim = get_allocation_bitmap()
     if not re.match(r"\d+-\d+", bitmap_before_trim):
-        logging.debug("bitmap before test: %s" % bitmap_before_trim)
+        logging.debug("bitmap before test: %s", bitmap_before_trim)
         test.fail("bitmap should be continuous before fstrim")
 
     error_context.context("Create partition on '%s' in guest" % device_name,
@@ -143,7 +143,7 @@ def run(test, params, env):
 
     bitmap_after_trim = get_allocation_bitmap()
     if not re.match(r"\d+-\d+,.*\d+-\d+$", bitmap_after_trim):
-        logging.debug("bitmap after test: %s" % bitmap_before_trim)
+        logging.debug("bitmap after test: %s", bitmap_before_trim)
         test.fail("discard command doesn't issue"
                   "to scsi_debug disk, please report bug for qemu")
     if vm:

@@ -45,7 +45,7 @@ class MonotonicTime(TimeClientTest):
         """
         if not test_type:
             self.test.error('missing test type')
-        logging.info("Test type: %s" % test_type)
+        logging.info("Test type: %s", test_type)
         timeout = float(duration) + 100.0
 
         cmd = self.src_dir + '/time_test'

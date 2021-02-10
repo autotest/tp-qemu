@@ -22,7 +22,7 @@ def run(test, params, env):
     """
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s" % img.image_filename)
+        logging.info("Run qemu-io %s", img.image_filename)
         try:
             QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
         except process.CmdError:

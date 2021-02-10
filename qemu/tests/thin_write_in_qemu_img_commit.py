@@ -31,13 +31,13 @@ def run(test, params, env):
 
     def _create_external_snapshot(tag):
         """Create an external snapshot based on tag."""
-        logging.info("Create external snapshot %s." % tag)
+        logging.info("Create external snapshot %s.", tag)
         qit = QemuImgTest(test, params, env, snapshot)
         qit.create_snapshot()
 
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s" % img.image_filename)
+        logging.info("Run qemu-io %s", img.image_filename)
         q = QemuIOSystem(test, params, img.image_filename)
         q.cmd_output(cmd, 120)
 

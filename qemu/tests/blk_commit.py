@@ -39,7 +39,7 @@ class BlockCommit(block_copy.BlockCopy):
         """
         image_format = self.params["snapshot_format"]
         snapshots = self.params["snapshot_chain"].split()
-        logging.info("create live snapshots %s" % snapshots)
+        logging.info("create live snapshots %s", snapshots)
         for snapshot in snapshots:
             snapshot = utils_misc.get_path(self.data_dir, snapshot)
             image_file = self.get_image_file()

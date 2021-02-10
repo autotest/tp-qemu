@@ -54,14 +54,14 @@ def run(test, params, env):
 
             drive_kname = drive_path.split("/")[-1]
             cmd = params.get("chk_phy_blk_cmd") % drive_kname
-            logging.debug("Physical block size get via '%s'" % cmd)
+            logging.debug("Physical block size get via '%s'", cmd)
             out_physical = int(session.cmd_output(cmd))
             cmd = params.get("chk_log_blk_cmd") % drive_kname
-            logging.debug("Logical block size get via '%s'" % cmd)
+            logging.debug("Logical block size get via '%s'", cmd)
             out_logical = int(session.cmd_output(cmd))
         else:
             cmd = params.get("chk_blks_cmd_windows")
-            logging.debug("Physical/Logical block size get via '%s'" % cmd)
+            logging.debug("Physical/Logical block size get via '%s'", cmd)
             out_bs = session.cmd_output(cmd, timeout=240).strip().split("\n\n")
             for blk_info in out_bs:
                 if blk_info.find(drive_serial) != -1:

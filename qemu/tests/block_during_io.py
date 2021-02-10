@@ -87,7 +87,7 @@ def run(test, params, env):
     def _change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
-        logging.info('Sending command(%s): %s' % (method, command))
+        logging.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             power_session = vm.wait_for_login(timeout=360)
             power_session.sendline(command)
@@ -102,7 +102,7 @@ def run(test, params, env):
         action = 'shutdown' if shutdown_vm else 'login'
         if not getattr(vm, 'wait_for_%s' % action)(timeout=362):
             test.fail('Failed to %s vm.' % action)
-        logging.info('%s vm successfully.' % action.capitalize())
+        logging.info('%s vm successfully.', action.capitalize())
 
     def run_power_management_test():
         """ Run power management test inside guest. """

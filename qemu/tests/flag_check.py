@@ -78,7 +78,7 @@ def run(test, params, env):
             if flag:
                 return flag.groups()[0]
         except Exception as e:
-            logging.error("Failed to get support flag %s" % e)
+            logging.error("Failed to get support flag %s", e)
 
     def get_all_support_flags():
         """
@@ -126,7 +126,7 @@ def run(test, params, env):
             flags = flags_re.search(out).groups()[0].split()
             return set(map(cpu.Flag, flags))
         except Exception as e:
-            logging.error("Failed to get guest cpu flags %s" % e)
+            logging.error("Failed to get guest cpu flags %s", e)
 
     cpu.Flag.aliases = cpu.kvm_map_flags_aliases
 

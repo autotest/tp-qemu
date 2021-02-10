@@ -190,8 +190,8 @@ def run(test, params, env):
             txt += "Please refer to log file for details:\n %s" % msg
             test.fail(txt)
     logging.info("The UDP performance as measured via netperf is ok.")
-    logging.info("Throughput of netperf command: %s" % throughput)
-    logging.debug("Output of netperf command:\n %s" % msg)
+    logging.info("Throughput of netperf command: %s", throughput)
+    logging.debug("Output of netperf command:\n %s", msg)
 
     try:
         if session:

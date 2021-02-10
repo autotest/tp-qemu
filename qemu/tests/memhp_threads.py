@@ -53,7 +53,7 @@ def run(test, params, env):
     dev.set_param("id", "%s-%s" % ("mem", mem))
     args = [vm.monitor]
     bg = utils_test.BackgroundTest(dev.hotplug, args)
-    logging.info("Hotplug memory backend '%s' to guest" % dev["id"])
+    logging.info("Hotplug memory backend '%s' to guest", dev["id"])
     bg.start()
     threads_num = int(new_params["prealloc-threads"])
     logging.info("Get qemu threads number again")
@@ -67,7 +67,7 @@ def run(test, params, env):
     dimm = vm.devices.dimm_device_define_by_params(params.object_params(mem),
                                                    mem)
     dimm.set_param("memdev", dev["id"])
-    logging.info("Hotplug pc-dimm '%s' to guest" % dimm["id"])
+    logging.info("Hotplug pc-dimm '%s' to guest", dimm["id"])
     vm.devices.simple_hotplug(dimm, vm.monitor)
     memhp_test.update_vm_after_hotplug(vm, dimm)
     logging.info("Resume vm and check memory inside guest")

@@ -70,7 +70,7 @@ def run(test, params, env):
                                                               libgcc_link, cpp_link, gcc_link)
         (s, o) = cmd_status_output(cmd)
         if s:
-            logging.debug("Fail to install gcc.output:%s" % o)
+            logging.debug("Fail to install gcc.output:%s", o)
 
     def record_result(result):
         re_result = params.get("re_result")
@@ -85,7 +85,7 @@ def run(test, params, env):
         f1.write(result_str)
         f1.close()
         open(os.path.basename(result_file), 'w').write(result)
-        logging.info("Test result got from %s:\n%s" % (result_file, result))
+        logging.info("Test result got from %s:\n%s", result_file, result)
 
     test_type = params.get("test_type")
     guest_thp_cmd = params.get("guest_thp_cmd")
@@ -134,7 +134,7 @@ def run(test, params, env):
         if s:
             test.error("Fail command:%s\n Output:%s" % (test_cmd, o))
         else:
-            logging.info("Output for command %s is:\n %s" % (test_cmd, o))
+            logging.info("Output for command %s is:\n %s", test_cmd, o)
             record_result(o)
     finally:
         if params.get("post_cmd"):

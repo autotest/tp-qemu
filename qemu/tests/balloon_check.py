@@ -30,7 +30,7 @@ class BallooningTest(MemoryBaseTest):
             else:
                 sleep_time = 90
             logging.info("Waiting %d seconds for guest's "
-                         "applications up" % sleep_time)
+                         "applications up", sleep_time)
             time.sleep(sleep_time)
             self.params["balloon_test_setup_ready"] = True
             self.ori_gmem = self.get_memory_status()
@@ -261,7 +261,7 @@ class BallooningTest(MemoryBaseTest):
                                   step=float(self.params.get("guest_check_step",
                                                              10.0)))
         if not ret:
-            logging.warning("guest memory is not stable after %ss" % timeout)
+            logging.warning("guest memory is not stable after %ss", timeout)
 
     def get_memory_boundary(self, balloon_type=''):
         """
@@ -430,7 +430,7 @@ class BallooningTestWin(BallooningTest):
         :param guest_value: memory size report from guest, this value can be
                             None
         """
-        logging.error("Memory size mismatch %s:\n" % step)
+        logging.error("Memory size mismatch %s:\n", step)
         error_msg = "Wanted to be changed: %s\n" % abs(self.ori_mem -
                                                        expect_value)
         if monitor_value:
@@ -543,7 +543,7 @@ class BallooningTestLinux(BallooningTest):
         @param guest_value: memory size report from guest, this value can be
                             None
         """
-        logging.error("Memory size mismatch %s:\n" % step)
+        logging.error("Memory size mismatch %s:\n", step)
         error_msg = "Assigner to VM: %s\n" % expect_value
         if monitor_value:
             error_msg += "Reported by monitor: %s\n" % monitor_value

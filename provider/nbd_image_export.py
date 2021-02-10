@@ -105,8 +105,8 @@ class QemuNBDExportImage(NBDExportImage):
                 # when qemu-nbd crashes unexpectedly, we can handle it
                 os.kill(self._nbd_server_pid, signal.SIGKILL)
             except Exception as e:
-                logging.warn("Error occurred when killing nbd server: %s"
-                             % str(e))
+                logging.warn("Error occurred when killing nbd server: %s",
+                             str(e))
             finally:
                 self._nbd_server_pid = None
 

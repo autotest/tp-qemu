@@ -91,7 +91,7 @@ def run(test, params, env):
                 continue
             elif data and re.findall(checking_pattern_re, data):
                 logging.info("Capture the data successfully")
-                logging.info("The capture data is like: %s" %
+                logging.info("The capture data is like: %s",
                              re.findall(checking_pattern_re, data)[-1])
                 fd.close()
                 break

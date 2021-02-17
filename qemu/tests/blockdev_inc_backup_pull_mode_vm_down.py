@@ -1,13 +1,12 @@
+import logging
 import socket
 import time
-from functools import partial
 from multiprocessing import Process
 
 from avocado.utils import process
 
 from virttest.qemu_devices.qdevices import QBlockdevFormatNode
-from virttest.qemu_monitor import MonitorProtocolError, MonitorSocketError
-from virttest.utils_misc import parallel
+from virttest.utils_misc import wait_for
 
 from provider.backup_utils import copyif
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
@@ -36,7 +35,6 @@ class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
         self.trash.append(self._fleecing_image_obj)
 
         # local target images, where data is copied from nbd image
-        self._targets = []
         self._clients = []
         self._client_image_objs = []
         nbd_image = self.params['nbd_image_%s' % self._full_bk_images[0]]
@@ -46,7 +44,6 @@ class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
             )
             p = Process(target=copyif, args=(self.params, nbd_image, tag))
             self._clients.append(p)
-            self._targets.append(partial(self._join_process, p=p))
         self.trash.extend(self._client_image_objs)
 
     def add_target_data_disks(self):
@@ -71,11 +68,7 @@ class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
         also note that, currently, creating a file may cause
         qemu core dumped due to a product bug 1879437
         """
-        pass
-
-    def remove_files_from_system_image(self, tmo=60):
-        """No need to remove files for no file is created"""
-        pass
+        self.disks_info = {}
 
     def prepare_test(self):
         super(BlockdevIncBackupPullModePoweroffVMTest, self).prepare_test()
@@ -98,10 +91,15 @@ class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
         list(map(_wait_till_qemu_io_active,
                  [o.tag for o in self._client_image_objs]))
 
-    def _poweroff_vm_during_data_copy(self):
+    def _poweroff_vm_during_data_copy(self, session):
         self._wait_till_all_qemu_io_active()
-        s = self.main_vm.wait_for_login()
-        s.cmd(cmd='poweroff', ignore_all_errors=True)
+        session.cmd(cmd='poweroff', ignore_all_errors=True)
+        tmo = self.params.get_numeric('vm_down_timeout', 300)
+        if not wait_for(self.main_vm.is_dead, timeout=tmo):
+            # qemu should quit after vm poweroff, or we have to do some checks
+            self._check_qemu_responsive()
+        else:
+            logging.info('qemu quit after vm poweroff')
 
     def destroy_vms(self):
         if self._is_qemu_hang:
@@ -115,39 +113,22 @@ class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
     def _check_qemu_responsive(self):
         try:
             self.main_vm.monitor.cmd(cmd="query-status", timeout=10)
-        except MonitorProtocolError:
+        except Exception as e:
             self._is_qemu_hang = True
-            self.test.fail('qemu hangs')
-        except MonitorSocketError:
-            self.test.fail('Failed to send qmp cmd to qemu')
+            self.test.fail('qemu hangs: %s' % str(e))
         else:
-            self.test.error('Too slow I/O to finish pulling data '
-                            'set process_timeout to a larger value in cfg')
-
-    def _join_process(self, p):
-        p.join(timeout=self.params.get_numeric('process_timeout', 1800))
+            self.test.error('qemu keeps alive unexpectedly after vm poweroff')
 
     def pull_data_and_poweroff_vm_in_parallel(self):
         """pull data and poweroff vm in parallel"""
-        results = []
+        # setup connection here for it costs some time to log into vm
+        session = self.main_vm.wait_for_login()
         list(map(lambda p: p.start(), self._clients))
         try:
-            self._poweroff_vm_during_data_copy()
-            parallel(self._targets)
-            # never do join again when p.exitcode is None,
-            # in case qemu-io hangs, process never returns
-            results = list(map(lambda p: p.exitcode is not None and p.exitcode == 0,
-                               self._clients))
+            self._poweroff_vm_during_data_copy(session)
         finally:
             list(map(lambda p: p.terminate(), self._clients))
             list(map(lambda p: p.join(), self._clients))
-
-        if not all(results):
-            # timeout(still running) or process quit unexpectedly
-            self._check_qemu_responsive()
-
-    def cancel_job(self):
-        self.main_vm.monitor.cmd('job-cancel', {'id': self._job})
 
     def export_full_bk_fleecing_img(self):
         self._nbd_export.add_nbd_image(self._full_bk_nodes[0])
@@ -160,7 +141,6 @@ class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
         self.do_full_backup()
         self.export_full_bk_fleecing_img()
         self.pull_data_and_poweroff_vm_in_parallel()
-        self.cancel_job()
 
 
 def run(test, params, env):

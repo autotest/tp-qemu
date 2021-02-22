@@ -32,7 +32,7 @@ class BlockdevIncBackupXptBitmapTest(BlockdevBaseTest):
         self.source_images.append("drive_%s" % tag)
         self.full_backups.append("drive_%s" % image_chain[0])
         self.bitmaps.append("bitmap_%s" % tag)
-        image_params["nbd_export_bitmap"] = "bitmap_%s" % tag
+        image_params["nbd_export_bitmaps"] = "bitmap_%s" % tag
         self.nbd_exports.append(QemuNBDExportImage(image_params, tag))
         self.nbd_images.append(
             qemu_storage.QemuImg(

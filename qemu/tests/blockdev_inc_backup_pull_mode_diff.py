@@ -55,7 +55,7 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
         self.before_2nd_inc_bitmaps.append("before_2nd_inc_bitmap_%s" % tag)
         self.merged_bitmaps.append("merged_bitmap_%s" % tag)
         self.inc_backup_bitmaps.append("inc_bitmap_%s" % tag)
-        self.params['nbd_export_bitmap_%s' %
+        self.params['nbd_export_bitmaps_%s' %
                     bk_tags[1]] = self.merged_bitmaps[-1]
 
         # nbd images

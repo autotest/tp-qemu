@@ -29,7 +29,7 @@ def run(test, params, env):
             if dev['qdev_id'] == dev_id:
                 device_found = dev
                 break
-            elif dev['class_info']['desc'] == 'PCI bridge':
+            elif dev['class_info'].get('desc') == 'PCI bridge':
                 pci_bridge_devices = dev['pci_bridge'].get('devices')
                 if not pci_bridge_devices:
                     continue

@@ -23,20 +23,31 @@ def run(test, params, env):
     :params params: Dictionary with the test parameters.
     :params env: Dictionary with test environment.
     """
+    def run_guest_cmd(cmd, retry=False):
+        """
+        Run cmd inside guest
+        """
+        output = session.cmd_output_safe(cmd)
+        if retry and not output:
+            output = session.cmd_output_safe(cmd)
+        if not output:
+            test.error("Get empty output after run cmd %s" % cmd)
+        return output
+
     def get_guest_threads():
         """
         Get guest threads number
         """
         if os_type == "linux":
             cmd = params["get_threads_cmd"]
-            output = session.cmd_output_safe(cmd)
+            output = run_guest_cmd(cmd)
             threads = int(re.findall(r":\s*(\d+)", output)[0])
         else:
             cmd = params["get_cores_cmd"]
-            output = session.cmd_output_safe(cmd)
+            output = run_guest_cmd(cmd, retry=True)
             cores = int(re.findall(r"=(\d+)", output)[0])
             cmd = params["get_sockets_cmd"]
-            output = session.cmd_output_safe(cmd)
+            output = run_guest_cmd(cmd)
             sockets = len(re.findall(r"SocketDesignation=", output))
             threads = int(vm.cpuinfo.smp/sockets/cores)
         return threads

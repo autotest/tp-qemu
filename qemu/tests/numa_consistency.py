@@ -45,9 +45,17 @@ def run(test, params, env):
     params['vcpu_cores'] = 1
     params['vcpu_threads'] = 1
     params['vcpu_sockets'] = params['smp']
+    params['vcpu_maxcpus'] = params['smp']
     params['guest_numa_nodes'] = ""
+    params['mem_devs'] = ""
+    params['backend_mem'] = "memory-backend-ram"
+    params['use_mem'] = "no"
+    params['size_mem'] = "1024M"
+    params['mem'] = int(params['size_mem'].strip('M')) * len(node_list)
     for node_id in range(len(node_list)):
         params['guest_numa_nodes'] += " node%d" % node_id
+        params['mem_devs'] += "mem%d " % node_id
+        params['numa_memdev_node%d' % node_id] = "mem-mem%d" % node_id
     params['start_vm'] = 'yes'
 
     utils_memory.drop_caches()

@@ -6,7 +6,7 @@ from provider import backup_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
-class BlockdevCommitNonExistedBase(BlockDevCommitTest):
+class BlockdevCommitNonExistedNode(BlockDevCommitTest):
 
     def commit_snapshots(self):
         device = self.params.get("device_tag")
@@ -15,9 +15,14 @@ class BlockdevCommitNonExistedBase(BlockDevCommitTest):
         self.device_node = self.get_node_name(device)
         options = ["base-node", "top-node", "speed"]
         arguments = self.params.copy_from_keys(options)
-        arguments["base-node"] = self.params["none_existed_base"]
-        device = self.get_node_name(snapshot_tags[-1])
-        arguments["top-node"] = device
+        if self.params.get("none_existed_base"):
+            arguments["base-node"] = self.params["none_existed_base"]
+            device = self.get_node_name(snapshot_tags[-1])
+            arguments["top-node"] = device
+        if self.params.get("none_existed_top"):
+            arguments["base-node"] = self.get_node_name(device)
+            device = self.get_node_name(snapshot_tags[-1])
+            arguments["top-node"] = self.params["none_existed_top"]
         commit_cmd = backup_utils.block_commit_qmp_cmd
         cmd, args = commit_cmd(device, **arguments)
         try:
@@ -50,5 +55,5 @@ def run(test, params, env):
     5. check QMPCmdError data
     """
 
-    block_test = BlockdevCommitNonExistedBase(test, params, env)
+    block_test = BlockdevCommitNonExistedNode(test, params, env)
     block_test.run_test()

@@ -97,6 +97,7 @@ class BlockdevBackupBaseTest(object):
     def verify_data_files(self):
         session = self.clone_vm.wait_for_login()
         try:
+            backup_utils.refresh_mounts(self.disks_info, self.params, session)
             for tag, info in self.disks_info.items():
                 logging.debug("mount target disk in VM!")
                 utils_disk.mount(info[0], info[1], session=session)

@@ -39,16 +39,15 @@ class BlockdevSnapshotMultiDisksTest(BlockDevSnapshotTest):
                     assert disk_id, "Disk not found in guest!"
                     mount_point = utils_disk.configure_empty_linux_disk(
                         session, disk_id, disk_size)[0]
-                    self.disks_info.append([
-                        r"/dev/%s1" %
-                        disk_id, mount_point])
+                    self.disks_info[snapshot_tag] = [r"/dev/%s1" % disk_id,
+                                                     mount_point]
                 else:
                     disk_id = utils_disk.get_windows_disks_index(
                         session, disk_size)
                     driver_letter = utils_disk.configure_empty_windows_disk(
                         session, disk_id, disk_size)[0]
                     mount_point = r"%s:\\" % driver_letter
-                    self.disks_info.append([disk_id, mount_point])
+                    self.disks_info[snapshot_tag] = [disk_id, mount_point]
             finally:
                 session.close()
 

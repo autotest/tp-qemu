@@ -21,7 +21,7 @@ class BlockdevStreamSubChainTest(BlockDevStreamTest):
 
     def snapshot_test(self):
         """create one snapshot, create one new file"""
-        self.generate_tempfile(self.disks_info[0][1],
+        self.generate_tempfile(self.disks_info[self.base_tag][1],
                                filename="base",
                                size=self.params["tempfile_size"])
 
@@ -34,7 +34,7 @@ class BlockdevStreamSubChainTest(BlockDevStreamTest):
                 "drive_%s" % chain[idx]
             )
 
-            self.generate_tempfile(self.disks_info[0][1],
+            self.generate_tempfile(self.disks_info[self.base_tag][1],
                                    filename=chain[idx],
                                    size=self.params["tempfile_size"])
 

@@ -1,6 +1,7 @@
 import json
 import math
 import random
+import re
 
 from avocado import fail_on
 from avocado.utils import process
@@ -10,6 +11,7 @@ from virttest import qemu_storage
 from virttest import utils_libguestfs
 from virttest import utils_numeric
 from virttest import utils_misc
+from virttest import utils_disk
 
 from provider import block_dirty_bitmap as block_bitmap
 from provider.virt_storage.storage_admin import sp_admin
@@ -475,3 +477,80 @@ def copyif(params, nbd_image, target_image, bitmap=None):
 
     img_obj.base_tag = 'null'
     img_obj.rebase(img_obj.params)
+
+
+def get_disk_info_by_param(tag, params, session):
+    """
+    Get disk info by by serial/wwn or by size.
+
+    For most cases, only one data disk is used, we can use disk size to find
+    it; if there are more than one, we should set the same wwn/serial for each
+    data disk and its target, e.g.
+      blk_extra_params_data1 = "serial=DATA_DISK1"
+      blk_extra_params_mirror1 = "serial=DATA_DISK1"
+      blk_extra_params_data2 = "serial=DATA_DISK2"
+      blk_extra_params_mirror2 = "serial=DATA_DISK2"
+    where mirror1/mirror2 are the mirror images of data1/data2, so when we
+    restart vm with mirror1 and mirror2, we can find them by serials
+    :param tag: image tag name
+    :param params: Params object
+    :param session: vm login session
+    :return: The disk info dict(e.g. {'kname':xx, 'size':xx}) or None
+    """
+    info = None
+    drive_path = None
+    image_params = params.object_params(tag)
+    if image_params.get('blk_extra_params'):
+        # get disk by serial or wwn
+        # utils_disk.get_linux_disks can also get serial, but for
+        # virtio-scsi ID_SERIAL is a long string including serial
+        # e.g. ID_SERIAL=0QEMU_QEMU_HARDDISK_DATA_DISK2 instead of
+        # ID_SERIAL=DATA_DISK2
+        m = re.search(r"(serial|wwn)=(\w+)",
+                      image_params["blk_extra_params"], re.M)
+        if m is not None:
+            drive_path = utils_misc.get_linux_drive_path(session, m.group(2))
+
+    if drive_path:
+        info = {'kname': drive_path[5:], 'size': image_params['image_size']}
+    else:
+        # get disk by disk size
+        conds = {'type': image_params.get('disk_type', 'disk'),
+                 'size': image_params['image_size']}
+        disks = utils_disk.get_linux_disks(session, True)
+        for kname, attr in disks.items():
+            d = dict(zip(['kname', 'size', 'type'], attr))
+            if all([conds[k] == d[k] for k in conds]):
+                info = d
+                break
+    return info
+
+
+@fail_on
+def refresh_mounts(mounts, params, session):
+    """
+    Refresh mounts with the correct device and its mount point.
+
+    Device name may change when restarting vm with the target images on RHEL9
+    (e.g. start vm with mirror/snapshot/backup image as its data images)
+    :param mounts: {tag, [dev path(e.g. /dev/sdb1), mnt(e.g. /mnt/sdb1)], ...}
+    :param params: Params object
+    :param session: vm login session
+    """
+    # always refresh disks info when count of data disks >= 2
+    if 'image1' in mounts:
+        forced = True if len(mounts) > 2 else False
+    else:
+        forced = True if len(mounts) > 1 else False
+
+    for tag, mount in mounts.items():
+        if tag == 'image1':
+            continue
+        if not forced and utils_disk.is_mount(mount[0], verbose=True,
+                                              session=session):
+            # device name changed, now the mounted device is the system device
+            forced = True
+        if forced:
+            info = get_disk_info_by_param(tag, params, session)
+            assert info, 'Failed to get the kname for device: %s' % tag
+            mount[0] = '/dev/%s1' % info['kname']

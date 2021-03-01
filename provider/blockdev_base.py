@@ -133,6 +133,7 @@ class BlockdevBaseTest(object):
         """
         session = self.clone_vm.wait_for_login()
         try:
+            backup_utils.refresh_mounts(self.disks_info, self.params, session)
             for tag, info in self.disks_info.items():
                 if tag != 'image1':
                     logging.debug("mount target disk in VM!")
@@ -147,18 +148,13 @@ class BlockdevBaseTest(object):
     def format_data_disk(self, tag):
         session = self.main_vm.wait_for_login()
         try:
-            disk_params = self.params.object_params(tag)
-            disk_size = disk_params["image_size"]
-            disks = utils_disk.get_linux_disks(session, True)
-            for kname, attr in disks.items():
-                if attr[1] == disk_size and attr[2] == "disk":
-                    disk_id = kname
-                    break
-            else:
+            info = backup_utils.get_disk_info_by_param(tag, self.params,
+                                                       session)
+            if info is None:
                 raise exceptions.TestFail("disk not found in guest ...")
-            disk_path = "/dev/%s1" % kname
+            disk_path = "/dev/%s1" % info['kname']
             mount_point = utils_disk.configure_empty_linux_disk(
-                session, disk_id, disk_size)[0]
+                session, info['kname'], info['size'])[0]
             self.disks_info[tag] = [disk_path, mount_point]
         finally:
             session.close()

@@ -1,8 +1,4 @@
-import re
 import logging
-
-from virttest import utils_disk
-from virttest import utils_misc
 
 from provider import backup_utils
 
@@ -23,26 +19,6 @@ class BlockdevStreamMultipleBlocksTest(BlockdevStreamParallelTest,
         self.disks_info = {}  # tag, [dev, mount_point]
         self.files_info = {}  # tag, [file, file...]
         self.trash = []
-
-    def _get_data_disk_info(self, tag, session):
-        """Get the disk id and size by serial or wwn in linux"""
-        disk_params = self.params.object_params(tag)
-        extra_params = disk_params["blk_extra_params"]
-        drive_id = re.search(r"(serial|wwn)=(\w+)",
-                             extra_params, re.M).group(2)
-        drive_path = utils_misc.get_linux_drive_path(session, drive_id)
-        return drive_path[5:], disk_params["image_size"]
-
-    def format_data_disk(self, tag):
-        session = self.main_vm.wait_for_login()
-        try:
-            disk_id, disk_size = self._get_data_disk_info(tag, session)
-            mnt = utils_disk.configure_empty_linux_disk(session,
-                                                        disk_id,
-                                                        disk_size)[0]
-            self.disks_info[tag] = ["/dev/%s1" % disk_id, mnt]
-        finally:
-            session.close()
 
     def generate_inc_files(self):
         """create another file on data disks"""

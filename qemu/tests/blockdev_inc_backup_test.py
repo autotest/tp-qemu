@@ -5,6 +5,7 @@ from functools import partial
 from avocado.utils import memory
 
 from virttest import utils_misc
+from virttest import qemu_monitor
 
 from provider import backup_utils
 from provider import blockdev_base
@@ -76,7 +77,7 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
                     self.inc_backups,
                     self.bitmaps,
                     **extra_options)
-            except AssertionError:
+            except qemu_monitor.QMPCmdError:
                 return
             self.test.fail('expect incremental backup job(s) failed')
         else:

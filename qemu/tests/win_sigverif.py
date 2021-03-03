@@ -23,8 +23,6 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
-    vm.send_key('meta_l-d')
-    time.sleep(60)
 
     driver_name = params["driver_name"]
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
@@ -38,6 +36,8 @@ def run(test, params, env):
 
     error_context.context("Run sigverif in windows guest", logging.info)
     session.cmd(clean_sigverif_cmd, ignore_all_errors=True)
+    vm.send_key('meta_l-d')
+    time.sleep(60)
     status, output = session.cmd_status_output(run_sigverif_cmd)
     if status != 0:
         test.error(output)

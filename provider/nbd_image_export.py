@@ -11,6 +11,7 @@ Available methods:
                 with user defined command
 - export_image: Export the local image
 - stop_export: Stop exporting image
+- suspend_export: Suspend exporting image
 - list_exported_image: List nbd image with qemu-nbd
 - hotplug_tls: Hotplug tls creds object for internal nbd server
 - hotplug_image: Hotplug local image to be exported
@@ -139,6 +140,14 @@ class QemuNBDExportImage(NBDExportImage):
                              str(e))
             finally:
                 self._nbd_server_pid = None
+
+    def suspend_export(self):
+        if self._nbd_server_pid is not None:
+            try:
+                os.kill(self._nbd_server_pid, signal.SIGSTOP)
+            except Exception as e:
+                logging.warning("Error occurred when suspending"
+                                "nbd server: %s", str(e))
 
 
 class InternalNBDExportImage(NBDExportImage):

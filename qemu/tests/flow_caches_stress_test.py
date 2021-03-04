@@ -1,4 +1,5 @@
 import logging
+import os
 
 from avocado.utils import process
 
@@ -75,8 +76,8 @@ def run(test, params, env):
             error_context.context(err, logging.info)
             session.cmd(nf_conntrack_max_set_cmd)
 
-    netperf_link = utils_misc.get_path(data_dir.get_deps_dir("netperf"),
-                                       params["netperf_link"])
+    netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
+                                params.get("netperf_link"))
     md5sum = params.get("pkg_md5sum")
     client_num = params.get("netperf_client_num", 520)
     netperf_timeout = int(params.get("netperf_timeout", 600))

@@ -165,8 +165,8 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
         check_guest_cpu_count()
         if vm.get_cpu_count() == maxcpus and check_cpu_topology:
-            if not cpu_utils.check_guest_cpu_topology(session, os_type,
-                                                      vm.cpuinfo):
+            if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type,
+                                                             vm.cpuinfo):
                 session.close()
                 test.fail("CPU topology of guest is inconsistent with "
                           "expectations.")

@@ -6,7 +6,7 @@ from avocado.utils import cpu
 from virttest import error_context
 from virttest import env_process
 
-from provider.cpu_utils import check_guest_cpu_topology
+from provider.cpu_utils import check_if_vm_vcpu_topology_match
 
 
 @error_context.context_aware
@@ -69,7 +69,8 @@ def run(test, params, env):
                 raise
         vm = env.get_vm(vm_name)
         session = vm.wait_for_login()
-        check_guest_cpu_topology(session, os_type, vm.cpuinfo)
+        if not check_if_vm_vcpu_topology_match(session, os_type, vm.cpuinfo):
+            test.fail('CPU topology of guest is incorrect.')
         if params.get('check_siblings_cmd'):
             check('sibling', vcpu_threads * vcpu_cores, 'check_siblings_cmd')
         vm.destroy()

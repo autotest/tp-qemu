@@ -95,10 +95,10 @@ def run(test, params, env):
         test.fail(mismatch_text)
 
     error_context.context("Check CPU topology of guest", logging.info)
-    if not cpu_utils.check_guest_cpu_topology(session, os_type, cpuinfo):
+    if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
         test.fail("CPU topology of guest is not as expected.")
     session = vm.reboot(session, timeout=reboot_timeout)
-    if not cpu_utils.check_guest_cpu_topology(session, os_type, cpuinfo):
+    if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
         test.fail("CPU topology of guest is not as expected after reboot.")
 
     if os_type == "linux":

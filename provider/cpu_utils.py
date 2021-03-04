@@ -54,7 +54,7 @@ def get_guest_cpu_ids(session, os_type):
                                    output, re.M)))
 
 
-def check_guest_cpu_topology(session, os_type, cpuinfo):
+def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
     """
     check the cpu topology of the guest.
 

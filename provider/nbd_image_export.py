@@ -143,11 +143,21 @@ class QemuNBDExportImage(NBDExportImage):
 
     def suspend_export(self):
         if self._nbd_server_pid is not None:
+            logging.info("Suspend qemu-nbd by sending SIGSTOP")
             try:
                 os.kill(self._nbd_server_pid, signal.SIGSTOP)
             except Exception as e:
                 logging.warning("Error occurred when suspending"
                                 "nbd server: %s", str(e))
+
+    def resume_export(self):
+        if self._nbd_server_pid is not None:
+            logging.info("Resume qemu-nbd by sending SIGCONT")
+            try:
+                os.kill(self._nbd_server_pid, signal.SIGCONT)
+            except Exception as e:
+                logging.warning("Error occurred when resuming nbd server: %s",
+                                str(e))
 
 
 class InternalNBDExportImage(NBDExportImage):

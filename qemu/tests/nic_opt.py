@@ -134,6 +134,10 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_serial_login()
     try:
+        match_string = "unable to start vhost net"
+        output = vm.process.get_output()
+        if match_string in output:
+            test.fail("Qemu output error info: %s" % output)
         if params["os_type"] == "windows":
             error_context.context("Verify if netkvm.sys is enabled in guest",
                                   logging.info)

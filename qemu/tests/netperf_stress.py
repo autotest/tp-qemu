@@ -235,8 +235,6 @@ def run(test, params, env):
             test_option += " -c"
         if netperf_output_unit in "GMKgmk":
             test_option += " -f %s" % netperf_output_unit
-        start_time = time.time()
-        stop_time = start_time + netperf_test_duration
         num = 0
         s_len = len(server_infos)
         for protocol in test_protocols.split():
@@ -255,6 +253,8 @@ def run(test, params, env):
                 else:
                     test.error("Can not start netperf client.")
                 num += 1
+            start_time = time.time()
+            stop_time = start_time + netperf_test_duration
             # here when set a run flag, when other case call this case as a
             # subprocess backgroundly, can set this run flag to False to stop
             # the stress test.

@@ -125,18 +125,18 @@ def run(test, params, env):
         if netperf_server_g:
             if netperf_server_g.is_server_running():
                 netperf_server_g.stop()
-            netperf_server_g.package.env_cleanup(True)
+            netperf_server_g.cleanup(True)
         if netperf_server_h:
             if netperf_server_h.is_server_running():
                 netperf_server_h.stop()
-            netperf_server_h.package.env_cleanup(True)
+            netperf_server_h.cleanup(True)
         if netperf_client_h:
             if netperf_client_h.is_netperf_running():
                 netperf_client_h.stop()
-            netperf_client_h.package.env_cleanup(True)
+            netperf_client_h.cleanup(True)
         if netperf_client_g:
             if netperf_client_g.is_netperf_running():
                 netperf_client_g.stop()
-            netperf_client_g.package.env_cleanup(True)
+            netperf_client_g.cleanup(True)
         if session:
             session.close()

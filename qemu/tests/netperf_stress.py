@@ -269,12 +269,11 @@ def run(test, params, env):
             time.sleep(5)
     finally:
         for n_server in netperf_servers:
-            if n_server:
-                n_server.stop()
-            n_server.package.env_cleanup(True)
+            n_server.stop()
+            n_server.cleanup(True)
         for n_client in netperf_clients:
-            if n_client:
-                n_client.package.env_cleanup(True)
+            n_client.stop()
+            n_client.cleanup(True)
         env["netperf_run"] = False
         if session:
             session.close()

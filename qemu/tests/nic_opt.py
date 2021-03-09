@@ -89,8 +89,8 @@ def run(test, params, env):
                 time.sleep(5)
         finally:
             n_server.stop()
-            n_server.package.env_cleanup(True)
-            n_client.package.env_cleanup(True)
+            n_server.cleanup(True)
+            n_client.cleanup(True)
 
     def test_ping():
         """

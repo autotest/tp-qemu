@@ -159,6 +159,7 @@ def run(test, params, env):
         utils_test.run_file_transfer(test, params, env)
     finally:
         netperf_server.stop()
-        netperf_client.package.env_cleanup(True)
+        netperf_client.cleanup(True)
+        netperf_server.cleanup(True)
         if session:
             session.close()

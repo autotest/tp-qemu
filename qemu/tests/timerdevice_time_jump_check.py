@@ -4,6 +4,7 @@ import time
 from virttest import error_context
 
 from avocado.utils import process
+from avocado.utils import cpu
 
 
 @error_context.context_aware
@@ -30,9 +31,7 @@ def run(test, params, env):
     logging.info("%s is current clocksource.", session.cmd_output(cmd))
 
     error_context.context("Pin every vcpu to physical cpu", logging.info)
-    host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
-    host_cpu_num = process.run(host_cpu_cnt_cmd,
-                               shell=True).stdout_text.strip()
+    host_cpu_num = cpu.total_count()
     host_cpu_list = (_ for _ in range(int(host_cpu_num)))
     if len(vm.vcpu_threads) > int(host_cpu_num):
         host_cpu_list = []

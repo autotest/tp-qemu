@@ -8,6 +8,7 @@ from provider.storage_benchmark import generate_instance
 from provider.throttle_utils import ThrottleGroupManager, ThrottleTester, \
     ThrottleGroupsTester
 from provider.block_devices_plug import BlockDevicesPlug
+from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
 
 # This decorator makes the test function aware of context strings
@@ -25,6 +26,7 @@ def run(test, params, env):
         Change throttle group attribute or move disk to other group
         5) Or Execute other operation testing for example:
         Reboot guest or stop-resume guest
+        or add snapshot on throttle node
         6) Execute throttle testing on all groups.
     """
 
@@ -82,6 +84,14 @@ def run(test, params, env):
         plug.hotplug_devs_serial("stg3")
         plug.hotplug_devs_serial("stg4")
 
+    def operation_snapshot():
+        """
+        create snapshot
+        """
+        snapshot_test = BlockDevSnapshotTest(test, params, env)
+        snapshot_test.prepare_snapshot_file()
+        snapshot_test.create_snapshot()
+
     error_context.context("Get the main VM", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -128,4 +138,7 @@ def run(test, params, env):
     error_context.context("Start groups testing:%s" % groups, logging.info)
     groups_tester = ThrottleGroupsTester(testers)
 
-    groups_tester.start()
+    repeat_test = params.get_numeric("repeat_test", 1)
+    for repeat in range(repeat_test):
+        error_context.context("Begin test loop:%d" % repeat, logging.info)
+        groups_tester.start()

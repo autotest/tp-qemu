@@ -3,6 +3,7 @@ import os
 import six
 import aexpect
 import functools
+import re
 
 from avocado.utils import process
 
@@ -109,10 +110,15 @@ def run(test, params, env):
         output_cmd(cmd_install)
         output_cmd(cmd_clean)
 
-    check_cmd = "uname -r |grep el8"
-    if process.run(check_cmd, shell=True):
+    def is_version_lt_rhel7(uname_str):
+        ver = re.findall('el(\\d)', uname_str)
+        if ver:
+            return int(ver[0]) > 7
+        return False
+
+    if is_version_lt_rhel7(process.getoutput('uname -r')):
         install_package(host_ver)
-    if session.cmd(check_cmd):
+    if is_version_lt_rhel7(session.cmd('uname -r')):
         install_package(guest_ver.strip(), session=session)
 
     # get result tested by each scenario

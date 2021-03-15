@@ -545,7 +545,7 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
 
     def thread_cmd(params, i, numa_enable, client_s, timeout):
         fname = "/tmp/netperf.%s.nf" % pid
-        option = "`command -v python python3 ` "
+        option = "`command -v python python3 | head -1 ` "
         option += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (
                  i, client_path, server, int(l) * 1.5, nf_args)
         option += " >> %s" % fname

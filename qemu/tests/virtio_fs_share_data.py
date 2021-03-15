@@ -162,7 +162,8 @@ def run(test, params, env):
                 error_context.context("Mount virtiofs target %s to %s inside"
                                       " guest." % (fs_target, fs_dest),
                                       logging.info)
-                utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session)
+                if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
+                    test.fail('Mount virtiofs target failed.')
 
         else:
             error_context.context("Start virtiofs service in guest.", logging.info)

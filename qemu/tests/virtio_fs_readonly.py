@@ -33,7 +33,8 @@ def run(test, params, env):
 
     error_context.context("Mount the virtiofs target with read-only to "
                           "the destination directory inside guest.", logging.info)
-    utils_disk.mount(fs_target, fs_dest, 'virtiofs', 'ro', session=session)
+    if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', 'ro', session=session):
+        test.fail('Mount virtiofs target failed.')
 
     try:
         error_context.context("Create file under the destination "

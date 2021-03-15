@@ -134,7 +134,8 @@ def run(test, params, env):
                 error_context.context(
                     "%s: Mount the virtiofs target %s to %s inside guest." %
                     (vm, fs_target, fs_dest), logging.info)
-                utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session)
+                if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
+                    test.fail('Mount virtiofs target failed.')
             else:
                 virtio_fs_disk_label = fs_target
                 error_context.context("%s: Get Volume letter of virtio fs"

@@ -75,6 +75,8 @@ def block_dirty_bitmap_add(vm, bitmap_params):
                 item: False}, "default": {
                 item: None}}
     kargs = dict(node=target_device, name=bitmap)
+    if bitmap_params.get('bitmap_granularity'):
+        kargs['granularity'] = bitmap_params['bitmap_granularity']
     for item in ["persistent", "disabled"]:
         kargs.update(mapping[item][bitmap_params.get(item, "default")])
     vm.monitor.block_dirty_bitmap_add(**kargs)
@@ -231,7 +233,7 @@ def handle_block_dirty_bitmap_transaction(vm, disabled_params=None,
         bitmap_data = {"node": added_params['bitmap_device_node'],
                        "name": added_params['bitmap_name']}
         if added_params.get('bitmap_granularity'):
-            bitmap_data['granularity'] = added_params['granularity']
+            bitmap_data['granularity'] = added_params['bitmap_granularity']
 
         mapping = {'on': True, 'yes': True, 'off': False, 'no': False}
         if added_params.get('bitmap_persistent'):

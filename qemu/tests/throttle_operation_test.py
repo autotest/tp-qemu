@@ -86,8 +86,9 @@ def run(test, params, env):
 
     def operation_snapshot():
         """
-        create snapshot
+        define snapshot node name, create snapshot
         """
+        params["node"] = params["image_format"] + "_" + params["base_tag"]
         snapshot_test = BlockDevSnapshotTest(test, params, env)
         snapshot_test.prepare_snapshot_file()
         snapshot_test.create_snapshot()

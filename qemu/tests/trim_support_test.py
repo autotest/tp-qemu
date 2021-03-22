@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from avocado.utils import process
 from virttest import utils_test
@@ -48,6 +49,12 @@ def run(test, params, env):
             return new_size
         return None
 
+    def query_system_events(filter_options):
+        """Query the system events in filter options."""
+        logging.info("Query the system event log.")
+        cmd = params.get("query_cmd") % filter_options
+        return params.get("searched_keywords") in session.cmd(cmd).strip()
+
     host_check_cmd = params.get("host_check_cmd")
     image_dir = os.path.join(data_dir.get_data_dir(), 'images')
     host_check_cmd %= image_dir
@@ -56,6 +63,7 @@ def run(test, params, env):
     image_size_str = stg_param["image_size"]
     guest_trim_cmd = params["guest_trim_cmd"]
     driver_name = params.get("driver_name", "netkvm")
+    event_id = params.get("event_id")
 
     timeout = float(params.get("timeout", 360))
     vm = env.get_vm(params["main_vm"])
@@ -92,6 +100,12 @@ def run(test, params, env):
     if status:
         test.error("Error when trim the volume, status=%s, output=%s" %
                    (status, output))
+    if event_id:
+        time.sleep(10)
+        session = vm.reboot(session)
+        if query_system_events(params['filter_options']):
+            test.fail("Disk corruption after trim for %s"
+                      % params.get("block_size"))
 
     error_context.context("Check size from host after disk trimming")
     new_size = utils_misc.wait_for(

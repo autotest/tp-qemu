@@ -92,7 +92,7 @@ def run(test, params, env):
 
         return dst
 
-    def dpdk_devbind():
+    def dpdk_devbind(dpdk_bind_cmd):
         """
 
         bind two nics to vfio-pci
@@ -111,16 +111,18 @@ def run(test, params, env):
                 if i == "Virtio":
                     nic_pci_1 = "0000:%s" % session.cmd(
                         "lspci |awk '/%s network/ {print $1}'" % i).strip()
-                    cmd_str = "dpdk-devbind --bind=vfio-pci %s" % nic_pci_1
+                    cmd_str = "%s --bind=vfio-pci %s" % (
+                            dpdk_bind_cmd, nic_pci_1)
                 else:
                     nic_pci_2 = "0000:%s" % session.cmd(
                         "lspci |awk '/%s/ {print $1}'" % i).strip()
-                    cmd_str = "dpdk-devbind --bind=vfio-pci %s" % nic_pci_2
+                    cmd_str = "%s --bind=vfio-pci %s" % (
+                            dpdk_bind_cmd,  nic_pci_2)
                 session.cmd_output(cmd_str)
-        session.cmd_output('dpdk-devbind --status')
+        session.cmd_output("%s --status" % dpdk_bind_cmd)
         return nic_pci_1, nic_pci_2
 
-    def install_moongen(session, ip, user, port, password):
+    def install_moongen(session, ip, user, port, password, dpdk_bind_cmd):
         """
 
         Install moogen on remote moongen host
@@ -151,7 +153,7 @@ def run(test, params, env):
         # bind nic
         moongen_dpdk_nic = params.get("moongen_dpdk_nic").split()
         for i in list(moongen_dpdk_nic):
-            cmd_bind = "dpdk-devbind --bind=vfio-pci %s" % i
+            cmd_bind = "%s --bind=vfio-pci %s" % (dpdk_bind_cmd, i)
             if session.cmd_status(cmd_bind) != 0:
                 test.error("Fail to bind nic %s on monngen host" % i)
 
@@ -207,8 +209,9 @@ def run(test, params, env):
 
     # setup env and bind nics to vfio-pci in guest
 
+    dpdk_bind_cmd = "`command -v dpdk-devbind dpdk-devbind.py | head -1` "
     exec_file = env_setup()
-    nic_pci_1, nic_pci_2 = dpdk_devbind()
+    nic_pci_1, nic_pci_2 = dpdk_devbind(dpdk_bind_cmd)
 
     # setup env on moongen host
     generator_ip = params.get("generator")
@@ -227,7 +230,8 @@ def run(test, params, env):
                                        username,
                                        password,
                                        params.get("shell_prompt_generator"))
-    install_moongen(generator1, generator_ip, username, shell_port, password)
+    install_moongen(generator1, generator_ip, username,
+                    shell_port, password, dpdk_bind_cmd)
 
     # get qemu, guest kernel, kvm version and dpdk version and write them into result
     result_path = utils_misc.get_path(test.resultsdir, "virtio_net_dpdk.RHS")
@@ -247,6 +251,7 @@ def run(test, params, env):
         result_file.write("%s\n" % record_line.rstrip("|"))
         nic1_driver = params.get("nic1_dpdk_driver")
         nic2_driver = params.get("nic2_dpdk_driver")
+        whitelist_option = params.get("whitelist_option")
         cores = params.get("vcpu_sockets")
         queues = params.get("testpmd_queues")
         running_time = int(params.get("testpmd_running_time"))
@@ -268,6 +273,7 @@ def run(test, params, env):
         status = launch_test(session, generator1, generator2,
                              mac, port, exec_file,
                              nic1_driver, nic2_driver,
+                             whitelist_option,
                              nic_pci_1, nic_pci_2,
                              cores, queues, running_time)
         if status is True:
@@ -293,6 +299,7 @@ def run(test, params, env):
 def launch_test(session, generator1, generator2,
                 mac, port_id, exec_file,
                 nic1_driver, nic2_driver,
+                whitelist_option,
                 nic_pci_1, nic_pci_2,
                 cores, queues, running_time):
     """ Launch MoonGen """
@@ -318,13 +325,14 @@ def launch_test(session, generator1, generator2,
             return False
 
     def start_testpmd(session, exec_file, nic1_driver, nic2_driver,
-                      nic1_pci_1, nic2_pci_2, cores, queues, running_time):
+                      whitelist_option, nic1_pci_1, nic2_pci_2, cores,
+                      queues, running_time):
         """ Start testpmd on VM """
 
-        cmd = "`command -v python python3` "
-        cmd += " %s %s %s %s %s %s %s %s > /tmp/testpmd.log" % (
-            exec_file, nic1_driver, nic2_driver,
-            nic_pci_1, nic_pci_2, cores, queues, running_time)
+        cmd = "`command -v python python3 | head -1` "
+        cmd += " %s %s %s %s %s %s %s %s %s > /tmp/testpmd.log" % (
+                exec_file, nic1_driver, nic2_driver, whitelist_option,
+                nic_pci_1, nic_pci_2, cores, queues, running_time)
         session.cmd_output(cmd)
 
     moongen_thread = threading.Thread(
@@ -335,7 +343,7 @@ def launch_test(session, generator1, generator2,
                            text="Wait until devices is up to work"):
         logging.debug("MoonGen start to work")
         testpmd_thread = threading.Thread(target=start_testpmd, args=(
-            session, exec_file, nic1_driver, nic2_driver,
+            session, exec_file, nic1_driver, nic2_driver, whitelist_option,
             nic_pci_1, nic_pci_2, cores, queues, running_time))
         time.sleep(3)
         testpmd_thread.start()

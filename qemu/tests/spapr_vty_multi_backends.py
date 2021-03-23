@@ -27,7 +27,10 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.wait_for_login()
     for serial_id in params.objects("serials"):
-        if serial_id != "vs1":
+        if serial_id != "vs1" and serial_id != "vs9":
+            # where the 9th or larger number spapr-vty devices could not be used as serial
+            # since the maximum available console/serial devices is 8 inside the guest,
+            # i.e. from /dev/hvc0 to /dev/hvc7
             hvc_id = int(serial_id.replace('vs', '')) - 1
             kernel_params = "console=hvc%s,115200" % hvc_id
             utils_test.update_boot_option(vm, args_added=kernel_params)

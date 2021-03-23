@@ -283,8 +283,8 @@ def run(test, params, env):
                         util = float(re.findall(r".*?util=(\d+(?:[\.][\d]+))%",
                                                 o)[0])
 
-                    lat = float((laten[0][1]) / 1000 if laten[0][0] == "usec"
-                                else float(laten[0][1]))
+                    lat = float(laten[0][1]) / 1000 if laten[0][0] == "usec" \
+                        else float(laten[0][1])
                     if re.findall("rw", io_pattern):
                         bw = bw + float(
                             utils_numeric.normalize_data_size(results[1][1]))
@@ -292,9 +292,8 @@ def run(test, params, env):
                             utils_numeric.normalize_data_size(
                                 results[1][0], order_magnitude="B",
                                 factor=1000))
-                        lat1 = float(
-                            (laten[1][1]) / 1000 if laten[1][0] == "usec"
-                            else float(laten[1][1]))
+                        lat1 = float(laten[1][1]) / 1000 \
+                            if laten[1][0] == "usec" else float(laten[1][1])
                         lat = lat + lat1
 
                     ret = process.system_output("tail -n 1 %s" % cpu_file)

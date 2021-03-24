@@ -1334,7 +1334,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         test.error("Disk %s dependencies "
                                    "should be null." % diskname)
                 except IndexError:
-                    logging.info("Disk %s dependencies is null", diskname)
+                    logging.info("Disk '%s' dependencies is null", diskname)
             else:
                 if disk_info['dependencies'][0] != disk_info_guest['pkname']:
                     test.fail("Disk %s dependencies is different "
@@ -3819,6 +3819,35 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)
+
+    @error_context.context_aware
+    def gagent_check_get_disks(self, test, params, env):
+        """
+        Execute "guest-get-disks" command to guest agent
+        1) Check the disk name
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Check all disks info in a loop.",
+                              logging.info)
+        # Due Since the disk information obtained in windows does not include
+        # partition, the partition attribute is detected as always false.
+        disks_info_qga = self.gagent.get_disks()
+        for disk_info in disks_info_qga:
+            diskname = disk_info['name'].replace("\\", r"\\")
+            disk_info_guest = session.cmd_output(params["cmd_get_diskinfo"]
+                                                 % diskname).strip().split()
+
+            error_context.context("Check disk name", logging.info)
+            if diskname.upper() != disk_info_guest[0].replace("\\", r"\\"):
+                test.fail("Disk %s name is different "
+                          "between guest and qga." % diskname)
 
     @error_context.context_aware
     def gagent_check_fsfreeze_vss_test(self, test, params, env):

@@ -40,6 +40,7 @@ def run(test, params, env):
     if '-mmio:' in params.get('machine_type'):
         dev_vsock = qdevices.QDevice('vhost-vsock-device', vsock_params)
     elif params.get('machine_type').startswith("s390"):
+        vsock_params['devno'] = params.get('devno')
         dev_vsock = qdevices.QDevice("vhost-vsock-ccw", vsock_params)
     else:
         dev_vsock = qdevices.QDevice('vhost-vsock-pci', vsock_params)
@@ -48,27 +49,29 @@ def run(test, params, env):
                           'dmesg output.', logging.info)
     addr_pattern = params['addr_pattern']
     device_pattern = params['device_pattern']
-    lspci_cmd = 'lspci'
+    check_vsock_cmd = params.get('check_vsock_cmd', 'lspci')
     time.sleep(10)
-    lspci_output = session.cmd_output(lspci_cmd)
+    lspci_output = session.cmd_output(check_vsock_cmd)
     device_str = re.findall(r'%s\s%s' % (addr_pattern, device_pattern),
                             lspci_output)
-    if not device_str:
-        test.fail('lspci failed, no device "%s"' % device_pattern)
-    else:
-        address = re.findall(addr_pattern, device_str[0])[0]
-        chk_dmesg_cmd = 'dmesg'
-        output = re.findall(address, session.cmd_output(chk_dmesg_cmd))
-        if not output:
-            test.fail('dmesg failed, no info related to %s' % address)
+
+    if params.get('dmesg_check') == 'yes':
+        if not device_str:
+            test.fail('check_vsock_cmd failed, no device "%s"' % device_pattern)
         else:
-            error_msg = ''
-            for o in output:
-                if re.search(r'fail|error', o, re.I):
-                    error_msg += '%s' % o
-                    break
-            if error_msg:
-                test.fail("dmesg check failed: %s" % error_msg)
+            address = re.findall(addr_pattern, device_str[0])[0]
+            chk_dmesg_cmd = 'dmesg'
+            output = re.findall(address, session.cmd_output(chk_dmesg_cmd))
+            if not output:
+                test.fail('dmesg failed, no info related to %s' % address)
+            else:
+                error_msg = ''
+                for o in output:
+                    if re.search(r'fail|error', o, re.I):
+                        error_msg += '%s' % o
+                        break
+                if error_msg:
+                    test.fail("dmesg check failed: %s" % error_msg)
     # Transfer data from guest to host
     try:
         nc_vsock_bin = vsock_test.compile_nc_vsock(test, vm, session)

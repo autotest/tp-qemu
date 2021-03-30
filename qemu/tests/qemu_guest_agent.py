@@ -25,6 +25,7 @@ from virttest import data_dir
 from virttest import storage
 from virttest import qemu_migration
 
+from virttest.utils_windows import virtio_win
 from avocado import TestCancel
 
 
@@ -3745,6 +3746,113 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         self.gagent_src_type = params.get("gagent_src_type", "url")
 
     @error_context.context_aware
+    def _check_serial_driver(self, test, params, env):
+        '''
+        Check whether serial device is installed or not, if not install it.
+        Test steps:
+        1) Check whether serial driver is running.
+        2) Install serial driver.
+        3) Reboot vm
+        4) Verify serial has been installed.
+
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        '''
+
+        def _chk_cert(session, cert_path):
+            chk_cmd = "certutil -verify %s"
+            chk_cmd %= cert_path
+            # it may take a while to verify cert file so lets wait a little longer
+            out = session.cmd(chk_cmd, timeout=360)
+            if re.search("Expired certificate", out, re.I):
+                logging.warning("Certificate '%s' is expired!", cert_path)
+            if re.search("Incomplete certificate chain", out, re.I):
+                logging.warning("Incomplete certificate chain! Details:\n%s", out)
+
+        def _add_cert(session, cert_path, store):
+            add_cmd = "certutil -addstore -f %s %s"
+            add_cmd %= (store, cert_path)
+            session.cmd(add_cmd, timeout=120)
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        driver_name = params["driver_name_serial"]
+        device_hwid = params["device_hwid_serial"]
+        media_type = params["virtio_win_media_type"]
+        check_serial = params.get("cmd_check_serial")
+
+        error_context.context("Check whether serial drive is running.",
+                              logging.info)
+        if check_serial:
+            check_serial_result = session.cmd_output(check_serial).strip()
+            if "Running" not in check_serial_result:
+                error_context.context("Installing target driver", logging.info)
+                installed_any = False
+                # wait for cdroms having driver installed in case that
+                # they are new appeared in this test
+                utils_misc.wait_for(lambda: utils_misc.get_winutils_vol(session),
+                                    timeout=120, step=10)
+                devcon_path = utils_misc.set_winutils_letter(session,
+                                                             params["devcon_path"])
+                s, o = session.cmd_status_output("dir %s" % devcon_path,
+                                                 timeout=120)
+                if s:
+                    test.error("Not found devcon.exe, details: %s" % o)
+                vm_infos = {'drive_letter': '',
+                            'product_dirname': '', 'arch_dirname': ''}
+                for chk_point in vm_infos.keys():
+                    try:
+                        get_content_func = getattr(virtio_win,
+                                                   "%s_%s" % (chk_point,
+                                                              media_type))
+                    except AttributeError:
+                        test.error("Not supported virtio "
+                                   "win media type '%s'", media_type)
+                    vm_infos[chk_point] = get_content_func(session)
+                    if not vm_infos[chk_point]:
+                        test.error("Could not get %s of guest" % chk_point)
+                inf_middle_path = ("{name}\\{arch}" if media_type == "iso"
+                                   else "{arch}\\{name}"
+                                   ).format(name=vm_infos['product_dirname'],
+                                            arch=vm_infos['arch_dirname'])
+                inf_find_cmd = 'dir /b /s %s\\%s.inf | findstr "\\%s\\\\"'
+                inf_find_cmd %= (vm_infos['drive_letter'],
+                                 driver_name, inf_middle_path)
+                inf_path = session.cmd(inf_find_cmd,
+                                       timeout=120).strip()
+                logging.info("Found inf file '%s'", inf_path)
+
+                error_context.context("Installing certificates",
+                                      logging.info)
+                cert_files = params['cert_files']
+                cert_files = utils_misc.set_winutils_letter(session,
+                                                            cert_files)
+                cert_files = [cert.split("=",
+                                         1) for cert in cert_files.split()]
+                for store, cert in cert_files:
+                    _chk_cert(session, cert)
+                    _add_cert(session, cert, store)
+
+                for hwid in device_hwid.split():
+                    output = session.cmd_output("%s find %s" %
+                                                (devcon_path, hwid))
+                    if re.search("No matching devices found", output, re.I):
+                        continue
+                    inst_cmd = "%s updateni %s %s" % (devcon_path,
+                                                      inf_path, hwid)
+                    status, output = session.cmd_status_output(inst_cmd, 360)
+                    # acceptable status: OK(0), REBOOT(1)
+                    if status > 1:
+                        test.error("Failed to install driver '%s', "
+                                   "details:\n%s" % (driver_name, output))
+                    installed_any |= True
+                if not installed_any:
+                    test.error("Failed to find target devices "
+                               "by hwids: '%s'" % device_hwid)
+
+    @error_context.context_aware
     def get_qga_pkg_path(self, qemu_ga_pkg, test, session, params, vm):
         """
         Get the qemu-ga pkg path which will be installed.
@@ -3817,6 +3925,8 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 self.gagent_start(session, self.vm)
                 time.sleep(5)
 
+            if params["check_vioser"] == 'yes':
+                self._check_serial_driver(test, params, env)
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)
 

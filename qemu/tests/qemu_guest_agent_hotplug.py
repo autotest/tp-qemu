@@ -1,4 +1,5 @@
 import logging
+import time
 
 from virttest import error_context
 from virttest.qemu_devices import qdevices
@@ -49,6 +50,7 @@ def run(test, params, env):
     device.unplug(vm.monitor)
     device_status = device.verify_unplug("", vm.monitor)
     check_status_unplug(device_status, "virtserialport")
+    time.sleep(3)
     chardev.unplug(vm.monitor)
     chardev_status = chardev.verify_unplug("", vm.monitor)
     check_status_unplug(chardev_status, "socket")

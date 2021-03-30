@@ -47,13 +47,16 @@ def run(test, params, env):
     with change_check:
         vm.change_media(device_name, new_img_name)
 
-    error_context.context("Query cdrom device with throttle.", logging.info)
+    # After change medium throttle property is expected to be removed
+    error_context.context("Query cdrom device with new image.", logging.info)
+    p_dict = {"removable": True, "file": new_img_name}
     device_name = vm.get_block(p_dict)
 
     if device_name is None:
-        test.fail("Fail to get cdrom device with drv throttle after change")
+        test.fail("Fail to get cdrom device with new image after change")
 
     # eject media
-    error_context.context("Eject original device.", logging.info)
+    error_context.context("Eject device.", logging.info)
     with eject_check:
-        vm.eject_cdrom(device_name, force=True)
+        monitor.blockdev_open_tray(qdev, force=True)
+        monitor.blockdev_remove_medium(qdev)

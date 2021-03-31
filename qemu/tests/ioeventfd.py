@@ -75,7 +75,7 @@ def run(test, params, env):
             dev_id = 'image1'
         elif params['drive_format'] == 'scsi-hd':
             params['bus_extra_params_image1'] = ioeventfd
-            dev_id = 'virtio_scsi_pci0'
+            dev_id = params.get('dev_id', 'virtio_scsi_pci0')
         return dev_id
 
     def _dd_test(session):

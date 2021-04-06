@@ -1434,7 +1434,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                                shell=True, timeout=5)
             login_user = login_user.strip().decode(encoding="utf-8",
                                                    errors="strict")
-            if login_user != params["guest_user"]:
+            if params["guest_user"] not in login_user:
                 test.error("Can not login guest without interaction, "
                            "basic function test is fail.")
 

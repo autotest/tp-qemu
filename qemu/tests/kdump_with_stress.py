@@ -1,11 +1,9 @@
 import logging
-import os
-
-from avocado.utils import download
 
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
+from virttest import data_dir
 
 from generic.tests import kdump
 
@@ -28,25 +26,12 @@ def run(test, params, env):
         """
         Install stress app in guest.
         """
-        if session.cmd_status(params.get("app_check_cmd", "true")) == 0:
-            logging.info("Stress app already installed in guest.")
-            return
-
-        link = params.get("download_link")
-        md5sum = params.get("pkg_md5sum")
-        tmp_dir = params.get("tmp_dir", "/var/tmp")
-        install_cmd = params.get("install_cmd")
-
-        logging.info("Fetch package: '%s'", link)
-        pkg_name = os.path.basename(link)
-        pkg_path = os.path.join(test.tmpdir, pkg_name)
-        download.get_file(link, pkg_path, hash_expected=md5sum)
-        vm.copy_files_to(pkg_path, tmp_dir)
-
-        logging.info("Install app: '%s' in guest.", install_cmd)
-        s, o = session.cmd_status_output(install_cmd, timeout=300)
-        if s != 0:
-            test.error("Fail to install stress app(%s)" % o)
+        stress_path = data_dir.get_deps_dir("stress")
+        stress_guest_path = params["tmp_dir"]
+        logging.info("Copy stress package to guest.")
+        session.cmd_status_output("mkdir -p %s" % stress_guest_path)
+        vm.copy_files_to(stress_path, stress_guest_path)
+        session.cmd(params["install_cmd"])
 
         logging.info("Install app successed")
 

@@ -4,11 +4,13 @@ import logging
 import random
 
 from avocado.core import exceptions
+from avocado.utils import process
 
 from virttest import qemu_monitor
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
+from virttest.utils_numeric import normalize_data_size
 from virttest.utils_test.qemu import MemoryBaseTest
 
 
@@ -614,5 +616,22 @@ def run(test, params, env):
             return
     try:
         balloon_test.reset_memory()
+        if params.get("balloon_opt_free_page_reporting") == "yes" and \
+                params.get("os_type") == "linux":
+            get_res_cmd = params["get_res_cmd"] % balloon_test.vm.get_pid()
+            memhog_cmd = params["memhog_cmd"]
+            consumed_mem = float(normalize_data_size(params["consumed_mem"]))
+            res1 = float(normalize_data_size(process.getoutput(get_res_cmd)))
+            session = balloon_test.vm.wait_for_login()
+            session.cmd_output_safe(memhog_cmd)
+            res2 = float(normalize_data_size(process.getoutput(get_res_cmd)))
+            time.sleep(30)
+            res3 = float(normalize_data_size(process.getoutput(get_res_cmd)))
+            logging.info("The RES values are %sM, %sM, and %sM sequentially",
+                         res1, res2, res3)
+            if res2 - res1 < consumed_mem * 0.5:
+                test.error("QEMU should consume more memory")
+            if res3 - res1 > res1 * 0.1:
+                test.fail("QEMU should consume same memory as before memhog ")
     finally:
         balloon_test.close_sessions()

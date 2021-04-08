@@ -9,6 +9,8 @@ from avocado.utils import process
 
 from virttest import utils_misc, utils_test, utils_numeric
 from virttest import data_dir
+from virttest import utils_disk
+from virttest import error_context
 
 
 def format_result(result, base="12", fbase="2"):
@@ -114,6 +116,7 @@ def uninstall_fio():
     pass
 
 
+@error_context.context_aware
 def run(test, params, env):
     """
     Block performance test with fio
@@ -219,6 +222,18 @@ def run(test, params, env):
                                                    timeout=cmd_timeout)
                 if s:
                     test.fail("Failed to online disk: %s" % o)
+    for fs in params.objects("filesystems"):
+        fs_params = params.object_params(fs)
+        fs_target = fs_params.get("fs_target")
+        fs_dest = fs_params.get("fs_dest")
+        fs_source = fs_params.get("fs_source_dir")
+        error_context.context("Create a destination directory %s "
+                              "inside guest." % fs_dest, logging.info)
+        utils_misc.make_dirs(fs_dest, session)
+        error_context.context("Mount virtiofs target %s to %s inside"
+                              " guest." % (fs_target, fs_dest), logging.info)
+        if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
+            test.fail('Mount virtiofs target failed.')
     # format disk
     if format == "True":
         session.cmd(pre_cmd, cmd_timeout)
@@ -239,7 +254,7 @@ def run(test, params, env):
                     line += "%s|" % format_result(bs[:-1])
                     line += "%s|" % format_result(io_depth)
                     line += "%s|" % format_result(numjobs)
-                    if format == "True":
+                    if format == "True" or params.objects("filesystems"):
                         file_name = io_pattern + "_" + bs + "_" + io_depth
                         run_cmd = fio_cmd % (io_pattern, bs, io_depth,
                                              file_name, numjobs)
@@ -277,7 +292,7 @@ def run(test, params, env):
                     bw = float(utils_numeric.normalize_data_size(results[0][1]))
                     iops = float(utils_numeric.normalize_data_size(
                         results[0][0], order_magnitude="B", factor=1000))
-                    if os_type == "linux":
+                    if os_type == "linux" and not params.objects("filesystems"):
                         o = process.system_output("egrep 'util' %s" %
                                                   fio_result_file).decode()
                         util = float(re.findall(r".*?util=(\d+(?:[\.][\d]+))%",
@@ -307,8 +322,11 @@ def run(test, params, env):
                     if os_type == "windows":
                         line += "%s" % format_result(io_exits)
                     if os_type == "linux":
-                        line += "%s|" % format_result(io_exits)
-                        line += "%s" % format_result(util)
+                        if not params.objects("filesystems"):
+                            line += "%s|" % format_result(io_exits)
+                            line += "%s" % format_result(util)
+                        else:
+                            line += "%s" % format_result(io_exits)
                     result_file.write("%s\n" % line)
 
     # del temporary files in guest
@@ -316,4 +334,10 @@ def run(test, params, env):
                     guest_result_file, fio_path, cmd_timeout)
 
     result_file.close()
+    for fs in params.objects("filesystems"):
+        fs_params = params.object_params(fs)
+        fs_target = fs_params.get("fs_target")
+        fs_dest = fs_params.get("fs_dest")
+        utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
+        utils_misc.safe_rmdir(fs_dest, session=session)
     session.close()

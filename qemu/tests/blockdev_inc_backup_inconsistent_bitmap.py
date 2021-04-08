@@ -35,13 +35,17 @@ class BlockdevIncbkInconsistentBitmap(BlockdevLiveBackupBaseTest):
         out = self._data_image_obj.info()
         return out and self._bitmaps[0] in out
 
-    def check_bitmap_status(self, status):
+    def check_bitmap_field(self, **args):
         bitmap = get_bitmap_by_name(self.main_vm, self._source_nodes[0],
                                     self._bitmaps[0])
         if bitmap is None:
             self.test.fail('Failed to get bitmap %s' % self._bitmaps[0])
-        elif status != bitmap.get('status'):
-            self.test.fail('bitmap status changed')
+        else:
+            for key, value in args.items():
+                if value != bitmap[key]:
+                    self.test.fail('bitmap field %s is not correct: '
+                                   'expected %s, got %s' %
+                                   (key, value, bitmap[key]))
 
     def kill_qemu_and_start_vm(self):
         """Forcely killing qemu-kvm can make bitmap inconsistent"""
@@ -101,9 +105,9 @@ class BlockdevIncbkInconsistentBitmap(BlockdevLiveBackupBaseTest):
         self.add_persistent_bitmap()
         self.generate_inc_files(filename='inc')
         self.powerdown_and_start_vm()
-        self.check_bitmap_status(status='active')
+        self.check_bitmap_field(recording=True)
         self.kill_qemu_and_start_vm()
-        self.check_bitmap_status(status='inconsistent')
+        self.check_bitmap_field(recording=False, inconsistent=True)
         self.test_scenario()
 
 

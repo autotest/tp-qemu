@@ -102,7 +102,7 @@ class BlockdevIncbkWithMigration(blockdev_base.BlockdevBaseTest):
         for info in self.get_bitmaps_info():
             if info is None:
                 self.test.fail('Failed to get bitmaps after migration')
-            if info['status'] != 'disabled':
+            if info['recording'] is not False:
                 self.test.fail('Bitmap was not disabled after migration')
             if info['count'] != self.bitmap_counts[info['name']]:
                 self.test.fail('Count of bitmap was changed after migration')

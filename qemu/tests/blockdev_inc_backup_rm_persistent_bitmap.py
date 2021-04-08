@@ -50,7 +50,7 @@ class BlockdevIncbkRmPersistentBitmapTest(BlockdevLiveBackupBaseTest):
                 lambda b1, b2: (b1 and b2
                                 and b2['count'] > 0
                                 and b1['count'] == b2['count']
-                                and b2['status'] == 'disabled'),
+                                and (b2['recording'] is False)),
                 self._bitmaps_info, bitmaps_info))):
             self.test.fail("bitmaps' count or status changed")
 

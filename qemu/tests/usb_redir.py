@@ -118,7 +118,7 @@ def run(test, params, env):
                 chardev_params['host'] = usbredir_params['chardev_host']
                 chardev_params['port'] = free_port
                 chardev_params['server'] = usbredir_params.get('chardev_server')
-                chardev_params['nowait'] = usbredir_params.get('chardev_nowait')
+                chardev_params['wait'] = usbredir_params.get('chardev_wait')
             chardev = qdevices.CharDevice(chardev_params, chardev_id)
             usbredir_dev = qdevices.QDevice('usb-redir',
                                             aobject=usbredirdev_name)

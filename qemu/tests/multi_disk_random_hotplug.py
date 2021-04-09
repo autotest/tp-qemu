@@ -181,7 +181,7 @@ def run(test, params, env):
             elif fmt == 'spapr_vscsi':
                 args['fmt'] = 'scsi-hd'
                 args['scsi_hba'] = 'spapr-vscsi'
-            elif fmt == 'usb2':
+            elif fmt == 'usb2' or fmt == 'usb3':
                 usb_port_occupied += 1
                 if usb_port_occupied > int(usb_max_port):
                     continue

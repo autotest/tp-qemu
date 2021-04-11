@@ -15,6 +15,7 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest.remote import scp_to_remote
 from virttest.utils_windows import virtio_win
+from virttest.qemu_devices import qdevices
 
 from provider.storage_benchmark import generate_instance
 
@@ -269,3 +270,36 @@ def run(test, params, env):
                     nfs_local = nfs.Nfs(params)
                     nfs_local.cleanup()
                     utils_misc.safe_rmdir(params["export_dir"])
+
+    # during all virtio fs is mounted, reboot vm
+    if params.get('reboot_guest', 'no') == 'yes':
+        def get_vfsd_num():
+            """
+            Get virtiofsd daemon number during vm boot up.
+            :return: virtiofsd daemon count.
+            """
+            cmd_ps_virtiofsd = params.get('cmd_ps_virtiofsd')
+            vfsd_num = 0
+            for device in vm.devices:
+                if isinstance(device, qdevices.QVirtioFSDev):
+                    sock_path = device.get_param('sock_path')
+                    cmd_ps_virtiofsd = cmd_ps_virtiofsd % sock_path
+                    vfsd_ps = process.system_output(cmd_ps_virtiofsd, shell=True)
+                    vfsd_num += len(vfsd_ps.strip().splitlines())
+            return vfsd_num
+
+        error_context.context("Check virtiofs daemon before reboot vm.",
+                              logging.info)
+
+        vfsd_num_bf = get_vfsd_num()
+        error_context.context("Reboot guest and check virtiofs daemon.",
+                              logging.info)
+        vm.reboot()
+        if not vm.is_alive():
+            test.fail("After rebooting vm quit unexpectedly.")
+        vfsd_num_af = get_vfsd_num()
+
+        if vfsd_num_bf != vfsd_num_af:
+            test.fail("Virtiofs daemon is different before and after reboot.\n"
+                      "Before reboot: %s\n"
+                      "After reboot: %s\n", (vfsd_num_bf, vfsd_num_af))

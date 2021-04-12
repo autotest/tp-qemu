@@ -128,23 +128,27 @@ class BallooningTest(MemoryBaseTest):
         """
         check_mem_ratio = float(self.params.get("check_mem_ratio", 0.1))
         check_mem_diff = float(self.params.get("check_mem_diff", 150))
-        error_context.context("Get memory from guest", logging.info)
+        error_context.context("Get memory from guest aligned"
+                              " with %s." % keyname, logging.info)
         if keyname == "stat-free-memory":
             guest_mem = self.get_guest_free_mem(self.vm)
         elif keyname == "stat-total-memory":
             guest_mem = self.get_vm_mem(self.vm)
+        elif keyname == "stat-disk-caches":
+            guest_mem = self.get_guest_cache_mem(self.vm)
+
         memory_stat_qmp = "%sB" % memory_stat_qmp
         memory_stat_qmp = int(float(utils_misc.normalize_data_size(
             memory_stat_qmp, order_magnitude="M")))
         mem_diff = float(abs(guest_mem - memory_stat_qmp))
-        if ((mem_diff / guest_mem) > check_mem_ratio and
-                mem_diff > check_mem_diff):
-            self.test.fail("%s of guest %s is not equal to %s in qmp,the"
-                           "acceptable ratio/diff is %s/%s" % (keyname,
-                                                               guest_mem,
-                                                               memory_stat_qmp,
-                                                               check_mem_ratio,
-                                                               check_mem_diff))
+        if mem_diff > guest_mem * check_mem_ratio and mem_diff > check_mem_diff:
+            self.test.fail("%s of guest %s is not equal to %s"
+                           " in qmp,the acceptable ratio/diff"
+                           " is %s/%s" % (keyname,
+                                          guest_mem,
+                                          memory_stat_qmp,
+                                          check_mem_ratio,
+                                          check_mem_diff))
 
     def memory_stats_check(self, keyname, enabled):
         """

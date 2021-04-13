@@ -68,7 +68,7 @@ def run(test, params, env):
         stg_params["amend_%sstate" % encrypt] = "inactive"
         if erase_password == "password":
             stg_params.pop("amend_%skeyslot" % encrypt)
-            stg_params["amend_%sold-secret" % encrypt] = stg_params["amnd_secret_id"]
+            stg_params["amend_%sold-secret" % encrypt] = stg_params["amend_secret_id"]
 
     cmd_result = stg_img.amend(stg_params, ignore_status=True)
     if err_info:

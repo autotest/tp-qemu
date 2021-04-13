@@ -3,17 +3,19 @@ import sys
 import time
 import locale
 import pexpect
+import subprocess
 
 from six import string_types
 
 
 nic1_driver = sys.argv[1]
 nic2_driver = sys.argv[2]
-nic1 = sys.argv[3]
-nic2 = sys.argv[4]
-cores = int(sys.argv[5])
-queues = int(sys.argv[6])
-running_time = int(sys.argv[7])
+whitelist_option = sys.argv[3]
+nic1 = sys.argv[4]
+nic2 = sys.argv[5]
+cores = int(sys.argv[6])
+queues = int(sys.argv[7])
+running_time = int(sys.argv[8])
 
 ENCODING = locale.getpreferredencoding()
 
@@ -23,18 +25,21 @@ class TestPMD(object):
     def __init__(self):
 
         self.proc = None
-        testpmd_cmd = "/usr/bin/testpmd "
+        testpmd_cmd = subprocess.check_output(
+                "rpm -ql dpdk |grep testpmd", shell=True).decode()
         self.testpmd_exec = testpmd_cmd
 
-    def launch(self, nic1_driver, nic2_driver, nic1, nic2, cores, queues):
+    def launch(self, nic1_driver, nic2_driver,
+               whitelist_option, nic1, nic2, cores, queues):
 
         cmd = ("-l 1,2,3 -n 4 -d %s -d %s"
-               " -w %s -w %s "
+               " %s %s %s %s "
                " -- "
                " -i --nb-cores=%d "
                " --disable-rss --rxd=512 --txd=512 "
                " --rxq=%d --txq=%d" % (
-                   nic1_driver, nic2_driver, nic1, nic2, cores, queues, queues))
+                   nic1_driver, nic2_driver, whitelist_option,
+                   nic1, whitelist_option, nic2, cores, queues, queues))
         cmd_str = self.testpmd_exec + cmd
         logging.info("[cmd] %s", cmd_str)
         try:
@@ -94,12 +99,14 @@ class TestPMD(object):
         return to_text(self.proc.before)
 
 
-def start_testpmd(nic1_driver, nic2_driver, nic1, nic2, cores, queues):
+def start_testpmd(nic1_driver, nic2_driver, whitelist_option,
+                  nic1, nic2, cores, queues):
 
     my_testpmd = TestPMD()
     my_testpmd.launch(
         nic1_driver=nic1_driver,
         nic2_driver=nic2_driver,
+        whitelist_option=whitelist_option,
         nic1=nic1,
         nic2=nic2,
         cores=cores,
@@ -145,4 +152,5 @@ def to_text(data):
     return data
 
 
-start_testpmd(nic1_driver, nic2_driver, nic1, nic2, cores, queues)
+start_testpmd(nic1_driver, nic2_driver, whitelist_option,
+              nic1, nic2, cores, queues)

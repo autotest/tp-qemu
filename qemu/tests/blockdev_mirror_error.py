@@ -25,7 +25,7 @@ def run(test, params, env):
         1. boot VM with a 2G data disk
         2. format the data disk and mount it
         3. create a file
-        4. add a target disk(size = 1G) for mirror to VM via qmp commands
+        4. hotplug a target disk(actual size < 2G) for mirror
         5. do block-mirror with sync mode full
         6. check the mirror job is stopped
 

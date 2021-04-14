@@ -15,7 +15,7 @@ def run(test, params, env):
     2. Create temporary file in the guest
     3. Get md5 value of the temporary file
     4. Destroy the guest
-    5. Convert image to raw/qcow2/luks with parameter --target-is-zero -n
+    5. Convert image to raw/qcow2 with parameter --target-is-zero -n
     6. Boot the target image, check the md5 value of the temporary file
        Make sure the values are the same
     7. remove the target image

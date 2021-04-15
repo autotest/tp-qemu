@@ -111,7 +111,6 @@ def run(test, params, env):
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     driver = params["driver_name"]
-    extra_driver_verify = params.objects("extra_driver_verify")
     timeout = int(params.get("login_timeout", 360))
 
     vm = env.get_vm(params["main_vm"])
@@ -120,14 +119,9 @@ def run(test, params, env):
 
     if params["os_type"] == "windows":
         session = vm.wait_for_login(timeout=timeout)
-        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test, driver,
-                                                                timeout)
-        if extra_driver_verify:
-            for ext_driver in extra_driver_verify:
-                session = utils_test.qemu.setup_win_driver_verifier(session,
-                                                                    ext_driver, vm)
-
+        utils_test.qemu.windrv_verify_running(session, test,
+                                              driver.split()[0])
+        session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
         session.close()
     env["bg_status"] = 0
     run_bg_flag = params.get("run_bg_flag")

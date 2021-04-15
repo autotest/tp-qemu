@@ -107,18 +107,17 @@ def run(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    drivers = params.objects("driver_name")
+    driver = params["driver_name"]
 
     if params["os_type"] == "windows":
         session = vm.wait_for_login()
 
         error_context.context("Check vioinput driver is running", logging.info)
-        utils_test.qemu. windrv_verify_running(session, test, drivers[0])
+        utils_test.qemu.windrv_verify_running(session, test, driver.split()[0])
 
         error_context.context("Enable all vioinput related driver verified",
                               logging.info)
-        for driver in params.objects("driver_name"):
-            session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
+        session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
         session.close()
 
     error_context.context("Run keyboard testing", logging.info)

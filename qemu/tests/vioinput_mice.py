@@ -211,19 +211,17 @@ def run(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    driver_name = params["driver_name"]
-    extra_driver_verify = params.objects("extra_driver_verify")
+    driver = params["driver_name"]
 
     if params["os_type"] == "windows":
         session = vm.wait_for_login()
 
         error_context.context("Check vioinput driver is running", logging.info)
-        utils_test.qemu.windrv_verify_running(session, test, driver_name)
+        utils_test.qemu.windrv_verify_running(session, test, driver.split()[0])
 
         error_context.context("Enable all vioinput related driver verified",
                               logging.info)
-        for ext_driver in params.objects("extra_driver_verify"):
-            session = utils_test.qemu.setup_win_driver_verifier(session, ext_driver, vm)
+        session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
 
     mice_name = params.get("mice_name", "QEMU PS/2 Mouse")
     mice_info = query_mice_status(vm, mice_name)

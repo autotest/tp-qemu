@@ -2539,8 +2539,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         try:
             self.gagent.fsfreeze(check_status=False)
         except guest_agent.VAgentCmdError as e:
-            expected = ("The command guest-fsfreeze-freeze has been disabled "
-                        "for this instance")
+            expected = ("Command guest-fsfreeze-freeze has been disabled: "
+                        "the agent is in frozen state")
             if expected not in e.edata["desc"]:
                 test.fail(e)
         else:

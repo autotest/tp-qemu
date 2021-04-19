@@ -180,7 +180,7 @@ def block_dirty_bitmap_disable(vm, node, name):
     func(node, name)
     bitmap = get_bitmap_by_name(vm, node, name)
     msg = "block dirty bitmap '%s' is not disabled" % name
-    assert bitmap["status"] == "disabled", msg
+    assert (bitmap["recording"] is False), msg
 
 
 @fail_on
@@ -190,7 +190,7 @@ def block_dirty_bitmap_enable(vm, node, name):
     func(node, name)
     bitmap = get_bitmap_by_name(vm, node, name)
     msg = "block dirty bitmap '%s' is not enabled" % name
-    assert bitmap["status"] == "active", msg
+    assert (bitmap["recording"] is True), msg
 
 
 def get_bitmaps_in_device(vm, device):

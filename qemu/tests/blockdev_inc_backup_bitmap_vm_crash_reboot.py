@@ -17,7 +17,7 @@ class BlockdevIncbkBitmapExistAfterVMCrashReboot(BlockdevLiveBackupBaseTest):
         bitmaps = list(map(
             lambda n, b: get_bitmap_by_name(self.main_vm, n, b),
             self._source_nodes, self._bitmaps))
-        if not all(list(map(lambda b: b and b['status'] == 'active'
+        if not all(list(map(lambda b: b and (b['recording'] is True)
                             and b['count'] >= 0, bitmaps))):
             self.test.fail('bitmap should still exist after vm crash.')
 

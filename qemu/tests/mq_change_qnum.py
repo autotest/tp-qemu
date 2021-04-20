@@ -109,7 +109,7 @@ def run(test, params, env):
 
     enable_multi_queues(vm)
 
-    session_serial = vm.wait_for_serial_login(timeout=login_timeout)
+    session = vm.wait_for_login(timeout=login_timeout)
     s_session = None
     bg_ping = params.get("bg_ping")
     b_ping_lost_ratio = int(params.get("background_ping_package_lost_ratio", 5))
@@ -122,7 +122,7 @@ def run(test, params, env):
 
         ifnames = []
         for nic_index, nic in enumerate(vm.virtnet):
-            ifname = utils_net.get_linux_ifname(session_serial,
+            ifname = utils_net.get_linux_ifname(session,
                                                 vm.virtnet[nic_index].mac)
             ifnames.append(ifname)
 
@@ -167,19 +167,18 @@ def run(test, params, env):
                 error_context.context("Change queues number -- %sth"
                                       % repeat_num, logging.info)
                 try:
-                    queues_status = get_queues_status(session_serial, ifname)
+                    queues_status = get_queues_status(session, ifname)
                     for q_number in change_list:
-                        queues_status = change_queues_number(session_serial,
+                        queues_status = change_queues_number(session,
                                                              ifname,
                                                              int(q_number),
                                                              queues_status)
                 except aexpect.ShellProcessTerminatedError:
                     vm = env.get_vm(params["main_vm"])
                     session = vm.wait_for_serial_login(timeout=login_timeout)
-                    session_serial = session
-                    queues_status = get_queues_status(session_serial, ifname)
+                    queues_status = get_queues_status(session, ifname)
                     for q_number in change_list:
-                        queues_status = change_queues_number(session_serial,
+                        queues_status = change_queues_number(session,
                                                              ifname,
                                                              int(q_number),
                                                              queues_status)
@@ -212,8 +211,8 @@ def run(test, params, env):
     finally:
         if bg_stress_test:
             env[bg_stress_run_flag] = False
-        if session_serial:
-            session_serial.close()
+        if session:
+            session.close()
         if s_session:
             s_session.close()
         if bg_test:

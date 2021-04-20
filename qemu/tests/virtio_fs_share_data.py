@@ -97,20 +97,30 @@ def run(test, params, env):
     cmd_setenv = params.get('cmd_setenv')
     cmd_useradd = params.get('cmd_useradd')
     fs_dest_fs1 = params.get('fs_dest_fs1')
+    cmd_get_tmpfs = params.get('cmd_get_tmpfs')
+    cmd_set_tmpfs = params.get('cmd_set_tmpfs')
+    size_mem1 = params.get('size_mem1')
 
     # xfstest-nfs config
     setup_local_nfs = params.get('setup_local_nfs')
 
-    if setup_local_nfs:
-        for fs in params.objects("filesystems"):
-            nfs_params = params.object_params(fs)
-            params["export_dir"] = nfs_params.get("export_dir")
-            params["nfs_mount_src"] = nfs_params.get("nfs_mount_src")
-            params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
-            nfs_local = nfs.Nfs(params)
-            nfs_local.setup()
+    if cmd_xfstest:
+        # /dev/shm is the default memory-backend-file, the default value is the
+        # half of the host memory. Increase it to guest memory size to avoid crash
+        ori_tmpfs_size = process.run(cmd_get_tmpfs, shell=True).stdout_text.replace("\n", "")
+        logging.debug("original tmpfs size is %s", ori_tmpfs_size)
+        params["post_command"] = cmd_set_tmpfs % ori_tmpfs_size
+        params["pre_command"] = cmd_set_tmpfs % size_mem1
+        if setup_local_nfs:
+            for fs in params.objects("filesystems"):
+                nfs_params = params.object_params(fs)
+                params["export_dir"] = nfs_params.get("export_dir")
+                params["nfs_mount_src"] = nfs_params.get("nfs_mount_src")
+                params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
+                nfs_local = nfs.Nfs(params)
+                nfs_local.setup()
         params["start_vm"] = "yes"
-        env_process.preprocess_vm(test, params, env, params["main_vm"])
+        env_process.preprocess(test, params, env)
 
     os_type = params.get("os_type")
     vm = env.get_vm(params.get("main_vm"))

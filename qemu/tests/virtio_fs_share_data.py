@@ -95,6 +95,7 @@ def run(test, params, env):
     cmd_yum_install = params.get('cmd_yum_install')
     cmd_make_xfs = params.get('cmd_make_xfs')
     cmd_setenv = params.get('cmd_setenv')
+    cmd_setenv_nfs = params.get('cmd_setenv_nfs', '')
     cmd_useradd = params.get('cmd_useradd')
     fs_dest_fs1 = params.get('fs_dest_fs1')
     cmd_get_tmpfs = params.get('cmd_get_tmpfs')
@@ -252,6 +253,7 @@ def run(test, params, env):
                 session.cmd(cmd_yum_install, 180)
                 session.cmd(cmd_make_xfs, 360)
                 session.cmd(cmd_setenv, 180)
+                session.cmd(cmd_setenv_nfs, 180)
                 session.cmd(cmd_useradd, 180)
 
                 try:

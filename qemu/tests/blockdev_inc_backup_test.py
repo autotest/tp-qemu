@@ -70,16 +70,21 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
         if self.params.get("completion_mode") == 'grouped':
             extra_options['completion_mode'] = 'grouped'
         if self.params.get('negative_test') == 'yes':
+            extra_options['wait_job_complete'] = False
+            # Unwrap blockdev_batch_backup to catch the exception
+            backup_func = backup_utils.blockdev_batch_backup.__wrapped__
             try:
-                backup_utils.blockdev_batch_backup(
+                backup_func(
                     self.main_vm,
                     self.source_images,
                     self.inc_backups,
                     self.bitmaps,
                     **extra_options)
-            except qemu_monitor.QMPCmdError:
-                return
-            self.test.fail('expect incremental backup job(s) failed')
+            except qemu_monitor.QMPCmdError as e:
+                if self.params['error_msg'] not in str(e):
+                    self.test.fail('Unexpect error: %s' % str(e))
+            else:
+                self.test.fail('expect incremental backup job(s) failed')
         else:
             backup_utils.blockdev_batch_backup(
                 self.main_vm,

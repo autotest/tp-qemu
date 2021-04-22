@@ -6,6 +6,7 @@ from avocado.utils import process
 from virttest import utils_misc
 from virttest import env_process
 from virttest import error_context
+from virttest import utils_package
 
 from provider.chardev_utils import setup_certs
 
@@ -33,6 +34,9 @@ def run(test, params, env):
     """
     clean_cmd = params["clean_cmd"]
     try:
+        pkgs = params.objects("depends_pkgs")
+        if not utils_package.package_install(pkgs):
+            test.error("Install dependency packages failed")
         setup_certs(params)
         expected_msg = params["expected_msg"]
         hostname = process.run('hostname', ignore_status=False, shell=True,

@@ -53,7 +53,10 @@ def run(test, params, env):
                                                                    tag)
                 time.sleep(20)
                 if mem_check == "yes":
-                    balloon_test.memory_stats_check('stat-free-memory', mem_stat_working)
+                    check_list = params["mem_stat_check_list"].split()
+                    for mem_check_name in check_list:
+                        balloon_test.memory_stats_check(mem_check_name,
+                                                        mem_stat_working)
                 if quit_after_test:
                     return
 

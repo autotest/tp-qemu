@@ -4,6 +4,7 @@ import re
 
 from virttest import error_context
 from virttest import utils_test
+from virttest import utils_misc
 
 from provider.block_devices_plug import BlockDevicesPlug
 
@@ -65,11 +66,12 @@ def run(test, params, env):
         cmd_map = {'linux': 'mount /dev/sr{0} /mnt && ls /mnt && umount /mnt',
                    'windows': 'dir {0}:\\'}
         if is_windows:
-            output = session.cmd(
-                "wmic logicaldisk where (Description='CD-ROM Disc') get DeviceID")
-            letters = re.findall(r'(\w):', output, re.M)
+            get_letter_cmd = "wmic logicaldisk where (Description='CD-ROM Disc') get DeviceID"
+            letters = utils_misc.wait_for(lambda: re.findall(r'(\w):',
+                                                             session.cmd(get_letter_cmd),
+                                                             re.M), 3)
             if not letters:
-                test.error('No available CD-ROM devices: %s' % output)
+                test.error('No available CD-ROM devices')
         for index in range(len(cdroms)):
             if iso_name in session.cmd(cmd_map[os_type].format(
                     letters[index] if is_windows else index)).lower():

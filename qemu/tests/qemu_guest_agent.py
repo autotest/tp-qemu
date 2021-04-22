@@ -4168,6 +4168,64 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             msg += "the blocks after fstrim is %s." % blocks_after_fstrim
             test.fail(msg)
 
+    @error_context.context_aware
+    def gagent_check_resource_leak(self, test, params, env):
+        """
+        Check whether commands 'guest-get-osinfo/devices' cause
+        resource leak.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+
+        def execute_qga_cmds_loop():
+            for i in range(repeats):
+                logging.info("execute 'get-osinfo/devices'"
+                             " %s times", (i + 1))
+                self.gagent.get_osinfo()
+                self.gagent.get_virtio_device()
+
+        def _get_handle(pid):
+            """
+            Check the handles of qga via handle.exe
+
+            :params pid: process ID of qga.service
+            :return qga_handles: the handles of qga.service
+            """
+            cmd_get_handle = params["cmd_get_qga_handle"] % pid
+            qga_handles = int(session.cmd_output(cmd_get_handle
+                                                 ).strip().split(":")[1])
+            return qga_handles
+
+        def _base_on_bg_check_handles():
+            if bg.is_alive():
+                end_handles = _get_handle(pid_qga)
+                if end_handles > 300:
+                    test.fail("Handles is %s more than 300, qga-commands"
+                              " caused resource leak." % end_handles)
+                return False
+            else:
+                return True
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Check whether resource leak can be"
+                              " caused via execute commands "
+                              "'get-osinfo/devices' in a loop.",
+                              logging.info)
+        self.vm.send_key('meta_l-d')
+        time.sleep(30)
+        session.cmd(params["cmd_start_handle_tool"])
+        time.sleep(5)
+        repeats = int(params.get("repeat_times", 1))
+        pid_qga = int(session.cmd_output(params["cmd_get_qga_pid"]
+                                         ).strip().split()[1])
+        bg = utils_misc.InterruptedThread(execute_qga_cmds_loop)
+        bg.start()
+        utils_misc.wait_for(lambda: _base_on_bg_check_handles(), 180)
+
 
 def run(test, params, env):
     """

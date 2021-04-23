@@ -92,7 +92,7 @@ def run(test, params, env):
     error_context.context("hotplug existed virtserialport and chardev",
                           logging.info)
     try:
-        serial_devices[0].hotplug(vm.monitor)
+        serial_devices[0].hotplug(vm.monitor, vm.devices.qemu_version)
     except QMPCmdError as e:
         if "Duplicate ID '%s' for device" % serial_devices[0] not in str(
                 e.data):
@@ -105,7 +105,7 @@ def run(test, params, env):
         test.fail(msg)
 
     try:
-        char_devices[0].hotplug(vm.monitor)
+        char_devices[0].hotplug(vm.monitor, vm.devices.qemu_version)
     except QMPCmdError as e:
         if "attempt to add duplicate property '%s'" % char_devices[0] \
                 not in str(e.data):

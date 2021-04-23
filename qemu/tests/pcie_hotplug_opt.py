@@ -27,7 +27,7 @@ def run(test, params, env):
         """
         virtio_blk_pci_dev = image_devs[-1]
         virtio_blk_pci_dev.set_param("bus", free_root_port_id)
-        virtio_blk_pci_dev.hotplug(vm.monitor)
+        virtio_blk_pci_dev.hotplug(vm.monitor, vm.devices.qemu_version)
 
     def hotplug_scsi():
         """

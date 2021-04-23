@@ -31,7 +31,7 @@ def run(test, params, env):
         drive.unplug(vm.monitor)
         time.sleep(5)
         error_context.context("Hotplug the drive", logging.info)
-        drive.hotplug(vm.monitor)
+        drive.hotplug(vm.monitor, vm.devices.qemu_version)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

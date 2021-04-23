@@ -51,7 +51,7 @@ def run(test, params, env):
     new_params = new_params.copy_from_keys(attrs)
     dev = Memory(new_params["backend"], new_params)
     dev.set_param("id", "%s-%s" % ("mem", mem))
-    args = [vm.monitor]
+    args = [vm.monitor, vm.devices.qemu_version]
     bg = utils_test.BackgroundTest(dev.hotplug, args)
     logging.info("Hotplug memory backend '%s' to guest", dev["id"])
     bg.start()

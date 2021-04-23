@@ -2271,7 +2271,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     @error_context.context_aware
     def _action_before_fsfreeze(self, *args):
         session = self._get_session(self.params, None)
-        session.cmd("restorecon -Rv /", timeout=180)
+        if self.params.get("os_type") == "linux":
+            session.cmd("restorecon -Rv /", timeout=180)
         self._open_session_list.append(session)
 
     @error_context.context_aware
@@ -3229,7 +3230,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 test.error("Didn't find any disk_index except system disk.")
 
         error_context.context("Freeze fs.", logging.info)
-        session.cmd("restorecon -Rv /", timeout=180)
+        if params.get("os_type") == "linux":
+            session.cmd("restorecon -Rv /", timeout=180)
         self.gagent.fsfreeze()
 
         error_context.context("Umount fs or offline disk in guest.",

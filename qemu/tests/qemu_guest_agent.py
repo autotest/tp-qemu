@@ -2359,7 +2359,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                     mountpoints = check_mountpoints
                 write_cmd_list = []
                 for mpoint in mountpoints:
-                    mpoint = "/tmp" if mpoint == "/" else mpoint
+                    mpoint = "/home" if mpoint == "/" else mpoint
                     write_cmd_m = write_cmd % mpoint
                     write_cmd_list.append(write_cmd_m)
                 write_cmd_guest = ";".join(write_cmd_list)
@@ -2402,7 +2402,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environmen.
         """
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
         self._fsfreeze()
+        # clean env at the end of testing
+        session.cmd(self.params["delete_temp_file"])
 
     @error_context.context_aware
     def gagent_check_fsfreeze_list(self, test, params, env):

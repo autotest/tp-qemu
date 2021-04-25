@@ -197,7 +197,7 @@ def run(test, params, env):
             str(check_items), logging.info)
         blocks = vm.monitor.info_block()
         for key, val in check_items.items():
-            if (key == 'device' and val == dev_id) or blocks[dev_id][key] == val:
+            if blocks[device_name][key] == val:
                 continue
             test.fail(
                 'No such \"%s: %s\" in the output of query-block.' % (key, val))
@@ -216,7 +216,6 @@ def run(test, params, env):
 
     def change_cdrom():
         """ Change cdrom. """
-        new_img_name = params["cdrom_new_file"]
         error_context.context("Insert new image to device.", logging.info)
         with change_check:
             vm.change_media(device_name, new_img_name)
@@ -328,23 +327,23 @@ def run(test, params, env):
     if with_cdrom:
         cdrom_params = params.object_params(params['cdroms'])
         check_orig_items = ast.literal_eval(cdrom_params['check_orig_items'])
-        dev_id = check_orig_items['device']
-        check_cdrom_info_by_qmp(check_orig_items)
-        orig_size = compare_cdrom_size(params['cdrom_orig_file'])
-
         orig_img_name = params["cdrom_orig_file"]
+        new_img_name = params["cdrom_new_file"]
         device_name = vm.get_block({"file": orig_img_name})
         if device_name is None:
             test.fail("Failed to get device using image %s." % orig_img_name)
+        check_cdrom_info_by_qmp(check_orig_items)
+        orig_size = compare_cdrom_size(orig_img_name)
 
         eject_check = QMPEventCheckCDEject(vm, device_name)
         change_check = QMPEventCheckCDChange(vm, device_name)
         eject_cdrom()
         change_cdrom()
 
+        device_name = vm.get_block({"file": new_img_name})
         check_new_items = ast.literal_eval(cdrom_params['check_new_items'])
         check_cdrom_info_by_qmp(check_new_items)
-        new_size = compare_cdrom_size(params['cdrom_new_file'])
+        new_size = compare_cdrom_size(new_img_name)
         if new_size == orig_size:
             test.fail('The new size inside guest is equal to the orig iso size.')
 

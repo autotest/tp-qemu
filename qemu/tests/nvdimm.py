@@ -163,6 +163,7 @@ def run(test, params, env):
             pkgs = params["depends_pkgs"].split()
             if not utils_package.package_install(pkgs, nvdimm_test.session):
                 test.cancel("Install dependency packages failed")
+            nvdimm_test.run_guest_cmd(params["add_proxy"] % params["proxy"])
             nvdimm_test.run_guest_cmd(params["get_nvml"])
             nvdimm_test.run_guest_cmd(params["compile_nvml"])
             nvdimm_test.run_guest_cmd(params["config_nvml"])

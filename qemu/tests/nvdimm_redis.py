@@ -24,6 +24,7 @@ def run(test, params, env):
     try:
         error_context.context("Get redis in guest", logging.info)
         cmds = []
+        cmds.append(params["add_proxy"] % params["proxy"])
         cmds.append(params["get_redis"])
         cmds.append(params["get_nvml"])
         cmds.append(params["compile_nvml"])

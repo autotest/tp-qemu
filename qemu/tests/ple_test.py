@@ -58,6 +58,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
+    session.cmd(params["add_proxy"] % params["proxy"])
     session.cmd(params["get_unixbench"])
     try:
         cmd = params["run_unixbench"]

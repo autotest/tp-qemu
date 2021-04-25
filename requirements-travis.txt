@@ -1,6 +1,6 @@
 virtualenv==1.9.1
 pylint==1.9.5; python_version < '3.0'
-pylint==2.7.2; python_version >= '3.0'
+pylint==2.8.0; python_version >= '3.0'
 inspektor==0.5.2
 autotest==0.16.2; python_version < '3.0'
 autopep8==1.5.4

@@ -3697,10 +3697,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         _result_check(kernel_release_qga, kernel_release_guest)
 
         error_context.context("Check variant and machine type.", logging.info)
-        if self.params.get("os_variant", "") != 'rhel8':
-            # for rhel8+ there is no variant info
-            # server or client
-            variant_qga = os_info_qga["variant"]
+        variant_qga = os_info_qga.get("variant", "")
+        if variant_qga:
             variant_id_qga = os_info_qga["variant-id"]
             variant_guest = "server" \
                 if "server" in os_name_full_guest.lower() else "client"

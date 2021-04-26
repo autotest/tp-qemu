@@ -3402,13 +3402,15 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         devs_list = self.gagent.get_virtio_device()
         check_driver_cmd_org = params["check_driver_powershell_cmd"]
+        main_qga_ver = int(self.gagent.guest_info()["version"].split('.')[0])
         for device in devs_list:
             driver_name = device["driver-name"]
             error_context.context("Check %s info." % driver_name, logging.info)
 
             driver_date = device["driver-date"]
             driver_version = device["driver-version"]
-            device_address = device["address"]["data"]
+            device_address = (device["id"] if 5 <= main_qga_ver < 10 else
+                              device["address"]["data"])
             device_id = device_address["device-id"]
             vendor_id = device_address["vendor-id"]
 
@@ -3423,7 +3425,15 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             date_group = re.search(r"driverdate.*\:\s(\d{4})(\d{2})(\d{2})",
                                    driver_info_guest, re.I).groups()
             driver_date_guest = "-".join(date_group)
-            _result_check(driver_date, driver_date_guest)
+            if 5 <= main_qga_ver < 10:
+                driver_date_guest_timearray = time.strptime(driver_date_guest,
+                                                            "%Y-%m-%d")
+                driver_date_guest = time.mktime(driver_date_guest_timearray)
+                if abs(driver_date_guest - int(driver_date/1000000000)) > 86400:
+                    test.fail("The difference of driver_date between guest and qga "
+                              "shoudn't differ by more than 86400 seconds")
+            else:
+                _result_check(driver_date, driver_date_guest)
 
             # check driver version
             driver_ver_guest = re.search(r"driverversion.*\:\s(\S+)",

@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 
 from virttest import error_context
 from virttest import utils_disk
@@ -30,6 +29,7 @@ def run(test, params, env):
         """
         Get viofs.exe from virtio win iso,such as E:\viofs\2k19\amd64
         """
+        logging.info("Get virtiofs exe full path.")
         media_type = params["virtio_win_media_type"]
         try:
             get_drive_letter = getattr(virtio_win, "drive_letter_%s" %
@@ -105,19 +105,26 @@ def run(test, params, env):
 
             error_context.context("%s: Start virtiofs service in guest." % vm,
                                   logging.info)
-            exe_path = get_viofs_exe(session)
-            start_vfs_cmd = params["start_vfs_cmd"] % exe_path
-            session.sendline(start_vfs_cmd)
+            viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
+            viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
+            viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
 
-            error_context.context("%s: Check if virtiofs service is started."
-                                  % vm, logging.info)
-            check_virtiofs_cmd = params["check_virtiofs_cmd"]
-
-            if not utils_misc.wait_for(lambda: re.search("virtiofs",
-                                                         session.cmd_output(
-                                                             check_virtiofs_cmd),
-                                                         re.IGNORECASE), 30):
-                test.fail("%s: Virtiofs service is failed to start." % vm)
+            logging.info("Query virtiofs service status.")
+            status, output = session.cmd_status_output(viofs_sc_query_cmd)
+            if "not exist as an installed service" in output:
+                logging.info("Register virtiofs service in windows guest.")
+                exe_path = get_viofs_exe(session)
+                viofs_sc_create_cmd = viofs_sc_create_cmd % exe_path
+                sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
+                if sc_create_s != 0:
+                    test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
+            elif "RUNNING" not in output:
+                logging.info("Start virtiofs service.")
+                sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
+                if sc_start_s != 0:
+                    test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
+            else:
+                logging.info("Virtiofs service is running.")
 
         # get fs dest for vm
         for fs in vm_params.objects('filesystems'):

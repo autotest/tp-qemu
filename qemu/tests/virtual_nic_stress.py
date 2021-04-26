@@ -1,5 +1,4 @@
 import logging
-import aexpect
 
 from virttest import error_context
 from virttest import utils_net
@@ -13,7 +12,7 @@ def run(test, params, env):
     Do network stress test when under memory stress
     1) Boot a guest with vhost=on
     2) swapoff in guest
-    3) flood ping from guest to host
+    3) flood ping from host to guest
     4) do stress test
 
     :param test: QEMU test object
@@ -21,24 +20,14 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def flood_ping(session, host_ip, os_type="linux"):
+    def flood_ping():
         """
-        Do flood ping from guest to host
+        Do flood ping from host to guest
 
-        :param session: session to send flood ping
-        :param host_ip: the IP of the host
         """
         flood_minutes = int(params["flood_minutes"])
         logging.info("Flood ping for %s minutes", flood_minutes)
-        try:
-            utils_net.ping(host_ip, flood=True,
-                           session=session, timeout=flood_minutes * 60)
-        except aexpect.ExpectProcessTerminatedError:
-            if os_type == "windows":
-                session.close()
-                session = vm.wait_for_login(timeout=timeout)
-                pass
-        return session
+        utils_net.ping(guest_ip, flood=True, timeout=flood_minutes * 60)
 
     def load_stress():
         """
@@ -66,8 +55,8 @@ def run(test, params, env):
 
     timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
-    host_ip = utils_net.get_host_ip_address(params)
     session = vm.wait_for_login(timeout=timeout)
+    guest_ip = vm.get_address()
 
     os_type = params["os_type"]
     if os_type == "linux":
@@ -77,11 +66,12 @@ def run(test, params, env):
     if os_type == "linux":
         test_mem = params.get("memory", 256)
         stress_args = "--cpu 4 --io 4 --vm 2 --vm-bytes %sM" % int(test_mem)
-        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
+        stress_test = utils_test.VMStress(vm, "stress", params,
+                                          stress_args=stress_args)
         stress_test.load_stress_tool()
     else:
         load_stress()
-    session = flood_ping(session, host_ip, os_type)
+    flood_ping()
     if os_type == "linux":
         stress_test.unload_stress()
         stress_test.clean()
@@ -93,7 +83,7 @@ def run(test, params, env):
                           logging.info)
     count = params["count"]
     timeout = float(count) * 2
-    status, output = utils_net.ping(host_ip, count, session=session,
+    status, output = utils_net.ping(guest_ip, count,
                                     timeout=timeout)
     if status != 0:
         test.fail("Ping failed, status: %s,"

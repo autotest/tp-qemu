@@ -157,6 +157,26 @@ def run(test, params, env):
             if session.cmd_status(cmd_bind) != 0:
                 test.error("Fail to bind nic %s on monngen host" % i)
 
+    def unbind_dpdk_nic(session, ip, user, port, password, dpdk_bind_cmd):
+        """
+        Clean the evn on Moongen host
+
+        :param:session: remote host session
+        :param:ip: remote host ip
+        :param:user: remote host user
+        :param:port: remote host port
+        :param:password: remote host password
+        :param:dpdk_bind_cmd: dpdk bind command
+        """
+
+        cmd = "pkill MoonGen ; rm -rf /tmp/throughput.log ; sleep 3"
+        generator1.cmd_output(cmd)
+        moongen_dpdk_nic_list = params.get("moongen_dpdk_nic")
+        cmd_unbind = "%s -b ixgbe %s" % (dpdk_bind_cmd, moongen_dpdk_nic_list)
+        if session.cmd_status(cmd_unbind) != 0:
+            test.error("Fail to unbind nic %s on monngen host"
+                       % moongen_dpdk_nic_list)
+
     def result(recode, dst):
 
         if os.path.getsize(dst) > 0:
@@ -290,6 +310,9 @@ def run(test, params, env):
         line += "%s" % format_result(pkt_cate_r)
         result_file.write(("%s\n" % line))
 
+    unbind_dpdk_nic(generator1, generator_ip, username,
+                    shell_port, password, dpdk_bind_cmd)
+
     generator1.close()
     generator2.close()
     session.close()
@@ -307,8 +330,7 @@ def launch_test(session, generator1, generator2,
     def start_moongen(generator1, mac, port_id, running_time):
 
         file = '/home/MoonGen/examples/udp-throughput.lua'
-        cmd = "pkill MoonGen ; rm -rf /tmp/throughput.log ; sleep 3"
-        cmd += r" && \cp %s %s.tmp" % (file, file)
+        cmd = "cp %s %s.tmp" % (file, file)
         tmp_file = "%s.tmp" % file
         cmd += " && sed -i 's/10:11:12:13:14:15/%s/g' %s" % (mac, tmp_file)
         cmd += " && cd /home/MoonGen "\

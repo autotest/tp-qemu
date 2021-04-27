@@ -3,9 +3,10 @@ import time
 
 from avocado.utils import process
 from virttest import utils_misc
-from virttest import utils_test
 from virttest import env_process
 from virttest import error_context
+
+from provider import netperf_test
 
 
 @error_context.context_aware
@@ -65,25 +66,18 @@ def run(test, params, env):
             logging.warning("Could not stop firewall in guest")
 
         try:
-            bg_stress_test = params.get("background_stress_test",
-                                        'netperf_stress')
-            error_context.context(("Run subtest %s between host and guest." %
-                                   bg_stress_test), logging.info)
+            error_context.context(("Run subtest netperf_stress between"
+                                   " host and guest.", logging.info))
             stress_thread = None
             wait_time = int(params.get("wait_bg_time", 60))
             bg_stress_run_flag = params.get("bg_stress_run_flag")
             vm_wait_time = int(params.get("wait_before_kill_vm"))
             env[bg_stress_run_flag] = False
             stress_thread = utils_misc.InterruptedThread(
-                utils_test.run_virt_sub_test, (test, params, env),
-                {"sub_type": bg_stress_test})
+                netperf_test.netperf_stress, (test, params, vm))
             stress_thread.start()
-            if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
-                                       wait_time, 0, 1,
-                                       "Wait %s test start" % bg_stress_test):
-                err = "Fail to start netperf test between guest and host"
-                test.error(err)
-
+            utils_misc.wait_for(lambda: wait_time, 0, 1,
+                                "Wait netperf_stress test start")
             logging.info("Sleep %ss before killing the VM", vm_wait_time)
             time.sleep(vm_wait_time)
             msg = "During netperf running, Check that we can kill VM with signal 0"
@@ -96,7 +90,7 @@ def run(test, params, env):
                 pass
 
     def netdriver_kill_problem(test, session_serial):
-        times = int(params.get("repeat_times", 10))
+        times = params.get_numeric("repeat_times", 10)
         modules = get_ethernet_driver(session_serial)
         logging.debug("Guest network driver(s): %s", modules)
         msg = "Repeatedly load/unload network driver(s) for %s times." % times
@@ -117,16 +111,16 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    login_timeout = int(params.get("login_timeout", 360))
+    login_timeout = params.get_numeric("login_timeout", 360)
     session = vm.wait_for_login(timeout=login_timeout)
     session.close()
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
-
     mode = params.get("mode")
     if mode == "driver":
         netdriver_kill_problem(test, session_serial)
     elif mode == "load":
         netload_kill_problem(test, session_serial)
+    session_serial.close()
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

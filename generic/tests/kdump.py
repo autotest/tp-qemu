@@ -16,6 +16,9 @@ def preprocess_kdump(test, vm, timeout):
     :param timeout: Timeout in seconds
     """
     kdump_cfg_path = vm.params.get("kdump_cfg_path", "/etc/kdump.conf")
+    auth_key_path = vm.params["auth_key_path"]
+    backup_key_cmd = ("/bin/cp -f %s %s-bk" %
+                      (auth_key_path, auth_key_path))
     cp_kdumpcf_cmd = "/bin/cp -f %s %s-bk" % (kdump_cfg_path, kdump_cfg_path)
     cp_kdumpcf_cmd = vm.params.get("cp_kdumpcf_cmd", cp_kdumpcf_cmd)
 
@@ -23,6 +26,8 @@ def preprocess_kdump(test, vm, timeout):
 
     logging.info("Backup kdump.conf file.")
     status, output = session.cmd_status_output(cp_kdumpcf_cmd)
+    logging.info("Backup authorized_keys file.")
+    process.run(backup_key_cmd, shell=True)
     if status != 0:
         logging.error(output)
         test.error("Fail to backup the kdump.conf")
@@ -38,6 +43,9 @@ def postprocess_kdump(test, vm, timeout):
     :param timeout: Timeout in seconds
     """
     kdump_cfg_path = vm.params.get("kdump_cfg_path", "/etc/kdump.conf")
+    auth_key_path = vm.params["auth_key_path"]
+    restore_key_cmd = ("/bin/cp -f %s-bk %s" %
+                       (auth_key_path, auth_key_path))
     restore_kdumpcf_cmd = ("/bin/cp -f %s-bk %s" %
                            (kdump_cfg_path, kdump_cfg_path))
     restore_kdumpcf_cmd = vm.params.get("restore_kdumpcf_cmd",
@@ -47,6 +55,8 @@ def postprocess_kdump(test, vm, timeout):
 
     logging.info("Restore kdump.conf")
     status, output = session.cmd_status_output(restore_kdumpcf_cmd)
+    logging.info("Restore authorized_keys file.")
+    process.run(restore_key_cmd, shell=True)
     if status != 0:
         logging.error(output)
         test.error("Fail to restore the kdump.conf")
@@ -70,7 +80,8 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
     kdump_config = vm.params.get("kdump_config")
     vmcore_path = vm.params.get("vmcore_path", "/var/crash")
     kdump_method = vm.params.get("kdump_method", "basic")
-    kdump_propagate_cmd = vm.params.get("kdump_propagate_cmd")
+    kdump_propagate_cmd = vm.params.get("kdump_propagate_cmd",
+                                        'kdumpctl propagate')
     kdump_enable_timeout = int(vm.params.get("kdump_enable_timeout", 360))
 
     error_context.context("Try to log into guest '%s'." % vm_name,
@@ -97,6 +108,8 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
                               logging.info)
 
         session.cmd("cat /dev/null > %s" % kdump_cfg_path)
+        session.cmd("echo 'core_collector makedumpfile -F -c -d 31' > %s"
+                    % kdump_cfg_path)
         for config_line in kdump_config.split(";"):
             config_cmd = "echo -e '%s' >> %s "
             config_con = config_line.strip()
@@ -147,15 +160,22 @@ def crash_test(test, vm, vcpu, crash_cmd, timeout):
     vmcore_rm_cmd = vm.params.get("vmcore_rm_cmd", "rm -rf %s/*")
     vmcore_rm_cmd = vmcore_rm_cmd % vmcore_path
     kdump_restart_cmd = vm.params.get("kdump_restart_cmd",
-                                      "service kdump restart")
+                                      "systemctl restart kdump.service")
     kdump_status_cmd = vm.params.get("kdump_status_cmd",
                                      "systemctl status kdump.service")
+    kdump_propagate_cmd = vm.params.get("kdump_propagate_cmd",
+                                        'kdumpctl propagate')
 
     session = vm.wait_for_login(timeout=timeout)
-
     logging.info("Delete the vmcore file.")
     if kdump_method == "ssh":
+        output = session.cmd("cat %s" % vm.params["kdump_rsa_path"])
         process.run(vmcore_rm_cmd, shell=True)
+        process.run("cat /dev/null > %s" % vm.params["auth_key_path"],
+                    shell=True, sudo=True)
+        authorized_key_cmd = vm.params["authorized_key_cmd"]
+        process.run(authorized_key_cmd % output, shell=True, sudo=True)
+        session.cmd(kdump_propagate_cmd, timeout=120)
     else:
         session.cmd_output(vmcore_rm_cmd)
 

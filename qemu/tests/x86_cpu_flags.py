@@ -1,6 +1,6 @@
 import logging
 
-from virttest import error_context, env_process
+from virttest import error_context, env_process, cpu
 from provider.cpu_utils import check_cpu_flags
 
 
@@ -21,6 +21,13 @@ def run(test, params, env):
     check_host_flags = params.get_boolean("check_host_flags")
     if check_host_flags:
         check_cpu_flags(params, flags, test)
+
+    unsupported_models = params.get("unsupported_models", "")
+    cpu_model = params.get("cpu_model")
+    if not cpu_model:
+        cpu_model = cpu.get_qemu_best_cpu_model(params)
+    if cpu_model in unsupported_models.split():
+        test.cancel("'%s' doesn't support this test case" % cpu_model)
 
     params["start_vm"] = "yes"
     vm_name = params['main_vm']

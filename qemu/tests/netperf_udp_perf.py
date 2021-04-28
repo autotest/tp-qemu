@@ -102,7 +102,7 @@ def run(test, params, env):
             src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
             path = os.path.join(test.resultsdir, "systeminfo")
             destpath = params.get("log_guestinfo_path", "/tmp/log_guestinfo.sh")
-            vm.copy_files_to(src, destpath, nic_index=1)
+            vm.copy_files_to(src, destpath)
             logexec = params.get("log_guestinfo_exec", "bash")
             output = server_ctl.cmd_output("%s %s" % (logexec, destpath))
             logfile = open(path, "a+")

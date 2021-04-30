@@ -8,6 +8,7 @@ from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import arch
 from virttest.staging import utils_memory
 
 
@@ -51,6 +52,8 @@ def run(test, params, env):
     params['backend_mem'] = "memory-backend-ram"
     params['use_mem'] = "no"
     params['size_mem'] = "1024M"
+    if arch.ARCH in ('ppc64', 'ppc64le'):
+        params['size_mem'] = "4096M"
     params['mem'] = int(params['size_mem'].strip('M')) * len(node_list)
     for node_id in range(len(node_list)):
         params['guest_numa_nodes'] += " node%d" % node_id

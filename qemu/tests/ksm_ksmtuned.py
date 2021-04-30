@@ -42,12 +42,12 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.wait_for_login()
-        if stress:
+        if stress and params["os_type"] == "linux":
             params['stress_args'] = ('--cpu 4 --io 4 --vm 2 --vm-bytes %sM' %
                                      (int(params['mem']) // 2))
             stress_test = VMStress(vm, "stress", params)
             stress_test.load_stress_tool()
-            time.sleep(30)
+        time.sleep(30)
         qemu_pid = vm.get_pid()
         qemu_used_page = utils_misc.normalize_data_size(process.getoutput(
             params['cmd_get_qemu_used_mem'] % qemu_pid, shell=True) + 'K', 'B')

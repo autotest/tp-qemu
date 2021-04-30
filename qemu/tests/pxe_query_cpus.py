@@ -10,6 +10,7 @@ from virttest import utils_misc
 from virttest import cpu
 from virttest import qemu_monitor
 from virttest import env_process
+from virttest import virt_vm
 
 
 @error_context.context_aware
@@ -85,7 +86,15 @@ def run(test, params, env):
             count += 1
             try:
                 vm.monitor.info("cpus", debug=False)
-                vm.verify_status("running")
+                if params.get('machine_type').startswith("s390"):
+                    if vm.monitor.get_status()['status'] in ['running',
+                                                             'guest-panicked']:
+                        pass
+                    else:
+                        raise virt_vm.VMStatusError('Unexpected VM status: "%s"'
+                                                    % vm.monitor.get_status())
+                else:
+                    vm.verify_status("running")
                 if not bg.is_alive():
                     break
             except qemu_monitor.MonitorSocketError:

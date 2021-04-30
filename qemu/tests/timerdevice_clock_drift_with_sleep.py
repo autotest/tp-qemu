@@ -40,7 +40,7 @@ def run(test, params, env):
         output = session.cmd_output(get_time_cmd, timeout=timeout_sleep)
 
         times_list = output.splitlines()[1:]
-        times_list = [_ for _ in times_list if float(_) < 10.0 or float(_) > 11.0]
+        times_list = [_ for _ in times_list if float(_) < 10.0 or float(_) > 12.0]
 
         if times_list:
             test.fail("Unexpected time drift found: Detail: '%s' \n timeslist: %s"

@@ -47,12 +47,16 @@ def run(test, params, env):
                                                            mac)
             return None
         ifname = utils_net.get_linux_ifname(session, mac)
-        p_cfg = "/etc/sysconfig/network-scripts/ifcfg-%s" % ifname
-        cfg_con = "DEVICE=%s\nBOOTPROTO=dhcp\nONBOOT=yes" % ifname
-        make_conf = "test -f %s || echo '%s' > %s" % (p_cfg, cfg_con, p_cfg)
+        if params.get("make_change") == "yes":
+            p_cfg = "/etc/sysconfig/network-scripts/ifcfg-%s" % ifname
+            cfg_con = "DEVICE=%s\nBOOTPROTO=dhcp\nONBOOT=yes" % ifname
+            make_conf = "test -f %s || echo '%s' > %s" % (p_cfg, cfg_con, p_cfg)
+        else:
+            make_conf = "nmcli connection add type ethernet con-name %s ifname" \
+                        " %s autoconnect yes" % (ifname, ifname)
         arp_clean = "arp -n|awk '/^[1-9]/{print \"arp -d \" $1}'|sh"
         session.cmd_output_safe(make_conf)
-        session.cmd_output_safe("ifconfig %s up" % ifname)
+        session.cmd_output_safe("ip link set dev %s up" % ifname)
         session.cmd_output_safe("dhclient -r", timeout=240)
         session.cmd_output_safe("dhclient %s" % ifname, timeout=240)
         session.cmd_output_safe(arp_clean)
@@ -92,7 +96,7 @@ def run(test, params, env):
             ifname = utils_net.get_linux_ifname(session, mac)
             add_route_cmd = "route add %s dev %s" % (ip, ifname)
             del_route_cmd = "route del %s dev %s" % (ip, ifname)
-            logging.warn("Failed to ping %s from host.")
+            logging.warning("Failed to ping %s from host.")
             logging.info("Add route and try again")
             session.cmd_output_safe(add_route_cmd)
             status, output = utils_test.ping(hotnic_ip, 10, timeout=30)
@@ -206,34 +210,19 @@ def run(test, params, env):
                           nic_index, nic_model, nic_name)
             hotplug_nic = vm.hotplug_nic(**nic_params)
             logging.info("Check if new interface gets ip address")
-            hotnic_ip = get_hotplug_nic_ip(
-                vm,
-                hotplug_nic,
-                s_session,
-                guest_is_linux)
+            hotnic_ip = get_hotplug_nic_ip(vm, hotplug_nic,
+                                           s_session, guest_is_linux)
             if not hotnic_ip:
-                test.fail("Hotplug nic can not get ip address")
+                logging.info("Reboot vm after hotplug nic")
+                # reboot vm via serial port since some guest can't auto up
+                # hotplug nic and next step will check is hotplug nic works.
+                s_session = vm.reboot(session=s_session, serial=True)
+                vm.verify_alive()
+                hotnic_ip = get_hotplug_nic_ip(vm, hotplug_nic,
+                                               s_session, guest_is_linux)
+                if not hotnic_ip:
+                    test.fail("Hotplug nic still can't get ip after reboot vm")
             logging.info("Got the ip address of new nic: %s", hotnic_ip)
-
-            logging.info("Ping guest's new ip from host")
-            status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
-                                              s_session, guest_is_linux)
-            if status:
-                err_msg = "New nic failed ping test, error info: '%s'"
-                test.fail(err_msg % output)
-
-            # reboot vm via serial port since some guest can't auto up
-            # hotplug nic and next step will check is hotplug nic works.
-
-            hotnic_ip = get_hotplug_nic_ip(
-                vm,
-                hotplug_nic,
-                s_session,
-                guest_is_linux)
-            if not hotnic_ip:
-                test.fail(
-                    "Hotplug nic can't get ip after reboot vm")
-
             logging.info("Ping guest's new ip from host")
             status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
                                               s_session, guest_is_linux)

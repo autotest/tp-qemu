@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import re
 import shutil
 
 import aexpect
@@ -217,20 +216,28 @@ def run(test, params, env):
             test.fail('Mount virtiofs target failed.')
     else:
         error_context.context("Start virtiofs service in guest.", logging.info)
-        exe_path = get_viofs_exe(session)
-        start_vfs_cmd = params["start_vfs_cmd"] % exe_path
-        session.sendline(start_vfs_cmd)
+        viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
+        viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
+        viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
 
-        error_context.context("Check if virtiofs service is started.",
-                              logging.info)
-        check_virtiofs_cmd = params["check_virtiofs_cmd"]
+        logging.info("Query virtiofs service status.")
+        status, output = session.cmd_status_output(viofs_sc_query_cmd)
+        if "not exist as an installed service" in output:
+            logging.info("Register virtiofs service in windows guest.")
+            exe_path = get_viofs_exe(session)
+            viofs_sc_create_cmd = viofs_sc_create_cmd % exe_path
+            sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
+            if sc_create_s != 0:
+                test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
+        elif "RUNNING" not in output:
+            logging.info("Start virtiofs service.")
+            sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
+            if sc_start_s != 0:
+                test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
+        else:
+            logging.info("Virtiofs service is running.")
 
-        if not utils_misc.wait_for(lambda: re.search("virtiofs",
-                                                     session.cmd_output(
-                                                         check_virtiofs_cmd),
-                                                     re.IGNORECASE), 30):
-            test.fail("Virtiofs service is failed to start.")
-
+        # get fs dest for vm
         virtio_fs_disk_label = fs_target
         error_context.context("Get Volume letter of virtio fs target, the disk"
                               "lable is %s." % virtio_fs_disk_label,

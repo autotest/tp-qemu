@@ -31,6 +31,7 @@ def run(test, params, env):
     login_timeout = params.get_numeric("login_timeout", 1200)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
+    mac = vm.get_mac_address(0)
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
     ifnames = utils_net.get_linux_ifname(session_serial)
 
@@ -47,7 +48,7 @@ def run(test, params, env):
     if bonding_params:
         modprobe_cmd += " %s" % bonding_params
     session_serial.cmd_output_safe(modprobe_cmd)
-    session_serial.cmd_output_safe("ifconfig bond0 up")
+    session_serial.cmd_output_safe("ip link set dev bond0 addr %s up" % mac)
     setup_cmd = "ifenslave bond0 " + " ".join(ifnames)
     session_serial.cmd_output_safe(setup_cmd)
     # do a pgrep to check if dhclient has already been running

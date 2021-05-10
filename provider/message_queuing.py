@@ -73,9 +73,6 @@ class MQBase(client.Expect):
     def send_message(self, msg):
         """
         Send message to other.
-
-        :param msg:
-        :return:
         """
         self.sendline(msg)
 
@@ -201,7 +198,7 @@ class MQClient(MQBase):
 
     def unregister_msg(self, msg):
         """Remove registered msg"""
-        if msg in self.msg_callback.keys():
+        if msg in self.msg_callback:
             self.msg_callback.pop(msg)
 
     def filter_msg(self, msgs=None, timeout=DEFAULT_MONITOR_TIMEOUT):

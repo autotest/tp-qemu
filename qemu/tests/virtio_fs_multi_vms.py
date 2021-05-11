@@ -79,7 +79,7 @@ def run(test, params, env):
         sessions.append(vm.wait_for_login())
 
     mapping = {}
-    for vm, session in zip(params.objects('vms'), sessions):
+    for vm, vm_obj, session in zip(params.objects('vms'), vms, sessions):
         vm_params = params.object_params(vm)
         mapping[vm] = {'session': session, 'filesystems': []}
 
@@ -88,7 +88,7 @@ def run(test, params, env):
         if os_type == "windows":
             # Check whether windows driver is running,and enable driver verifier
             session = utils_test.qemu.windrv_check_running_verifier(session,
-                                                                    vm, test,
+                                                                    vm_obj, test,
                                                                     driver_name)
             error_context.context("%s: Install winfsp for windows guest." % vm,
                                   logging.info)

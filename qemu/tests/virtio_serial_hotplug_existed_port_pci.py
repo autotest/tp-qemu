@@ -26,14 +26,14 @@ def run(test, params, env):
     pci_dev_id = virtio_port.params['bus'].split('.')[0]
     pci_dev = vm.devices.get(pci_dev_id)
     try:
-        virtio_port.hotplug(vm.monitor)
+        virtio_port.hotplug(vm.monitor, vm.devices.qemu_version)
     except qemu_monitor.QMPCmdError as e:
         if 'Duplicate' not in e.data['desc']:
             test.fail(e.data['desc'])
     else:
         test.fail('hotplugg virtserialport device should be failed')
     try:
-        pci_dev.hotplug(vm.monitor)
+        pci_dev.hotplug(vm.monitor, vm.devices.qemu_version)
     except qemu_monitor.QMPCmdError as e:
         if 'Duplicate' not in e.data['desc']:
             test.fail(e.data['desc'])

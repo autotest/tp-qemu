@@ -179,6 +179,7 @@ class BlockDevicesPlug(object):
             Flags.BLOCKDEV) else qdevices.QDrive
         self._timeout = 300
         self._interval = 0
+        self._qemu_version = self.vm.devices.qemu_version
 
     def __getitem__(self, index):
         """ Get the hot plugged disk index. """
@@ -261,15 +262,23 @@ class BlockDevicesPlug(object):
                     self._hotplugged_devs[img].insert(-1, dev)
                     HOTPLUGGED_HBAS[img] = dev
 
-    def _plug(self, plug_func, monitor):
+    def _plug(self, plug_func, monitor, action):
         end = time.time() + self.ACQUIRE_LOCK_TIMEOUT
         while time.time() < end:
             try:
-                return plug_func(monitor)
+                return plug_func(
+                    monitor
+                ) if action == UNPLUG else plug_func(
+                    monitor, self._qemu_version
+                )
             except MonitorLockError:
                 pass
         else:
-            return plug_func(monitor)
+            return plug_func(
+                monitor
+            ) if action == UNPLUG else plug_func(
+                monitor, self._qemu_version
+            )
 
     def _hotplug_atomic(self, device, monitor, bus=None):
         """ Function hot plug device to devices representation. """
@@ -300,7 +309,7 @@ class BlockDevicesPlug(object):
                 bus.prepare_hotplug(device)
                 qdev_out = self.vm.devices.insert(device)
 
-        out = self._plug(device.hotplug, monitor)
+        out = self._plug(device.hotplug, monitor, HOTPLUG)
         ver_out = device.verify_hotplug(out, monitor)
         if ver_out is False:
             self.vm.devices.set_clean()
@@ -325,7 +334,7 @@ class BlockDevicesPlug(object):
         device = self.vm.devices[device]
         self.vm.devices.set_dirty()
 
-        out = self._plug(device.unplug, monitor)
+        out = self._plug(device.unplug, monitor, UNPLUG)
         if not utils_misc.wait_for(
                 lambda: device.verify_unplug(out, monitor) is True,
                 first=1, step=5, timeout=self.VERIFY_UNPLUG_TIMEOUT):
@@ -352,7 +361,7 @@ class BlockDevicesPlug(object):
                         child_nodes = node.get_child_nodes()
                         recursive = True if len(child_nodes) > 0 else False
                         if not node.verify_unplug(
-                                self._plug(node.unplug, monitor), monitor):
+                                self._plug(node.unplug, monitor, UNPLUG), monitor):
                             raise DeviceUnplugError(
                                 node, "Failed to unplug blockdev node.", self)
                         self.vm.devices.remove(node, recursive)

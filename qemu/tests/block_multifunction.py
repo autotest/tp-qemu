@@ -195,7 +195,7 @@ def run(test, params, env):
                 dev['addr'] = hex(dev_slot)  # for pci bus addr might be reset
                 try:
                     parent_bus_obj.prepare_hotplug(dev)
-                    dev.hotplug(vm.monitor)
+                    dev.hotplug(vm.monitor, vm.devices.qemu_version)
                 except QMPCmdError as e:
                     if 'single function' not in str(e):
                         raise

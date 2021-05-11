@@ -110,7 +110,7 @@ def run(test, params, env):
                                         serial_devices[0].get_param('bus'))
             serial_devices[1].set_param('nr', pre_nr)
             try:
-                serial_devices[1].hotplug(vm.monitor)
+                serial_devices[1].hotplug(vm.monitor, vm.devices.qemu_version)
             except QMPCmdError as e:
                 if 'A port already exists at id %d' % pre_nr not in str(
                         e.data):

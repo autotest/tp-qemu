@@ -90,8 +90,7 @@ def run(test, params, env):
     # xfstest config
     cmd_xfstest = params.get('cmd_xfstest')
     fs_dest_fs2 = params.get('fs_dest_fs2')
-    xfstest_pkg = params.get('xfstest_pkg')
-    cmd_unpack_xfstest = params.get('cmd_unpack_xfstest')
+    cmd_download_xfstest = params.get('cmd_download_xfstest')
     cmd_yum_install = params.get('cmd_yum_install')
     cmd_make_xfs = params.get('cmd_make_xfs')
     cmd_setenv = params.get('cmd_setenv')
@@ -262,10 +261,8 @@ def run(test, params, env):
             if cmd_xfstest:
                 error_context.context("Run xfstest on guest.", logging.info)
                 utils_misc.make_dirs(fs_dest_fs2, session)
-                host_path = os.path.join(data_dir.get_deps_dir('xfstest'),
-                                         xfstest_pkg)
-                scp_to_remote(host_addr, port, username, password, host_path, fs_dest_fs1)
-                session.cmd(cmd_unpack_xfstest.format(fs_dest), 180)
+                if session.cmd_status(cmd_download_xfstest, 360):
+                    test.error("Failed to download xfstests-dev")
                 session.cmd(cmd_yum_install, 180)
                 session.cmd(cmd_make_xfs, 360)
                 session.cmd(cmd_setenv, 180)

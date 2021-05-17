@@ -220,7 +220,7 @@ def run(test, params, env):
         viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
         viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
 
-        logging.info("Query virtiofs service status.")
+        logging.info("Check if virtiofs service is registered.")
         status, output = session.cmd_status_output(viofs_sc_query_cmd)
         if "not exist as an installed service" in output:
             logging.info("Register virtiofs service in windows guest.")
@@ -229,7 +229,10 @@ def run(test, params, env):
             sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
             if sc_create_s != 0:
                 test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
-        elif "RUNNING" not in output:
+
+        logging.info("Check if virtiofs service is started.")
+        status, output = session.cmd_status_output(viofs_sc_query_cmd)
+        if "RUNNING" not in output:
             logging.info("Start virtiofs service.")
             sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
             if sc_start_s != 0:
@@ -245,6 +248,8 @@ def run(test, params, env):
         vol_con = "VolumeName='%s'" % virtio_fs_disk_label
         vol_func = utils_misc.get_win_disk_vol(session, condition=vol_con)
         volume_letter = utils_misc.wait_for(lambda: vol_func, 120)
+        if volume_letter is None:
+            test.fail("Could not get virtio-fs mounted volume letter.")
         fs_dest = "%s:" % volume_letter
 
     guest_file = os.path.join(fs_dest, 'fs_test')

@@ -1,5 +1,4 @@
 import logging
-import time
 import random
 
 import aexpect
@@ -7,6 +6,7 @@ import aexpect
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
+from avocado.utils.wait import wait_for
 
 
 def setup_test_environment(test, params, vm, session):
@@ -39,24 +39,28 @@ def setup_test_environment(test, params, vm, session):
         vm.reboot(session, timeout=timeout)
 
 
-def check_qmp_events(vm, event_name, timeout=360):
+def check_qmp_events(vm, event_names, timeout=360):
     """
     Check whether certain qmp event appeared in vm.
 
     :param vm: target virtual machine
-    :param event_name: target event name, such as 'GUEST_PANICKED'
+    :param event_names: a list of target event names,
+        such as 'GUEST_PANICKED'
     :param timeout: check time
+    :return: True if one of the events given by `event_names` appeared,
+        otherwise None
     """
-    end_time = time.time() + timeout
+    def _do_check(vm, event_names):
+        for name in event_names:
+            if vm.monitor.get_event(name):
+                logging.info("Receive qmp %s event notification", name)
+                vm.monitor.clear_event(name)
+                return True
+        return False
+
     logging.info("Try to get qmp events %s in %s seconds!",
-                 event_name, timeout)
-    while time.time() < end_time:
-        if vm.monitor.get_event(event_name):
-            logging.info("Receive qmp %s event notification", event_name)
-            vm.monitor.clear_event(event_name)
-            return True
-        time.sleep(5)
-    return False
+                 event_names, timeout)
+    return wait_for(lambda: _do_check(vm, event_names), timeout, 5, 5)
 
 
 def trigger_crash(test, vm, params):
@@ -97,24 +101,33 @@ def trigger_crash(test, vm, params):
                     "please check cfg file for mistake." % crash_method)
 
 
+PVPANIC_PANICKED = 1
+PVPANIC_CRASHLOADED = 2
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
     Pvpanic test.
 
-    1) Log into the guest
+    1) Boot guest with pvpanic device (events=1/2/3, optional)
     2) Check if the driver is installed and verified (only for win)
-    3) Stop kdump service and modify unknown_nmi_panic(for linux)
-       or modify register value(for win)
-    4) Trigger a crash by nmi, keyboard or notmyfault app
-    5) Check the event in qmp
+    3) Stop kdump service and modify unknown_nmi_panic (for linux)
+       or modify register value (for win)
+    4) Enable or disable crashdump (only for win)
+    5) Trigger a crash by nmi, keyboard or notmyfault app
+    6) Check the event in qmp
 
     :param test: kvm test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
     timeout = int(params.get("timeout", 360))
-    event_check = params.get("event_check", "GUEST_PANICKED")
+    event_check = ["GUEST_PANICKED", "GUEST_CRASHLOADED"]
+    with_events = params.get("with_events", "no") == "yes"
+    debug_type = params.get_numeric("debug_type")
+    events_pvpanic = params.get_numeric("events_pvpanic")
+
     error_context.context("Boot guest with pvpanic device", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -127,6 +140,24 @@ def run(test, params, env):
                                                                 test,
                                                                 driver_name,
                                                                 timeout)
+    check_empty = False
+    if with_events:
+        if debug_type == 2:
+            if events_pvpanic & PVPANIC_CRASHLOADED:
+                event_check = ["GUEST_CRASHLOADED"]
+            else:
+                event_check = ["GUEST_PANICKED"]
+        else:
+            if events_pvpanic & PVPANIC_PANICKED:
+                event_check = ["GUEST_PANICKED"]
+            else:
+                check_empty = True
+
+        error_context.context("Setup crashdump for pvpanic events", logging.info)
+        crashdump_cmd = params["crashdump_cmd"] % debug_type
+        s, o = session.cmd_status_output(crashdump_cmd, timeout=timeout)
+        if s:
+            test.error("Cannot setup crashdump, output = " + o)
 
     if params["crash_method"] != "notmyfault_app":
         error_context.context("Setup crash evironment for test", logging.info)
@@ -136,6 +167,8 @@ def run(test, params, env):
     trigger_crash(test, vm, params)
 
     error_context.context("Check the panic event in qmp", logging.info)
-    if not check_qmp_events(vm, event_check, timeout):
-        test.fail("Did not receive qmp %s event notification"
-                  % event_check)
+    result = check_qmp_events(vm, event_check, timeout)
+    if not check_empty and not result:
+        test.fail("Did not receive panic event notification")
+    elif check_empty and result:
+        test.fail("Did receive panic event notification, but should not")

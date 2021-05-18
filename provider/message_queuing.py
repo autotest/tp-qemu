@@ -1,4 +1,6 @@
 import logging
+import re
+import time
 
 from aexpect import client
 
@@ -68,20 +70,29 @@ class MQBase(client.Expect):
             self.send_ctrl('^C')
         super(MQBase, self).close()
 
+    def send_message(self, msg):
+        """
+        Send message to other.
+        """
+        self.sendline(msg)
+
 
 class MQPublisher(MQBase):
-    def __init__(self, port=None, udp=False, multiple_connections=False):
+    def __init__(self, port=None, udp=False, multiple_connections=False,
+                 other_options=""):
         """
         MQ publisher.
 
         :param port: Specify source port to use.
         :param udp: Use UDP instead of default TCP.
         :param multiple_connections: Accept multiple connections in listen mode.
+        :param other_options: extra options for the server.
         """
         cmd_options = ['nc', '-l']
         port and cmd_options.append('-p ' + str(port))
         udp and cmd_options.append('--udp')
         multiple_connections and cmd_options.append('--keep-open')
+        cmd_options.append(other_options)
         super(MQPublisher, self).__init__(' '.join(cmd_options))
 
     def confirm_access(self, timeout=DEFAULT_MONITOR_TIMEOUT):
@@ -146,3 +157,96 @@ class MQSubscriber(MQBase):
         except client.ExpectTimeoutError as err:
             raise UnknownEventError(err.output.strip())
         return event.strip()
+
+
+class MQClient(MQBase):
+    """
+    Message queue client like chat.
+    Clients may communicate together.
+    It need to set server running as broker mode.
+    """
+
+    def __init__(self, server_address, port=None):
+        """
+        MQ subscriber.
+
+        :param server_address: The address of remote/local MQ server.
+        :param port: The listening port of the MQ server.
+        """
+        cmd_options = ['nc', server_address]
+        port and cmd_options.append(str(port))
+        self.msg_loop_flag = True
+        self.msg_callback = {}
+        super(MQClient, self).__init__(' '.join(cmd_options))
+
+    def match_patterns(self, lines, patterns):
+        matches = []
+        for line in lines:
+            for pattern in patterns:
+                if re.search(pattern, line):
+                    matches.append([pattern, line])
+
+        return matches if len(matches) else None
+
+    def register_msg(self, msg, callback):
+        """
+        Register callback for specific msg.
+        Callback will be invoked when receive registered msg
+        """
+        if callback:
+            self.msg_callback[msg] = callback
+
+    def unregister_msg(self, msg):
+        """Remove registered msg"""
+        if msg in self.msg_callback:
+            self.msg_callback.pop(msg)
+
+    def filter_msg(self, msgs=None, timeout=DEFAULT_MONITOR_TIMEOUT):
+        """
+        Read match msgs
+
+        :param msgs: msg list want to filter
+        :param timeout: read timeout
+        :return: list of matched msg
+        """
+        try:
+            if not msgs:
+                msgs = self.msg_callback.keys()
+
+            output = self.read_until_output_matches(msgs,
+                                                    lambda x: x.splitlines(),
+                                                    timeout, 0.1)
+
+            if output:
+                logging.debug('Monitor The message "{}"'.format(output))
+                return output[0]
+
+        except client.ExpectTimeoutError as err:
+            raise MessageNotFoundError(msgs, err.output)
+
+    def set_msg_loop(self, flag):
+        self.msg_loop_flag = flag
+
+    def msg_loop(self, msgs=None, timeout=DEFAULT_MONITOR_TIMEOUT):
+        """
+        Messages handle loop, the loop will keep reading messages
+        until timeout or the msg loop disabled.
+        The registered callbacks will be invoked if read match messages.
+
+        :param msgs: msg list want to filter
+        :param timeout: The whole time in handling
+        :return:
+        """
+        end_time = time.time() + timeout
+        rest_time = timeout
+        while self.msg_loop_flag and rest_time > 0:
+            if not msgs:
+                msgs = self.msg_callback.keys()
+            match_msg = self.filter_msg(msgs, rest_time)
+            rest_time = end_time - time.time()
+            if match_msg:
+                for msg in match_msg:
+                    if msg[0] in self.msg_callback.keys():
+                        callback = self.msg_callback[msg[0]]
+                        logging.info("Ready callback %s %s", callback, msg[1])
+                        callback(self, msg[1])

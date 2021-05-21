@@ -30,7 +30,7 @@ def run(test, params, env):
         if not queues_status:
             queues_status = get_queues_status(ifname)
         mq_set_cmd = "ethtool -L %s combined %d" % (ifname, q_number)
-        output = session_serial.cmd_output_safe(mq_set_cmd)
+        output = session.cmd_output(mq_set_cmd)
         cur_queues_status = get_queues_status(ifname)
 
         err_msg = ""
@@ -61,7 +61,7 @@ def run(test, params, env):
         Get queues status
         """
         mq_get_cmd = "ethtool -l %s" % ifname
-        nic_mq_info = session_serial.cmd_output_safe(mq_get_cmd)
+        nic_mq_info = session.cmd_output(mq_get_cmd)
         queues_reg = re.compile(r"Combined:\s+(\d)", re.I)
         queues_info = queues_reg.findall(" ".join(nic_mq_info.splitlines()))
         if len(queues_info) != 2:
@@ -97,6 +97,7 @@ def run(test, params, env):
     bg_test = True
     try:
         while bg_test:
+            session = vm.wait_for_login()
             session_serial = vm.wait_for_serial_login(timeout=login_timeout)
             error_context.context("Enable multi queues in guest.", logging.info)
             for nic in vm.virtnet:
@@ -159,5 +160,7 @@ def run(test, params, env):
             else:
                 bg_test = False
     finally:
+        if session:
+            session.close()
         if session_serial:
             session_serial.close()

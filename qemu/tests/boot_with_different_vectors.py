@@ -106,7 +106,8 @@ def run(test, params, env):
         irq_check_cmd = params["irq_check_cmd"]
         output = session.cmd_output(irq_check_cmd).strip()
         if vectors == 0 or vectors == 1:
-            if not (re.findall("IO-APIC.*fasteoi|XICS.*Level|XIVE.*Level",
+            if not (re.findall("IO-APIC.*fasteoi|XICS.*Level|XIVE.*Level|"
+                               "GIC.*Level",
                                output)):
                 msg = "Could not find interrupt controller for virito device"
                 msg += " when vectors = %d" % vectors

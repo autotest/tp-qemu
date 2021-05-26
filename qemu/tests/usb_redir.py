@@ -225,6 +225,9 @@ def run(test, params, env):
     if backend not in ('spicevmc', 'tcp_socket'):
         test.error("Unsupported char device backend type: %s" % backend)
 
+    if backend == 'spicevmc' and params.get('display') != 'spice':
+        test.cancel("Only support spice connection")
+
     option = params.get("option")
     vendorid = params["usbredir_vendorid"]
     productid = params["usbredir_productid"]

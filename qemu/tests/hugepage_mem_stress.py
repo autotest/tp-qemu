@@ -1,5 +1,7 @@
 import logging
+import tempfile
 
+from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
@@ -31,6 +33,14 @@ def run(test, params, env):
                 test.cancel("WIN_UTILS CDROM not found.")
             install_cmd = params["install_cmd"] % winutil_drive
             session.cmd(install_cmd)
+
+    if params.get_boolean("non_existent_point"):
+        dir = tempfile.mkdtemp(prefix='hugepage_')
+        error_context.context("This path %s, doesn't mount hugepage." %
+                              dir, logging.info)
+        params["extra_params"] = " -mem-path %s" % dir
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params["main_vm"])
 
     os_type = params["os_type"]
     stress_duration = params.get_numeric("stress_duration", 60)

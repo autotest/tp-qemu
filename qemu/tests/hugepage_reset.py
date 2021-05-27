@@ -60,7 +60,7 @@ def run(test, params, env):
     logging.info('Setup hugepage number to %s', origin_nr)
     hp_config.setup()
     hugepage_size = utils_memory.get_huge_page_size()
-
+    params["hugepage_path"] = hp_config.hugepage_path
     params['start_vm'] = "yes"
     vm_name = params['main_vm']
     env_process.preprocess_vm(test, params, env, vm_name)

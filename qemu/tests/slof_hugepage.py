@@ -40,6 +40,7 @@ def _setup_hugepage(params):
     error_context.context('mount hugepages to %s'
                           % huge_page.hugepage_path, logging.info)
     huge_page.mount_hugepage_fs()
+    params["hugepage_path"] = huge_page.hugepage_path
 
 
 def _check_mem_increase(session, params, orig_mem):

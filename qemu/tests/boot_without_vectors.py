@@ -58,7 +58,7 @@ def run(test, params, env):
         :param vm: guest vm
         """
         login_timeout = int(params.get("login_timeout", 360))
-        env_process.preprocess_vm(test, params, env, params.get("main_vm"))
+        env_process.preprocess(test, params, env)
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
         session = vm.wait_for_login(timeout=login_timeout)

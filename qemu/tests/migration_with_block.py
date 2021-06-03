@@ -261,7 +261,8 @@ def run(test, params, env):
                 migration_thread.start()
                 if not utils_misc.wait_for(lambda: (
                         bool(vm.monitor.query("migrate")) and (
-                        'completed' != vm.monitor.query("migrate")['status'])), 30):
+                        'completed' != vm.monitor.query("migrate")['status'])),
+                                           timeout=60, first=10):
                     test.error('Migration thread is not alive.')
                 vm.monitor.wait_for_migrate_progress(
                     float(params['percent_start_post_copy']))

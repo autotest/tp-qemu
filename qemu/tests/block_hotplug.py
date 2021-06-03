@@ -83,6 +83,8 @@ def run(test, params, env):
             if ret[1] is False:
                 test.fail("Failed to %s device '%s', %s." % (action, dev, ret[0]))
 
+        if params.get("machine_type").startswith('s390'):
+            session = vm.wait_for_login(timeout=timeout)
         num = 1 if action == 'hotplug' else len(data_imgs)
         plugged_disks = wait_plug_disks(session, action, disks_before_plug, num, windows, test)
         session.close()

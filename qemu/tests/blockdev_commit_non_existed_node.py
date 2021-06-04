@@ -1,4 +1,5 @@
 import logging
+import re
 
 from virttest.qemu_monitor import QMPCmdError
 
@@ -29,7 +30,8 @@ class BlockdevCommitNonExistedNode(BlockDevCommitTest):
             self.main_vm.monitor.cmd(cmd, args)
         except QMPCmdError as e:
             logging.info("Error message is %s", e.data)
-            if self.params["qmp_error_msg"] not in str(e.data):
+            qmp_error_msg = self.params.get("qmp_error_msg")
+            if not re.search(qmp_error_msg, str(e.data)):
                 self.test.fail("Error message not as expected")
         else:
             self.test.fail("Block commit should fail with "

@@ -1,3 +1,5 @@
+import re
+
 from virttest.qemu_monitor import QMPCmdError
 
 from provider.block_dirty_bitmap import block_dirty_bitmap_add
@@ -27,7 +29,8 @@ class BlockdevIncbkNonExistedTarget(BlockdevLiveBackupBaseTest):
                  'sync': 'incremental'}
             )
         except QMPCmdError as e:
-            if self.params['error_msg'] not in str(e):
+            error_msg = self.params.get('error_msg')
+            if not re.search(error_msg, str(e)):
                 self.test.fail('Unexpected error: %s' % str(e))
         else:
             self.test.fail('blockdev-backup succeeded unexpectedly')

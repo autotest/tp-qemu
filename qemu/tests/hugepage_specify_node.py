@@ -67,6 +67,7 @@ def run(test, params, env):
         hp_config.setup()
         params["qemu_command_prefix"] = "numactl --membind=%s" % node_id
         params["start_vm"] = "yes"
+        params["hugepage_path"] = hp_config.hugepage_path
         env_process.preprocess_vm(test, params, env, params["main_vm"])
         try:
             vm = env.get_vm(params["main_vm"])

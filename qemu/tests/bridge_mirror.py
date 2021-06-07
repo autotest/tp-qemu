@@ -116,16 +116,16 @@ def run(test, params, env):
             vm.verify_alive()
             ip = params["ip_%s" % vm_name]
             mac = vm.get_mac_address()
-            session = vm.wait_for_serial_login(timeout=login_timeout)
-            session.cmd(stop_NM_cmd, ignore_all_errors=True)
-            session.cmd(stop_firewall_cmd, ignore_all_errors=True)
-            nic_name = utils_net.get_linux_ifname(session, mac)
+            serial_session = vm.wait_for_serial_login(timeout=login_timeout)
+            serial_session.cmd_output_safe(stop_NM_cmd)
+            serial_session.cmd_output_safe(stop_firewall_cmd)
+            nic_name = utils_net.get_linux_ifname(serial_session, mac)
             ifname = vm.get_ifname()
             ifset_cmd = "ip addr add %s/%s dev %s" % (ip, net_mask, nic_name)
             ifup_cmd = "ip link set dev %s up" % nic_name
-            session.cmd(ifset_cmd)
-            session.cmd(ifup_cmd)
-            vms_info[vm_name] = [vm, ifname, ip, session, nic_name]
+            serial_session.cmd_output_safe(ifset_cmd)
+            serial_session.cmd_output_safe(ifup_cmd)
+            vms_info[vm_name] = [vm, ifname, ip, serial_session, nic_name]
 
         vm_mirror = vm_names[0]
         vm_src = vm_names[1]

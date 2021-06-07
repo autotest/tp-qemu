@@ -28,7 +28,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_serial_login(timeout=timeout)
+    session = vm.wait_for_login(timeout=timeout)
     os_type = params.get("os_type")
 
     free_mem_before_nichotplug = utils_misc.get_free_mem(session,
@@ -55,12 +55,11 @@ def run(test, params, env):
         mac = vm.get_mac_address()
         guest_nic = utils_net.get_linux_ifname(session, mac)
         for i in range(1, 300):
-            session.cmd("ip link add link %s %s.%s type vlan id %s" %
+            session.cmd("ip link add link %s name %s.%s type vlan id %s" %
                         (guest_nic, guest_nic, i, i))
         time.sleep(3)
         for i in range(1, 300):
-            session.cmd("ip link delete %s.%s" %
-                        (guest_nic, i))
+            session.cmd("ip link delete %s.%s" % (guest_nic, i))
 
     free_mem_after_nichotplug = utils_misc.get_free_mem(session,
                                                         os_type)

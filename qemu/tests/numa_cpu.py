@@ -30,7 +30,7 @@ def run(test, params, env):
             max_boundary = int(value if value is not None else (max_value - 1)) * weight
             return (min_boundary, max_boundary)
 
-        if vm_arch in ('x86_64', 'i386'):
+        if vm_arch in ('x86_64', 'i686'):
             socket_min, socket_max = _get_boundary(socketid, vcpu_sockets, socket_weight)
             die_min, die_max = _get_boundary(dieid, vcpu_dies, die_weight)
             core_min, core_max = _get_boundary(coreid, vcpu_cores, core_weight)
@@ -166,7 +166,7 @@ def run(test, params, env):
     vm_arch = params["vm_arch_name"]
 
     vcpu_threads = params.get_numeric('vcpu_threads')
-    if vm_arch in ('x86_64', 'i386'):
+    if vm_arch in ('x86_64', 'i686'):
         vcpu_sockets = params.get_numeric('vcpu_sockets')
         vcpu_dies = params.get_numeric('vcpu_dies')
         vcpu_cores = params.get_numeric('vcpu_cores')

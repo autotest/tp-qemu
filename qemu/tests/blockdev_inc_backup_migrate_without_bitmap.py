@@ -27,7 +27,7 @@ class BlockdevIncbkMigrateNoBitmap(BlockdevLiveBackupBaseTest):
             if bitmap is None:
                 self.test.fail('No persistent bitmap was found '
                                'after migration')
-            if bitmap.get('status') != 'disabled':
+            if bitmap.get('recording') is not False:
                 self.test.fail('Persistent bitmap was not disabled '
                                'after migration')
             v = debug_block_dirty_bitmap_sha256(self.main_vm,

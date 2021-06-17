@@ -45,7 +45,9 @@ def run(test, params, env):
         throughput = 0
         for i in range(repeat_times):
             output = n_client.start(server_address=host_ip,
-                                    test_option=params.get("test_option"))
+                                    test_option=params.get("test_option"),
+                                    cmd_safe=params.get_boolean("cmd_safe",
+                                                                True))
             throughput += float(re.findall(r"580\s+\d+\.?\d+\s+(\d+\.?\d+)",
                                            output)[0])
             time.sleep(1)

@@ -16,18 +16,24 @@ def preprocess_kdump(test, vm, timeout):
     :param timeout: Timeout in seconds
     """
     kdump_cfg_path = vm.params.get("kdump_cfg_path", "/etc/kdump.conf")
-    auth_key_path = vm.params["auth_key_path"]
+    auth_key_path = vm.params.get("auth_key_path")
     backup_key_cmd = ("/bin/cp -f %s %s-bk" %
                       (auth_key_path, auth_key_path))
     cp_kdumpcf_cmd = "/bin/cp -f %s %s-bk" % (kdump_cfg_path, kdump_cfg_path)
     cp_kdumpcf_cmd = vm.params.get("cp_kdumpcf_cmd", cp_kdumpcf_cmd)
 
     session = vm.wait_for_login(timeout=timeout)
-
+    if auth_key_path:
+        create_key_cmd = ("/bin/touch %s" % auth_key_path)
+        if not os.path.exists("/root/.ssh"):
+            process.run("mkdir /root/.ssh", shell=True)
+        logging.info("Create authorized_keys file if it not existed.")
+        process.run(create_key_cmd, shell=True)
+        logging.info("Backup authorized_keys file.")
+        process.run(backup_key_cmd, shell=True)
     logging.info("Backup kdump.conf file.")
     status, output = session.cmd_status_output(cp_kdumpcf_cmd)
-    logging.info("Backup authorized_keys file.")
-    process.run(backup_key_cmd, shell=True)
+
     if status != 0:
         logging.error(output)
         test.error("Fail to backup the kdump.conf")
@@ -43,20 +49,21 @@ def postprocess_kdump(test, vm, timeout):
     :param timeout: Timeout in seconds
     """
     kdump_cfg_path = vm.params.get("kdump_cfg_path", "/etc/kdump.conf")
-    auth_key_path = vm.params["auth_key_path"]
-    restore_key_cmd = ("/bin/cp -f %s-bk %s" %
-                       (auth_key_path, auth_key_path))
+    auth_key_path = vm.params.get("auth_key_path")
     restore_kdumpcf_cmd = ("/bin/cp -f %s-bk %s" %
                            (kdump_cfg_path, kdump_cfg_path))
     restore_kdumpcf_cmd = vm.params.get("restore_kdumpcf_cmd",
                                         restore_kdumpcf_cmd)
 
     session = vm.wait_for_login(timeout=timeout)
+    if auth_key_path:
+        restore_key_cmd = ("/bin/cp -f %s-bk %s" %
+                           (auth_key_path, auth_key_path))
+        logging.info("Restore authorized_keys file.")
+        process.run(restore_key_cmd, shell=True)
 
     logging.info("Restore kdump.conf")
     status, output = session.cmd_status_output(restore_kdumpcf_cmd)
-    logging.info("Restore authorized_keys file.")
-    process.run(restore_key_cmd, shell=True)
     if status != 0:
         logging.error(output)
         test.error("Fail to restore the kdump.conf")
@@ -215,7 +222,8 @@ def check_vmcore(test, vm, session, timeout):
 
     error_context.context("Waiting for kernel crash dump to complete",
                           logging.info)
-    session = vm.wait_for_login(timeout=timeout)
+    if vm.params.get("kdump_method") != "ssh":
+        session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Probing vmcore file...", logging.info)
     try:

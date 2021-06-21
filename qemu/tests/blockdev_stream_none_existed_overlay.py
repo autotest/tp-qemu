@@ -1,3 +1,5 @@
+import re
+
 from virttest.qemu_monitor import QMPCmdError
 
 from provider.blockdev_stream_base import BlockDevStreamTest
@@ -21,7 +23,8 @@ class BlockdevStreamNoneExistedOverlay(BlockDevStreamTest):
                 {'device': self.params['none_existed_overlay_node']}
             )
         except QMPCmdError as e:
-            if self.params['error_msg'] not in str(e):
+            error_msg = self.params.get("error_msg")
+            if not re.search(error_msg, str(e)):
                 self.test.fail('Unexpected error: %s' % str(e))
         else:
             self.test.fail('block-stream succeeded unexpectedly')

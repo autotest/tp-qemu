@@ -2409,7 +2409,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         self._fsfreeze()
         # clean env at the end of testing
-        session.cmd(self.params["delete_temp_file"])
+        session.cmd(params["delete_temp_file"])
 
     @error_context.context_aware
     def gagent_check_fsfreeze_list(self, test, params, env):

@@ -30,6 +30,7 @@ def run(test, params, env):
     dev_param_name = params.get("dev_param_name", "blk_extra_params")
     dev_pattern = params.get("dev_pattern", "(dev: %s.*?)dev:" % dev_type)
     pci_id_pattern = params.get("pci_id_pattern")
+    ccw_id_pattern = params.get("ccw_id_pattern")
     convert_dict = {"1": ["on", "true"], "0": ["off", "false"]}
     orig_extra_params = params.get(dev_param_name, "")
     for properties in test_loop:
@@ -72,11 +73,22 @@ def run(test, params, env):
 
             logging.info("Properity bit in qtree is right for %s.", option)
             if params.get("check_in_guest", "yes") == "yes":
-                pci_info = session.cmd_output("lspci")
-                pci_n = re.findall(pci_id_pattern, pci_info)
-                if not pci_n:
-                    test.error("Can't get the pci id for device")
-                cmd = "cat /sys/bus/pci/devices/0000:%s/" % pci_n[0]
+                if params.get('machine_type').startswith("s390"):
+                    id_pattern = \
+                        ccw_id_pattern + re.findall(
+                            'dev:virtio-scsi-ccw.*\n''.*\n.*\n.*\ndev_id=\"'
+                            'fe.0.(.*?)\"', qtree_info.replace(' ', ''))[0]
+                    ccw_info = session.cmd_output("lscss")
+                    ccw_n = re.findall(id_pattern, ccw_info)
+                    if not ccw_n:
+                        test.error("Can't get the ccw id for device")
+                    cmd = "cat /sys/bus/ccw/devices/%s/" % ccw_n[0]
+                else:
+                    pci_info = session.cmd_output("lspci")
+                    pci_n = re.findall(pci_id_pattern, pci_info)
+                    if not pci_n:
+                        test.error("Can't get the pci id for device")
+                    cmd = "cat /sys/bus/pci/devices/0000:%s/" % pci_n[0]
                 cmd += "virtio*/features"
                 bitstr = session.cmd_output(cmd)
                 bitstr = re.findall("[01]+", bitstr)[-1]

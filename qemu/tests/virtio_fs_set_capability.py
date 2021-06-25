@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import shutil
@@ -8,13 +7,12 @@ import aexpect
 from avocado.utils import process
 
 from virttest import data_dir
+from virttest import env_process
 from virttest import error_context
 from virttest import utils_disk
 from virttest import utils_misc
 from virttest import utils_test
 
-from virttest.utils_params import Params
-from virttest.qemu_devices import qdevices
 from virttest.utils_windows import virtio_win
 
 
@@ -88,7 +86,6 @@ def run(test, params, env):
     cmd_echo_file = params.get('cmd_echo_file')
 
     # set fs daemon path
-    target = params.get('fs_target')
     fs_source = params.get('fs_source_dir')
     base_dir = params.get('fs_source_base_dir', data_dir.get_data_dir())
 
@@ -101,6 +98,7 @@ def run(test, params, env):
 
     sock_path = os.path.join(data_dir.get_tmp_dir(),
                              '-'.join(('avocado-vt-vm1', 'viofs', 'virtiofsd.sock')))
+    params['fs_source_user_sock_path'] = sock_path
 
     # set capability
     cmd_capsh_drop = (cmd_capsh_drop % capability)
@@ -122,56 +120,9 @@ def run(test, params, env):
     logging.info('Running daemon command %s.', cmd_run_virtiofsd)
     session.sendline(cmd_run_virtiofsd)
 
-    # insert devices
+    params["start_vm"] = "yes"
+    env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params.get("main_vm"))
-    vm.devices, _ = vm.make_create_command()
-
-    machine_type = params.get("machine_type", "")
-    qbus_type = "PCI"
-    if machine_type.startswith("q35") or machine_type.startswith("arm64"):
-        qbus_type = "PCIE"
-
-    devices = []
-    vfsd = qdevices.QCustomDevice('chardev null,id=serial_vfsd', aobject='fs',
-                                  child_bus=qdevices.QUnixSocketBus(sock_path, 'fs'))
-    devices.append(vfsd)
-
-    char_params = Params()
-    char_params["backend"] = "socket"
-    char_params["id"] = 'virtiofs_fs'
-    sock_bus = {'busid': sock_path}
-    char = qdevices.CharDevice(char_params, parent_bus=sock_bus)
-    char.set_aid('virtiofs_fs')
-    devices.append(char)
-
-    qdriver = "vhost-user-fs"
-    if "-mmio:" in machine_type:
-        qdriver += "-device"
-        qbus_type = "virtio-bus"
-    elif machine_type.startswith("s390"):
-        qdriver += "-ccw"
-        qbus_type = "virtio-bus"
-    else:
-        qdriver += "-pci"
-
-    bus = {"type": qbus_type}
-
-    dev_params = {"id": "vufs_virtiofs_fs",
-                  "chardev": char.get_qid(),
-                  "tag": target}
-    fs_driver_props = json.loads(params.get("fs_driver_props", "{}"))
-    dev_params.update(fs_driver_props)
-    vufs = qdevices.QDevice(qdriver, params=dev_params, parent_bus=bus)
-    vufs.set_aid('virtiofs_fs')
-    devices.append(vufs)
-
-    vm.devices.insert(devices)
-
-    # Since if 'redirs' has a value, the vm.create() method will reset the devices.
-    # So set 'redirs' to empty for a workaround.
-    vm.params['redirs'] = ''
-
-    vm.create()
     vm.verify_alive()
     is_windows = params.get("os_type") == "windows"
     session = vm.wait_for_login()
@@ -320,4 +271,3 @@ def run(test, params, env):
             utils_misc.safe_rmdir(fs_dest, session=session)
         session.close()
         vm.destroy()
-        utils_misc.safe_rmdir(fs_source)

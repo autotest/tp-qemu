@@ -226,14 +226,20 @@ def check_vmcore(test, vm, session, timeout):
         session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Probing vmcore file...", logging.info)
-    try:
-        if vm.params.get("kdump_method") == "ssh":
-            logging.info("Checking vmcore file on host")
-            process.run(vmcore_chk_cmd, shell=True)
-        else:
-            logging.info("Checking vmcore file on guest")
-            session.cmd(vmcore_chk_cmd)
-    except Exception:
+    if vm.params.get("kdump_method") == "ssh":
+        logging.info("Checking vmcore file on host")
+        status = utils_misc.wait_for(lambda:
+                                     process.system(vmcore_chk_cmd,
+                                                    shell=True) == 0,
+                                     ignore_errors=True,
+                                     timeout=200)
+    else:
+        logging.info("Checking vmcore file on guest")
+        status = utils_misc.wait_for(lambda:
+                                     session.cmd_status(vmcore_chk_cmd) == 0,
+                                     ignore_errors=True,
+                                     timeout=200)
+    if not status:
         postprocess_kdump(test, vm, timeout)
         test.fail("Could not found vmcore file.")
 

@@ -50,6 +50,8 @@ def run(test, params, env):
 
     error_context.context("sync time in guest", logging.info)
     if os_type == "windows":
+        w32time_conf_cmd = params["w32time_conf_cmd"]
+        session.cmd(w32time_conf_cmd)
         utils_test.start_windows_service(session, "w32time")
     session.cmd(ntp_cmd)
 

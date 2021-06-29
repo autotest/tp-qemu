@@ -35,13 +35,14 @@ class BallooningTest(MemoryBaseTest):
                          "applications up", sleep_time)
             time.sleep(sleep_time)
             self.params["balloon_test_setup_ready"] = True
+            # ori_mem/gmem is original memory
+            # pre_mem/gmem is memory value before balloon test
             self.ori_gmem = self.get_memory_status()
-            self.current_gmem = self.ori_gmem
+            self.pre_gmem = self.ori_gmem
         self.ori_mem = self.get_vm_mem(self.vm)
-        self.current_mmem = self.get_ballooned_memory()
-        if self.current_mmem != self.ori_mem:
+        self.pre_mem = self.ori_mem
+        if self.get_ballooned_memory() != self.ori_mem:
             self.balloon_memory(self.ori_mem)
-        self.current_mmem = self.ori_mem
 
     def get_ballooned_memory(self):
         """
@@ -80,10 +81,10 @@ class BallooningTest(MemoryBaseTest):
         guest_mem_ratio = self.params.get("guest_mem_ratio")
         if guest_mem_ratio:
             gcompare_threshold = max(gcompare_threshold,
-                                     float(guest_mem_ratio) * self.ori_mem)
-        # for windows illegal test:set windows guest balloon in (1,100),free
-        # memory of the OS shoul be as small as possible.
-        if ballooned_mem >= self.ori_mem - 100:
+                                     float(guest_mem_ratio) * self.pre_mem)
+        # if set windows guest balloon in (1,100),free
+        # memory of the OS should be as small as possible.
+        if self.pre_mem + ballooned_mem <= 100:
             timeout = float(self.params.get("login_timeout", 600))
             session = self.vm.wait_for_login(timeout=timeout)
             try:
@@ -92,10 +93,17 @@ class BallooningTest(MemoryBaseTest):
             finally:
                 session.close()
         else:
-            guest_ballooned_mem = abs(gmem - self.ori_gmem)
-            if (abs(mmem - self.ori_mem) != ballooned_mem or
+            # for rhel guest, the gmem is total memory in guest;
+            # for windows guest or balloon_opt_deflate_on_oom condition, the gmem is
+            # used memory in guest.
+            if self.params['os_type'] == 'windows' or \
+                            self.params.get("balloon_opt_deflate_on_oom") == "yes":
+                guest_ballooned_mem = self.pre_gmem - gmem
+            else:
+                guest_ballooned_mem = gmem - self.pre_gmem
+            if (mmem - self.pre_mem != ballooned_mem or
                     (abs(guest_ballooned_mem - ballooned_mem) > gcompare_threshold)):
-                self.error_report(step, self.ori_mem - ballooned_mem, mmem,
+                self.error_report(step, self.pre_mem + ballooned_mem, mmem,
                                   gmem)
                 raise exceptions.TestFail("Balloon test failed %s" % step)
         return mmem, gmem
@@ -197,11 +205,10 @@ class BallooningTest(MemoryBaseTest):
         if new_mem > self.ori_mem:
             compare_mem = self.ori_mem
         elif new_mem == 0:
-            compare_mem = self.current_mmem
+            compare_mem = self.pre_mem
         elif new_mem <= 100:
             self._balloon_post_action()
-            self.current_mmem = self.get_ballooned_memory()
-            compare_mem = self.current_mmem
+            compare_mem = self.get_ballooned_memory()
         else:
             compare_mem = new_mem
 
@@ -238,9 +245,10 @@ class BallooningTest(MemoryBaseTest):
             qemu_quit_after_test = 1
         if params.get("session_need_update", "no") == "yes":
             self.session = self.get_session(self.vm)
+        # for s4 operation after balloon test,
+        # memory is reset to original after s4
         if params.get("qemu_quit_after_sub_case", "no") == "yes":
-            self.current_mmem = self.ori_mem
-            self.current_gmem = self.ori_gmem
+            self.pre_mem = self.ori_mem
             qemu_quit_after_test = 0
         return qemu_quit_after_test
 
@@ -297,10 +305,11 @@ class BallooningTest(MemoryBaseTest):
             vm_mem_free = self.get_free_mem()
             used_size = min((self.ori_mem - vm_mem_free + balloon_buffer),
                             max_size)
+        current_mem = self.get_ballooned_memory()
         if balloon_type == "enlarge":
-            min_size = self.current_mmem
+            min_size = current_mem
         elif balloon_type == "evict":
-            max_size = self.current_mmem
+            max_size = current_mem
         min_size = max(used_size, min_size)
         return min_size, max_size
 
@@ -327,15 +336,16 @@ class BallooningTest(MemoryBaseTest):
             self.memory_check("before ballooning test", 0)
 
         params_tag = self.params.object_params(tag)
+        self.pre_mem = self.get_ballooned_memory()
+        self.pre_gmem = self.get_memory_status()
         self.balloon_memory(expect_mem)
         self.test_round += 1
-        ballooned_memory = self.ori_mem - expect_mem
-        if ballooned_memory < 0 or ballooned_memory == self.ori_mem:
-            ballooned_memory = 0
-        mmem, gmem = self.memory_check("after %s memory" % tag,
-                                       ballooned_memory)
-        self.current_mmem = mmem
-        self.current_gmem = gmem
+        ballooned_memory = expect_mem - self.pre_mem
+        # for illegal enlarge test
+        if expect_mem > self.ori_mem:
+            ballooned_memory = self.ori_mem - self.pre_mem
+        self.memory_check("after %s memory" % tag,
+                          ballooned_memory)
         if (params_tag.get("run_sub_test_after_balloon", "no") == "yes" and
                 params_tag.get('sub_test_after_balloon')):
             sub_type = params_tag['sub_test_after_balloon']
@@ -343,22 +353,20 @@ class BallooningTest(MemoryBaseTest):
                                                     self.env, sub_type)
             if should_quit == 1:
                 return True
-
+            # s4 after balloon test
             elif should_quit == 0:
                 expect_mem = self.ori_mem
 
             sleep_before_check = int(self.params.get("sleep_before_check", 0))
             timeout = (int(self.params.get("balloon_timeout", 100)) +
                        sleep_before_check)
-            ballooned_mem = abs(self.ori_mem - expect_mem)
+            ballooned_mem = expect_mem - self.pre_mem
             msg = "Wait memory balloon back after "
             msg += params_tag['sub_test_after_balloon']
             ret = utils_misc.wait_for(_memory_check_after_sub_test,
                                       timeout, sleep_before_check, 5, msg)
             if not ret:
                 self.test.fail("After sub test, memory check failed")
-            self.current_mmem = ret[0]
-            self.current_gmem = ret[1]
         return False
 
     def reset_memory(self):
@@ -437,13 +445,11 @@ class BallooningTestWin(BallooningTest):
                             None
         """
         logging.error("Memory size mismatch %s:\n", step)
-        error_msg = "Wanted to be changed: %s\n" % abs(self.ori_mem -
-                                                       expect_value)
+        error_msg = "Wanted to be changed: %s\n" % (expect_value - self.pre_mem)
         if monitor_value:
-            error_msg += "Changed in monitor: %s\n" % abs(self.ori_mem -
-                                                          monitor_value)
-        error_msg += "Changed in guest: %s\n" % abs(
-            guest_value - self.ori_gmem)
+            error_msg += "Changed in monitor: %s\n" % (monitor_value
+                                                       - self.pre_mem)
+        error_msg += "Changed in guest: %s\n" % (guest_value - self.pre_gmem)
         logging.error(error_msg)
 
     def get_memory_status(self):
@@ -597,9 +603,7 @@ def run(test, params, env):
                              float(params_tag.get('expect_memory_ratio')))
         # set evict illegal value to "0" for both linux and windows
         elif params_tag.get('illegal_value_check', 'no') == 'yes':
-            if tag == 'evict':
-                expect_mem = 1
-            else:
+            if tag == 'enlarge':
                 expect_mem = int(balloon_test.ori_mem + random.uniform(1, 1000))
         else:
             balloon_type = params_tag['balloon_type']

@@ -75,14 +75,14 @@ def check_memory_in_procfs(test, params, vm):
         memdev_params = params.object_params(mem_dev)
         mem_size = memdev_params['size']
         mem_size = int(float(utils_misc.normalize_data_size(mem_size, "K")))
-        smaps = process.system_output("grep -1 %d /proc/%d/smaps"
+        smaps = process.system_output("grep -B1 -E '^Size:\s+%d' /proc/%d/smaps"
                                       % (mem_size, qemu_pid))
         smaps = astring.to_text(smaps).strip()
         mem_path = memdev_params.get("mem-path")
         if mem_path and (mem_path not in smaps):
             test.fail("memdev = %s: mem-path '%s' is not in smaps '%s'!"
                       % (mem_dev, mem_path, smaps))
-        mem_start = smaps.split('-')[0]
+        mem_start = re.findall('^([0-9a-fA-F]+)-', smaps, re.M)[0]
         numa_maps = process.system_output("grep %s /proc/%d/numa_maps"
                                           % (mem_start, qemu_pid))
         numa_maps = astring.to_text(numa_maps).strip()

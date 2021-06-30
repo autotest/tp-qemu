@@ -26,7 +26,6 @@ from virttest import storage
 from virttest import qemu_migration
 
 from virttest.utils_windows import virtio_win
-from avocado import TestCancel
 
 
 class BaseVirtTest(object):
@@ -117,7 +116,7 @@ class QemuGuestAgentTest(BaseVirtTest):
     def _check_ga_pkg(self, session, cmd_check_pkg):
         '''
         Check if the package is installed, for rhel8 need to check
-        if the current pkg is the latest one.
+        if the specific pkg.
 
         :param session: use for sending cmd
         :param cmd_check_pkg: cmd to check if ga pkg is installed
@@ -126,18 +125,24 @@ class QemuGuestAgentTest(BaseVirtTest):
                               logging.info)
         s, o = session.cmd_status_output(cmd_check_pkg)
         if s == 0 and self.params.get("os_variant", "") == 'rhel8':
-            # qemu-guest-agent-2.12.0-88.module+el8.1.0+4233+bc44be3f.x86_64
-            error_context.context("Check if the installed pkg is the latest"
+            error_context.context("Check if the installed pkg is the specific"
                                   " one for rhel8 guest.", logging.info)
             version_list = []
-            build_latest = re.sub(r'/', '-', self.qga_pkg_latest_url)
-            for pkg in [o, build_latest]:
-                pattern = r"guest-agent-(\d+.\d+.\d+-\d+).module"
-                qga_v = re.findall(pattern, pkg, re.I)[0]
-                version_list.append(qga_v)
-            logging.info("The installed and the latest pkg version is"
-                         " %s", version_list)
-            if version_list[1] != version_list[0]:
+            full_qga_rpm_info = session.cmd("readlink %s" % self.qga_pkg_path)
+            build_specific = re.sub(r'/', '-', full_qga_rpm_info)
+            if full_qga_rpm_info:
+                for pkg in [o, build_specific]:
+                    pattern = r"guest-agent-(\d+.\d+.\d+-\d+).module"
+                    qga_v = re.findall(pattern, pkg, re.I)
+                    if qga_v:
+                        version_list.append(qga_v[0])
+                logging.info("The installed and the specific pkg "
+                             "version is %s", version_list)
+            if len(version_list) < 2:
+                self.test.error("Does not find proper qga package at %s, it"
+                                "is recommended to install a specific version"
+                                "of qga rpm in advance" % self.qga_pkg_path)
+            elif version_list[1] != version_list[0]:
                 return False
         return s == 0
 
@@ -166,91 +171,6 @@ class QemuGuestAgentTest(BaseVirtTest):
         ver_main = int(re.findall(pattern, qga_ver)[0])
         return ver_main
 
-    @error_context.context_aware
-    def _get_latest_pkg(self):
-        """
-        get latest qemu-guest-agent rpm package url.
-        :return: rpm pkg list
-        """
-        def get_mdl_tag_build_status(get_mdl_tag_cmd):
-            """
-            Get module tag and qemu-kvm build status.
-            """
-            logging.info("Get the needed module tag.")
-            mdl_tag = process.system_output(get_mdl_tag_cmd,
-                                            shell=True,
-                                            timeout=query_timeout
-                                            ).strip().split()[0].decode()
-            logging.info("Check qemu-kvm build is ready or not")
-            get_qemu_name_cmd = "brew list-tagged %s" % mdl_tag
-            get_qemu_name_cmd += " | grep qemu-kvm"
-            qemu_bild_name = process.system_output(get_qemu_name_cmd,
-                                                   shell=True,
-                                                   timeout=query_timeout
-                                                   ).strip().split()[0].decode()
-            get_build_ready_cmd = "brew buildinfo %s | grep State" % qemu_bild_name
-            output = process.system_output(get_build_ready_cmd,
-                                           shell=True,
-                                           timeout=query_timeout
-                                           ).strip().decode()
-            return mdl_tag, "COMPLETE" in output
-
-        virt_module_stream = self.params.get("virt_module_stream", "")
-        guest_name = self.params.get("guest_name")
-        arch = self.params["vm_arch_name"]
-        download_root = self.params["download_root_url"]
-        query_timeout = 180
-
-        error_context.context("Check if brew command is presented.",
-                              logging.info)
-        try:
-            avo_path.find_command("brew")
-        except avo_path.CmdNotFoundError as detail:
-            raise TestCancel(str(detail))
-
-        error_context.context("Get the latest qemu-guest-agent pkg of %s"
-                              " stream." % virt_module_stream,
-                              logging.info)
-        # target release,such as 810,811
-        target_release = re.findall(r'rhel(\d+)-\w+', guest_name, re.I)[0]
-        # get tag pattern,such as module-virt-8.1-80101xxxxx
-        if virt_module_stream == "rhel":
-            # for slow train,didn't know 810 or 811.
-            # module-virt-rhel-801xxx
-            target_release = target_release[:-1]
-        tag_version = "0".join(target_release)
-        # module-virt-8.1-80101 or module-virt-rhel-801
-        platform_tag = "module-virt-%s-%s" % (virt_module_stream,
-                                              tag_version)
-        get_latest_mdl_tag_cmd = "brew list-targets |grep"
-        get_latest_mdl_tag_cmd += " %s |sort -r |head -n 1" % platform_tag
-        mdl_tag, build_s = get_mdl_tag_build_status(get_latest_mdl_tag_cmd)
-
-        if not build_s:
-            logging.info("The qemu-kvm build's status is not ready,"
-                         " so we well check it in the previous virt module")
-            get_pre_mdl_tag_cmd = "brew list-targets |grep %s" % platform_tag
-            get_pre_mdl_tag_cmd += " |sort -r |head -n 2 |tail -n 1"
-            mdl_tag, build_s = get_mdl_tag_build_status(
-                get_pre_mdl_tag_cmd)
-            if not build_s:
-                self.test.error("Please check why the recent two modules'"
-                                " qemu-kvm build is not ready.")
-
-        error_context.context("Get qemu-guest-agent rpm pkg"
-                              " url of %s." % mdl_tag, logging.info)
-        get_brew_latest_pkg_cmd = "brew --quiet --topdir=%s" % download_root
-        get_brew_latest_pkg_cmd += " list-tagged %s" % mdl_tag
-        get_brew_latest_pkg_cmd += " --path --arch=%s" % arch
-        get_brew_latest_pkg_cmd += " |grep qemu-guest-agent-[0-9]"
-
-        rpm_url = process.system_output(get_brew_latest_pkg_cmd,
-                                        shell=True,
-                                        timeout=query_timeout
-                                        ).strip().decode()
-        logging.info("Qemu-guest-agent rpm pkg url is %s", rpm_url)
-        return rpm_url
-
     def gagent_install(self, session, vm):
         """
         install qemu-ga pkg in guest.
@@ -266,7 +186,7 @@ class QemuGuestAgentTest(BaseVirtTest):
                 error_context.context("Remove the original guest agent pkg.",
                                       logging.info)
                 session.cmd("rpm -e %s" % o_check.strip())
-            self.gagent_install_cmd = "rpm -ivh %s" % self.qga_pkg_latest_url
+            self.gagent_install_cmd = "rpm -ivh %s" % self.qga_pkg_path
 
         error_context.context("Install qemu-guest-agent pkg in guest.",
                               logging.info)
@@ -398,9 +318,15 @@ class QemuGuestAgentTest(BaseVirtTest):
             session = self._get_session(params, self.vm)
             self._open_session_list.append(session)
             if self.params.get("os_variant", "") == 'rhel8':
-                error_context.context("Get the latest qemu-guest-agent pkg"
+                error_context.context("Get the qemu-guest-agent pkg"
                                       " for rhel8 guest.", logging.info)
-                self.qga_pkg_latest_url = self._get_latest_pkg()
+                cmd_check_qga_installlog = params["cmd_check_qga_installlog"]
+                s, o = session.cmd_status_output(cmd_check_qga_installlog)
+                if not s:
+                    output = session.cmd_output("cat %s" % o)
+                    test.fail("Failed to get qga, details: %s" % output)
+                else:
+                    self.qga_pkg_path = params["qga_rpm_path"]
             if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
                 logging.info("qemu-ga is already installed.")
             else:

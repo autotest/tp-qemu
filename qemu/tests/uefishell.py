@@ -107,7 +107,7 @@ class UEFIShellTest(object):
         :return if check_result is not None, return matched string list
         """
         logging.info("Send uefishell command: %s", command)
-        output = self.session.cmd_output_safe(command)
+        output = self.session.cmd_output(command)
         time.sleep(interval)
         # Judge if cmd is run successfully via environment variable 'lasterror'
         last_error = self.params["last_error"]

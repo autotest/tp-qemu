@@ -5,6 +5,7 @@ import re
 import base64
 import random
 import string
+import json
 
 import aexpect
 
@@ -1236,50 +1237,47 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Check all disks info in a loop.",
                               logging.info)
         disks_info_qga = self.gagent.get_disks()
-        cmd_get_rawdisk_guest = params['get_rawdisk_guest_cmd']
-        raw_disk_guest = session.cmd_output(cmd_get_rawdisk_guest)
-        for disk_info in disks_info_qga:
-            diskname = disk_info['name']
-            if diskname in raw_disk_guest:
-                cmd_rawdisk_guest = params['rawdisk_guest_cmd'] % diskname
-                disk_info_guest = session.cmd_output(cmd_rawdisk_guest)
+        cmd_diskinfo_guest = params['diskinfo_guest_cmd']
+        disks_info_guest = session.cmd_output(cmd_diskinfo_guest)
+        disks_info_guest = json.loads(disks_info_guest)['blockdevices']
+
+        for disk_info_guest in disks_info_guest:
+            diskname = disk_info_guest['kname']
+            error_context.context("Check properties of disk %s"
+                                  % diskname, logging.info)
+            for disk_info_qga in disks_info_qga:
+                if diskname == disk_info_qga['name']:
+                    error_context.context("Check dependencies of disk %s"
+                                          % diskname, logging.info)
+                    dependencies = disk_info_qga['dependencies']
+                    if disk_info_guest['type'] == 'disk':
+                        if (dependencies and dependencies[0] != 'null'):
+                            test.error("Disk %s dependencies "
+                                       "should be [] or ['null']." % diskname)
+                    else:
+                        if (not dependencies or (dependencies[0] !=
+                                                 disk_info_guest['pkname'])):
+                            test.fail("Disk %s dependencies is different "
+                                      "between guest and qga." % diskname)
+
+                    error_context.context("Check partition of disk %s"
+                                          % diskname, logging.info)
+                    partition = False if disk_info_guest['type'] != "part" else True
+                    if disk_info_qga["partition"] != partition:
+                        test.fail("Disk %s partition is different "
+                                  "between guest and qga." % diskname)
+
+                    if disk_info_guest['type'] == 'lvm':
+                        error_context.context("Check alias of disk %s"
+                                              % diskname, logging.info)
+                        cmd_get_disk_alias = params["cmd_get_disk_alias"] % diskname
+                        disk_alias = session.cmd_output(cmd_get_disk_alias).strip()
+                        if disk_info_qga['alias'] != disk_alias:
+                            test.fail("Disk %s alias is defferent "
+                                      "between guest and qga." % diskname)
+                    break
             else:
-                cmd_diskinfo_guest = params['diskinfo_guest_cmd'] % diskname
-                disk_info_guest = session.cmd_output(cmd_diskinfo_guest)
-            disk_info_guest = eval(disk_info_guest.strip().strip(','))
-
-            error_context.context("Check disk name", logging.info)
-            if disk_info['name'] != disk_info_guest['kname']:
-                test.fail("Disk %s name is different "
-                          "between guest and qga." % diskname)
-
-            error_context.context("Check dependencies", logging.info)
-            if disk_info_guest['type'] == 'disk':
-                dependencies = 'null'
-                try:
-                    if disk_info['dependencies'][0] != dependencies:
-                        test.error("Disk %s dependencies "
-                                   "should be null." % diskname)
-                except IndexError:
-                    logging.info("Disk '%s' dependencies is null", diskname)
-            else:
-                if disk_info['dependencies'][0] != disk_info_guest['pkname']:
-                    test.fail("Disk %s dependencies is different "
-                              "between guest and qga." % diskname)
-
-            error_context.context("Check partition", logging.info)
-            partition = False if disk_info_guest['type'] != "part" else True
-            if disk_info["partition"] != partition:
-                test.fail("Disk %s partition is different "
-                          "between guest and qga." % diskname)
-
-            if disk_info_guest['type'] == 'lvm':
-                error_context.context("Check alias", logging.info)
-                cmd_get_disk_alias = params["cmd_get_disk_alias"] % diskname
-                disk_alias = session.cmd_output(cmd_get_disk_alias).strip()
-                if disk_info['alias'] != disk_alias:
-                    test.fail("Disk %s alias is defferent "
-                              "between guest and qga." % diskname)
+                test.fail("Failed to get disk %s with qga." % diskname)
 
     @error_context.context_aware
     def gagent_check_ssh_public_key_injection(self, test, params, env):

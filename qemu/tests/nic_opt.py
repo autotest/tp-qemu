@@ -46,22 +46,21 @@ def run(test, params, env):
         try:
             n_server.start()
             # Run netperf with message size defined in range.
-            netperf_test_duration = int(params.get("netperf_test_duration", 180))
+            test_duration = int(params.get("netperf_test_duration", 180))
+            deviation_time = params.get_numeric("deviation_time")
             netperf_para_sess = params.get("netperf_para_sessions", "1")
             test_protocols = params.get("test_protocols", "TCP_STREAM")
             netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
             netperf_output_unit = params.get("netperf_output_unit")
             netperf_package_sizes = params.get("netperf_sizes")
             test_option = params.get("test_option", "")
-            test_option += " -l %s" % netperf_test_duration
+            test_option += " -l %s" % test_duration
             if params.get("netperf_remote_cpu") == "yes":
                 test_option += " -C"
             if params.get("netperf_local_cpu") == "yes":
                 test_option += " -c"
             if netperf_output_unit in "GMKgmk":
                 test_option += " -f %s" % netperf_output_unit
-            start_time = time.time()
-            stop_time = start_time + netperf_test_duration
             num = 0
             for protocol in test_protocols.split():
                 error_context.context("Testing %s protocol" % protocol,
@@ -76,21 +75,28 @@ def run(test, params, env):
                 else:
                     test.error("Can not start netperf client.")
                 num += 1
+                start_time = time.time()
                 # here when set a run flag, when other case call this case as a
                 # subprocess backgroundly,can set this run flag to False to stop
                 # the stress test.
                 env["netperf_run"] = True
-
-                netperf_test_duration = stop_time - time.time()
-                utils_misc.wait_for(
-                    lambda: not n_client.is_netperf_running(),
-                    netperf_test_duration, 0, 5,
-                    "Wait netperf test finish %ss" % netperf_test_duration)
-                time.sleep(5)
+                execution_time = test_duration + deviation_time
+                utils_misc.wait_for(lambda: not
+                                    n_client.is_netperf_running(),
+                                    execution_time, 0, 2,
+                                    "Wait netperf test finish %ss" % test_duration)
+                stop_time = time.time()
+                run_time = stop_time - start_time
+                if n_client.is_netperf_running():
+                    test.fail("netperf still running,netperf hangs")
+                elif test_duration - 5 <= run_time:
+                    logging.info("netperf runs successfully")
+                else:
+                    test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
         finally:
             n_server.stop()
-            n_server.package.env_cleanup(True)
-            n_client.package.env_cleanup(True)
+            n_server.cleanup(True)
+            n_client.cleanup(True)
 
     def test_ping():
         """

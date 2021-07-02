@@ -24,7 +24,6 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     login_timeout = float(params.get("login_timeout", 360))
-
     netperf_server = params.get("netperf_server").split()
     netperf_client = params.get("netperf_client").split()
     guest_username = params.get("username", "")
@@ -39,6 +38,7 @@ def run(test, params, env):
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
+    disable_firewall = params.get("disable_firewall", "")
     if (params.get("netperf_vlan_test", "no") == "yes" and
             params.get("host_vlan_ip")):
         host_ip = params.get("host_vlan_ip")
@@ -54,7 +54,7 @@ def run(test, params, env):
             server_vm = env.get_vm(server)
             server_vm.verify_alive()
             session = server_vm.wait_for_login(timeout=login_timeout)
-            session.cmd("service iptables stop; iptables -F",
+            session.cmd(disable_firewall,
                         ignore_all_errors=True)
             if params.get("netperf_vlan_test", "no") == "yes":
                 vlan_nic = params.get("vlan_nic")
@@ -108,7 +108,7 @@ def run(test, params, env):
             client_vm = env.get_vm(client)
             client_vm.verify_alive()
             session = client_vm.wait_for_login(timeout=login_timeout)
-            session.cmd("service iptables stop; iptables -F",
+            session.cmd(disable_firewall,
                         ignore_all_errors=True)
             if params.get("netperf_vlan_test", "no") == "yes":
                 vlan_nic = params.get("vlan_nic")
@@ -221,22 +221,21 @@ def run(test, params, env):
         for n_server in netperf_servers:
             n_server.start()
         # Run netperf with message size defined in range.
-        netperf_test_duration = int(params.get("netperf_test_duration", 60))
+        test_duration = int(params.get("netperf_test_duration", 60))
+        deviation_time = params.get_numeric("deviation_time")
         netperf_para_sess = params.get("netperf_para_sessions", "1")
         test_protocols = params.get("test_protocols", "TCP_STREAM")
         netperf_cmd_prefix = params.get("netperf_cmd_prefix", "")
         netperf_output_unit = params.get("netperf_output_unit", " ")
         netperf_package_sizes = params.get("netperf_package_sizes")
         test_option = params.get("test_option", "")
-        test_option += " -l %s" % netperf_test_duration
+        test_option += " -l %s" % test_duration
         if params.get("netperf_remote_cpu") == "yes":
             test_option += " -C"
         if params.get("netperf_local_cpu") == "yes":
             test_option += " -c"
         if netperf_output_unit in "GMKgmk":
             test_option += " -f %s" % netperf_output_unit
-        start_time = time.time()
-        stop_time = start_time + netperf_test_duration
         num = 0
         s_len = len(server_infos)
         for protocol in test_protocols.split():
@@ -255,26 +254,31 @@ def run(test, params, env):
                 else:
                     test.error("Can not start netperf client.")
                 num += 1
+            start_time = time.time()
             # here when set a run flag, when other case call this case as a
             # subprocess backgroundly, can set this run flag to False to stop
             # the stress test.
             env["netperf_run"] = True
-            for n_client in netperf_clients:
-                if n_client.is_netperf_running():
-                    left_time = stop_time - time.time()
-                    utils_misc.wait_for(lambda: not
-                                        n_client.is_netperf_running(),
-                                        left_time, 0, 5,
-                                        "Wait netperf test finish %ss" % left_time)
-            time.sleep(5)
+            execution_time = test_duration + deviation_time
+            utils_misc.wait_for(lambda: not
+                                n_client.is_netperf_running(),
+                                execution_time, 0, 2,
+                                "Wait netperf test finish %ss" % test_duration)
+            stop_time = time.time()
+            run_time = stop_time - start_time
+            if n_client.is_netperf_running():
+                test.fail("netperf still running,netperf hangs")
+            elif test_duration - 5 <= run_time:
+                logging.info("netperf runs successfully")
+            else:
+                test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
     finally:
         for n_server in netperf_servers:
-            if n_server:
-                n_server.stop()
-            n_server.package.env_cleanup(True)
+            n_server.stop()
+            n_server.cleanup(True)
         for n_client in netperf_clients:
-            if n_client:
-                n_client.package.env_cleanup(True)
+            n_client.stop()
+            n_client.cleanup(True)
         env["netperf_run"] = False
         if session:
             session.close()

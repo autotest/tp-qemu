@@ -56,12 +56,12 @@ def run(test, params, env):
     buf_num = params.get("buf_num", 200000)
     session_num = params.get("session_num")
     timeout = int(params.get("timeout")) * int(session_num)
-    driver_name = params.get("driver_name", "netkvm")
+    driver_verifier = params["driver_verifier"]
 
     vm_sender = env.get_vm(params["main_vm"])
     vm_sender.verify_alive()
     # verify driver
-    _verify_vm_driver(vm_sender, test, driver_name)
+    _verify_vm_driver(vm_sender, test, driver_verifier)
 
     logging.debug(process.system("numactl --hardware", ignore_status=True,
                                  shell=True))
@@ -75,7 +75,7 @@ def run(test, params, env):
 
     vm_receiver = env.get_vm("vm2")
     vm_receiver.verify_alive()
-    _verify_vm_driver(vm_receiver, test, driver_name)
+    _verify_vm_driver(vm_receiver, test, driver_verifier)
     try:
         sess = None
         sess = vm_receiver.wait_for_login(timeout=login_timeout)

@@ -70,6 +70,7 @@ def run(test, params, env):
         session.cmd(params["msi_cmd"] % (hwid, 0 if enable else 1))
 
     driver = params["driver_name"]
+    driver_verifier = params.get("driver_verifier", driver)
     device_name = params["device_name"]
     timeout = int(params.get("login_timeout", 360))
     restore_msi = False
@@ -79,7 +80,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test, driver,
+                                                            test, driver_verifier,
                                                             timeout)
 
     error_context.context("Check %s's irq number" % device_name, logging.info)

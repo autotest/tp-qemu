@@ -41,10 +41,11 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     timeout = int(params.get("login_timeout", 360))
     driver = params["driver_name"]
+    driver_verifier = params.get("driver_verifier", driver)
     error_context.context("Enable driver verifier in guest.", logging.info)
     session = vm.wait_for_login(timeout=timeout)
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test, driver,
+                                                            test, driver_verifier,
                                                             timeout)
     session.close()
     if params.get("need_uninstall") != "yes":

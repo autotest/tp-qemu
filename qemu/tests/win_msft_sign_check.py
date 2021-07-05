@@ -20,8 +20,9 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     driver_name = params["driver_name"]
+    driver_verifier = params.get("driver_verifier", driver_name)
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test, driver_name)
+                                                            test, driver_verifier)
 
     # check if Windows VirtIO driver is msft digital signed.
     device_name = params["device_name"]

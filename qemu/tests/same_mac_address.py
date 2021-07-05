@@ -28,10 +28,10 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     error_context.context("Check if the driver is installed and "
                           "verified", logging.info)
-    driver_name = params.get("driver_name", "netkvm")
+    driver_verifier = params["driver_verifier"]
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,
-                                                            driver_name,
+                                                            driver_verifier,
                                                             timeout)
     # wait for getting the 169.254.xx.xx, it gets slower than valid ip.
     time.sleep(60)

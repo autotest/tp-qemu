@@ -27,10 +27,10 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     error_context.context("Check if the driver is installed and "
                           "verified", logging.info)
-    driver_name = params.get("driver_name", "netkvm")
+    driver_verifier = params["driver_verifier"]
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,
-                                                            driver_name,
+                                                            driver_verifier,
                                                             timeout)
     error_context.context("Install VIOPROT protocol", logging.info)
     media_type = params["virtio_win_media_type"]

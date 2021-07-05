@@ -7,6 +7,7 @@ from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
 from virttest.staging import utils_memory
+from virttest.utils_test import BackgroundTest
 
 
 @error_context.context_aware
@@ -39,6 +40,46 @@ def run(test, params, env):
         except ValueError as err:
             test.cancel(err)
 
+    def run_stress():
+        def heavyload_install():
+            if session.cmd_status(test_install_cmd) != 0:
+                logging.warning("Could not find installed heavyload in guest, "
+                                "will install it via winutils.iso ")
+                winutil_drive = utils_misc.get_winutils_vol(session)
+                if not winutil_drive:
+                    test.cancel("WIN_UTILS CDROM not found.")
+                install_cmd = params["install_cmd"] % winutil_drive
+                session.cmd(install_cmd)
+
+        logging.info('Loading stress on guest.')
+        stress_duration = params.get("stress_duration", 60)
+        if params["os_type"] == "linux":
+            params['stress_args'] = '--vm %s --vm-bytes 256M --timeout %s' % (
+                    mem // 512, stress_duration)
+            stress = utils_test.VMStress(vm, 'stress', params)
+            stress.load_stress_tool()
+            time.sleep(stress_duration)
+            stress.unload_stress()
+        else:
+            session = vm.wait_for_login()
+            install_path = params["install_path"]
+            test_install_cmd = 'dir "%s" | findstr /I heavyload' % install_path
+            heavyload_install()
+            heavyload_bin = r'"%s\heavyload.exe" ' % install_path
+            heavyload_options = ["/MEMORY 100",
+                                 "/DURATION %d" % (stress_duration // 60),
+                                 "/AUTOEXIT",
+                                 "/START"]
+            start_cmd = heavyload_bin + " ".join(heavyload_options)
+            stress_tool = BackgroundTest(session.cmd, (start_cmd,
+                                                       stress_duration,
+                                                       stress_duration))
+            stress_tool.start()
+            if not utils_misc.wait_for(stress_tool.is_alive, 30):
+                test.error("Failed to start heavyload process")
+            stress_tool.join(stress_duration)
+
+
     origin_nr = int(params['origin_nr'])
     host_numa_node = utils_misc.NumaInfo()
     mem = int(float(utils_misc.normalize_data_size("%sM" % params["mem"])))
@@ -68,13 +109,7 @@ def run(test, params, env):
     vm_name = params['main_vm']
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
-    params['stress_args'] = '--vm %s --vm-bytes 256M --timeout 30s' % (
-            mem // 512)
-    logging.info('Loading stress on guest.')
-    stress = utils_test.VMStress(vm, 'stress', params)
-    stress.load_stress_tool()
-    time.sleep(30)
-    stress.unload_stress()
+    run_stress()
     set_hugepage()
     hp_config.cleanup()
     vm.verify_kernel_crash()

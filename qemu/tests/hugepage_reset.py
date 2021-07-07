@@ -27,14 +27,17 @@ def run(test, params, env):
 
     def set_hugepage():
         """Set nr_hugepages"""
-        for h_size in (origin_nr - 2, origin_nr + 2):
-            hp_config.target_hugepages = h_size
-            hp_config.set_hugepages()
-            if params.get('on_numa_node'):
-                logging.info('Set hugepage size %s to target node %s',
-                             h_size, target_node)
-                hp_config.set_node_num_huge_pages(h_size, target_node,
-                                                  hugepage_size)
+        try:
+            for h_size in (origin_nr - 2, origin_nr + 2):
+                hp_config.target_hugepages = h_size
+                hp_config.set_hugepages()
+                if params.get('on_numa_node'):
+                    logging.info('Set hugepage size %s to target node %s',
+                                 h_size, target_node)
+                    hp_config.set_node_num_huge_pages(h_size, target_node,
+                                                      hugepage_size)
+        except ValueError as err:
+            test.cancel(err)
 
     origin_nr = int(params['origin_nr'])
     host_numa_node = utils_misc.NumaInfo()

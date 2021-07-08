@@ -140,12 +140,21 @@ def run(test, params, env):
                  if needed
         """
         sub_type = params.get("sub_type_%s" % plug_tag)
-        if sub_type:
-            context_msg = "Running sub test '%s' %s"
-            error_context.context(context_msg % (sub_type, plug_tag),
-                                  logging.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
-            return (sub_type == "shutdown")
+        login_timeout = params.get_numeric("login_timeout", 360)
+        session = vm.wait_for_serial_login(timeout=login_timeout)
+        shutdown_method = params.get("shutdown_method", "shell")
+        shutdown_command = params.get("shutdown_command")
+        if sub_type == "reboot":
+            logging.info("Running sub test '%s' %s", sub_type, plug_tag)
+            if params.get("reboot_method"):
+                vm.reboot(session, params["reboot_method"], 0,
+                          login_timeout, serial=True)
+        elif sub_type == "shutdown":
+            logging.info("Running sub test '%s' %s", sub_type, plug_tag)
+            if shutdown_method == "shell":
+                # Send a shutdown command to the guest's shell
+                session.sendline(shutdown_command)
+                return True
         return False
 
     login_timeout = int(params.get("login_timeout", 360))

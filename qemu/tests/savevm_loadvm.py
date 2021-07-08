@@ -36,6 +36,8 @@ def run(test, params, env):
         error_context.context("Loading VM from %s" % snapshot_tag,
                               logging.info)
         vm.monitor.human_monitor_cmd("loadvm %s" % snapshot_tag)
+        if vm.monitor.verify_status("paused"):
+            vm.monitor.human_monitor_cmd("c")
         if os_type == "linux":
             vm.verify_kernel_crash()
             vm.verify_dmesg()

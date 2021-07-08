@@ -94,12 +94,15 @@ def run(test, params, env):
             verify_wait_timeout, first=5, step=10):
         test.fail(mismatch_text)
 
-    error_context.context("Check CPU topology of guest", logging.info)
-    if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
-        test.fail("CPU topology of guest is not as expected.")
-    session = vm.reboot(session, timeout=reboot_timeout)
-    if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
-        test.fail("CPU topology of guest is not as expected after reboot.")
+    if params.get_boolean("check_cpu_topology", True):
+        error_context.context("Check CPU topology of guest", logging.info)
+        if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type,
+                                                         cpuinfo):
+            test.fail("CPU topology of guest is not as expected.")
+        session = vm.reboot(session, timeout=reboot_timeout)
+        if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type,
+                                                         cpuinfo):
+            test.fail("CPU topology of guest is not as expected after reboot.")
 
     if os_type == "linux":
         error_context.context("Hotunplug all vCPU devices", logging.info)

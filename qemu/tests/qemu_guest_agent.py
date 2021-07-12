@@ -137,6 +137,7 @@ class QemuGuestAgentTest(BaseVirtTest):
                     qga_v = re.findall(pattern, pkg, re.I)
                     if qga_v:
                         version_list.append(qga_v[0])
+                self.qga_v = version_list[-1]
                 logging.info("The installed and the specific pkg "
                              "version is %s", version_list)
             if len(version_list) < 2:
@@ -145,6 +146,10 @@ class QemuGuestAgentTest(BaseVirtTest):
                                 "of qga rpm in advance" % self.qga_pkg_path)
             elif version_list[1] != version_list[0]:
                 return False
+        elif self.params.get("os_variant", "") == 'rhel7':
+            pattern = r"guest-agent-(\d+.\d+.\d+-\d+).el7"
+            qga_v = re.findall(pattern, o, re.I)
+            self.qga_v = qga_v
         return s == 0
 
     @error_context.context_aware
@@ -429,11 +434,41 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environmen.
+        :param env: Dictionary with test environment.
         """
         error_context.context("Check guest agent command 'guest-sync'",
                               logging.info)
         self.gagent.sync()
+
+    @error_context.context_aware
+    def gagent_check_guest_info(self, test, params, env):
+        """
+        Execute "guest-info" command to guest agent
+
+        Test steps:
+        1) Send "guest-info" command and check the version of qga.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+
+        session = self._get_session(params, None)
+        self._open_session_list.append(session)
+
+        error_context.context("Check guest agent command 'guest-info'",
+                              logging.info)
+        qga_ver_qga = self.gagent.guest_info()['version'].strip()
+        if params.get("os_type") == 'windows':
+            win_qgabuild_guest = session.cmd_output(params["cmd_qga_build"]
+                                                    ).strip()
+        else:
+            qga_ver_guest_raw = str(self.qga_v)
+            pattern = r"(\d+.\d+.\d+)"
+            qga_ver_guest = re.findall(pattern, qga_ver_guest_raw, re.I)[0]
+        if qga_ver_qga != qga_ver_guest:
+            test.fail("The qga version %s from qga is different with %s "
+                      "from guest." % (qga_ver_qga, qga_ver_guest))
 
     @error_context.context_aware
     def gagent_check_container(self, test, params, env):

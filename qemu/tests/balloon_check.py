@@ -598,7 +598,7 @@ def run(test, params, env):
         # set evict illegal value to "0" for both linux and windows
         elif params_tag.get('illegal_value_check', 'no') == 'yes':
             if tag == 'evict':
-                expect_mem = 0
+                expect_mem = 1
             else:
                 expect_mem = int(balloon_test.ori_mem + random.uniform(1, 1000))
         else:

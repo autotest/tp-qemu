@@ -19,11 +19,13 @@ class BallooningTestPause(BallooningTest):
         super(BallooningTestPause, self).__init__(test, params, env)
 
         self.vm = env.get_vm(params["main_vm"])
+        # ori_mem is the original memory
+        # pre_mem/gmem is the memory value before balloon test
         self.ori_mem = self.get_vm_mem(self.vm)
         if self.get_ballooned_memory() != self.ori_mem:
             self.balloon_memory(self.ori_mem)
-        self.old_mmem = self.ori_mem
-        self.old_gmem = None
+        self.pre_mem = self.ori_mem
+        self.pre_gmem = None
 
     @error_context.context_aware
     def memory_check(self, step, changed_mem):
@@ -33,7 +35,7 @@ class BallooningTestPause(BallooningTest):
         :param step: the check point string
         :type step: string
         :param changed_mem: ballooned memory in current step(compared with
-        last round of memory, i.e. self.old_mmem, instead of self.ori_mem)
+        last round of memory, i.e. self.pre_mem, instead of self.ori_mem)
         :type changed_mem: int
         :return: memory size get from monitor and guest
         :rtype: tuple
@@ -41,10 +43,16 @@ class BallooningTestPause(BallooningTest):
         error_context.context("Check memory status %s" % step, logging.info)
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
-        if (abs(mmem - self.old_mmem)) != changed_mem or (
-                    self.old_gmem and (
-                            abs(gmem - self.old_gmem) - changed_mem) > 100):
-            self.error_report(step, abs(self.old_mmem - changed_mem),
+        if self.pre_gmem:
+            # for rhel guest, the gmem is total memory in guest;
+            # for windows guest, the gmem is used memory in guest.
+            if self.params['os_type'] == 'windows':
+                guest_ballooned_mem = self.pre_gmem - gmem
+            else:
+                guest_ballooned_mem = gmem - self.pre_gmem
+        if (mmem - self.pre_mem) != changed_mem or (self.pre_gmem and abs(
+                            guest_ballooned_mem - changed_mem) > 100):
+            self.error_report(step, self.pre.mem + changed_mem,
                               mmem, gmem)
             self.test.fail("Balloon test failed %s" % step)
         return (mmem, gmem)
@@ -63,7 +71,7 @@ class BallooningTestPause(BallooningTest):
         except Exception as e:
             if self.vm.monitor.verify_status('paused'):
                 # Make sure memory not changed before the guest resumed
-                if self.get_ballooned_memory() != self.ori_mem:
+                if self.get_ballooned_memory() != self.pre_mem:
                     self.test.fail("Memory changed before guest resumed")
 
                 logging.info("Resume the guest")
@@ -106,13 +114,11 @@ class BallooningTestPause(BallooningTest):
         :param guest_value: memory size report from guest
         """
         logging.error("Memory size mismatch %s:\n", step)
-        error_msg = "Wanted to be changed: %s\n" % abs(self.old_mmem -
-                                                       expect_value)
-        error_msg += "Changed in monitor: %s\n" % abs(self.old_mmem -
-                                                      monitor_value)
-        if self.old_gmem:
-            error_msg += "Changed in guest: %s\n" % abs(
-                self.old_gmem - guest_value)
+        error_msg = "Wanted to be changed: %s\n" % (expect_value - self.pre_mem)
+        error_msg += "Changed in monitor: %s\n" % (monitor_value
+                                                   - self.pre_mem)
+        if self.pre_gmem:
+            error_msg += "Changed in guest: %s\n" % (guest_value - self.pre_gmem)
         logging.error(error_msg)
 
 
@@ -198,16 +204,15 @@ def run(test, params, env):
         params_tag = params.object_params(tag)
         balloon_type = params_tag['balloon_type']
         if balloon_type == 'evict':
-            expect_mem = int(random.uniform(min_sz, balloon_test.old_mmem))
+            expect_mem = int(random.uniform(min_sz, balloon_test.pre_mem))
         else:
-            expect_mem = int(random.uniform(balloon_test.old_mmem, max_sz))
-
+            expect_mem = int(random.uniform(balloon_test.pre_mem, max_sz))
         balloon_test.balloon_memory(expect_mem)
-        changed_memory = abs(balloon_test.old_mmem - expect_mem)
+        changed_memory = expect_mem - balloon_test.pre_mem
         mmem, gmem = balloon_test.memory_check("after %s memory" % tag,
                                                changed_memory)
-        balloon_test.old_mmem = mmem
-        balloon_test.old_gmem = gmem
+        balloon_test.pre_mem = mmem
+        balloon_test.pre_gmem = gmem
 
     subtest = params.get("sub_test_after_balloon")
     if subtest:

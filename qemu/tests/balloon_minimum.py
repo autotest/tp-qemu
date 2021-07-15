@@ -30,6 +30,8 @@ def run(test, params, env):
                                                             test, driver_name)
     balloon_test = BallooningTestWin(test, params, env)
     expect_mem = int(params["expect_memory"])
+    balloon_test.pre_mem = balloon_test.get_ballooned_memory()
+    balloon_test.pre_gmem = balloon_test.get_memory_status()
     repeat_times = int(params.get("repeat_times", 10))
 
     while repeat_times:
@@ -40,6 +42,7 @@ def run(test, params, env):
         balloon_test._balloon_post_action()
         time.sleep(30)
         repeat_times -= 1
-    ballooned_memory = balloon_test.ori_mem - expect_mem
+
+    ballooned_memory = expect_mem - balloon_test.pre_mem
     balloon_test.memory_check("after balloon guest memory 10 times", ballooned_memory)
     session.close()

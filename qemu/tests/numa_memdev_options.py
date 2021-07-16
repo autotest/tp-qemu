@@ -75,7 +75,7 @@ def check_memory_in_procfs(test, params, vm):
         memdev_params = params.object_params(mem_dev)
         mem_size = memdev_params['size']
         mem_size = int(float(utils_misc.normalize_data_size(mem_size, "K")))
-        smaps = process.system_output("grep -B1 -E '^Size:\s+%d' /proc/%d/smaps"
+        smaps = process.system_output(r"grep -B1 -E '^Size:\s+%d' /proc/%d/smaps"
                                       % (mem_size, qemu_pid))
         smaps = astring.to_text(smaps).strip()
         mem_path = memdev_params.get("mem-path")

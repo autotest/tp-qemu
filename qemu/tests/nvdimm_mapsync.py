@@ -48,7 +48,7 @@ def run(test, params, env):
             vm_pid = vm.get_pid()
 
             error_context.context("Check vmflags in smaps file", logging.info)
-            with open('/proc/%s/smaps' %vm_pid, 'r') as fd:
+            with open('/proc/%s/smaps' % vm_pid, 'r') as fd:
                 content = fd.read()
             check_pattern = params["check_pattern"]
             vmflags_match = re.search(check_pattern, content, re.M)

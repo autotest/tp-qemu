@@ -79,7 +79,6 @@ def run(test, params, env):
                 test.error("Failed to start heavyload process")
             stress_tool.join(stress_duration)
 
-
     origin_nr = int(params['origin_nr'])
     host_numa_node = utils_misc.NumaInfo()
     mem = int(float(utils_misc.normalize_data_size("%sM" % params["mem"])))

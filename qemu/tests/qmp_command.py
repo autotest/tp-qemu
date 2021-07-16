@@ -259,7 +259,7 @@ def run(test, params, env):
             vm_machines = params["machine_type"].split(':', 1)[-1]
             expect_o = [{'alias': vm_machines}]
         elif qmp_cmd == "query-vnc":
-            vnc_port =  vm.get_vnc_port()
+            vnc_port = vm.get_vnc_port()
             expect_o = [{'service': str(vnc_port)}, {'enabled': True}, {'host': '0.0.0.0'}]
         check_result(qmp_o, expect_o)
     elif result_check.startswith("post_"):

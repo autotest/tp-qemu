@@ -67,6 +67,14 @@ def run(test, params, env):
         logging.info("Found exe file '%s'", exe_path)
         return exe_path
 
+    def get_stdev(file):
+        """
+        Get file's st_dev value.
+        """
+        stdev = session.cmd_output(cmd_get_stdev % file).strip()
+        logging.info("%s device id is %s.", file, stdev)
+        return stdev
+
     # data io config
     cmd_dd = params.get('cmd_dd')
     cmd_md5 = params.get('cmd_md5')
@@ -104,8 +112,12 @@ def run(test, params, env):
     cmd_set_tmpfs = params.get('cmd_set_tmpfs')
     size_mem1 = params.get('size_mem1')
 
-    # xfstest-nfs config
+    # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
+
+    # st_dev check config
+    cmd_get_stdev = params.get("cmd_get_stdev")
+    nfs_mount_dst_name = params.get("nfs_mount_dst_name")
 
     if cmd_xfstest:
         # /dev/shm is the default memory-backend-file, the default value is the
@@ -114,14 +126,21 @@ def run(test, params, env):
         logging.debug("original tmpfs size is %s", ori_tmpfs_size)
         params["post_command"] = cmd_set_tmpfs % ori_tmpfs_size
         params["pre_command"] = cmd_set_tmpfs % size_mem1
-        if setup_local_nfs:
-            for fs in params.objects("filesystems"):
-                nfs_params = params.object_params(fs)
-                params["export_dir"] = nfs_params.get("export_dir")
-                params["nfs_mount_src"] = nfs_params.get("nfs_mount_src")
-                params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
-                nfs_local = nfs.Nfs(params)
-                nfs_local.setup()
+
+    if setup_local_nfs:
+        for fs in params.objects("filesystems"):
+            nfs_params = params.object_params(fs)
+
+            params["export_dir"] = nfs_params.get("export_dir")
+            params["nfs_mount_src"] = nfs_params.get("nfs_mount_src")
+            params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
+            if cmd_get_stdev:
+                fs_source_dir = nfs_params.get("fs_source_dir")
+                params["nfs_mount_dir"] = os.path.join(fs_source_dir, nfs_mount_dst_name)
+            nfs_local = nfs.Nfs(params)
+            nfs_local.setup()
+
+    if cmd_xfstest or setup_local_nfs:
         params["start_vm"] = "yes"
         env_process.preprocess(test, params, env)
 
@@ -296,6 +315,22 @@ def run(test, params, env):
                 except (aexpect.ShellStatusError, aexpect.ShellTimeoutError):
                     test.fail('The xfstest failed.')
 
+            if cmd_get_stdev:
+                error_context.context("Create files in local device and"
+                                      " nfs device ", logging.info)
+                file_in_local_host = os.path.join(fs_source, "file_test")
+                file_in_nfs_host = os.path.join(fs_source, nfs_mount_dst_name,
+                                                "file_test")
+                cmd_touch_file = "touch %s && touch %s" % (file_in_local_host,
+                                                           file_in_nfs_host)
+                process.run(cmd_touch_file)
+                error_context.context("Check if the two files' st_dev are"
+                                      " the same on guest.", logging.info)
+                file_in_local_guest = os.path.join(fs_dest, "file_test")
+                file_in_nfs_guest = os.path.join(fs_dest, nfs_mount_dst_name,
+                                                 "file_test")
+                if get_stdev(file_in_local_guest) == get_stdev(file_in_nfs_guest):
+                    test.fail("st_dev are the same on diffrent device.")
         finally:
             if os_type == "linux":
                 utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
@@ -309,6 +344,9 @@ def run(test, params, env):
                     params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
                     params["rm_export_dir"] = nfs_params.get("export_dir")
                     params["rm_mount_dir"] = nfs_params.get("fs_source_dir")
+                    if cmd_get_stdev:
+                        fs_source_dir = nfs_params.get("fs_source_dir")
+                        params["nfs_mount_dir"] = os.path.join(fs_source_dir, nfs_mount_dst_name)
                     nfs_local = nfs.Nfs(params)
                     nfs_local.cleanup()
                     utils_misc.safe_rmdir(params["export_dir"])

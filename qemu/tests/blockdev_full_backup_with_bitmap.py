@@ -1,4 +1,3 @@
-import re
 import json
 
 from virttest.qemu_monitor import QMPCmdError

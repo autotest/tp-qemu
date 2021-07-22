@@ -53,7 +53,11 @@ def run(test, params, env):
     stop_iterations = int(params.get("stop_iterations", 1))
     stop_time = int(params.get("stop_time", 60))
     stop_with_signal = params.get("stop_with_signal") == "yes"
+    ntp_stop_cmd = params["ntp_stop_cmd"]
 
+    logging.info("Stop ntp service in guest")
+    if session.cmd_status(ntp_stop_cmd):
+        test.error("Failed to stop ntp service")
     # Get guest's pid.
     pid = vm.get_pid()
 

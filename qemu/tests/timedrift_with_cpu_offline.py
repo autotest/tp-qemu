@@ -26,6 +26,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
+    ntp_stop_cmd = params["ntp_stop_cmd"]
     boot_option_added = params.get("boot_option_added")
     boot_option_removed = params.get("boot_option_removed")
     if boot_option_added or boot_option_removed:
@@ -34,6 +35,8 @@ def run(test, params, env):
                                       args_added=boot_option_added)
 
     session = vm.wait_for_login(timeout=login_timeout)
+    if session.cmd_status(ntp_stop_cmd):
+        test.error("Failed to stop ntp service")
 
     # Command to run to get the current time
     time_command = params.get("time_command")

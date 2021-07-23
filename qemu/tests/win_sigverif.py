@@ -25,8 +25,9 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     driver_name = params["driver_name"]
+    driver_verifier = params.get("driver_verifier", driver_name)
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test, driver_name)
+                                                            test, driver_verifier)
 
     run_sigverif_cmd = utils_misc.set_winutils_letter(
         session, params["run_sigverif_cmd"])

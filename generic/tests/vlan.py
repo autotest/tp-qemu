@@ -186,6 +186,7 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
     prepare_netkvmco_cmd = params.get("prepare_netkvmco_cmd")
     set_vlan_cmd = params.get("set_vlan_cmd")
+    driver_verifier = params["driver_verifier"]
 
     vms.append(env.get_vm(params["main_vm"]))
     vms.append(env.get_vm("vm2"))
@@ -197,7 +198,7 @@ def run(test, params, env):
             session = vm.wait_for_login(timeout=login_timeout)
             session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                     test,
-                                                                    "netkvm")
+                                                                    driver_verifier)
             netkvmco_path = get_netkvmco_path(session)
             session.cmd(prepare_netkvmco_cmd % netkvmco_path, timeout=240)
             session.close()

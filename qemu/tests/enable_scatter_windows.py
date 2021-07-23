@@ -128,7 +128,7 @@ def run(test, params, env):
         return int(version)
 
     timeout = params.get("timeout", 360)
-    driver_name = params.get("driver_name", "netkvm")
+    driver_verifier = params["driver_verifier"]
     wireshark_name = params.get("wireshark_name")
     run_wireshark_temp = params.get("run_wireshark_temp")
     stop_wireshark_cmd = params.get("stop_wireshark_cmd")
@@ -149,7 +149,7 @@ def run(test, params, env):
                           "verified", logging.info)
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,
-                                                            driver_name,
+                                                            driver_verifier,
                                                             timeout)
 
     if _get_driver_version(session) > 189:

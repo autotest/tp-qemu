@@ -96,11 +96,12 @@ def run(test, params, env):
                     test.error("Error occured when set vlan tag for network interface: %s, "
                                "err info: %s " % (ifname, output))
             else:
+                driver_verifier = params["driver_verifier"]
                 session = vm.wait_for_login(timeout=login_timeout)
                 error_context.context("Verify if netkvm.sys is enabled in guest",
                                       logging.info)
                 session = utils_test.qemu.windrv_check_running_verifier(
-                            session, vm, test, "netkvm", timeout=120)
+                            session, vm, test, driver_verifier, timeout=120)
                 verify_vlan_table(expect_vlan)
                 ifname = utils_net.get_windows_nic_attribute(
                             session=session, key="netenabled", value=True,

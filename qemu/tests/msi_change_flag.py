@@ -76,13 +76,15 @@ def run(test, params, env):
             test.fail("virtio device's statuts is not correct")
     else:
         driver = params.get("driver_name")
+        driver_verifier = params.get("driver_verifier", driver)
+
         device_name = params["device_name"]
         devcon_folder = utils_misc.set_winutils_letter(session,
                                                        params["devcon_folder"])
         error_context.context("Boot guest with %s device" % driver,
                               logging.info)
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test, driver,
+                                                                test, driver_verifier,
                                                                 login_timeout)
         error_context.context("Check %s's irq number" % device_name,
                               logging.info)

@@ -85,10 +85,10 @@ def run(test, params, env):
         else:
             error_context.context("Check if the driver is installed and "
                                   "verified", logging.info)
-            driver_name = params.get("driver_name", "netkvm")
+            driver_verifier = params["driver_verifier"]
             utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                           test,
-                                                          driver_name,
+                                                          driver_verifier,
                                                           cmd_timeout)
             msis, queues = utils_net.get_msis_and_queues_windows(params, vm)
             if msis == 0 and vectors == 0:

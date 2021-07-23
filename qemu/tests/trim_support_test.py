@@ -62,7 +62,7 @@ def run(test, params, env):
     stg_param = params.object_params(image_name)
     image_size_str = stg_param["image_size"]
     guest_trim_cmd = params["guest_trim_cmd"]
-    driver_name = params.get("driver_name", "netkvm")
+    driver_verifier = params["driver_verifier"]
     event_id = params.get("event_id")
 
     timeout = float(params.get("timeout", 360))
@@ -73,7 +73,7 @@ def run(test, params, env):
     error_context.context("Check if the driver is installed and verified",
                           logging.info)
     session = utils_test.qemu.windrv_check_running_verifier(
-        session, vm, test, driver_name, timeout)
+        session, vm, test, driver_verifier, timeout)
 
     error_context.context("Format data disk", logging.info)
     disk_index = utils_misc.wait_for(

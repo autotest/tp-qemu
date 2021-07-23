@@ -53,6 +53,7 @@ def run(test, params, env):
     """
     inst_timeout = int(params.get("driver_install_timeout", INSTALL_TIMEOUT))
     driver_name = params["driver_name"]
+    driver_verifier = params.get("driver_verifier", driver_name)
     device_name = params["device_name"]
     device_hwid = params["device_hwid"]
 
@@ -152,7 +153,7 @@ def run(test, params, env):
 
     error_context.context("Verifying target driver", logging.info)
     session = vm.reboot(session)
-    windrv_verify_running(session, test, driver_name)
+    windrv_verify_running(session, test, driver_verifier)
 
     ver_list = _pnpdrv_info(session, device_name, ["DriverVersion"])
     if expected_ver not in ver_list:

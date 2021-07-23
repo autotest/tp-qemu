@@ -139,10 +139,11 @@ def run(test, params, env):
         if match_string in output:
             test.fail("Qemu output error info: %s" % output)
         if params["os_type"] == "windows":
+            driver_verifier = params["driver_verifier"]
             error_context.context("Verify if netkvm.sys is enabled in guest",
                                   logging.info)
             session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                    test, "netkvm")
+                                                                    test, driver_verifier)
         func_name = {"ping": test_ping, "netperf": test_netperf}
         func_name[check_type]()
     finally:

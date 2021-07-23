@@ -112,7 +112,7 @@ def run(test, params, env):
         error_context.context(txt, logging.info)
         host_result = crypto.hash_file(name, algorithm="md5")
         try:
-            output = session.cmd_output("md5sum %s" % name).split()[0]
+            output = session.cmd_output("md5sum %s" % name, 120).split()[0]
             guest_result = re.findall(r"\w+", output)[0]
         except IndexError:
             logging.error("Could not get file md5sum in guest")
@@ -138,176 +138,175 @@ def run(test, params, env):
         utils_net.Interface(brname).down()
         host_bridges.del_bridge(brname)
 
+    set_ip_cmd = params["set_ip_cmd"]
     logging.debug("Create private bridge %s", brname)
     host_bridges.add_bridge(brname)
     host_bridge_iface = utils_net.Interface(brname)
     logging.debug("Bring up %s", brname)
-    netmask = params["net_mask"]
+    process.system(set_ip_cmd % ("192.168.1.1", brname))
     host_bridge_iface.up()
-    host_bridge_iface.set_ip("192.168.1.1")
-    host_bridge_iface.set_netmask(int(netmask))
 
-    login_timeout = int(params.get("login_timeout", "600"))
-    params['netdst'] = brname
-    params["start_vm"] = "yes"
-    params["image_snapshot"] = "yes"
-    env_process.preprocess_vm(test, params, env, params["main_vm"])
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
+    try:
+        login_timeout = int(params.get("login_timeout", "600"))
+        params['netdst'] = brname
+        params["start_vm"] = "yes"
+        params["image_snapshot"] = "yes"
+        env_process.preprocess_vm(test, params, env, params["main_vm"])
+        vm = env.get_vm(params["main_vm"])
+        vm.verify_alive()
 
-    session = vm.wait_for_serial_login(timeout=login_timeout)
-    stop_NM_cmd = params.get("stop_NM_cmd")
-    session.cmd(stop_NM_cmd, ignore_all_errors=True)
-    mac = vm.get_mac_address()
-    nic_name = utils_net.get_linux_ifname(session, mac)
+        session = vm.wait_for_serial_login(timeout=login_timeout)
+        stop_NM_cmd = params.get("stop_NM_cmd")
+        session.cmd(stop_NM_cmd, ignore_all_errors=True)
+        mac = vm.get_mac_address()
+        nic_name = utils_net.get_linux_ifname(session, mac)
 
-    # Set first_nic IP in guest
-    ip = params["ip_vm"]
-    session.cmd_output("ip addr add %s/%s dev %s" % (ip, netmask,
-                                                     nic_name))
+        # Set first_nic IP in guest
+        ip = params["ip_vm"]
+        session.cmd_output(set_ip_cmd % (ip, nic_name))
 
-    # Create vlans via script qinq.sh
-    output = session.cmd_output("sh %sqinq.sh %s" % (guest_qinq_dir,
-                                                     nic_name), timeout=300)
-    logging.info("%s", output)
+        # Create vlans via script qinq.sh
+        output = session.cmd_output("sh %sqinq.sh %s" % (guest_qinq_dir,
+                                                         nic_name), timeout=300)
+        logging.info("%s", output)
 
-    # Set interface v1v10 IP in guest
-    L1tag_iface = params["L1tag_iface"]
-    L1tag_iface_ip = params["L1tag_iface_ip"]
-    session.cmd_output("ifconfig %s %s netmask %s" % (L1tag_iface,
-                                                      L1tag_iface_ip, netmask))
-    output = session.cmd_output("ifconfig %s" % L1tag_iface, timeout=120)
-    logging.info(output)
+        # Set interface v1v10 IP in guest
+        L1tag_iface = params["L1tag_iface"]
+        L1tag_iface_ip = params["L1tag_iface_ip"]
+        session.cmd_output(set_ip_cmd % (L1tag_iface_ip, L1tag_iface))
+        session.cmd("ip link set %s up" % L1tag_iface)
+        output = session.cmd_output("ip addr show %s" % L1tag_iface,
+                                    timeout=120)
+        logging.info(output)
 
-    # Start tcpdump on L1tag interface and first_nic in guest
-    error_context.context("Start tcpdump in %s" % params["main_vm"],
-                          logging.info)
-    L1tag_tcpdump_log = params.get("tcpdump_log") % L1tag_iface
-    L1tag_tcpdump_cmd = params.get("tcpdump_cmd") % (L1tag_iface,
-                                                     L1tag_tcpdump_log)
-    first_nic_tcpdump_log = params.get("tcpdump_log") % nic_name
-    first_nic_tcpdump_cmd = params.get("tcpdump_cmd") % (nic_name,
-                                                         first_nic_tcpdump_log)
-    session.sendline(L1tag_tcpdump_cmd)
-    time.sleep(2)
-    session.sendline(first_nic_tcpdump_cmd)
-    time.sleep(5)
+        # Start tcpdump on L1tag interface and first_nic in guest
+        error_context.context("Start tcpdump in %s" % params["main_vm"],
+                              logging.info)
+        L1tag_tcpdump_log = params.get("tcpdump_log") % L1tag_iface
+        L1tag_tcpdump_cmd = params.get("tcpdump_cmd") % (L1tag_iface,
+                                                         L1tag_tcpdump_log)
+        first_nic_tcpdump_log = params.get("tcpdump_log") % nic_name
+        first_nic_tcpdump_cmd = params.get("tcpdump_cmd") % (nic_name,
+                                                             first_nic_tcpdump_log)
+        session.sendline(L1tag_tcpdump_cmd)
+        time.sleep(2)
+        session.sendline(first_nic_tcpdump_cmd)
+        time.sleep(5)
 
-    # Create 802.1ad vlan via bridge in host
-    error_context.context("Create 802.1ad vlan via bridge %s" % brname,
-                          logging.info)
-    advlan_ifname = params["advlan_name"]
-    add_advlan_cmd = params["add_advlan_cmd"]
-    process.system_output(add_advlan_cmd)
-    advlan_iface = utils_net.Interface(advlan_ifname)
-    advlan_iface.set_mac(params["advlan_mac"])
-    advlan_iface.set_ip(params["advlan_ip"])
-    advlan_iface.set_netmask(int(netmask))
-    advlan_iface.up()
-    output = process.getoutput("ifconfig %s" % advlan_ifname)
-    logging.info(output)
+        # Create 802.1ad vlan via bridge in host
+        error_context.context("Create 802.1ad vlan via bridge %s" % brname,
+                              logging.info)
+        advlan_ifname = params["advlan_name"]
+        add_advlan_cmd = params["add_advlan_cmd"]
+        process.system_output(add_advlan_cmd)
+        advlan_iface = utils_net.Interface(advlan_ifname)
+        advlan_iface.set_mac(params["advlan_mac"])
+        process.system(set_ip_cmd % (params["advlan_ip"], advlan_ifname))
+        advlan_iface.up()
+        output = process.getoutput("ip addr show %s" % advlan_ifname)
+        logging.info(output)
 
-    # Ping guest from host via 802.1ad vlan interface
-    error_context.context("Start ping test from host to %s via %s" %
-                          (L1tag_iface_ip, advlan_ifname), logging.info)
-    ping_count = int(params.get("ping_count"))
-    status, output = utils_net.ping(L1tag_iface_ip, ping_count,
-                                    interface=advlan_ifname,
-                                    timeout=float(ping_count)*1.5)
-    if status != 0:
-        test.fail("Ping returns non-zero value %s" % output)
-    package_lost = utils_test.get_loss_ratio(output)
-    if package_lost != 0:
-        test.fail("%s packeage lost when ping guest ip %s " % (package_lost,
-                                                               L1tag_iface_ip))
+        # Ping guest from host via 802.1ad vlan interface
+        error_context.context("Start ping test from host to %s via %s" %
+                              (L1tag_iface_ip, advlan_ifname), logging.info)
+        ping_count = int(params.get("ping_count"))
+        status, output = utils_net.ping(L1tag_iface_ip, ping_count,
+                                        interface=advlan_ifname,
+                                        timeout=float(ping_count)*1.5)
+        if status != 0:
+            test.fail("Ping returns non-zero value %s" % output)
+        package_lost = utils_test.get_loss_ratio(output)
+        if package_lost != 0:
+            test.fail("%s packeage lost when ping guest ip %s " % (package_lost,
+                                                                   L1tag_iface_ip))
 
-    # Stop tcpdump and check result
-    session.cmd_output_safe("pkill tcpdump")
-    check_tcpdump_result(session, L1tag_iface,
-                         "ethertype IPv4 (0x0800)")
-    check_tcpdump_result(session, nic_name,
-                         "ethertype 802.1Q-QinQ (0x88a8)", vlan_tag="vlan 10,")
+        # Stop tcpdump and check result
+        session.cmd_output_safe("pkill tcpdump")
+        check_tcpdump_result(session, L1tag_iface,
+                             "ethertype IPv4 (0x0800)")
+        check_tcpdump_result(session, nic_name,
+                             "ethertype 802.1Q-QinQ (0x88a8)", vlan_tag="vlan 10,")
 
-    # Set IP on L2 tag on the guest interface with vid 20
-    L2tag_iface = params["L2tag_iface"]
-    L2tag_iface_ip = params["L2tag_iface_ip"]
-    session.cmd_output("ip addr add %s/%s dev %s" % (L2tag_iface_ip, netmask,
-                                                     L2tag_iface))
-    output = session.cmd_output("ifconfig %s" % L2tag_iface, timeout=120)
-    logging.info(output)
+        # Set IP on L2 tag on the guest interface with vid 20
+        L2tag_iface = params["L2tag_iface"]
+        L2tag_iface_ip = params["L2tag_iface_ip"]
+        session.cmd_output(set_ip_cmd % (L2tag_iface_ip, L2tag_iface))
+        session.cmd("ip link set %s up" % L2tag_iface)
+        output = session.cmd_output("ip addr show %s" % L2tag_iface,
+                                    timeout=120)
+        logging.info(output)
 
-    # Start tcpdump on L1tag interface, L2tag interface and first_nic in guest
-    error_context.context("Start tcpdump in %s" % params["main_vm"],
-                          logging.info)
-    L2tag_tcpdump_log = params.get("tcpdump_log") % L2tag_iface
-    L2tag_tcpdump_cmd = params.get("tcpdump_cmd") % (L2tag_iface,
-                                                     L2tag_tcpdump_log)
-    session.sendline(L1tag_tcpdump_cmd)
-    time.sleep(2)
-    session.sendline(L2tag_tcpdump_cmd)
-    time.sleep(2)
-    session.sendline(first_nic_tcpdump_cmd)
-    time.sleep(5)
+        # Start tcpdump on L1tag and L2tag interfaces and first_nic in guest
+        error_context.context("Start tcpdump in %s" % params["main_vm"],
+                              logging.info)
+        L2tag_tcpdump_log = params.get("tcpdump_log") % L2tag_iface
+        L2tag_tcpdump_cmd = params.get("tcpdump_cmd") % (L2tag_iface,
+                                                         L2tag_tcpdump_log)
+        session.sendline(L1tag_tcpdump_cmd)
+        time.sleep(2)
+        session.sendline(L2tag_tcpdump_cmd)
+        time.sleep(2)
+        session.sendline(first_nic_tcpdump_cmd)
+        time.sleep(5)
 
-    # Create 802.1q vlan via 802.1ad vlan in host
-    error_context.context("Create 802.1q vlan via 802.1ad vlan %s" %
-                          advlan_ifname, logging.info)
-    qvlan_ifname = params["qvlan_name"]
-    add_qvlan_cmd = params["add_qvlan_cmd"]
-    process.system_output(add_qvlan_cmd)
-    qvlan_iface = utils_net.Interface(qvlan_ifname)
-    qvlan_iface.set_ip(params["qvlan_ip"])
-    qvlan_iface.set_netmask(int(netmask))
-    qvlan_iface.up()
-    output = process.getoutput("ifconfig %s" % qvlan_ifname)
-    logging.info(output)
+        # Create 802.1q vlan via 802.1ad vlan in host
+        error_context.context("Create 802.1q vlan via 802.1ad vlan %s" %
+                              advlan_ifname, logging.info)
+        qvlan_ifname = params["qvlan_name"]
+        add_qvlan_cmd = params["add_qvlan_cmd"]
+        process.system_output(add_qvlan_cmd)
+        qvlan_iface = utils_net.Interface(qvlan_ifname)
+        process.system(set_ip_cmd % (params["qvlan_ip"], qvlan_ifname))
+        qvlan_iface.up()
+        output = process.getoutput("ip addr show %s" % qvlan_ifname)
+        logging.info(output)
 
-    # Ping guest from host via 802.1q vlan interface
-    error_context.context("Start ping test from host to %s via %s" %
-                          (L2tag_iface_ip, qvlan_ifname), logging.info)
-    status, output = utils_net.ping(L2tag_iface_ip, ping_count,
-                                    interface=qvlan_ifname,
-                                    timeout=float(ping_count)*1.5)
-    if status != 0:
-        test.fail("Ping returns non-zero value %s" % output)
-    package_lost = utils_test.get_loss_ratio(output)
-    if package_lost >= 5:
-        test.fail("%s packeage lost when ping guest ip %s " % (package_lost,
-                                                               L2tag_iface_ip))
+        # Ping guest from host via 802.1q vlan interface
+        error_context.context("Start ping test from host to %s via %s" %
+                              (L2tag_iface_ip, qvlan_ifname), logging.info)
+        status, output = utils_net.ping(L2tag_iface_ip, ping_count,
+                                        interface=qvlan_ifname,
+                                        timeout=float(ping_count)*1.5)
+        if status != 0:
+            test.fail("Ping returns non-zero value %s" % output)
+        package_lost = utils_test.get_loss_ratio(output)
+        if package_lost >= 5:
+            test.fail("%s packeage lost when ping guest ip %s " % (package_lost,
+                                                                   L2tag_iface_ip))
 
-    # Stop tcpdump and check result
-    session.cmd_output_safe("pkill tcpdump")
-    check_tcpdump_result(session, L1tag_iface,
-                         "ethertype 802.1Q (0x8100)", vlan_tag="vlan 20,")
-    check_tcpdump_result(session, L2tag_iface,
-                         "ethertype IPv4 (0x0800)")
-    check_tcpdump_result(session, nic_name,
-                         ethertype="ethertype 802.1Q-QinQ (0x88a8)",
-                         ethertype2="ethertype 802.1Q",
-                         vlan_tag="vlan 10,",
-                         vlan_tag2="vlan 20,")
+        # Stop tcpdump and check result
+        session.cmd_output_safe("pkill tcpdump")
+        check_tcpdump_result(session, L1tag_iface,
+                             "ethertype 802.1Q (0x8100)", vlan_tag="vlan 20,")
+        check_tcpdump_result(session, L2tag_iface,
+                             "ethertype IPv4 (0x0800)")
+        check_tcpdump_result(session, nic_name,
+                             ethertype="ethertype 802.1Q-QinQ (0x88a8)",
+                             ethertype2="ethertype 802.1Q",
+                             vlan_tag="vlan 10,",
+                             vlan_tag2="vlan 20,")
 
-    # scp file to guest with L2 vlan tag
-    file_size = int(params.get("file_size", "4096"))
-    host_path = params.get("host_path", "/tmp/transferred_file")
-    guest_path = params.get("guest_path", "/tmp/transferred_file")
-    transfer_timeout = int(params.get("transfer_timeout", 1000))
-    cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, file_size)
-    error_context.context(
-        "Creating %dMB file on host" % file_size, logging.info)
-    process.run(cmd)
-    error_context.context("Transferring file host -> guest, "
-                          "timeout: %ss" % transfer_timeout, logging.info)
-    shell_port = int(params.get("shell_port", 22))
-    password = params["password"]
-    username = params["username"]
-    remote.scp_to_remote(L2tag_iface_ip, shell_port, username, password,
-                         host_path, guest_path)
-    if not compare_host_guest_md5sum(host_path):
-        test.fail("md5sum mismatch on guest and host")
+        # scp file to guest with L2 vlan tag
+        file_size = int(params.get("file_size", "4096"))
+        host_path = params.get("host_path", "/tmp/transferred_file")
+        guest_path = params.get("guest_path", "/tmp/transferred_file")
+        transfer_timeout = int(params.get("transfer_timeout", 1000))
+        cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, file_size)
+        error_context.context(
+            "Creating %dMB file on host" % file_size, logging.info)
+        process.run(cmd)
+        error_context.context("Transferring file host -> guest, "
+                              "timeout: %ss" % transfer_timeout, logging.info)
+        shell_port = int(params.get("shell_port", 22))
+        password = params["password"]
+        username = params["username"]
+        remote.scp_to_remote(L2tag_iface_ip, shell_port, username, password,
+                             host_path, guest_path)
+        if not compare_host_guest_md5sum(host_path):
+            test.fail("md5sum mismatch on guest and host")
 
-    session.close()
-    vm.destroy(gracefully=True)
-
-    host_bridge_iface.down()
-    host_bridges.del_bridge(brname)
+        session.close()
+        vm.destroy(gracefully=True)
+    finally:
+        host_bridge_iface.down()
+        host_bridges.del_bridge(brname)

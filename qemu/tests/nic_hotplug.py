@@ -114,7 +114,7 @@ def run(test, params, env):
         pci_add_cmd = "device_add id=%s, driver=%s, netdev=%s" % (device_id,
                                                                   pci_model,
                                                                   netdev)
-        bus = vm.devices.get_buses({'aobject': 'pci.0'})[0]
+        bus = vm.devices.get_buses({'aobject': params.get('nic_bus', 'pci.0')})[0]
         if isinstance(bus, qdevices.QPCIEBus):
             root_port_id = bus.get_free_root_port()
             if root_port_id:

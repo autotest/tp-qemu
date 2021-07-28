@@ -36,6 +36,9 @@ def run(test, params, env):
     module = params.get("modprobe_module")
     check_module = params.get_boolean("check_module", True)
     bg_test = params.get_boolean("bg_test", True)
+    host_script = params["host_script"]
+    check_pid_command = "pgrep -f %s" % host_script
+    orig_set = set(process.getoutput(check_pid_command).splitlines())
     session = vm.wait_for_login()
     if os_type == "windows":
         driver_name = params["driver_name"]
@@ -87,12 +90,12 @@ def run(test, params, env):
                 session.cmd("modprobe %s" % module)
                 time.sleep(1)
         session.close()
-        host_script = params['host_script']
-        check_pid_cmd = 'pgrep -f %s'
-        host_proc_pid = process.getoutput(check_pid_cmd % host_script, shell=True)
-        if host_proc_pid:
+        test_set = set(process.getoutput(check_pid_command).splitlines())
+        difference = test_set.difference(orig_set)
+        if difference:
             logging.info("Kill the first serial process on host")
-            result = process.system('kill -9 %s' % host_proc_pid, shell=True)
+            result = process.system('kill -9 %s' % difference.pop(),
+                                    shell=True)
             if result != 0:
                 logging.error("Failed to kill the first serial process on host!")
         if transfer_data(params, vm) is not True:

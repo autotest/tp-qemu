@@ -41,7 +41,7 @@ def run(test, params, env):
         output = session.cmd_output('lscpu')
         session.close()
         vm.destroy()
-        L3_present = 'L3 cache' in output
+        L3_present = 'L3' in output
         if check_L3 ^ L3_present:
             test.fail('L3 cache should %s inside guest for machine type %s' %
                       (L3_existence, machine_type))

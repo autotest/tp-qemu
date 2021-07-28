@@ -1,5 +1,6 @@
 import logging
 import json
+import re
 
 from avocado.utils import wait
 
@@ -7,6 +8,7 @@ from virttest import error_context
 from virttest import utils_numeric
 from virttest import utils_test
 from virttest import utils_disk
+from virttest import utils_misc
 from virttest import storage
 from virttest import data_dir
 from virttest.utils_windows import drive
@@ -101,7 +103,9 @@ def run(test, params, env):
 
     if params.get("format_disk") == "yes":
         if os_type == 'linux':
-            disk = sorted(utils_disk.get_linux_disks(session).keys())[0]
+            disk_dict = utils_disk.get_linux_disks(session)
+            disk = sorted(disk_dict.keys())[0]
+            disk_serial = disk_dict[disk][3]
         else:
             disk = utils_disk.get_windows_disks_index(session, img_size)[0]
             utils_disk.update_windows_disk_attributes(session, disk)
@@ -122,7 +126,7 @@ def run(test, params, env):
             md5 = get_md5_of_file(md5_filename)
             logging.debug("Got md5 %s ratio:%s on %s", md5, ratio, disk)
 
-        # We need shrink the disk in guest first, than in monitor
+        # We need shrink the disk in guest first, then in monitor
         if float(ratio) < 1.0:
             error_context.context("Shrink disk size to %s in guest"
                                   % block_size, logging.info)
@@ -155,7 +159,7 @@ def run(test, params, env):
         if params.get("need_rescan") == "yes":
             drive.rescan_disks(session)
 
-        # We need extend disk in monitor first than extend it in guest
+        # We need extend disk in monitor first then extend it in guest
         if float(ratio) > 1.0:
             error_context.context("Extend disk to %s in guest"
                                   % block_size, logging.info)
@@ -181,6 +185,17 @@ def run(test, params, env):
         session = vm.reboot(session=session)
 
         if os_type == 'linux':
+            # After guest reboot, reget the disk letter, if it changed, replace
+            # variables, i.e 'mpoint', 'partition', 'disk' and 'md5_filename'
+            new_disk = utils_misc.get_linux_drive_path(session, disk_serial)
+            new_disk = re.search(r"([svh]d\w+)", new_disk, re.M).group(0)
+            if new_disk != disk:
+                mpoint = mpoint.replace(disk, new_disk)
+                partition = partition.replace(disk, new_disk)
+                disk = new_disk
+                if params.get('md5_test') == 'yes':
+                    md5_filename = mpoint + junction + md5_file
+
             if not utils_disk.is_mount(partition, dst=mpoint,
                                        fstype=fstype, session=session):
                 utils_disk.mount(partition, mpoint,

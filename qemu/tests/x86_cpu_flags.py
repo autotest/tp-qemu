@@ -28,6 +28,9 @@ def run(test, params, env):
         cpu_model = cpu.get_qemu_best_cpu_model(params)
     if cpu_model in unsupported_models.split():
         test.cancel("'%s' doesn't support this test case" % cpu_model)
+    fallback_models_map = eval(params.get('fallback_models_map', '{}'))
+    if cpu_model in fallback_models_map.keys():
+        params["cpu_model"] = fallback_models_map[cpu_model]
 
     params["start_vm"] = "yes"
     vm_name = params['main_vm']

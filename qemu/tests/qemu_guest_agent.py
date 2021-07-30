@@ -339,9 +339,17 @@ class QemuGuestAgentTest(BaseVirtTest):
                 logging.info("qemu-ga is not installed or need to update.")
                 self.gagent_install(session, self.vm)
 
+            error_context.context("Check qga service running status",
+                                  logging.info)
             if self._check_ga_service(
                     session, params.get("gagent_status_cmd")):
-                logging.info("qemu-ga service is already running.")
+                output = session.cmd_output(params["cmd_check_qgaservice"],
+                                            timeout=5)
+                if output and "qemu-guest-agent" in output:
+                    test.error("qemu-ga service may have some issues, please"
+                               "check more details from %s" % output)
+                else:
+                    logging.info("qemu-ga service is already running well.")
             else:
                 logging.info("qemu-ga service is not running.")
                 self.gagent_start(session, self.vm)

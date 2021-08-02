@@ -1,6 +1,10 @@
 import logging
 import re
 
+from avocado.utils.network.hosts import LocalHost
+from avocado.utils.network.interfaces import NetworkInterface
+from avocado.utils.configure_network import set_mtu_host
+
 from virttest import error_context
 from virttest import utils_net
 from virttest import utils_test
@@ -39,17 +43,22 @@ def run(test, params, env):
                 utils_net.find_bridge_manager(netdst).del_port(netdst, p)
 
     netdst = params.get("netdst", "switch")
+    mtu_value = params.get_numeric("mtu_value")
     host_bridge = utils_net.find_bridge_manager(netdst)
-    if netdst in utils_net.Bridge().list_br():
-        host_hw_interface = utils_net.Bridge().list_iface(netdst)[0]
-    else:
-        host_hw_interface = host_bridge.list_ports(netdst)
-        tmp_ports = re.findall(r"t[0-9]{1,}-[a-zA-Z0-9]{6}",
-                               ' '.join(host_hw_interface))
-        if tmp_ports:
-            for p in tmp_ports:
-                host_bridge.del_port(netdst, p)
+    localhost = LocalHost()
+    try:
+        if netdst in utils_net.Bridge().list_br():
+            host_hw_interface = utils_net.Bridge().list_iface(netdst)[0]
+        else:
             host_hw_interface = host_bridge.list_ports(netdst)
+            tmp_ports = re.findall(r"t[0-9]{1,}-[a-zA-Z0-9]{6}",
+                                   ' '.join(host_hw_interface))
+            if tmp_ports:
+                for p in tmp_ports:
+                    host_bridge.del_port(netdst, p)
+                host_hw_interface = host_bridge.list_ports(netdst)
+    except IndexError:
+        host_hw_interface = netdst
 
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params["main_vm"])
@@ -60,13 +69,13 @@ def run(test, params, env):
     vm_iface = vm.get_ifname()
     # Get host interface original mtu value before setting
     if netdst in utils_net.Bridge().list_br():
-        host_hw_iface = utils_net.Interface(host_hw_interface)
+        host_hw_iface = NetworkInterface(host_hw_interface, localhost)
     elif utils_net.ovs_br_exists(netdst) is True:
-        host_hw_iface = utils_net.Interface(' '.join(host_hw_interface))
+        host_hw_iface = NetworkInterface(' '.join(host_hw_interface), localhost)
     host_mtu_origin = host_hw_iface.get_mtu()
 
-    utils_net.Interface(vm_iface).set_mtu(int(params["mtu_value"]))
-    host_hw_iface.set_mtu(int(params["mtu_value"]))
+    set_mtu_host(vm_iface, mtu_value)
+    host_hw_iface.set_mtu(mtu_value)
 
     os_type = params.get("os_type", "linux")
     login_timeout = float(params.get("login_timeout", 360))
@@ -103,9 +112,9 @@ def run(test, params, env):
             if re.findall("MTU", name):
                 break
             index += 1
-        mtu_value = line_value[index]
-        logging.info("MTU is %s", mtu_value)
-        if not int(mtu_value) == int(params["mtu_value"]):
+        guest_mtu_value = line_value[index]
+        logging.info("MTU is %s", guest_mtu_value)
+        if not int(guest_mtu_value) == mtu_value:
             test.fail("Host mtu %s is not exposed to "
                       "guest!" % params["mtu_value"])
 
@@ -117,7 +126,7 @@ def run(test, params, env):
         test.fail("Loss ratio is %s", ratio)
 
     # Restore host mtu after finish testing
-    utils_net.Interface(vm_iface).set_mtu(host_mtu_origin)
+    set_mtu_host(vm_iface, host_mtu_origin)
     host_hw_iface.set_mtu(host_mtu_origin)
 
     if netdst not in utils_net.Bridge().list_br():

@@ -285,6 +285,8 @@ class IozoneLinuxCfg(object):
             self.arch = 'linux-powerpc64'
         elif 'aarch64' in machine():
             self.arch = 'linux-arm'
+        elif 's390' in machine():
+            self.arch = 'linux-S390X'
         else:
             self.arch = 'linux-AMD64'
         self.cmd = 'cd %s/src/current && make clean && make %s' % (self.iozone_inst,

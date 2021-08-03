@@ -468,8 +468,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               logging.info)
         qga_ver_qga = self.gagent.guest_info()['version'].strip()
         if params.get("os_type") == 'windows':
-            win_qgabuild_guest = session.cmd_output(params["cmd_qga_build"]
-                                                    ).strip()
+            qga_ver_guest = session.cmd_output(params["cmd_qga_build"]
+                                               ).strip()
         else:
             qga_ver_guest_raw = str(self.qga_v)
             pattern = r"(\d+.\d+.\d+)"
@@ -3383,8 +3383,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
             driver_date = device["driver-date"]
             driver_version = device["driver-version"]
-            device_address = (device["id"] if 5 <= main_qga_ver < 10 else
-                              device["address"]["data"])
+            # main_qga_ver includes windows and rhel these individual situations.
+            device_address = (device["id"] if 5 <= main_qga_ver < 10 or
+                              main_qga_ver >= 102 else device["address"]["data"])
             device_id = device_address["device-id"]
             vendor_id = device_address["vendor-id"]
 
@@ -3399,7 +3400,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             date_group = re.search(r"driverdate.*\:\s(\d{4})(\d{2})(\d{2})",
                                    driver_info_guest, re.I).groups()
             driver_date_guest = "-".join(date_group)
-            if 5 <= main_qga_ver < 10:
+            if 5 <= main_qga_ver < 10 or main_qga_ver >= 102:
                 driver_date_guest_timearray = time.strptime(driver_date_guest,
                                                             "%Y-%m-%d")
                 driver_date_guest = time.mktime(driver_date_guest_timearray)

@@ -1,4 +1,5 @@
 import logging
+import re
 
 from virttest import error_context
 from virttest.qemu_monitor import QMPCmdError
@@ -57,10 +58,11 @@ def run(test, params, env):
         driver = device.get_param('driver')
         device_id = device.get_param('id')
         error_context.context("Hot-unplug %s" % driver, logging.info)
+        error_pattern = unplug_error_pattern % (parent_bus, parent_bus)
         try:
             device.unplug(vm.monitor)
         except QMPCmdError as e:
-            if e.data["desc"] != unplug_error % parent_bus:
+            if not re.search(error_pattern, e.data["desc"]):
                 test.fail("Hot-unplug failed but '%s' isn't the expected error"
                           % e.data["desc"])
             error_context.context("Hot-unplug %s failed as expected: %s"
@@ -75,10 +77,11 @@ def run(test, params, env):
         :param driver: the driver name
         """
         error_context.context("Hot-plug %s" % driver, logging.info)
+        error_pattern = hotplug_error_pattern % (free_root_port_id, free_root_port_id)
         try:
             callback[driver]()
         except QMPCmdError as e:
-            if e.data["desc"] != hotplug_error % free_root_port_id:
+            if not re.search(error_pattern, e.data["desc"]):
                 test.fail("Hot-plug failed but '%s' isn't the expected error"
                           % e.data["desc"])
             error_context.context("Hot-plug %s failed as expected: %s"
@@ -89,8 +92,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.wait_for_login()
     images = params.objects('images')
-    hotplug_error = params.get('hotplug_error')
-    unplug_error = params.get('unplug_error')
+    hotplug_error_pattern = params.get('hotplug_error_pattern')
+    unplug_error_pattern = params.get('unplug_error_pattern')
     unplug_devs = []
 
     blk_image = images[1]

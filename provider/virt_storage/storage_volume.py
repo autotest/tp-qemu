@@ -191,7 +191,9 @@ class StorageVolume(object):
         cmd, options = protocol_node.hotplug_qmp()
         vm.monitor.cmd(cmd, options)
         format_node = self.format
-        self.format_protocol_by_qmp(vm)
+        # Don't need the format blockdev-create for 'raw'
+        if self.format.TYPE != "raw":
+            self.format_protocol_by_qmp(vm)
         cmd, options = format_node.hotplug_qmp()
         vm.monitor.cmd(cmd, options)
         self.pool.refresh()

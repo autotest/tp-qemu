@@ -51,7 +51,8 @@ def run(test, params, env):
         :param virtio_mode: VirtIO mode for the device
         """
         device_name = params["device_name"]
-        driver_verifier = params["driver_verifier"]
+        driver_name = params["driver_name"]
+        driver_verifier = params.get("driver_verifier", driver_name)
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test, driver_verifier)
         devcon_folder = utils_misc.set_winutils_letter(session,

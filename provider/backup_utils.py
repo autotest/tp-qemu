@@ -188,7 +188,8 @@ def blockdev_stream_qmp_cmd(device, **extra_options):
     arguments = {"device": device, "job-id": job_id}
     # TODO: we may have to sync the block-stream options with libvirt
     options = ["speed", "base", "base-node", "snapshot-file",
-               "on-error", "backing-file", "auto-dismiss", "auto-finalize"]
+               "filter-node-name", "on-error", "backing-file",
+               "auto-dismiss", "auto-finalize"]
     args = copy_out_dict_if_exists(extra_options, options)
     if args:
         arguments.update(args)

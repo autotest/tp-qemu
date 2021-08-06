@@ -291,8 +291,11 @@ def run(test, params, env):
     # Check memory size
     error_context.context("Memory size check", logging.info)
     expected_mem = int(params["mem"])
+    vm_mem_limit = params.get("vm_mem_limit")
     actual_mem = vm.get_memory_size()
-    if actual_mem != expected_mem:
+    if vm_mem_limit:
+        error_context.context("Skip memory checking %s" % vm_mem_limit, logging.info)
+    elif actual_mem != expected_mem:
         fail_log = "Memory size mismatch:\n"
         fail_log += "    Assigned to VM: %s\n" % expected_mem
         fail_log += "    Reported by OS: %s\n" % actual_mem

@@ -113,6 +113,7 @@ def run(test, params, env):
         """ Run the test background. """
         error_context.context(target.__doc__, logging.info)
         thread = utils_misc.InterruptedThread(target, args, kwargs)
+        thread.daemon = True
         thread.start()
         return thread
 

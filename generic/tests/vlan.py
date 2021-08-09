@@ -186,7 +186,7 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
     prepare_netkvmco_cmd = params.get("prepare_netkvmco_cmd")
     set_vlan_cmd = params.get("set_vlan_cmd")
-    driver_verifier = params["driver_verifier"]
+    driver_verifier = params.get("driver_verifier")
 
     vms.append(env.get_vm(params["main_vm"]))
     vms.append(env.get_vm("vm2"))

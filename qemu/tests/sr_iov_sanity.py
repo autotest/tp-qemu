@@ -11,7 +11,7 @@ from virttest import test_setup
 from virttest import utils_net
 from virttest import error_context
 from virttest import utils_misc
-
+from virttest import env_process
 
 def check_network_interface_ip(interface, ipv6="no"):
     check_cmd = "ifconfig %s" % interface
@@ -219,5 +219,7 @@ def run(test, params, env):
                           "drivers in guest image")
         else:
             # User has opted for DHCP IP inside guest
+            params["start_vm"] = "yes"
+            env_process.preprocess_vm(test, params, env, vm_name)
             vm.verify_alive()
             vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))

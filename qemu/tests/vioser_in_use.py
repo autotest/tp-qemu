@@ -97,6 +97,7 @@ def run_bg_test(test, params, vm, sender="both"):
     stress_thread = utils_misc.InterruptedThread(
         virtio_serial_file_transfer.transfer_data, (params, vm),
         {"sender": sender})
+    stress_thread.daemon = True
     stress_thread.start()
 
     check_bg_timeout = float(params.get('check_bg_timeout', 120))

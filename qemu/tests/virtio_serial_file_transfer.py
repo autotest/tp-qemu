@@ -130,6 +130,7 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
                               % host_cmd, logging.info)
         host_thread = utils_misc.InterruptedThread(process.getoutput,
                                                    kwargs=kwargs)
+        host_thread.daemon = True
         host_thread.start()
         time.sleep(3)
         g_output = session.cmd_output(guest_cmd, timeout=timeout)

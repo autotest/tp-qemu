@@ -55,6 +55,7 @@ def run(test, params, env):
                 args = (test, session, receive_cmd, data_file)
                 guest_receive = utils_misc.InterruptedThread(receive_data,
                                                              args)
+                guest_receive.daemon = True
                 guest_receive.start()
                 process.system(send_cmd, timeout=30, shell=True)
             finally:

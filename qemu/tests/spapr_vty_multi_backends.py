@@ -18,6 +18,7 @@ def run(test, params, env):
     4) For unix_socket and tcp_socket:
       4.1) Login guest
       4.2) Create and delete files inside guest
+    5) Migrate the vm and do login test
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
@@ -26,6 +27,12 @@ def run(test, params, env):
     create_delete_file = params["create_delete_file"]
     vm = env.get_vm(params["main_vm"])
     vm.wait_for_login()
+    # do migration
+    if params.get('sub_type') == 'migration_all_type':
+        mig_timeout = float(params.get("mig_timeout", "3600"))
+        mig_protocol = params.get("migration_protocol", "tcp")
+        vm.migrate(mig_timeout, mig_protocol, env=env)
+        session = vm.wait_for_login()
     for serial_id in params.objects("serials"):
         if serial_id != "vs1" and serial_id != "vs9":
             # where the 9th or larger number spapr-vty devices could not be used as serial

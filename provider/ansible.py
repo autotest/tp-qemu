@@ -5,8 +5,9 @@ from aexpect.client import Expect
 
 from avocado.utils import path
 from avocado.utils import process
-from avocado.utils import software_manager
 from avocado.utils.wait import wait_for
+
+from virttest import utils_package
 
 
 class SyntaxCheckError(Exception):
@@ -23,16 +24,6 @@ class ExecutorTimeoutError(Exception):
     pass
 
 
-def find_playbook_program():
-    """ Return to the path of ansible-playbook. """
-    try:
-        path.find_command('ansible-playbook')
-    except path.CmdNotFoundError:
-        sm = software_manager.SoftwareManager()
-        sm.install('ansible')
-    return path.find_command('ansible-playbook')
-
-
 class PlaybookExecutor(Expect):
     def __init__(self, inventory, site_yml, remote_user=None, extra_vars=None,
                  callback_plugin=None, addl_opts=None):
@@ -46,7 +37,7 @@ class PlaybookExecutor(Expect):
         :param callback_plugin: The plugin of the main manager of console output.
         :param addl_opts: Other ansible-playbook common options.
         """
-        self.program = find_playbook_program()
+        self.program = path.find_command('ansible-playbook')
         self.inventory = inventory
         self.site_yml = site_yml
         self.remote_user = remote_user
@@ -116,3 +107,55 @@ class PlaybookExecutor(Expect):
         with open(os.path.join(log_dir, filename), 'w') as log_file:
             log_file.write(self.get_output())
             log_file.flush()
+
+
+def check_ansible_playbook(params):
+    """
+    check if ansible-playbook exists or not.
+
+    :param params: Dictionary with the test parameters.
+    :return: True if ansible-playbook exists or be installed success, else False.
+    """
+
+    def python_install():
+        """
+        Install python ansible.
+        """
+        pip_bin = ''
+        for binary in ['pip', 'pip3', 'pip2']:
+            if process.system("which %s" % binary, ignore_status=True) == 0:
+                pip_bin = binary
+                break
+        if not pip_bin:
+            logging.error("Failed to get available pip binary")
+            return False
+        install_cmd = '%s install ansible' % pip_bin
+        status, output = process.getstatusoutput(install_cmd, verbose=True)
+        if status != 0:
+            logging.error("Install python ansible failed as: %s", output)
+            return False
+        # Install 'sshpass' as it can't be installed automatically as a
+        # dependency of ansible when ansible be installed with pip
+        sshpass_pkg = params.get('sshpass_pkg')
+        if not utils_package.package_install('sshpass'):
+            if not (sshpass_pkg and utils_package.package_install(sshpass_pkg)):
+                logging.error("Failed to install sshpass.")
+                return False
+        return True
+
+    def distro_install():
+        """
+        Install ansible from the distro
+        """
+        return utils_package.package_install('ansible')
+
+    policy_map = {"distro_install": distro_install,
+                  "python_install": python_install}
+
+    try:
+        path.find_command('ansible-playbook')
+    except path.CmdNotFoundError:
+        ansible_install_policy = params['ansible_install_policy']
+        return policy_map[ansible_install_policy]()
+    else:
+        return True

@@ -5,6 +5,7 @@ import logging
 from avocado.utils import process
 from avocado.utils.network.ports import find_free_port
 
+from virttest import env_process
 from virttest import error_context
 from virttest.virt_vm import VMMigrateFailedError
 
@@ -16,8 +17,8 @@ from provider import message_queuing
 def run(test, params, env):
     """
     Ansible playbook basic test:
-    1) Check ansible package exists
-    2) Launch the guest
+    1) Check ansible-playbook exists and try to install it if not exists
+    2) Launch the guest if ansible-playbook program exists
     3) Clone an ansible playbook repo
     4) Generate the ansible-playbook command
     5) Execute the playbook and verify the return status
@@ -26,6 +27,10 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
+    # check ansible-playbook program
+    if not ansible.check_ansible_playbook(params):
+        test.cancel("No available ansible-playbook program")
 
     guest_user = params["username"]
     guest_passwd = params["password"]
@@ -46,6 +51,8 @@ def run(test, params, env):
     mq_listen_port = params.get_numeric("mq_listen_port", find_free_port())
     wait_response_timeout = params.get_numeric("wait_response_timeout", 600)
 
+    params['start_vm'] = 'yes'
+    env_process.preprocess(test, params, env)
     vms = env.get_all_vms()
     guest_ip_list = []
     for vm in vms:

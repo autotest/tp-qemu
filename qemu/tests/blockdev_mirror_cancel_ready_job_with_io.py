@@ -23,7 +23,7 @@ class BlockdevMirrorCancelReadyIOJobTest(BlockdevMirrorNowaitTest):
             session.close()
 
     def cancel_job(self):
-        self.main_vm.monitor.cmd("job-cancel", {'id': self._jobs[0]})
+        self.main_vm.monitor.cmd("block-job-cancel", {'device': self._jobs[0], 'force': True})
         event = get_event_by_condition(
             self.main_vm, 'BLOCK_JOB_CANCELLED',
             self.params.get_numeric('job_cancelled_timeout', 60),

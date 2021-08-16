@@ -146,8 +146,8 @@ class QemuGuestAgentTest(BaseVirtTest):
                                 "of qga rpm in advance" % self.qga_pkg_path)
             elif version_list[1] != version_list[0]:
                 return False
-        elif self.params.get("os_variant", "") == 'rhel7':
-            pattern = r"guest-agent-(\d+.\d+.\d+-\d+).el7"
+        else:
+            pattern = r"guest-agent-(\d+.\d+.\d+-\d+).el"
             qga_v = re.findall(pattern, o, re.I)
             self.qga_v = qga_v
         return s == 0

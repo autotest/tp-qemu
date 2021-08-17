@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from avocado.utils import process
 
@@ -33,7 +34,6 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-
     def get_if_queues(ifname):
         """
         Query interface queues with 'ethtool -l'
@@ -81,6 +81,7 @@ def run(test, params, env):
     md5sum = params.get("pkg_md5sum")
     client_num = params.get("netperf_client_num", 520)
     netperf_timeout = int(params.get("netperf_timeout", 600))
+    disable_firewall = params.get("disable_firewall", "")
 
     if int(params.get("queues", 1)) > 1 and params.get("os_type") == "linux":
         error_context.context("Enable multi queues support in guest.",
@@ -101,7 +102,7 @@ def run(test, params, env):
 
     error_context.context("Setup netperf in guest", logging.info)
     if params.get("os_type") == "linux":
-        session.cmd("iptables -F", ignore_all_errors=True)
+        session.cmd(disable_firewall, ignore_all_errors=True)
         g_client_link = netperf_link
         g_client_path = params.get("client_path", "/var/tmp/")
     netperf_client_ip = vm.get_address()
@@ -153,13 +154,23 @@ def run(test, params, env):
                               % netperf_timeout, logging.info)
         test_option = "-t TCP_CRR -l %s -- -b 10 -D" % netperf_timeout
         netperf_client.bg_start(host_ip, test_option, client_num)
-
+        start_time = time.time()
+        deviation_time = params.get_numeric("deviation_time")
+        execution_time = netperf_timeout + deviation_time
         utils_misc.wait_for(lambda: not netperf_client.is_netperf_running(),
-                            timeout=netperf_timeout, first=590, step=2)
-
+                            timeout=execution_time, first=590, step=2)
+        stop_time = time.time()
+        run_time = stop_time - start_time
+        if netperf_client.is_netperf_running():
+            test.fail("netperf still running,netperf hangs")
+        elif netperf_timeout - 5 <= run_time:
+            logging.info("netperf runs successfully")
+        else:
+            test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
         utils_test.run_file_transfer(test, params, env)
     finally:
         netperf_server.stop()
-        netperf_client.package.env_cleanup(True)
+        netperf_client.cleanup(True)
+        netperf_server.cleanup(True)
         if session:
             session.close()

@@ -2,12 +2,14 @@ import logging
 import os
 import time
 
+from virttest import error_context
 from virttest import data_dir
 from virttest import utils_misc
 from virttest import utils_net
 from virttest import utils_netperf
 
 
+@error_context.context_aware
 def netperf_stress(test, params, vm):
     """
     Netperf stress test.
@@ -37,11 +39,12 @@ def netperf_stress(test, params, vm):
     try:
         n_server.start()
         # Run netperf with message size defined in range.
-        netperf_test_duration = params.get_numeric("netperf_test_duration")
+        test_duration = params.get_numeric("netperf_test_duration")
+        deviation_time = params.get_numeric("deviation_time")
         test_protocols = params.get("test_protocol")
         netperf_output_unit = params.get("netperf_output_unit")
         test_option = params.get("test_option", "")
-        test_option += " -l %s" % netperf_test_duration
+        test_option += " -l %s" % test_duration
         if params.get("netperf_remote_cpu") == "yes":
             test_option += " -C"
         if params.get("netperf_local_cpu") == "yes":
@@ -59,11 +62,21 @@ def netperf_stress(test, params, vm):
             logging.info("Netperf test start successfully.")
         else:
             test.error("Can not start netperf client.")
-        utils_misc.wait_for(lambda: not n_client.is_netperf_running(),
-                            netperf_test_duration, 0, 5,
-                            "Wait netperf test finish %ss" % netperf_test_duration)
-        time.sleep(5)
+        start_time = time.time()
+        execution_time = test_duration + deviation_time
+        utils_misc.wait_for(lambda: not
+                            n_client.is_netperf_running(),
+                            execution_time, 0, 2,
+                            "Wait netperf test finish %ss" % test_duration)
+        stop_time = time.time()
+        run_time = stop_time - start_time
+        if n_client.is_netperf_running():
+            test.fail("netperf still running,netperf hangs")
+        elif test_duration - 5 <= run_time:
+            logging.info("netperf runs successfully")
+        else:
+            test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
     finally:
         n_server.stop()
-        n_server.package.env_cleanup(True)
-        n_client.package.env_cleanup(True)
+        n_server.cleanup(True)
+        n_client.cleanup(True)

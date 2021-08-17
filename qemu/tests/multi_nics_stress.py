@@ -12,12 +12,10 @@ from virttest import utils_test
 
 def launch_netperf_client(test, server_ips, netperf_clients, test_option,
                           test_duration, netperf_para_sess,
-                          netperf_cmd_prefix):
+                          netperf_cmd_prefix, params):
     """
     start netperf client in guest.
     """
-    start_time = time.time()
-    stop_time = start_time + test_duration * 1.5
     logging.info("server_ips = %s", server_ips)
     for s_ip in server_ips:
         for n_client in netperf_clients:
@@ -29,13 +27,21 @@ def launch_netperf_client(test, server_ips, netperf_clients, test_option,
             else:
                 test.error("Can not start netperf client.")
 
-    for n_client in netperf_clients:
-        if n_client.is_netperf_running():
-            left_time = stop_time - time.time()
-            utils_misc.wait_for(lambda: not
-                                n_client.is_netperf_running(),
-                                left_time, 0, 5,
-                                "Wait netperf test finish %ss" % left_time)
+    start_time = time.time()
+    deviation_time = params.get_numeric("deviation_time")
+    execution_time = test_duration + deviation_time
+    utils_misc.wait_for(lambda: not
+                        n_client.is_netperf_running(),
+                        execution_time, 0, 2,
+                        "Wait netperf test finish %ss" % test_duration)
+    stop_time = time.time()
+    run_time = stop_time - start_time
+    if n_client.is_netperf_running():
+        test.fail("netperf still running,netperf hangs")
+    elif test_duration - 5 <= run_time:
+        logging.info("netperf runs successfully")
+    else:
+        test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
 
 
 @error_context.context_aware
@@ -53,7 +59,6 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     login_timeout = float(params.get("login_timeout", 360))
-
     netperf_server = params.get("netperf_server").split()
     netperf_client = params.get("netperf_client")
     guest_username = params.get("username", "")
@@ -62,8 +67,7 @@ def run(test, params, env):
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
     shell_prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
-    disable_firewall = params.get("disable_firewall", "service iptables stop;"
-                                  " iptables -F")
+    disable_firewall = params.get("disable_firewall", "")
     linesep = params.get(
         "shell_linesep", "\n").encode().decode('unicode_escape')
     status_test_command = params.get("status_test_command", "echo $?")
@@ -81,7 +85,7 @@ def run(test, params, env):
         if server in vms:
             server_vm = env.get_vm(server)
             server_vm.verify_alive()
-            server_ctl = server_vm.wait_for_login(timeout=login_timeout)
+            server_ctl = server_vm.wait_for_serial_login(timeout=login_timeout)
             error_context.context("Stop fireware on netperf server guest.",
                                   logging.info)
             server_ctl.cmd(disable_firewall, ignore_all_errors=True)
@@ -113,7 +117,7 @@ def run(test, params, env):
     if client in vms:
         client_vm = env.get_vm(client)
         client_vm.verify_alive()
-        client_ctl = client_vm.wait_for_login(timeout=login_timeout)
+        client_ctl = client_vm.wait_for_serial_login(timeout=login_timeout)
         if params.get("dhcp_cmd"):
             status, output = client_ctl.cmd_status_output(params["dhcp_cmd"], timeout=600)
             if status:
@@ -245,7 +249,7 @@ def run(test, params, env):
                     test_option += " -- -m %s" % size
                     launch_netperf_client(test, server_ips, netperf_clients,
                                           test_option, test_duration, sess,
-                                          netperf_cmd_prefix)
+                                          netperf_cmd_prefix, params)
         error_context.context("Ping test after netperf testing.", logging.info)
         for s_ip in server_ips:
             status, output = utils_test.ping(s_ip, ping_count,
@@ -259,12 +263,11 @@ def run(test, params, env):
                           (package_lost, server))
     finally:
         for n_server in netperf_servers:
-            if n_server:
-                n_server.stop()
-            n_server.package.env_cleanup(True)
+            n_server.stop()
+            n_server.cleanup(True)
         for n_client in netperf_clients:
-            if n_client:
-                n_client.package.env_cleanup(True)
+            n_client.stop()
+            n_client.cleanup(True)
         if server_ctl:
             server_ctl.close()
         if client_ctl:

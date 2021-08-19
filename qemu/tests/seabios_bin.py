@@ -23,7 +23,9 @@ def run(test, params, env):
     bin_dict = {
                    'rhel6': 'bios.bin',
                    'rhel7': 'bios-256k.bin',
-                   'rhel8': 'bios-256k.bin'
+                   'rhel8': 'bios-256k.bin',
+                   '4.2': 'bios-256k.bin',
+                   '2.11': 'bios-256k.bin'
                }
 
     error_context.context("Get available bin files", logging.info)

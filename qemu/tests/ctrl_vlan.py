@@ -29,8 +29,8 @@ def run(test, params, env):
         vlan_table = vm.monitor.send_args_cmd(query_cmd)[0].get("vlan-table")
         if not expect_vlan:
             vlan_table.sort()
-            if (len(set(vlan_table)) == 4096 and vlan_table[0] == 0 and
-                    vlan_table[-1] == 4095):
+            if (len(set(vlan_table)) == 4095 and vlan_table[0] == 0 and
+                    vlan_table[-1] == 4094):
                 pass
             else:
                 test.fail("Guest vlan table is not correct, expect: %s,"

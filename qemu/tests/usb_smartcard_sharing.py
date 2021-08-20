@@ -139,6 +139,9 @@ def run(test, params, env):
             err_msg = "Fail to establish %s connection" % rv_binary
         return (status, err_msg)
 
+    if params.get('display') != 'spice':
+        test.cancel("Only support spice connection")
+
     usbscdev_name = params["usbscdev_name"]
     timeout = params.get("wait_timeout", 600)
     rv_binary = params.get('rv_binary', 'remote-viewer')

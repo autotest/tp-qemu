@@ -70,12 +70,21 @@ class BlockdevStreamOnErrorIgnoreTest(BlockdevStreamNowaitTest):
                        ignore_status=False, shell=True)
         time.sleep(5)
 
+    def wait_until_job_complete_with_error(self):
+        try:
+            job_utils.wait_until_block_job_completed(self.main_vm, self._job)
+        except AssertionError as e:
+            if self.params["error_msg"] not in str(e):
+                self.test.fail(str(e))
+        else:
+            self.test.fail("stream completed without error 'No space left'")
+
     def do_test(self):
         self.snapshot_test()
         self.blockdev_stream()
         self.check_job_error_event()
         self.extend_lv_size()
-        self.check_job_error_event()
+        self.wait_until_job_complete_with_error()
 
 
 def run(test, params, env):
@@ -91,7 +100,7 @@ def run(test, params, env):
         5. do block-stream with on-error:ignore
         6. check BLOCK_JOB_ERROR is always received
         7. extend lv
-        8. check BLOCK_JOB_ERROR is always received
+        8. check BLOCK_JOB_COMPLETE with No space left on device
 
     :param test: test object
     :param params: test configuration dict

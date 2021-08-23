@@ -80,7 +80,10 @@ def run(test, params, env):
     cmd_md5 = params.get('cmd_md5')
     cmd_new_folder = params.get('cmd_new_folder')
     cmd_copy_file = params.get('cmd_copy_file')
+    cmd_rename_folder = params.get('cmd_rename_folder')
+    cmd_check_folder = params.get('cmd_check_folder')
     cmd_del_folder = params.get('cmd_del_folder')
+    folder_test = params.get('folder_test')
 
     # pjdfs test config
     cmd_pjdfstest = params.get('cmd_pjdfstest')
@@ -265,14 +268,20 @@ def run(test, params, env):
                 if md5_guest != md5_host:
                     test.fail('The md5 value of host is not same to guest.')
 
-            if cmd_new_folder and cmd_copy_file and cmd_del_folder:
+            if folder_test == 'yes':
                 error_context.context("Folder test under %s inside "
                                       "guest." % fs_dest, logging.info)
                 session.cmd(cmd_new_folder % fs_dest)
                 test_file = guest_file if os_type == "linux" \
                     else "%s:\\%s" % (volume_letter, 'fs_test')
                 session.cmd(cmd_copy_file % (test_file, fs_dest))
+                cmd_rename = cmd_rename_folder % (fs_dest, fs_dest) \
+                    if os_type == "linux" else cmd_rename_folder % fs_dest
+                session.cmd(cmd_rename)
                 session.cmd(cmd_del_folder % fs_dest)
+                status = session.cmd_status(cmd_check_folder % fs_dest)
+                if status == 0:
+                    test.fail("The folder are not deleted.")
 
             if fio_options:
                 error_context.context("Run fio on %s." % fs_dest, logging.info)

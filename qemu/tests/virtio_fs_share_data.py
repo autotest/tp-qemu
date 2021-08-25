@@ -292,7 +292,11 @@ def run(test, params, env):
                 session.cmd(cmd_autoreconf % fs_dest, 180)
                 session.cmd(cmd_configure.format(fs_dest), 180)
                 session.cmd(cmd_make % fs_dest, io_timeout)
-                session.cmd(cmd_pjdfstest % fs_dest, io_timeout)
+                status, output = session.cmd_status_output(
+                    cmd_pjdfstest % fs_dest, io_timeout)
+                if status != 0:
+                    logging.info(output)
+                    test.fail('The pjdfstest failed.')
 
             if cmd_xfstest:
                 error_context.context("Run xfstest on guest.", logging.info)
@@ -300,7 +304,10 @@ def run(test, params, env):
                 if session.cmd_status(cmd_download_xfstest, 360):
                     test.error("Failed to download xfstests-dev")
                 session.cmd(cmd_yum_install, 180)
-                session.cmd(cmd_make_xfs, 360)
+                status, output = session.cmd_status_output(cmd_make_xfs, 360)
+                if status != 0:
+                    logging.info(output)
+                    test.error("Failed to build xfstests-dev")
                 session.cmd(cmd_setenv, 180)
                 session.cmd(cmd_setenv_nfs, 180)
                 session.cmd(cmd_useradd, 180)

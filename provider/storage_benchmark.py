@@ -337,20 +337,32 @@ class Iozone(StorageBenchmark):
 
 class FioLinuxCfg(object):
     def __init__(self, params, session):
-        fio_pkg = params.get("fio_pkg", 'fio-3.13-48-ga819.tar.bz2')
-        host_path = os.path.join(data_dir.get_deps_dir(), 'fio', fio_pkg)
-        self.download_path = os.path.join('/home', fio_pkg)
-        self.fio_inst = os.path.join('/home', 'fio_inst')
-        self.fio_path = '%s/bin/fio' % self.fio_inst
-        scp_benckmark = attrgetter('scp_benckmark')
-        unpack_file = attrgetter('unpack_file')
-        install_timeout = params.get_numeric('fio_install_timeout', 300)
-        install = attrgetter('install')
-        self.setups = {scp_benckmark: (params.get('username'), params.get('password'),
-                                       host_path, self.download_path),
-                       unpack_file: (TAR_UNPACK, self.download_path, self.fio_inst),
-                       install: (self.fio_inst, self.fio_inst, install_timeout)}
-        self.setup_orders = (scp_benckmark, unpack_file, install)
+        #fio_resource accept 'distro' or one specified fio package.
+        #'distro' means use the fio binary provides by os, and the specified
+        #package means use the specified package in deps.
+        fio_resource = params.get("fio_resource", 'fio-3.13-48-ga819.tar.bz2')
+        if fio_resource == 'distro':
+            status, output = session.cmd_status_output('which fio')
+            if status == 0:
+                self.fio_path = output.strip()
+                self.setup_orders = ()
+            else:
+                raise TestError('No available fio in the distro')
+        else:
+            host_path = os.path.join(data_dir.get_deps_dir(), 'fio',
+                                     fio_resource)
+            self.download_path = os.path.join('/home', fio_resource)
+            self.fio_inst = os.path.join('/home', 'fio_inst')
+            self.fio_path = '%s/bin/fio' % self.fio_inst
+            scp_benckmark = attrgetter('scp_benckmark')
+            unpack_file = attrgetter('unpack_file')
+            install_timeout = params.get_numeric('fio_install_timeout', 300)
+            install = attrgetter('install')
+            self.setups = {scp_benckmark: (params.get('username'), params.get('password'),
+                                           host_path, self.download_path),
+                           unpack_file: (TAR_UNPACK, self.download_path, self.fio_inst),
+                           install: (self.fio_inst, self.fio_inst, install_timeout)}
+            self.setup_orders = (scp_benckmark, unpack_file, install)
 
 
 class FioWinCfg(object):

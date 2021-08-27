@@ -52,7 +52,7 @@ class BallooningTestPause(BallooningTest):
                 guest_ballooned_mem = gmem - self.pre_gmem
         if (mmem - self.pre_mem) != changed_mem or (self.pre_gmem and abs(
                             guest_ballooned_mem - changed_mem) > 100):
-            self.error_report(step, self.pre.mem + changed_mem,
+            self.error_report(step, self.pre_mem + changed_mem,
                               mmem, gmem)
             self.test.fail("Balloon test failed %s" % step)
         return (mmem, gmem)

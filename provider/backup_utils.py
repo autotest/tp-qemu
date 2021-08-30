@@ -171,6 +171,7 @@ def block_commit_qmp_cmd(device, **extra_options):
         'top',
         'backing-file',
         'speed',
+        'on-error',
         'filter-node-name',
         'auto-finalize',
         'auto-dismiss']

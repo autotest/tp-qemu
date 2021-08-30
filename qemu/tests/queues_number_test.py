@@ -90,7 +90,6 @@ def run(test, params, env):
     vm.verify_alive()
     vm.wait_for_serial_login(timeout=login_timeout)
     guest_ip = vm.get_address()
-    wait_time = params.get_numeric("wait_bg_time")
     ping_lost_ratio = params.get_numeric("background_ping_package_lost_ratio", 5)
     ping_time = params.get_numeric("background_ping_time")
     required_reboot = True
@@ -109,8 +108,6 @@ def run(test, params, env):
             stress_thread = utils_misc.InterruptedThread(
                 netperf_test.netperf_stress, (test, params, vm))
             stress_thread.start()
-            utils_misc.wait_for(lambda: wait_time, 0, 5,
-                                "Wait %s start background" % netperf_stress)
 
             # ping test
             error_context.context("Ping guest from host", logging.info)

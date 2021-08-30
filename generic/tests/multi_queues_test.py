@@ -123,16 +123,10 @@ def run(test, params, env):
 
                 # Set flag, when the sub test really running, will change this
                 # flag to True
-                env[bg_stress_run_flag] = False
-                wait_time = float(params.get("wait_bg_time", 60))
                 stress_thread = utils_misc.InterruptedThread(
                     utils_test.run_virt_sub_test, (test, params, env),
                     {"sub_type": bg_sub_test})
                 stress_thread.start()
-                # here wait sub test chang the test flag
-                utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
-                                    wait_time, 0, 5,
-                                    "Wait %s start background" % bg_sub_test)
 
             if params.get("vhost") == 'vhost=on' and check_vhost == 'yes':
                 vhost_thread_pattern = params.get("vhost_thread_pattern",
@@ -201,7 +195,6 @@ def run(test, params, env):
                     err_msg += "Error Info: '%s'"
                     test.error(err_msg % (bg_sub_test, e))
         finally:
-            env[bg_stress_run_flag] = False
             if session:
                 session.close()
             if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):

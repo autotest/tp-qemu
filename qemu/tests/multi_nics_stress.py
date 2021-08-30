@@ -21,7 +21,7 @@ def launch_netperf_client(test, server_ips, netperf_clients, test_option,
         for n_client in netperf_clients:
             n_client.bg_start(s_ip, test_option,
                               netperf_para_sess, netperf_cmd_prefix)
-            if utils_misc.wait_for(n_client.is_netperf_running, 30, 0, 1,
+            if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
                                    "Wait netperf test start"):
                 logging.info("Netperf test start successfully.")
             else:
@@ -29,19 +29,19 @@ def launch_netperf_client(test, server_ips, netperf_clients, test_option,
 
     start_time = time.time()
     deviation_time = params.get_numeric("deviation_time")
-    execution_time = test_duration + deviation_time
-    utils_misc.wait_for(lambda: not
-                        n_client.is_netperf_running(),
-                        execution_time, 0, 2,
-                        "Wait netperf test finish %ss" % test_duration)
-    stop_time = time.time()
-    run_time = stop_time - start_time
+    duration = time.time() - start_time
+    max_run_time = test_duration + deviation_time
+    while duration < max_run_time:
+        time.sleep(10)
+        duration = time.time() - start_time
+        status = n_client.is_netperf_running()
+        if not status and duration < test_duration - 10:
+            test.fail("netperf terminated unexpectedly")
+        logging.info("Wait netperf test finish %ss", duration)
     if n_client.is_netperf_running():
-        test.fail("netperf still running,netperf hangs")
-    elif test_duration - 5 <= run_time:
-        logging.info("netperf runs successfully")
+        test.fail("netperf still running, netperf hangs")
     else:
-        test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
+        logging.info("netperf runs successfully")
 
 
 @error_context.context_aware

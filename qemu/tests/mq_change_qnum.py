@@ -97,7 +97,6 @@ def run(test, params, env):
     error_context.context("Init guest and try to login", logging.info)
     login_timeout = int(params.get("login_timeout", 360))
     bg_stress_test = params.get("run_bgstress")
-    bg_stress_run_flag = params.get("bg_stress_run_flag")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login(timeout=login_timeout)
@@ -126,20 +125,13 @@ def run(test, params, env):
                                                 vm.virtnet[nic_index].mac)
             ifnames.append(ifname)
 
-        if bg_stress_test:
-            error_context.context("Run test %s background" % bg_stress_test,
-                                  logging.info)
-            stress_thread = ""
-            wait_time = float(params.get("wait_bg_time", 60))
-            env[bg_stress_run_flag] = False
-            stress_thread = utils_misc.InterruptedThread(
-                utils_test.run_virt_sub_test, (test, params, env),
-                {"sub_type": bg_stress_test})
-            stress_thread.start()
-            if bg_stress_run_flag:
-                utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
-                                    wait_time, 0, 5,
-                                    "Wait %s start background" % bg_stress_test)
+        error_context.context("Run test %s background" % bg_stress_test,
+                              logging.info)
+        stress_thread = utils_misc.InterruptedThread(
+            utils_test.run_virt_sub_test, (test, params, env),
+            {"sub_type": bg_stress_test})
+        stress_thread.start()
+
         if bg_ping == "yes":
             error_context.context("Ping guest from host", logging.info)
             args = (guest_ip, b_ping_time, b_ping_lost_ratio)
@@ -196,21 +188,17 @@ def run(test, params, env):
             error_context.context(txt, logging.info)
             ping_test(ext_host, f_ping_time, f_ping_lost_ratio, s_session)
 
-        if bg_stress_test:
-            env[bg_stress_run_flag] = False
-            if stress_thread:
-                error_context.context("wait for background test finish",
-                                      logging.info)
-                try:
-                    stress_thread.join()
-                except Exception as err:
-                    err_msg = "Run %s test background error!\n "
-                    err_msg += "Error Info: '%s'"
-                    test.error(err_msg % (bg_stress_test, err))
+        if stress_thread:
+            error_context.context("wait for background test finish",
+                                  logging.info)
+            try:
+                stress_thread.join()
+            except Exception as err:
+                err_msg = "Run %s test background error!\n "
+                err_msg += "Error Info: '%s'"
+                test.error(err_msg % (bg_stress_test, err))
 
     finally:
-        if bg_stress_test:
-            env[bg_stress_run_flag] = False
         if session:
             session.close()
         if s_session:

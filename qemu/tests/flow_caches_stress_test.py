@@ -8,9 +8,7 @@ from virttest import error_context
 from virttest import utils_netperf
 from virttest import utils_net
 from virttest import env_process
-from virttest import utils_misc
 from virttest import data_dir
-from virttest import utils_test
 
 
 # This decorator makes the test function aware of context strings
@@ -156,18 +154,19 @@ def run(test, params, env):
         netperf_client.bg_start(host_ip, test_option, client_num)
         start_time = time.time()
         deviation_time = params.get_numeric("deviation_time")
-        execution_time = netperf_timeout + deviation_time
-        utils_misc.wait_for(lambda: not netperf_client.is_netperf_running(),
-                            timeout=execution_time, first=590, step=2)
-        stop_time = time.time()
-        run_time = stop_time - start_time
+        duration = time.time() - start_time
+        max_run_time = netperf_timeout + deviation_time
+        while duration < max_run_time:
+            time.sleep(10)
+            duration = time.time() - start_time
+            status = netperf_client.is_netperf_running()
+            if not status and duration < netperf_timeout - 10:
+                test.fail("netperf terminated unexpectedly")
+            logging.info("Wait netperf test finish %ss", duration)
         if netperf_client.is_netperf_running():
-            test.fail("netperf still running,netperf hangs")
-        elif netperf_timeout - 5 <= run_time:
-            logging.info("netperf runs successfully")
+            test.fail("netperf still running, netperf hangs")
         else:
-            test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
-        utils_test.run_file_transfer(test, params, env)
+            logging.info("netperf runs successfully")
     finally:
         netperf_server.stop()
         netperf_client.cleanup(True)

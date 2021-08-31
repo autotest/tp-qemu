@@ -484,8 +484,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Start qga container behavior only for linux guest
         and release version above rhel8.2.0 now:
         steps:
-        1) Prepare for container that stop qga.service and
-         install podman.
+        1) Prepare for container that stop qga.service,
+         install podman and download/update ca trust.
         2) Create qga container.
         3) start qga container.
         4) Check target qga pkg we aim to test.
@@ -502,6 +502,11 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               logging.info)
         self.gagent_stop(session, self.vm)
         utils_package.package_install('podman', session)
+        ca_dir = params["ca_dir"]
+        ca_name = params["ca_name"]
+        ca_url = params["ca_url"]
+        session.cmd("curl -kL -o %s/%s %s" % (ca_dir, ca_name, ca_url))
+        session.cmd("update-ca-trust")
 
         error_context.context("Create a qemu-ga container.", logging.info)
         cmd_create_container = params["create_container_cmd"]

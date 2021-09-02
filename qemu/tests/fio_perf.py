@@ -12,6 +12,8 @@ from virttest import data_dir
 from virttest import utils_disk
 from virttest import error_context
 
+from provider.storage_benchmark import generate_instance
+
 
 def format_result(result, base="12", fbase="2"):
     """
@@ -86,36 +88,6 @@ def get_version(session, result_file, kvm_ver_chk_cmd,
                           "[Version ide driver format]\n")
 
 
-def clean_tmp_files(session, check_install_fio, tarball,
-                    os_type, guest_result_file, fio_path, timeout):
-    """
-    del temporary files in guest
-
-    :param session: VM session
-    :param check_install_fio: check if fio is installed in guest
-    :param tarball: fio tar package
-    :param os_type: guest typet
-    :param guest_result_file: fio result file in guest
-    :param fio_path: path of fio source code
-    :param timeout: Timeout in seconds
-    """
-
-    if not session.cmd_status(check_install_fio):
-        if os_type == "linux":
-            session.cmd("rm -rf %s /tmp/%s %s" %
-                        (guest_result_file, os.path.basename(tarball),
-                         fio_path), timeout)
-        elif os_type == "windows":
-            session.cmd("del /f/s/q %s && rd /s/q %s" % (guest_result_file,
-                                                         fio_path), timeout)
-
-
-def uninstall_fio():
-    # TODO there is no command like "make uninstall" for fio, so will
-    # implement steps of uninstall fio later.
-    pass
-
-
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -136,7 +108,26 @@ def run(test, params, env):
         """
         run fio command in guest
         """
-        session.cmd_status(run_cmd, cmd_timeout)
+        # generate instance with fio
+        fio = generate_instance(params, vm, 'fio')
+        try:
+            fio.run(run_fio_options)
+        finally:
+            fio.clean()
+
+    def clean_tmp_files(session, os_type, guest_result_file, timeout):
+        """
+        Clean temporary test result file inside guest
+
+        :param session: VM session
+        :param os_type: guest typet
+        :param guest_result_file: fio result file in guest
+        :param timeout: Timeout in seconds
+        """
+        if os_type == "linux":
+            session.cmd("rm -rf %s" % guest_result_file, timeout)
+        elif os_type == "windows":
+            session.cmd("del /f/s/q %s" % guest_result_file, timeout)
 
     def _pin_vm_threads(node):
         """
@@ -149,24 +140,6 @@ def run(test, params, env):
                 node = utils_misc.NumaNode(int(node))
             utils_test.qemu.pin_vm_threads(vm, node)
 
-    def fio_install(tarball):
-        """
-        check whether fio is installed in guest, if no, install it, if yes, do nothing.
-
-        :param tarball: fio tar package
-        """
-        if session.cmd_status(check_install_fio):
-            tarball = os.path.join(data_dir.get_deps_dir(), tarball)
-            if os_type == "linux":
-                vm.copy_files_to(tarball, "/tmp")
-                session.cmd("cd /tmp/ && tar -zxvf /tmp/%s" %
-                            os.path.basename(tarball), cmd_timeout)
-                session.cmd("cd %s && %s" % (fio_path, compile_cmd),
-                            cmd_timeout)
-            elif os_type == "windows":
-                session.cmd("md %s" % fio_path)
-                vm.copy_files_to(tarball, fio_path)
-
     # login virtual machine
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -177,11 +150,7 @@ def run(test, params, env):
     _pin_vm_threads(params.get("numa_node"))
 
     # get parameter from dictionary
-    check_install_fio = params["check_install_fio"]
-    tarball = params["tarball"]
-    fio_path = params["fio_path"]
-    compile_cmd = params.get("compile_cmd")
-    fio_cmd = params["fio_cmd"]
+    fio_options = params["fio_options"]
     rw = params["rw"]
     block_size = params["block_size"]
     iodepth = params["iodepth"]
@@ -206,9 +175,6 @@ def run(test, params, env):
     # scratch host and windows guest version info
     get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, os_type,
                 driver_format, cmd_timeout)
-
-    # install fio tool in guest
-    fio_install(tarball)
 
     # online disk
     if os_type == "windows":
@@ -256,12 +222,13 @@ def run(test, params, env):
                     line += "%s|" % format_result(numjobs)
                     if format == "True" or params.objects("filesystems"):
                         file_name = io_pattern + "_" + bs + "_" + io_depth
-                        run_cmd = fio_cmd % (io_pattern, bs, io_depth,
-                                             file_name, numjobs)
+                        run_fio_options = fio_options % (
+                            io_pattern, bs, io_depth, file_name, numjobs)
                     else:
-                        run_cmd = fio_cmd % (io_pattern, bs, io_depth, numjobs)
+                        run_fio_options = fio_options % (
+                            io_pattern, bs, io_depth, numjobs)
 
-                    logging.info("run_cmd is: %s", run_cmd)
+                    logging.info("run_fio_options are: %s", run_fio_options)
                     if os_type == "linux":
                         (s, o) = session.cmd_status_output(drop_cache,
                                                            timeout=cmd_timeout)
@@ -329,9 +296,8 @@ def run(test, params, env):
                             line += "%s" % format_result(io_exits)
                     result_file.write("%s\n" % line)
 
-    # del temporary files in guest
-    clean_tmp_files(session, check_install_fio, tarball, os_type,
-                    guest_result_file, fio_path, cmd_timeout)
+    # del temporary files in guest os
+    clean_tmp_files(session, os_type, guest_result_file, cmd_timeout)
 
     result_file.close()
     for fs in params.objects("filesystems"):

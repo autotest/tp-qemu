@@ -117,11 +117,25 @@ def run(test, params, env):
     check_cpu_topology = params.get_boolean("check_cpu_topology", True)
 
     vm = env.get_vm(params["main_vm"])
+    maxcpus = vm.cpuinfo.maxcpus
+    if not params.objects("vcpu_devices"):
+        vcpus_count = (vm.cpuinfo.threads if
+                       params["machine_type"].startswith("pseries") else 1)
+        pluggable_cpus = vm.cpuinfo.maxcpus // vcpus_count // 2
+        params["vcpu_devices"] = " ".join(["vcpu%d" % (count + 1) for count in
+                                           range(pluggable_cpus)])
+        vm.destroy()
+        if len(params.objects("vcpu_devices")) < 2:
+            test.cancel("Insufficient maxcpus for multi-CPU hotplug")
+        params["paused_after_start_vm"] = "no"
+        vm.create(params=params)
+
+    if vm.is_paused():
+        vm.resume()
+    vcpu_devices = params.objects("vcpu_devices")
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
     cpu_count_before_test = vm.get_cpu_count()
-    maxcpus = vm.cpuinfo.maxcpus
-    vcpu_devices = params.objects("vcpu_devices")
     guest_cpu_ids = cpu_utils.get_guest_cpu_ids(session, os_type)
 
     error_context.context("Check the number of guest CPUs after startup",

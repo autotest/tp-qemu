@@ -52,14 +52,19 @@ def run(test, params, env):
 
     os_type = params["os_type"]
     machine = params["machine_type"]
-    vcpu_devices = params.objects("vcpu_devices")
-    vcpus_count = params.get_numeric("vcpus_count", 1)
     login_timeout = params.get_numeric("login_timeout", 360)
     vm = env.get_vm(params["main_vm"])
-    vm.create()
     maxcpus = vm.cpuinfo.maxcpus
     alignment = vm.cpuinfo.threads if machine.startswith("pseries") else 1
-    vm.destroy()
+    if not params.objects("vcpu_devices"):
+        vcpus_count = (vm.cpuinfo.threads if machine.startswith("pseries") else 1)
+        pluggable_cpus = vm.cpuinfo.maxcpus // vcpus_count // 2
+        params["vcpu_devices"] = " ".join(["vcpu%d" % (count + 1) for count in
+                                           range(pluggable_cpus)])
+        vm.destroy()
+        if len(params.objects("vcpu_devices")) < 2:
+            test.cancel("Insufficient maxcpus for multi-CPU hotplug")
+        params["paused_after_start_vm"] = "no"
 
     error_context.base_context("Define the cpu list for each numa node",
                                logging.info)
@@ -69,11 +74,13 @@ def run(test, params, env):
     for node in numa_nodes:
         params["numa_cpus_%s" % node] = ",".join(
             node_cpus_mapping[params["numa_nodeid_%s" % node]])
-    params["start_vm"] = "yes"
 
     error_context.context("Launch the guest with our assigned numa node",
                           logging.info)
+    vcpu_devices = params.objects("vcpu_devices")
     vm.create(params=params)
+    if vm.is_paused():
+        vm.resume()
     session = vm.wait_for_login(timeout=login_timeout)
 
     if params.get_boolean("workaround_need"):
@@ -85,7 +92,6 @@ def run(test, params, env):
         test.error("The number of guest CPUs is not equal to the qemu command "
                    "line configuration")
 
-    cpu_count_before_test = vm.get_cpu_count()
     if os_type == "linux" and not utils_package.package_install("numactl",
                                                                 session):
         test.cancel("Please install numactl to proceed")

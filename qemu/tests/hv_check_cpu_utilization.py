@@ -123,7 +123,7 @@ def run(test, params, env):
         session = vm.wait_for_serial_login(timeout=timeout)
 
     # wait for the guest to chill
-    time.sleep(900)
+    time.sleep(1800)
 
     # start background checking guest cpu usage
     thread = threading.Thread(target=_check_cpu_thread_func,

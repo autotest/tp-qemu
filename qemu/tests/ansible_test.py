@@ -44,6 +44,11 @@ def run(test, params, env):
     # Use this directory to copy some logs back from the guest
     test_harness_log_dir = test.logdir
 
+    # Configure host kernel modules when necessary
+    module_cmd = params["module_cmd"]
+    if module_cmd:
+        process.run(module_cmd, shell=True)
+
     params['start_vm'] = 'yes'
     env_process.preprocess(test, params, env)
     vms = env.get_all_vms()

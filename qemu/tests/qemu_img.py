@@ -397,11 +397,11 @@ def run(test, params, env):
         """
 
         logging.info("Commit testing started!")
-        image_name = storage.get_image_filename(params,
-                                                data_dir.get_data_dir())
+        base_image_name = storage.get_image_filename(params,
+                                                     data_dir.get_data_dir())
         pre_name = '.'.join(image_name.split('.')[:-1])
-        image_format = params.get("image_format", "qcow2")
-        overlay_file_name = "%s_overlay.%s" % (pre_name, image_format)
+        base_image_format = params.get("image_format", "qcow2")
+        overlay_file_name = "%s_overlay.qcow2" % pre_name
         file_create_cmd = params.get("file_create_cmd",
                                      "touch /commit_testfile")
         file_info_cmd = params.get("file_info_cmd",
@@ -416,9 +416,8 @@ def run(test, params, env):
                 remove(overlay_file_name)
 
             # Create the new overlay file
-            create_cmd = "%s create -b %s -f %s %s" % (cmd, image_name,
-                                                       image_format,
-                                                       overlay_file_name)
+            create_cmd = "%s create -b %s -F %s -f qcow2 %s" % (
+                cmd, base_image_name, base_image_format, overlay_file_name)
             msg = "Create overlay file by command: %s" % create_cmd
             error_context.context(msg, logging.info)
             try:

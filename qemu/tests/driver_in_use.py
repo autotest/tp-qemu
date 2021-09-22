@@ -112,6 +112,7 @@ def run(test, params, env):
 
     driver = params["driver_name"]
     driver_verifier = params.get("driver_verifier", driver)
+    driver_running = params.get('driver_running', driver_verifier)
     timeout = int(params.get("login_timeout", 360))
 
     vm = env.get_vm(params["main_vm"])
@@ -121,7 +122,7 @@ def run(test, params, env):
     if params["os_type"] == "windows":
         session = vm.wait_for_login(timeout=timeout)
         utils_test.qemu.windrv_verify_running(session, test,
-                                              driver_verifier)
+                                              driver_running)
         session = utils_test.qemu.setup_win_driver_verifier(session,
                                                             driver_verifier,
                                                             vm)

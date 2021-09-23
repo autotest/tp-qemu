@@ -101,18 +101,17 @@ def run(test, params, env):
             test.fail("in %s tcpdump log, ethertype is not %s" % (iface_name,
                                                                   ethertype))
 
-    def compare_host_guest_md5sum(name):
+    def compare_host_guest_md5sum():
         """
         Compare md5 value of file on host and guest
 
         :param name: file name
 
         """
-        txt = "Comparing md5sum of the file %s on guest and host" % name
-        error_context.context(txt, logging.info)
-        host_result = crypto.hash_file(name, algorithm="md5")
+        logging.info("Comparing md5sum on guest and host")
+        host_result = crypto.hash_file(host_path, algorithm="md5")
         try:
-            output = session.cmd_output("md5sum %s" % name, 120).split()[0]
+            output = session.cmd_output("md5sum %s" % guest_path, 120).split()[0]
             guest_result = re.findall(r"\w+", output)[0]
         except IndexError:
             logging.error("Could not get file md5sum in guest")
@@ -288,8 +287,8 @@ def run(test, params, env):
 
         # scp file to guest with L2 vlan tag
         file_size = int(params.get("file_size", "4096"))
-        host_path = params.get("host_path", "/tmp/transferred_file")
-        guest_path = params.get("guest_path", "/tmp/transferred_file")
+        host_path = os.path.join(test.tmpdir, "transferred_file")
+        guest_path = params.get("guest_path", "/var/tmp/transferred_file")
         transfer_timeout = int(params.get("transfer_timeout", 1000))
         cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, file_size)
         error_context.context(
@@ -302,11 +301,11 @@ def run(test, params, env):
         username = params["username"]
         remote.scp_to_remote(L2tag_iface_ip, shell_port, username, password,
                              host_path, guest_path)
-        if not compare_host_guest_md5sum(host_path):
+        if not compare_host_guest_md5sum():
             test.fail("md5sum mismatch on guest and host")
-
+    finally:
+        session.cmd("rm -rf %s" % guest_path)
         session.close()
         vm.destroy(gracefully=True)
-    finally:
         host_bridge_iface.down()
         host_bridges.del_bridge(brname)

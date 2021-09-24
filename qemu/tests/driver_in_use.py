@@ -4,7 +4,9 @@ import logging
 
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import env_process
 from virttest import error_context
+from provider import win_dump_utils
 
 
 @error_context.context_aware
@@ -115,7 +117,12 @@ def run(test, params, env):
     driver_running = params.get('driver_running', driver_verifier)
     timeout = int(params.get("login_timeout", 360))
 
-    vm = env.get_vm(params["main_vm"])
+    vm_name = params['main_vm']
+    if driver == "fwcfg":
+        win_dump_utils.set_vm_for_dump(test, params)
+        params['start_vm'] = 'yes'
+        env_process.preprocess_vm(test, params, env, vm_name)
+    vm = env.get_vm(vm_name)
     vm.verify_alive()
     error_context.context("Boot guest with %s device" % driver, logging.info)
 

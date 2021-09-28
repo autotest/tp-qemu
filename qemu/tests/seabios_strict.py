@@ -48,7 +48,11 @@ def run(test, params, env):
         """
         boot info check
         """
-        return re.search(info, vm.serial_console.get_stripped_output(), re.S)
+        if params["enable_sga"] == "yes":
+            output = vm.serial_console.get_stripped_output()
+        else:
+            output = vm.serial_console.get_output()
+        return re.search(info, output, re.S)
 
     error_context.context("Start guest with sga bios", logging.info)
     create_cdrom()

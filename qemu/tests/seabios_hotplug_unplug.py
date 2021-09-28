@@ -29,7 +29,11 @@ def run(test, params, env):
         """
         Use the function to short the lines in the scripts
         """
-        return session_obj.get_stripped_output()
+        if params["enable_sga"] == "yes":
+            output = session_obj.get_stripped_output()
+        else:
+            output = session_obj.get_output()
+        return output
 
     def sga_info_check():
         return re.search(sgabios_info, get_output(vm.serial_console))

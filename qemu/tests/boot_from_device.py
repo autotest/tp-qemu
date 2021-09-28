@@ -43,7 +43,17 @@ def run(test, params, env):
         """
         boot info check
         """
-        return re.search(info, vm.serial_console.get_stripped_output(), re.S)
+        return re.search(info, get_serial_console_output(), re.S)
+
+    def get_serial_console_output():
+        """
+        get the output of serail console
+        """
+        if params["enable_sga"] == "yes":
+            output = vm.serial_console.get_stripped_output()
+        else:
+            output = vm.serial_console.get_output()
+        return output
 
     timeout = int(params.get("login_timeout", 360))
     boot_menu_key = params.get("boot_menu_key", 'esc')
@@ -70,7 +80,7 @@ def run(test, params, env):
             # Send boot menu key in monitor.
             vm.send_key(boot_menu_key)
 
-            output = vm.serial_console.get_stripped_output()
+            output = get_serial_console_output()
             boot_list = re.findall(r"^\d+\. (.*)\s", output, re.M)
             if not boot_list:
                 test.fail("Could not get boot entries list")

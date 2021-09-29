@@ -103,7 +103,10 @@ def run(test, params, env):
     error_context.context("Check the guest boot result", logging.info)
     start = time.time()
     while True:
-        output = vm.serial_console.get_stripped_output()
+        if params["enable_sga"] == "yes":
+            output = vm.serial_console.get_stripped_output()
+        else:
+            output = vm.serial_console.get_output()
         result = re.findall(boot_fail_infos, output, re.S | re.I)
         if result or time.time() > start + timeout:
             break

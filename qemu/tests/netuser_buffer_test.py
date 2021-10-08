@@ -23,7 +23,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     login_timeout = params.get_numeric("login_timeout", 360)
     vm.wait_for_login(timeout=login_timeout)
-    test_path = os.path.join(data_dir.get_deps_dir(), "netuser/exp.c")
+    exp_path = params["exp_path"]
+    test_path = os.path.join(data_dir.get_deps_dir(), exp_path)
     vm.copy_files_to(test_path, '~')
     vm.destroy()
 

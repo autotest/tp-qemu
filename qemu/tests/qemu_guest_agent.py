@@ -4169,24 +4169,37 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 self.gagent.get_osinfo()
                 self.gagent.get_virtio_device()
 
-        def _get_handle(pid):
+        def _process_qga_resource():
             """
-            Check the handles of qga via handle.exe
+            Check the handles&memory of process qemu-ga.
 
-            :params pid: process ID of qga.service
             :return qga_handles: the handles of qga.service
+            :return qga_memory: the memory of qga.service
             """
-            cmd_get_handle = params["cmd_get_qga_handle"] % pid
-            qga_handles = int(session.cmd_output(cmd_get_handle
-                                                 ).strip().split(":")[1])
-            return qga_handles
 
-        def _base_on_bg_check_handles():
+            get_resour = self.params['cmd_get_qga_resource']
+            qga_resources = session.cmd_output(get_resour).strip().split(" ")
+            qga_handles = qga_resources[0]
+            qga_memory = int(qga_resources[1]) / 1024
+            return (int(qga_handles), int(qga_memory))
+
+        def _base_on_bg_check_resource_leak():
+            """
+            Check whether there is resource leak situation base on background
+            that some operations are running.
+            """
+
             if bg.is_alive():
-                end_handles = _get_handle(pid_qga)
-                if end_handles > 300:
-                    test.fail("Handles is %s more than 300, qga-commands"
-                              " caused resource leak." % end_handles)
+                qga_handles, qga_memory = _process_qga_resource()
+                # Generally the qga handles won't exceed 300, and the memory
+                # setting '3000' is an average value when the guest is not
+                # running redundant operations and apps.
+                if qga_handles > 300 or qga_memory > 3000:
+                    test.fail("QGA commands caused resource leak. handles are"
+                              " %s, memory is %s" % (qga_handles, qga_memory))
+                else:
+                    logging.info("Current qga handles is %s, qga memory"
+                                 "is %s", qga_handles, qga_memory)
                 return False
             else:
                 return True
@@ -4194,20 +4207,13 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         session = self._get_session(params, None)
         self._open_session_list.append(session)
 
-        error_context.context("Check whether resource leak can be"
-                              " caused via execute commands "
-                              "'get-osinfo/devices' in a loop.",
-                              logging.info)
-        self.vm.send_key('meta_l-d')
-        time.sleep(30)
-        session.cmd(params["cmd_start_handle_tool"])
-        time.sleep(5)
+        error_context.context("Check whether resources leak during executing"
+                              " get-osinfo/devices in a loop.", logging.info)
         repeats = int(params.get("repeat_times", 1))
-        pid_qga = int(session.cmd_output(params["cmd_get_qga_pid"]
-                                         ).strip().split()[1])
+
         bg = utils_misc.InterruptedThread(execute_qga_cmds_loop)
         bg.start()
-        utils_misc.wait_for(lambda: _base_on_bg_check_handles(), 180)
+        utils_misc.wait_for(lambda: _base_on_bg_check_resource_leak(), 500)
 
 
 def run(test, params, env):

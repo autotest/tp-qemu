@@ -3851,22 +3851,45 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         """
         error_context.context("Get %s path where it locates." % qemu_ga_pkg,
                               logging.info)
-
         if self.gagent_src_type == "url":
             gagent_host_path = params["gagent_host_path"]
-            gagent_download_cmd = params["gagent_download_cmd"]
+            gagent_download_url = params["gagent_download_url"]
+            qga_msi = params['qemu_ga_pkg']
+            rpm_install = "rpm_install" in gagent_download_url
+            if rpm_install:
+                gagent_download_url = gagent_download_url.split("rpm_install:")[-1]
+                gagent_download_cmd = 'wget -qP %s %s' % (gagent_host_path,
+                                                          gagent_download_url)
+                gagent_host_path += params["src_qgarpm_path"]
+            else:
+                gagent_host_path += qga_msi
+                gagent_download_cmd = 'wget %s %s' % (gagent_host_path,
+                                                      gagent_download_url)
 
-            error_context.context("Download qemu-ga.msi from website and copy "
-                                  "it to guest.", logging.info)
-            process.system(
-                gagent_download_cmd, float(params.get("login_timeout", 360)))
-            if not os.path.exists(gagent_host_path):
-                test.error("qemu-ga.msi is not exist, maybe it is not "
+            error_context.context("Download qemu-ga package from website "
+                                  "and copy it to guest.", logging.info)
+            process.system(gagent_download_cmd)
+            s, gagent_host_path = process.getstatusoutput('ls %s' % gagent_host_path)
+            if s != 0:
+                test.error("qemu-ga package is not exist, maybe it is not "
                            "successfully downloaded ")
             s, o = session.cmd_status_output("mkdir %s" % self.gagent_guest_dir)
             if s and "already exists" not in o:
                 test.error("Could not create qemu-ga directory in "
                            "VM '%s', detail: '%s'" % (vm.name, o))
+            if rpm_install:
+                get_qga_msi = params["installrpm_getmsi"] % gagent_host_path
+                process.system(get_qga_msi, shell=True, timeout=10)
+                cmd_get_qgamsi_path = params["get_qgamsi_path"]
+                qgamsi_path = process.system_output(cmd_get_qgamsi_path,
+                                                    shell=True)
+                qgamsi_path = qgamsi_path.decode(encoding="utf-8",
+                                                 errors="strict").split("\n")
+                tmp_dir = params["gagent_host_path"]
+                process.system("cp -r %s %s %s" % (qgamsi_path[0],
+                                                   qgamsi_path[1],
+                                                   tmp_dir))
+                gagent_host_path = tmp_dir + qga_msi
 
             error_context.context("Copy qemu-ga.msi to guest", logging.info)
             vm.copy_files_to(gagent_host_path, self.gagent_guest_dir)

@@ -30,8 +30,10 @@ def run(test, params, env):
     wdbg_timeout = params.get("wdbg_timeout", 600)
     error_context.context("Check fwcfg driver is running", logging.info)
     utils_test.qemu.windrv_verify_running(session, test, driver)
-    error_context.context("Enable fwcfg driver verified", logging.info)
-    session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
+    if params.get("setup_verifier", "yes") == "yes":
+        error_context.context("Enable fwcfg driver verified", logging.info)
+        session = utils_test.qemu.setup_win_driver_verifier(session,
+                                                            driver, vm)
 
     disk = sorted(session.cmd('wmic diskdrive get index').split()[1:])[-1]
     utils_disk.update_windows_disk_attributes(session, disk)

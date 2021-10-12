@@ -1,10 +1,15 @@
 import logging
 import json
+import re
 
 from virttest import data_dir
 from virttest import utils_numeric
 from virttest.qemu_io import QemuIOSystem
 from virttest.qemu_storage import QemuImg
+from virttest import env_process
+from virttest import utils_misc
+
+from virttest.utils_version import VersionInterval
 
 from qemu.tests.qemu_disk_img import QemuImgTest
 from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
@@ -43,10 +48,21 @@ def run(test, params, env):
 
     def _verify_map_output(output):
         """"Verify qemu map output."""
-        expected = {
-            "length": int(utils_numeric.normalize_data_size(
-                params["write_size"], "B")),
-            "start": 0, "depth": 0, "zero": True, "data": False}
+        qemu_path = utils_misc.get_qemu_binary(params)
+        qemu_version = env_process._get_qemu_version(qemu_path)
+        match = re.search(r'[0-9]+\.[0-9]+\.[0-9]+(\-[0-9]+)?', qemu_version)
+        host_qemu = match.group(0)
+        if host_qemu in VersionInterval('[6.1.0,)'):
+            expected = {
+                "length": int(utils_numeric.normalize_data_size(
+                    params["write_size"], "B")),
+                "start": 0, "depth": 0, "present": True, "zero": True,
+                "data": False}
+        else:
+            expected = {
+                "length": int(utils_numeric.normalize_data_size(
+                    params["write_size"], "B")),
+                "start": 0, "depth": 0, "zero": True, "data": False}
         if expected not in json.loads(output.stdout_text):
             test.fail("Commit failed, data from 0 to %s are not zero" %
                       params["write_size"])

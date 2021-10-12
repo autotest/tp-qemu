@@ -2,10 +2,15 @@ import logging
 import random
 import json
 import string
+import re
 
 from avocado.utils import process
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
+from virttest import env_process
+from virttest import utils_misc
+
+from virttest.utils_version import VersionInterval
 
 
 def run(test, params, env):
@@ -29,11 +34,23 @@ def run(test, params, env):
     def _verify_qemu_img_map(output, str_len):
         """Verify qemu-img map's output."""
         logging.info("Verify the dumped mete-data of the unaligned image.")
-        expected = [{"start": 0, "length": str_len, "depth": 0,
-                     "zero": False, "data": True, "offset": 0},
-                    {"start": str_len, "length": 512 - (str_len % 512),
-                     "depth": 0, "zero": True, "data": False,
-                     "offset": str_len}]
+        qemu_path = utils_misc.get_qemu_binary(params)
+        qemu_version = env_process._get_qemu_version(qemu_path)
+        match = re.search(r'[0-9]+\.[0-9]+\.[0-9]+(\-[0-9]+)?', qemu_version)
+        host_qemu = match.group(0)
+        if host_qemu in VersionInterval('[6.1.0,)'):
+            expected = [
+                {"start": 0, "length": str_len, "depth": 0, "present": True,
+                 "zero": False, "data": True, "offset": 0},
+                {"start": str_len, "length": 512 - (str_len % 512), "depth": 0,
+                 "present": True, "zero": True, "data": False,
+                 "offset": str_len}]
+        else:
+            expected = [{"start": 0, "length": str_len, "depth": 0,
+                         "zero": False, "data": True, "offset": 0},
+                        {"start": str_len, "length": 512 - (str_len % 512),
+                         "depth": 0, "zero": True, "data": False,
+                         "offset": str_len}]
         res = json.loads(output)
         if res != expected:
             test.fail("The dumped mete-data of the unaligned "

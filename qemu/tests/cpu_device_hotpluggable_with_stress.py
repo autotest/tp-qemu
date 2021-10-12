@@ -45,9 +45,23 @@ def run(test, params, env):
     login_timeout = params.get_numeric("login_timeout", 360)
     stress_duration = params.get_numeric("stress_duration", 180)
     verify_wait_timeout = params.get_numeric("verify_wait_timeout", 60)
-    vcpu_devices = params.objects("vcpu_devices")
 
     vm = env.get_vm(params["main_vm"])
+    if not params.objects("vcpu_devices"):
+        vcpus_count = (vm.cpuinfo.threads if
+                       params["machine_type"].startswith("pseries") else 1)
+        pluggable_cpus = vm.cpuinfo.maxcpus // vcpus_count // 2
+        vcpu_devices = ["vcpu%d" % (count + 1) for count in range(pluggable_cpus)]
+        params["vcpu_devices"] = " ".join(vcpu_devices)
+        vm.destroy()
+        if len(vcpu_devices) < 2:
+            test.cancel("Insufficient maxcpus for multi-CPU hotplug")
+        params["paused_after_start_vm"] = "no"
+        vm.create(params=params)
+
+    if vm.is_paused():
+        vm.resume()
+    vcpu_devices = params.objects("vcpu_devices")
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
 

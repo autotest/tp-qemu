@@ -76,10 +76,14 @@ def run(test, params, env):
         return stdev
 
     # data io config
+    test_file = params.get('test_file')
+    folder_test = params.get('folder_test')
     cmd_dd = params.get('cmd_dd')
     cmd_md5 = params.get('cmd_md5')
     cmd_new_folder = params.get('cmd_new_folder')
     cmd_copy_file = params.get('cmd_copy_file')
+    cmd_rename_folder = params.get('cmd_rename_folder')
+    cmd_check_folder = params.get('cmd_check_folder')
     cmd_del_folder = params.get('cmd_del_folder')
 
     # pjdfs test config
@@ -185,7 +189,7 @@ def run(test, params, env):
         if not os.path.isabs(fs_source):
             fs_source = os.path.join(base_dir, fs_source)
 
-        host_data = os.path.join(fs_source, 'fs_test')
+        host_data = os.path.join(fs_source, test_file)
 
         if os_type == "linux":
             error_context.context("Create a destination directory %s "
@@ -243,7 +247,7 @@ def run(test, params, env):
                 test.fail("Could not get virtio-fs mounted volume letter.")
             fs_dest = "%s:" % volume_letter
 
-        guest_file = os.path.join(fs_dest, 'fs_test')
+        guest_file = os.path.join(fs_dest, test_file)
         logging.info("The guest file in shared dir is %s", guest_file)
 
         try:
@@ -265,14 +269,18 @@ def run(test, params, env):
                 if md5_guest != md5_host:
                     test.fail('The md5 value of host is not same to guest.')
 
-            if cmd_new_folder and cmd_copy_file and cmd_del_folder:
+            if folder_test == 'yes':
                 error_context.context("Folder test under %s inside "
                                       "guest." % fs_dest, logging.info)
                 session.cmd(cmd_new_folder % fs_dest)
-                test_file = guest_file if os_type == "linux" \
-                    else "%s:\\%s" % (volume_letter, 'fs_test')
-                session.cmd(cmd_copy_file % (test_file, fs_dest))
-                session.cmd(cmd_del_folder % fs_dest)
+                session.cmd(cmd_copy_file)
+                session.cmd(cmd_rename_folder)
+                session.cmd(cmd_del_folder)
+                status = session.cmd_status(cmd_check_folder)
+                if status == 0:
+                    test.fail("The folder are not deleted.")
+                if os_type == "linux":
+                    session.cmd("cd -")
 
             if fio_options:
                 error_context.context("Run fio on %s." % fs_dest, logging.info)

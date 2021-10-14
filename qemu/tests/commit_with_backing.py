@@ -93,3 +93,7 @@ def run(test, params, env):
     for tmpfile, hashval in hashes.items():
         img_utils.check_md5sum(tmpfile, md5sum_bin, session,
                                md5_value_to_check=hashval)
+
+    for image in images:
+        if image is not base:
+            image.remove()

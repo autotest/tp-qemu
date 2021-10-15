@@ -12,6 +12,19 @@ from virttest import qemu_virtio_port
 
 
 @error_context.context_aware
+def get_abstract_address(hostfile):
+    """
+    Only for unix socket
+
+    :param hostfile: the unix socket path in command
+    :return: Abstract hostfile address for unix socket
+    """
+    find_cmd = "cat /proc/net/unix | grep '%s'" % hostfile
+    abstract_hostfile = process.getoutput(find_cmd).strip().split(' ')[-1]
+    return abstract_hostfile
+
+
+@error_context.context_aware
 def copy_scripts(guest_scripts, guest_path, vm):
     """
     Copy data transfer scripts to guest
@@ -40,7 +53,13 @@ def get_virtio_port_property(vm, port_name):
         if isinstance(port, qemu_virtio_port.VirtioSerial):
             if port.name == port_name:
                 hostfile = port.hostfile
-                if port.port_type in ('tcp_socket', 'udp'):
+                # support abstract namespace Unix domain sockets
+                if port.port_type == 'unix_socket':
+                    char_info = [m for m in chardev_info.split('\n')
+                                 if hostfile in m][0]
+                    if 'abstract=on' in char_info:
+                        hostfile = get_abstract_address(hostfile)
+                elif port.port_type in ('tcp_socket', 'udp'):
                     hostfile = '%s:%s' % (port.hostfile[0], port.hostfile[1])
                 elif port.port_type == 'pty':
                     hostfile = re.findall('%s: filename=pty:(/dev/pts/\\d)?' %

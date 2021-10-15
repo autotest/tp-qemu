@@ -86,6 +86,10 @@ def run(test, params, env):
     cmd_check_folder = params.get('cmd_check_folder')
     cmd_del_folder = params.get('cmd_del_folder')
 
+    # soft link config
+    cmd_symblic_file = params.get('cmd_symblic_file')
+    cmd_symblic_folder = params.get('cmd_symblic_folder')
+
     # pjdfs test config
     cmd_pjdfstest = params.get('cmd_pjdfstest')
     cmd_unpack = params.get('cmd_unpack')
@@ -279,6 +283,17 @@ def run(test, params, env):
                 status = session.cmd_status(cmd_check_folder)
                 if status == 0:
                     test.fail("The folder are not deleted.")
+                if os_type == "linux":
+                    session.cmd("cd -")
+
+            if cmd_symblic_file:
+                error_context.context("Symbolic test under %s inside "
+                                      "guest." % fs_dest, logging.info)
+                session.cmd(cmd_new_folder % fs_dest)
+                if session.cmd_status(cmd_symblic_file):
+                    test.fail("Creat symbolic files failed.")
+                if session.cmd_status(cmd_symblic_folder):
+                    test.fail("Creat symbolic folders failed.")
                 if os_type == "linux":
                     session.cmd("cd -")
 

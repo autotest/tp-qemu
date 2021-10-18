@@ -109,12 +109,6 @@ def run(test, params, env):
     info_output = json.loads(active_layer.info(output="json"))
     verify_qemu_img_info_backing_chain(info_output)
 
-    if params.get("remove_intermediate_layers", "no") == "yes":
-        for image in images:
-            if image not in (base, active_layer):
-                logging.info("Remove the snapshot %s.", image.image_filename)
-                image.remove()
-
     vm = img_utils.boot_vm_with_images(test, params, env, (active_layer.tag,))
     session = vm.wait_for_login(timeout=timeout)
     for guest_file, hash_val in hashes.items():
@@ -122,3 +116,6 @@ def run(test, params, env):
                                md5_value_to_check=hash_val)
     session.close()
     vm.destroy()
+    for image in images:
+        if image is not base:
+            image.remove()

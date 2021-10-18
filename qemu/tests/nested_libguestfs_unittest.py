@@ -17,7 +17,7 @@ def run(test, params, env):
     1) Launch a guest and check if libguestfs-tools is installed.
     2) Execute the libguestfs-test-tool directly launching qemu.
     3) Analyze the result of libguestfs-test-tool.
-    4) Check the nested file exists.
+    4) Check the nested file exists(ignore on s390x).
 
     :param test:   QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -71,18 +71,19 @@ def run(test, params, env):
             test.fail("libguestfs-test-tool execution failed due to: %s. "
                       % fail_msg)
 
-        error_context.context("Check the nested file status.", logging.info)
-        file_s, file_o = session.cmd_status_output("cat " + nested_file)
-        if re.match(r"[1Y]", file_o) and is_kvm_mode:
-            logging.info("Guest runs with nested flag, the nested feature has "
-                         "been enabled.")
-        elif file_s == 1 and not is_kvm_mode:
-            logging.info("Guest runs without nested flag, so the nested file "
-                         "does not exist.")
-        else:
-            logging.error("Nested file status: %s, output: %s", file_s, file_o)
-            test.fail("Getting the status of nested file has unexpected "
-                      "result.")
+        if cpu_arch != "s390":
+            error_context.context("Check the nested file status.", logging.info)
+            file_s, file_o = session.cmd_status_output("cat " + nested_file)
+            if re.match(r"[1Y]", file_o) and is_kvm_mode:
+                logging.info("Guest runs with nested flag, the nested feature has "
+                             "been enabled.")
+            elif file_s == 1 and not is_kvm_mode:
+                logging.info("Guest runs without nested flag, so the nested file "
+                             "does not exist.")
+            else:
+                logging.error("Nested file status: %s, output: %s", file_s, file_o)
+                test.fail("Getting the status of nested file has unexpected "
+                          "result.")
     finally:
         session.cmd("rm -f " + stderr_file, ignore_all_errors=True)
         session.close()

@@ -100,8 +100,8 @@ def run(test, params, env):
                                         run_install_cmd,
                                         installer_pkg_check_cmd,
                                         copy_files_params=params)
-    # TODO: workaround as Bug 1847856，should be removed when the bz is fixed
-    session = vm.reboot(session)
+    if params.get("need_reboot", "no") == "yes":
+        session = vm.reboot(session)
 
     check_gagent_version(session, test, gagent_pkg_info_cmd,
                          expected_gagent_version)

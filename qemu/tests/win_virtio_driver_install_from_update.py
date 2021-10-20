@@ -40,6 +40,9 @@ def run(test, params, env):
             status = session.cmd_status(wuauserv_start_cmd)
             if status != 0:
                 test.fail("Fail to start wuauserv service")
+            if not utils_misc.wait_for(lambda: not session.cmd_status(wuauserv_status_cmd),
+                                       60, 0, 2):
+                test.fail("wuauserv service not running")
 
     driver_name = params["driver_name"]
     device_name = params["device_name"]

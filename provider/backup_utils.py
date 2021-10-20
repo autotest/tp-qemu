@@ -219,6 +219,11 @@ def blockdev_backup_qmp_cmd(source, target, **extra_options):
             arguments["bitmap-mode"] = extra_options["bitmap-mode"]
     if "filter-node-name" in extra_options:
         arguments["filter-node-name"] = extra_options["filter-node-name"]
+    x_perf_ops = ["use-copy-range", "max-workers", "max-chunk"]
+    if any(item in extra_options for item in x_perf_ops):
+        arguments["x-perf"] = {x: extra_options[x]
+                               for x in x_perf_ops
+                               if x in extra_options}
     return "blockdev-backup", arguments
 
 

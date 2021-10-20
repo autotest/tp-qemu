@@ -54,10 +54,11 @@ def vcpu_hotplug_guest(test, params, vm, session):
     """
 
     maxcpus = int(params["vcpu_maxcpus"])
-    current_cpus = int(params.get("smp", 2))
-    for cpuid in range(current_cpus, maxcpus):
-        error_context.context("hot-pluging vCPU %s" % cpuid, logging.info)
-        vm.hotplug_vcpu(cpu_id=cpuid)
+    vcpu_devices = params.objects("vcpu_devices")
+    for vcpu_device in vcpu_devices:
+        error_context.context("hot-pluging vCPU %s" % vcpu_device,
+                              logging.info)
+        vm.hotplug_vcpu_device(vcpu_id=vcpu_device)
         # make the cpu hotplug has slot during data transfer
         time.sleep(2)
 

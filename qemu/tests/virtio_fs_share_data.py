@@ -327,7 +327,10 @@ def run(test, params, env):
                 if session.cmd_status(cmd_download_xfstest, 360):
                     test.error("Failed to download xfstests-dev")
                 session.cmd(cmd_yum_install, 180)
-                status, output = session.cmd_status_output(cmd_make_xfs, 360)
+
+                # Due to the increase of xfstests-dev cases, more time is
+                # needed for compilation here.
+                status, output = session.cmd_status_output(cmd_make_xfs, 900)
                 if status != 0:
                     logging.info(output)
                     test.error("Failed to build xfstests-dev")

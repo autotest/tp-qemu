@@ -38,9 +38,9 @@ def run(test, params, env):
             node_cpus = set([int(v) for v in node_cpus.split()])
             numa_guest.append((node_size, node_cpus))
 
-        # It is a known WONTFIX issue for x86, node info of node0 and node1 is
-        # opposite in guest os when vm have 2 nodes
-        if (vm_arch in ("x86_64", "i686") and len(numa_guest) == 2):
+        # It is a known WONTFIX issue for x86 and ARM, node info of node0 and
+        # node1 is opposite in guest os when vm have 2 nodes
+        if (vm_arch in ("x86_64", "i686", "aarch64") and len(numa_guest) == 2):
             numa_guest.reverse()
         return numa_guest
 

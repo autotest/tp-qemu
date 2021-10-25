@@ -16,7 +16,7 @@ from virttest import error_context
 _system_output = functools.partial(process.system_output, shell=True)
 
 
-def format_result(result, base="12", fbase="2"):
+def format_result(result, base="33", fbase="2"):
     """
     Format the result to a fixed length string.
 
@@ -59,8 +59,6 @@ def run(test, params, env):
             utils_test.qemu.pin_vm_threads(vm, node)
 
     timeout = float(params.get("pktgen_test_timeout", "240"))
-    run_threads = params.get("pktgen_threads", 1)
-    record_list = params.get("record_list")
     error_context.context("Init the VM, and try to login", logging.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -75,6 +73,10 @@ def run(test, params, env):
     # get parameter from dictionary
     category = params.get("category")
     pkt_size = params.get("pkt_size")
+    run_threads = params.get("pktgen_threads")
+    burst = params.get("burst")
+    record_list = params.get("record_list")
+    pktgen_script = params.get('pktgen_script')
     kvm_ver_chk_cmd = params.get("kvm_ver_chk_cmd")
     guest_ver_cmd = params["guest_ver_cmd"]
 
@@ -128,42 +130,55 @@ def run(test, params, env):
 
         # copy pktgen_test script to test server
         local_path = os.path.join(data_dir.get_shared_dir(),
-                                  "scripts/pktgen_perf.sh")
-        remote_path = "/tmp/pktgen_perf.sh"
+                                  "scripts/pktgen_perf")
+        remote_path = "/tmp/"
         if pkt_cate == "tx":
             vm.copy_files_to(local_path, remote_path)
         elif pkt_cate == "rx":
-            process.run("cp %s %s" % (local_path, remote_path))
+            process.run("cp -r %s %s" % (local_path, remote_path))
 
-        for size in pkt_size.split():
-            if pkt_cate == "tx":
-                error_context.context("test guest tx pps performance",
-                                      logging.info)
-                guest_mac = vm.get_mac_address(0)
-                pktgen_interface = utils_net.get_linux_ifname(session,
-                                                              guest_mac)
-                dsc_dev = utils_net.Interface(vm.get_ifname(0))
-                dsc = dsc_dev.get_mac()
-                runner = session.cmd
-                pktgen_ip = vm.wait_for_get_address(0, timeout=5)
-                pkt_cate_r = run_test(session_serial, runner, remote_path,
-                                      pktgen_ip, dsc, pktgen_interface,
-                                      run_threads, size, timeout)
-            elif pkt_cate == "rx":
-                error_context.context("test guest rx pps performance",
-                                      logging.info)
-                host_bridge = params.get("netdst", "switch")
-                host_nic = utils_net.Interface(host_bridge)
-                pktgen_ip = host_nic.get_ip()
-                dsc = vm.wait_for_get_address(0, timeout=5)
-                pktgen_interface = vm.get_ifname(0)
-                runner = _system_output
-                pkt_cate_r = run_test(session_serial, runner, remote_path,
-                                      pktgen_ip, dsc, pktgen_interface,
-                                      run_threads, size, timeout)
-            line = "%s|" % format_result(size)
-            line += "%s" % format_result(pkt_cate_r)
-            result_file.write(("%s\n" % line))
+        pktgen_script = params.get('pktgen_script')
+
+        for pktgen_script in pktgen_script.split():
+            for size in pkt_size.split():
+                for threads in run_threads.split():
+                    for burst in burst.split():
+                        if pkt_cate == "tx":
+                            error_context.context("test guest tx pps"
+                                                  " performance",
+                                                  logging.info)
+                            guest_mac = vm.get_mac_address(0)
+                            pktgen_interface = utils_net.get_linux_ifname(
+                                               session, guest_mac)
+                            dsc_dev = utils_net.Interface(vm.get_ifname(0))
+                            dsc = dsc_dev.get_mac()
+                            runner = session.cmd
+                            pktgen_ip = vm.wait_for_get_address(0, timeout=5)
+                        elif pkt_cate == "rx":
+                            error_context.context("test guest rx pps"
+                                                  " performance",
+                                                  logging.info)
+                            host_bridge = params.get("netdst", "switch")
+                            host_nic = utils_net.Interface(host_bridge)
+                            pktgen_ip = host_nic.get_ip()
+                            if pktgen_script == "pktgen_perf":
+                                dsc = vm.wait_for_get_address(0, timeout=5)
+                            else:
+                                dsc = vm.get_mac_address(0)
+                            pktgen_interface = vm.get_ifname(0)
+                            runner = _system_output
+                        pkt_cate_r = run_test(session_serial, runner,
+                                              pktgen_script, pkt_cate,
+                                              pktgen_ip, pktgen_interface,
+                                              dsc, threads, size, burst,
+                                              timeout)
+
+                        line = "%s|" % format_result(pktgen_script)
+                        line += "%s|" % format_result(size)
+                        line += "%s|" % format_result(threads)
+                        line += "%s|" % format_result(burst)
+                        line += "%s" % format_result(pkt_cate_r)
+                        result_file.write(("%s\n" % line))
 
     error_context.context("Verify Host and guest kernel no error\
                            and call trace", logging.info)
@@ -174,24 +189,33 @@ def run(test, params, env):
     session.close()
 
 
-def run_test(session_serial, runner, remote_path, pktgen_ip, dsc,
-             interface, run_threads, size, timeout):
+def run_test(session_serial, runner, pktgen_script, pkt_rate, pktgen_ip,
+             interface, dsc, threads, size, burst, timeout):
     """
     Run pktgen_perf script on remote and gather packet numbers/time and
     calculate mpps.
 
     :param session_serial: session serial for vm.
     :param runner: connection for vm or host.
-    :param remote_path: pktgen_perf script path.
+    :param pktgen_script: pktgen script name.
+    :param pkt_rate: tx or rx category.
     :param pktgen_ip: ip address which pktgen script was running.
-    :param dsc: dsc mac or dsc ip pass to pktgen_perf script.
     :param interface: device name pass to pktgen_perf script.
-    :param run_threads: the numbers pktgen threads.
+    :param dsc: dsc mac or dsc ip pass to pktgen_perf script.
+    :param threads: the numbers pktgen threads.
     :param size: packet size pass to pktgen_perf script.
+    :param burst: HW level bursting of SKBs.
     :param timeout: test run time.
     """
-    exec_cmd = "%s %s %s %s %s" % (remote_path, dsc, interface,
-                                   run_threads, size)
+
+    pktgen_script_path = "/tmp/pktgen_perf/%s.sh" % pktgen_script
+    if pktgen_script in "pktgen_perf":
+        dsc_option = '-m' if pkt_rate == 'tx' else '-d'
+        exec_cmd = "%s -i %s %s %s -t %s -s %s" % (
+                pktgen_script_path, interface, dsc_option, dsc, threads, size)
+    else:
+        exec_cmd = "%s -i %s -m %s -n 0 -t %s -s %s -b %s -c 0" % (
+                pktgen_script_path, interface, dsc, threads, size, burst)
     packets = "cat /sys/class/net/%s/statistics/tx_packets" % interface
     logging.info("Start pktgen test by cmd '%s'", exec_cmd)
     try:
@@ -201,7 +225,8 @@ def run_test(session_serial, runner, remote_path, pktgen_ip, dsc,
         # when pktgen script is running on guest, it's damaged,
         # guest could not response by ssh, so uses serial instead.
         packet_a = session_serial.cmd(packets, timeout)
-        kill_cmd = "kill -9 `ps -C pktgen_perf.sh -o pid=`"
+        kill_cmd = "kill -9 `ps -ef | grep %s --color | grep -v grep | "\
+                   "awk '{print $2}'`" % pktgen_script
         session_serial.cmd(kill_cmd)
         session_serial.cmd("ping %s -c 5" % pktgen_ip, ignore_all_errors=True)
     except process.CmdError:

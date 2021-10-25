@@ -36,6 +36,7 @@ def run(test, params, env):
     ansible_addl_opts = params.get("ansible_addl_opts", "")
     ansible_ssh_extra_args = params["ansible_ssh_extra_args"]
     ansible_extra_vars = params.get("ansible_extra_vars", "{}")
+    custom_extra_vars = params.objects("custom_extra_vars")
     playbook_repo = params["playbook_repo"]
     playbook_timeout = params.get_numeric("playbook_timeout")
     playbook_dir = params.get("playbook_dir",
@@ -63,6 +64,9 @@ def run(test, params, env):
                   "ansible_ssh_pass": guest_passwd,
                   "test_harness_log_dir": test_harness_log_dir}
     extra_vars.update(json.loads(ansible_extra_vars))
+    custom_params = params.object_params("extra_vars")
+    for cev in custom_extra_vars:
+        extra_vars[cev] = custom_params[cev]
 
     error_context.context("Execute the ansible playbook.", logging.info)
     playbook_executor = ansible.PlaybookExecutor(

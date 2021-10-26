@@ -245,8 +245,8 @@ def run(test, params, env):
                                   "lable is %s." % virtio_fs_disk_label,
                                   logging.info)
             vol_con = "VolumeName='%s'" % virtio_fs_disk_label
-            vol_func = utils_misc.get_win_disk_vol(session, condition=vol_con)
-            volume_letter = utils_misc.wait_for(lambda: vol_func, cmd_timeout)
+            volume_letter = utils_misc.wait_for(
+                lambda: utils_misc.get_win_disk_vol(session, condition=vol_con), cmd_timeout)
             if volume_letter is None:
                 test.fail("Could not get virtio-fs mounted volume letter.")
             fs_dest = "%s:" % volume_letter

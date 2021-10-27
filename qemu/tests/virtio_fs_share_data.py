@@ -277,14 +277,16 @@ def run(test, params, env):
                 error_context.context("Folder test under %s inside "
                                       "guest." % fs_dest, logging.info)
                 session.cmd(cmd_new_folder % fs_dest)
-                session.cmd(cmd_copy_file)
-                session.cmd(cmd_rename_folder)
-                session.cmd(cmd_del_folder)
-                status = session.cmd_status(cmd_check_folder)
-                if status == 0:
-                    test.fail("The folder are not deleted.")
-                if os_type == "linux":
-                    session.cmd("cd -")
+                try:
+                    session.cmd(cmd_copy_file)
+                    session.cmd(cmd_rename_folder)
+                    session.cmd(cmd_del_folder)
+                    status = session.cmd_status(cmd_check_folder)
+                    if status == 0:
+                        test.fail("The folder are not deleted.")
+                finally:
+                    if os_type == "linux":
+                        session.cmd("cd -")
 
             if cmd_symblic_file:
                 error_context.context("Symbolic test under %s inside "

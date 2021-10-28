@@ -60,6 +60,7 @@ def run(test, params, env):
     run_tcpreplay_cmd = params.get("run_tcpreplay_cmd")
     tmp_dir = params.get("tmp_dir", "/tmp")
     uncompress_dir = params.get("uncompress_dir")
+    timeout = params.get_numeric("timeout", 60)
 
     error_context.context("Copy %s to %s" % (tcpreplay_file_name, tmp_dir),
                           logging.info)
@@ -80,7 +81,7 @@ def run(test, params, env):
         test.error("Can't uncompress %s" % tcpreplay_full_path)
 
     logging.info("Compile files at %s", uncompress_full_path)
-    execute_host_cmd(tcpreplay_compile_cmd % uncompress_full_path)
+    execute_host_cmd(tcpreplay_compile_cmd % uncompress_full_path, timeout)
 
     error_context.context("Copy %s to %s" % (pcap_file_name, tmp_dir),
                           logging.info)

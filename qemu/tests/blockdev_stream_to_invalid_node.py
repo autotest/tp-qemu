@@ -1,6 +1,9 @@
 import random
 
+from virttest import utils_misc
+from virttest import utils_qemu
 from virttest.qemu_monitor import QMPCmdError
+from virttest.utils_version import VersionInterval
 
 from provider import backup_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
@@ -23,7 +26,13 @@ class BlkdevStreamtoInvalidnode(BlockDevCommitTest):
             cmd, arguments = backup_utils.blockdev_stream_qmp_cmd(device_node)
             self.main_vm.monitor.cmd(cmd, arguments)
         except QMPCmdError as e:
-            qmp_error_msg = self.params.get("qmp_error_msg") % self.device_node
+            qemu_binary = utils_misc.get_qemu_binary(self.params)
+            qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
+            required_qemu_version = self.params["required_qemu_version"]
+            if qemu_version in VersionInterval(required_qemu_version):
+                qmp_error_msg = self.params["qmp_error_since_6_1"] % self.device_node
+            else:
+                qmp_error_msg = self.params["qmp_error_before_6_1"] % self.device_node
             if qmp_error_msg not in str(e.data):
                 self.test.fail(str(e))
         else:

@@ -113,7 +113,13 @@ def run(test, params, env):
 
             # Verify the guest status
             if _get_lvm_size() < disk_size:
-                test.assertTrue(vm.wait_for_status("paused", wait_timeout))
+                try:
+                    test.assertTrue(vm.wait_for_status("paused", wait_timeout))
+                except AssertionError:
+                    if _get_lvm_size() < disk_size:
+                        raise
+                    else:
+                        logging.debug("Ignore timeout.")
             else:
                 test.assertTrue(
                     vm.wait_for_status("running", wait_timeout))

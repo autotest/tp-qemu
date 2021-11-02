@@ -95,7 +95,7 @@ def run(test, params, env):
         def check_guest_reboot(pattern):
             start_time = time.time()
             while (time.time() - start_time) < vm.REBOOT_TIMEOUT:
-                if pattern in vm.serial_console.get_output().strip(o_before):
+                if pattern in vm.serial_console.get_output().strip():
                     return True
             return False
 
@@ -448,9 +448,6 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login(timeout=timeout)
-
-    if (watchdog_action == "inject-nmi" and vm_arch_name in ("ppc64", "ppc64le")):
-        o_before = vm.serial_console.get_output()
 
     if params.get("setup_runlevel") == "yes":
         error_context.context("Setup the runlevel for guest", logging.info)

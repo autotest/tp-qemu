@@ -50,7 +50,7 @@ def run(test, params, env):
         content = "[temp]\nname=temp\nbaseurl=%s\nenable=1\n" % baseurl
         content += "gpgcheck=0\nskip_if_unavailable=1"
         create_cmd = r'echo -e "%s" > /etc/yum.repos.d/temp.repo' % content
-        process.system(create_cmd)
+        process.system(create_cmd, shell=True)
 
     def _host_config_check():
         status = True

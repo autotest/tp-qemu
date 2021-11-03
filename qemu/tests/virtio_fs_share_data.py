@@ -148,243 +148,245 @@ def run(test, params, env):
             nfs_local = nfs.Nfs(params)
             nfs_local.setup()
 
-    if cmd_xfstest or setup_local_nfs:
-        params["start_vm"] = "yes"
-        env_process.preprocess(test, params, env)
+    try:
+        if cmd_xfstest or setup_local_nfs:
+            params["start_vm"] = "yes"
+            env_process.preprocess(test, params, env)
 
-    os_type = params.get("os_type")
-    vm = env.get_vm(params.get("main_vm"))
-    vm.verify_alive()
-    session = vm.wait_for_login()
-    host_addr = vm.get_address()
+        os_type = params.get("os_type")
+        vm = env.get_vm(params.get("main_vm"))
+        vm.verify_alive()
+        session = vm.wait_for_login()
+        host_addr = vm.get_address()
 
-    if os_type == "windows":
-        cmd_timeout = params.get_numeric("cmd_timeout", 120)
-        driver_name = params["driver_name"]
-        install_path = params["install_path"]
-        check_installed_cmd = params["check_installed_cmd"] % install_path
+        if os_type == "windows":
+            cmd_timeout = params.get_numeric("cmd_timeout", 120)
+            driver_name = params["driver_name"]
+            install_path = params["install_path"]
+            check_installed_cmd = params["check_installed_cmd"] % install_path
 
-        # Check whether windows driver is running,and enable driver verifier
-        session = utils_test.qemu.windrv_check_running_verifier(session,
-                                                                vm, test,
-                                                                driver_name)
-        # install winfsp tool
-        error_context.context("Install winfsp for windows guest.",
-                              logging.info)
-        installed = session.cmd_status(check_installed_cmd) == 0
-        if installed:
-            logging.info("Winfsp tool is already installed.")
-        else:
-            install_cmd = utils_misc.set_winutils_letter(session,
-                                                         params["install_cmd"])
-            session.cmd(install_cmd, cmd_timeout)
-            if not utils_misc.wait_for(lambda: not session.cmd_status(
-                    check_installed_cmd), 60):
-                test.error("Winfsp tool is not installed.")
-
-    for fs in params.objects("filesystems"):
-        fs_params = params.object_params(fs)
-        fs_target = fs_params.get("fs_target")
-        fs_dest = fs_params.get("fs_dest")
-
-        fs_source = fs_params.get("fs_source_dir")
-        base_dir = fs_params.get("fs_source_base_dir",
-                                 data_dir.get_data_dir())
-        if not os.path.isabs(fs_source):
-            fs_source = os.path.join(base_dir, fs_source)
-
-        host_data = os.path.join(fs_source, test_file)
-
-        if os_type == "linux":
-            error_context.context("Create a destination directory %s "
-                                  "inside guest." % fs_dest, logging.info)
-            utils_misc.make_dirs(fs_dest, session)
-            if not cmd_xfstest:
-                error_context.context("Mount virtiofs target %s to %s inside"
-                                      " guest." % (fs_target, fs_dest),
-                                      logging.info)
-                if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
-                    test.fail('Mount virtiofs target failed.')
-
-        else:
-            error_context.context("Start virtiofs service in guest.", logging.info)
-            viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
-            viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
-            viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
-
-            logging.info("Check if virtiofs service is registered.")
-            status, output = session.cmd_status_output(viofs_sc_query_cmd)
-            if "not exist as an installed service" in output:
-                logging.info("Register virtiofs service in windows guest.")
-                exe_path = get_viofs_exe(session)
-                viofs_sc_create_cmd = viofs_sc_create_cmd % exe_path
-                sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
-                if sc_create_s != 0:
-                    test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
-
-            logging.info("Check if virtiofs service is started.")
-            status, output = session.cmd_status_output(viofs_sc_query_cmd)
-            if "RUNNING" not in output:
-                logging.info("Start virtiofs service.")
-                sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
-                if sc_start_s != 0:
-                    test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
-            else:
-                logging.info("Virtiofs service is running.")
-
-            viofs_log_file_cmd = params.get("viofs_log_file_cmd")
-            if viofs_log_file_cmd:
-                error_context.context("Check if LOG file is created.", logging.info)
-                log_dir_s = session.cmd_status(viofs_log_file_cmd)
-                if log_dir_s != 0:
-                    test.fail("Virtiofs log is not created.")
-
-            # get fs dest for vm
-            virtio_fs_disk_label = fs_target
-            error_context.context("Get Volume letter of virtio fs target, the disk"
-                                  "lable is %s." % virtio_fs_disk_label,
+            # Check whether windows driver is running,and enable driver verifier
+            session = utils_test.qemu.windrv_check_running_verifier(session,
+                                                                    vm, test,
+                                                                    driver_name)
+            # install winfsp tool
+            error_context.context("Install winfsp for windows guest.",
                                   logging.info)
-            vol_con = "VolumeName='%s'" % virtio_fs_disk_label
-            volume_letter = utils_misc.wait_for(
-                lambda: utils_misc.get_win_disk_vol(session, condition=vol_con), cmd_timeout)
-            if volume_letter is None:
-                test.fail("Could not get virtio-fs mounted volume letter.")
-            fs_dest = "%s:" % volume_letter
+            installed = session.cmd_status(check_installed_cmd) == 0
+            if installed:
+                logging.info("Winfsp tool is already installed.")
+            else:
+                install_cmd = utils_misc.set_winutils_letter(session,
+                                                             params["install_cmd"])
+                session.cmd(install_cmd, cmd_timeout)
+                if not utils_misc.wait_for(lambda: not session.cmd_status(
+                        check_installed_cmd), 60):
+                    test.error("Winfsp tool is not installed.")
 
-        guest_file = os.path.join(fs_dest, test_file)
-        logging.info("The guest file in shared dir is %s", guest_file)
+        for fs in params.objects("filesystems"):
+            fs_params = params.object_params(fs)
+            fs_target = fs_params.get("fs_target")
+            fs_dest = fs_params.get("fs_dest")
 
-        try:
-            if cmd_dd:
-                error_context.context("Creating file under %s inside "
-                                      "guest." % fs_dest, logging.info)
-                session.cmd(cmd_dd % guest_file, io_timeout)
+            fs_source = fs_params.get("fs_source_dir")
+            base_dir = fs_params.get("fs_source_base_dir",
+                                     data_dir.get_data_dir())
+            if not os.path.isabs(fs_source):
+                fs_source = os.path.join(base_dir, fs_source)
 
-                if os_type == "linux":
-                    cmd_md5_vm = cmd_md5 % guest_file
+            host_data = os.path.join(fs_source, test_file)
+
+            if os_type == "linux":
+                error_context.context("Create a destination directory %s "
+                                      "inside guest." % fs_dest, logging.info)
+                utils_misc.make_dirs(fs_dest, session)
+                if not cmd_xfstest:
+                    error_context.context("Mount virtiofs target %s to %s inside"
+                                          " guest." % (fs_target, fs_dest),
+                                          logging.info)
+                    if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
+                        test.fail('Mount virtiofs target failed.')
+
+            else:
+                error_context.context("Start virtiofs service in guest.", logging.info)
+                viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
+                viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
+                viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
+
+                logging.info("Check if virtiofs service is registered.")
+                status, output = session.cmd_status_output(viofs_sc_query_cmd)
+                if "not exist as an installed service" in output:
+                    logging.info("Register virtiofs service in windows guest.")
+                    exe_path = get_viofs_exe(session)
+                    viofs_sc_create_cmd = viofs_sc_create_cmd % exe_path
+                    sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
+                    if sc_create_s != 0:
+                        test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
+
+                logging.info("Check if virtiofs service is started.")
+                status, output = session.cmd_status_output(viofs_sc_query_cmd)
+                if "RUNNING" not in output:
+                    logging.info("Start virtiofs service.")
+                    sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
+                    if sc_start_s != 0:
+                        test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
                 else:
-                    guest_file_win = guest_file.replace("/", "\\")
-                    cmd_md5_vm = cmd_md5 % (volume_letter, guest_file_win)
-                md5_guest = session.cmd_output(cmd_md5_vm, io_timeout).strip().split()[0]
+                    logging.info("Virtiofs service is running.")
 
-                logging.info(md5_guest)
-                md5_host = process.run("md5sum %s" % host_data,
-                                       io_timeout).stdout_text.strip().split()[0]
-                if md5_guest != md5_host:
-                    test.fail('The md5 value of host is not same to guest.')
+                viofs_log_file_cmd = params.get("viofs_log_file_cmd")
+                if viofs_log_file_cmd:
+                    error_context.context("Check if LOG file is created.", logging.info)
+                    log_dir_s = session.cmd_status(viofs_log_file_cmd)
+                    if log_dir_s != 0:
+                        test.fail("Virtiofs log is not created.")
 
-            if folder_test == 'yes':
-                error_context.context("Folder test under %s inside "
-                                      "guest." % fs_dest, logging.info)
-                session.cmd(cmd_new_folder % fs_dest)
-                try:
-                    session.cmd(cmd_copy_file)
-                    session.cmd(cmd_rename_folder)
-                    session.cmd(cmd_del_folder)
-                    status = session.cmd_status(cmd_check_folder)
-                    if status == 0:
-                        test.fail("The folder are not deleted.")
-                finally:
+                # get fs dest for vm
+                virtio_fs_disk_label = fs_target
+                error_context.context("Get Volume letter of virtio fs target, the disk"
+                                      "lable is %s." % virtio_fs_disk_label,
+                                      logging.info)
+                vol_con = "VolumeName='%s'" % virtio_fs_disk_label
+                volume_letter = utils_misc.wait_for(
+                    lambda: utils_misc.get_win_disk_vol(session, condition=vol_con), cmd_timeout)
+                if volume_letter is None:
+                    test.fail("Could not get virtio-fs mounted volume letter.")
+                fs_dest = "%s:" % volume_letter
+
+            guest_file = os.path.join(fs_dest, test_file)
+            logging.info("The guest file in shared dir is %s", guest_file)
+
+            try:
+                if cmd_dd:
+                    error_context.context("Creating file under %s inside "
+                                          "guest." % fs_dest, logging.info)
+                    session.cmd(cmd_dd % guest_file, io_timeout)
+
+                    if os_type == "linux":
+                        cmd_md5_vm = cmd_md5 % guest_file
+                    else:
+                        guest_file_win = guest_file.replace("/", "\\")
+                        cmd_md5_vm = cmd_md5 % (volume_letter, guest_file_win)
+                    md5_guest = session.cmd_output(cmd_md5_vm, io_timeout).strip().split()[0]
+
+                    logging.info(md5_guest)
+                    md5_host = process.run("md5sum %s" % host_data,
+                                           io_timeout).stdout_text.strip().split()[0]
+                    if md5_guest != md5_host:
+                        test.fail('The md5 value of host is not same to guest.')
+
+                if folder_test == 'yes':
+                    error_context.context("Folder test under %s inside "
+                                          "guest." % fs_dest, logging.info)
+                    session.cmd(cmd_new_folder % fs_dest)
+                    try:
+                        session.cmd(cmd_copy_file)
+                        session.cmd(cmd_rename_folder)
+                        session.cmd(cmd_del_folder)
+                        status = session.cmd_status(cmd_check_folder)
+                        if status == 0:
+                            test.fail("The folder are not deleted.")
+                    finally:
+                        if os_type == "linux":
+                            session.cmd("cd -")
+
+                if cmd_symblic_file:
+                    error_context.context("Symbolic test under %s inside "
+                                          "guest." % fs_dest, logging.info)
+                    session.cmd(cmd_new_folder % fs_dest)
+                    if session.cmd_status(cmd_symblic_file):
+                        test.fail("Creat symbolic files failed.")
+                    if session.cmd_status(cmd_symblic_folder):
+                        test.fail("Creat symbolic folders failed.")
                     if os_type == "linux":
                         session.cmd("cd -")
 
-            if cmd_symblic_file:
-                error_context.context("Symbolic test under %s inside "
-                                      "guest." % fs_dest, logging.info)
-                session.cmd(cmd_new_folder % fs_dest)
-                if session.cmd_status(cmd_symblic_file):
-                    test.fail("Creat symbolic files failed.")
-                if session.cmd_status(cmd_symblic_folder):
-                    test.fail("Creat symbolic folders failed.")
-                if os_type == "linux":
-                    session.cmd("cd -")
+                if fio_options:
+                    error_context.context("Run fio on %s." % fs_dest, logging.info)
+                    fio = generate_instance(params, vm, 'fio')
+                    try:
+                        fio.run(fio_options % guest_file, io_timeout)
+                    finally:
+                        fio.clean()
+                    vm.verify_dmesg()
 
-            if fio_options:
-                error_context.context("Run fio on %s." % fs_dest, logging.info)
-                fio = generate_instance(params, vm, 'fio')
-                try:
-                    fio.run(fio_options % guest_file, io_timeout)
-                finally:
-                    fio.clean()
-                vm.verify_dmesg()
+                if cmd_pjdfstest:
+                    error_context.context("Run pjdfstest on %s." % fs_dest, logging.info)
+                    host_path = os.path.join(data_dir.get_deps_dir('pjdfstest'), pjdfstest_pkg)
+                    scp_to_remote(host_addr, port, username, password, host_path, fs_dest)
+                    session.cmd(cmd_unpack.format(fs_dest), 180)
+                    session.cmd(cmd_yum_deps, 180)
+                    session.cmd(cmd_autoreconf % fs_dest, 180)
+                    session.cmd(cmd_configure.format(fs_dest), 180)
+                    session.cmd(cmd_make % fs_dest, io_timeout)
+                    status, output = session.cmd_status_output(
+                        cmd_pjdfstest % fs_dest, io_timeout)
+                    if status != 0:
+                        logging.info(output)
+                        test.fail('The pjdfstest failed.')
 
-            if cmd_pjdfstest:
-                error_context.context("Run pjdfstest on %s." % fs_dest, logging.info)
-                host_path = os.path.join(data_dir.get_deps_dir('pjdfstest'), pjdfstest_pkg)
-                scp_to_remote(host_addr, port, username, password, host_path, fs_dest)
-                session.cmd(cmd_unpack.format(fs_dest), 180)
-                session.cmd(cmd_yum_deps, 180)
-                session.cmd(cmd_autoreconf % fs_dest, 180)
-                session.cmd(cmd_configure.format(fs_dest), 180)
-                session.cmd(cmd_make % fs_dest, io_timeout)
-                status, output = session.cmd_status_output(
-                    cmd_pjdfstest % fs_dest, io_timeout)
-                if status != 0:
-                    logging.info(output)
-                    test.fail('The pjdfstest failed.')
+                if cmd_xfstest:
+                    error_context.context("Run xfstest on guest.", logging.info)
+                    utils_misc.make_dirs(fs_dest_fs2, session)
+                    if session.cmd_status(cmd_download_xfstest, 360):
+                        test.error("Failed to download xfstests-dev")
+                    session.cmd(cmd_yum_install, 180)
 
-            if cmd_xfstest:
-                error_context.context("Run xfstest on guest.", logging.info)
-                utils_misc.make_dirs(fs_dest_fs2, session)
-                if session.cmd_status(cmd_download_xfstest, 360):
-                    test.error("Failed to download xfstests-dev")
-                session.cmd(cmd_yum_install, 180)
+                    # Due to the increase of xfstests-dev cases, more time is
+                    # needed for compilation here.
+                    status, output = session.cmd_status_output(cmd_make_xfs, 900)
+                    if status != 0:
+                        logging.info(output)
+                        test.error("Failed to build xfstests-dev")
+                    session.cmd(cmd_setenv, 180)
+                    session.cmd(cmd_setenv_nfs, 180)
+                    session.cmd(cmd_useradd, 180)
 
-                # Due to the increase of xfstests-dev cases, more time is
-                # needed for compilation here.
-                status, output = session.cmd_status_output(cmd_make_xfs, 900)
-                if status != 0:
-                    logging.info(output)
-                    test.error("Failed to build xfstests-dev")
-                session.cmd(cmd_setenv, 180)
-                session.cmd(cmd_setenv_nfs, 180)
-                session.cmd(cmd_useradd, 180)
-
-                try:
-                    output = session.cmd_output(cmd_xfstest, io_timeout)
-                    logging.info("%s", output)
-                    if 'Failed' in output:
+                    try:
+                        output = session.cmd_output(cmd_xfstest, io_timeout)
+                        logging.info("%s", output)
+                        if 'Failed' in output:
+                            test.fail('The xfstest failed.')
+                        else:
+                            break
+                    except (aexpect.ShellStatusError, aexpect.ShellTimeoutError):
                         test.fail('The xfstest failed.')
-                    else:
-                        break
-                except (aexpect.ShellStatusError, aexpect.ShellTimeoutError):
-                    test.fail('The xfstest failed.')
 
-            if cmd_get_stdev:
-                error_context.context("Create files in local device and"
-                                      " nfs device ", logging.info)
-                file_in_local_host = os.path.join(fs_source, "file_test")
-                file_in_nfs_host = os.path.join(fs_source, nfs_mount_dst_name,
-                                                "file_test")
-                cmd_touch_file = "touch %s && touch %s" % (file_in_local_host,
-                                                           file_in_nfs_host)
-                process.run(cmd_touch_file)
-                error_context.context("Check if the two files' st_dev are"
-                                      " the same on guest.", logging.info)
-                file_in_local_guest = os.path.join(fs_dest, "file_test")
-                file_in_nfs_guest = os.path.join(fs_dest, nfs_mount_dst_name,
-                                                 "file_test")
-                if get_stdev(file_in_local_guest) == get_stdev(file_in_nfs_guest):
-                    test.fail("st_dev are the same on diffrent device.")
-        finally:
-            if os_type == "linux":
-                utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
-                utils_misc.safe_rmdir(fs_dest, session=session)
-            if setup_local_nfs:
-                session.close()
+                if cmd_get_stdev:
+                    error_context.context("Create files in local device and"
+                                          " nfs device ", logging.info)
+                    file_in_local_host = os.path.join(fs_source, "file_test")
+                    file_in_nfs_host = os.path.join(fs_source, nfs_mount_dst_name,
+                                                    "file_test")
+                    cmd_touch_file = "touch %s && touch %s" % (file_in_local_host,
+                                                               file_in_nfs_host)
+                    process.run(cmd_touch_file)
+                    error_context.context("Check if the two files' st_dev are"
+                                          " the same on guest.", logging.info)
+                    file_in_local_guest = os.path.join(fs_dest, "file_test")
+                    file_in_nfs_guest = os.path.join(fs_dest, nfs_mount_dst_name,
+                                                     "file_test")
+                    if get_stdev(file_in_local_guest) == get_stdev(file_in_nfs_guest):
+                        test.fail("st_dev are the same on diffrent device.")
+            finally:
+                if os_type == "linux":
+                    utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
+                    utils_misc.safe_rmdir(fs_dest, session=session)
+    finally:
+        if setup_local_nfs:
+            if vm.is_alive():
                 vm.destroy()
-                for fs in params.objects("filesystems"):
-                    nfs_params = params.object_params(fs)
-                    params["export_dir"] = nfs_params.get("export_dir")
-                    params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
-                    params["rm_export_dir"] = nfs_params.get("export_dir")
-                    params["rm_mount_dir"] = nfs_params.get("fs_source_dir")
-                    if cmd_get_stdev:
-                        fs_source_dir = nfs_params.get("fs_source_dir")
-                        params["nfs_mount_dir"] = os.path.join(fs_source_dir, nfs_mount_dst_name)
-                    nfs_local = nfs.Nfs(params)
-                    nfs_local.cleanup()
-                    utils_misc.safe_rmdir(params["export_dir"])
+            for fs in params.objects("filesystems"):
+                nfs_params = params.object_params(fs)
+                params["export_dir"] = nfs_params.get("export_dir")
+                params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
+                params["rm_export_dir"] = nfs_params.get("export_dir")
+                params["rm_mount_dir"] = nfs_params.get("fs_source_dir")
+                if cmd_get_stdev:
+                    fs_source_dir = nfs_params.get("fs_source_dir")
+                    params["nfs_mount_dir"] = os.path.join(fs_source_dir, nfs_mount_dst_name)
+                nfs_local = nfs.Nfs(params)
+                nfs_local.cleanup()
+                utils_misc.safe_rmdir(params["export_dir"])
 
     # during all virtio fs is mounted, reboot vm
     if params.get('reboot_guest', 'no') == 'yes':

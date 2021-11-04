@@ -39,6 +39,8 @@ class BlockdevIncbkModRdonlyBitmapTest(BlockdevLiveBackupBaseTest):
 
     def restart_vm_with_readonly_data_image(self):
         self.main_vm.monitor.system_powerdown()
+        if not self.main_vm.wait_until_dead(10, 1, 1):
+            self.test.fail("Failed to shutdowm vm and save bitmap")
         self.params['image_readonly_%s' % self._source_images[0]] = 'on'
         self.prepare_main_vm()
         self._error_msg += '|{pid} Aborted'.format(pid=self.main_vm.get_pid())

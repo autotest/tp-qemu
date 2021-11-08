@@ -112,9 +112,20 @@ def verify_usb_device_in_guest(params, session, devs):
     def _verify_guest_usb():
         output = session.cmd_output(params["chk_usb_info_cmd"],
                                     float(params["cmd_timeout"]))
+        # For usb-hub, '-v' must be used to get the expected usb info.
+        # For non usb-hub, refer to 'chk_usb_info_cmd', two situations:
+        # '-v' must be used to get expected info
+        # '-v' must not be used to avoid duplicate info in output and affect the device count.
+        if "Hub" in str(devs) and os_type == "linux":
+            hub_output = session.cmd_output("lsusb -v",
+                                            float(params["cmd_timeout"]))
         # each dev must in the output
         for dev in devs:
-            if dev[1] not in output:
+            if "Hub" in dev[1] and os_type == "linux":
+                o = hub_output
+            else:
+                o = output
+            if dev[1] not in o:
                 logging.info("%s does not exist", dev[1])
                 return False
         # match number of devices
@@ -122,14 +133,19 @@ def verify_usb_device_in_guest(params, session, devs):
         dev_nums = dict((i, dev_list.count(i)) for i in dev_list)
         for k, v in dev_nums.items():
             logging.info("the number of %s is %s", k, v)
-            count = output.count(k)
+            if "Hub" in k and os_type == "linux":
+                o = hub_output
+            else:
+                o = output
+            count = o.count(k)
             if count != v:
                 logging.info("expected %s %s, got %s in the guest",
                              v, k, count)
                 return False
         return True
 
-    if params.get("os_type") == "linux":
+    os_type = params.get("os_type")
+    if os_type == "linux":
         logging.info("checking if there is I/O error in dmesg")
         output = session.cmd_output("dmesg | grep -i usb",
                                     float(params["cmd_timeout"]))

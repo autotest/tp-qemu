@@ -405,6 +405,27 @@ def create_image_by_params(vm, params, image_name):
     return image
 
 
+def create_image_with_data_file(vm, params, image_name):
+    """
+    Create image with data_file
+    :param vm: vm object
+    :param params: params used to create data_file
+    :image_name: image that created on data_file_image
+    :return list: data_file image list
+    """
+    image_list = []
+    image_params = params.object_params(image_name)
+    data_file_tag = image_params.get("image_data_file")
+    if data_file_tag:
+        data_file_image = sp_admin.volume_define_by_params(data_file_tag, params)
+        data_file_image.hotplug(vm)
+        image_list.append(data_file_image)
+    image = sp_admin.volume_define_by_params(image_name, params)
+    image.hotplug(vm)
+    image_list.append(image)
+    return image_list
+
+
 def format_storage_volume(img, filesystem, partition="mbr"):
     """
     format data disk with virt-format

@@ -67,14 +67,15 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    balloon_device = params.get("ballon_device", "virtio-balloon-pci")
+    balloon_device = params.get("balloon_device", "virtio-balloon-pci")
     error_context.context("Hotplug and unplug balloon device in a loop",
                           logging.info)
     for i in range(int(params.get("balloon_repeats", 3))):
         vm.devices.set_dirty()
         new_dev = qdevices.QDevice(balloon_device,
                                    {'id': 'balloon%d' % idx},
-                                   parent_bus={'aobject': 'pci.0'})
+                                   parent_bus={'aobject': params.get(
+                                       "balloon_bus", 'pci.0')})
 
         error_context.context("Hotplug balloon device for %d times" % (i+1),
                               logging.info)

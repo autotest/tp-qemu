@@ -123,11 +123,12 @@ def run(test, params, env):
     # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
 
+    setup_hugepages = params.get("setup_hugepages", "no") == "yes"
+
     # st_dev check config
     cmd_get_stdev = params.get("cmd_get_stdev")
     nfs_mount_dst_name = params.get("nfs_mount_dst_name")
-
-    if cmd_xfstest:
+    if cmd_xfstest and not setup_hugepages:
         # /dev/shm is the default memory-backend-file, the default value is the
         # half of the host memory. Increase it to guest memory size to avoid crash
         ori_tmpfs_size = process.run(cmd_get_tmpfs, shell=True).stdout_text.replace("\n", "")
@@ -149,7 +150,7 @@ def run(test, params, env):
             nfs_local.setup()
 
     try:
-        if cmd_xfstest or setup_local_nfs:
+        if cmd_xfstest or setup_local_nfs or setup_hugepages:
             params["start_vm"] = "yes"
             env_process.preprocess(test, params, env)
 

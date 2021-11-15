@@ -1,5 +1,6 @@
 import random
 import logging
+import time
 
 from virttest import utils_test
 from virttest import error_context
@@ -30,6 +31,7 @@ def run(test, params, env):
         Check guest memory
         """
         if params['os_type'] == 'windows':
+            time.sleep(2)
             memhp_test.check_memory(vm)
         else:
             expected_mem = new_mem + mem_dev_sz

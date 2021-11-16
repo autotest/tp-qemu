@@ -197,7 +197,7 @@ def run(test, params, env):
                                         verbose=False).decode().strip()
             if bool(pid):
                 break
-            time.sleep(1)
+            time.sleep(0.1)
         try:
             os.kill(int(pid), signal.SIGUSR1)
         except Exception as error:
@@ -532,12 +532,23 @@ def run(test, params, env):
         base_img = storage.get_image_filename(params, data_dir.get_data_dir())
         _create(cmd, sn1, sn_fmt, base_img=base_img, base_img_fmt=image_format)
 
+        rebase_mode = params.get("rebase_mode", "safe")
+        if rebase_mode == "safe":
+            # Boot snapshot1 image before create snapshot2
+            img_format = sn1.split('.')[-1]
+            img_name = ".".join(sn1.split('.')[:-1])
+            _boot(img_name, img_format)
+
         # Create snapshot2 based on snapshot1
         sn2 = params["image_name_snapshot2"]
         sn2 = _get_image_filename(sn2, enable_gluster, img_fmt=sn_fmt)
         _create(cmd, sn2, sn_fmt, base_img=sn1, base_img_fmt=sn_fmt)
 
-        rebase_mode = params.get("rebase_mode", "safe")
+        # Boot snapshot2 image before rebase
+        img_format = sn2.split('.')[-1]
+        img_name = ".".join(sn2.split('.')[:-1])
+        _boot(img_name, img_format)
+
         if rebase_mode == "unsafe":
             remove(sn1)
 
@@ -627,6 +638,7 @@ def run(test, params, env):
         """
         params['image_name'] = img_name
         params['image_format'] = img_fmt
+        dd_file_size = params.get('dd_file_size', 1000)
         image_name = "%s.%s" % (img_name, img_fmt)
         msg = "Try to boot vm with image %s" % image_name
         error_context.context(msg, logging.info)
@@ -641,7 +653,7 @@ def run(test, params, env):
 
         # Run dd in linux guest
         if params.get("os_type") == 'linux':
-            cmd = "dd if=/dev/zero of=/mnt/test bs=1000 count=1000"
+            cmd = "dd if=/dev/zero of=/mnt/test bs=%s count=1000" % dd_file_size
             status = session.cmd_status(cmd, timeout=dd_timeout)
             if status != 0:
                 test.error("dd failed")

@@ -127,11 +127,13 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
         error_context.context("Install the previous qemu-ga in guest.",
                               logging.info)
+        gagent_download_url = params["gagent_download_url"]
+        rpm_install = "rpm_install" in gagent_download_url
         if self._check_ga_pkg(session, params["gagent_pkg_check_cmd"]):
             logging.info("Uninstall the one which is installed.")
             self.gagent_uninstall(session, vm)
 
-        if self.gagent_src_type == "virtio-win":
+        if self.gagent_src_type == "virtio-win" or rpm_install:
             _change_agent_media(params["cdrom_virtio_downgrade"])
         elif self.gagent_src_type == "url":
             _get_pkg_download_cmd()
@@ -142,7 +144,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
         error_context.context("Update qemu-ga to the latest one.",
                               logging.info)
-        if self.gagent_src_type == "virtio-win":
+        if self.gagent_src_type == "virtio-win" or rpm_install:
             _change_agent_media(params["cdrom_virtio"])
         else:
             params["gagent_download_cmd"] = latest_qga_download_cmd

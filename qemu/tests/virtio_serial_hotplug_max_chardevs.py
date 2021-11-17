@@ -107,8 +107,8 @@ def run(test, params, env):
     try:
         char_devices[0].hotplug(vm.monitor, vm.devices.qemu_version)
     except QMPCmdError as e:
-        if "attempt to add duplicate property '%s'" % char_devices[0] \
-                not in str(e.data):
+        if not ("duplicate property '%s'" % char_devices[0] in str(e.data)
+                or "'%s' already exists" % char_devices[0] in str(e.data)):
             msg = ("Should fail to hotplug device %s with error Duplicate"
                    % char_devices[0])
             test.fail(msg)

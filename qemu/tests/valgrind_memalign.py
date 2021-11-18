@@ -48,6 +48,8 @@ def run(test, params, env):
     time.sleep(interval)
     error_context.context("Verify guest status is running after cont",
                           logging.info)
+    if params.get('machine_type').startswith("s390"):
+        vm.monitor.cmd("cont")
     vm.verify_status(params.get("expected_status", "running"))
 
     error_context.context("Quit guest and check the process quit normally",

@@ -4163,6 +4163,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         error_context.context("Execute the guest-fstrim cmd via qga.",
                               logging.info)
         self.gagent.fstrim()
+        time.sleep(360)
 
         error_context.context("Check blocks of data disk after fstrim.",
                               logging.info)

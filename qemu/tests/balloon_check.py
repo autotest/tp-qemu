@@ -52,10 +52,15 @@ class BallooningTest(MemoryBaseTest):
         :rtype: int
         """
         try:
-            output = self.vm.monitor.info("balloon")
-            ballooned_mem = int(re.findall(r"\d+", str(output))[0])
-            if self.vm.monitor.protocol == "qmp":
-                ballooned_mem = ballooned_mem / (1024 ** 2)
+            if self.vm.monitor:
+                output = self.vm.monitor.info("balloon")
+                ballooned_mem = int(re.findall(r"\d+", str(output))[0])
+                if self.vm.monitor.protocol == "qmp":
+                    ballooned_mem = ballooned_mem / (1024 ** 2)
+            else:
+                logging.info('could not get balloon_memory, cause vm.monitor '
+                             'is None')
+                return 0
         except qemu_monitor.MonitorError as emsg:
             logging.error(emsg)
             return 0

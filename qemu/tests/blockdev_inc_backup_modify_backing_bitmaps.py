@@ -11,8 +11,9 @@ class BlkIncModifyBackingBitmaps(BlockDevSnapshotTest):
     def reopen_backing_image(self, node_name):
         opts = []
         fmt_node = self.main_vm.devices.get_by_qid(node_name)[0]
-        file = fmt_node.get_param("file")
-        item = {"driver": "qcow2", "node-name": node_name, "file": file,
+        file_node = fmt_node.get_param("file")
+        driver = fmt_node.get_param("driver")
+        item = {"driver": driver, "node-name": node_name, "file": file_node,
                 "read-only": False}
         qemu_binary = utils_misc.get_qemu_binary(self.params)
         qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
@@ -70,12 +71,12 @@ def run(test, params, env):
     Backup VM disk test when VM reboot
 
     1) start VM with system disk
-    2) add a persistent bitmap
+    2) add a bitmap
     3) create snapshot target node
     4) do snapshot to target node
-    5) add a persistent bitmap to snapshot node
+    5) add a bitmap to snapshot node
     6) reopen backing image by (x-)blockdev-reopen
-    7) remove all persistent bitmaps
+    7) remove all bitmaps
     :param test: test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.

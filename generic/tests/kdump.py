@@ -196,7 +196,8 @@ def crash_test(test, vm, vcpu, crash_cmd, timeout):
     try:
         if crash_cmd == "nmi":
             logging.info("Triggering crash with 'nmi' interrupt")
-            session.cmd("echo 1 > /proc/sys/kernel/unknown_nmi_panic")
+            send_nmi_cmd = vm.params.get("send_nmi_cmd")
+            session.cmd(send_nmi_cmd)
             vm.monitor.nmi()
         else:
             logging.info("Triggering crash on vcpu %d ...", vcpu)

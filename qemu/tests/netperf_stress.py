@@ -23,6 +23,23 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+    def netperf_test(duration):
+        while duration < max_run_time:
+            time.sleep(10)
+            duration = time.time() - start_time
+            status = n_client.is_netperf_running()
+            if not status and duration < test_duration - 10:
+                msg = "netperf terminated unexpectedly"
+                test.fail(msg)
+                return False, msg
+            logging.info("Wait netperf test finish %ss", duration)
+        if n_client.is_netperf_running():
+            msg = "netperf still running, netperf hangs"
+            test.fail(msg)
+            return False, msg
+        else:
+            logging.info("netperf runs successfully")
+
     login_timeout = float(params.get("login_timeout", 360))
     netperf_server = params.get("netperf_server").split()
     netperf_client = params.get("netperf_client").split()
@@ -248,7 +265,7 @@ def run(test, params, env):
                 n_client.bg_start(server_ip, t_option,
                                   netperf_para_sess, netperf_cmd_prefix,
                                   package_sizes=netperf_package_sizes)
-                if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
+                if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
                                        "Wait netperf test start"):
                     logging.info("Netperf test start successfully.")
                 else:
@@ -259,19 +276,9 @@ def run(test, params, env):
             # subprocess backgroundly, can set this run flag to False to stop
             # the stress test.
             env["netperf_run"] = True
-            execution_time = test_duration + deviation_time
-            utils_misc.wait_for(lambda: not
-                                n_client.is_netperf_running(),
-                                execution_time, 0, 2,
-                                "Wait netperf test finish %ss" % test_duration)
-            stop_time = time.time()
-            run_time = stop_time - start_time
-            if n_client.is_netperf_running():
-                test.fail("netperf still running,netperf hangs")
-            elif test_duration - 5 <= run_time:
-                logging.info("netperf runs successfully")
-            else:
-                test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
+            duration = time.time() - start_time
+            max_run_time = test_duration + deviation_time
+            netperf_test(duration)
     finally:
         for n_server in netperf_servers:
             n_server.stop()

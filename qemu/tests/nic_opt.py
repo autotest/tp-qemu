@@ -69,7 +69,7 @@ def run(test, params, env):
                 n_client.bg_start(utils_net.get_host_ip_address(params), t_option,
                                   netperf_para_sess, netperf_cmd_prefix,
                                   package_sizes=netperf_package_sizes)
-                if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
+                if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
                                        "Wait netperf test start"):
                     logging.info("Netperf test start successfully.")
                 else:
@@ -80,19 +80,19 @@ def run(test, params, env):
                 # subprocess backgroundly,can set this run flag to False to stop
                 # the stress test.
                 env["netperf_run"] = True
-                execution_time = test_duration + deviation_time
-                utils_misc.wait_for(lambda: not
-                                    n_client.is_netperf_running(),
-                                    execution_time, 0, 2,
-                                    "Wait netperf test finish %ss" % test_duration)
-                stop_time = time.time()
-                run_time = stop_time - start_time
+                duration = time.time() - start_time
+                max_run_time = test_duration + deviation_time
+                while duration < max_run_time:
+                    time.sleep(10)
+                    duration = time.time() - start_time
+                    status = n_client.is_netperf_running()
+                    if not status and duration < test_duration - 10:
+                        test.fail("netperf terminated unexpectedly")
+                    logging.info("Wait netperf test finish %ss", duration)
                 if n_client.is_netperf_running():
-                    test.fail("netperf still running,netperf hangs")
-                elif test_duration - 5 <= run_time:
-                    logging.info("netperf runs successfully")
+                    test.fail("netperf still running, netperf hangs")
                 else:
-                    test.fail("netperf terminated unexpectedly,executed %ss" % run_time)
+                    logging.info("netperf runs successfully")
         finally:
             n_server.stop()
             n_server.cleanup(True)
@@ -119,7 +119,7 @@ def run(test, params, env):
                                   " with package size %s. " %
                                   (ifname, dest, vm.name, size), logging.info)
             status, output = utils_net.ping(dest=dest, count=10, packetsize=size, session=session, timeout=30)
-            if status:
+            if status != 0:
                 test.fail("%s ping %s unexpected, output %s" % (vm.name, dest,
                                                                 output))
             if params["os_type"] == "windows":

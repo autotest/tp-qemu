@@ -103,34 +103,15 @@ def run(test, params, env):
         Ping test for nic option.
         """
         package_sizes = params.objects("ping_sizes")
-        if params["os_type"] == "windows":
-            ifname = utils_net.get_windows_nic_attribute(
-                session=session,
-                key="netenabled",
-                value=True,
-                target="netconnectionID")
-        else:
-            ifname = utils_net.get_linux_ifname(session,
-                                                vm.get_mac_address())
-        dest = utils_net.get_host_ip_address(params)
+        guest_ip = vm.get_address()
 
         for size in package_sizes:
-            error_context.context("Test ping from '%s' to host '%s' on guest '%s'"
+            error_context.context("From host ping to '%s' with guest '%s'"
                                   " with package size %s. " %
-                                  (ifname, dest, vm.name, size), logging.info)
-            status, output = utils_net.ping(dest=dest, count=10, packetsize=size, session=session, timeout=30)
+                                  (vm.name, guest_ip, size), logging.info)
+            status, output = utils_net.ping(guest_ip, count=10, packetsize=size, timeout=30)
             if status != 0:
-                test.fail("%s ping %s unexpected, output %s" % (vm.name, dest,
-                                                                output))
-            if params["os_type"] == "windows":
-                # windows guest get loss=0 when ping failed sometime,
-                # need further check
-                loss = utils_test.get_loss_ratio(output)
-                if loss or "TTL" in output:
-                    pass
-                else:
-                    test.fail("Guest ping test hit unexpected loss, "
-                              "error_info: %s" % output)
+                test.fail("host ping %s unexpected, output %s" % (guest_ip, output))
 
     check_type = params.get("check_type")
     smp_value = params.get_numeric("smp") or params.get_numeric("vcpu_maxcpus")

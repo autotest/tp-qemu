@@ -2699,7 +2699,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         cmd_get_hook_files = "rpm -ql qemu-guest-agent |grep fsfreeze-hook"
         hook_files = session.cmd_output(cmd_get_hook_files)
 
-        if len(hook_files.strip().split()) != 5:
+        expect_file_nums = 4
+        os_ver = params['os_variant']
+        pattern = r"rhel(\d+)"
+        if 'rhel' in os_ver and int(re.findall(pattern, os_ver)[0]) <= 8:
+            expect_file_nums = 5
+        if len(hook_files.strip().split()) < expect_file_nums:
             test.fail("Fsfreeze hook files are missed, the output is"
                       " %s" % hook_files)
 

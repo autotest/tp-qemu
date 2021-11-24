@@ -3239,9 +3239,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Make the user log out.", logging.info)
         try:
             session.cmd("logoff %s" % login_user_id)
-        except aexpect.ShellProcessTerminatedError as detail:
-            if not re.search("Connection reset by peer", str(detail)):
-                test.error("Error occured with %s." % str(detail))
+        except (aexpect.ShellProcessTerminatedError,
+                aexpect.ShellProcessTerminatedError,
+                aexpect.ShellStatusError):
+            pass
         else:
             test.fail("The user logoff failed.")
 

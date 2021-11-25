@@ -43,7 +43,7 @@ class PoolSource(object):
     def source_define_by_params(cls, name, params):
         instance = cls()
         instance.name = name
-        instance.name = params.get("rbd_pool_name")
+        instance.pool_name = params.get("rbd_pool_name")
         instance.initiator = params.get("initiator")
         instance.vendor = params.get("vendor")
         instance.protocol = params.get("protocol")

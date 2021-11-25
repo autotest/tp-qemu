@@ -587,7 +587,7 @@ class ThrottleTester(object):
         burst_total_iops, burst_empty_time, burst_time = _count_burst_iops(
             local_vars, "total")
 
-        runtime = 60
+        runtime = self._params.get("throttle_runtime", 60)
         if burst_time:
             runtime = burst_time
             self.set_throttle_expected({"burst": {
@@ -603,7 +603,7 @@ class ThrottleTester(object):
         else:
             mode = "randrw"
 
-        option += " --rw=%s --bs=%d --runtime=%d" % (mode, iops_size, runtime)
+        option += " --rw=%s --bs=%d --runtime=%s" % (mode, iops_size, runtime)
 
         logging.debug(self._throttle["expected"])
         logging.debug("fio_option:%s", option)

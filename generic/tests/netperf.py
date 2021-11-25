@@ -95,6 +95,29 @@ def run(test, params, env):
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
 
+    config_cmds = params.get("config_cmds")
+    if config_cmds:
+        for config_cmd in config_cmds.split(","):
+            cmd = params.get(config_cmd.strip())
+            session = vm.wait_for_serial_login(timeout=login_timeout)
+            if cmd:
+                s, o = session.cmd_status_output(cmd)
+                logging.info(o)
+                if "querysettings" in cmd:
+                    if ".sys" in o:
+                        verifier_clear_cmd = "verifier /reset"
+                        status, output = session.cmd_status_output(verifier_clear_cmd)
+                        logging.info(output)
+                        if ".sys" in output:
+                            msg = "% does not work correctly" % verifier_clear_cmd
+                            test.error(msg)
+                elif s != 0:
+                    msg = "Config command %s failed. Output: %s" % (cmd, o)
+                    test.error(msg)
+            session.close()
+        if params.get("reboot_after_config", "yes") == "yes":
+            vm.reboot(method="system_reset", serial=True)
+
     try:
         vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
     except virt_vm.VMIPAddressMissingError:
@@ -104,19 +127,6 @@ def run(test, params, env):
         session = vm.wait_for_login(nic_index=1, timeout=login_timeout)
     else:
         session = vm.wait_for_login(timeout=login_timeout)
-
-    config_cmds = params.get("config_cmds")
-    if config_cmds:
-        for config_cmd in config_cmds.split(","):
-            cmd = params.get(config_cmd.strip())
-            if cmd:
-                s, o = session.cmd_status_output(cmd)
-                if s:
-                    msg = "Config command %s failed. Output: %s" % (cmd, o)
-                    test.error(msg)
-        if params.get("reboot_after_config", "yes") == "yes":
-            session = vm.reboot(session=session, timeout=login_timeout)
-            vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
 
     mac = vm.get_mac_address(0)
     if params.get("os_type") == "linux":

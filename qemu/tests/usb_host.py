@@ -75,14 +75,19 @@ def run(test, params, env):
         dev = re.findall(r'\[(sd\w+)\]', o)[0]
         mounts_cmd = "cat /proc/mounts | grep /dev/%s" % dev
         s, o = session.cmd_status_output(mounts_cmd)
-        if s:
-            s, o = session.cmd_status_output('mount /dev/%s /mnt' % dev)
+        if not s:
+            s, o = session.cmd_status_output('umount /dev/%s' % dev)
             if s:
-                test.error("Fail to mount /dev/%s, output: %s" % (s, o))
-            mp = "/mnt"
-        else:
-            mp = re.findall(r'/dev/%s\d*\s+(\S+)\s+' % dev, o)[0]
-        return mp
+                test.error("Fail to umount /dev/%s, output: %s" % (s, o))
+        mkfs_cmd = "mkfs.vfat /dev/%s" % dev
+        s, o = session.cmd_status_output(mkfs_cmd)
+        if s:
+            test.error("Fail to build filesystem on usb stick: %s" % o)
+        mount_point = "/mnt"
+        s, o = session.cmd_status_output("mount /dev/%s %s" % (dev, mount_point))
+        if s:
+            test.error("Fail to mount /dev/%s, output: %s" % (s, o))
+        return mount_point
 
     def _usb_stick_io(mount_point, bg=False):
         """

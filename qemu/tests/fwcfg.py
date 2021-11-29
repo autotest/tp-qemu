@@ -35,6 +35,8 @@ def run(test, params, env):
         session = utils_test.qemu.setup_win_driver_verifier(session,
                                                             driver, vm)
 
+    error_context.context("Disable security alert", logging.info)
+    win_dump_utils.disable_security_alert(params, session)
     disk = sorted(session.cmd('wmic diskdrive get index').split()[1:])[-1]
     utils_disk.update_windows_disk_attributes(session, disk)
     disk_letter = utils_disk.configure_empty_disk(session,
@@ -50,18 +52,25 @@ def run(test, params, env):
     try:
         error_context.context("Copy the Memory.dmp.zip file "
                               "from host to guest", logging.info)
-        unzip_speed = int(params.get("unzip_speed", 80))
         vm.copy_files_to(dump_zip_file, "%s:\\Memory.dmp.zip" % disk_letter)
         unzip_cmd = params["unzip_cmd"] % (disk_letter, disk_letter)
-        unzip_timeout = int(params["mem"]) // unzip_speed
+        unzip_timeout = int(params.get("unzip_timeout", 1800))
         status, output = session.cmd_status_output(unzip_cmd,
                                                    timeout=unzip_timeout)
         if status:
             test.error("unzip dump file failed as:\n%s" % output)
         session.cmd(params["move_cmd"].format(disk_letter))
-        win_dump_utils.install_windbg(test, params, session,
-                                      timeout=wdbg_timeout)
+        session.cmd(params["save_path_cmd"].format(disk_letter))
+        windbg_installed = False
+        status, _ = session.cmd_status_output(params["chk_sdk_ins"])
+        if not status:
+            windbg_installed = True
+        if not windbg_installed:
+            win_dump_utils.install_windbg(test, params, session,
+                                          timeout=wdbg_timeout)
         win_dump_utils.dump_windbg_check(test, params, session)
     finally:
         process.system("rm %s %s" % (dump_file, dump_zip_file), shell=True)
+        session.cmd("del %s" % params["dump_analyze_file"])
+        session.cmd(params["del_path_file"])
         session.close()

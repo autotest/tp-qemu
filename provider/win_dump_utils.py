@@ -76,10 +76,13 @@ def install_windbg(test, params, session, timeout=600):
     windbg_install_cmd = utils_misc.set_winutils_letter(session,
                                                         windbg_install_cmd
                                                         % params["feature"])
+
     session.cmd(windbg_install_cmd)
     if not utils_misc.wait_for(lambda: check_windbg_installed(params, session),
-                               timeout=timeout):
+                               timeout=timeout, step=5):
         test.fail("windbg tool has not been installed")
+    else:
+        logging.info("windbg tool installation completed")
 
 
 def check_windbg_installed(params, session):
@@ -92,6 +95,21 @@ def check_windbg_installed(params, session):
     check_cmd = params["chk_windbg_cmd"] % params["windbg_path"]
     status, _ = session.cmd_status_output(check_cmd)
     return False if status else True
+
+
+def disable_security_alert(params, session):
+    """
+    Disable the security alert for windows internet access.
+
+    :param params: the dict used for parameters.
+    :param session: The guest session object.
+    """
+    query_cmd = 'reg query HKU | findstr /I /e "500"'
+    output = session.cmd_output(query_cmd)
+    cmd = 'reg add "%s\\Software\\Microsoft\\Windows\\CurrentVersion'
+    cmd += '\\Internet Settings" /v WarnonZoneCrossing /d 0 /t '
+    cmd += 'REG_DWORD /f'
+    session.cmd(cmd % output)
 
 
 def dump_windbg_check(test, params, session):
@@ -109,13 +127,15 @@ def dump_windbg_check(test, params, session):
                                                   chk_dump_cmd)
     session.cmd(chk_dump_cmd)
     if not utils_misc.wait_for(lambda: check_log_exist(session, log_file),
-                               timeout=120):
+                               timeout=240, step=5):
         test.error("Cannot generate dump analyze log.")
     chk_id_cmd = params["chk_id_cmd"] % log_file
     status, output = session.cmd_status_output(chk_id_cmd)
     if status:
         output = session.cmd_output("type %s" % log_file)
         test.fail("Check dump file failed, output as %s" % output)
+    else:
+        logging.info("Check dump file passed")
 
 
 def check_log_exist(session, log_file):

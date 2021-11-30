@@ -61,6 +61,7 @@ def run(test, params, env):
         session.cmd(params["move_cmd"].format(disk_letter))
         win_dump_utils.install_windbg(test, params, session,
                                       timeout=wdbg_timeout)
+        win_dump_utils.update_dbg_dll(params, session)
         win_dump_utils.dump_windbg_check(test, params, session)
     finally:
         process.system("rm %s %s" % (dump_file, dump_zip_file), shell=True)

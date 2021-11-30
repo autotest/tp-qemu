@@ -82,6 +82,22 @@ def install_windbg(test, params, session, timeout=600):
         test.fail("windbg tool has not been installed")
 
 
+def update_dbg_dll(params, session):
+    """
+    Update Windows Debug Tools dbg dll file.
+    Here's a fix workarond for windbg running, it's not so stable sometimes,
+    better repalce 2 files dbgeng.dll and dbghelp.dll before using.
+
+    :param params: the dict used for parameters.
+    :param session: The guest session object.
+    """
+    windbg_path = params["windbg_path"]
+    dbgeng_cmd = params["dbgeng_cmd"] % windbg_path
+    dbghelp_cmd = params["dbghelp_cmd"] % windbg_path
+    session.cmd(dbgeng_cmd)
+    session.cmd(dbghelp_cmd)
+
+
 def check_windbg_installed(params, session):
     """
     Check Windows Debug Tools is installed

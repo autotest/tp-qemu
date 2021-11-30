@@ -1133,9 +1133,9 @@ def run(test, params, env):
             logging.error("Test requires at least 2 vCPUs.")
             raise exceptions.TestSkipError("Test requires at least 2 vCPUs.")
         # Check whether smp changed and recreate VM if so
-        if vm_cpus != params.get("smp", 0):
+        if vm_cpus != (params.get_numeric("smp") or params.get_numeric("vcpu_maxcpus")):
             logging.info("Expected VM reload.")
-            params['smp'] = vm_cpus
+            params['vcpu_maxcpus'] = params['smp'] = vm_cpus
             vm.create(params=params)
         # Verify vcpus matches prescription
         vcpus = vm.get_vcpu_pids(debug=False)

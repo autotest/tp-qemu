@@ -16,8 +16,9 @@ class BlockdevMirrorQemuioReadyjob(BlockdevMirrorNowaitTest):
         image_params = self.params.object_params(tag)
         image = self.source_disk_define_by_params(image_params, tag)
         filename = image.image_filename
+        fmt = image.image_format
         qemu_io = utils_misc.get_qemu_io_binary(self.params)
-        qemuio_cmd = self.params.get("qemuio_cmd") % (qemu_io, filename)
+        qemuio_cmd = self.params.get("qemuio_cmd") % (qemu_io, fmt, filename)
         try:
             process.run(qemuio_cmd, shell=True)
         except process.CmdError as e:

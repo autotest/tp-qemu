@@ -75,6 +75,22 @@ def run(test, params, env):
         logging.info("%s device id is %s.", file, stdev)
         return stdev
 
+    def check_socket_group():
+        """
+        check socket path's user group
+        """
+        cmd_get_sock = params["cmd_get_sock"]
+        for device in vm.devices:
+            if isinstance(device, qdevices.QVirtioFSDev):
+                sock_path = device.get_param("sock_path")
+                break
+        sock_path_info = process.system_output(cmd_get_sock % sock_path)
+        group_name = sock_path_info.decode(encoding="utf-8",
+                                           errors="strict").strip().split()[3]
+        if group_name != socket_group:
+            test.fail("Socket-group name is not correct.\nIt should be %s,but"
+                      " the output is %s" % (socket_group, group_name))
+
     # data io config
     test_file = params.get('test_file')
     folder_test = params.get('folder_test')
@@ -115,7 +131,6 @@ def run(test, params, env):
     cmd_setenv = params.get('cmd_setenv')
     cmd_setenv_nfs = params.get('cmd_setenv_nfs', '')
     cmd_useradd = params.get('cmd_useradd')
-    fs_dest_fs1 = params.get('fs_dest_fs1')
     cmd_get_tmpfs = params.get('cmd_get_tmpfs')
     cmd_set_tmpfs = params.get('cmd_set_tmpfs')
     size_mem1 = params.get('size_mem1')
@@ -124,6 +139,8 @@ def run(test, params, env):
     setup_local_nfs = params.get('setup_local_nfs')
 
     setup_hugepages = params.get("setup_hugepages", "no") == "yes"
+    socket_group_test = params.get("socket_group_test", "no") == "yes"
+    socket_group = params.get("socket_group")
 
     # st_dev check config
     cmd_get_stdev = params.get("cmd_get_stdev")
@@ -159,6 +176,9 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login()
         host_addr = vm.get_address()
+
+        if socket_group_test:
+            check_socket_group()
 
         if os_type == "windows":
             cmd_timeout = params.get_numeric("cmd_timeout", 120)

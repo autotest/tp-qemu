@@ -23,7 +23,8 @@ def run(test, params, env):
     """
     vcpu_devices = params.objects("vcpu_devices")
     unplug_during_boot = params.get_boolean("unplug_during_boot")
-    boot_patterns = [r".*Started udev Wait for Complete Device Initialization.*"]
+    boot_patterns = [r".*Started udev Wait for Complete Device Initialization.*",
+                     r".*Finished .*Wait for udev To Complete Device Initialization.*"]
     reboot_patterns = [r".*[Rr]ebooting.*", r".*[Rr]estarting system.*",
                        r".*[Mm]achine restart.*"]
 

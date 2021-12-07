@@ -135,6 +135,11 @@ class StorageVolume(object):
             if backing:
                 backing_node = "drive_%s" % backing
                 self.format.set_param("backing", backing_node)
+
+            data_file_name = params.get("image_data_file")
+            if data_file_name:
+                data_file_node = "drive_%s" % data_file_name
+                self.format.set_param("data-file", data_file_node)
         self.format.set_param("file", self.protocol.get_param("node-name"))
 
         # keep the same setting with libvirt when blockdev-add a format node
@@ -232,6 +237,11 @@ class StorageVolume(object):
             if self._params and self._params.get("image_cluster_size"):
                 options["cluster-size"] = int(
                     self._params["image_cluster_size"])
+            if self._params.get("image_data_file"):
+                options["data-file"] = self.format.get_param("data-file")
+                data_file_raw_set = self._params.get("image_data_file_raw")
+                data_file_raw = data_file_raw_set in ("on", "yes", "true")
+                options["data-file-raw"] = data_file_raw
         arguments = {
             "options": options,
             "job-id": node_name,

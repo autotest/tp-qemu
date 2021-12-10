@@ -8,6 +8,8 @@ from virttest import utils_netperf
 from virttest import utils_misc
 from virttest import data_dir
 from virttest import utils_test
+from virttest import env_process
+from virttest.staging import utils_memory
 
 
 def launch_netperf_client(test, server_ips, netperf_clients, test_option,
@@ -80,6 +82,18 @@ def run(test, params, env):
     client_infos = []
     server_ips = []
     client_ips = []
+
+    os_type = params.get("os_type")
+    if os_type == "windows":
+        host_mem = utils_memory.memtotal() // (1024 * 1024)
+        vm_mem = host_mem / (len(vms.split()) + 1) * 1024
+        if vm_mem < params.get_numeric("min_mem"):
+            test.cancel("Host total memory is insufficient for this test case,"
+                        "each VM's memory can not meet guest OS's requirement")
+        params["mem"] = vm_mem
+    params["start_vm"] = "yes"
+
+    env_process.preprocess(test, params, env)
     for server in netperf_server:
         s_info = {}
         if server in vms:

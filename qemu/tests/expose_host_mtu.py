@@ -3,7 +3,6 @@ import re
 
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.network.interfaces import NetworkInterface
-from avocado.utils.configure_network import set_mtu_host
 
 from virttest import error_context
 from virttest import utils_net
@@ -74,7 +73,7 @@ def run(test, params, env):
         host_hw_iface = NetworkInterface(' '.join(host_hw_interface), localhost)
     host_mtu_origin = host_hw_iface.get_mtu()
 
-    set_mtu_host(vm_iface, mtu_value)
+    NetworkInterface(vm_iface, localhost).set_mtu(mtu_value)
     host_hw_iface.set_mtu(mtu_value)
 
     os_type = params.get("os_type", "linux")
@@ -126,7 +125,7 @@ def run(test, params, env):
         test.fail("Loss ratio is %s", ratio)
 
     # Restore host mtu after finish testing
-    set_mtu_host(vm_iface, host_mtu_origin)
+    NetworkInterface(vm_iface, localhost).set_mtu(host_mtu_origin)
     host_hw_iface.set_mtu(host_mtu_origin)
 
     if netdst not in utils_net.Bridge().list_br():

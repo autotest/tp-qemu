@@ -23,7 +23,8 @@ def run(test, params, env):
                                          sync_bin)
 
         logging.debug("Get md5 value of the temporary file")
-        md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
+        md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin,
+                                           session)
         session.close()
         vm.destroy()
 
@@ -58,3 +59,4 @@ def run(test, params, env):
                                md5_value_to_check=md5_value)
         session.close()
         vm.destroy()
+    target.remove()

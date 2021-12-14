@@ -39,7 +39,9 @@ def run(test, params, env):
     convert_source = params["convert_source"]
     convert_target = params["convert_target"]
     source_params = params.object_params(convert_source)
+    target_params = params.object_params(convert_target)
     source = qemu_storage.QemuImg(source_params, root_dir, convert_source)
+    target = qemu_storage.QemuImg(target_params, root_dir, convert_target)
     logging.debug("Convert from %s to %s", convert_source, convert_target)
     fail_on((process.CmdError,))(source.convert)(source_params, root_dir)
 
@@ -49,3 +51,4 @@ def run(test, params, env):
     img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
                            md5_value_to_check=md5_value)
     session.close()
+    target.remove()

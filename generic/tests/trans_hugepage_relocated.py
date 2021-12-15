@@ -46,11 +46,11 @@ def run(test, params, env):
 
     free_memory = utils_memory.read_from_meminfo("MemFree")
     hugepage_size = utils_memory.read_from_meminfo("Hugepagesize")
-    mem = params.get("mem")
-    vmsm = int(mem) + 128
+    mem = params.get_numeric("mem")
+    vmsm = mem + 128
     hugetlbfs_path = params.get("hugetlbfs_path", "/proc/sys/vm/nr_hugepages")
     if vmsm < int(free_memory) / 1024:
-        nr_hugetlbfs = vmsm * 1024 / int(hugepage_size)
+        nr_hugetlbfs = int(vmsm * 1024 / hugepage_size)
     else:
         nr_hugetlbfs = None
     # Get dd speed in host
@@ -73,21 +73,20 @@ def run(test, params, env):
         mem_free_filter = r"MemFree:\s+(.\d+)\s+(\w+)"
         guest_mem_free, guest_unit = re.findall(mem_free_filter, o)[0]
         if re.findall("[kK]", guest_unit):
-            guest_mem_free = str(int(guest_mem_free) / 1024)
+            guest_mem_free = int(guest_mem_free) / 1024
         elif re.findall("[gG]", guest_unit):
-            guest_mem_free = str(int(guest_mem_free) * 1024)
+            guest_mem_free = int(guest_mem_free) * 1024
         elif re.findall("[mM]", guest_unit):
             pass
         else:
-            guest_mem_free = str(int(guest_mem_free) / 1024 / 1024)
+            guest_mem_free = int(guest_mem_free) / 1024 / 1024
 
-        file_size = min(1024, int(guest_mem_free) / 2)
+        file_size = min(1024, int(guest_mem_free / 2))
         cmd = "mount -t tmpfs -o size=%sM none /mnt" % file_size
         s, o = session.cmd_status_output(cmd)
         if nr_hugetlbfs:
-            hugepage_cfg = open(hugetlbfs_path, "w")
-            hugepage_cfg.write(str(nr_hugetlbfs))
-            hugepage_cfg.close()
+            with open(hugetlbfs_path, "w") as hugepage_cfg:
+                hugepage_cfg.write(str(nr_hugetlbfs))
 
         if not os.path.isdir('/space'):
             os.makedirs('/space')
@@ -96,7 +95,7 @@ def run(test, params, env):
 
         # Try to make some fragment in memory
         # The total size of fragments is vmsm
-        count = vmsm * 1024 / 4
+        count = int(vmsm * 1024 / 4)
         cmd = "for i in `seq %s`; do dd if=/dev/urandom of=/space/$i" % count
         cmd += " bs=4K count=1 & done"
         logging.info("Start to make fragment in host")
@@ -104,7 +103,8 @@ def run(test, params, env):
         if s != 0:
             test.error("Can not dd in host")
     finally:
-        process.run("umount /space", verbose=False, shell=True)
+        if os.path.ismount('/space'):
+            process.run("umount /space", verbose=False, shell=True)
 
     bg = utils_test.BackgroundTest(nr_hugepage_check, (s_time, w_time))
     bg.start()

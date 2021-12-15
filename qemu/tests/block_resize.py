@@ -117,6 +117,9 @@ def run(test, params, env):
 
     for ratio in params.objects("disk_change_ratio"):
         block_size = int(int(block_virtual_size) * float(ratio))
+        # The new size must be a multiple of 512 for windows
+        if params.get("os_type") == "windows" and block_size % 512 != 0:
+            block_size = int(block_size / 512) * 512
 
         # Record md5
         if params.get('md5_test') == 'yes':

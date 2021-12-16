@@ -134,7 +134,8 @@ def run(test, params, env):
         pci_model = params.get("pci_model")
         controller_model = None
         bus_option = ""
-        if machine_type == "q35" and drive_format == "virtio":
+        if "q35" in params["machine_type"] or "arm64" in params["machine_type"]\
+                and drive_format == "virtio":
             bus_option = ",bus=pcie_extra_root_port_%d" % pci_num
 
         if pci_model == "virtio":

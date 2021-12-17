@@ -1,5 +1,6 @@
 import logging
 
+from provider.block_devices_plug import BlockDevicesPlug
 from virttest import error_context
 
 
@@ -98,5 +99,15 @@ def run(test, params, env):
             if not check_dev_cap_in_guest(dev_id, capabilities):
                 test.fail('Check capabilities %s for device %s failed'
                           % (capabilities, dev_id))
+
+        plug = BlockDevicesPlug(vm)
+        for img in params.get("hotplug_images", "").split():
+            plug.unplug_devs_serial(img)
+            plug.hotplug_devs_serial(img)
+            blk_dev = vm.devices.get_by_qid(img)[0]
+            blk_dev_id = blk_dev.params['id']
+            if not check_dev_cap_in_guest(blk_dev_id, capabilities):
+                test.fail('Check capabilities %s for device %s failed'
+                          % (capabilities, blk_dev_id))
     finally:
         session.close()

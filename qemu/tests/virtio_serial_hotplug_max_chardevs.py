@@ -1,4 +1,5 @@
 import time
+import re
 
 from virttest import error_context
 from virttest import utils_misc
@@ -93,8 +94,8 @@ def run(test, params, env):
     try:
         serial_devices[0].hotplug(vm.monitor, vm.devices.qemu_version)
     except QMPCmdError as e:
-        if "Duplicate ID '%s' for device" % serial_devices[0] not in str(
-                e.data):
+        if not re.search("Duplicate (device |)ID '%s'"
+                         % serial_devices[0], str(e.data)):
             msg = ("Should fail to hotplug device %s with error Duplicate"
                    % serial_devices[0])
             test.fail(msg)

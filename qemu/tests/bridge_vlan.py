@@ -78,6 +78,10 @@ def run(test, params, env):
         error_context.context("Assign IP '%s' to vlan interface '%s'" %
                               (vlan_ip, vlan_if), logging.info)
         if session:
+            disable_firewall = params.get("disable_firewall", "")
+            session.cmd(disable_firewall, ignore_all_errors=True)
+            disable_nm = params.get("disable_nm", "")
+            session.cmd(disable_nm, ignore_all_errors=True)
             session.cmd("ifconfig %s 0.0.0.0" % vlan_if)
             session.cmd("ifconfig %s down" % vlan_if)
             session.cmd("ifconfig %s %s up" % (vlan_if, vlan_ip))
@@ -135,6 +139,7 @@ def run(test, params, env):
         error_context.context("Run netperf stress test among guests and host, "
                               "server: %s, client: %s" % (server, client),
                               logging.info)
+        session.cmd("systemctl restart NetworkManager", ignore_all_errors=True)
         utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     vms = []

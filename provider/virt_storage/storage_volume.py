@@ -81,6 +81,8 @@ class StorageVolume(object):
         if self._protocol is None:
             if self.pool.TYPE == "directory":
                 self._protocol = qdevices.QBlockdevProtocolFile(self.name)
+            elif self.pool.TYPE == "rbd":
+                self._protocol = qdevices.QBlockdevProtocolRBD(self.name)
             else:
                 raise NotImplementedError
         return self._protocol
@@ -117,6 +119,9 @@ class StorageVolume(object):
         if self.pool.TYPE == "directory":
             volume_params = params.object_params(self.name)
             self.path = self.pool.get_volume_path_by_param(volume_params)
+        elif self.pool.TYPE == "rbd":
+            volume_params = params.object_params(self.name)
+            self.path = self.pool.get_volume_path_by_param(volume_params)
         else:
             raise NotImplementedError
 
@@ -151,6 +156,10 @@ class StorageVolume(object):
             aio = params.get("image_aio", "threads")
             self.protocol.set_param("filename", self.path)
             self.protocol.set_param("aio", aio)
+        elif self.protocol.TYPE == "rbd":
+            self.protocol.set_param("pool", self.pool.source.pool_name)
+            image_name = self.path.split("/")[-1]
+            self.protocol.set_param("image", image_name)
         else:
             raise NotImplementedError
 
@@ -208,6 +217,12 @@ class StorageVolume(object):
         options = {"driver": self.protocol.TYPE}
         if self.protocol.TYPE == "file":
             options["filename"] = self.protocol.get_param("filename")
+            options["size"] = self.capacity
+        elif self.protocol.TYPE == "rbd":
+            location = {}
+            location["pool"] = self.protocol.get_param("pool")
+            location["image"] = self.protocol.get_param("image")
+            options["location"] = location
             options["size"] = self.capacity
         else:
             raise NotImplementedError

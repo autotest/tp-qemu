@@ -8,6 +8,7 @@ class PoolSource(object):
 
     def __init__(self):
         self.name = None
+        self.pool_name = None
         self.auth = None
         self.hosts = []
         self.devices = []
@@ -42,6 +43,7 @@ class PoolSource(object):
     def source_define_by_params(cls, name, params):
         instance = cls()
         instance.name = name
+        instance.pool_name = params.get("rbd_pool_name")
         instance.initiator = params.get("initiator")
         instance.vendor = params.get("vendor")
         instance.protocol = params.get("protocol")

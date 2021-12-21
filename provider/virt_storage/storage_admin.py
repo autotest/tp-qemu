@@ -2,6 +2,7 @@ import logging
 from functools import reduce
 
 from . import exception
+from .backend import rbd
 from .backend import directory
 from .utils import state
 
@@ -9,6 +10,7 @@ from .utils import state
 class StoragePoolAdmin(object):
     supported_storage_backend = {
         "directory": directory.DirectoryPool,
+        "rbd": rbd.RBDPool,
     }
 
     __pools = set()

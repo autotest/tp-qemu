@@ -1329,14 +1329,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
 
             process.system(params["cmd_clean_keys"], shell=True)
-            status = process.system(params["ssh_keygen_cmd"],
-                                    shell=True, timeout=3)
+            status = process.system(params["ssh_keygen_cmd"], shell=True)
             if status:
                 test.error("Can not generate ssh key with no "
                            "interaction, please have a check.")
             cmd_get_hostkey = params["cmd_get_hostkey"]
-            host_key = process.getoutput(cmd_get_hostkey,
-                                         timeout=3)
+            host_key = process.getoutput(cmd_get_hostkey)
             return host_key
 
         def _login_guest_test(guest_ip):
@@ -1347,8 +1345,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
 
             cmd_login_guest = params["test_login_guest"] % guest_ip
-            login_user = process.system_output(cmd_login_guest,
-                                               shell=True, timeout=5)
+            login_user = process.system_output(cmd_login_guest, shell=True)
             login_user = login_user.strip().decode(encoding="utf-8",
                                                    errors="strict")
             if params["guest_user"] not in login_user:

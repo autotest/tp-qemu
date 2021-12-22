@@ -13,6 +13,7 @@ from avocado.utils import process
 from virttest import error_context
 from virttest import env_process
 from virttest import utils_misc
+from virttest import utils_numeric
 from virttest import qemu_storage
 from virttest import data_dir
 
@@ -437,7 +438,7 @@ def run(test, params, env):
             self.guest_mount_path = params.get("guest_disk_mount_path", "/mnt")
             self.copy_timeout = int(params.get("copy_timeout", "1024"))
 
-            self.copy_block_size = int(utils_misc.normalize_data_size(
+            self.copy_block_size = int(utils_numeric.normalize_data_size(
                 params.get("copy_block_size", "100M"), "M"))
             self.disk_size = "%sM" % int(self.copy_block_size * 1.4)
 

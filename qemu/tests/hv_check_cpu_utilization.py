@@ -104,6 +104,8 @@ def run(test, params, env):
     host_check_interval = params.get_numeric("host_check_interval", 2)
     guest_check_timeout = host_check_times * host_check_interval
     thread_cpu_level = params.get_numeric("thread_cpu_level", 5)
+    set_owner_cmd = params.get("set_owner_cmd")
+    set_full_control_cmd = params.get("set_full_control_cmd")
     session = vm.wait_for_serial_login(timeout=timeout)
     do_migration = params.get("do_migration", "no") == "yes"
 
@@ -114,6 +116,13 @@ def run(test, params, env):
         _stop_service(test, params, session, service)
 
     # stop windows defender
+    if set_owner_cmd and set_full_control_cmd:
+        set_owner_cmd = utils_misc.set_winutils_letter(session,
+                                                       set_owner_cmd)
+        set_full_control_cmd = utils_misc.set_winutils_letter(
+                session, set_full_control_cmd)
+        session.cmd(set_owner_cmd)
+        session.cmd(set_full_control_cmd)
     session.cmd(params["reg_cmd"])
 
     session = vm.reboot(session, timeout=timeout, serial=True)

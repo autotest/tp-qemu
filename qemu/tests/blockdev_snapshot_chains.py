@@ -26,6 +26,7 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
             self.params["image_name_%s" % snapshot_tag] = snapshot_tag
             snapshot_format = params.get("snapshot_format", "qcow2")
             params["image_format_%s" % snapshot_tag] = snapshot_format
+            self.params["image_format_%s" % snapshot_tag] = snapshot_format
             image = sp_admin.volume_define_by_params(snapshot_tag, params)
             image.hotplug(self.main_vm)
 
@@ -55,6 +56,8 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
         if self.main_vm.is_alive():
             self.main_vm.destroy()
         base_tag = self.base_tag
+        base_format = self.params.get("image_format", "qcow2")
+        self.params["image_format_%s" % base_tag] = base_format
         for snapshot_tag in self.snapshot_chains:
             snapshot_image = self.get_image_by_tag(snapshot_tag)
             base_image = self.get_image_by_tag(base_tag)

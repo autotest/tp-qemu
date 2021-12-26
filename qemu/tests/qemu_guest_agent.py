@@ -4158,7 +4158,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             get_resour = self.params['cmd_get_qga_resource']
             qga_resources = session.cmd_output(get_resour).strip().split(" ")
             qga_handles = qga_resources[0]
-            qga_memory = int(qga_resources[1]) / 1024
+            qga_memory = int(qga_resources[-2]) / 1024
             return (int(qga_handles), int(qga_memory))
 
         def _base_on_bg_check_resource_leak():

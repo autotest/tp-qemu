@@ -116,7 +116,8 @@ def run(test, params, env):
         fpages = open('/sys/kernel/mm/ksm/pages_sharing')
         ksm_pages = int(fpages.read())
         fpages.close()
-        return ((ksm_pages * 4096) / 1e6)
+        sharing_mem = ksm_pages * pagesize
+        return int(float(utils_misc.normalize_data_size("%sK" % sharing_mem)))
 
     def initialize_guests():
         """
@@ -151,7 +152,7 @@ def run(test, params, env):
                           ksm_size)
             while ((new_ksm and (shm < (ksm_size * (i + 1)))) or
                     (not new_ksm and (shm < (ksm_size)))):
-                if j > 64:
+                if j > 256:
                     logging.debug(utils_test.get_memory_info(lvms))
                     test.error("SHM didn't merge the memory until "
                                "the DL on guest: %s" % vm.name)
@@ -447,9 +448,8 @@ def run(test, params, env):
     # guest_reserve: mem reserve kept to avoid guest OS to kill processes
     guest_reserve = int(params.get("ksm_guest_reserve", -1))
     if (guest_reserve == -1):
-        # default guest_reserve = minimal_system_mem(256MB)
-        # later we add tmpfs overhead
-        guest_reserve = 256
+        # In case of OOM, set guest_reserve to 1536M
+        guest_reserve = 1536
         # using default reserve
         _guest_reserve = True
     else:
@@ -471,6 +471,7 @@ def run(test, params, env):
             _host_reserve = vmsc
 
     host_mem = (int(utils_memory.memtotal()) / 1024 - host_reserve)
+    pagesize = utils_memory.getpagesize()
 
     ksm_swap = False
     if params.get("ksm_swap") == "yes":
@@ -506,9 +507,13 @@ def run(test, params, env):
         # mem: Memory of the guest systems. Maximum must be less than
         # host's physical ram
         mem = int(overcommit * host_mem / vmsc)
+        # If guest memory is too much, it will take very very long time for ksm
+        # to scan and merge same pages, sometimes will hit timeout
+        if mem > 8192:
+            mem = 8192
 
         # 32bit system adjustment
-        if not params['image_name'].endswith("64"):
+        if params["vm_arch_name"] == 'i686':
             logging.debug("Probably i386 guest architecture, "
                           "max allocator mem = 2G")
             # Guest can have more than 2G but
@@ -576,15 +581,6 @@ def run(test, params, env):
     vm_name = params["main_vm"]
     params['mem'] = mem
     params['vms'] = vm_name
-    # Associate pidfile name
-    params['pid_' + vm_name] = utils_misc.generate_tmp_file_name(vm_name,
-                                                                 'pid')
-    if not params.get('extra_params'):
-        params['extra_params'] = ' '
-    params['extra_params_' + vm_name] = params.get('extra_params')
-    params['extra_params_' + vm_name] += (" -pidfile %s" %
-                                          (params.get('pid_' + vm_name)))
-    params['extra_params'] = params.get('extra_params_' + vm_name)
 
     # ksm_size: amount of memory used by allocator
     ksm_size = mem - guest_reserve
@@ -602,22 +598,10 @@ def run(test, params, env):
     logging.debug("Booting first guest %s", lvms[0].name)
 
     lsessions.append(lvms[0].wait_for_login(timeout=360))
-    # Associate vm PID
-    try:
-        tmp = open(params.get('pid_' + vm_name), 'r')
-        params['pid_' + vm_name] = int(tmp.readline())
-    except Exception:
-        test.fail("Could not get PID of %s" % (vm_name))
 
     # Creating other guest systems
     for i in range(1, vmsc):
         vm_name = "vm" + str(i + 1)
-        params['pid_' + vm_name] = utils_misc.generate_tmp_file_name(vm_name,
-                                                                     'pid')
-        params['extra_params_' + vm_name] = params.get('extra_params')
-        params['extra_params_' + vm_name] += (" -pidfile %s" %
-                                              (params.get('pid_' + vm_name)))
-        params['extra_params'] = params.get('extra_params_' + vm_name)
 
         # Last VM is later used to run more allocators simultaneously
         lvms.append(lvms[0].clone(vm_name, params))
@@ -631,11 +615,6 @@ def run(test, params, env):
                        "living VM" % lvms[i].name)
 
         lsessions.append(lvms[i].wait_for_login(timeout=360))
-        try:
-            tmp = open(params.get('pid_' + vm_name), 'r')
-            params['pid_' + vm_name] = int(tmp.readline())
-        except Exception:
-            test.fail("Could not get PID of %s" % (vm_name))
 
     # Let guests rest a little bit :-)
     pause = vmsc * 2 * perf_ratio

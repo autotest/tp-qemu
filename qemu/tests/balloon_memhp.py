@@ -30,7 +30,7 @@ def run(test, params, env):
         Check guest memory
         """
         if params['os_type'] == 'windows':
-            memhp_test.check_memory(vm)
+            memhp_test.check_memory(vm, wait_time=3)
         else:
             expected_mem = new_mem + mem_dev_sz
             guest_mem_size = memhp_test.get_guest_total_mem(vm)

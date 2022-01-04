@@ -31,16 +31,16 @@ def run(test, params, env):
         sleep_cmd += ' do sleep 0.01; done"'' > /tmp/sleep.sh'
         session.cmd(sleep_cmd)
 
-        get_time_cmd = 'for (( i=0; i<$(grep "processor" /proc/cpuinfo'
-        get_time_cmd += ' | wc -l); i+=1 )); do /usr/bin/time -f"%e"'
-        get_time_cmd += ' taskset -c $i sh /tmp/sleep.sh; done'
         guest_cpu = session.cmd_output("grep 'processor' "
                                        "/proc/cpuinfo | wc -l")
-        timeout_sleep = int(guest_cpu) * 12
+        get_time_cmd = 'for (( i=0; i<%s; i+=1 ));' % guest_cpu
+        get_time_cmd += ' do /usr/bin/time -f"%e"'
+        get_time_cmd += ' taskset -c $i sh /tmp/sleep.sh; done'
+        timeout_sleep = int(guest_cpu) * 14
         output = session.cmd_output(get_time_cmd, timeout=timeout_sleep)
 
         times_list = output.splitlines()[1:]
-        times_list = [_ for _ in times_list if float(_) < 10.0 or float(_) > 12.0]
+        times_list = [_ for _ in times_list if float(_) < 10.0 or float(_) > 14.0]
 
         if times_list:
             test.fail("Unexpected time drift found: Detail: '%s' \n timeslist: %s"

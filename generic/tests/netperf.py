@@ -13,6 +13,7 @@ from virttest import utils_net
 from virttest import remote
 from virttest import error_context
 from provider import netperf_base
+from provider import win_driver_utils
 
 _netserver_started = False
 
@@ -118,10 +119,68 @@ def run(test, params, env):
         if params.get("reboot_after_config", "yes") == "yes":
             vm.reboot(method="system_reset", serial=True)
 
-    try:
-        vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
-    except virt_vm.VMIPAddressMissingError:
-        pass
+    failover_exist = False
+    for i in params.get("nics").split():
+        nic_params = params.object_params(i)
+        if nic_params.get("failover_pair_id"):
+            failover_exist = True
+            break
+    if failover_exist:
+        if params.get("os_type") == "linux":
+            session = vm.wait_for_serial_login(timeout=login_timeout)
+            ifname = utils_net.get_linux_ifname(session)
+            for i in ifname:
+                cmd = "ethtool -i %s |grep driver| awk -F': ' '{print $2}'" % i
+                driver = session.cmd_output(cmd).strip()
+                if driver == "net_failover":
+                    session.cmd_output("dhclient -r && dhclient %s" % i)
+                    break
+        if params.get("os_type") == "windows" and params.get("install_vioprot_cmd"):
+            media_type = params["virtio_win_media_type"]
+            driver_name = params["driver_name"]
+            session = vm.wait_for_login(nic_index=2, timeout=login_timeout)
+            for driver_name in driver_name.split():
+                inf_path = win_driver_utils.get_driver_inf_path(session, test,
+                                                                media_type,
+                                                                driver_name)
+                if driver_name == "netkvm":
+                    device_name = params.get("device_name")
+                    device_hwid = params.get("device_hwid")
+                    devcon_path = utils_misc.set_winutils_letter(
+                                  session, params.get("devcon_path"))
+                    status, output = session.cmd_status_output("dir %s" %
+                                                               devcon_path)
+                    if status:
+                        test.error("Not found devcon.exe, details: %s" % output)
+
+                    error_context.context("Uninstall %s driver" % driver_name,
+                                          logging.info)
+                    win_driver_utils.uninstall_driver(session, test,
+                                                      devcon_path, driver_name,
+                                                      device_name, device_hwid)
+                    for hwid in device_hwid.split():
+                        install_driver_cmd = "%s install %s %s" % (devcon_path,
+                                                                   inf_path,
+                                                                   hwid)
+                        status, output = session.cmd_status_output(
+                                         install_driver_cmd,
+                                         timeout=login_timeout)
+                        if status:
+                            test.fail("Failed to install driver '%s', "
+                                      "details:\n%s" % (driver_name, output))
+                if driver_name == "VIOPROT":
+                    logging.info("Will install inf file found at '%s'", inf_path)
+                    install_cmd = params.get("install_vioprot_cmd") % inf_path
+                    status, output = session.cmd_status_output(install_cmd)
+                    if status:
+                        test.error("Install inf file failed, output=%s" % output)
+                session.cmd_output_safe("ipconfig /renew", timeout=login_timeout)
+            session.close()
+    else:
+        try:
+            vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
+        except virt_vm.VMIPAddressMissingError:
+            pass
 
     if len(params.get("nics", "").split()) > 1:
         session = vm.wait_for_login(nic_index=1, timeout=login_timeout)

@@ -16,7 +16,7 @@ from virttest import error_context
 _system_output = functools.partial(process.system_output, shell=True)
 
 
-def format_result(result, base="33", fbase="2"):
+def format_result(result, base, fbase):
     """
     Format the result to a fixed length string.
 
@@ -79,6 +79,8 @@ def run(test, params, env):
     pktgen_script = params.get('pktgen_script')
     kvm_ver_chk_cmd = params.get("kvm_ver_chk_cmd")
     guest_ver_cmd = params["guest_ver_cmd"]
+    base = params.get("format_base", "12")
+    fbase = params.get("format_fbase", "2")
 
     # get qemu, guest kernel and kvm version info and write them into result
     result_path = utils_misc.get_path(test.resultsdir, "pktgen_perf.RHS")
@@ -88,12 +90,12 @@ def run(test, params, env):
     guest_ver = session.cmd_output(guest_ver_cmd, timeout)
     result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
     result_file.write("### kvm_version : %s\n" % host_ver)
-    result_file.write("### guest-kernel-ver :%s\n" % guest_ver)
+    result_file.write("### guest-kernel-ver :%s" % guest_ver)
 
     # get record_list
     record_line = ""
     for record in record_list.split():
-        record_line += "%s|" % format_result(record)
+        record_line += "%s|" % format_result(record, base, fbase)
 
     def install_package(ver, session=None):
         """ check module pktgen, install kernel-modules-internal package """
@@ -124,22 +126,23 @@ def run(test, params, env):
         install_package(guest_ver.strip(), session=session)
 
     # get result tested by each scenario
-    for pkt_cate in category.split():
-        result_file.write("Category:%s\n" % pkt_cate)
-        result_file.write("%s\n" % record_line.rstrip("|"))
+    pktgen_script = params.get('pktgen_script')
+    for pktgen_script in pktgen_script.split():
 
         # copy pktgen_test script to test server
         local_path = os.path.join(data_dir.get_shared_dir(),
                                   "scripts/pktgen_perf")
         remote_path = "/tmp/"
-        if pkt_cate == "tx":
-            vm.copy_files_to(local_path, remote_path)
-        elif pkt_cate == "rx":
-            process.run("cp -r %s %s" % (local_path, remote_path))
+        for pkt_cate in category.split():
+            result_file.write("Script:%s " % pktgen_script)
+            result_file.write("Category:%s\n" % pkt_cate)
+            result_file.write("%s\n" % record_line.rstrip("|"))
 
-        pktgen_script = params.get('pktgen_script')
+            if pkt_cate == "tx":
+                vm.copy_files_to(local_path, remote_path)
+            elif pkt_cate == "rx":
+                process.run("cp -r %s %s" % (local_path, remote_path))
 
-        for pktgen_script in pktgen_script.split():
             for size in pkt_size.split():
                 for threads in run_threads.split():
                     for burst in burst.split():
@@ -172,12 +175,10 @@ def run(test, params, env):
                                               pktgen_ip, pktgen_interface,
                                               dsc, threads, size, burst,
                                               timeout)
-
-                        line = "%s|" % format_result(pktgen_script)
-                        line += "%s|" % format_result(size)
-                        line += "%s|" % format_result(threads)
-                        line += "%s|" % format_result(burst)
-                        line += "%s" % format_result(pkt_cate_r)
+                        line = "%s|" % format_result(size, base, fbase)
+                        line += "%s|" % format_result(threads, base, fbase)
+                        line += "%s|" % format_result(burst, base, fbase)
+                        line += "%s" % format_result(pkt_cate_r, base, fbase)
                         result_file.write(("%s\n" % line))
 
     error_context.context("Verify Host and guest kernel no error\

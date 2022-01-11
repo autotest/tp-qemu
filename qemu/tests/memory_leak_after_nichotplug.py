@@ -28,8 +28,11 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
-    session = vm.wait_for_login(timeout=timeout)
     os_type = params.get("os_type")
+    if os_type == "windows":
+        session = vm.wait_for_login(timeout=timeout)
+    else:
+        session = vm.wait_for_serial_login(timeout=timeout)
 
     free_mem_before_nichotplug = utils_misc.get_free_mem(session,
                                                          os_type)

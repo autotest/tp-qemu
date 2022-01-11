@@ -33,6 +33,7 @@ def run(test, params, env):
     dd_cmd = params["dd_cmd"]
     file_trans_timeout = int(params.get("file_trans_timeout", '1200'))
     file_md5_check_timeout = int(params.get("file_md5_check_timeout", '600'))
+    link_local_ipv6_addr = params.getboolean("link_local_ipv6_addr")
 
     def get_file_md5sum(file_name, session, timeout):
         """
@@ -56,7 +57,7 @@ def run(test, params, env):
     # config ipv6 address host and guest.
     host_ifname = params.get("netdst")
     host_address = utils_net.get_host_ip_address(
-        params, ip_ver="ipv6", linklocal=True)
+        params, ip_ver="ipv6", linklocal=link_local_ipv6_addr)
 
     error_context.context("Get ipv6 address of host: %s" % host_address,
                           test.log.info)
@@ -71,7 +72,7 @@ def run(test, params, env):
             vm.get_mac_address(),
             params.get("os_type"),
             ip_version="ipv6",
-            linklocal=True)
+            linklocal=link_local_ipv6_addr)
 
         error_context.context("Get ipv6 address of %s: %s" % (vm.name, addresses[vm]),
                               test.log.info)

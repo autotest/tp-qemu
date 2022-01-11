@@ -17,7 +17,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
             logging.info("Start to run fio")
             fio = generate_instance(self.params, self.main_vm, 'fio')
             try:
-                fio.run(fio_options)
+                fio.run(fio_options, timeout=2400)
             finally:
                 fio.clean()
             self.main_vm.verify_dmesg()
@@ -32,7 +32,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
             cmd, args = commit_cmd(device)
             job_id = args.get("job-id", device)
             self.main_vm.monitor.cmd(cmd, args)
-            job_utils.wait_until_block_job_completed(self.main_vm, job_id)
+            job_utils.wait_until_block_job_completed(self.main_vm, job_id, timeout=1800)
 
     def run_test(self):
         self.pre_test()

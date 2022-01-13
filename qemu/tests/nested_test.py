@@ -4,7 +4,7 @@ import json
 
 from avocado.utils import cpu
 from avocado.utils import process
-from avocado.utils import software_manager
+from avocado.utils.software_manager import manager
 
 from virttest import error_context
 from virttest import data_dir as virttest_data_dir
@@ -120,7 +120,7 @@ def run(test, params, env):
             cpu.get_vendor() != 'intel'):
         test.cancel("We only test this case with Intel platform now")
 
-    sm = software_manager.SoftwareManager()
+    sm = manager.SoftwareManager()
     if not sm.check_installed("ansible"):
         sm.install("ansible")
 

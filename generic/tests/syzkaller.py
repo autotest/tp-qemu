@@ -3,7 +3,7 @@ import json
 import time
 import shutil
 
-from avocado.utils import software_manager
+from avocado.utils.software_manager import manager
 from avocado.utils import process
 
 from virttest import utils_misc
@@ -24,7 +24,7 @@ def run(test, params, env):
     """
     start_time = time.time()
     #  Step 1: Install/Setup syzkaller in host
-    sm = software_manager.SoftwareManager()
+    sm = manager.SoftwareManager()
     if not sm.check_installed("go") and not sm.install("go"):
         test.cancel("golang package install failed")
     home = os.environ["HOME"]

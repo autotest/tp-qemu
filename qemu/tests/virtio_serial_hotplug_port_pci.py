@@ -93,6 +93,8 @@ def run(test, params, env):
     params['start_vm'] = "yes"
     env_process.preprocess(test, params, env)
     vm = env.get_vm(params['main_vm'])
+    # Make sure the guest boot successfully before hotplug
+    vm.wait_for_login()
     vm.devices.insert(char_devices)
     serials = params.objects('extra_serials')
     buses, serial_devices = get_buses_and_serial_devices(

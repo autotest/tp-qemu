@@ -12,6 +12,8 @@ from math import ceil
 from multiprocessing.pool import ThreadPool
 from time import sleep
 
+from virttest.utils_version import VersionInterval
+
 from virttest.utils_misc import get_linux_drive_path
 
 from virttest.qemu_monitor import QMPCmdError
@@ -141,7 +143,10 @@ class ThrottleGroupManager(object):
         file = throttle_blockdev.get_param("file")
         args = {"driver": "throttle", "node-name": node_name, "file": file,
                 "throttle-group": group_id}
-        self._monitor.x_blockdev_reopen(args)
+        if self._vm.devices.qemu_version in VersionInterval("[6.1.0, )"):
+            self._monitor.blockdev_reopen({"options": [args]})
+        else:
+            self._monitor.x_blockdev_reopen(args)
 
         for bus in old_throttle_group.child_bus:
             bus.remove(throttle_blockdev)

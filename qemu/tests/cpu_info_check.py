@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import process
 
@@ -31,8 +30,8 @@ def run(test, params, env):
             try:
                 cpu_types.remove(model)
             except ValueError:
-                logging.warning('The model to be removed is not'
-                                ' in the list: %s', model)
+                test.log.warning('The model to be removed is not'
+                                 ' in the list: %s', model)
                 continue
 
     def get_patterns(p_list):
@@ -63,7 +62,7 @@ def run(test, params, env):
     if host_qemu in VersionInterval('[,2.12.0)'):
         remove_models(params.objects('cpu_model_2_12_0'))
     qemu_binary = utils_misc.get_qemu_binary(params)
-    logging.info('Query cpu models by qemu command')
+    test.log.info('Query cpu models by qemu command')
     query_cmd = "%s -cpu ? | awk '{print $2}'" % qemu_binary
     qemu_binary_output = process.system_output(
         query_cmd, shell=True).decode().splitlines()
@@ -75,7 +74,7 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
     # query cpu model supported by qemu
-    logging.info('Query cpu model supported by qemu by qemu monitor')
+    test.log.info('Query cpu model supported by qemu by qemu monitor')
     qmp_model_output = str(vm.monitor.cmd('qom-list-types'))
     qmp_def_output = str(vm.monitor.cmd('query-cpu-definitions'))
 
@@ -85,8 +84,8 @@ def run(test, params, env):
                    'query-cpu-definitions':  qmp_def_output}
     missing = dict.fromkeys(output_list.keys(), [])
     for cpu_model in cpu_types:
-        logging.info('Check cpu model %s from qemu command output and'
-                     ' qemu monitor output', cpu_model)
+        test.log.info('Check cpu model %s from qemu command output and'
+                      ' qemu monitor output', cpu_model)
         for key, value in output_list.items():
             if cpu_model not in value:
                 missing[key].append(cpu_model)
@@ -97,7 +96,7 @@ def run(test, params, env):
 
     # Check if qemu command output matches qmp output
     missing = []
-    logging.info('Check if qemu command output matches qemu monitor output')
+    test.log.info('Check if qemu command output matches qemu monitor output')
     for cpu_model in cpu_models_binary:
         if cpu_model not in qmp_model_output:
             missing.append(cpu_model)
@@ -116,7 +115,7 @@ def run(test, params, env):
                   ' wrong model: %s' % model_name)
     model_prop = model.get('props')
     for flag in cpu.CPU_TYPES_RE.get(model_name).split(','):
-        logging.info('Check flag %s from qemu monitor output', flag)
+        test.log.info('Check flag %s from qemu monitor output', flag)
         flags = get_patterns(flag.split('|'))
         for f in flags:
             if model_prop.get(f) is True:
@@ -126,8 +125,8 @@ def run(test, params, env):
 
     # Check if the flags in qmp output matches qemu command output
     missing = []
-    logging.info('Check if the flags in qemu monitor output matches'
-                 ' qemu command output')
+    test.log.info('Check if the flags in qemu monitor output matches'
+                  ' qemu command output')
     for flag in cpu_flags_binary:
         if flag not in str(output):
             missing.append(flag)

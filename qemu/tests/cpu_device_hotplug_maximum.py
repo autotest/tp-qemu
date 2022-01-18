@@ -1,5 +1,4 @@
 import re
-import logging
 from os import uname
 
 from avocado.utils import cpu
@@ -45,7 +44,7 @@ def run(test, params, env):
     if not params.get_boolean("allow_pcpu_overcommit"):
         supported_maxcpus = min(supported_maxcpus, cpu.online_count())
 
-    logging.info("Define the CPU topology of guest")
+    test.log.info("Define the CPU topology of guest")
     vcpu_devices = []
     if (cpu.get_vendor() == "amd" and
             params.get_numeric("vcpu_threads") != 1):
@@ -79,23 +78,23 @@ def run(test, params, env):
         win_wora.modify_driver(params, session)
 
     error_context.context("Check the number of guest CPUs after startup",
-                          logging.info)
+                          test.log.info)
     if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
         test.error("The number of guest CPUs is not equal to the qemu command "
                    "line configuration")
 
-    error_context.context("Hotplug all vCPU devices", logging.info)
+    error_context.context("Hotplug all vCPU devices", test.log.info)
     for vcpu_device in vcpu_devices:
         vm.hotplug_vcpu_device(vcpu_device)
 
-    error_context.context("Check Number of vCPU in guest", logging.info)
+    error_context.context("Check Number of vCPU in guest", test.log.info)
     if not utils_misc.wait_for(
             lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm),
             verify_wait_timeout, first=5, step=10):
         test.fail(mismatch_text)
 
     if params.get_boolean("check_cpu_topology", True):
-        error_context.context("Check CPU topology of guest", logging.info)
+        error_context.context("Check CPU topology of guest", test.log.info)
         if not cpu_utils.check_if_vm_vcpu_topology_match(session, os_type,
                                                          cpuinfo):
             test.fail("CPU topology of guest is not as expected.")
@@ -105,11 +104,11 @@ def run(test, params, env):
             test.fail("CPU topology of guest is not as expected after reboot.")
 
     if os_type == "linux":
-        error_context.context("Hotunplug all vCPU devices", logging.info)
+        error_context.context("Hotunplug all vCPU devices", test.log.info)
         if offline_vcpu_after_hotplug:
             hotplugged_vcpu = range(smp, supported_maxcpus)
             vcpu_list = "%d-%d" % (hotplugged_vcpu[0], hotplugged_vcpu[-1])
-            logging.info("Offline vCPU: %s.", vcpu_list)
+            test.log.info("Offline vCPU: %s.", vcpu_list)
             session.cmd("chcpu -d %s" % vcpu_list, timeout=len(hotplugged_vcpu))
             if vm.get_cpu_count() != smp:
                 test.error("Failed to offline all hotplugged vCPU.")

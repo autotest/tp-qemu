@@ -1,6 +1,5 @@
 import re
 import six
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -65,7 +64,7 @@ def run(test, params, env):
     if monitor:
         monitor = monitor[0]
     else:
-        logging.warn("qemu does not support qmp. Human monitor will be used.")
+        test.log.warn("qemu does not support qmp. Human monitor will be used.")
         monitor = vm.monitor
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     cdrom = params.get("cdrom_cd1")
@@ -83,7 +82,7 @@ def run(test, params, env):
         change_insert_cmd = ("blockdev-change-medium id=%s,filename=%s" %
                              (qdev, orig_img_name))
     monitor.send_args_cmd(change_insert_cmd)
-    logging.info("Wait until device is ready")
+    test.log.info("Wait until device is ready")
     exists = utils_misc.wait_for(lambda: (orig_img_name in
                                           str(monitor.info("block"))
                                           ), timeout=10, first=3)
@@ -93,7 +92,7 @@ def run(test, params, env):
 
     if params.get("os_type") != "windows":
         error_context.context("mount cdrom to make status to locked",
-                              logging.info)
+                              test.log.info)
         cdroms = utils_misc.wait_for(lambda: (utils_test.get_readable_cdroms(
             params, session)),
             timeout=10)
@@ -108,7 +107,7 @@ def run(test, params, env):
             test.error(msg)
 
     else:
-        error_context.context("lock cdrom in guest", logging.info)
+        error_context.context("lock cdrom in guest", test.log.info)
         tmp_dir = params.get("tmp_dir", "c:\\")
         eject_tool = utils_misc.get_path(data_dir.get_deps_dir(),
                                          "cdrom/eject.exe")
@@ -125,7 +124,7 @@ def run(test, params, env):
     if not check_block_locked(device_name):
         test.fail("device is not locked after mount it in guest.")
 
-    error_context.context("Change media of cdrom", logging.info)
+    error_context.context("Change media of cdrom", test.log.info)
     new_img_name = params.get("new_img_name")
     change_insert_cmd = "change device=%s,target=%s" % (device_name,
                                                         new_img_name)
@@ -144,7 +143,7 @@ def run(test, params, env):
     if orig_img_name not in str(blocks_info):
         test.fail("Locked device %s is changed!" % orig_img_name)
 
-    error_context.context("Change no-removable device", logging.info)
+    error_context.context("Change no-removable device", test.log.info)
     device_name = vm.get_block({"removable": False})
     if device_name is None:
         test.error("VM doesn't have any non-removable devices.")

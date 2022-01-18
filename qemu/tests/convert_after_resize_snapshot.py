@@ -1,4 +1,3 @@
-import logging
 import json
 
 from avocado.utils import process
@@ -20,7 +19,7 @@ def run(test, params, env):
     """
     def _compare_images(img1, img2):
         """Compare two qemu images are identical or not."""
-        logging.info("Compare two images are identical.")
+        test.log.info("Compare two images are identical.")
         cmd = [img1.image_cmd, "compare", "-f", img1.image_format,
                "-F", img2.image_format,
                img1.image_filename, img2.image_filename]
@@ -31,7 +30,7 @@ def run(test, params, env):
 
     def _create_external_snapshot(tag):
         """Create an external snapshot based on tag."""
-        logging.info("Create external snapshot %s.", tag)
+        test.log.info("Create external snapshot %s.", tag)
         qit = QemuImgTest(test, params, env, tag)
         qit.create_snapshot()
 
@@ -61,8 +60,8 @@ def run(test, params, env):
             params["image_size"], "B")) +
             int(utils_numeric.normalize_data_size(
                 params["sn1_size_change"], "B"))) * sign
-        logging.info("Verify the size of  %s is %s.",
-                     img.image_filename, expected_size)
+        test.log.info("Verify the size of  %s is %s.",
+                      img.image_filename, expected_size)
         if img_size != expected_size:
             test.fail("Got image virtual size: %s, should be: %s." %
                       (img_size, expected_size))

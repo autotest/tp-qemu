@@ -1,7 +1,6 @@
 import re
 import time
 import random
-import logging
 
 from provider import cpu_utils
 from provider import win_wora
@@ -32,8 +31,8 @@ def run(test, params, env):
 
     def heavyload_install():
         if session.cmd_status(test_installed_cmd) != 0:
-            logging.warning("Could not find installed heavyload in guest, will"
-                            " install it via winutils.iso ")
+            test.log.warning("Could not find installed heavyload in guest, will"
+                             " install it via winutils.iso ")
             winutil_drive = utils_misc.get_winutils_vol(session)
             if not winutil_drive:
                 test.cancel("WIN_UTILS CDROM not found.")
@@ -69,7 +68,7 @@ def run(test, params, env):
         win_wora.modify_driver(params, session)
 
     error_context.context("Check the number of guest CPUs after startup",
-                          logging.info)
+                          test.log.info)
     if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
         test.error("The number of guest CPUs is not equal to the qemu command "
                    "line configuration")
@@ -77,7 +76,7 @@ def run(test, params, env):
     guest_cpu_ids = cpu_utils.get_guest_cpu_ids(session, os_type)
     for vcpu_dev in vcpu_devices:
         error_context.context("Hotplug vcpu device: %s" % vcpu_dev,
-                              logging.info)
+                              test.log.info)
         vm.hotplug_vcpu_device(vcpu_dev)
     if not utils_misc.wait_for(
             lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm),
@@ -93,14 +92,14 @@ def run(test, params, env):
         plugged_cpu_ids.sort()
         for cpu_id in plugged_cpu_ids:
             error_context.context("Run stress on vCPU(%d) inside guest."
-                                  % cpu_id, logging.info)
+                                  % cpu_id, test.log.info)
             stress_tool.load_stress_tool(cpu_id)
         error_context.context("Successfully launched stress sessions, execute "
                               "stress test for %d seconds" % stress_duration,
-                              logging.info)
+                              test.log.info)
         time.sleep(stress_duration)
         if utils_package.package_install("sysstat", session):
-            error_context.context("Check usage of guest CPUs", logging.info)
+            error_context.context("Check usage of guest CPUs", test.log.info)
             mpstat_cmd = "mpstat 1 5 -P %s | cat" % ",".join(
                 map(str, plugged_cpu_ids))
             mpstat_out = session.cmd_output(mpstat_cmd)
@@ -111,12 +110,12 @@ def run(test, params, env):
                 if cpu_usage_rate < 50:
                     test.error("Stress test on vCPU(%s) failed, usage rate: "
                                "%.2f%%" % (cpu_id, cpu_usage_rate))
-                logging.info("Usage rate of vCPU(%s) is: %.2f%%", cpu_id,
-                             cpu_usage_rate)
+                test.log.info("Usage rate of vCPU(%s) is: %.2f%%", cpu_id,
+                              cpu_usage_rate)
         if not vm_arch_name.startswith("s390"):
             for vcpu_dev in vcpu_devices:
                 error_context.context("Hotunplug vcpu device: %s" % vcpu_dev,
-                                      logging.info)
+                                      test.log.info)
                 vm.hotunplug_vcpu_device(vcpu_dev)
                 # Drift the running stress task to other vCPUs
                 time.sleep(random.randint(5, 10))
@@ -129,7 +128,7 @@ def run(test, params, env):
         install_path = params["install_path"]
         test_installed_cmd = 'dir "%s" | findstr /I heavyload' % install_path
         heavyload_install()
-        error_context.context("Run heavyload inside guest.", logging.info)
+        error_context.context("Run heavyload inside guest.", test.log.info)
         heavyload_bin = r'"%s\heavyload.exe" ' % install_path
         heavyload_options = ["/CPU %d" % vm.get_cpu_count(),
                              "/DURATION %d" % (stress_duration // 60),

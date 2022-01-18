@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -15,14 +14,14 @@ def run(test, params, env):
 
     def hotplug(vm, current_cpus, total_cpus, vcpu_threads):
         for cpu in range(current_cpus, total_cpus):
-            error_context.context("hot-pluging vCPU %s" % cpu, logging.info)
+            error_context.context("hot-pluging vCPU %s" % cpu, test.log.info)
             vm.hotplug_vcpu(cpu_id=cpu, plug_command=hotplug_cmd)
             time.sleep(0.1)
         time.sleep(5)
 
     def hotunplug(vm, current_cpus, total_cpus, vcpu_threads):
         for cpu in range(current_cpus, total_cpus):
-            error_context.context("hot-unpluging vCPU %s" % cpu, logging.info)
+            error_context.context("hot-unpluging vCPU %s" % cpu, test.log.info)
             vm.hotplug_vcpu(cpu_id=cpu, plug_command=unplug_cmd, unplug="yes")
             time.sleep(0.1)
         # Need more time to unplug, so sleeping more than hotplug.
@@ -30,7 +29,7 @@ def run(test, params, env):
 
     def verify(vm, total_cpus):
         output = vm.monitor.send_args_cmd("info cpus")
-        logging.debug("Output of info CPUs:\n%s", output)
+        test.log.debug("Output of info CPUs:\n%s", output)
 
         cpu_regexp = re.compile(r"CPU #(\d+)")
         total_cpus_monitor = len(cpu_regexp.findall(output))
@@ -38,20 +37,20 @@ def run(test, params, env):
             test.fail("Monitor reports %s CPUs, when VM should have"
                       " %s" % (total_cpus_monitor, total_cpus))
         error_context.context("hotplugging finished, let's wait a few sec and"
-                              " check CPUs quantity in guest.", logging.info)
+                              " check CPUs quantity in guest.", test.log.info)
         if not utils_misc.wait_for(lambda: cpu.check_if_vm_vcpu_match(
                                    total_cpus, vm),
                                    60 + total_cpus, first=10,
                                    step=5.0, text="retry later"):
             test.fail("CPU quantity mismatch cmd after hotplug !")
         error_context.context("rebooting the vm and check CPU quantity !",
-                              logging.info)
+                              test.log.info)
         session = vm.reboot()
         if not cpu.check_if_vm_vcpu_match(total_cpus, vm):
             test.fail("CPU quantity mismatch cmd after hotplug and reboot !")
 
     error_context.context("boot the vm, with '-smp X,maxcpus=Y' option,"
-                          "thus allow hotplug vcpu", logging.info)
+                          "thus allow hotplug vcpu", test.log.info)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -78,14 +77,14 @@ def run(test, params, env):
     hotplug_cmd = hotplug_cmd.replace("CPU_MODEL", cpu_model)
 
     if (n_cpus_add * vcpu_threads) + current_cpus > maxcpus:
-        logging.warn("CPU quantity more than maxcpus, set it to %s", maxcpus)
+        test.log.warn("CPU quantity more than maxcpus, set it to %s", maxcpus)
         total_cpus = maxcpus
     else:
         total_cpus = current_cpus + (n_cpus_add * vcpu_threads)
 
-    logging.info("current_cpus=%s, total_cpus=%s", current_cpus, total_cpus)
+    test.log.info("current_cpus=%s, total_cpus=%s", current_cpus, total_cpus)
     error_context.context("check if CPUs in guest matches qemu cmd "
-                          "before hot-plug", logging.info)
+                          "before hot-plug", test.log.info)
     if not cpu.check_if_vm_vcpu_match(current_cpus, vm):
         test.error("CPU quantity mismatch cmd before hotplug !")
     hotplug(vm, current_cpus, total_cpus, vcpu_threads)

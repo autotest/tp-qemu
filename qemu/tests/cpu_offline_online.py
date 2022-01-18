@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import cpu
 
 from virttest import error_context
@@ -25,14 +23,14 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     error_context.base_context("Offline CPUs: {}".format(cpu_list),
-                               logging.info)
+                               test.log.info)
     session.cmd("chcpu -d {}".format(cpu_list), timeout=len(cpu_range))
     if not check_if_vm_vcpu_match(1, vm):
         test.fail("CPU quantity on guest mismatch after offline")
-    logging.info("{} have been offline.".format(cpu_list))
+    test.log.info("{} have been offline.".format(cpu_list))
 
-    error_context.context("Online CPUs: {}".format(cpu_list), logging.info)
+    error_context.context("Online CPUs: {}".format(cpu_list), test.log.info)
     session.cmd("chcpu -e {}".format(cpu_list), timeout=len(cpu_range))
     if not check_if_vm_vcpu_match(host_cpu, vm):
         test.fail("CPU quantity on guest mismatch after online again")
-    logging.info("{} have been online.".format(cpu_list))
+    test.log.info("{} have been online.".format(cpu_list))

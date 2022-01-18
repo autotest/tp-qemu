@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import data_dir
 from virttest import utils_misc
@@ -24,7 +22,7 @@ def run(test, params, env):
     vm.copy_files_to(host_path, '%s%s' % (guest_path, source_file))
     if params['os_type'] == 'linux':
         build_cmd = params.get('build_cmd', 'cd %s; gcc -lrt %s -o %s')
-        error_context.context("build binary file 'rdrand'", logging.info)
+        error_context.context("build binary file 'rdrand'", test.log.info)
         session.cmd(build_cmd % (guest_path, source_file, test_bin))
     s, o = session.cmd_status_output('%s%s' % (guest_path, test_bin))
     session.cmd(params['delete_cmd'])

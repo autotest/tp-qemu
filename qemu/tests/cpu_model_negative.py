@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import process
 
@@ -46,13 +45,13 @@ def run(test, params, env):
 
     warning_msg = params['warning_msg']
     wrong_cmd = '%s %s' % (qemu_bin, params['wrong_cmd'])
-    logging.info('Start qemu with command: %s', wrong_cmd)
+    test.log.info('Start qemu with command: %s', wrong_cmd)
     status, output = process.getstatusoutput(wrong_cmd)
-    logging.info('Qemu prompt output:\n%s', output)
+    test.log.info('Qemu prompt output:\n%s', output)
     if status == 0:
         test.fail('Qemu guest boots up while it should not.')
     if warning_msg not in output:
         test.fail('Does not get expected warning message.')
     else:
-        logging.info('Test passed as qemu does not boot up and'
-                     ' prompts expected message.')
+        test.log.info('Test passed as qemu does not boot up and'
+                      ' prompts expected message.')

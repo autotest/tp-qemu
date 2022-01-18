@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -32,7 +31,7 @@ def run(test, params, env):
                 and duplex is a 'full' or 'half'.
         """
         error_context.context(
-            "Check speed and duplex info from the traceview", logging.info)
+            "Check speed and duplex info from the traceview", test.log.info)
         log = utils_net.dump_traceview_log_windows(params, vm)
         check_pattern = 'Speed=(\\d+).+Duplex=(\\w+)$'
         result = re.search(check_pattern, log, re.MULTILINE)
@@ -48,7 +47,7 @@ def run(test, params, env):
                 and duplex is a 'full' or 'half'.
         """
         error_context.context("Check speed and duplex info from powershell",
-                              logging.info)
+                              test.log.info)
         check_speed_cmd = params["check_speed_powershell_cmd"]
         status, output = session.cmd_status_output(check_speed_cmd)
         if status:
@@ -73,7 +72,7 @@ def run(test, params, env):
         # convert to bps unit
         tar_speed = tar_speed * 1000000
         error_context.context("Check if the driver is installed and verified",
-                              logging.info)
+                              test.log.info)
         driver_name = params.get("driver_name", "netkvm")
         run_powershell = (params.get("run_powershell", "yes") == "yes")
         session = utils_test.qemu.windrv_check_running_verifier(
@@ -110,7 +109,7 @@ def run(test, params, env):
         return: a tuple of (speed, duplex), which speed is measured by mbps,
                 and duplex is one of 'half' and 'full'.
         """
-        error_context.context("Get speed & duplex info", logging.info)
+        error_context.context("Get speed & duplex info", test.log.info)
         mac = vm.get_mac_address(0)
         ethname = utils_net.get_linux_ifname(session, mac)
         check_speed_cmd = params["check_speed_cmd"] % ethname
@@ -118,7 +117,7 @@ def run(test, params, env):
         if status:
             test.fail("Failed to get speed info,"
                       "status=%s, ouput=%s" % (status, output))
-        logging.info(output)
+        test.log.info(output)
         result = re.findall(r"(?:Speed:\s+(\d+)Mb/s)|(?:Duplex:\s+(\w+))",
                             output)
         if len(result) < 2:

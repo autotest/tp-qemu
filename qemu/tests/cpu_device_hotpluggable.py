@@ -1,5 +1,3 @@
-import logging
-
 from aexpect import ShellCmdError
 
 from virttest import error_context
@@ -34,36 +32,36 @@ def run(test, params, env):
 
     def sub_hotunplug():
         error_context.context("Hotunplug vcpu devices after vcpu %s"
-                              % hotpluggable_test, logging.info)
+                              % hotpluggable_test, test.log.info)
         for plugged_dev in pluggable_vcpu_dev[::-1]:
             try:
                 vm.hotunplug_vcpu_device(plugged_dev)
             except VMDeviceCheckError:
                 if not vm.is_paused():
                     raise
-                logging.warning("%s can not be unplugged directly because "
-                                "guest is paused, will check again after "
-                                "resume", plugged_dev)
+                test.log.warning("%s can not be unplugged directly because "
+                                 "guest is paused, will check again after "
+                                 "resume", plugged_dev)
                 vm.params["vcpu_enable_%s" % plugged_dev] = "no"
 
     def sub_reboot():
         error_context.context("Reboot guest after vcpu %s"
-                              % hotpluggable_test, logging.info)
+                              % hotpluggable_test, test.log.info)
         vm.reboot(session=session, method=params["reboot_method"],
                   timeout=login_timeout)
 
     def sub_shutdown():
         error_context.context("Shutdown guest after vcpu %s"
-                              % hotpluggable_test, logging.info)
+                              % hotpluggable_test, test.log.info)
         shutdown_method = params["shutdown_method"]
         if shutdown_method == "shell":
             session.sendline(params["shutdown_command"])
             error_context.context("waiting VM to go down (guest shell cmd)",
-                                  logging.info)
+                                  test.log.info)
         elif shutdown_method == "system_powerdown":
             vm.monitor.system_powerdown()
             error_context.context("waiting VM to go down (qemu monitor cmd)",
-                                  logging.info)
+                                  test.log.info)
         if not vm.wait_for_shutdown(360):
             test.fail("Guest refuses to go down after vcpu %s"
                       % hotpluggable_test)
@@ -72,7 +70,7 @@ def run(test, params, env):
         sub_migrate_reboot = sub_reboot
         sub_migrate_hotunplug = sub_hotunplug
         error_context.context("Migrate guest after vcpu %s"
-                              % hotpluggable_test, logging.info)
+                              % hotpluggable_test, test.log.info)
         vm.migrate()
         vm.verify_alive()
         sub_test_after_migrate = params.objects("sub_test_after_migrate")
@@ -84,7 +82,7 @@ def run(test, params, env):
 
     def sub_online_offline():
         error_context.context("Offline then online guest CPUs after vcpu %s"
-                              % hotpluggable_test, logging.info)
+                              % hotpluggable_test, test.log.info)
         cpu_ids = list(current_guest_cpu_ids - guest_cpu_ids)
         cpu_ids.sort()
         cmd = "echo %d > /sys/devices/system/cpu/cpu%d/online"
@@ -97,12 +95,12 @@ def run(test, params, env):
             for cpu_id in cpu_ids:
                 session.cmd(cmd % (1, cpu_id))
         except ShellCmdError as err:
-            logging.error(str(err))
+            test.log.error(str(err))
             test.error("Failed to change the CPU state on guest.")
 
     def sub_pause_resume():
         error_context.context("Pause guest to hotunplug all vcpu devices",
-                              logging.info)
+                              test.log.info)
         vm.pause()
         sub_hotunplug()
         error_context.context("Resume guest after hotunplug")
@@ -139,7 +137,7 @@ def run(test, params, env):
     guest_cpu_ids = cpu_utils.get_guest_cpu_ids(session, os_type)
 
     error_context.context("Check the number of guest CPUs after startup",
-                          logging.info)
+                          test.log.info)
     if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
         test.error("The number of guest CPUs is not equal to the qemu command "
                    "line configuration")
@@ -154,16 +152,16 @@ def run(test, params, env):
 
     if params.get("pause_vm_before_hotplug", "no") == "yes":
         error_context.context("Pause guest before %s" % hotpluggable_test,
-                              logging.info)
+                              test.log.info)
         vm.pause()
 
     error_context.context("%s all vcpu devices" % hotpluggable_test,
-                          logging.info)
+                          test.log.info)
     for vcpu_dev in pluggable_vcpu_dev:
         getattr(vm, "%s_vcpu_device" % hotpluggable_test)(vcpu_dev)
     if vm.is_paused():
         error_context.context("Resume guest after %s" % hotpluggable_test,
-                              logging.info)
+                              test.log.info)
         vm.resume()
 
     check_guest_cpu_count()

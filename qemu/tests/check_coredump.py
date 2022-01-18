@@ -14,6 +14,8 @@ from virttest import error_context
 from virttest import utils_misc
 import virttest.utils_libguestfs as lgf
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def get_images():
     """
@@ -53,7 +55,7 @@ def coredump_exists(mntpnt, files, out_dir):
                 msgs_return.append((os.path.basename(item),
                                     file_ctime))
                 error_context.context("copy files %s %s" %
-                                      (item, out_dir), logging.info)
+                                      (item, out_dir), LOG_JOB.info)
                 os.system("cp -rf %s %s" % (item, out_dir))
 
     return file_exists, msgs_return
@@ -75,12 +77,12 @@ def check_images_coredump(image, mntpnt, check_files, debugdir):
     try:
         error_context.context("Mount the guest image %s to host mount point" %
                               image,
-                              logging.info)
+                              LOG_JOB.info)
         status = lgf.guestmount(image, mntpnt,
                                 True, True, debug=True, is_disk=True)
         if status.exit_status:
             msgs_return.append("Could not mount guest image %s." % image)
-            error_context.context(msgs_return[0], logging.error)
+            error_context.context(msgs_return[0], LOG_JOB.error)
         else:
             found_coredump, msgs_return = coredump_exists(mntpnt,
                                                           check_files,
@@ -179,13 +181,13 @@ def run(test, params, env):
     check_files = [file_chk_for_win, file_chk_for_linux]
     check_results = []
 
-    error_context.context("Get all the images name", logging.info)
+    error_context.context("Get all the images name", test.log.info)
     images = get_images()
-    error_context.context("images: %s" % images, logging.info)
+    error_context.context("images: %s" % images, test.log.info)
 
     # find all the images
     # mount per-image to check if the dump file exists
-    error_context.context("Check coredump file per-image", logging.info)
+    error_context.context("Check coredump file per-image", test.log.info)
     for image in images:
         status, chk_msgs = check_images_coredump(image,
                                                  host_mountpoint,

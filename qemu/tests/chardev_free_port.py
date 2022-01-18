@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context, env_process
 from virttest import utils_misc
 
@@ -43,14 +41,14 @@ def run(test, params, env):
         for chardev in chardevs:
             if chardev['label'] == chardev_params['id']:
                 tmp_pnum = int(chardev['filename'].split(':')[-1].split(',')[0])
-                error_context.context("Get port %d for vm%d from monitor" % (tmp_pnum, char_ind), logging.info)
+                error_context.context("Get port %d for vm%d from monitor" % (tmp_pnum, char_ind), test.log.info)
                 break
         if char_ind == 0:
-            error_context.context("The expect port for vm%d is %d" % (char_ind, _port), logging.info)
+            error_context.context("The expect port for vm%d is %d" % (char_ind, _port), test.log.info)
             if tmp_pnum == _port:
                 in_chardev = True
         else:
-            error_context.context("The expect port for vm%d is in [%d, %d]" % (char_ind, _port + 1, _to), logging.info)
+            error_context.context("The expect port for vm%d is in [%d, %d]" % (char_ind, _port + 1, _to), test.log.info)
             if tmp_pnum > _port and tmp_pnum <= _to:
                 in_chardev = True
         assert in_chardev is True, 'The actual port does not match with the expect port in VM %d' % char_ind

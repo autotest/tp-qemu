@@ -1,5 +1,4 @@
 import json
-import logging
 
 from provider import qemu_img_utils as img_utils
 from virttest import qemu_storage
@@ -50,44 +49,44 @@ def run(test, params, env):
     hashes = {}
     for image in images:
         if image is not base:
-            logging.debug("Create snapshot %s based on %s",
-                          image.image_filename, image.base_image_filename)
+            test.log.debug("Create snapshot %s based on %s",
+                           image.image_filename, image.base_image_filename)
             image.create(image.params)
         vm = img_utils.boot_vm_with_images(test, params, env, (image.tag,))
         guest_file = params["guest_tmp_filename"] % image.tag
-        logging.debug("Create tmp file %s in image %s", guest_file,
-                      image.image_filename)
+        test.log.debug("Create tmp file %s in image %s", guest_file,
+                       image.image_filename)
         img_utils.save_random_file_to_vm(vm, guest_file, 2048 * 100, sync_bin)
 
         session = vm.wait_for_login()
-        logging.debug("Get md5 value fo the temporary file")
+        test.log.debug("Get md5 value fo the temporary file")
         hashes[guest_file] = img_utils.check_md5sum(guest_file,
                                                     md5sum_bin, session)
         session.close()
         vm.destroy()
 
-    logging.debug("Hashes of temporary files:\n%s", hashes)
+    test.log.debug("Hashes of temporary files:\n%s", hashes)
 
-    logging.debug("Verify the snapshot chain")
+    test.log.debug("Verify the snapshot chain")
     info = json.loads(active_layer.info(output="json"))
     active_layer_size_before = info[0]["actual-size"]
     verify_backing_chain(info)
 
-    logging.debug("Commit image")
+    test.log.debug("Commit image")
     active_layer.commit(base=base.tag)
 
-    logging.debug("Verify the snapshot chain after commit")
+    test.log.debug("Verify the snapshot chain after commit")
     info = json.loads(active_layer.info(output="json"))
     active_layer_size_after = info[0]["actual-size"]
-    logging.debug("%s file size before commit: %s, after commit: %s",
-                  active_layer.image_filename, active_layer_size_before,
-                  active_layer_size_after)
+    test.log.debug("%s file size before commit: %s, after commit: %s",
+                   active_layer.image_filename, active_layer_size_before,
+                   active_layer_size_after)
     if active_layer_size_after < active_layer_size_before:
         test.fail("image %s is emptied after commit with explicit base" %
                   active_layer.image_filename)
     verify_backing_chain(info)
 
-    logging.debug("Verify hashes of temporary files")
+    test.log.debug("Verify hashes of temporary files")
     vm = img_utils.boot_vm_with_images(test, params, env, (base.tag,))
     session = vm.wait_for_login()
     for tmpfile, hashval in hashes.items():

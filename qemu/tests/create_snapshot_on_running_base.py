@@ -1,5 +1,3 @@
-import logging
-
 from virttest import data_dir
 from virttest import qemu_storage
 
@@ -35,21 +33,21 @@ def run(test, params, env):
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
 
-    logging.info("Boot a guest up from base image: %s, and create a"
-                 " file %s on the disk.", base.tag, guest_temp_file)
+    test.log.info("Boot a guest up from base image: %s, and create a"
+                  " file %s on the disk.", base.tag, guest_temp_file)
     vm = img_utils.boot_vm_with_images(test, params, env)
     session = vm.wait_for_login()
     img_utils.save_random_file_to_vm(vm, guest_temp_file, 1024 * 512, sync_bin)
     md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
     session.close()
 
-    logging.info("Create a snapshot %s on the running base image.",
-                 snapshot.tag)
+    test.log.info("Create a snapshot %s on the running base image.",
+                  snapshot.tag)
     snapshot.create(snapshot.params)
 
     vm.destroy()
-    logging.info("Boot the guest up from snapshot image: %s, and verify the"
-                 " file %s's md5 on the disk.", snapshot.tag, guest_temp_file)
+    test.log.info("Boot the guest up from snapshot image: %s, and verify the"
+                  " file %s's md5 on the disk.", snapshot.tag, guest_temp_file)
     vm = img_utils.boot_vm_with_images(test, params, env,
                                        images=(snapshot.tag,))
     session = vm.wait_for_login()

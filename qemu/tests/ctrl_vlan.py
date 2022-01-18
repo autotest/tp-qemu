@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -24,7 +23,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     def verify_vlan_table(expect_vlan=None):
-        error_context.context("Check vlan table in rx-filter", logging.info)
+        error_context.context("Check vlan table in rx-filter", test.log.info)
         query_cmd = "query-rx-filter name=%s" % vm.virtnet[0].device_id
         vlan_table = vm.monitor.send_args_cmd(query_cmd)[0].get("vlan-table")
         if not expect_vlan:
@@ -65,11 +64,11 @@ def run(test, params, env):
         find_cmd = 'dir /b /s %s\\netkvmco.dll | findstr "\\%s\\\\"'
         find_cmd %= (viowin_ltr,  middle_path)
         netkvmco_path = session.cmd(find_cmd).strip()
-        logging.info("Found netkvmco.dll file at %s", netkvmco_path)
+        test.log.info("Found netkvmco.dll file at %s", netkvmco_path)
         return netkvmco_path
 
     login_timeout = float(params.get("login_timeout", 360))
-    error_context.context("Init the VM, and try to login", logging.info)
+    error_context.context("Init the VM, and try to login", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -81,7 +80,7 @@ def run(test, params, env):
 
     if "ctrl_vlan=on" in params["nic_extra_params"]:
         error_context.context(
-            "Add vlan tag for guest network", logging.info)
+            "Add vlan tag for guest network", test.log.info)
         vlan_set_cmd = params["vlan_set_cmd"]
         vlan_id = params["vlan_id"]
         try:
@@ -99,7 +98,7 @@ def run(test, params, env):
                 driver_verifier = params["driver_verifier"]
                 session = vm.wait_for_login(timeout=login_timeout)
                 error_context.context("Verify if netkvm.sys is enabled in guest",
-                                      logging.info)
+                                      test.log.info)
                 session = utils_test.qemu.windrv_check_running_verifier(
                             session, vm, test, driver_verifier, timeout=120)
                 verify_vlan_table(expect_vlan)

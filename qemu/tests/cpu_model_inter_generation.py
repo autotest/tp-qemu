@@ -1,5 +1,3 @@
-import logging
-
 from virttest import cpu
 from virttest import utils_misc
 from virttest import env_process
@@ -23,7 +21,7 @@ def run(test, params, env):
         """
         vm = None
         params['cpu_model'] = test_model
-        logging.info('Start vm with cpu model %s', test_model)
+        test.log.info('Start vm with cpu model %s', test_model)
         try:
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
@@ -33,7 +31,7 @@ def run(test, params, env):
                           " while it does not.")
         except Exception as e:
             if boot_expected == 'no':
-                logging.info('Expect vm boot up failed when enforce is set.')
+                test.log.info('Expect vm boot up failed when enforce is set.')
                 if warning_text not in str(e):
                     raise
             else:

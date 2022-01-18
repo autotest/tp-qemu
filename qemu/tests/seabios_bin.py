@@ -30,8 +30,9 @@ def run(test, params, env):
 
     error_context.context("Get available bin files", logging.info)
     output = process.system_output('ls /usr/share/seabios', shell=True).decode()
+    bin_file_skip = params.get("bin_file_skip", "")
     for value in bin_dict.values():
-        if value not in output:
+        if value not in output and value != bin_file_skip:
             test.fail("%s is not available" % value)
 
     error_context.context("Get supported machine types", logging.info)

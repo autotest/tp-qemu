@@ -9,6 +9,8 @@ from provider import backup_utils
 
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockDevSnapshotTest(object):
 
@@ -156,7 +158,7 @@ class BlockDevSnapshotTest(object):
             self.clone_vm.destroy()
             self.snapshot_image.remove()
         except Exception as error:
-            logging.error(str(error))
+            LOG_JOB.error(str(error))
 
     def run_test(self):
         self.pre_test()

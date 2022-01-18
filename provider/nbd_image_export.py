@@ -65,6 +65,8 @@ from virttest.qemu_monitor import MonitorNotSupportedCmdError
 
 from provider.job_utils import get_event_by_condition
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class NBDExportImage(object):
     """NBD local image export base class"""
@@ -115,7 +117,7 @@ class QemuNBDExportImage(NBDExportImage):
         self._nbd_server_pid = None
 
     def export_image(self):
-        logging.info("Export image with qemu-nbd")
+        LOG_JOB.info("Export image with qemu-nbd")
         self._nbd_server_pid = nbd.export_image(self._qemu_nbd,
                                                 self._local_filename,
                                                 self._tag, self._image_params)
@@ -123,7 +125,7 @@ class QemuNBDExportImage(NBDExportImage):
             raise exceptions.TestFail('Failed to export image')
 
     def list_exported_image(self, nbd_image, nbd_image_params):
-        logging.info("List the nbd image with qemu-nbd")
+        LOG_JOB.info("List the nbd image with qemu-nbd")
         result = nbd.list_exported_image(self._qemu_nbd, nbd_image,
                                          nbd_image_params)
         if result.exit_status != 0:
@@ -136,27 +138,27 @@ class QemuNBDExportImage(NBDExportImage):
                 # when qemu-nbd crashes unexpectedly, we can handle it
                 os.kill(self._nbd_server_pid, signal.SIGKILL)
             except Exception as e:
-                logging.warn("Error occurred when killing nbd server: %s",
+                LOG_JOB.warn("Error occurred when killing nbd server: %s",
                              str(e))
             finally:
                 self._nbd_server_pid = None
 
     def suspend_export(self):
         if self._nbd_server_pid is not None:
-            logging.info("Suspend qemu-nbd by sending SIGSTOP")
+            LOG_JOB.info("Suspend qemu-nbd by sending SIGSTOP")
             try:
                 os.kill(self._nbd_server_pid, signal.SIGSTOP)
             except Exception as e:
-                logging.warning("Error occurred when suspending"
+                LOG_JOB.warning("Error occurred when suspending"
                                 "nbd server: %s", str(e))
 
     def resume_export(self):
         if self._nbd_server_pid is not None:
-            logging.info("Resume qemu-nbd by sending SIGCONT")
+            LOG_JOB.info("Resume qemu-nbd by sending SIGCONT")
             try:
                 os.kill(self._nbd_server_pid, signal.SIGCONT)
             except Exception as e:
-                logging.warning("Error occurred when resuming nbd server: %s",
+                LOG_JOB.warning("Error occurred when resuming nbd server: %s",
                                 str(e))
 
 
@@ -187,7 +189,7 @@ class InternalNBDExportImage(NBDExportImage):
         self._node_name = devices[-1].get_qid()
         self._image_devices = devices
 
-        logging.info("Plug devices(without image device driver)")
+        LOG_JOB.info("Plug devices(without image device driver)")
         for dev in devices:
             ret = self._vm.devices.simple_hotplug(dev, self._vm.monitor)
             if not ret[1]:
@@ -197,9 +199,9 @@ class InternalNBDExportImage(NBDExportImage):
     def hotplug_tls(self):
         """Hotplug tls creds object for nbd server"""
         if self._image_params.get('nbd_unix_socket'):
-            logging.info('TLS is only supported with IP')
+            LOG_JOB.info('TLS is only supported with IP')
         elif self._image_params.get('nbd_server_tls_creds'):
-            logging.info("Plug server tls creds device")
+            LOG_JOB.info("Plug server tls creds device")
             self._tls_creds_id = '%s_server_tls_creds' % self._tag
             dev = qemu_devices.qdevices.QObject('tls-creds-x509')
             dev.set_param("id", self._tls_creds_id)
@@ -221,7 +223,7 @@ class InternalNBDExportImage(NBDExportImage):
             'port': self._image_params.get('nbd_port', '10809')
         }
 
-        logging.info("Start internal nbd server")
+        LOG_JOB.info("Start internal nbd server")
         return self._vm.monitor.nbd_server_start(server, self._tls_creds_id)
 
     def _block_export_add(self):
@@ -289,7 +291,7 @@ class InternalNBDExportImage(NBDExportImage):
         if node_name:
             self._node_name = node_name
 
-        logging.info("Add image node to nbd server")
+        LOG_JOB.info("Add image node to nbd server")
         try:
             return self._block_export_add()
         except MonitorNotSupportedCmdError:
@@ -303,7 +305,7 @@ class InternalNBDExportImage(NBDExportImage):
 
     def remove_nbd_image(self):
         """Remove the exported image from internal nbd server"""
-        logging.info("Remove image from nbd server")
+        LOG_JOB.info("Remove image from nbd server")
         try:
             return self._block_export_del()
         except MonitorNotSupportedCmdError:
@@ -314,7 +316,7 @@ class InternalNBDExportImage(NBDExportImage):
 
     def stop_nbd_server(self):
         """Stop internal nbd server, it also unregisters all devices"""
-        logging.info("Stop nbd server")
+        LOG_JOB.info("Stop nbd server")
         return self._vm.monitor.nbd_server_stop()
 
     def export_image(self):

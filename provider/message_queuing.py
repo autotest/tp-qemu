@@ -4,6 +4,8 @@ import time
 
 from aexpect import client
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 DEFAULT_MONITOR_TIMEOUT = 60
 
@@ -35,7 +37,7 @@ class MQBase(client.Expect):
         :param cmd: The MQ command line.
         """
         super(MQBase, self).__init__(cmd)
-        logging.info("MQ command line: %s", self.command)
+        LOG_JOB.info("MQ command line: %s", self.command)
 
     def _confirm_message(self, message):
         """
@@ -54,7 +56,7 @@ class MQBase(client.Expect):
         """
         try:
             self.read_until_last_line_matches([message], timeout)
-            logging.info('The message "{}" has been monitored.'.format(message))
+            LOG_JOB.info('The message "{}" has been monitored.'.format(message))
         except client.ExpectTimeoutError as err:
             raise MessageNotFoundError(message, err.output)
 
@@ -218,7 +220,7 @@ class MQClient(MQBase):
                                                     timeout, 0.1)
 
             if output:
-                logging.debug('Monitor The message "{}"'.format(output))
+                LOG_JOB.debug('Monitor The message "{}"'.format(output))
                 return output[0]
 
         except client.ExpectTimeoutError as err:
@@ -248,5 +250,5 @@ class MQClient(MQBase):
                 for msg in match_msg:
                     if msg[0] in self.msg_callback.keys():
                         callback = self.msg_callback[msg[0]]
-                        logging.info("Ready callback %s %s", callback, msg[1])
+                        LOG_JOB.info("Ready callback %s %s", callback, msg[1])
                         callback(self, msg[1])

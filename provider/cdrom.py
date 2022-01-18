@@ -11,6 +11,8 @@ from avocado import fail_on
 from virttest import utils_misc
 from virttest.qemu_capabilities import Flags
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class CDRomError(Exception):
     pass
@@ -135,7 +137,7 @@ class QMPEventCheckCD(QMPEventCheck):
         # count is 2 if closed before, 1 if opened before.
         """
         if not len(self.vm.qmp_monitors):
-            logging.warn("unable to check %s due to no qmp_monitor available",
+            LOG_JOB.warn("unable to check %s due to no qmp_monitor available",
                          self.event_to_check)
             return
 
@@ -143,7 +145,7 @@ class QMPEventCheckCD(QMPEventCheck):
         events = utils_misc.wait_for(m.get_events, timeout=20)
         if not events:
             events = []
-        logging.info('Event list:\n%s', events)
+        LOG_JOB.info('Event list:\n%s', events)
         self.count = 0
         for event in events:
             if event['event'] == u"DEVICE_TRAY_MOVED":

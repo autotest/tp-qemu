@@ -4,6 +4,8 @@ import time
 from avocado import fail_on
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 BLOCK_JOB_COMPLETED_EVENT = "BLOCK_JOB_COMPLETED"
 BLOCK_JOB_CANCELLED_EVENT = "BLOCK_JOB_CANCELLED"
 BLOCK_JOB_ERROR_EVENT = "BLOCK_JOB_ERROR"
@@ -212,13 +214,13 @@ def is_block_job_started(vm, jobid, tmo=10):
     for i in range(tmo):
         job = get_block_job_by_id(vm, jobid)
         if not job:
-            logging.warn('job %s was not found', jobid)
+            LOG_JOB.warn('job %s was not found', jobid)
             break
         elif job['offset'] > 0:
             return True
         time.sleep(1)
     else:
-        logging.warn('block job %s never starts in %s', jobid, tmo)
+        LOG_JOB.warn('block job %s never starts in %s', jobid, tmo)
     return False
 
 
@@ -240,7 +242,7 @@ def is_block_job_running(vm, jobid, tmo=200):
     for i in range(tmo):
         job = get_block_job_by_id(vm, jobid)
         if not job:
-            logging.warn('job %s cancelled unexpectedly', jobid)
+            LOG_JOB.warn('job %s cancelled unexpectedly', jobid)
             break
         elif offset is None:
             offset = job['offset']
@@ -248,7 +250,7 @@ def is_block_job_running(vm, jobid, tmo=200):
             return True
         time.sleep(1)
     else:
-        logging.warn('offset never changed for block job %s in %s',
+        LOG_JOB.warn('offset never changed for block job %s in %s',
                      jobid, tmo)
     return False
 
@@ -273,12 +275,12 @@ def is_block_job_paused(vm, jobid, tmo=50):
     for i in range(tmo):
         job = get_block_job_by_id(vm, jobid)
         if not job:
-            logging.warn('job %s cancelled unexpectedly', jobid)
+            LOG_JOB.warn('job %s cancelled unexpectedly', jobid)
             return False
         elif offset is None:
             offset = job['offset']
         elif offset != job['offset']:
-            logging.warn('offset %s changed for job %s in %s',
+            LOG_JOB.warn('offset %s changed for job %s in %s',
                          offset, jobid, tmo)
             return False
         time.sleep(1)

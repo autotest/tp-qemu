@@ -28,6 +28,8 @@ from virttest.remote import scp_to_remote
 
 from avocado import TestError
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 GIT_DOWNLOAD = 'git'
 CURL_DOWNLOAD = 'curl'
 
@@ -106,7 +108,7 @@ class StorageBenchmark(object):
         """
         proc_name = self.name if self.os_type == 'linux' else (
                 self.name.upper() + '.EXE')
-        logging.info('Checking the running %s processes.', self.name)
+        LOG_JOB.info('Checking the running %s processes.', self.name)
         if not utils_misc.wait_for(
                 lambda: not re.search(
                     proc_name.lower(), session.cmd_output(
@@ -121,7 +123,7 @@ class StorageBenchmark(object):
         :param session: vm session
         :type session: aexpect.client.ShellSession
         """
-        logging.info('Killing all %s processes by force.', self.name)
+        LOG_JOB.info('Killing all %s processes by force.', self.name)
         session.cmd_output(self._kill_pid % self.name, timeout=120)
 
     def __remove_env_files(self, session, timeout=300):
@@ -134,7 +136,7 @@ class StorageBenchmark(object):
         :param timeout: timeout for removing
         :type timeout: float
         """
-        logging.info('Removing the environment files.')
+        LOG_JOB.info('Removing the environment files.')
         cmds = (self._rm_file.format(f) for f in self.env_files)
         session.cmd(' && '.join(cmds), timeout=timeout)
 

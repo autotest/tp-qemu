@@ -8,6 +8,8 @@ from avocado.utils import process
 from virttest import env_process
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def set_vm_for_dump(test, params):
     """
@@ -71,7 +73,7 @@ def install_windbg(test, params, session, timeout=600):
     :param session: The guest session object.
     :param timeout: waiting debug tool install finish.
     """
-    logging.info("Install Windows Debug Tools in guest.")
+    LOG_JOB.info("Install Windows Debug Tools in guest.")
     windbg_install_cmd = params["windbg_install_cmd"]
     windbg_install_cmd = utils_misc.set_winutils_letter(session,
                                                         windbg_install_cmd
@@ -82,7 +84,7 @@ def install_windbg(test, params, session, timeout=600):
                                timeout=timeout, step=5):
         test.fail("windbg tool has not been installed")
     else:
-        logging.info("windbg tool installation completed")
+        LOG_JOB.info("windbg tool installation completed")
 
 
 def check_windbg_installed(params, session):
@@ -120,7 +122,7 @@ def dump_windbg_check(test, params, session):
     :param params: the dict used for parameters.
     :param session: The guest session object.
     """
-    logging.info("Check the dump file can be opened by windbg tool")
+    LOG_JOB.info("Check the dump file can be opened by windbg tool")
     chk_dump_cmd = params["chk_dump_cmd"]
     log_file = params["dump_analyze_file"]
     chk_dump_cmd = utils_misc.set_winutils_letter(session,
@@ -135,7 +137,7 @@ def dump_windbg_check(test, params, session):
         output = session.cmd_output("type %s" % log_file)
         test.fail("Check dump file failed, output as %s" % output)
     else:
-        logging.info("Check dump file passed")
+        LOG_JOB.info("Check dump file passed")
 
 
 def check_log_exist(session, log_file):

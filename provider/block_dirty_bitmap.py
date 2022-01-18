@@ -11,6 +11,8 @@ from virttest import data_dir
 from virttest import storage
 from virttest import qemu_monitor
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def parse_params(vm, params):
     """Parse params for bitmap."""
@@ -66,7 +68,7 @@ def block_dirty_bitmap_add(vm, bitmap_params):
     """Add block dirty bitmap."""
     bitmap = bitmap_params.get("bitmap_name")
     target_device = bitmap_params.get("target_device")
-    logging.debug("add dirty bitmap %s to %s", bitmap, target_device)
+    LOG_JOB.debug("add dirty bitmap %s to %s", bitmap, target_device)
     mapping = {}
     for item in ["persistent", "disabled"]:
         mapping[item] = {
@@ -107,7 +109,7 @@ def block_dirty_bitmap_merge(vm, device, bitmaps, target):
     """
     func = qemu_monitor.get_monitor_function(vm, "block-dirty-bitmap-merge")
     cmd = func.__name__.replace("_", "-")
-    logging.debug("Merge %s into %s", bitmaps, target)
+    LOG_JOB.debug("Merge %s into %s", bitmaps, target)
     if not cmd.startswith("x-"):
         return func(device, bitmaps, target)
     # handle 'x-block-dirty-bitmap-merge' command

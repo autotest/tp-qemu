@@ -8,6 +8,8 @@ from virttest import utils_misc
 from virttest import utils_net
 from virttest import utils_netperf
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 @error_context.context_aware
 def netperf_stress(test, params, vm):
@@ -59,7 +61,7 @@ def netperf_stress(test, params, vm):
                           package_sizes=params.get("netperf_sizes"))
         if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
                                "Wait netperf test start"):
-            logging.info("Netperf test start successfully.")
+            LOG_JOB.info("Netperf test start successfully.")
         else:
             test.error("Can not start netperf client.")
         start_time = time.time()
@@ -71,11 +73,11 @@ def netperf_stress(test, params, vm):
             status = n_client.is_netperf_running()
             if not status and duration < test_duration - 10:
                 test.fail("netperf terminated unexpectedly")
-            logging.info("Wait netperf test finish %ss", duration)
+            LOG_JOB.info("Wait netperf test finish %ss", duration)
         if n_client.is_netperf_running():
             test.fail("netperf still running, netperf hangs")
         else:
-            logging.info("netperf runs successfully")
+            LOG_JOB.info("netperf runs successfully")
     finally:
         n_server.stop()
         n_server.cleanup(True)

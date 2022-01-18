@@ -19,6 +19,8 @@ import os
 
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 START_PATTERN = r'\s+SLOF\S+\s+\*+'
 END_PATTERN = r'\s+Successfully loaded$'
 
@@ -86,7 +88,7 @@ def wait_for_loaded(vm, test, start_pos=0, start_str=START_PATTERN,
     while time.time() < end_time:
         content, start_pos = get_boot_content(vm, start_pos, start_str, end_str)
         if content:
-            logging.info('Output of SLOF:\n%s', ''.join(content))
+            LOG_JOB.info('Output of SLOF:\n%s', ''.join(content))
             return content, start_pos
     test.fail(
         'No found corresponding SLOF info in serial log during %s sec.' %
@@ -142,7 +144,7 @@ def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
     devices = get_booted_devices(content)
     for k, v in devices.items():
         if int(k) == position:
-            logging.info('Position [%d]: %s', k, v)
+            LOG_JOB.info('Position [%d]: %s', k, v)
             break
 
     if position in devices:
@@ -155,7 +157,7 @@ def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
                     'bootable device.'.format(parent_bus_type, child_bus_type,
                                               child_addr, sub_child_addr,
                                               position))
-        logging.info(info)
+        LOG_JOB.info(info)
         if parent_bus_type == 'pci':
             # virtio-blk, virtio-scsi and ethernet device.
             if child_bus_type == 'scsi' or child_bus_type == 'ethernet':
@@ -174,7 +176,7 @@ def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
         else:
             return False
     else:
-        logging.debug(
+        LOG_JOB.debug(
             'No such device at position %s in all devices in SLOF contents.',
             position)
         return False
@@ -191,4 +193,4 @@ def check_error(test, content):
     for line in content:
         if re.search(r'error', line, re.IGNORECASE):
             test.fail('Found errors: %s' % line)
-    logging.info("No errors in SLOF content.")
+    LOG_JOB.info("No errors in SLOF content.")

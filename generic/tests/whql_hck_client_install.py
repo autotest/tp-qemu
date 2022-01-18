@@ -3,6 +3,8 @@ import logging
 from virttest import remote
 from virttest import error_context
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 @error_context.context_aware
 def run_whql_hck_client_install(test, params, env):
@@ -36,19 +38,19 @@ def run_whql_hck_client_install(test, params, env):
 
     services_installed = session.cmd_output("wmic service get")
     if "HCKcommunication" in services_installed:
-        logging.info("HCK client already installed.")
+        LOG_JOB.info("HCK client already installed.")
         return
 
     # Join the server's workgroup
     if params.get("join_domain") == "yes":
-        error_context.context("Join the workgroup", logging.info)
+        error_context.context("Join the workgroup", LOG_JOB.info)
         cmd = ("netdom join %s /domain:%s /UserD:%s "
                "/PasswordD:%s" % (client_name, server_domname,
                                   client_username, client_password))
         session.cmd(cmd, timeout=600)
 
     error_context.context(("Setting up auto logon for user '%s'" %
-                           client_username), logging.info)
+                           client_username), LOG_JOB.info)
     cmd = ('reg add '
            '"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\winlogon"'
            ' /v "%s" /d "%s" /t REG_SZ /f')
@@ -60,13 +62,13 @@ def run_whql_hck_client_install(test, params, env):
 
     if params.get("pre_hck_install"):
         error_context.context("Install some program before install HCK client",
-                              logging.info)
+                              LOG_JOB.info)
         install_cmd = params.get("pre_hck_install")
         session.cmd(install_cmd, timeout=install_timeout)
 
     install_cmd = params["install_cmd"]
     error_context.context(("Installing HCK client (timeout=%ds)" %
-                           install_timeout), logging.info)
+                           install_timeout), LOG_JOB.info)
     session.cmd(install_cmd, timeout=install_timeout)
     reboot_timeout = login_timeout + 1500
     session = vm.reboot(session, timeout=reboot_timeout)

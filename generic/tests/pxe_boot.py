@@ -1,5 +1,3 @@
-import logging
-
 import aexpect
 
 from virttest import error_context
@@ -18,21 +16,21 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    error_context.context("Try to boot from NIC", logging.info)
+    error_context.context("Try to boot from NIC", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("pxe_timeout", 60))
 
-    error_context.context("Snoop packet in the tap device", logging.info)
+    error_context.context("Snoop packet in the tap device", test.log.info)
     tcpdump_cmd = "tcpdump -nli %s port '(tftp or bootps)'" % vm.get_ifname()
     try:
         tcpdump_process = aexpect.run_bg(command=tcpdump_cmd,
-                                         output_func=logging.debug,
+                                         output_func=test.log.debug,
                                          output_prefix="(pxe capture) ")
         if not tcpdump_process.read_until_output_matches(['tftp'],
                                                          timeout=timeout):
             test.fail("Couldn't find any TFTP packets after %s seconds" % timeout)
-        logging.info("Found TFTP packet")
+        test.log.info("Found TFTP packet")
     finally:
         try:
             tcpdump_process.kill()

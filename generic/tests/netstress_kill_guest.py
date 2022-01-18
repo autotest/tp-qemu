@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 
@@ -52,7 +51,7 @@ def run(test, params, env):
         vm.destroy(gracefully=False)
         if not vm.wait_until_dead(timeout=60):
             test.fail("VM is not dead after destroy operation")
-        logging.info("VM is dead as expected")
+        test.log.info("VM is dead as expected")
 
     def netperf_stress(test, params, vm):
         """
@@ -102,7 +101,7 @@ def run(test, params, env):
                               package_sizes=params.get("netperf_sizes"))
             if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
                                    "Wait netperf test start"):
-                logging.info("Netperf test start successfully.")
+                test.log.info("Netperf test start successfully.")
             else:
                 test.error("Can not start netperf client.")
         finally:
@@ -112,20 +111,20 @@ def run(test, params, env):
 
     def netload_kill_problem(test, session_serial):
         firewall_flush = params.get("firewall_flush", "service iptables stop")
-        error_context.context("Stop firewall in guest and host.", logging.info)
+        error_context.context("Stop firewall in guest and host.", test.log.info)
         try:
             process.run(firewall_flush, shell=True)
         except Exception:
-            logging.warning("Could not stop firewall in host")
+            test.log.warning("Could not stop firewall in host")
 
         try:
             session_serial.cmd(firewall_flush)
         except Exception:
-            logging.warning("Could not stop firewall in guest")
+            test.log.warning("Could not stop firewall in guest")
 
         try:
             error_context.context(("Run subtest netperf_stress between"
-                                   " host and guest.", logging.info))
+                                   " host and guest.", test.log.info))
             stress_thread = None
             wait_time = int(params.get("wait_bg_time", 60))
             bg_stress_run_flag = params.get("bg_stress_run_flag")
@@ -136,10 +135,10 @@ def run(test, params, env):
             stress_thread.start()
             utils_misc.wait_for(lambda: wait_time, 0, 1,
                                 "Wait netperf_stress test start")
-            logging.info("Sleep %ss before killing the VM", vm_wait_time)
+            test.log.info("Sleep %ss before killing the VM", vm_wait_time)
             time.sleep(vm_wait_time)
             msg = "During netperf running, Check that we can kill VM with signal 0"
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             kill_and_check(test, vm)
         finally:
             try:
@@ -150,9 +149,9 @@ def run(test, params, env):
     def netdriver_kill_problem(test, session_serial):
         times = params.get_numeric("repeat_times", 10)
         modules = get_ethernet_driver(session_serial)
-        logging.debug("Guest network driver(s): %s", modules)
+        test.log.debug("Guest network driver(s): %s", modules)
         msg = "Repeatedly load/unload network driver(s) for %s times." % times
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         for i in range(times):
             for module in modules:
                 error_context.context("Unload driver %s. Repeat: %s/%s" %
@@ -164,7 +163,7 @@ def run(test, params, env):
                 session_serial.cmd_output_safe("modprobe %s" % module)
 
         error_context.context("Check that we can kill VM with signal 0.",
-                              logging.info)
+                              test.log.info)
         kill_and_check(test, vm)
 
     vm = env.get_vm(params["main_vm"])

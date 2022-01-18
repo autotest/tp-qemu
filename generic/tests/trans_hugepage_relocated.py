@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 import re
@@ -32,13 +31,13 @@ def run(test, params, env):
                 if nr_hugepages[-2] != nr_hugepages[-1]:
                     time_last = time_stamp
                 elif time_stamp - time_last > wait_time:
-                    logging.info("Huge page size stop changed")
+                    test.log.info("Huge page size stop changed")
                     break
             else:
                 time_last = time_stamp
             time.sleep(sleep_time)
 
-    logging.info("Relocated test start")
+    test.log.info("Relocated test start")
     login_timeout = float(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -65,10 +64,10 @@ def run(test, params, env):
     w_time = int(re.findall(r"alloc_sleep_millisecs:(\d+)", thp_cfg)[0]) / 1000
 
     try:
-        logging.info("Turn off swap in guest")
+        test.log.info("Turn off swap in guest")
         s, o = session.cmd_status_output("swapoff -a")
         if s != 0:
-            logging.warning("Didn't turn off swap in guest")
+            test.log.warning("Didn't turn off swap in guest")
         s, o = session.cmd_status_output("cat /proc/meminfo")
         mem_free_filter = r"MemFree:\s+(.\d+)\s+(\w+)"
         guest_mem_free, guest_unit = re.findall(mem_free_filter, o)[0]
@@ -99,7 +98,7 @@ def run(test, params, env):
         count = vmsm * 1024 / 4
         cmd = "for i in `seq %s`; do dd if=/dev/urandom of=/space/$i" % count
         cmd += " bs=4K count=1 & done"
-        logging.info("Start to make fragment in host")
+        test.log.info("Start to make fragment in host")
         s = process.system(cmd, verbose=False, shell=True)
         if s != 0:
             test.error("Can not dd in host")
@@ -132,9 +131,9 @@ def run(test, params, env):
             mem_increase += last_value - current
             count = 0
         if count > w_step:
-            logging.warning("Memory didn't increase in %s s", (count * s_time))
+            test.log.warning("Memory didn't increase in %s s", (count * s_time))
     if mem_increase < file_size * 0.5:
         test.error("Hugepages allocated can not reach a half: %s/%s"
                    % (mem_increase, file_size))
     session.close()
-    logging.info("Relocated test succeed")
+    test.log.info("Relocated test succeed")

@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 import random
@@ -73,7 +72,7 @@ def run(test, params, env):
         session = reset_guest_udevrules(session, udev_rules_file, rules)
 
     error_context.base_context("Test env prepare")
-    error_context.context("Get NIC interface name in guest.", logging.info)
+    error_context.context("Get NIC interface name in guest.", test.log.info)
     ethname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
     # get ethernet driver from '/sys' directory.
     # ethtool can do the same thing and doesn't care about os type.
@@ -83,10 +82,10 @@ def run(test, params, env):
     readlink_cmd = params.get("readlink_command", "readlink -e")
     driver = os.path.basename(session.cmd("%s %s" % (readlink_cmd,
                                                      sys_path)).strip())
-    logging.info("The guest interface %s using driver %s", ethname, driver)
+    test.log.info("The guest interface %s using driver %s", ethname, driver)
 
     error_context.context("Host test file prepare, create %dMB file on host" %
-                          filesize, logging.info)
+                          filesize, test.log.info)
     tmp_dir = data_dir.get_tmp_dir()
     host_path = os.path.join(tmp_dir, "host_file_%s" %
                              utils_misc.generate_random_string(8))
@@ -97,17 +96,17 @@ def run(test, params, env):
     file_checksum = crypto.hash_file(host_path, algorithm="md5")
 
     error_context.context("Guest test file prepare, Copy file %s from host to "
-                          "guest" % host_path, logging.info)
+                          "guest" % host_path, test.log.info)
     vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
     if session.cmd_status("md5sum %s | grep %s" %
                           (guest_path, file_checksum)):
         test.cancel("File MD5SUMs changed after copy to guest")
-    logging.info("Test env prepare successfully")
+    test.log.info("Test env prepare successfully")
 
-    error_context.base_context("Nic driver load/unload testing", logging.info)
+    error_context.base_context("Nic driver load/unload testing", test.log.info)
     session_serial = vm.wait_for_serial_login(timeout=timeout)
     try:
-        error_context.context("Transfer file between host and guest", logging.info)
+        error_context.context("Transfer file between host and guest", test.log.info)
         threads = []
         file_paths = []
         host_file_paths = []
@@ -133,22 +132,22 @@ def run(test, params, env):
 
         time.sleep(5)
         error_context.context("Repeatedly unload/load NIC driver during file "
-                              "transfer", logging.info)
+                              "transfer", test.log.info)
         while not all_threads_done(threads):
             error_context.context("Shutdown the driver for NIC interface.",
-                                  logging.info)
+                                  test.log.info)
             session_serial.cmd_output_safe("ifconfig %s down" % ethname)
-            error_context.context("Unload  NIC driver.", logging.info)
+            error_context.context("Unload  NIC driver.", test.log.info)
             session_serial.cmd_output_safe("modprobe -r %s" % driver)
-            error_context.context("Load NIC driver.", logging.info)
+            error_context.context("Load NIC driver.", test.log.info)
             session_serial.cmd_output_safe("modprobe %s" % driver)
-            error_context.context("Activate NIC driver.", logging.info)
+            error_context.context("Activate NIC driver.", test.log.info)
             session_serial.cmd_output_safe("ifconfig %s up" % ethname)
             session_serial.cmd_output_safe("sleep %s" % random.randint(10, 60))
 
         # files md5sums check
         error_context.context("File transfer finished, checking files md5sums",
-                              logging.info)
+                              test.log.info)
         err_info = []
         for copied_file in file_paths:
             if session_serial.cmd_status("md5sum %s | grep %s" %

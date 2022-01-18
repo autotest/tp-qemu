@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -31,7 +30,7 @@ def run(test, params, env):
 
     try:
         # Swapping test
-        logging.info("Swapping test start")
+        test.log.info("Swapping test start")
         # Parameters of memory information
         # @total: Memory size
         # @free: Free memory size
@@ -62,7 +61,7 @@ def run(test, params, env):
             tmpfs_size = free
 
         if swap_size <= 0:
-            logging.warning("Host does not have swap enabled")
+            test.log.warning("Host does not have swap enabled")
         session = None
         try:
             if not os.path.isdir(mem_path):
@@ -106,7 +105,7 @@ def run(test, params, env):
             if session is not None:
                 process.run("umount %s" % mem_path, shell=True)
 
-        logging.info("Swapping test succeed")
+        test.log.info("Swapping test succeed")
 
     finally:
         if session is not None:

@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 
@@ -83,24 +82,24 @@ def run(test, params, env):
     server_session.cmd("cd %s" % server_studio_path)
     cmd = "%s %s %s" % (os.path.basename(dsso_delete_machine_binary),
                         server_name, client_name)
-    server_session.cmd(cmd, print_func=logging.info)
+    server_session.cmd(cmd, print_func=test.log.info)
     server_session.close()
 
     # Rename the client machine
     client_name = "autotest_%s" % utils_misc.generate_random_string(4)
-    logging.info("Renaming client machine to '%s'", client_name)
+    test.log.info("Renaming client machine to '%s'", client_name)
     cmd = ('wmic computersystem where name="%%computername%%" rename name="%s"'
            % client_name)
     session.cmd(cmd, timeout=600)
 
     # Join the server's workgroup
-    logging.info("Joining workgroup '%s'", server_workgroup)
+    test.log.info("Joining workgroup '%s'", server_workgroup)
     cmd = ('wmic computersystem where name="%%computername%%" call '
            'joindomainorworkgroup name="%s"' % server_workgroup)
     session.cmd(cmd, timeout=600)
 
     # Set the client machine's DNS suffix
-    logging.info("Setting DNS suffix to '%s'", server_dns_suffix)
+    test.log.info("Setting DNS suffix to '%s'", server_dns_suffix)
     cmd = 'reg add %s /v Domain /d "%s" /f' % (regkey, server_dns_suffix)
     session.cmd(cmd, timeout=300)
 
@@ -108,7 +107,7 @@ def run(test, params, env):
     session = vm.reboot(session)
 
     # Access shared resources on the server machine
-    logging.info("Attempting to access remote share on server")
+    test.log.info("Attempting to access remote share on server")
     cmd = r"net use \\%s /user:%s %s" % (server_name, server_username,
                                          server_password)
     end_time = time.time() + 120
@@ -123,12 +122,12 @@ def run(test, params, env):
         test.error("Could not access server share from client machine")
 
     # Install
-    logging.info("Installing DTM client (timeout=%ds)", install_timeout)
+    test.log.info("Installing DTM client (timeout=%ds)", install_timeout)
     install_cmd = r"cmd /c \\%s\%s" % (server_name, install_cmd.lstrip("\\"))
     session.cmd(install_cmd, timeout=install_timeout)
 
     # Setup auto logon
-    logging.info("Setting up auto logon for user '%s'", client_username)
+    test.log.info("Setting up auto logon for user '%s'", client_username)
     cmd = ('reg add '
            '"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\winlogon" '
            '/v "%s" /d "%s" /t REG_SZ /f')

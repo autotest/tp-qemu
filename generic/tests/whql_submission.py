@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -77,7 +76,7 @@ def run(test, params, env):
     for client_name in client_names:
         cmd = "%s %s %s" % (os.path.basename(dsso_delete_machine_binary),
                             server_name, client_name)
-        server_session.cmd(cmd, print_func=logging.debug)
+        server_session.cmd(cmd, print_func=test.log.debug)
 
     # Reboot the client machines
     sessions = utils_misc.parallel((vm.reboot, (session,))
@@ -110,7 +109,7 @@ def run(test, params, env):
     # error occurs
     def find_prompt(test, prompt):
         m, o = server_session.read_until_last_line_matches(
-            [prompt, server_session.prompt], print_func=logging.info,
+            [prompt, server_session.prompt], print_func=test.log.info,
             timeout=600)
         if m != 0:
             errors = re.findall("^Error:.*$", o, re.I | re.M)
@@ -172,7 +171,7 @@ def run(test, params, env):
 
     # Wait for the automation program to terminate
     try:
-        o = server_session.read_up_to_prompt(print_func=logging.info,
+        o = server_session.read_up_to_prompt(print_func=test.log.info,
                                              timeout=test_timeout + 300)
         # (test_timeout + 300 is used here because the automation program is
         # supposed to terminate cleanly on its own when test_timeout expires)
@@ -221,7 +220,7 @@ def run(test, params, env):
     # Print result summary (both to the regular logs and to a file named
     # 'summary' in test.debugdir)
     def print_summary_line(f, line):
-        logging.info(line)
+        test.log.info(line)
         f.write(line + "\n")
     if results:
         # Make sure all results have the required keys
@@ -240,8 +239,8 @@ def run(test, params, env):
         results.sort(reverse=True)
         results = [r[-1] for r in results]
         # Print results
-        logging.info("")
-        logging.info("Result summary:")
+        test.log.info("")
+        test.log.info("Result summary:")
         name_length = max(len(r["job"]) for r in results)
         fmt = "%%-6s %%-%ds %%-15s %%-8s %%-8s %%-8s %%-15s" % name_length
         f = open(os.path.join(test.debugdir, "summary"), "w")
@@ -254,7 +253,7 @@ def run(test, params, env):
                                          r["pass"], r["fail"], r["notrun"],
                                          r["notapplicable"]))
         f.close()
-        logging.info("(see logs and HTML reports in %s)", test.debugdir)
+        test.log.info("(see logs and HTML reports in %s)", test.debugdir)
 
     # Kill the client VMs and fail if the automation program did not terminate
     # on time

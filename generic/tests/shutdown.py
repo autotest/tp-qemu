@@ -1,5 +1,4 @@
 import time
-import logging
 import re
 
 from virttest import utils_test
@@ -32,16 +31,16 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
         error_context.base_context("shutting down the VM %s/%s" %
-                                   (i + 1, shutdown_count), logging.info)
+                                   (i + 1, shutdown_count), test.log.info)
         if params.get("setup_runlevel") == "yes":
-            error_context.context("Setup the runlevel for guest", logging.info)
+            error_context.context("Setup the runlevel for guest", test.log.info)
             utils_test.qemu.setup_runlevel(params, session)
 
         if shutdown_method == "shell":
             # Send a shutdown command to the guest's shell
             session.sendline(shutdown_command)
             error_context.context("waiting VM to go down (shutdown shell cmd)",
-                                  logging.info)
+                                  test.log.info)
         elif shutdown_method == "system_powerdown":
             # Sleep for a while -- give the guest a chance to finish booting
             time.sleep(sleep_time)
@@ -49,7 +48,7 @@ def run(test, params, env):
             vm.monitor.system_powerdown()
             error_context.context("waiting VM to go down "
                                   "(system_powerdown monitor cmd)",
-                                  logging.info)
+                                  test.log.info)
 
         if not vm.wait_for_shutdown(360):
             test.fail("Guest refuses to go down")

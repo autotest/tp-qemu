@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import utils_test
 from virttest import utils_net
@@ -15,7 +13,7 @@ def _ping_with_params(test, params, dest, interface=None,
             cmd += " -S %s" % interface
         flood_minutes = float(params.get("flood_minutes", 10))
         status, output = utils_net.raw_ping(cmd, flood_minutes * 60,
-                                            session, logging.debug)
+                                            session, test.log.debug)
     else:
         timeout = float(count) * 1.5
         status, output = utils_net.ping(dest, count, interval, interface,
@@ -57,7 +55,7 @@ def run(test, params, env):
     pre_cmd = params.get("pre_cmd", None)
     vm = env.get_vm(params["main_vm"])
 
-    error_context.context("Login to guest", logging.info)
+    error_context.context("Login to guest", test.log.info)
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
 
@@ -73,9 +71,9 @@ def run(test, params, env):
                 ext_host = process.system_output(ext_host_get_cmd, shell=True)
                 ext_host = ext_host.decode()
             except process.CmdError:
-                logging.warn("Can't get specified host with cmd '%s',"
-                             " Fallback to default host '%s'",
-                             ext_host_get_cmd, ext_host)
+                test.log.warn("Can't get specified host with cmd '%s',"
+                              " Fallback to default host '%s'",
+                              ext_host_get_cmd, ext_host)
         dest_ips = [ext_host]
         sessions = [session]
         interfaces = [None]
@@ -99,25 +97,25 @@ def run(test, params, env):
             interfaces.append(interface)
 
     for (ip, interface, session) in zip(dest_ips, interfaces, sessions):
-        error_context.context("Ping test with dest: %s" % ip, logging.info)
+        error_context.context("Ping test with dest: %s" % ip, test.log.info)
 
         # ping with different size & interval
         for size in packet_sizes:
             for interval in interval_times:
-                logging.info("Ping with packet size: %s and interval: %s",
-                             size, interval)
+                test.log.info("Ping with packet size: %s and interval: %s",
+                              size, interval)
                 _ping_with_params(test, params, ip, interface, size,
                                   interval, session=session, count=counts)
 
         # ping with flood
         if not ping_ext_host or params.get("os_type") == "linux":
-            error_context.context("Flood ping test", logging.info)
+            error_context.context("Flood ping test", test.log.info)
             _ping_with_params(test, params, ip, interface,
                               session=session, flood=True)
 
             # ping to check whether the network is alive
             error_context.context("Ping test after flood ping,"
                                   " Check if the network is still alive",
-                                  logging.info)
+                                  test.log.info)
             _ping_with_params(test, params, ip, interface,
                               session=session, count=counts)

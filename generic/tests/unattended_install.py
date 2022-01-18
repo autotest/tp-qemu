@@ -1,4 +1,3 @@
-import logging
 import threading
 import time
 import random
@@ -37,7 +36,7 @@ def run(test, params, env):
             vm_params["main_vm"] = vm
             unattended_install.run(test, vm_params, env)
         except Exception as info:
-            logging.error(info)
+            test.log.error(info)
             error_flag = True
 
     if not params.get("master_images_clone"):

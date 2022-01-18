@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -22,9 +21,9 @@ def run(test, params, env):
 
     def kill_vm_by_signal_15():
         vm_pid = vm.get_pid()
-        logging.info("VM: %s, PID: %s", vm.name, vm_pid)
+        test.log.info("VM: %s, PID: %s", vm.name, vm_pid)
         thread_pid = os.getpid()
-        logging.info("Main Process ID is %s", thread_pid)
+        test.log.info("Main Process ID is %s", thread_pid)
         utils_misc.kill_process_tree(vm_pid, 15)
         return thread_pid
 
@@ -41,13 +40,13 @@ def run(test, params, env):
 
     re_str = "terminating on signal 15 from pid ([0-9]+)"
     re_str = params.get("qemu_error_re", re_str)
-    error_context.context("Kill VM by signal 15", logging.info)
+    error_context.context("Kill VM by signal 15", test.log.info)
     thread_pid = kill_vm_by_signal_15()
     # Wait QEMU print error log.
     results = utils_misc.wait_for(lambda: killer_report(re_str),
                                   60, 2, 2)
     error_context.context("Check that QEMU can report who killed it",
-                          logging.info)
+                          test.log.info)
     if not results:
         test.fail("QEMU did not tell us who killed it")
     elif int(results[-1]) != thread_pid:
@@ -56,4 +55,4 @@ def run(test, params, env):
         msg += "QEMU reported PID: %s" % int(results[-1])
         test.fail(msg)
     else:
-        logging.info("QEMU identified the process that killed it properly")
+        test.log.info("QEMU identified the process that killed it properly")

@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import process
 
@@ -41,7 +40,7 @@ def run(test, params, env):
         interval_size = int(interval_size)
         write_unit = ""
 
-    error_context.context("Init images for testing", logging.info)
+    error_context.context("Init images for testing", test.log.info)
     sn_list = []
     for img in re.split(r"\s+", image_chain.strip()):
         image_params = params.object_params(img)
@@ -51,7 +50,7 @@ def run(test, params, env):
 
     # Write to the test image
     error_context.context("Prepare the image with write a certain size block",
-                          logging.info)
+                          test.log.info)
     dropcache = 'echo 3 > /proc/sys/vm/drop_caches && sleep 5'
     snapshot_file = sn_list[test_image][0].image_filename
 
@@ -60,7 +59,7 @@ def run(test, params, env):
         writecmd0 = writecmd % (write_round, offset, interval_size,
                                 write_unit, interval_size, write_unit)
         iocmd0 = iocmd % (writecmd0, io_options, snapshot_file)
-        logging.info("writecmd-offset-0: %s", writecmd0)
+        test.log.info("writecmd-offset-0: %s", writecmd0)
         process.run(dropcache, shell=True)
         output = process.run(iocmd0, shell=True)
     else:
@@ -68,21 +67,21 @@ def run(test, params, env):
         writecmd1 = writecmd % (write_round, offset, interval_size,
                                 write_unit, interval_size, write_unit)
         iocmd1 = iocmd % (writecmd1, io_options, snapshot_file)
-        logging.info("writecmd-offset-1: %s", writecmd1)
+        test.log.info("writecmd-offset-1: %s", writecmd1)
         process.run(dropcache, shell=True)
         output = process.run(iocmd1, shell=True)
 
     error_context.context("Do one operations to the image and "
-                          "measure the time", logging.info)
+                          "measure the time", test.log.info)
 
     if op_type == "read":
         readcmd = opcmd % (io_options, snapshot_file)
-        logging.info("read: %s", readcmd)
+        test.log.info("read: %s", readcmd)
         process.run(dropcache, shell=True)
         output = process.run(readcmd, shell=True)
     elif op_type == "commit":
         commitcmd = opcmd % (cache_mode, snapshot_file)
-        logging.info("commit: %s", commitcmd)
+        test.log.info("commit: %s", commitcmd)
         process.run(dropcache, shell=True)
         output = process.run(commitcmd, shell=True)
     elif op_type == "rebase":
@@ -91,19 +90,19 @@ def run(test, params, env):
         new_base_img.create(params.object_params(new_base))
         rebasecmd = opcmd % (new_base_img.image_filename,
                              cache_mode, snapshot_file)
-        logging.info("rebase: %s", rebasecmd)
+        test.log.info("rebase: %s", rebasecmd)
         process.run(dropcache, shell=True)
         output = process.run(rebasecmd, shell=True)
     elif op_type == "convert":
         convertname = sn_list[test_image][0].image_filename + "_convert"
         convertcmd = opcmd % (snapshot_file, cache_mode, convertname)
-        logging.info("convert: %s", convertcmd)
+        test.log.info("convert: %s", convertcmd)
         process.run(dropcache, shell=True)
         output = process.run(convertcmd, shell=True)
 
-    error_context.context("Result recording", logging.info)
+    error_context.context("Result recording", test.log.info)
     result_file = open("%s/%s_%s_results" %
                        (test.resultsdir, "qcow2perf", op_type), 'w')
     result_file.write("%s:%s\n" % (op_type, output))
-    logging.info("%s takes %s", op_type, output)
+    test.log.info("%s takes %s", op_type, output)
     result_file.close()

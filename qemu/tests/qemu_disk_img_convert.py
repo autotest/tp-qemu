@@ -8,6 +8,8 @@ from virttest import error_context
 
 from qemu.tests import qemu_disk_img
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class ConvertTest(qemu_disk_img.QemuImgTest):
 
@@ -21,7 +23,7 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         """
         create image file from one format to another format
         """
-        error_context.context("convert image file", logging.info)
+        error_context.context("convert image file", LOG_JOB.info)
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)
@@ -43,7 +45,7 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         """
         for mode in t_params.objects("compare_mode_list"):
             error_context.context("Compare images in %s mode" % mode,
-                                  logging.info)
+                                  LOG_JOB.info)
             cmd_result = None
             is_strict = ("strict" == mode)
             image1 = self.image_filename
@@ -86,7 +88,7 @@ def run(test, params, env):
         cluster_size_lst.append(None)
     for cluster_size in cluster_size_lst:
         if cluster_size is not None:
-            logging.info("convert image file with cluster_size=%s.", cluster_size)
+            test.log.info("convert image file with cluster_size=%s.", cluster_size)
         n_params = convert_test.convert({"image_cluster_size": cluster_size})
         convert_test.compare_test(n_params)
         convert_test.verify_info(n_params)

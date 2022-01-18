@@ -1,4 +1,3 @@
-import logging
 import random
 import json
 import string
@@ -33,7 +32,7 @@ def run(test, params, env):
 
     def _verify_qemu_img_map(output, str_len):
         """Verify qemu-img map's output."""
-        logging.info("Verify the dumped mete-data of the unaligned image.")
+        test.log.info("Verify the dumped mete-data of the unaligned image.")
         qemu_path = utils_misc.get_qemu_binary(params)
         qemu_version = env_process._get_qemu_version(qemu_path)
         match = re.search(r'[0-9]+\.[0-9]+\.[0-9]+(\-[0-9]+)?', qemu_version)
@@ -59,12 +58,12 @@ def run(test, params, env):
     img_param = params.object_params("test")
     img = QemuImg(img_param, data_dir.get_data_dir(), "test")
 
-    logging.info("Create a new file %s using truncate.", img.image_filename)
+    test.log.info("Create a new file %s using truncate.", img.image_filename)
     process.run("rm -f %s" % img.image_filename)
     process.run("truncate -s 1G %s " % img.image_filename)
 
     random_str, str_len = _generate_random_string()
-    logging.info("Write '%s' into the file %s.", random_str, img.image_filename)
+    test.log.info("Write '%s' into the file %s.", random_str, img.image_filename)
     process.run("echo -n '%s' > %s" % (random_str, img.image_filename),
                 shell=True)
     res = img.map(output="json")

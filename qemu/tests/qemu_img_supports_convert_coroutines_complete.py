@@ -1,5 +1,4 @@
 import os
-import logging
 
 from avocado.utils import process
 from virttest import data_dir, utils_package
@@ -29,12 +28,12 @@ def run(test, params, env):
 
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s", img.image_filename)
+        test.log.info("Run qemu-io %s", img.image_filename)
         q = QemuIOSystem(test, params, img.image_filename)
         q.cmd_output(cmd, 120)
 
     def _create_error_cfg(file):
-        logging.info("Create error cfg %s.", file)
+        test.log.info("Create error cfg %s.", file)
         error_cfg = ('[inject-error]\nevent = "write_aio"\n'
                      'sector = "819200"\nonce = "on"')
         with open(file, "w") as cfg:
@@ -55,7 +54,7 @@ def run(test, params, env):
             os.unlink(file)
             pkg.remove()
 
-    logging.info("Create source and target images.")
+    test.log.info("Create source and target images.")
     for tag in params["images"].split():
         img, img_param = _get_img_obj_and_params(tag)
         img.create(img_param)

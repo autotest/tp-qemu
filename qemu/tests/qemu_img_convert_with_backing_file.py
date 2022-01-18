@@ -1,5 +1,4 @@
 import json
-import logging
 
 from virttest import data_dir
 from virttest import qemu_storage
@@ -51,16 +50,16 @@ def run(test, params, env):
         source_cache_mode = params.get("source_cache_mode")
         source_params["convert_target"] = convert_target.tag
         source_params["convert_backing_file"] = backing_file
-        logging.info("Convert from %s to %s",
-                     convert_source.tag, convert_target.tag)
+        test.log.info("Convert from %s to %s",
+                      convert_source.tag, convert_target.tag)
         fail_on((process.CmdError,))(convert_source.convert)(
-                source_params, root_dir, cache_mode,
-                source_cache_mode, skip_target_creation)
+            source_params, root_dir, cache_mode,
+            source_cache_mode, skip_target_creation)
 
     def check_image_size(image):
         """Check image is not fully allocated"""
-        logging.info("Verify qemu-img does not allocate the "
-                     "entire image after image convert")
+        test.log.info("Verify qemu-img does not allocate the "
+                      "entire image after image convert")
         info = json.loads(image.info(output="json"))
         virtual_size = info["virtual-size"]
         actual_size = info["actual-size"]
@@ -76,19 +75,19 @@ def run(test, params, env):
     guest_temp_file = params["guest_temp_file"]
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
-    logging.info("Create temporary file on guest: %s", guest_temp_file)
+    test.log.info("Create temporary file on guest: %s", guest_temp_file)
     img_utils.save_random_file_to_vm(vm, guest_temp_file, 2048 * 512, sync_bin)
-    logging.info("Get md5 value of the temporary file")
+    test.log.info("Get md5 value of the temporary file")
     md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
     session.close()
     vm.destroy()
 
     root_dir = data_dir.get_data_dir()
     base1, sn1 = prepare_images_from_params(params["image_chain1"], params)
-    logging.info("Create snapshot %s", sn1.tag)
+    test.log.info("Create snapshot %s", sn1.tag)
     sn1.create(sn1.params)
     base2, sn2 = prepare_images_from_params(params["image_chain2"], params)
-    logging.info("Create snapshot %s", sn2.tag)
+    test.log.info("Create snapshot %s", sn2.tag)
     base2.create(base2.params)
     sn2.create(sn2.params)
 
@@ -97,7 +96,7 @@ def run(test, params, env):
 
     vm = img_utils.boot_vm_with_images(test, params, env, (sn2.tag,))
     session = vm.wait_for_login()
-    logging.info("Verify md5 value of the temporary file")
+    test.log.info("Verify md5 value of the temporary file")
     img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
                            md5_value_to_check=md5_value)
     session.close()
@@ -106,7 +105,7 @@ def run(test, params, env):
     check_image_size(sn1)
     check_image_size(sn2)
 
-    logging.info("Verify the snapshot chain of %s", sn2.tag)
+    test.log.info("Verify the snapshot chain of %s", sn2.tag)
     info = json.loads(sn2.info(output="json"))
     full_backing_filename = info["full-backing-filename"]
     if full_backing_filename != base2.image_filename:

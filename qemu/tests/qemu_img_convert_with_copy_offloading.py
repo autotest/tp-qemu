@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest import data_dir
@@ -24,12 +22,12 @@ def run(test, params, env):
     """
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s", img.image_filename)
+        test.log.info("Run qemu-io %s", img.image_filename)
         QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
 
     def _convert_with_copy_offloading_and_verify(src, tgt):
         """Verify whether copy_offloading works."""
-        logging.info("Verify whether copy_offloading works for commit.")
+        test.log.info("Verify whether copy_offloading works for commit.")
         cmd = ("strace -e trace=copy_file_range -f qemu-img convert -C -f "
                "%s %s -O %s %s " % (src.image_format, src.image_filename,
                                     tgt.image_format, tgt.image_filename))

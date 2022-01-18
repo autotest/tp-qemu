@@ -1,5 +1,3 @@
-import logging
-
 from virttest import data_dir
 from virttest import qemu_storage
 
@@ -28,9 +26,9 @@ def run(test, params, env):
     guest_temp_file = params["guest_temp_file"]
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
-    logging.debug("Create temporary file on guest: %s", guest_temp_file)
+    test.log.debug("Create temporary file on guest: %s", guest_temp_file)
     img_utils.save_random_file_to_vm(vm, guest_temp_file, 2048 * 512, sync_bin)
-    logging.debug("Get md5 value of the temporary file")
+    test.log.debug("Get md5 value of the temporary file")
     md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
     session.close()
     vm.destroy()
@@ -42,12 +40,12 @@ def run(test, params, env):
     target_params = params.object_params(convert_target)
     source = qemu_storage.QemuImg(source_params, root_dir, convert_source)
     target = qemu_storage.QemuImg(target_params, root_dir, convert_target)
-    logging.debug("Convert from %s to %s", convert_source, convert_target)
+    test.log.debug("Convert from %s to %s", convert_source, convert_target)
     fail_on((process.CmdError,))(source.convert)(source_params, root_dir)
 
     vm = img_utils.boot_vm_with_images(test, params, env, (convert_target,))
     session = vm.wait_for_login()
-    logging.debug("Verify md5 value of the temporary file")
+    test.log.debug("Verify md5 value of the temporary file")
     img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
                            md5_value_to_check=md5_value)
     session.close()

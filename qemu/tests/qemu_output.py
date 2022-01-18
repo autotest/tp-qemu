@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 
@@ -20,12 +19,12 @@ def run(test, params, env):
     """
 
     def check_qemu_output():
-        error_context.context('Check qemu outputs.', logging.info)
+        error_context.context('Check qemu outputs.', test.log.info)
         output = vm.process.get_output()
         if re.search(check_pattern, output, re.I):
-            logging.debug('qemu outputs: %s', output)
+            test.log.debug('qemu outputs: %s', output)
             test.fail('Error message is captured in qemu output.')
-        logging.info('No error message was found in the qemu output.')
+        test.log.info('No error message was found in the qemu output.')
 
     check_pattern = params['check_pattern']
 

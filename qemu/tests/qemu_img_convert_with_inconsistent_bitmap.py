@@ -1,5 +1,4 @@
 import json
-import logging
 
 from avocado.utils import process
 
@@ -45,7 +44,7 @@ def run(test, params, env):
 
     def check_bitmap_in_image(image, bitmap_name, inconsistent=False):
         """Check bitmap info in image"""
-        logging.info("Verify bitmap info in image")
+        test.log.info("Verify bitmap info in image")
         info = json.loads(image.info(output="json"))
         bitmaps_info = info["format-specific"]["data"].get("bitmaps")
         for bitmap in bitmaps_info:
@@ -58,7 +57,7 @@ def run(test, params, env):
 
     def check_bitmap_not_in_image(image, bitmap_name):
         """Check bitmap info not in image"""
-        logging.info("Verify bitmap info not in image")
+        test.log.info("Verify bitmap info not in image")
         info = json.loads(image.info(output="json"))
         bitmaps_info = info["format-specific"]["data"].get("bitmaps")
         for bitmap in bitmaps_info:

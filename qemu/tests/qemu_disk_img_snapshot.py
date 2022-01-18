@@ -1,4 +1,3 @@
-import logging
 from qemu.tests import qemu_disk_img
 from avocado.core import exceptions
 
@@ -27,32 +26,32 @@ def run(test, params, env):
     t_file = params["guest_file_name"]
     snapshot_test = qemu_disk_img.QemuImgTest(test, params, env, base_image)
 
-    logging.info("Step1. save file md5sum before create snapshot.")
+    test.log.info("Step1. save file md5sum before create snapshot.")
     snapshot_test.start_vm(params)
     md5 = snapshot_test.save_file(t_file)
     if not md5:
         raise exceptions.TestError("Fail to save tmp file.")
     snapshot_test.destroy_vm()
 
-    logging.info("Step2. create snapshot and check the result.")
+    test.log.info("Step2. create snapshot and check the result.")
     snapshot_tag = snapshot_test.snapshot_create()
     output = snapshot_test.snapshot_list()
     if snapshot_tag not in output:
         raise exceptions.TestFail("Snapshot created failed or missed;"
                                   "snapshot list is: \n%s" % output)
 
-    logging.info("Step3. change tmp file before apply snapshot")
+    test.log.info("Step3. change tmp file before apply snapshot")
     snapshot_test.start_vm(params)
     change_md5 = snapshot_test.save_file(t_file)
     if not change_md5 or change_md5 == md5:
         raise exceptions.TestError("Fail to change tmp file.")
     snapshot_test.destroy_vm()
 
-    logging.info("Step4. apply snapshot.")
+    test.log.info("Step4. apply snapshot.")
     snapshot_test.snapshot_apply()
     snapshot_test.snapshot_del()
 
-    logging.info("Step5. check md5sum after apply snapshot.")
+    test.log.info("Step5. check md5sum after apply snapshot.")
     snapshot_test.start_vm(params)
     ret = snapshot_test.check_file(t_file, md5)
     if not ret:

@@ -1,7 +1,6 @@
 import os
 import time
 import re
-import logging
 import shutil
 import tempfile
 import signal
@@ -77,7 +76,7 @@ def run(test, params, env):
         """
         cmd += " check %s" % img
         error_context.context("Checking image '%s' by command '%s'"
-                              % (img, cmd), logging.info)
+                              % (img, cmd), test.log.info)
         try:
             output = process.system_output(cmd, verbose=False).decode()
         except process.CmdError as err:
@@ -102,7 +101,7 @@ def run(test, params, env):
         create_image_cmd = params["create_image_cmd"]
         create_image_cmd = create_image_cmd % test_image
         msg = " Create image %s by command %s" % (test_image, create_image_cmd)
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         process.system(create_image_cmd, verbose=False, shell=True)
         status, output = _check(cmd, test_image)
         if not status:
@@ -159,7 +158,7 @@ def run(test, params, env):
             cmd += " %s" % img_size
 
         msg = "Creating image %s by command %s" % (img_name, cmd)
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         process.system(cmd, verbose=False)
         status, out = _check(qemu_img_binary, img_name)
         if not status:
@@ -189,7 +188,7 @@ def run(test, params, env):
         send signal "SIGUSR1" to qemu-img without the option -p
         to report progress
         """
-        logging.info("Send signal to qemu-img")
+        test.log.info("Send signal to qemu-img")
         end_time = time.time() + timeout
         while time.time() < end_time:
             pid = process.system_output("pidof qemu-img",
@@ -201,7 +200,7 @@ def run(test, params, env):
         try:
             os.kill(int(pid), signal.SIGUSR1)
         except Exception as error:
-            logging.info("Failed to send signal to qemu-img")
+            test.log.info("Failed to send signal to qemu-img")
             test.error(str(error))
 
     def check_command_output(CmdResult):
@@ -209,7 +208,7 @@ def run(test, params, env):
         Check standard error or standard output of command
         : param CmdResult: a list of CmdResult objects
         """
-        logging.info("Check result of command")
+        test.log.info("Check result of command")
         check_output = params.get("check_output", "exit_status")
         if not hasattr(CmdResult, check_output):
             test.error("Unknown check output '%s'" % check_output)
@@ -260,7 +259,7 @@ def run(test, params, env):
         cmd += " %s %s" % (img_name, output_filename)
         msg = "Converting '%s' from format '%s'" % (img_name, fmt)
         msg += " to '%s'" % output_fmt
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         if show_progress == "off":
             bg = utils_misc.InterruptedThread(send_signal)
             bg.start()
@@ -310,8 +309,8 @@ def run(test, params, env):
         try:
             output = process.system_output(cmd).decode()
         except process.CmdError as err:
-            logging.error("Get info of image '%s' failed: %s",
-                          img, err.result.stderr.decode())
+            test.log.error("Get info of image '%s' failed: %s",
+                           img, err.result.stderr.decode())
             return None
 
         if not sub_info:
@@ -333,12 +332,12 @@ def run(test, params, env):
         :param cmd: qemu-img base command.
         """
         img_info = _info(cmd, image_name)
-        logging.info("Info of image '%s':\n%s", image_name, img_info)
+        test.log.info("Info of image '%s':\n%s", image_name, img_info)
         if image_format not in img_info:
             test.fail("Got unexpected format of image '%s'"
                       " in info test" % image_name)
         if not re.search(r'%s\s+bytes' % normalize_data_size(
-                  image_size, "B"), img_info):
+                image_size, "B"), img_info):
             test.fail("Got unexpected size of image '%s'"
                       " in info test" % image_name)
 
@@ -356,7 +355,7 @@ def run(test, params, env):
             msg = "Created snapshot '%s' in '%s' by command %s" % (sn_name,
                                                                    image_name,
                                                                    crtcmd)
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             cmd_result = process.run(crtcmd, verbose=False, ignore_status=True)
             status, output = cmd_result.exit_status, cmd_result.stdout.decode()
             if status != 0:
@@ -374,7 +373,7 @@ def run(test, params, env):
             delcmd = cmd
             delcmd += " -d %s %s" % (sn_name, image_name)
             msg = "Delete snapshot '%s' by command %s" % (sn_name, delcmd)
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             cmd_result = process.run(delcmd, verbose=False, ignore_status=True)
             status, output = cmd_result.exit_status, cmd_result.stdout.decode()
             if status != 0:
@@ -396,7 +395,7 @@ def run(test, params, env):
         :param cmd: qemu-img base command.
         """
 
-        logging.info("Commit testing started!")
+        test.log.info("Commit testing started!")
         base_image_name = storage.get_image_filename(params,
                                                      data_dir.get_data_dir())
         pre_name = '.'.join(image_name.split('.')[:-1])
@@ -419,22 +418,22 @@ def run(test, params, env):
             create_cmd = "%s create -b %s -F %s -f qcow2 %s" % (
                 cmd, base_image_name, base_image_format, overlay_file_name)
             msg = "Create overlay file by command: %s" % create_cmd
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             try:
                 process.system(create_cmd, verbose=False)
             except process.CmdError:
                 test.fail("Could not create a overlay file!")
-            logging.info("overlay file (%s) created!", overlay_file_name)
+            test.log.info("overlay file (%s) created!", overlay_file_name)
 
             # Set the qemu harddisk to the overlay file
-            logging.info(
+            test.log.info(
                 "Original image_name is: %s", params.get('image_name'))
             params['image_name'] = '.'.join(overlay_file_name.split('.')[:-1])
-            logging.info("Param image_name changed to: %s",
-                         params.get('image_name'))
+            test.log.info("Param image_name changed to: %s",
+                          params.get('image_name'))
 
             msg = "Start a new VM, using overlay file as its harddisk"
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
@@ -445,9 +444,9 @@ def run(test, params, env):
             # Do some changes to the overlay_file harddisk
             try:
                 output = session.cmd(file_create_cmd)
-                logging.info("Output of %s: %s", file_create_cmd, output)
+                test.log.info("Output of %s: %s", file_create_cmd, output)
                 output = session.cmd(file_info_cmd)
-                logging.info("Output of %s: %s", file_info_cmd, output)
+                test.log.info("Output of %s: %s", file_info_cmd, output)
             except Exception as err:
                 test.fail("Could not create commit_testfile in the "
                           "overlay file %s" % err)
@@ -457,15 +456,15 @@ def run(test, params, env):
             cmitcmd = "%s commit -f %s %s" % (cmd, image_format,
                                               overlay_file_name)
             error_context.context("Committing image by command %s" % cmitcmd,
-                                  logging.info)
+                                  test.log.info)
             try:
                 process.system(cmitcmd, verbose=False)
             except process.CmdError:
                 test.fail("Could not commit the overlay file")
-            logging.info("overlay file (%s) committed!", overlay_file_name)
+            test.log.info("overlay file (%s) committed!", overlay_file_name)
 
             msg = "Start a new VM, using image_name as its harddisk"
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             params['image_name'] = pre_name
             vm_name = params['main_vm']
             env_process.preprocess_vm(test, params, env, vm_name)
@@ -475,7 +474,7 @@ def run(test, params, env):
             session = vm.wait_for_login(timeout=timeout)
             try:
                 output = session.cmd(file_exist_chk_cmd)
-                logging.info("Output of %s: %s", file_exist_chk_cmd, output)
+                test.log.info("Output of %s: %s", file_exist_chk_cmd, output)
                 session.cmd(file_del_cmd)
             except Exception:
                 test.fail("Could not find commit_testfile after a commit")
@@ -505,7 +504,7 @@ def run(test, params, env):
         cmd += " -b %s -F %s %s" % (base_img, backing_fmt, img_name)
         msg = "Trying to rebase '%s' to '%s' by command %s" % (img_name,
                                                                base_img, cmd)
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         if show_progress == "off":
             bg = utils_misc.InterruptedThread(send_signal)
             bg.start()
@@ -595,7 +594,7 @@ def run(test, params, env):
                 cmd += "%s=%s," % (option, params.get(option))
             cmd = cmd.rstrip(',')
         cmd += " %s" % img_name
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         check_command_output(process.run(cmd, ignore_status=True))
 
     def amend_test(cmd):
@@ -641,7 +640,7 @@ def run(test, params, env):
         dd_file_size = params.get('dd_file_size', 1000)
         image_name = "%s.%s" % (img_name, img_fmt)
         msg = "Try to boot vm with image %s" % image_name
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         vm_name = params.get("main_vm")
         dd_timeout = int(params.get("dd_timeout", 60))
         params['vms'] = vm_name
@@ -658,7 +657,7 @@ def run(test, params, env):
             if status != 0:
                 test.error("dd failed")
 
-        error_context.context("Shutdown guest", logging.info)
+        error_context.context("Shutdown guest", test.log.info)
         try:
             vm.graceful_shutdown(timeout=login_timeout)
         except Exception:
@@ -682,7 +681,7 @@ def run(test, params, env):
             gluster.glusterfs_mount(g_uri, mount_point)
             image_name = os.path.basename(image_file)
             image_file = os.path.join(mount_point, image_name)
-        logging.warn("backup %s to %s", image_file, test.resultsdir)
+        test.log.warn("backup %s to %s", image_file, test.resultsdir)
         shutil.copy(image_file, test.resultsdir)
         backing_file = _info(qemu_img, image_file, "backing file", None)
         if backing_file:
@@ -696,5 +695,5 @@ def run(test, params, env):
 
     # Here starts test
     subcommand = params["subcommand"]
-    error_context.context("Running %s_test(cmd)" % subcommand, logging.info)
+    error_context.context("Running %s_test(cmd)" % subcommand, test.log.info)
     eval("%s_test(cmd)" % subcommand)

@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import process
 
@@ -53,12 +52,12 @@ def run(test, params, env):
         if not re.findall(r"%s\.(.*)=(.*)" %
                           device_name, device_support_option):
             test.fail("Qemu option check Failed")
-        logging.info("Qemu options check successful. output is:\n%s",
-                     device_support_option)
+        test.log.info("Qemu options check successful. output is:\n%s",
+                      device_support_option)
 
     device_name = params.get("device_name")
     qemu_binary = utils_misc.get_qemu_binary(params)
 
     error_context.context("Get qemu support %s device options" % device_name,
-                          logging.info)
+                          test.log.info)
     get_device_option(qemu_binary, device_name)

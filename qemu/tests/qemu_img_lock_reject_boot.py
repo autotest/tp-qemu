@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import env_process
 
@@ -22,7 +20,7 @@ def run(test, params, env):
     """
     def _create_os_snapshot():
         """Crate one external snapshot based on the os image."""
-        logging.info("Create a qcow2 snapshot based on the os image.")
+        test.log.info("Create a qcow2 snapshot based on the os image.")
         # workaround to asign syetem disk's image_name to image_name_image1
         params["image_name_image1"] = params["image_name"]
         gen = generate_base_snapshot_pair(params["image_chain"])
@@ -30,7 +28,7 @@ def run(test, params, env):
         QemuImgTest(test, params, env, snapshot).create_snapshot()
 
     def _verify_write_lock_err_msg(test, output, img_file=None):
-        logging.info("Verify qemu-img write lock err msg.",)
+        test.log.info("Verify qemu-img write lock err msg.",)
         msgs = ['"write" lock',
                 'Is another process using the image']
         if img_file:
@@ -48,7 +46,7 @@ def run(test, params, env):
         vm1 = env.get_vm("avocado-vt-vm1")
     vm2 = vm1.clone(name=params["second_vm_name"])
 
-    logging.info("Boot one vm from the base os image.")
+    test.log.info("Boot one vm from the base os image.")
     vm1.create()
     vm1.verify_status("running")
 
@@ -57,9 +55,9 @@ def run(test, params, env):
         vm2.params["boot_drive_image1"] = "no"
         vm2.params["boot_drive_sn"] = "yes"
         img_file = None
-        logging.info("Boot a seconde vm from the snapshot.")
+        test.log.info("Boot a seconde vm from the snapshot.")
     else:
-        logging.info("Boot a seconde vm from the same os image.")
+        test.log.info("Boot a seconde vm from the same os image.")
 
     try:
         vm2.devices, _ = vm2.make_create_command()

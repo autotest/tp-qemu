@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -25,13 +24,13 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     if params["unit_test"] == "yes":
-        error_context.context("Prepare unit test on host", logging.info)
+        error_context.context("Prepare unit test on host", test.log.info)
         cmds = [params["get_htm_dir"], params["compile_htm"]]
         for cmd in cmds:
             s, o = process.getstatusoutput(cmd, timeout=3600)
             if s:
                 test.error("Failed to run cmd '%s', output: %s" % (cmd, o))
-        error_context.context("Run htm unit test on host", logging.info)
+        error_context.context("Run htm unit test on host", test.log.info)
         s, o = process.getstatusoutput(params["run_htm_test"], timeout=3600)
         if s:
             test.fail("Run htm unit test failed, output: %s" % o)

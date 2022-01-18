@@ -1,5 +1,4 @@
 import ast
-import logging
 import re
 
 from virttest import error_context
@@ -38,21 +37,21 @@ def run(test, params, env):
         """Shutdown vm."""
         shutdown_command = params["shutdown_cmd"]
         error_context.context(
-            "Shutting down VM by \"%s\"." % shutdown_command, logging.info)
+            "Shutting down VM by \"%s\"." % shutdown_command, test.log.info)
         session.sendline(shutdown_command)
         if not vm.wait_for_shutdown():
             test.fail("Failed to shutdown vm.")
 
     def _reboot_vm(session):
         """Reboot vm."""
-        error_context.context("Rebooting VM.", logging.info)
+        error_context.context("Rebooting VM.", test.log.info)
         return vm.reboot(session=session, timeout=360)
 
     def _check_cdrom_info_by_qmp(items):
         """Check the cdrom device info by qmp."""
         error_context.context(
             'Check if the info \"%s\" are match with the output of query-block.' %
-            str(items), logging.info)
+            str(items), test.log.info)
         blocks = vm.monitor.info_block()
         for key, val in items.items():
             if (key == 'device' and val == dev_id) or blocks[dev_id][key] == val:
@@ -62,7 +61,7 @@ def run(test, params, env):
 
     def _check_cdrom_info_by_guest():
         """Check cdrom info inside guest."""
-        logging.info('Check if the file \"%s\" is in the cdrom.', iso_name)
+        test.log.info('Check if the file \"%s\" is in the cdrom.', iso_name)
         cmd_map = {'linux': 'mount /dev/sr{0} /mnt && ls /mnt && umount /mnt',
                    'windows': 'dir {0}:\\'}
         if is_windows:

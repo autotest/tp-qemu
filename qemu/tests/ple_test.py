@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import cpu
 from avocado.utils import process
@@ -35,7 +34,7 @@ def run(test, params, env):
         """
         Run unixbench inside guest, return benchmark scores
         """
-        error_context.context("Run unixbench inside guest", logging.info)
+        error_context.context("Run unixbench inside guest", test.log.info)
         output = session.cmd_output_safe(cmd, timeout=4800)
         scores = re.findall(r"System Benchmarks Index Score\s+(\d+\.?\d+)",
                             output)
@@ -45,7 +44,7 @@ def run(test, params, env):
     mod_param = params["mod_param"]
     read_cmd = "cat /sys/module/%s/parameters/%s" % (module, mod_param)
     origin_ple = process.getoutput(read_cmd)
-    error_context.context("Enable ple on host if it's disabled", logging.info)
+    error_context.context("Enable ple on host if it's disabled", test.log.info)
     if origin_ple == 0:
         reload_module(params["ple_value"])
 
@@ -62,15 +61,15 @@ def run(test, params, env):
     try:
         cmd = params["run_unixbench"]
         scores_on = run_unixbench(cmd)
-        logging.info("Unixbench scores are %s when ple is on", scores_on)
+        test.log.info("Unixbench scores are %s when ple is on", scores_on)
         vm.destroy()
 
-        error_context.context("Disable ple on host", logging.info)
+        error_context.context("Disable ple on host", test.log.info)
         reload_module(0)
         vm.create(params=params)
         session = vm.wait_for_login()
         scores_off = run_unixbench(cmd)
-        logging.info("Unixbench scores are %s when ple is off", scores_off)
+        test.log.info("Unixbench scores are %s when ple is off", scores_off)
         scores_off = [x*0.96 for x in scores_off]
         if scores_on[0] < scores_off[0] or scores_on[1] < scores_off[1]:
             test.fail("Scores is much lower when ple is on than off")

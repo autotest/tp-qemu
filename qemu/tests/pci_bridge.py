@@ -7,6 +7,8 @@ from virttest import utils_misc
 from virttest import utils_disk
 from virttest.qemu_capabilities import Flags
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def prepare_pci_bridge(test, params, pci_bridge_num):
     """
@@ -172,14 +174,14 @@ def check_data_disks(test, params, env, vm, session):
     del image_list[0]
     image_num = len(image_list)
 
-    error_context.context("Check data disks in monitor!", logging.info)
+    error_context.context("Check data disks in monitor!", LOG_JOB.info)
     monitor_info_block = vm.monitor.info_block(False)
     blocks = ','.join(monitor_info_block.keys())
     for image in image_list:
         if image not in blocks:
             test.fail("drive_%s is missed: %s!" % (image, blocks))
 
-    error_context.context("Read and write on data disks!", logging.info)
+    error_context.context("Read and write on data disks!", LOG_JOB.info)
     os_type = params["os_type"]
     if os_type == "linux":
         sub_test_type = params.get("sub_test_type", "dd_test")
@@ -242,7 +244,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    error_context.context("Modify params!", logging.info)
+    error_context.context("Modify params!", test.log.info)
     pci_bridge_num = int(params.get("pci_bridge_num", 1))
     prepare_pci_bridge(test, params, pci_bridge_num)
     pci_bridges = params.objects("pci_controllers")
@@ -258,7 +260,7 @@ def run(test, params, env):
     env_process.process_images(env_process.preprocess_image, test, params)
     env_process.preprocess_vm(test, params, env, params["main_vm"])
 
-    error_context.context("Get the main VM!", logging.info)
+    error_context.context("Get the main VM!", test.log.info)
     vm = env.get_vm(params["main_vm"])
 
     login_timeout = int(params.get("login_timeout", 360))
@@ -282,13 +284,13 @@ def run(test, params, env):
             if fmt == "scsi-hd" and params["drive_format"] == "scsi-hd":
                 params["drive_bus_%s" % image] = 1
             error_context.context("Hotplug a %s disk on %s!"
-                                  % (fmt, pci_bridge_id), logging.info)
+                                  % (fmt, pci_bridge_id), test.log.info)
             device_list += disk_hotplug(test, params, vm, session,
                                         image, fmt, pci_bridge_id)
 
     check_data_disks(test, params, env, vm, session)
 
-    error_context.context("Ping guest!", logging.info)
+    error_context.context("Ping guest!", test.log.info)
     guest_ip = vm.get_address()
     status, output = utils_test.ping(guest_ip, count=10, timeout=20)
     if status:
@@ -297,7 +299,7 @@ def run(test, params, env):
         test.fail("All packets lost during ping guest %s." % guest_ip)
 
     if opr == "hotplug_unplug":
-        error_context.context("Unplug those hotplugged devices!", logging.info)
+        error_context.context("Unplug those hotplugged devices!", test.log.info)
         device_list.reverse()
         for dev in device_list:
             ret = vm.devices.simple_unplug(dev, vm.monitor)
@@ -305,10 +307,10 @@ def run(test, params, env):
                 test.fail("Failed to unplug device '%s'."
                           "Output:\n%s" % (dev, ret[0]))
     elif opr == "with_migration":
-        error_context.context("Migrating...", logging.info)
+        error_context.context("Migrating...", test.log.info)
         vm.migrate(float(params.get("mig_timeout", "3600")))
 
-    error_context.context("Check kernel crash message!", logging.info)
+    error_context.context("Check kernel crash message!", test.log.info)
     vm.verify_kernel_crash()
 
     session.close()

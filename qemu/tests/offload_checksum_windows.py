@@ -1,5 +1,3 @@
-import logging
-
 from virttest import utils_test
 from virttest import error_context
 from virttest import utils_net
@@ -42,11 +40,11 @@ def run(test, params, env):
         param config: the setting config for checksum, tcp or disable
         """
         error_context.context("Start set tx/rx checksum offload to %s" % checksum_config,
-                              logging.info)
+                              test.log.info)
         set_offload_checksum_windows(vm, True, checksum_config)
         set_offload_checksum_windows(vm, False, checksum_config)
 
-        error_context.context("Start file transfer test", logging.info)
+        error_context.context("Start file transfer test", test.log.info)
         utils_test.run_file_transfer(test, params, env)
 
     timeout = params.get("timeout", 360)
@@ -55,7 +53,7 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=timeout)
     error_context.context("Check if the driver is installed and "
-                          "verified", logging.info)
+                          "verified", test.log.info)
     driver_name = params.get("driver_name", "netkvm")
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,

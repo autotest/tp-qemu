@@ -1,5 +1,4 @@
 """Pass-through fc device as lun device io test"""
-import logging
 import time
 import random
 import json
@@ -45,7 +44,7 @@ def run(test, params, env):
         if status != 0:
             test.fail("execute command fail: %s" % output)
         output = "".join([s for s in output.splitlines(True) if s.strip()])
-        logging.debug(output)
+        test.log.debug(output)
         info = output.split(":")
         if len(info) > 1:
             return info[1].strip()
@@ -65,7 +64,7 @@ def run(test, params, env):
             cmd = "lsscsi -gb %s|awk '{print $3}'" % dev["hctl"]
             status, output = process.getstatusoutput(cmd)
             dev["sg_dev"] = output
-        logging.debug(devs)
+        test.log.debug(devs)
         return devs
 
     fc_devs = _get_fc_devices()
@@ -89,7 +88,7 @@ def run(test, params, env):
         params["image_name_stg0"] = fc_dev["sg_dev"]
 
     clean_cmd = clean_cmd % params["image_name_stg0"]
-    error_context.context("run clean cmd %s" % clean_cmd, logging.info)
+    error_context.context("run clean cmd %s" % clean_cmd, test.log.info)
     process.getstatusoutput(clean_cmd)
 
     params['start_vm'] = 'yes'
@@ -112,16 +111,16 @@ def run(test, params, env):
         guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
         did = _get_window_disk_index_by_wwn(disk_wwn)
         utils_disk.update_windows_disk_attributes(session, did)
-        logging.info("Clean partition disk:%s", did)
+        test.log.info("Clean partition disk:%s", did)
         _clean_disk_windows(did)
         try:
             driver = configure_empty_disk(session, did, part_size, os_type)[0]
         except Exception as err:
-            logging.warning("configure_empty_disk again due to:%s", err)
+            test.log.warning("configure_empty_disk again due to:%s", err)
             time.sleep(10)
             _clean_disk_windows(did)
             driver = configure_empty_disk(session, did, part_size, os_type)[0]
-            logging.debug("configure_empty_disk over")
+            test.log.debug("configure_empty_disk over")
         output_path = driver + ":\\test.dat"
     else:
         output_path = get_linux_drive_path(session, disk_wwn)
@@ -129,10 +128,10 @@ def run(test, params, env):
     if not output_path:
         test.fail("Can not get output file path in guest.")
 
-    logging.debug("Get output file path %s", output_path)
+    test.log.debug("Get output file path %s", output_path)
     guest_cmd = guest_cmd.format(output_path)
 
-    error_context.context('Start io test...', logging.info)
+    error_context.context('Start io test...', test.log.info)
     session.cmd(guest_cmd, timeout=360)
     if not vm.monitor.verify_status("running"):
         test.fail("Guest not run after dd")

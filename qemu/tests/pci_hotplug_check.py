@@ -1,5 +1,4 @@
 import re
-import logging
 import time
 import random
 
@@ -111,8 +110,8 @@ def run(test, params, env):
         devices_supported = [j.strip('"') for j in
                              re.findall(r'\"[a-z|0-9|\-|\_|\,|\.]*\"',
                                         probe_output, re.MULTILINE)]
-        logging.debug("QEMU reported the following supported devices for "
-                      "PCI hotplug: %s", devices_supported)
+        test.log.debug("QEMU reported the following supported devices for "
+                       "PCI hotplug: %s", devices_supported)
         return (dev in devices_supported)
 
     def verify_supported_device(dev):
@@ -203,8 +202,8 @@ def run(test, params, env):
 
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][1] not in str(after_add):
-            logging.error("Could not find matched id in monitor:"
-                          " %s", pci_info[pci_num][1])
+            test.log.error("Could not find matched id in monitor:"
+                           " %s", pci_info[pci_num][1])
             test.fail("Add device failed. Monitor command is: %s"
                       ". Output: %r" % (pci_add_cmd, add_output))
         return after_add
@@ -261,7 +260,7 @@ def run(test, params, env):
 
             # Test the newly added device
             try:
-                error_context.context("Check disk in guest", logging.info)
+                error_context.context("Check disk in guest", test.log.info)
                 session.cmd(params.get("pci_test_cmd") % (pci_num + 1))
             except aexpect.ShellError as e:
                 test.fail("Check for %s device failed" % pci_type +
@@ -352,7 +351,7 @@ def run(test, params, env):
     # Add block device into guest
     for pci_num in range(pci_num_range):
         error_context.context("Prepare the %d removable pci device" % pci_num,
-                              logging.info)
+                              test.log.info)
         add_device(pci_num)
         if pci_info[pci_num][4] is not None:
             partition = pci_info[pci_num][4]
@@ -372,17 +371,17 @@ def run(test, params, env):
         pci_num = random.randint(0, len(pci_info) - 1)
         error_context.context(
             "start unplug device, repeat %d of %d-%d" % (j, rp_times, pci_num),
-            logging.info)
+            test.log.info)
         guest_devices = session.cmd_output(chk_cmd)
         pci_del(pci_num)
         device_del = find_del_device(chk_cmd, guest_devices)
         if device_del != pci_info[pci_num][4]:
             test.fail("Device is not deleted in guest.")
 
-        #sleep to wait delete event
+        # sleep to wait delete event
         time.sleep(5)
         error_context.context("Start plug pci device, repeat %d" % j,
-                              logging.info)
+                              test.log.info)
         guest_devices = session.cmd_output(chk_cmd)
         add_device(pci_num, pci_id=pci_info[pci_num][0])
         device_del = find_new_device(chk_cmd, guest_devices)

@@ -1,4 +1,3 @@
-import logging
 import time
 
 import aexpect
@@ -29,7 +28,7 @@ def run(test, params, env):
         process.system(cmd)
         if not vm.wait_until_dead(timeout=10):
             test.fail("VM is not dead, 10s after '%s' sent." % cmd)
-        logging.info("Vm is dead as expected")
+        test.log.info("Vm is dead as expected")
 
     def guest_ping(session, dst_ip, count=None):
         """
@@ -50,7 +49,7 @@ def run(test, params, env):
                 ping_cmd += " -t "
             ping_cmd += " -l %s %s" % (packetsize, dst_ip)
         try:
-            logging.debug("Ping dst vm with cmd: '%s'", ping_cmd)
+            test.log.debug("Ping dst vm with cmd: '%s'", ping_cmd)
             test_runner(ping_cmd)
         except aexpect.ShellTimeoutError as err:
             if count:
@@ -102,11 +101,11 @@ def run(test, params, env):
     session_serial = dst_vm.wait_for_serial_login(timeout=login_timeout)
 
     try:
-        error_context.context("Ping dst guest", logging.info)
+        error_context.context("Ping dst guest", test.log.info)
         guest_ping(session, dst_ip, count=4)
 
         error_context.context("Disable the dst guest nic interface",
-                              logging.info)
+                              test.log.info)
         macaddress = dst_vm.get_mac_address()
         if params.get("os_type") == "linux":
             ifname = utils_net.get_linux_ifname(session_serial, macaddress)
@@ -116,11 +115,11 @@ def run(test, params, env):
         manage_guest_nic(session_serial, ifname)
 
         error_context.context("Ping dst guest after disabling it's nic",
-                              logging.info)
+                              test.log.info)
         ping_timeout = float(params.get("ping_timeout", 21600))
         guest_ping(session, dst_ip)
         # This test need do infinite ping for a long time(6h)
-        logging.info("Waiting for %s(S) before next step", ping_timeout)
+        test.log.info("Waiting for %s(S) before next step", ping_timeout)
         end_time = time.time() + ping_timeout
         while time.time() < end_time:
             try:
@@ -131,7 +130,7 @@ def run(test, params, env):
             else:
                 time.sleep(60)
 
-        error_context.context("Kill the guest after ping", logging.info)
+        error_context.context("Kill the guest after ping", test.log.info)
         kill_and_check(vm)
 
     finally:

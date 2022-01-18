@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest.virt_vm import VMCreateError
@@ -23,7 +22,7 @@ def run(test, params, env):
     params["start_vm"] = "yes"
     vm = env.get_vm(params["main_vm"])
 
-    error_context.base_context("Try to create a qemu instance...", logging.info)
+    error_context.base_context("Try to create a qemu instance...", test.log.info)
     try:
         vm.create(params=params)
     except VMCreateError as e:
@@ -35,13 +34,13 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login()
 
-    error_context.context("Get irqchip and ic-mode information.", logging.info)
+    error_context.context("Get irqchip and ic-mode information.", test.log.info)
     pic_o = vm.monitor.info("pic")
     irqchip_match = re.search(r"^irqchip: %s" % kernel_irqchip, pic_o, re.M)
     ic_mode_match = session.cmd_status("grep %s /proc/interrupts"
                                        % ic_mode.upper()) == 0
 
-    error_context.context("Check wherever irqchip/ic-mode match.", logging.info)
+    error_context.context("Check wherever irqchip/ic-mode match.", test.log.info)
     if not irqchip_match:
         test.fail("irqchip does not match to '%s'." % kernel_irqchip)
     elif not ic_mode_match:

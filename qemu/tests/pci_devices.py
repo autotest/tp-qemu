@@ -13,6 +13,8 @@ from virttest import env_process
 from virttest import error_context
 from virttest import qemu_qtree
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class PCIBusInfo:
 
@@ -42,7 +44,7 @@ def process_qdev(qdev):
     for bus in qdev.get_buses({'type': ('PCI', 'PCIE')}):
         for device in bus:
             if isinstance(device, six.string_types):
-                logging.error("Not a device %s (bus %s)", device, bus)
+                LOG_JOB.error("Not a device %s (bus %s)", device, bus)
                 continue
             dev_id = device.get_param('id')
             addr = [int(_, 16) for _ in device.get_param('addr').split('.')]
@@ -216,7 +218,7 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
     if not params.get('reserved_slots_%s' % parent_bus):
         params['reserved_slots_%s' % parent_bus] = ""
     params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
-    logging.debug("Add test device %s %s %s addr:%s", name, device[1],
+    LOG_JOB.debug("Add test device %s %s %s addr:%s", name, device[1],
                   parent_bus, addr)
     return params, name_idxs
 
@@ -263,7 +265,7 @@ def add_virtio_disk(params, name_idxs, parent_bus, addr):
     if not params.get('reserved_slots_%s' % parent_bus):
         params['reserved_slots_%s' % parent_bus] = ""
     params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
-    logging.debug("Add test device %s virtio_disk %s addr:%s", name,
+    LOG_JOB.debug("Add test device %s virtio_disk %s addr:%s", name,
                   parent_bus, addr)
     return params, name_idxs
 
@@ -311,7 +313,7 @@ def run(test, params, env):
     _lasts[0].last -= 1     # last port is usually used by the VM
     use_buses = []
     names = {}
-    logging.info("Test setup")
+    test.log.info("Test setup")
     for line in test_params.split('\\n'):
         _idx = 0
         out = ""
@@ -336,7 +338,7 @@ def run(test, params, env):
             else:
                 _idx += 1
                 out += " " * (len(_lasts[_idx].name) + 2)
-        logging.info(out)
+        test.log.info(out)
 
     add_devices = {'first': add_devices_first,
                    'all': add_devices_all}.get(test_devices,
@@ -356,10 +358,10 @@ def run(test, params, env):
 
     # PCI devices are initialized by firmware, which might require some time
     # to setup. Wait until the guest boots up.
-    error_context.context("Verify VM booted properly.", logging.info)
+    error_context.context("Verify VM booted properly.", test.log.info)
     session = vm.wait_for_login()
 
-    error_context.context("Verify qtree vs. qemu devices", logging.info)
+    error_context.context("Verify qtree vs. qemu devices", test.log.info)
     qtree = qemu_qtree.QtreeContainer()
     _info_qtree = vm.monitor.info('qtree', False)
     qtree.parse_info_qtree(_info_qtree)
@@ -368,21 +370,21 @@ def run(test, params, env):
     errors = ""
     err = verify_qdev_vs_qtree(info_qdev, info_qtree)
     if err:
-        logging.error(_info_qtree)
-        logging.error(qtree.get_qtree().str_qtree())
-        logging.error(vm.devices.str_bus_long())
-        logging.error(err)
+        test.log.error(_info_qtree)
+        test.log.error(qtree.get_qtree().str_qtree())
+        test.log.error(vm.devices.str_bus_long())
+        test.log.error(err)
         errors += "qdev vs. qtree, "
 
-    error_context.context("Verify lspci vs. qtree", logging.info)
+    error_context.context("Verify lspci vs. qtree", test.log.info)
     if params.get('lspci_cmd'):
         _info_lspci = session.cmd_output(params['lspci_cmd'])
         info_lspci = process_lspci(_info_lspci)
         err = verify_lspci(info_lspci, info_qtree[2])
         if err:
-            logging.error(_info_lspci)
-            logging.error(_info_qtree)
-            logging.error(err)
+            test.log.error(_info_lspci)
+            test.log.error(_info_qtree)
+            test.log.error(err)
             errors += "qtree vs. lspci, "
 
     error_context.context("Results")

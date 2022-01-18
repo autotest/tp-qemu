@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -57,7 +56,7 @@ def run(test, params, env):
         parent_bus = device.get_param('bus')
         driver = device.get_param('driver')
         device_id = device.get_param('id')
-        error_context.context("Hot-unplug %s" % driver, logging.info)
+        error_context.context("Hot-unplug %s" % driver, test.log.info)
         error_pattern = unplug_error_pattern % (parent_bus, parent_bus)
         try:
             device.unplug(vm.monitor)
@@ -66,7 +65,7 @@ def run(test, params, env):
                 test.fail("Hot-unplug failed but '%s' isn't the expected error"
                           % e.data["desc"])
             error_context.context("Hot-unplug %s failed as expected: %s"
-                                  % (driver, e.data["desc"]), logging.info)
+                                  % (driver, e.data["desc"]), test.log.info)
         else:
             test.fail("Hot-unplug %s should not success" % driver)
 
@@ -76,7 +75,7 @@ def run(test, params, env):
 
         :param driver: the driver name
         """
-        error_context.context("Hot-plug %s" % driver, logging.info)
+        error_context.context("Hot-plug %s" % driver, test.log.info)
         error_pattern = hotplug_error_pattern % (free_root_port_id, free_root_port_id)
         try:
             callback[driver]()
@@ -85,7 +84,7 @@ def run(test, params, env):
                 test.fail("Hot-plug failed but '%s' isn't the expected error"
                           % e.data["desc"])
             error_context.context("Hot-plug %s failed as expected: %s"
-                                  % (driver, e.data["desc"]), logging.info)
+                                  % (driver, e.data["desc"]), test.log.info)
         else:
             test.fail("Hot-plug %s should not success" % driver)
 
@@ -123,7 +122,7 @@ def run(test, params, env):
                                                     plug_image_params,
                                                     'disk')
     error_context.context("Hot-plug the Drive/BlockdevNode first, "
-                          "will be used by virtio-blk-pci", logging.info)
+                          "will be used by virtio-blk-pci", test.log.info)
     for image_dev in image_devs[:-1]:
         vm.devices.simple_hotplug(image_dev, vm.monitor)
 

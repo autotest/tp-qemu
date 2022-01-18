@@ -1,5 +1,4 @@
 import functools
-import logging
 import re
 import os
 
@@ -42,7 +41,7 @@ def run(test, params, env):
         err_type = ""
         for asys in access_sys:
             for atgt in access_targets:
-                logging.debug("Try to access target %s from %s", atgt, asys)
+                test.log.debug("Try to access target %s from %s", atgt, asys)
 
                 access_params = access_sys[asys]
                 atgt_disabled = access_params['disabled_%s' % atgt]
@@ -119,7 +118,7 @@ def run(test, params, env):
                     err_msg += "Command: %s " % access_cmd
                     err_msg += "Output: %s" % out
                 if disabled and atgt_disabled and stat != 0:
-                    logging.debug("Can not access target as expect.")
+                    test.log.debug("Can not access target as expect.")
                 if not disabled and stat != 0:
                     if ref:
                         err_msg += "Can not access %s at the" % atgt
@@ -189,7 +188,7 @@ def run(test, params, env):
         src_name = src
         if src != "localhost":
             src_name = src.name
-        logging.info("Login %s from %s", host, src_name)
+        test.log.info("Login %s from %s", host, src_name)
         port = params_login["target_port"]
         username = params_login["username"]
         password = params_login["password"]
@@ -216,7 +215,7 @@ def run(test, params, env):
             raise remote.LoginBadClientError(client)
 
         if src == "localhost":
-            logging.debug("Login with command %s", cmd)
+            test.log.debug("Login with command %s", cmd)
             session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
         else:
             if params_login.get("os_type") == "windows":
@@ -228,7 +227,7 @@ def run(test, params, env):
             else:
                 cmd += " || sleep 5"
             session = src.wait_for_login()
-            logging.debug("Sending login command: %s", cmd)
+            test.log.debug("Sending login command: %s", cmd)
             session.sendline(cmd)
         try:
             out = remote.handle_prompts(session, username, password,
@@ -262,7 +261,7 @@ def run(test, params, env):
 
         error_context.context("Set up %s service in %s"
                               % (setup_params.get("service"), setup_target),
-                              logging.info)
+                              test.log.info)
         if params.get("copy_ftp_site") and setup_target != "localhost":
             ftp_site = os.path.join(data_dir.get_deps_dir(),
                                     params.get("copy_ftp_site"))
@@ -271,8 +270,8 @@ def run(test, params, env):
         access_param = setup_params.object_params(setup_target)
         if "ftp" in access_param.get("access_cmd") and os_type == "linux":
             setup_func(
-                    "sed -i 's/anonymous_enable=NO/anonymous_enable=YES/g' %s"
-                    % params["vsftpd_conf"])
+                "sed -i 's/anonymous_enable=NO/anonymous_enable=YES/g' %s"
+                % params["vsftpd_conf"])
         if prepare_cmd:
             setup_func(prepare_cmd, timeout=setup_timeout)
         setup_func(setup_cmd, timeout=setup_timeout)
@@ -298,7 +297,7 @@ def run(test, params, env):
 
         error_context.context("Stop %s service in %s"
                               % (setup_params.get("service"), setup_target),
-                              logging.info)
+                              test.log.info)
         if stop_cmd:
             setup_func(stop_cmd, timeout=setup_timeout)
 
@@ -384,9 +383,9 @@ def run(test, params, env):
                 access_sys[target]['disabled_%s' % tgt] = acl_disabled
 
     error_context.context("Try to access target before setup the rules",
-                          logging.info)
+                          test.log.info)
     access_service(access_sys, access_targets, False, host_ip, ref=True)
-    error_context.context("Disable the access in ovs", logging.info)
+    error_context.context("Disable the access in ovs", test.log.info)
     br_infos = utils_net.openflow_manager(br_name, "show").stdout.decode()
     if_port = re.findall(r"(\d+)\(%s\)" % if_name, br_infos)
     if not if_port:
@@ -396,33 +395,33 @@ def run(test, params, env):
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "drop", acl_extra_options)
     utils_net.openflow_manager(br_name, "add-flow", acl_cmd)
     acl_rules = utils_net.openflow_manager(
-                br_name, "dump-flows").stdout.decode()
+        br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
     error_context.context("Try to acess target to exam the disable rules",
-                          logging.info)
+                          test.log.info)
     access_service(access_sys, access_targets, True, host_ip)
-    error_context.context("Enable the access in ovs", logging.info)
+    error_context.context("Enable the access in ovs", test.log.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "normal", acl_extra_options)
     utils_net.openflow_manager(br_name, "mod-flows", acl_cmd)
     acl_rules = utils_net.openflow_manager(
-                br_name, "dump-flows").stdout.decode()
+        br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
     error_context.context("Try to acess target to exam the enable rules",
-                          logging.info)
+                          test.log.info)
     access_service(access_sys, access_targets, False, host_ip)
-    error_context.context("Delete the access rules in ovs", logging.info)
+    error_context.context("Delete the access rules in ovs", test.log.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "", acl_extra_options)
     utils_net.openflow_manager(br_name, "del-flows", acl_cmd)
     acl_rules = utils_net.openflow_manager(
-                br_name, "dump-flows").stdout.decode()
+        br_name, "dump-flows").stdout.decode()
     if acl_rules_check(acl_rules, acl_cmd):
         test.fail("Still can find the rules from ovs-ofctl: %s" % acl_rules)
     error_context.context("Try to acess target to exam after delete the rules",
-                          logging.info)
+                          test.log.info)
     access_service(access_sys, access_targets, False, host_ip)
 
     for setup_target in params.get("setup_targets", "").split():

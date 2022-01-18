@@ -3,7 +3,6 @@ import re
 import time
 import glob
 import shutil
-import logging
 import itertools
 
 from avocado.utils import process
@@ -37,7 +36,7 @@ def run(test, params, env):
         Set OVS port attribute.
         """
         cmd = "ovs-vsctl set interface %s %s=%s" % (iface, attribute, value)
-        logging.info("execute host command: %s", cmd)
+        test.log.info("execute host command: %s", cmd)
         status = process.system(cmd, ignore_status=True)
         if status != 0:
             err_msg = "set %s to %s for interface '%s' " % (
@@ -56,7 +55,7 @@ def run(test, params, env):
         """
         iface = vm.get_ifname()
         error_context.context("Set QoS for tap '%s' use by vm '%s'"
-                              % (iface, vm.name), logging.info)
+                              % (iface, vm.name), test.log.info)
         attributes = zip(['ingress_policing_rate',
                           'ingress_policing_burst'],
                          [rate, burst])
@@ -77,15 +76,15 @@ def run(test, params, env):
         :return: float type throughout Kbps.
         """
         error_context.context("Set '%s' as netperf server" % server_vm.name,
-                              logging.info)
+                              test.log.info)
         if not netperf_server.is_server_running():
             netperf_server.start()
 
         error_context.context("Set '%s' as netperf client" % client_vm.name,
-                              logging.info)
+                              test.log.info)
         server_ip = server_vm.get_address()
         output = netperf_client.start(server_ip, client_options)
-        logging.debug("netperf client output: %s", output)
+        test.log.debug("netperf client output: %s", output)
         regex = r"\d+\s+\d+\s+\d+\s+[\d.]+\s+([\d.]+)"
         try:
             throughout = float(re.search(regex, output, re.M).groups()[0])
@@ -105,7 +104,7 @@ def run(test, params, env):
         """
         Report failed test scenarios.
         """
-        error_context.context("Analyze guest throughout", logging.info)
+        error_context.context("Analyze guest throughout", test.log.info)
         fails = [_ for _ in datas if not is_test_pass(_)]
         if fails:
             msg = "OVS Qos test failed, "
@@ -117,10 +116,10 @@ def run(test, params, env):
 
     def clear_qos_setting(iface):
         error_context.context("Clear qos setting for ovs port '%s'" % iface,
-                              logging.info)
+                              test.log.info)
         clear_cmd = "ovs-vsctl clear Port %s qos" % iface
         process.system(clear_cmd)
-        logging.info("Clear ovs command: %s", clear_cmd)
+        test.log.info("Clear ovs command: %s", clear_cmd)
 
     def setup_netperf_env():
         """
@@ -248,11 +247,11 @@ def run(test, params, env):
     finally:
         try:
             # cleanup netperf env
-            logging.debug("Cleanup netperf env")
+            test.log.debug("Cleanup netperf env")
             for ntpf, _ in itertools.chain(netperf_clients, netperf_servers):
                 ntpf.cleanup()
         except Exception as e:
-            logging.warn("Cleanup failed:\n%s\n", e)
+            test.log.warn("Cleanup failed:\n%s\n", e)
         for f in glob.glob("/var/log/openvswith/*.log"):
             dst = os.path.join(test.resultsdir, os.path.basename(f))
             shutil.copy(f, dst)

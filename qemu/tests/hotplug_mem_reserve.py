@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest.utils_misc import normalize_data_size
@@ -51,13 +49,13 @@ def run(test, params, env):
         test.error("HugePages_Rsvd is not stable in %ss" % timeout)
     try:
         hugepage_rsvd = utils_memory.read_from_meminfo("HugePages_Rsvd")
-        logging.info("HugePages_Rsvd is %s after hotplug memory", hugepage_rsvd)
+        test.log.info("HugePages_Rsvd is %s after hotplug memory", hugepage_rsvd)
         if params["reserve_mem"] == "yes":
             hugepages_total = utils_memory.read_from_meminfo("HugePages_Total")
             hugepages_free = utils_memory.read_from_meminfo("HugePages_Free")
             hugepagesize = utils_memory.read_from_meminfo("Hugepagesize")
-            logging.info("HugePages_Total is %s, hugepages_free is %s",
-                         hugepages_total, hugepages_free)
+            test.log.info("HugePages_Total is %s, hugepages_free is %s",
+                          hugepages_total, hugepages_free)
             plug_size = params["size_mem_%s" % mem_name]
             numa_size = params["size_mem_%s" % params["mem_devs"]]
             expected_size = float(normalize_data_size(plug_size, "K")) + \

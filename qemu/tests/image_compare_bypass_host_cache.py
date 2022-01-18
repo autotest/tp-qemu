@@ -1,4 +1,3 @@
-import logging
 import os
 
 from avocado.utils import path
@@ -20,14 +19,14 @@ def run(test, params, env):
     def compare_images(source, target, source_cache_mode=None):
         ret = source.compare_to(target, source_cache_mode=source_cache_mode)
         if ret.exit_status == 0:
-            logging.debug("images are identical")
+            test.log.debug("images are identical")
         elif ret.exit_status == 1:
             test.fail("images differ")
         else:
-            logging.error(ret.stdout_text)
+            test.log.error(ret.stdout_text)
             test.error("error in image comparison")
 
-    logging.debug("check if strace is available")
+    test.log.debug("check if strace is available")
     try:
         path.find_command("strace")
     except path.CmdNotFoundError as detail:
@@ -42,7 +41,7 @@ def run(test, params, env):
     target_params = params.object_params(target)
     target = qemu_storage.QemuImg(target_params, root_dir, target)
 
-    logging.debug("Convert image from %s to %s", source.tag, target.tag)
+    test.log.debug("Convert image from %s to %s", source.tag, target.tag)
     try:
         source.convert(source_params, root_dir)
     except process.CmdError as detail:

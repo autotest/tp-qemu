@@ -1,7 +1,6 @@
 import os
 import re
 import shutil
-import logging
 
 from aexpect import ShellCmdError
 from avocado.utils import process
@@ -38,13 +37,13 @@ def run(test, params, env):
                                                      iperf_source_path)
         try:
             if session:
-                logging.info("Compiling %s in guest...", iperf_version)
+                test.log.info("Compiling %s in guest...", iperf_version)
                 session.cmd(compile_cmd)
             else:
-                logging.info("Compiling %s in host...", iperf_version)
+                test.log.info("Compiling %s in host...", iperf_version)
                 process.run(compile_cmd, shell=True, verbose=False)
         except (process.CmdError, ShellCmdError) as err_msg:
-            logging.error(err_msg)
+            test.log.error(err_msg)
             test.error("Failed to compile iperf")
         else:
             iperf_bin_name = re.sub(r'[-2]', '', iperf_version.split('.')[0])
@@ -56,18 +55,18 @@ def run(test, params, env):
         try:
             info_text = "Start iperf session in %s with cmd: %s"
             if session:
-                logging.info(info_text, "guest", iperf_cmd)
+                test.log.info(info_text, "guest", iperf_cmd)
                 data_info = session.cmd_output(iperf_cmd, timeout=120)
             else:
-                logging.info(info_text, "host", iperf_cmd)
+                test.log.info(info_text, "host", iperf_cmd)
                 data_info = process.system_output(iperf_cmd, timeout=120,
                                                   verbose=False).decode()
         except Exception as err_msg:
-            logging.error(str(err_msg))
+            test.log.error(str(err_msg))
             test.error("Failed to start iperf session")
         else:
             if catch_data:
-                logging.debug("Full connection log:\n%s", data_info)
+                test.log.debug("Full connection log:\n%s", data_info)
                 parallel_cur = len(re.findall(catch_data, data_info))
                 parallel_exp = int(params.get("parallel_num", 0))
                 if not parallel_cur:
@@ -76,7 +75,7 @@ def run(test, params, env):
                     test.fail("Number of parallel threads running(%d) is "
                               "inconsistent with expectations(%d)"
                               % (parallel_cur, parallel_exp))
-                logging.info("iperf client successfully connected to server")
+                test.log.info("iperf client successfully connected to server")
 
     def is_iperf_running(name_pattern, session=None):
         if session:
@@ -88,16 +87,16 @@ def run(test, params, env):
         return status == 0
 
     def rss_test():
-        logging.info('Run the command "netkvm-wmi.cmd rss" to collect statistics')
+        test.log.info('Run the command "netkvm-wmi.cmd rss" to collect statistics')
         rss_test_cmd = utils_misc.set_winutils_letter(
-                guest_session, params["rss_test_cmd"])
+            guest_session, params["rss_test_cmd"])
         output = guest_session.cmd_output(rss_test_cmd)
         rss_statistics = output.splitlines()[1].split()
         rxerrors = int(rss_statistics[-4])
         rxmissed = int(rss_statistics[-2])
         if not (rxerrors == 0 and rxmissed == 0):
             test.fail("Rss support for virtio-net driver is bad")
-        logging.info("Rss support for virtio-net driver is works well")
+        test.log.info("Rss support for virtio-net driver is works well")
 
     os_type = params["os_type"]
     login_timeout = int(params.get("login_timeout", 360))
@@ -165,12 +164,12 @@ def run(test, params, env):
         if not utils_misc.wait_for(lambda: is_iperf_running(s_info[0],
                                                             s_info[2]), 5, 2):
             test.error("Failed to start iperf server.")
-        error_context.context("iperf server has started.", logging.info)
+        error_context.context("iperf server has started.", test.log.info)
         bg_client.start()
         if not utils_misc.wait_for(lambda: is_iperf_running(c_info[0],
                                                             c_info[2]), 5):
             test.error("Failed to start iperf client.")
-        error_context.context("iperf client has started.", logging.info)
+        error_context.context("iperf client has started.", test.log.info)
         utils_misc.wait_for(lambda: not is_iperf_running(c_info[0], c_info[2]),
                             iperf_test_duration, 0, 5,
                             "Waiting for iperf test to finish.")
@@ -181,7 +180,7 @@ def run(test, params, env):
             rss_test()
 
     finally:
-        logging.info("Cleanup host environment...")
+        test.log.info("Cleanup host environment...")
         if is_iperf_running(search_pattern["host"]):
             process.run('pkill -9 -f %s' % search_pattern["host"],
                         verbose=False, ignore_status=True)

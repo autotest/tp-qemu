@@ -1,4 +1,3 @@
-import logging
 import os
 
 from avocado import fail_on
@@ -37,13 +36,13 @@ def run(test, params, env):
         test.fail(str(detail))
 
     guest_file = params["guest_tmp_filename"]
-    logging.debug("Create tmp file %s in image %s", guest_file,
-                  sn.image_filename)
+    test.log.debug("Create tmp file %s in image %s", guest_file,
+                   sn.image_filename)
     img_utils.save_random_file_to_vm(vm, guest_file, 2048 * 100, sync_bin)
     vm.destroy()
 
     strace_log = os.path.join(test.debugdir, "commit.log")
-    logging.debug("commit snapshot, strace log %s", strace_log)
+    test.log.debug("commit snapshot, strace log %s", strace_log)
     with img_utils.strace(sn, trace_events, strace_log):
         fail_on((process.CmdError,))(sn.commit)()
     fail_msg = "'O_DIRECT' is presented in system calls %s" % trace_events
@@ -53,8 +52,8 @@ def run(test, params, env):
         test.fail(fail_msg)
 
     strace_log = os.path.join(test.debugdir, "commit_bypass.log")
-    logging.debug("commit snapshot with cache 'none', strace log: %s",
-                  strace_log)
+    test.log.debug("commit snapshot with cache 'none', strace log: %s",
+                   strace_log)
     with img_utils.strace(sn, trace_events, strace_log):
         fail_on((process.CmdError,))(sn.commit)(cache_mode="none")
     fail_msg = "'O_DIRECT' is missing in system calls %s" % trace_events

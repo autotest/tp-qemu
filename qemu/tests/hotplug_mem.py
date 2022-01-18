@@ -9,6 +9,8 @@ from virttest.utils_test import BackgroundTest
 from virttest.utils_test import run_virt_sub_test
 from virttest.utils_test.qemu import MemoryHotplugTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class MemoryHotplugSimple(MemoryHotplugTest):
 
@@ -19,7 +21,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
                     (self.params["sub_test"],
                      self.params["stage"],
                      self.params["operation"]))
-            error_context.context(step, logging.info)
+            error_context.context(step, LOG_JOB.info)
             args = (self.test, self.params, self.env, self.params["sub_type"])
             run_virt_sub_test(*args)
 
@@ -106,7 +108,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
                     vm, self.env.get_vm(
                         self.params['main_vm']))
             except Exception as details:
-                logging.warn("Error happen when restore vm: %s", details)
+                LOG_JOB.warn("Error happen when restore vm: %s", details)
             self.close_sessions()
 
 

@@ -4,6 +4,8 @@ from virttest import error_context
 from virttest import utils_test
 from virttest.utils_test.qemu import MemoryHotplugTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class MemoryHotplugRepeat(MemoryHotplugTest):
 
@@ -45,16 +47,16 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
         original_mem = self.get_guest_total_mem(vm)
         if self.params["test_type"] == "scalability_test":
             error_context.context("Repeat hotplug memory for %s times"
-                                  % times, logging.info)
+                                  % times, LOG_JOB.info)
             self.repeat_hotplug(vm, target_mems)
             if self.params.get('os_type') == 'linux':
                 error_context.context("Repeat unplug memory for %s times"
-                                      % times, logging.info)
+                                      % times, LOG_JOB.info)
                 self.repeat_unplug(vm, target_mems)
         else:
             for target_mem in target_mems:
                 error_context.context("Hotplug and unplug memory %s"
-                                      % target_mem, logging.info)
+                                      % target_mem, LOG_JOB.info)
                 self.hotplug_memory(vm, target_mem)
                 self.unplug_memory(vm, target_mem)
 

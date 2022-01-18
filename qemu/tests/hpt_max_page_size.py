@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -35,14 +34,14 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Check output Hugepage size.", logging.info)
+    error_context.context("Check output Hugepage size.", test.log.info)
     if _check_meminfo("Hugepagesize") != params["expected_value"]:
         test.fail("The hugepage size doesn't match, "
                   "please check meminfo: %s " % _check_meminfo("Huge"))
     # Please set 1G huge page as default huge page size on power9
     if params.get("sub_type") == "hugepage_reset":
         origin_nr = params.get("origin_nr")
-        error_context.context("Setup hugepage number to %s in guest" % origin_nr, logging.info)
+        error_context.context("Setup hugepage number to %s in guest" % origin_nr, test.log.info)
         set_hugepage_cmd = params.get("set_hugepage_cmd")
         if session.cmd_status(set_hugepage_cmd):
             test.fail("Failed to assign nr in the guest")

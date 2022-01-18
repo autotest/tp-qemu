@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -33,7 +32,7 @@ def run(test, params, env):
         ck_session.close()
 
     def _run_iozone_background():
-        logging.info("Start iozone under background.")
+        test.log.info("Start iozone under background.")
         thread = utils_misc.InterruptedThread(
             iozone.run, (params['iozone_options'].format(mount_point),
                          float(params['iozone_timeout'])))
@@ -53,7 +52,7 @@ def run(test, params, env):
     need_format = True
     try:
         for i in range(int(params['repeat_time'])):
-            logging.info('Start to run testing.(iteration: %d).', (i + 1))
+            test.log.info('Start to run testing.(iteration: %d).', (i + 1))
             plug.hotplug_devs_serial()
             if need_format:
                 if os_type == 'windows':

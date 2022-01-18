@@ -1,5 +1,3 @@
-import logging
-
 from avocado.core import exceptions
 
 from virttest import data_dir
@@ -26,7 +24,7 @@ def run(test, params, env):
     create_err_info = params["create_err_info"]
     resize_err_info = params["resize_err_info"]
 
-    logging.info("Test creating an image with large size.")
+    test.log.info("Test creating an image with large size.")
     try:
         large.create(large.params)
     except exceptions.TestError as err:
@@ -35,7 +33,7 @@ def run(test, params, env):
     else:
         test.fail("There is no error when creating an image with large size.")
 
-    logging.info("Test resizing an image with large size.")
+    test.log.info("Test resizing an image with large size.")
     small.create(small.params)
     result = small.resize(size_increases)
     status, output = result.exit_status, result.stderr_text

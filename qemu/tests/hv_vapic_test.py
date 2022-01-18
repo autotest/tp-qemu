@@ -1,4 +1,3 @@
-import logging
 import re
 import os
 import time
@@ -35,7 +34,7 @@ def run(test, params, env):
         """
         Create a tmpfs data disk
         """
-        logging.info("Create tmpfs data disk")
+        test.log.info("Create tmpfs data disk")
         disk_name_key = params["disk_name_key"]
         tmp_dir = data_dir.get_tmp_dir()
         tmpfs_dir = os.path.join(tmp_dir, "tmpfs")
@@ -53,13 +52,13 @@ def run(test, params, env):
 
         return: the formatted drive letter of the disk
         """
-        logging.info("Boot the guest to setup tmpfs disk")
+        test.log.info("Boot the guest to setup tmpfs disk")
         vm, session = _boot_guest_with_cpu_flag(cpu_model_flags)
-        logging.info("Format tmpfs disk")
+        test.log.info("Format tmpfs disk")
         disk_size = params["image_size_" + params["tmpfs_image_name"]]
         disk_id = utils_disk.get_windows_disks_index(session, disk_size)[0]
         drive_letter = utils_disk.configure_empty_windows_disk(
-                    session, disk_id, disk_size)[0]
+            session, disk_id, disk_size)[0]
         vm.graceful_shutdown(timeout=timeout)
         return drive_letter
 
@@ -90,9 +89,9 @@ def run(test, params, env):
         return: the bw value of the running result(bw=xxxB/s)
         """
         bw_search_reg = params["bw_search_reg"]
-        logging.info("Format tmpfs data disk")
+        test.log.info("Format tmpfs data disk")
         utils_disk.create_filesystem_windows(session, drive_letter, "ntfs")
-        logging.info("Start fio test")
+        test.log.info("Start fio test")
         fio = generate_instance(params, vm, 'fio')
         o = fio.run(params["fio_options"] % drive_letter)
         return int(re.search(bw_search_reg, o, re.M).group(1))
@@ -100,28 +99,28 @@ def run(test, params, env):
     timeout = params.get_numeric("timeout", 360)
     cpu_model_flags = params["cpu_model_flags"]
 
-    error_context.context("Create tmpfs data disk in host", logging.info)
+    error_context.context("Create tmpfs data disk in host", test.log.info)
     _create_tmpfs_data_disk()
 
-    error_context.context("Prepare tmpfs in guest", logging.info)
+    error_context.context("Prepare tmpfs in guest", test.log.info)
     drive_letter = _format_tmpfs_disk()
 
     error_context.context("Boot guest with all the hv flags")
     vm, session = _boot_guest_with_cpu_flag(cpu_model_flags)
     time.sleep(300)
-    error_context.context("Start fio in guest", logging.info)
+    error_context.context("Start fio in guest", test.log.info)
     bw_with_hv_vapic = _run_fio(session, drive_letter)
 
     error_context.context("Shutdown guest and boot without hv_vapnic",
-                          logging.info)
+                          test.log.info)
     vm.graceful_shutdown(timeout=timeout)
     cpu_model_flags = cpu_model_flags.replace(",hv_vapic", "")
     vm, session = _boot_guest_with_cpu_flag(cpu_model_flags)
     time.sleep(300)
-    error_context.context("Start fio in guest again", logging.info)
+    error_context.context("Start fio in guest again", test.log.info)
     bw_without_hv_vapic = _run_fio(session, drive_letter)
 
-    error_context.context("Check the improvement of hv_vapic", logging.info)
+    error_context.context("Check the improvement of hv_vapic", test.log.info)
     improvement = (float)(bw_with_hv_vapic - bw_without_hv_vapic)
     improvement /= bw_without_hv_vapic
     if improvement < 0.05:

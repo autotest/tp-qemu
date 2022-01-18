@@ -6,6 +6,8 @@ from virttest import error_context
 from virttest.utils_test.qemu import MemoryHotplugTest
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def set_hpt(session, params, test, hpt_size):
     """Run this step to set HPT in guest"""
@@ -45,9 +47,9 @@ def check_mem_increase(session, params, orig_mem, increase_mem):
     new_mem = int(session.cmd_output(cmd=params['free_mem_cmd']))
     if (new_mem - orig_mem) == increase_mem:
         error_context.context(
-            'Get guest free memory size after hotplug pc-dimm.', logging.info)
-        logging.debug('Guest free memory size is %d bytes', new_mem)
-        logging.info("Guest memory size is increased %s.", params['size'])
+            'Get guest free memory size after hotplug pc-dimm.', LOG_JOB.info)
+        LOG_JOB.debug('Guest free memory size is %d bytes', new_mem)
+        LOG_JOB.info("Guest memory size is increased %s.", params['size'])
         return True
     return False
 
@@ -80,7 +82,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    error_context.context("Start miscellaneous HPT test...", logging.info)
+    error_context.context("Start miscellaneous HPT test...", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
@@ -94,17 +96,17 @@ def run(test, params, env):
         test.fail("Fail to get HPT value")
     hpt_size = int(get_hpt_def)
     hpt_default = int(get_hpt_def)
-    logging.debug("Default hpt order : '%s'", get_hpt_def)
+    test.log.debug("Default hpt order : '%s'", get_hpt_def)
     increment_sequence = params.get("increment_sequence").split()
     error_context.context("hpt changes according to increment",
-                          logging.info)
+                          test.log.info)
     if params.get("sub_type") == "mem":
         # For HPT reszing after hotplug memory
         orig_mem = int(session.cmd_output(cmd=params['free_mem_cmd']))
         hpt_mem = MemoryHotplugTest(test, params, env)
         hpt_mem.hotplug_memory(vm, "hpt_mem")
         increase_mem = int(params['size'])
-        logging.debug('Guest free memory size is %d bytes', orig_mem)
+        test.log.debug('Guest free memory size is %d bytes', orig_mem)
         plug_timeout = float(params.get('plug_timeout', 20))
         if not utils_misc.wait_for(lambda: check_mem_increase(
                 session, params, orig_mem, increase_mem), plug_timeout):

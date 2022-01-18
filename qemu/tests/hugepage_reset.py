@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import env_process
 from virttest import test_setup
@@ -33,8 +32,8 @@ def run(test, params, env):
                 hp_config.target_hugepages = h_size
                 hp_config.set_hugepages()
                 if params.get('on_numa_node'):
-                    logging.info('Set hugepage size %s to target node %s',
-                                 h_size, target_node)
+                    test.log.info('Set hugepage size %s to target node %s',
+                                  h_size, target_node)
                     hp_config.set_node_num_huge_pages(h_size, target_node,
                                                       hugepage_size)
         except ValueError as err:
@@ -43,19 +42,19 @@ def run(test, params, env):
     def run_stress():
         def heavyload_install():
             if session.cmd_status(test_install_cmd) != 0:
-                logging.warning("Could not find installed heavyload in guest, "
-                                "will install it via winutils.iso ")
+                test.log.warning("Could not find installed heavyload in guest, "
+                                 "will install it via winutils.iso ")
                 winutil_drive = utils_misc.get_winutils_vol(session)
                 if not winutil_drive:
                     test.cancel("WIN_UTILS CDROM not found.")
                 install_cmd = params["install_cmd"] % winutil_drive
                 session.cmd(install_cmd)
 
-        logging.info('Loading stress on guest.')
+        test.log.info('Loading stress on guest.')
         stress_duration = params.get("stress_duration", 60)
         if params["os_type"] == "linux":
             params['stress_args'] = '--vm %s --vm-bytes 256M --timeout %s' % (
-                    mem // 512, stress_duration)
+                mem // 512, stress_duration)
             stress = utils_test.VMStress(vm, 'stress', params)
             stress.load_stress_tool()
             time.sleep(stress_duration)
@@ -92,7 +91,7 @@ def run(test, params, env):
                                                  target_node)
                 params['target_num_node%s' % target_node] = origin_nr
                 break
-            logging.info(
+            test.log.info(
                 'The free memory of node %s is %s, is not enough for'
                 ' guest memory: %s', target_node, node_mem_free, mem)
         else:
@@ -100,7 +99,7 @@ def run(test, params, env):
                         "this test.")
     hp_config = test_setup.HugePageConfig(params)
     hp_config.target_hugepages = origin_nr
-    logging.info('Setup hugepage number to %s', origin_nr)
+    test.log.info('Setup hugepage number to %s', origin_nr)
     hp_config.setup()
     hugepage_size = utils_memory.get_huge_page_size()
     params["hugepage_path"] = hp_config.hugepage_path

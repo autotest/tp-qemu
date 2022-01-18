@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import error_context
 from virttest import utils_net
@@ -26,13 +25,13 @@ def run(test, params, env):
         Get interrupt information using specified pattern
         """
         return session.cmd_output("grep '%s' /proc/interrupts" % irq_pattern,
-                                  print_func=logging.info).split()
+                                  print_func=test.log.info).split()
 
     def analyze_interrupts(irq_before_test, irq_after_test):
         """
         Compare interrupt information and analyze them
         """
-        error_context.context("Analyzing interrupts", logging.info)
+        error_context.context("Analyzing interrupts", test.log.info)
         filtered_result = [x for x in zip(irq_before_test, irq_after_test)
                            if x[0] != x[1]]
         if not filtered_result:
@@ -50,12 +49,12 @@ def run(test, params, env):
         if not extra_disk:
             test.error("No additional disks found")
 
-        error_context.context("Execute dd write test", logging.info)
+        error_context.context("Execute dd write test", test.log.info)
         session.cmd(params["dd_write"] % extra_disk)
         irq_info_after_dd_write = get_irq_info()
         analyze_interrupts(irq_info_before_test, irq_info_after_dd_write)
 
-        error_context.context("Execute dd read test", logging.info)
+        error_context.context("Execute dd read test", test.log.info)
         session.cmd(params["dd_read"] % extra_disk)
         irq_info_after_dd_read = get_irq_info()
         analyze_interrupts(irq_info_after_dd_write, irq_info_after_dd_read)
@@ -64,7 +63,7 @@ def run(test, params, env):
         """
         ping test to increase the number of interrupts
         """
-        error_context.context("Execute ping test", logging.info)
+        error_context.context("Execute ping test", test.log.info)
         utils_net.ping(guest_ip, 10, session=session)
         irq_info_after_ping = get_irq_info()
         analyze_interrupts(irq_info_before_test, irq_info_after_ping)
@@ -75,7 +74,7 @@ def run(test, params, env):
         """
         current_cpu = vm.get_cpu_count()
         vcpu_devices = params.objects("vcpu_devices")
-        error_context.context("Execute hotplug CPU test", logging.info)
+        error_context.context("Execute hotplug CPU test", test.log.info)
         for vcpu_device in vcpu_devices:
             vm.hotplug_vcpu_device(vcpu_device)
         if not utils_misc.wait_for(
@@ -112,13 +111,13 @@ def run(test, params, env):
                       "hotplug": hotplug_test, "standby": standby_test}
 
     error_context.base_context("Get interrupt info before executing test",
-                               logging.info)
+                               test.log.info)
     irq_info_before_test = get_irq_info()
 
     error_context.context("Execute test to verify increased interrupts")
     try:
         test_execution[params["increase_test"]]()
-        logging.info("The number of interrupts increased correctly")
+        test.log.info("The number of interrupts increased correctly")
     finally:
         session.close()
         vm.destroy()

@@ -1,4 +1,3 @@
-import logging
 import time
 import datetime
 import os
@@ -45,13 +44,13 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
 
-        logging.info("Copy tlbflush tool related files")
+        test.log.info("Copy tlbflush tool related files")
         for f in tlbflush_filenames:
             copy_file_cmd = utils_misc.set_winutils_letter(
                 session, copy_tlbflush_cmd % f)
             session.cmd(copy_file_cmd)
 
-        logging.info("Create a large file for test")
+        test.log.info("Create a large file for test")
         create_test_file_cmd = params["create_test_file_cmd"]
         test_file_size = params["test_file_size"]
         test_file_size = utils_numeric.normalize_data_size(
@@ -82,18 +81,18 @@ def run(test, params, env):
         delete_test_file_cmd = params["delete_test_file_cmd"]
 
         _stop_host_stress(host_stress)
-        logging.info("Cleanup the stress tool on host")
+        test.log.info("Cleanup the stress tool on host")
         host_stress.clean()
 
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
 
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("Delete tlbflush files")
+        test.log.info("Delete tlbflush files")
         for f in tlbflush_filenames:
             session.cmd(delete_tlbflush_cmd % f)
 
-        logging.info("Delete test file")
+        test.log.info("Delete test file")
         session.cmd(delete_test_file_cmd)
 
     def _start_host_stress(host_stress):
@@ -144,13 +143,13 @@ def run(test, params, env):
         run_tlbflush_cmd = params["run_tlbflush_cmd"]
         run_tlbflush_timeout = params.get_numeric("run_tlbflush_timeout", 3600)
 
-        logging.info("Start stress on host")
+        test.log.info("Start stress on host")
         _start_host_stress(host_stress)
 
-        logging.info("Start run hv_tlbflush.exe on guest")
+        test.log.info("Start run hv_tlbflush.exe on guest")
         s, o = session.cmd_status_output(run_tlbflush_cmd,
                                          run_tlbflush_timeout)
-        logging.info("Stop stress on host")
+        test.log.info("Stop stress on host")
         _stop_host_stress(host_stress)
 
         if s:
@@ -162,7 +161,7 @@ def run(test, params, env):
         total_time = datetime.timedelta(hours=s_t.tm_hour,
                                         minutes=s_t.tm_min,
                                         seconds=s_t.tm_sec).total_seconds()
-        logging.info("Running result: %f", total_time)
+        test.log.info("Running result: %f", total_time)
         return total_time
 
     timeout = params.get_numeric("timeout", 360)
@@ -170,7 +169,7 @@ def run(test, params, env):
     cpu_model_flags = params["cpu_model_flags"]
     hv_flags_to_ignore = params["hv_flags_to_ignore"].split()
 
-    error_context.context("Prepare test environment", logging.info)
+    error_context.context("Prepare test environment", test.log.info)
     host_stress = _prepare_test_environment()
 
     try:
@@ -180,13 +179,13 @@ def run(test, params, env):
                 if _ not in hv_flags_to_ignore])
         vm, session = _boot_guest_with_cpu_flag(hv_flag_without_tlbflush)
 
-        error_context.context("Run tlbflush without hv_tlbflush", logging.info)
+        error_context.context("Run tlbflush without hv_tlbflush", test.log.info)
         time_without_flag = _run_tlbflush(session, host_stress)
         vm.graceful_shutdown(timeout=timeout)
 
         error_context.context("Boot guest with related flags")
         vm, session = _boot_guest_with_cpu_flag(cpu_model_flags)
-        error_context.context("Run tlbflush with hv_tlbflush", logging.info)
+        error_context.context("Run tlbflush with hv_tlbflush", test.log.info)
         time_with_flag = _run_tlbflush(session, host_stress)
 
         error_context.context("Compare test results between 2 tests")

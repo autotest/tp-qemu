@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -26,7 +25,7 @@ def run(test, params, env):
     else:
         test.fail("Test failed since vm shouldn't be launched")
     error_context.context("Check the expected error message: %s"
-                          % error_msg, logging.info)
+                          % error_msg, test.log.info)
     if not re.search(error_msg, o):
         test.fail("Can not get expected error message: %s from %s"
                   % (error_msg, o))

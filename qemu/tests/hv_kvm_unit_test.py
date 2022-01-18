@@ -1,4 +1,3 @@
-import logging
 import re
 import json
 
@@ -27,14 +26,14 @@ def run(test, params, env):
     cpu_model = cpu.get_qemu_best_cpu_model(params)
     cpu_param = cpu_model + cpu_flags
 
-    error_context.context("Copy & compile kvm-unit-test tools", logging.info)
+    error_context.context("Copy & compile kvm-unit-test tools", test.log.info)
     process.system(compile_cmd, shell=True)
 
-    error_context.context("Run unit tests", logging.info)
+    error_context.context("Run unit tests", test.log.info)
     for unit_test, unit_test_result in json.loads(unit_tests_mapping).items():
         if unit_test in skip_tests:
             continue
-        logging.info("Start running unit test %s", unit_test)
+        test.log.info("Start running unit test %s", unit_test)
         unit_test_cmd = test_cmd % (tmp_dir, unit_test, cpu_param)
         result_output = process.system_output(unit_test_cmd, shell=True)
         result_output = result_output.decode()

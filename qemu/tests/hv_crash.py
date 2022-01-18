@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import env_process
 from virttest import utils_misc
@@ -50,20 +48,20 @@ def run(test, params, env):
     flags_without_hv_crash = params["cpu_model_flags"]
     flags_with_hv_crash = flags_without_hv_crash + "," + hv_crash_flag
 
-    error_context.context("Boot the guest with hv_crash flag", logging.info)
+    error_context.context("Boot the guest with hv_crash flag", test.log.info)
     vm, session = _boot_guest_with_cpu_flag(flags_with_hv_crash)
 
-    error_context.context("Make the guest crash", logging.info)
+    error_context.context("Make the guest crash", test.log.info)
     _trigger_crash(vm, session)
-    logging.info("Check the qemu process is quit")
+    test.log.info("Check the qemu process is quit")
     if not utils_misc.wait_for(vm.is_dead, 10, 1, 1):
         test.fail("The qemu still active after crash")
 
-    error_context.context("Boot the guest again", logging.info)
+    error_context.context("Boot the guest again", test.log.info)
     vm, session = _boot_guest_with_cpu_flag(flags_without_hv_crash)
 
-    error_context.context("Make the guest crash again", logging.info)
+    error_context.context("Make the guest crash again", test.log.info)
     _trigger_crash(vm, session)
-    logging.info("Check the qemu process is not quit")
+    test.log.info("Check the qemu process is not quit")
     if utils_misc.wait_for(vm.is_dead, 10, 1, 1):
         test.fail("The qemu is quit after crash")

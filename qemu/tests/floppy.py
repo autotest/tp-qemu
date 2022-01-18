@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 import sys
@@ -45,7 +44,7 @@ def run(test, params, env):
 
         :return: path to new floppy file.
         """
-        error_context.context("creating test floppy", logging.info)
+        error_context.context("creating test floppy", test.log.info)
         floppy = params["floppy_name"]
         if not os.path.isabs(floppy):
             floppy = os.path.join(data_dir.get_data_dir(), floppy)
@@ -55,7 +54,7 @@ def run(test, params, env):
 
     def cleanup_floppy(path):
         """ Removes created floppy """
-        error_context.context("cleaning up temp floppy images", logging.info)
+        error_context.context("cleaning up temp floppy images", test.log.info)
         os.remove("%s" % path)
 
     def lazy_copy(vm, dst_path, check_path, copy_timeout=None, dsize=None):
@@ -126,7 +125,7 @@ def run(test, params, env):
             error_context.context("Formating floppy disk before using it")
             format_cmd = params["format_floppy_cmd"]
             self.session.cmd(format_cmd, timeout=120)
-            logging.info("Floppy disk formatted successfully")
+            test.log.info("Floppy disk formatted successfully")
 
             if self.dest_dir:
                 error_context.context("Mounting floppy")
@@ -149,8 +148,8 @@ def run(test, params, env):
 
             self.session.cmd("%s %s %s" % (params["copy_cmd"], source_file,
                                            dest_file))
-            logging.info("Succeed to copy file '%s' into floppy disk",
-                         source_file)
+            test.log.info("Succeed to copy file '%s' into floppy disk",
+                          source_file)
 
             error_context.context("Checking if the file is unchanged "
                                   "after copy")
@@ -179,7 +178,7 @@ def run(test, params, env):
 
         def test(self):
             error_context.context("Preparing migration env and floppies.",
-                                  logging.info)
+                                  test.log.info)
             mig_protocol = params.get("mig_protocol", "tcp")
             self.mig_type = migration.MultihostMigration
             if mig_protocol == "fd":
@@ -245,7 +244,7 @@ def run(test, params, env):
                 # Some Linux distribution does not load floppy at boot
                 # and Windows needs time to load and init floppy driver
                 error_context.context("Prepare floppy for writing.",
-                                      logging.info)
+                                      test.log.info)
                 if self.mount_dir:
                     lsmod = session.cmd("lsmod")
                     if 'floppy' not in lsmod:
@@ -255,13 +254,13 @@ def run(test, params, env):
 
                 session.cmd(format_floppy_cmd)
 
-                error_context.context("Mount and copy data.", logging.info)
+                error_context.context("Mount and copy data.", test.log.info)
                 if self.mount_dir:
                     session.cmd("mount %s %s" % (guest_floppy_path,
                                                  self.mount_dir),
                                 timeout=30)
 
-                error_context.context("File copying test.", logging.info)
+                error_context.context("File copying test.", test.log.info)
 
                 pid = lazy_copy(vm, src_file, check_copy_path, copy_timeout)
 
@@ -275,7 +274,7 @@ def run(test, params, env):
             if not self.is_src:  # Starts in destination
                 vm = env.get_vm(self.vms[0])
                 session = vm.wait_for_login(timeout=login_timeout)
-                error_context.context("Wait for copy finishing.", logging.info)
+                error_context.context("Wait for copy finishing.", test.log.info)
                 status = session.cmd_status("kill %s" % pid,
                                             timeout=copy_timeout)
                 if status != 0:
@@ -286,7 +285,7 @@ def run(test, params, env):
                                    timeout=copy_timeout)
 
                 error_context.context("Check floppy file checksum.",
-                                      logging.info)
+                                      test.log.info)
                 md5_cmd = params.get("md5_cmd", "md5sum")
                 if md5_cmd:
                     md5_floppy = session.cmd("%s %s" % (md5_cmd, src_file))
@@ -350,7 +349,7 @@ def run(test, params, env):
                 # Some Linux distribution does not load floppy at boot
                 # and Windows needs time to load and init floppy driver
                 error_context.context("Prepare floppy for writing.",
-                                      logging.info)
+                                      test.log.info)
                 if self.mount_dir:   # If linux
                     lsmod = session.cmd("lsmod")
                     if 'floppy' not in lsmod:
@@ -365,8 +364,8 @@ def run(test, params, env):
                     session.cmd(format_floppy_cmd)
                 except aexpect.ShellCmdError as e:
                     if e.status == 1:
-                        logging.error("First access to floppy failed, "
-                                      " Trying a second time as a workaround")
+                        test.log.error("First access to floppy failed, "
+                                       " Trying a second time as a workaround")
                         session.cmd(format_floppy_cmd)
 
                 error_context.context("Check floppy")

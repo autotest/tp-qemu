@@ -6,7 +6,6 @@ change the resolution of the guest, by default creating two VMs from
 the same setup will result in them having the same resolution.
 
 """
-import logging
 
 from virttest import utils_spice
 
@@ -47,7 +46,7 @@ def run(test, params, env):
     client_root_session = client_vm.wait_for_login(username="root",
                                                    password="123456")
 
-    logging.debug("Exporting client display")
+    test.log.debug("Exporting client display")
     client_session.cmd("export DISPLAY=:0.0")
 
     # Get the min, current, and max resolution on the guest
@@ -64,7 +63,7 @@ def run(test, params, env):
 
     maximum = "2560x1600"
 
-    logging.info("Minimum: %s Current: %s Maximum: %s", minimum, current, maximum)
+    test.log.info("Minimum: %s Current: %s Maximum: %s", minimum, current, maximum)
     if(current != minimum):
         newClientResolution = minimum
     else:
@@ -72,10 +71,10 @@ def run(test, params, env):
 
     # Changing the guest resolution
     client_session.cmd("xrandr -s " + newClientResolution)
-    logging.info("The resolution on the client has been changed from %s to: %s",
-                 current, newClientResolution)
+    test.log.info("The resolution on the client has been changed from %s to: %s",
+                  current, newClientResolution)
 
-    logging.debug("Exporting guest display")
+    test.log.debug("Exporting guest display")
     guest_session.cmd("export DISPLAY=:0.0")
 
     # Get the min, current, and max resolution on the guest
@@ -86,7 +85,7 @@ def run(test, params, env):
     currentGuestRes = outputlist[current_index + 1]
     currentGuestRes += outputlist[current_index + 2]
     currentGuestRes += outputlist[current_index + 3].replace(",", "")
-    logging.info("Current Resolution of Guest: %s", currentGuestRes)
+    test.log.info("Current Resolution of Guest: %s", currentGuestRes)
 
     if (newClientResolution == currentGuestRes):
         test.fail("Client resolution is same as guest resolution!")

@@ -7,6 +7,8 @@ from virttest import error_context
 
 from qemu.tests import drive_mirror
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class DriveMirrorStress(drive_mirror.DriveMirror):
 
@@ -15,7 +17,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
         """
         load IO/CPU/Memory stress in guest;
         """
-        error_context.context("launch stress app in guest", logging.info)
+        error_context.context("launch stress app in guest", LOG_JOB.info)
         args = (self.test, self.params, self.env, self.params["stress_test"])
         bg_test = utils_test.BackgroundTest(utils_test.run_virt_sub_test, args)
         bg_test.start()
@@ -39,12 +41,12 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
             session.close()
             return self.app_running()
 
-        error_context.context("stop stress app in guest", logging.info)
+        error_context.context("stop stress app in guest", LOG_JOB.info)
         stopped = utils_misc.wait_for(_unload_stress, first=2.0,
                                       text="wait stress app quit",
                                       step=1.0, timeout=120)
         if not stopped:
-            logging.warn("stress app is still running")
+            LOG_JOB.warn("stress app is still running")
 
     def app_running(self):
         """
@@ -61,7 +63,7 @@ class DriveMirrorStress(drive_mirror.DriveMirror):
         """
         verify offset not decreased, after block mirror job in steady status;
         """
-        error_context.context("verify offset not decreased", logging.info)
+        error_context.context("verify offset not decreased", LOG_JOB.info)
         params = self.parser_test_args()
         timeout = int(params.get("hold_on_timeout", 600))
         offset = self.get_status()["offset"]

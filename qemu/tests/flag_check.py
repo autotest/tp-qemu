@@ -1,5 +1,4 @@
 import re
-import logging
 import os.path
 
 from avocado.utils import download
@@ -78,7 +77,7 @@ def run(test, params, env):
             if flag:
                 return flag.groups()[0]
         except Exception as e:
-            logging.error("Failed to get support flag %s", e)
+            test.log.error("Failed to get support flag %s", e)
 
     def get_all_support_flags():
         """
@@ -126,7 +125,7 @@ def run(test, params, env):
             flags = flags_re.search(out).groups()[0].split()
             return set(map(cpu.Flag, flags))
         except Exception as e:
-            logging.error("Failed to get guest cpu flags %s", e)
+            test.log.error("Failed to get guest cpu flags %s", e)
 
     cpu.Flag.aliases = cpu.kvm_map_flags_aliases
 
@@ -144,7 +143,7 @@ def run(test, params, env):
     extra_flags = params.get("cpu_model_flags", " ")
 
     error_context.context("Boot guest with -cpu %s,%s" %
-                          (guest_cpumodel, extra_flags), logging.info)
+                          (guest_cpumodel, extra_flags), test.log.info)
 
     if params.get("start_vm") == "no" and "unknown,check" in extra_flags:
         params["start_vm"] = "yes"
@@ -169,7 +168,7 @@ def run(test, params, env):
         else:
             qemu_model = guest_cpumodel
         error_context.context("Get model %s support flags" % qemu_model,
-                              logging.info)
+                              test.log.info)
 
         # Get flags for every reg from model's info
         models_info = process.system_output(
@@ -185,10 +184,10 @@ def run(test, params, env):
         model_support_flags = set(map(cpu.Flag,
                                       model_support_flags.split()))
 
-        error_context.context("Get guest flags", logging.info)
+        error_context.context("Get guest flags", test.log.info)
         guest_flags = get_guest_cpuflags(session)
 
-        error_context.context("Get expected flag list", logging.info)
+        error_context.context("Get expected flag list", test.log.info)
 
         # out_flags is definded in dump file, but not in guest
         out_flags = params.get("out_flags", " ").split()
@@ -215,7 +214,7 @@ def run(test, params, env):
         lack_flags = set(expected_flags | check_flags) - host_flags
 
         if "check" in extra_flags and "unknown" not in extra_flags:
-            error_context.context("Check lack flag in host", logging.info)
+            error_context.context("Check lack flag in host", test.log.info)
             process_output = vm.process.get_output()
             miss_warn = []
             if lack_flags:
@@ -226,7 +225,7 @@ def run(test, params, env):
                 test.fail("no warning for lack flag %s" % miss_warn)
 
         error_context.context("Compare guest flags with expected flags",
-                              logging.info)
+                              test.log.info)
         all_support_flags = get_all_support_flags()
         missing_flags = expected_flags - guest_flags
         unexpect_flags = (guest_flags - expected_flags -

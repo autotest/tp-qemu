@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -34,7 +33,7 @@ def run(test, params, env):
     scname = params.get("win_update_service", "WuAuServ")
 
     error_context.context("Turned off windows updates service.",
-                          logging.info)
+                          test.log.info)
     try:
         status = utils_misc.wait_for(
             lambda: disable_win_service(session, scname),

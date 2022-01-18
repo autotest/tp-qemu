@@ -3,7 +3,6 @@ fio_linux.py include following case:
     1. Boot guest with "aio=native" or "aio=threads" CLI option and run fio
        tools.
 """
-import logging
 import re
 
 from virttest import error_context
@@ -50,7 +49,7 @@ def run(test, params, env):
         aio = params.get('image_aio_%s' % image, 'threads')
         cache = params.get('drive_cache_%s' % image, 'none')
         info.append('%s(\"aio=%s,cache=%s\")' % (image, aio, cache))
-    logging.info('Boot a guest with %s.', ', '.join(info))
+    test.log.info('Boot a guest with %s.', ', '.join(info))
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

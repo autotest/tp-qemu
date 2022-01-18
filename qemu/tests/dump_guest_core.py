@@ -1,4 +1,3 @@
-import logging
 import os
 
 from avocado.utils import process
@@ -48,7 +47,7 @@ def run(test, params, env):
         status, output = process.getstatusoutput(gdb_command, timeout=360)
         os.remove(gdb_command_file)
         os.remove(core_file)
-        logging.debug(output)
+        test.log.debug(output)
         if status != 0:
             test.fail("gdb command execute failed")
         elif "<class 'gdb.MemoryError'>" in output:
@@ -64,9 +63,9 @@ def run(test, params, env):
         output = process.getoutput(crash_cmd, timeout=60)
         os.remove(crash_script)
         os.remove(vmcore_file)
-        logging.debug(output)
+        test.log.debug(output)
         if "systemd" in output and 'swapper' in output:
-            logging.info("Crash command works as expected")
+            test.log.info("Crash command works as expected")
         else:
             test.fail("Vmcore corrupt")
 
@@ -95,7 +94,7 @@ def run(test, params, env):
     core_file += str(qemu_id)
     gdb_command %= str(qemu_id)
     trigger_core_dump_command %= str(qemu_id)
-    logging.info("trigger core dump command: %s", trigger_core_dump_command)
+    test.log.info("trigger core dump command: %s", trigger_core_dump_command)
     process.run(trigger_core_dump_command)
     utils_misc.wait_for(lambda: os.path.exists(core_file), timeout=60)
     if params.get('check_core_file', 'yes') == 'yes':

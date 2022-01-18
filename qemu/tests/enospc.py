@@ -11,6 +11,8 @@ from virttest import error_context
 
 from avocado.utils import process
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class EnospcConfig(object):
 
@@ -43,8 +45,8 @@ class EnospcConfig(object):
 
     @error_context.context_aware
     def setup(self):
-        logging.debug("Starting enospc setup")
-        error_context.context("performing enospc setup", logging.info)
+        LOG_JOB.debug("Starting enospc setup")
+        error_context.context("performing enospc setup", LOG_JOB.info)
         utils_misc.display_attributes(self)
         # Double check if there aren't any leftovers
         self.cleanup()
@@ -74,12 +76,12 @@ class EnospcConfig(object):
             try:
                 self.cleanup()
             except Exception as e:
-                logging.warn(e)
+                LOG_JOB.warn(e)
             raise
 
     @error_context.context_aware
     def cleanup(self):
-        error_context.context("performing enospc cleanup", logging.info)
+        error_context.context("performing enospc cleanup", LOG_JOB.info)
         if os.path.islink(self.lvtest_device):
             process.run("fuser -k %s" % self.lvtest_device, ignore_status=True)
             time.sleep(2)
@@ -101,7 +103,7 @@ class EnospcConfig(object):
             try:
                 process.run("losetup -d %s" % self.loopback)
             except process.CmdError:
-                logging.error("Failed to liberate loopback %s", self.loopback)
+                LOG_JOB.error("Failed to liberate loopback %s", self.loopback)
         if os.path.islink(self.qcow_file_path):
             os.remove(self.qcow_file_path)
         if os.path.isfile(self.raw_file_path):
@@ -124,11 +126,11 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    error_context.context("Create a virtual disk on lvm", logging.info)
+    error_context.context("Create a virtual disk on lvm", test.log.info)
     enospc_config = EnospcConfig(test, params)
     enospc_config.setup()
 
-    error_context.context("Boot up guest with two disks", logging.info)
+    error_context.context("Boot up guest with two disks", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.create()
     login_timeout = int(params.get("login_timeout", 360))
@@ -144,8 +146,8 @@ def run(test, params, env):
     cmd = params["background_cmd"]
     cmd %= devname
 
-    error_context.context("Continually write data to second disk", logging.info)
-    logging.info("Sending background cmd '%s'", cmd)
+    error_context.context("Continually write data to second disk", test.log.info)
+    test.log.info("Sending background cmd '%s'", cmd)
     session_serial.sendline(cmd)
 
     iterations = int(params.get("repeat_time", 40))
@@ -155,7 +157,7 @@ def run(test, params, env):
         if vm.monitor.verify_status("paused"):
             pause_n += 1
             error_context.context("Checking all images in use by %s" % vm.name,
-                                  logging.info)
+                                  test.log.info)
             for image_name in vm.params.objects("images"):
                 image_params = vm.params.object_params(image_name)
                 try:
@@ -163,14 +165,14 @@ def run(test, params, env):
                                                  data_dir.get_data_dir(), image_name)
                     image.check_image(image_params, data_dir.get_data_dir(), force_share=True)
                 except virt_vm.VMError as e:
-                    logging.error(e)
+                    test.log.error(e)
             error_context.context("Guest paused, extending Logical Volume size",
-                                  logging.info)
+                                  test.log.info)
             try:
                 process.run("lvextend -L +200M %s" % logical_volume)
             except process.CmdError as e:
-                logging.debug(e.result.stdout.decode())
-            error_context.context("Continue paused guest", logging.info)
+                test.log.debug(e.result.stdout.decode())
+            error_context.context("Continue paused guest", test.log.info)
             vm.resume()
         elif not vm.monitor.verify_status("running"):
             status = str(vm.monitor.info("status"))
@@ -178,16 +180,16 @@ def run(test, params, env):
         time.sleep(10)
         i += 1
 
-    logging.info("Final %s", str(vm.monitor.info("status")))
+    test.log.info("Final %s", str(vm.monitor.info("status")))
     # Shutdown guest before remove the image on LVM.
     vm.destroy(gracefully=vm.monitor.verify_status("running"))
     try:
         enospc_config.cleanup()
     except Exception as e:
-        logging.warn(e)
+        test.log.warn(e)
 
     if pause_n == 0:
         test.fail("Guest didn't pause during loop")
     else:
-        logging.info("Guest paused %s times from %s iterations",
-                     pause_n, iterations)
+        test.log.info("Guest paused %s times from %s iterations",
+                      pause_n, iterations)

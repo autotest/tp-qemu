@@ -8,6 +8,8 @@ from provider import job_utils
 from provider import backup_utils
 from qemu.tests import live_backup_base
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class DifferentialBackupTest(live_backup_base.LiveBackup):
 
@@ -59,13 +61,13 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         data = {"node": self.device, "name": bitmap}
         if isinstance(extra_options, dict):
             data.update(extra_options)
-        logging.debug("%s bitmap %s", operator.capitalize, bitmap)
+        LOG_JOB.debug("%s bitmap %s", operator.capitalize, bitmap)
         return job_utils.make_transaction_action(action, data)
 
     def _bitmap_batch_operate_by_transaction(self, action, bitmap_index_list):
         bitmap_lists = ",".join(
             map(lambda x: "bitmap_%d" % x, bitmap_index_list))
-        logging.info("%s %s in a transaction",
+        LOG_JOB.info("%s %s in a transaction",
                      action.capitalize(), bitmap_lists)
         func = partial(self._make_bitmap_transaction_action, action)
         actions = list(map(func, bitmap_index_list))
@@ -171,41 +173,41 @@ def run(test, params, env):
     tag = params.get("source_image", "image2")
     backup_test = DifferentialBackupTest(test, params, env, tag)
     try:
-        error_context.context("Initialize data disk", logging.info)
+        error_context.context("Initialize data disk", test.log.info)
         backup_test.init_data_disk()
-        error_context.context("Do full backup", logging.info)
+        error_context.context("Do full backup", test.log.info)
         node_name = backup_test.do_full_backup("full")
-        error_context.context("track file1 in bitmap2", logging.info)
+        error_context.context("track file1 in bitmap2", test.log.info)
         backup_test.track_file1_with_bitmap2()
-        error_context.context("track file2 in bitmap3", logging.info)
+        error_context.context("track file2 in bitmap3", test.log.info)
         backup_test.track_file2_with_bitmap3()
         error_context.context(
-            "Record counts & sha256 of bitmap1", logging.info)
+            "Record counts & sha256 of bitmap1", test.log.info)
         sha256_bitmap1 = backup_test.get_sha256_of_bitmap("bitmap_1")
         record_counts_bitmap1 = backup_test.get_record_counts_of_bitmap(
             "bitmap_1")
         error_context.context(
-            "Merge bitmap2 and bitmap3 to bitmap4", logging.info)
+            "Merge bitmap2 and bitmap3 to bitmap4", test.log.info)
         backup_test.merge_bitmap2_and_bitmap3_to_bitmap4()
-        error_context.context("Record sha256 of bitmap4", logging.info)
+        error_context.context("Record sha256 of bitmap4", test.log.info)
         sha256_bitmap4 = backup_test.get_sha256_of_bitmap("bitmap_4")
-        error_context.context("Record count of bitmap4", logging.info)
+        error_context.context("Record count of bitmap4", test.log.info)
         record_counts_bitmap4 = backup_test.get_record_counts_of_bitmap(
             "bitmap_4")
         if sha256_bitmap4 != sha256_bitmap1:
-            logging.debug("sha256_bitmap1: %s, sha256_bitmap4: %s",
-                          sha256_bitmap1, sha256_bitmap4)
+            test.log.debug("sha256_bitmap1: %s, sha256_bitmap4: %s",
+                           sha256_bitmap1, sha256_bitmap4)
             raise test.fail("sha256 of bitmap4 not equal sha256 of bitmap1")
         if record_counts_bitmap4 != record_counts_bitmap1:
-            logging.debug("count_bitmap1: %d, count_bitmap4: %d",
-                          record_counts_bitmap1, record_counts_bitmap4)
+            test.log.debug("count_bitmap1: %d, count_bitmap4: %d",
+                           record_counts_bitmap1, record_counts_bitmap4)
             raise test.fail("counts of bitmap4 not equal counts of bitmap4")
-        error_context.context("track file3 in bitmap5", logging.info)
+        error_context.context("track file3 in bitmap5", test.log.info)
         backup_test.track_file3_with_bitmap5()
-        error_context.context("Merge bitmap5 in bitmap4", logging.info)
+        error_context.context("Merge bitmap5 in bitmap4", test.log.info)
         backup_test.merge_bitmap5_to_bitmap4()
         error_context.context(
-            "Do incremental backup with bitmap4", logging.info)
+            "Do incremental backup with bitmap4", test.log.info)
         backup_test.do_incremental_backup_with_bitmap4(node_name, "inc")
     finally:
         backup_test.clean()

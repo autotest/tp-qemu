@@ -1,6 +1,5 @@
 import re
 import time
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -34,7 +33,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     if not params.get('image_backend') == 'nvme_direct':
-        error_context.context("Format disk", logging.info)
+        error_context.context("Format disk", test.log.info)
         utils_misc.format_windows_disk(session, params["disk_index"],
                                        mountpoint=params["disk_letter"])
     try:
@@ -42,7 +41,7 @@ def run(test, params, env):
         if not installed:
             dst = r"%s:\\" % utils_misc.get_winutils_vol(session)
 
-            error_context.context("Install fio in guest", logging.info)
+            error_context.context("Install fio in guest", test.log.info)
             install_cmd = params["install_cmd"]
             install_cmd = re.sub(r"DRIVE:\\+", dst, install_cmd)
             session.cmd(install_cmd, timeout=180)
@@ -51,16 +50,16 @@ def run(test, params, env):
             if config_cmd:
                 session.cmd(config_cmd)
 
-        error_context.context("Start fio in guest.", logging.info)
+        error_context.context("Start fio in guest.", test.log.info)
         status, output = session.cmd_status_output(fio_cmd, timeout=(cmd_timeout*2))
         if status:
             test.error("Failed to run fio, output: %s" % output)
 
     finally:
-        error_context.context("Copy fio log from guest to host.", logging.info)
+        error_context.context("Copy fio log from guest to host.", test.log.info)
         try:
             vm.copy_files_from(fio_log_file, test.resultsdir)
         except Exception as err:
-            logging.warn("Log file copy failed: %s", err)
+            test.log.warn("Log file copy failed: %s", err)
         if session:
             session.close()

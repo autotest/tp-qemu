@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import env_process
@@ -48,7 +47,7 @@ def run(test, params, env):
     try:
         error_context.context("boot guest with -cpu %s,%s" %
                               (guest_cpumodel, extra_flags),
-                              logging.info)
+                              test.log.info)
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     except Exception as err:
@@ -57,7 +56,7 @@ def run(test, params, env):
             if msg in str(err):
                 tmp_flag = True
         if tmp_flag or msg_unknow in str(err):
-            logging.info("unavailable host feature, guest force quit")
+            test.log.info("unavailable host feature, guest force quit")
         else:
             test.fail("guest quit with error\n%s" % str(err))
 

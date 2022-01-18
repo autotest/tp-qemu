@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -25,7 +24,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Login to guest", logging.info)
+    error_context.context("Login to guest", test.log.info)
     session = vm.wait_for_login(timeout=login_timeout)
 
     scp_sessions = int(params.get("scp_para_sessions", 1))
@@ -33,7 +32,7 @@ def run(test, params, env):
     try:
         stress_timeout = float(params.get("stress_timeout", "3600"))
         error_context.context("Do file transfer between host and guest",
-                              logging.info)
+                              test.log.info)
         start_time = time.time()
         stop_time = start_time + stress_timeout
         # here when set a run flag, when other case call this case as a

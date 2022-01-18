@@ -8,6 +8,8 @@ from virttest import error_context
 
 from qemu.tests import drive_mirror
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class DriveMirrorSimple(drive_mirror.DriveMirror):
 
@@ -19,20 +21,20 @@ class DriveMirrorSimple(drive_mirror.DriveMirror):
         """
         query running block mirroring job info;
         """
-        error_context.context("query job status", logging.info)
+        error_context.context("query job status", LOG_JOB.info)
         if not self.get_status():
             self.test.fail("No active job")
 
     @error_context.context_aware
     def readonly_target(self):
-        error_context.context("Set readonly bit on target image", logging.info)
+        error_context.context("Set readonly bit on target image", LOG_JOB.info)
         cmd = "chattr +i %s" % self.target_image
         return process.system(cmd)
 
     @error_context.context_aware
     def clear_readonly_bit(self):
         error_context.context("Clear readonly bit on target image",
-                              logging.info)
+                              LOG_JOB.info)
         cmd = "chattr -i %s" % self.target_image
         return process.system(cmd)
 

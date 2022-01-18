@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import error_context
 from virttest import qemu_storage
@@ -29,13 +27,13 @@ def run(test, params, env):
     params['image_format_backing_file_snapshot'] = params.get("image_format")
     params['image_name_snapshot'] = params.get("image_name") + "-snap"
 
-    error_context.context("boot guest over glusterfs", logging.info)
+    error_context.context("boot guest over glusterfs", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login(timeout=timeout)
-    error_context.context("shutdown VM", logging.info)
+    error_context.context("shutdown VM", test.log.info)
     vm.destroy()
-    error_context.context("create snapshot of vm disk", logging.info)
+    error_context.context("create snapshot of vm disk", test.log.info)
 
     snapshot_params = params.object_params("snapshot")
 

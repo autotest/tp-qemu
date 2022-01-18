@@ -1,6 +1,5 @@
 import re
 import time
-import logging
 
 from virttest import utils_misc
 from virttest import utils_test
@@ -56,7 +55,7 @@ def run(test, params, env):
                  else raise error.
         """
         error_context.context("Run test %s background" % bg_stress_test,
-                              logging.info)
+                              test.log.info)
         stress_thread = None
         wait_time = float(params.get("wait_bg_time", 60))
         bg_stress_run_flag = params.get("bg_stress_run_flag")
@@ -87,7 +86,7 @@ def run(test, params, env):
                                    check_bg_timeout, 0, 1):
             test.fail("Backgroud test %s is not alive!" % bg_stress_test)
         if params.get("set_bg_stress_flag", "no") == "yes":
-            logging.info("Wait %s test start", bg_stress_test)
+            test.log.info("Wait %s test start", bg_stress_test)
             if not utils_misc.wait_for(lambda: env.get(bg_stress_run_flag),
                                        wait_time, 0, 0.5):
                 err = "Fail to start %s test" % bg_stress_test
@@ -124,7 +123,7 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
     vm.verify_alive()
-    error_context.context("Boot guest with %s device" % driver, logging.info)
+    error_context.context("Boot guest with %s device" % driver, test.log.info)
 
     if params["os_type"] == "windows":
         session = vm.wait_for_login(timeout=timeout)
@@ -143,7 +142,7 @@ def run(test, params, env):
     wait_bg_finish = params.get("wait_bg_finish", "no") == "yes"
 
     error_context.context("Run %s %s %s" % (main_test, run_bg_flag,
-                                            bg_stress_test), logging.info)
+                                            bg_stress_test), test.log.info)
     if run_bg_flag == "before_bg_test":
         utils_test.run_virt_sub_test(test, params, env, main_test)
         if vm.is_dead():

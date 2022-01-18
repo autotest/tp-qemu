@@ -1,6 +1,5 @@
 import os
 import time
-import logging
 
 from avocado.core import exceptions
 
@@ -48,7 +47,7 @@ def run(test, params, env):
             stress_server[vm.name].load_stress_tool()
         except exceptions.TestError as err_msg:
             error = True
-            logging.error(err_msg)
+            test.log.error(err_msg)
 
     if stress_duration:
         time.sleep(stress_duration)
@@ -58,20 +57,20 @@ def run(test, params, env):
                     vm.get_address(), count=5, timeout=20)
                 if s_ping != 0:
                     error = True
-                    logging.error(
+                    test.log.error(
                         "%s seem to have gone out of network", vm.name)
                     continue
                 uptime = vm.uptime()
                 if up_time[vm.name] > uptime:
                     error = True
-                    logging.error(
+                    test.log.error(
                         "%s seem to have rebooted during the stress run", vm.name)
                 stress_server[vm.name].unload_stress()
                 stress_server[vm.name].clean()
                 vm.verify_dmesg()
             except exceptions.TestError as err_msg:
                 error = True
-                logging.error(err_msg)
+                test.log.error(err_msg)
 
     if error:
         test.fail("Run failed: see error messages above")

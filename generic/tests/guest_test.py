@@ -5,6 +5,8 @@ import sys
 from avocado.core import exceptions
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def run(test, params, env):
     """
@@ -32,12 +34,12 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
 
     if reboot_before_test:
-        logging.debug("Rebooting guest before test ...")
+        test.log.debug("Rebooting guest before test ...")
         session = vm.reboot(session, timeout=login_timeout,
                             serial=serial_login)
 
     try:
-        logging.info("Starting script...")
+        test.log.info("Starting script...")
 
         # Collect test parameters
         interpreter = params.get("interpreter")
@@ -46,7 +48,7 @@ def run(test, params, env):
         script_params = params.get("script_params", "")
         test_timeout = float(params.get("test_timeout", 600))
 
-        logging.debug("Starting preparing resouce files...")
+        test.log.debug("Starting preparing resouce files...")
         # Download the script resource from a remote server, or
         # prepare the script using rss?
         if params.get("download") == "yes":
@@ -59,13 +61,13 @@ def run(test, params, env):
             rm_cmd = "cd %s && (rmdir /s /q %s || del /s /q %s)" % \
                      (dst_rsc_dir, rsc_dir, rsc_dir)
             session.cmd(rm_cmd, timeout=test_timeout)
-            logging.debug("Clean directory succeeded.")
+            test.log.debug("Clean directory succeeded.")
 
             # then download the resource.
             rsc_cmd = "cd %s && %s %s" % (
                 dst_rsc_dir, download_cmd, rsc_server)
             session.cmd(rsc_cmd, timeout=test_timeout)
-            logging.info("Download resource finished.")
+            test.log.info("Download resource finished.")
         else:
             session.cmd_output("del /f %s || rm -r %s" % (dst_rsc_path, dst_rsc_path),
                                internal_timeout=0)
@@ -75,20 +77,20 @@ def run(test, params, env):
         cmd = "%s %s %s" % (interpreter, dst_rsc_path, script_params)
 
         try:
-            logging.info("------------ Script output ------------")
-            s, o = session.cmd_status_output(cmd, print_func=logging.info,
+            test.log.info("------------ Script output ------------")
+            s, o = session.cmd_status_output(cmd, print_func=test.log.info,
                                              timeout=test_timeout, safe=True)
             if s != 0:
                 test.fail("Run script '%s' failed, script output is: %s" % (cmd, o))
         finally:
-            logging.info("------------ End of script output ------------")
+            test.log.info("------------ End of script output ------------")
 
         if reboot_after_test:
-            logging.debug("Rebooting guest after test ...")
+            test.log.debug("Rebooting guest after test ...")
             session = vm.reboot(session, timeout=login_timeout,
                                 serial=serial_login)
 
-        logging.debug("guest test PASSED.")
+        test.log.debug("guest test PASSED.")
     finally:
         session.close()
 
@@ -114,7 +116,7 @@ def run_guest_test_background(test, params, env):
         sys.stdout.flush()
         sys.stderr.flush()
 
-    logging.info("Running guest_test background ...")
+    test.log.info("Running guest_test background ...")
     flush()
     pid = os.fork()
     if pid:
@@ -128,18 +130,18 @@ def run_guest_test_background(test, params, env):
         run(test, params, env)
         os.remove(flag_fname)
     except exceptions.TestFail as message_fail:
-        logging.info("[Guest_test Background FAIL] %s", message_fail)
+        test.log.info("[Guest_test Background FAIL] %s", message_fail)
         os.remove(flag_fname)
         os._exit(1)
     except exceptions.TestError as message_error:
-        logging.info("[Guest_test Background ERROR] %s", message_error)
+        test.log.info("[Guest_test Background ERROR] %s", message_error)
         os.remove(flag_fname)
         os._exit(2)
     except Exception:
         os.remove(flag_fname)
         os._exit(3)
 
-    logging.info("[Guest_test Background GOOD]")
+    test.log.info("[Guest_test Background GOOD]")
     os._exit(0)
 
 
@@ -149,7 +151,7 @@ def wait_guest_test_background(pid):
 
     :param pid: Pid of the child process executing background guest_test
     """
-    logging.info("Waiting for background guest_test to finish ...")
+    LOG_JOB.info("Waiting for background guest_test to finish ...")
 
     (pid, s) = os.waitpid(pid, 0)
     status = os.WEXITSTATUS(s)

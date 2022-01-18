@@ -6,7 +6,6 @@ Configurable on-guest dd test.
 """
 import os
 import re
-import logging
 import aexpect
 
 from virttest import utils_misc
@@ -59,7 +58,7 @@ def run(test, params, env):
             except IndexError:
                 err = ("Incorrect cfg: dd_select out of the range (disks=%s,"
                        " select=%s)" % (disks, select))
-                logging.error(err)
+                test.log.error(err)
                 test.error(err)
 
     def _check_disk_partitions_number():
@@ -72,7 +71,7 @@ def run(test, params, env):
     vm = env.get_vm(params['main_vm'])
     timeout = int(params.get("login_timeout", 360))
 
-    error_context.context("Wait guest boot up", logging.info)
+    error_context.context("Wait guest boot up", test.log.info)
     session = vm.wait_for_login(timeout=timeout)
 
     dd_keys = ['dd_if', 'dd_of', 'dd_bs', 'dd_count', 'dd_iflag',
@@ -98,8 +97,8 @@ def run(test, params, env):
             psize = float(
                 utils_numeric.normalize_data_size(
                     params.get("partition_size", '2G')
-                    )
                 )
+            )
             start = 0.0
             dev_id = os.path.split(path)[-1]
             dev_partitioned.append(dev_id)
@@ -145,10 +144,10 @@ def run(test, params, env):
     cmd = [dd_cmd.format(*t) for t in
            zip_longest(*remaining, fillvalue=fillvalue)]
     cmd = ' & '.join(cmd)
-    logging.info("Using '%s' cmd", cmd)
+    test.log.info("Using '%s' cmd", cmd)
 
     try:
-        error_context.context("Execute dd in guest", logging.info)
+        error_context.context("Execute dd in guest", test.log.info)
         try:
             (stat, out) = session.cmd_status_output(cmd, timeout=dd_timeout)
         except aexpect.ShellTimeoutError:
@@ -160,9 +159,9 @@ def run(test, params, env):
             out = details.output
 
         error_context.context("Check command exit status and output",
-                              logging.info)
-        logging.debug("Returned dd_status: %s\nReturned output:\n%s",
-                      stat, out)
+                              test.log.info)
+        test.log.debug("Returned dd_status: %s\nReturned output:\n%s",
+                       stat, out)
         if stat != dd_stat:
             err = ("Return code doesn't match (expected=%s, actual=%s)\n"
                    "Output:\n%s" % (dd_stat, stat, out))
@@ -171,7 +170,7 @@ def run(test, params, env):
             err = ("Output doesn't match:\nExpected:\n%s\nActual:\n%s"
                    % (dd_output, out))
             test.fail(err)
-        logging.info("dd test succeeded.")
+        test.log.info("dd test succeeded.")
     finally:
         for dev_id in dev_partitioned:
             utils_disk.clean_partition_linux(session, dev_id)

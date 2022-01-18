@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 import time
 
 from virttest import postprocess_iozone
@@ -86,7 +85,7 @@ def run(test, params, env):
         for iozone_thread in iozone_threads:
             iozone_thread.join()
 
-        logging.info('All the iozone threads are done.')
+        test.log.info('All the iozone threads are done.')
 
     def check_gpt_labletype(disk_index):
         """
@@ -121,12 +120,12 @@ def run(test, params, env):
             if orig_letters:
                 orig_letter = orig_letters[0]
                 if orig_letter != letter:
-                    logging.info("Change the drive letter from %s to %s",
-                                 orig_letter, letter)
+                    test.log.info("Change the drive letter from %s to %s",
+                                  orig_letter, letter)
                     utils_disk.drop_drive_letter(session, orig_letter)
                     utils_disk.set_drive_letter(session, index, target_letter=letter)
             else:
-                error_context.context("Format disk", logging.info)
+                error_context.context("Format disk", test.log.info)
                 utils_misc.format_windows_disk(session, index, letter, fstype=fstype,
                                                labletype=labletype)
 
@@ -137,7 +136,7 @@ def run(test, params, env):
     cmd = params["iozone_cmd"]
     iozone_cmd = utils_misc.set_winutils_letter(session, cmd)
     error_context.context("Running IOzone command on guest, timeout %ss"
-                          % iozone_timeout, logging.info)
+                          % iozone_timeout, test.log.info)
 
     if params.get('run_iozone_parallel', 'no') == 'yes':
         disk_letters.append('C')
@@ -146,7 +145,7 @@ def run(test, params, env):
 
     status, results = session.cmd_status_output(cmd=iozone_cmd,
                                                 timeout=iozone_timeout)
-    error_context.context("Write results to %s" % results_path, logging.info)
+    error_context.context("Write results to %s" % results_path, test.log.info)
     if status != 0:
         test.fail("iozone test failed: %s" % results)
 
@@ -154,5 +153,5 @@ def run(test, params, env):
         file.write(results)
 
     if params.get("post_result", "no") == "yes":
-        error_context.context("Generate graph of test result", logging.info)
+        error_context.context("Generate graph of test result", test.log.info)
         post_result(results_path, analysisdir)

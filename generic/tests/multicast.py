@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -30,7 +29,7 @@ def run(test, params, env):
         try:
             session.cmd(cmd)
         except aexpect.ShellError as e:
-            logging.warn(e)
+            test.log.warn(e)
 
     def run_host_guest(cmd):
         run_guest(cmd)
@@ -73,21 +72,21 @@ def run(test, params, env):
             new_suffix = suffix + i
             mcast = "%s.%d" % (prefix, new_suffix)
 
-            logging.info("Initial ping test, mcast: %s", mcast)
+            test.log.info("Initial ping test, mcast: %s", mcast)
             s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)
             if s != 0:
                 test.fail(" Ping return non-zero value %s" % o)
 
-            logging.info("Flood ping test, mcast: %s", mcast)
+            test.log.info("Flood ping test, mcast: %s", mcast)
             utils_test.ping(mcast, None, interface=ifname, flood=True,
                             output_func=None, timeout=flood_minutes * 60)
 
-            logging.info("Final ping test, mcast: %s", mcast)
+            test.log.info("Final ping test, mcast: %s", mcast)
             s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)
             if s != 0:
                 test.fail("Ping failed, status: %s, output: %s" % (s, o))
 
     finally:
-        logging.debug(session.cmd_output("ipmaddr show"))
+        test.log.debug(session.cmd_output("ipmaddr show"))
         session.cmd_output("kill -s SIGCONT %s" % pid)
         session.close()

@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import utils_net
 from virttest import env_process
@@ -24,7 +23,7 @@ def run(test, params, env):
     nic_queues = int(params["queues"])
     try:
         error_context.context("Boot the vm using queues %s'" % nic_queues,
-                              logging.info)
+                              test.log.info)
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.destroy()
@@ -39,13 +38,13 @@ def run(test, params, env):
                 bridge = params.get("netdst", "switch")
                 utils_net.del_from_bridge(exp.ifname, bridge)
             except Exception as warning:
-                logging.warn("Error occurent when clean tap device(%s)",
-                             str(warning))
-        error_context.context("Check Qemu not coredump", logging.info)
+                test.log.warn("Error occurent when clean tap device(%s)",
+                              str(warning))
+        error_context.context("Check Qemu not coredump", test.log.info)
         if "(core dumped)" in message:
             test.fail("Qemu core dumped when boot with invalid parameters.")
         error_context.context("Check Qemu quit with except message",
-                              logging.info)
+                              test.log.info)
         if not re.search(params['key_words'], message, re.M | re.I):
-            logging.info("Error message: %s", message)
+            test.log.info("Error message: %s", message)
             test.fail("Can't detect expect error")

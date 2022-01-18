@@ -4,11 +4,13 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 @error_context.context_aware
 def mount_lv(lv_path, session):
     error_context.context("mounting filesystem made on logical volume %s"
-                          % os.path.basename(lv_path), logging.info)
+                          % os.path.basename(lv_path), LOG_JOB.info)
     session.cmd("mkdir -p /mnt/kvm_test_lvm")
     session.cmd("mount %s /mnt/kvm_test_lvm" % lv_path)
 
@@ -16,17 +18,17 @@ def mount_lv(lv_path, session):
 @error_context.context_aware
 def umount_lv(lv_path, session):
     error_context.context("umounting filesystem made on logical volume "
-                          "%s" % os.path.basename(lv_path), logging.info)
+                          "%s" % os.path.basename(lv_path), LOG_JOB.info)
     session.cmd("umount %s" % lv_path)
     session.cmd("rm -rf /mnt/kvm_test_lvm")
 
 
 @error_context.context_aware
 def check_mount_lv(check_mount, session):
-    error_context.context("Check the lvm is mounted or not", logging.info)
+    error_context.context("Check the lvm is mounted or not", LOG_JOB.info)
     s, o = session.cmd_status_output(check_mount)
     if "is not a mountpoint" in o or s != 0:
-        logging.info("lvm is not mounted")
+        LOG_JOB.info("lvm is not mounted")
         return False
     else:
         return True
@@ -69,24 +71,24 @@ def run(test, params, env):
                 disk_list.append(d_path)
             disks = " ".join(disk_list)
             error_context.context("adding physical volumes %s" % disks,
-                                  logging.info)
+                                  test.log.info)
             session.cmd("pvcreate %s" % disks)
             error_context.context("creating a volume group out of %s" % disks,
-                                  logging.info)
+                                  test.log.info)
             session.cmd("vgcreate %s %s" % (vg_name, disks))
             error_context.context("activating volume group %s" % vg_name,
-                                  logging.info)
+                                  test.log.info)
             session.cmd("vgchange -ay %s" % vg_name)
             error_context.context("creating logical volume on volume group %s"
-                                  % vg_name, logging.info)
+                                  % vg_name, test.log.info)
             session.cmd("lvcreate -L2000 -n %s %s" % (lv_name, vg_name))
             error_context.context("creating %s filesystem on logical volume"
-                                  " %s" % (fs_type, lv_name), logging.info)
+                                  " %s" % (fs_type, lv_name), test.log.info)
             session.cmd("yes | mkfs.%s %s" % (fs_type, lv_path), timeout=int(timeout))
             mount_lv(lv_path, session)
             umount_lv(lv_path, session)
             error_context.context("checking %s filesystem made on logical "
-                                  "volume %s" % (fs_type, lv_name), logging.info)
+                                  "volume %s" % (fs_type, lv_name), test.log.info)
             session.cmd("fsck %s" % lv_path, timeout=int(timeout))
             if clean == "no":
                 mount_lv(lv_path, session)
@@ -103,12 +105,12 @@ def run(test, params, env):
             if check_mount_lv(check_mount, session):
                 umount_lv(lv_path, session)
             error_context.context("removing logical volume %s" % lv_path,
-                                  logging.info)
+                                  test.log.info)
             session.cmd("yes | lvremove %s" % lv_path)
             error_context.context("disabling volume group %s" % vg_name,
-                                  logging.info)
+                                  test.log.info)
             session.cmd("vgchange -a n %s" % vg_name)
             error_context.context("removing volume group %s" % vg_name,
-                                  logging.info)
+                                  test.log.info)
             session.cmd("vgremove -f %s" % vg_name)
         session.close()

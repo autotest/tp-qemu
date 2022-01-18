@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -84,7 +83,7 @@ def run(test, params, env):
     queues = int(params.get("queues", 1))
     vms = params.get("vms").split()
     if queues == 1:
-        logging.info("No need to enable MQ feature for single queue")
+        test.log.info("No need to enable MQ feature for single queue")
         return
     for vm in vms:
         vm = env.get_vm(vm)
@@ -100,7 +99,7 @@ def run(test, params, env):
                 if len(re.findall(r"Combined:\s+%d\s" % queues, o)) != 2:
                     test.error("Fail to enable MQ feature of (%s)" %
                                nic.nic_name)
-                logging.info("MQ feature of (%s) is enabled", nic.nic_name)
+                test.log.info("MQ feature of (%s) is enabled", nic.nic_name)
 
         taskset_cpu = params.get("netperf_taskset_cpu")
         if taskset_cpu:
@@ -119,7 +118,7 @@ def run(test, params, env):
         try:
             if bg_sub_test:
                 error_context.context("Run test %s background" % bg_sub_test,
-                                      logging.info)
+                                      test.log.info)
 
                 # Set flag, when the sub test really running, will change this
                 # flag to True
@@ -134,7 +133,7 @@ def run(test, params, env):
                 vhost_threads = vm.get_vhost_threads(vhost_thread_pattern)
                 time.sleep(120)
                 error_context.context("Check vhost threads on host",
-                                      logging.info)
+                                      test.log.info)
                 top_cmd = (r'top -n 1 -bis | tail -n +7 | grep -E "^ *%s "'
                            % ' |^ *'.join(map(str, vhost_threads)))
                 top_info = None
@@ -143,7 +142,7 @@ def run(test, params, env):
                                                      shell=True).decode()
                     if top_info:
                         break
-                logging.info(top_info)
+                test.log.info(top_info)
                 vhost_re = re.compile(r"(0:00.\d{2}).*vhost-\d+[\d|+]")
                 invalid_vhost_thread = len(vhost_re.findall(top_info, re.I))
                 running_threads = (len(top_info.splitlines()) -
@@ -156,7 +155,7 @@ def run(test, params, env):
 
             # check cpu affinity
             if check_cpu_affinity == 'yes' and (vm.cpuinfo.smp == queues):
-                error_context.context("Check cpu affinity", logging.info)
+                error_context.context("Check cpu affinity", test.log.info)
                 vectors = params.get("vectors", None)
                 enable_msix_vectors = params.get("enable_msix_vectors")
                 expect_vectors = 2 * int(queues) + 2
@@ -175,10 +174,10 @@ def run(test, params, env):
 
                     irq_number = cpu_irq_affinity[taskset_cpu]
                     irq_ori = get_cpu_irq_statistics(session, irq_number)
-                    logging.info("Cpu irq info: %s", irq_ori)
+                    test.log.info("Cpu irq info: %s", irq_ori)
                     time.sleep(10)
                     irq_cur = get_cpu_irq_statistics(session, irq_number)
-                    logging.info("After 10s, cpu irq info: %s", irq_cur)
+                    test.log.info("After 10s, cpu irq info: %s", irq_cur)
 
                     irq_change_list = [x[0] - x[1] for x in zip(irq_cur, irq_ori)]
                     cpu_affinity = irq_change_list.index(max(irq_change_list))

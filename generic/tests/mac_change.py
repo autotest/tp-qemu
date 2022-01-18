@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -17,7 +16,7 @@ def check_guest_mac(test, mac, vm, device_id=None):
     :param vm: target vm
     :param device_id: id of network pci device
     """
-    error_context.context("Check mac address via monitor", logging.info)
+    error_context.context("Check mac address via monitor", test.log.info)
     network_info = str(vm.monitor.info("network"))
     if not device_id:
         device_id = vm.virtnet[0].device_id
@@ -66,7 +65,7 @@ def run(test, params, env):
     os_type = params.get("os_type")
     os_variant = params.get("os_variant")
     change_cmd_pattern = params.get("change_cmd")
-    logging.info("The initial MAC address is %s", old_mac)
+    test.log.info("The initial MAC address is %s", old_mac)
     check_guest_mac(test, old_mac, vm)
     if os_type == "linux":
         interface = utils_net.get_linux_ifname(session_serial, old_mac)
@@ -94,7 +93,7 @@ def run(test, params, env):
             session.cmd(copy_cmd)
 
     # Start change MAC address
-    error_context.context("Changing MAC address to %s" % new_mac, logging.info)
+    error_context.context("Changing MAC address to %s" % new_mac, test.log.info)
     if os_type == "linux":
         change_cmd = change_cmd_pattern % (interface, new_mac)
     else:
@@ -105,14 +104,14 @@ def run(test, params, env):
 
         # Verify whether MAC address was changed to the new one
         error_context.context("Verify the new mac address, and restart the network",
-                              logging.info)
+                              test.log.info)
         if os_type == "linux":
             if params.get("shutdown_int", "yes") == "yes":
                 int_activate_cmd = params.get("int_activate_cmd",
                                               "ifconfig %s up")
                 session_serial.cmd_output_safe(int_activate_cmd % interface)
             session_serial.cmd_output_safe("ifconfig | grep -i %s" % new_mac)
-            logging.info("Mac address change successfully, net restart...")
+            test.log.info("Mac address change successfully, net restart...")
             dhclient_cmd = "dhclient -r && dhclient %s" % interface
             session_serial.sendline(dhclient_cmd)
         else:
@@ -131,7 +130,7 @@ def run(test, params, env):
                 mac_check = new_mac
             if not re.findall("%s" % "-".join(mac_check.split(":")), o, re.I):
                 test.fail("Guest mac change failed")
-            logging.info("Guest mac have been modified successfully")
+            test.log.info("Guest mac have been modified successfully")
 
         if params.get("nettype") != "macvtap":
             # Re-log into the guest after changing mac address
@@ -139,7 +138,7 @@ def run(test, params, env):
                 # Just warning when failed to see the session become dead,
                 # because there is a little chance the ip does not change.
                 msg = "The session is still responsive, settings may fail."
-                logging.warn(msg)
+                test.log.warn(msg)
             session.close()
 
             # In the following case, mac address should not change,
@@ -151,13 +150,13 @@ def run(test, params, env):
                 vm.virtnet.update_db()
 
             # Re-log into guest and check if session is responsive
-            error_context.context("Re-log into the guest", logging.info)
+            error_context.context("Re-log into the guest", test.log.info)
             session = vm.wait_for_login(timeout=timeout)
             if not session.is_responsive():
                 test.error("The new session is not responsive.")
             if params.get("reboot_vm_after_mac_changed") == "yes":
                 error_context.context("Reboot guest and check the the mac address by "
-                                      "monitor", logging.info)
+                                      "monitor", test.log.info)
                 mac_check = new_mac
                 if os_type == "linux":
                     nic = vm.virtnet[0]
@@ -172,7 +171,7 @@ def run(test, params, env):
                 check_guest_mac(test, mac_check, vm)
             if params.get("file_transfer", "no") == "yes":
                 error_context.context("File transfer between host and guest.",
-                                      logging.info)
+                                      test.log.info)
                 utils_test.run_file_transfer(test, params, env)
         else:
             if params.get("ctrl_mac_addr") == "off":

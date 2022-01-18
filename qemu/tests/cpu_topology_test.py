@@ -29,7 +29,7 @@ def run(test, params, env):
         :param exp: The expect value
         :param check_cmd: The param to get check command
         """
-        res = session.cmd_output(params[check_cmd]).strip()
+        res = session.cmd_output(check_cmd).strip()
         if int(res) != int(exp):
             test.fail('The vcpu %s number inside guest is %s,'
                       ' while it is set to %s' % (p_name, res, exp))
@@ -39,6 +39,8 @@ def run(test, params, env):
     vcpu_threads_list = [1, 2]
     if params['machine_type'] == 'pseries':
         vcpu_threads_list = [1, 2, 4, 8]
+    if 'arm64' in params['machine_type']:
+        vcpu_threads_list = [1]
     host_cpu = cpu.online_count()
     params['vcpu_cores'] = vcpu_cores = random.randint(1, min(6, host_cpu//2))
     for vcpu_threads in vcpu_threads_list:
@@ -72,5 +74,8 @@ def run(test, params, env):
         if not check_if_vm_vcpu_topology_match(session, os_type, vm.cpuinfo):
             test.fail('CPU topology of guest is incorrect.')
         if params.get('check_siblings_cmd'):
-            check('sibling', vcpu_threads * vcpu_cores, 'check_siblings_cmd')
+            check('sibling', vcpu_threads * vcpu_cores, params['check_siblings_cmd'])
+        if params.get('check_core_id_cmd'):
+            for cpu_id in list(range(params['smp'])):
+                check('core_id', cpu_id, params['check_core_id_cmd'] % cpu_id)
         vm.destroy()

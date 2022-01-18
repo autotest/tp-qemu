@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from provider.nbd_image_export import QemuNBDExportImage
@@ -28,12 +26,12 @@ def run(test, params, env):
     nbd_export.create_image()
     nbd_export.export_image()
     # stop/suspend export
-    logging.info("Suspend qemu-nbd to stop export:")
+    test.log.info("Suspend qemu-nbd to stop export:")
     try:
         nbd_export.suspend_export()
         nbd_connect_cmd = params["nbd_connect_cmd"]
         for iteration in range(5):
             run_nbd_connect_cmd(nbd_connect_cmd)
     finally:
-        logging.info('Stop export test image.')
+        test.log.info('Stop export test image.')
         nbd_export.stop_export()

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import utils_test
 from virttest import error_context
 from virttest import utils_net
@@ -31,17 +29,17 @@ def run(test, params, env):
         param param_value: the value to set to
         """
         error_context.context("Start set %s to %s" % (param_name, param_value),
-                              logging.info)
+                              test.log.info)
         utils_net.set_netkvm_param_value(vm, param_name, param_value)
 
-        logging.info("Check value after setting %s", param_name)
+        test.log.info("Check value after setting %s", param_name)
         cur_value = utils_net.get_netkvm_param_value(vm, param_name)
         if cur_value != param_value:
             err_msg = "Current value: %s is not equal to target value: %s"
             err_msg = err_msg % (cur_value, param_value)
             test.fail(err_msg)
 
-        error_context.context("Start ping test", logging.info)
+        error_context.context("Start ping test", test.log.info)
         guest_ip = vm.get_address()
         status, output = utils_test.ping(guest_ip, 10, timeout=15)
         if status:
@@ -69,7 +67,7 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=timeout)
     error_context.context("Check if the driver is installed and "
-                          "verified", logging.info)
+                          "verified", test.log.info)
     driver_verifier = params["driver_verifier"]
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,

@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 
@@ -45,7 +44,7 @@ def run(test, params, env):
         pattern = int(re.findall(r'\d+', ifname)[-1])
         nic_name_number = params.get_numeric("nic_name_number")
         if pattern == nic_name_number:
-            logging.info("nic name match")
+            test.log.info("nic name match")
         else:
             test.fail("nic name doesn't match")
 
@@ -75,20 +74,20 @@ def run(test, params, env):
             return nic_ip
         cached_ip = vm.address_cache.get(nic["mac"])
         arps = process.system_output("arp -aen").decode()
-        logging.debug("Can't get IP address:")
-        logging.debug("\tCached IP: %s", cached_ip)
-        logging.debug("\tARP table: %s", arps)
+        test.log.debug("Can't get IP address:")
+        test.log.debug("\tCached IP: %s", cached_ip)
+        test.log.debug("\tARP table: %s", arps)
 
     login_timeout = int(params.get("login_timeout", 360))
     repeat_times = int(params.get("repeat_times", 1))
-    logging.info("repeat_times: %s", repeat_times)
+    test.log.info("repeat_times: %s", repeat_times)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_serial_login(timeout=login_timeout)
 
     for iteration in range(repeat_times):
         error_context.context("Start test iteration %s" % (iteration + 1),
-                              logging.info)
+                              test.log.info)
         nic_hotplug_count = int(params.get("nic_hotplug_count", 1))
         nic_hotplugged = []
         for nic_index in range(1, nic_hotplug_count + 1):
@@ -98,11 +97,11 @@ def run(test, params, env):
             nic_model = nic_params["nic_model"]
             nic_params["nic_model"] = nic_model
             hotplug_nic = vm.hotplug_nic(**nic_params)
-            logging.info("Check if new interface gets ip address")
+            test.log.info("Check if new interface gets ip address")
             hotnic_ip = get_hotplug_nic_ip(vm, hotplug_nic, s_session)
 
             if not hotnic_ip:
-                logging.info("Reboot vm after hotplug nic")
+                test.log.info("Reboot vm after hotplug nic")
                 # reboot vm via serial port since some guest can't auto up
                 # hotplug nic and next step will check is hotplug nic works.
                 s_session = vm.reboot(session=s_session, serial=True)
@@ -110,16 +109,16 @@ def run(test, params, env):
                 hotnic_ip = get_hotplug_nic_ip(vm, hotplug_nic, s_session)
                 if not hotnic_ip:
                     test.fail("Hotplug nic still can't get ip after reboot vm")
-            logging.info("Got the ip address of new nic: %s", hotnic_ip)
-            logging.info("Check the nic name from inside guest")
+            test.log.info("Got the ip address of new nic: %s", hotnic_ip)
+            test.log.info("Check the nic name from inside guest")
             verified_nic_name()
-            logging.info("Ping host from guest's new ip")
+            test.log.info("Ping host from guest's new ip")
             ping_test()
 
             # random hotunplug nic
             nic_hotplugged.append(hotplug_nic)
             if random.randint(0, 1) and params.get("do_random_unhotplug"):
-                logging.info("Detaching the previously attached nic from vm")
+                test.log.info("Detaching the previously attached nic from vm")
                 unplug_nic_index = random.randint(0, len(nic_hotplugged) - 1)
                 vm.hotunplug_nic(nic_hotplugged[unplug_nic_index].nic_name)
                 nic_hotplugged.pop(unplug_nic_index)

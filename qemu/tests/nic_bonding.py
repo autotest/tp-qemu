@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 import random
@@ -57,9 +56,9 @@ def run(test, params, env):
         session_serial.cmd_output_safe(pgrep_cmd)
     # if dhclient is there, killl it
     except aexpect.ShellCmdError:
-        logging.info("it's safe to run dhclient now")
+        test.log.info("it's safe to run dhclient now")
     else:
-        logging.info("dhclient is already running, kill it")
+        test.log.info("dhclient is already running, kill it")
         session_serial.cmd_output_safe("killall -9 dhclient")
         time.sleep(1)
 
@@ -69,7 +68,7 @@ def run(test, params, env):
                               utils_misc.generate_random_string(8))
     host_path = os.path.join(test.tmpdir, "tmp-%s" %
                              utils_misc.generate_random_string(8))
-    logging.info("Test setup: Creating %dMB file on host", filesize)
+    test.log.info("Test setup: Creating %dMB file on host", filesize)
     process.run(dd_cmd % host_path, shell=True)
 
     # get_bonding_nic_mac and ip
@@ -77,8 +76,8 @@ def run(test, params, env):
         link_set_cmd = "ip link set dev %s %s"
         # transfer data
         original_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data original: %s", original_md5)
-        logging.info("Failover test with file transfer")
+        test.log.info("md5 value of data original: %s", original_md5)
+        test.log.info("Failover test with file transfer")
         transfer_thread = utils_misc.InterruptedThread(
             vm.copy_files_to, (host_path, guest_path))
         transfer_thread.start()
@@ -95,9 +94,9 @@ def run(test, params, env):
         else:
             transfer_thread.join()
 
-        logging.info('Cleaning temp file on host')
+        test.log.info('Cleaning temp file on host')
         os.remove(host_path)
-        logging.info("Failover test 2 with file transfer")
+        test.log.info("Failover test 2 with file transfer")
         transfer_thread = utils_misc.InterruptedThread(
             vm.copy_files_from, (guest_path, host_path))
         transfer_thread.start()
@@ -119,7 +118,7 @@ def run(test, params, env):
         else:
             transfer_thread.join()
         current_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data current: %s", current_md5)
+        test.log.info("md5 value of data current: %s", current_md5)
         if original_md5 != current_md5:
             test.fail("File changed after transfer host -> guest "
                       "and guest -> host")

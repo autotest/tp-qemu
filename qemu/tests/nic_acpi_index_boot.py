@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import utils_net
@@ -28,7 +27,7 @@ def run(test, params, env):
     pattern = int(re.findall(r'\d+', ifname)[-1])
     nic_name_number = params.get_numeric("nic_name_number")
     if pattern == nic_name_number:
-        logging.info("nic name match")
+        test.log.info("nic name match")
     else:
         test.fail("nic name doesn't match")
     host_ip = utils_net.get_host_ip_address(params)

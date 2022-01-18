@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 
@@ -64,14 +63,14 @@ def run(test, params, env):
             num = 0
             for protocol in test_protocols.split():
                 error_context.context("Testing %s protocol" % protocol,
-                                      logging.info)
+                                      test.log.info)
                 t_option = "%s -t %s" % (test_option, protocol)
                 n_client.bg_start(utils_net.get_host_ip_address(params), t_option,
                                   netperf_para_sess, netperf_cmd_prefix,
                                   package_sizes=netperf_package_sizes)
                 if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
                                        "Wait netperf test start"):
-                    logging.info("Netperf test start successfully.")
+                    test.log.info("Netperf test start successfully.")
                 else:
                     test.error("Can not start netperf client.")
                 num += 1
@@ -88,11 +87,11 @@ def run(test, params, env):
                     status = n_client.is_netperf_running()
                     if not status and duration < test_duration - 10:
                         test.fail("netperf terminated unexpectedly")
-                    logging.info("Wait netperf test finish %ss", duration)
+                    test.log.info("Wait netperf test finish %ss", duration)
                 if n_client.is_netperf_running():
                     test.fail("netperf still running, netperf hangs")
                 else:
-                    logging.info("netperf runs successfully")
+                    test.log.info("netperf runs successfully")
         finally:
             n_server.stop()
             n_server.cleanup(True)
@@ -108,7 +107,7 @@ def run(test, params, env):
         for size in package_sizes:
             error_context.context("From host ping to '%s' with guest '%s'"
                                   " with package size %s. " %
-                                  (vm.name, guest_ip, size), logging.info)
+                                  (vm.name, guest_ip, size), test.log.info)
             status, output = utils_net.ping(guest_ip, count=10, packetsize=size, timeout=30)
             if status != 0:
                 test.fail("host ping %s unexpected, output %s" % (guest_ip, output))
@@ -128,7 +127,7 @@ def run(test, params, env):
         if params["os_type"] == "windows":
             driver_verifier = params["driver_verifier"]
             error_context.context("Verify if netkvm.sys is enabled in guest",
-                                  logging.info)
+                                  test.log.info)
             session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                     test, driver_verifier)
         func_name = {"ping": test_ping, "netperf": test_netperf}

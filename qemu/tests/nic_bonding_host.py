@@ -1,5 +1,4 @@
 import time
-import logging
 import re
 
 from avocado.utils import process
@@ -42,7 +41,7 @@ def run(test, params, env):
     host_bridges = utils_net.Bridge()
 
     error_context.context("Load bonding module with mode 802.3ad",
-                          logging.info)
+                          test.log.info)
     if not process.system("lsmod|grep bonding", ignore_status=True,
                           shell=True):
         process.system("modprobe -r bonding")
@@ -50,7 +49,7 @@ def run(test, params, env):
     process.system("modprobe bonding mode=%s miimon=%s max_bonds=%s" %
                    (bonding_mode, bonding_miimon, bonding_max_bonds))
 
-    error_context.context("Bring up %s" % bond_iface, logging.info)
+    error_context.context("Bring up %s" % bond_iface, test.log.info)
     host_ifaces = utils_net.get_host_iface()
 
     if bond_iface not in host_ifaces:
@@ -73,7 +72,7 @@ def run(test, params, env):
             len(host_ph_ifaces_un) < host_iface_bonding):
         test.cancel("Host need %s nics at least." % host_iface_bonding)
 
-    error_context.context("Add nics to %s" % bond_iface.name, logging.info)
+    error_context.context("Add nics to %s" % bond_iface.name, test.log.info)
     host_ifaces_bonding = host_ph_ifaces_un[:host_iface_bonding]
     ifenslave_cmd = "ifenslave %s" % bond_iface.name
     op_ifaces = []
@@ -83,28 +82,28 @@ def run(test, params, env):
     process.system(ifenslave_cmd)
 
     error_context.context("Add a new bridge and add %s to it."
-                          % bond_iface.name, logging.info)
+                          % bond_iface.name, test.log.info)
     if bond_br_name not in host_bridges.list_br():
         host_bridges.add_bridge(bond_br_name)
     host_bridges.add_port(bond_br_name, bond_iface.name)
 
-    error_context.context("Get ip address for bridge", logging.info)
+    error_context.context("Get ip address for bridge", test.log.info)
     process.system("dhclient -r; dhclient %s" % bond_br_name, shell=True)
 
     error_context.context("Boot up guest with bridge %s" % bond_br_name,
-                          logging.info)
+                          test.log.info)
     params["start_vm"] = "yes"
     vm_name = params.get("main_vm")
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Checking guest netowrk via ping.", logging.info)
+    error_context.context("Checking guest netowrk via ping.", test.log.info)
     ping_cmd = params.get("ping_cmd")
     ping_cmd = re.sub("REMOTE_HOST", remote_host, ping_cmd)
     session.cmd(ping_cmd, timeout=ping_timeout)
 
-    error_context.context("Start file transfer", logging.info)
+    error_context.context("Start file transfer", test.log.info)
     f_transfer = utils_misc.InterruptedThread(
         utils_test.run_virt_sub_test,
         args=(test, params, env,),
@@ -114,13 +113,13 @@ def run(test, params, env):
         lambda: process.system_output("pidof scp", ignore_status=True), 30)
 
     error_context.context("Disable and enable physical "
-                          "interfaces in %s" % bond_br_name, logging.info)
+                          "interfaces in %s" % bond_br_name, test.log.info)
     while True:
         for op_iface in op_ifaces:
-            logging.debug("Turn down %s", op_iface.name)
+            test.log.debug("Turn down %s", op_iface.name)
             op_iface.down()
             time.sleep(bonding_timeout)
-            logging.debug("Bring up %s", op_iface.name)
+            test.log.debug("Bring up %s", op_iface.name)
             op_iface.up()
             time.sleep(bonding_timeout)
         if not f_transfer.is_alive():

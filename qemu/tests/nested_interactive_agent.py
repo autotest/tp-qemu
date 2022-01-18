@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest.utils_test import VMStress
 
@@ -42,19 +40,19 @@ def run(test, params, env):
 
     try:
         error_context.context('Receive the "APPROVE" message from MQ publisher '
-                              'to continue the test.', logging.info)
+                              'to continue the test.', test.log.info)
         try:
             event = mq_subscriber.receive_event(wait_response_timeout)
             if event == "NOTIFY":
-                logging.warning('Got "NOTIFY" message to finish test')
+                test.log.warning('Got "NOTIFY" message to finish test')
                 return
             elif event != 'APPROVE':
                 test.fail('Got unwanted message from MQ publisher.')
         except message_queuing.UnknownEventError as err:
-            logging.error(err)
+            test.log.error(err)
             test.error('The MQ publisher did not enter the "APPROVE" message '
                        'within the expected time.')
-        logging.info('Already captured the "APPROVE" message.')
+        test.log.info('Already captured the "APPROVE" message.')
 
         if not stress_tool:
             vm.reboot()

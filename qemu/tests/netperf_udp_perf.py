@@ -10,6 +10,8 @@ from virttest import remote
 from virttest import error_context
 from provider import netperf_base
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -45,12 +47,12 @@ def run(test, params, env):
         server_ctl = vm.wait_for_login(timeout=login_timeout)
         server_ctl_ip = server_ip
 
-    logging.debug(process.system_output("numactl --hardware",
-                                        verbose=False, ignore_status=True,
-                                        shell=True).decode())
-    logging.debug(process.system_output("numactl --show",
-                                        verbose=False, ignore_status=True,
-                                        shell=True).decode())
+    test.log.debug(process.system_output("numactl --hardware",
+                                         verbose=False, ignore_status=True,
+                                         shell=True).decode())
+    test.log.debug(process.system_output("numactl --show",
+                                         verbose=False, ignore_status=True,
+                                         shell=True).decode())
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     numa_node = netperf_base.pin_vm_threads(vm, params.get("numa_node"))
     host = params.get("host", "localhost")
@@ -68,7 +70,7 @@ def run(test, params, env):
                                  client_ip)
     netperf_base.ssh_cmd(client, cmd)
 
-    error_context.context("Prepare env of server/client/host", logging.info)
+    error_context.context("Prepare env of server/client/host", test.log.info)
     prepare_list = set([server_ctl, client, host])
     tag_dict = {server_ctl: "server", client: "client", host: "host"}
     ip_dict = {server_ctl: server_ctl_ip, client: client_pub_ip,
@@ -85,7 +87,7 @@ def run(test, params, env):
     env.stop_ip_sniffing()
 
     try:
-        error_context.context("Start netperf udp stream testing", logging.info)
+        error_context.context("Start netperf udp stream testing", test.log.info)
         start_test(server_ip, server_ctl, host, client, test.resultsdir,
                    test_duration=int(params.get('test_duration')),
                    burst_time=params.get('burst_time'),
@@ -130,11 +132,11 @@ def start_test(server, server_ctl, host, client, resultsdir,
     netperf_base.record_env_version(test, params, host, server_ctl,
                                     fd, test_duration)
 
-    error_context.context("Start Netserver on guest", logging.info)
+    error_context.context("Start Netserver on guest", LOG_JOB.info)
     netperf_version = params.get("netperf_version", "2.6.0")
     client_path = "/tmp/netperf-%s/src/netperf" % netperf_version
     server_path = "/tmp/netperf-%s/src/netserver" % netperf_version
-    logging.info("Netserver start cmd is '%s'", server_path)
+    LOG_JOB.info("Netserver start cmd is '%s'", server_path)
     netperf_base.ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
 
     base = params.get("format_base", "18")
@@ -198,10 +200,10 @@ def start_test(server, server_ctl, host, client, resultsdir,
                 test.write_test_keyval(
                     {'%s--%s' % (prefix, key): ret[key]})
 
-            logging.info(row)
+            LOG_JOB.info(row)
             fd.write(row + "\n")
             fd.flush()
-            logging.debug("Remove temporary files")
+            LOG_JOB.debug("Remove temporary files")
             process.system_output("rm -f %s" % fname, verbose=False,
                                   ignore_status=True, shell=True)
             netperf_base.ssh_cmd(client, "rm -f %s" % fname)

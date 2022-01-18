@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import error_context
 from virttest import utils_test
@@ -24,7 +23,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Boot a windows guest", logging.info)
+    error_context.context("Boot a windows guest", test.log.info)
     timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     manual_reboot_cmd = params.get("manual_reboot_cmd")
@@ -43,7 +42,7 @@ def run(test, params, env):
         session.sendline(del_dump_cmd)
 
     if params.get("config_cmds"):
-        error_context.context("Configure guest for dump", logging.info)
+        error_context.context("Configure guest for dump", test.log.info)
         # Wait guest fully boot up, or configure command may fail in windows
         time.sleep(30)
         reg_cmds = params.get("config_cmds").split(",")
@@ -57,36 +56,36 @@ def run(test, params, env):
                 test.fail("Fail command: %s. Output: %s" % (cmd, o))
 
     if params.get("reboot_after_config") == "yes":
-        error_context.context("Reboot guest", logging.info)
+        error_context.context("Reboot guest", test.log.info)
         session = vm.reboot(timeout=timeout * 2)
 
     try:
         if nmi_cmd:
             error_context.context("Send inject-nmi or nmi from host to guest",
-                                  logging.info)
+                                  test.log.info)
             vm.monitor.send_args_cmd(nmi_cmd)
         # Wait guest create dump file.
         if manual_reboot_cmd:
             bsod_time = params.get("bsod_time", 160)
-            logging.info("Waiting guest for creating dump file"
-                         " (%ssec)", bsod_time)
+            test.log.info("Waiting guest for creating dump file"
+                          " (%ssec)", bsod_time)
             time.sleep(bsod_time)
             error_context.context("Send a system_reset monitor command",
-                                  logging.info)
+                                  test.log.info)
             vm.monitor.send_args_cmd(manual_reboot_cmd)
 
         session = vm.wait_for_login(timeout=timeout)
 
         if check_dump_cmd:
             error_context.context("Verify whether the dump files are "
-                                  "generated", logging.info)
+                                  "generated", test.log.info)
             s, o = session.cmd_status_output(check_dump_cmd, 360)
-            logging.debug("Output for check_dump_cmd command: %s", o)
+            test.log.debug("Output for check_dump_cmd command: %s", o)
             if s:
                 err_msg = "Could not find dump files in guest. Output: '%s'" % o
                 test.fail(err_msg)
         if analyze_cmd:
-            error_context.context("Analyze dump file in guest", logging.info)
+            error_context.context("Analyze dump file in guest", test.log.info)
             try:
                 vm.copy_files_from(params["dump_path"], ".", timeout=100)
             except Exception:
@@ -102,4 +101,4 @@ def run(test, params, env):
             except Exception as e:
                 # Ignore cleanup exception to avoid it overriding
                 # the actual fault.
-                logging.warn("Failed to delete dump files: '%s'", e)
+                test.log.warn("Failed to delete dump files: '%s'", e)

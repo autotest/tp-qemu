@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 
@@ -35,7 +34,7 @@ def run(test, params, env):
     serial_session = vm.wait_for_serial_login(timeout=login_timeout)
 
     def mtu_test():
-        logging.info("Set mtu value and verfied")
+        test.log.info("Set mtu value and verfied")
         serial_session.cmd(params["fw_stop_cmd"], ignore_all_errors=True)
         guest_ifname = utils_net.get_linux_ifname(serial_session,
                                                   vm.get_mac_address(0))
@@ -50,7 +49,7 @@ def run(test, params, env):
                       params["mtu_value"])
 
     def pkg_buffer_test():
-        logging.info("Compile the script and execute")
+        test.log.info("Compile the script and execute")
         serial_session.cmd("gcc -o ~/exp ~/exp.c")
         serial_session.sendline("~/exp")
         time.sleep(60)
@@ -60,7 +59,7 @@ def run(test, params, env):
         if s == 0:
             test.fail("Virtual machine has security issues")
         serial_session.send_ctrl("^c")
-        logging.info("send ctrl+c command to exit the current process.")
+        test.log.info("send ctrl+c command to exit the current process.")
         vm.verify_kernel_crash()
 
     try:

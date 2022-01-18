@@ -9,6 +9,8 @@ from virttest import error_context
 from virttest import utils_package
 from virttest.utils_test.qemu import MemoryHotplugTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class NvdimmTest(object):
     """
@@ -48,7 +50,7 @@ class NvdimmTest(object):
         :params mems: memory objects
         """
         dimms_expect = set("dimm-%s" % mem for mem in mems)
-        logging.info("Check if dimm %s in memory-devices", dimms_expect)
+        LOG_JOB.info("Check if dimm %s in memory-devices", dimms_expect)
         dimms_monitor = set([info["data"]["id"] for info in vm.monitor.info("memory-devices")])
         if not dimms_expect.issubset(dimms_monitor):
             invisible_dimms = dimms_expect - dimms_monitor
@@ -113,7 +115,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     if params["start_vm"] == "no":
-        error_context.context("Check nvdimm backend in host", logging.info)
+        error_context.context("Check nvdimm backend in host", test.log.info)
         try:
             process.system("grep 'memmap=' /proc/cmdline")
         except process.CmdError:
@@ -141,7 +143,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     try:
-        error_context.context("Login to the guest", logging.info)
+        error_context.context("Login to the guest", test.log.info)
         login_timeout = int(params.get("login_timeout", 360))
         nvdimm_test.session = vm.wait_for_login(timeout=login_timeout)
         mems = params.objects("mem_devs")
@@ -152,12 +154,12 @@ def run(test, params, env):
                 hotplug_test.hotplug_memory(vm, mem)
             time.sleep(10)
             mems += target_mems
-        error_context.context("Verify nvdimm in monitor and guest", logging.info)
+        error_context.context("Verify nvdimm in monitor and guest", test.log.info)
         nvdimm_ns_create_cmd = params.get("nvdimm_ns_create_cmd")
         if nvdimm_ns_create_cmd:
             nvdimm_test.run_guest_cmd(nvdimm_ns_create_cmd)
         nvdimm_test.verify_nvdimm(vm, mems)
-        error_context.context("Format and mount nvdimm in guest", logging.info)
+        error_context.context("Format and mount nvdimm in guest", test.log.info)
         nvdimm_test.mount_nvdimm()
         if params.get("nvml_test", "no") == "yes":
             pkgs = params["depends_pkgs"].split()
@@ -170,22 +172,22 @@ def run(test, params, env):
             return
         nv_file = params.get("nv_file", "/mnt/nv")
         error_context.context("Create a file in nvdimm mount dir in guest, and get "
-                              "original md5 of the file", logging.info)
+                              "original md5 of the file", test.log.info)
         dd_cmd = "dd if=/dev/urandom of=%s bs=1K count=200" % nv_file
         nvdimm_test.run_guest_cmd(dd_cmd)
         orig_md5 = nvdimm_test.md5_hash(nv_file)
         nvdimm_test.umount_nvdimm()
         nvdimm_test.session = vm.reboot()
-        error_context.context("Verify nvdimm after reboot", logging.info)
+        error_context.context("Verify nvdimm after reboot", test.log.info)
         nvdimm_test.verify_nvdimm(vm, mems)
         nvdimm_test.mount_nvdimm(format_device="no")
         new_md5 = nvdimm_test.md5_hash(nv_file)
-        error_context.context("Compare current md5 to original md5", logging.info)
+        error_context.context("Compare current md5 to original md5", test.log.info)
         if new_md5 != orig_md5:
             test.fail("'%s' changed. The original md5 is '%s', current md5 is '%s'"
                       % (nv_file, orig_md5, new_md5))
         nvdimm_test.umount_nvdimm()
-        error_context.context("Check if error and calltrace in guest", logging.info)
+        error_context.context("Check if error and calltrace in guest", test.log.info)
         vm.verify_kernel_crash()
 
     finally:
@@ -198,4 +200,4 @@ def run(test, params, env):
             try:
                 process.system(params["del_dax_cmd"], timeout=240, shell=True)
             except process.CmdError:
-                logging.warn("Host dax configuration cannot be deleted!")
+                test.log.warn("Host dax configuration cannot be deleted!")

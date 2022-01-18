@@ -1,5 +1,4 @@
 import os
-import logging
 import time
 
 from virttest import error_context
@@ -32,13 +31,13 @@ def run(test, params, env):
                 msg = "netperf terminated unexpectedly"
                 test.fail(msg)
                 return False, msg
-            logging.info("Wait netperf test finish %ss", duration)
+            test.log.info("Wait netperf test finish %ss", duration)
         if n_client.is_netperf_running():
             msg = "netperf still running, netperf hangs"
             test.fail(msg)
             return False, msg
         else:
-            logging.info("netperf runs successfully")
+            test.log.info("netperf runs successfully")
 
     login_timeout = float(params.get("login_timeout", 360))
     netperf_server = params.get("netperf_server").split()
@@ -257,7 +256,7 @@ def run(test, params, env):
         s_len = len(server_infos)
         for protocol in test_protocols.split():
             error_context.context("Testing %s protocol" % protocol,
-                                  logging.info)
+                                  test.log.info)
             t_option = "%s -t %s" % (test_option, protocol)
             for n_client in netperf_clients:
                 index = num % s_len
@@ -267,7 +266,7 @@ def run(test, params, env):
                                   package_sizes=netperf_package_sizes)
                 if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
                                        "Wait netperf test start"):
-                    logging.info("Netperf test start successfully.")
+                    test.log.info("Netperf test start successfully.")
                 else:
                     test.error("Can not start netperf client.")
                 num += 1

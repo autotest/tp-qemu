@@ -1,4 +1,3 @@
-import logging
 import resource
 
 from avocado.utils import process
@@ -35,7 +34,7 @@ def run(test, params, env):
                            in numa_node_info.nodes[_].cpus][0])
         return node_used_host
 
-    error_context.context("Get host numa topological structure", logging.info)
+    error_context.context("Get host numa topological structure", test.log.info)
     timeout = float(params.get("login_timeout", 240))
     host_numa_node = utils_misc.NumaInfo()
     node_list = host_numa_node.online_nodes
@@ -82,25 +81,25 @@ def run(test, params, env):
     drop = 0
     for cpuid in range(len(vcpu_threads)):
         error_context.context("Get vcpu %s used numa node." % cpuid,
-                              logging.info)
+                              test.log.info)
         memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            qemu_pid)
         node_used_host = get_vcpu_used_node(host_numa_node,
                                             vcpu_threads[cpuid])
         node_used_host_index = node_list.index(node_used_host)
         memory_used_before = memory_status[node_used_host_index]
-        error_context.context("Allocate memory in guest", logging.info)
+        error_context.context("Allocate memory in guest", test.log.info)
         session.cmd(mount_cmd)
         binded_dd_cmd = "taskset %s" % str(2 ** int(cpuid))
         binded_dd_cmd += " dd if=/dev/urandom of=/tmp/%s" % cpuid
         binded_dd_cmd += " bs=1M count=%s" % dd_size
         session.cmd(binded_dd_cmd)
         error_context.context("Check qemu process memory use status",
-                              logging.info)
+                              test.log.info)
         node_after = get_vcpu_used_node(host_numa_node, vcpu_threads[cpuid])
         if node_after != node_used_host:
-            logging.warn("Node used by vcpu thread changed. So drop the"
-                         " results in this round.")
+            test.log.warn("Node used by vcpu thread changed. So drop the"
+                          " results in this round.")
             drop += 1
             continue
         memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,

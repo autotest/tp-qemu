@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -47,7 +46,7 @@ def run(test, params, env):
         """
         Get the cpu id list for each node in guest os, sort with node id.
         """
-        error_context.context("Get cpus in guest os", logging.info)
+        error_context.context("Get cpus in guest os", test.log.info)
         numa_cpu_guest = []
         if vm_arch in ('ppc64', 'ppc64le'):
             numa_info_guest = NumaInfo(session=session)
@@ -57,7 +56,7 @@ def run(test, params, env):
                 numa_cpus = sorted([int(v) for v in numa_cpus.split()])
                 numa_cpu_guest.append(numa_cpus)
         else:
-            error_context.context("Get SRAT ACPI table", logging.info)
+            error_context.context("Get SRAT ACPI table", test.log.info)
             if not utils_package.package_install("acpidump", session):
                 test.cancel("Please install acpidump in guest to proceed")
             content = session.cmd_output('cd /tmp && acpidump -n SRAT -b && '
@@ -82,7 +81,7 @@ def run(test, params, env):
         """
         Get the cpu id list for each node according to the qemu cli, sort with nodeid.
         """
-        error_context.context("Get the expected cpus in qemu command line", logging.info)
+        error_context.context("Get the expected cpus in qemu command line", test.log.info)
         numa_cpus = params.objects("guest_numa_cpus")
         numa_cpu_cli = []
         tmp = {}
@@ -129,7 +128,7 @@ def run(test, params, env):
         Get the specified cpu id list for each node that sort with node id and
         unspecified cpu topology with the output of "query-hotpluggable-cpus".
         """
-        error_context.context("Get the hotpluggable cpus", logging.info)
+        error_context.context("Get the hotpluggable cpus", test.log.info)
         specified_cpus = []
         unspecified_cpus = []
         tmp = {}

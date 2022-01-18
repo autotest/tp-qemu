@@ -1,4 +1,3 @@
-import logging
 import re
 import os
 
@@ -37,11 +36,11 @@ def run(test, params, env):
             else:
                 func()
         except Exception as e:
-            logging.warn("Failed to execute function '%s'."
-                         " error message:\n%s", func.__name__, e)
+            test.log.warn("Failed to execute function '%s'."
+                          " error message:\n%s", func.__name__, e)
 
     def _clean_up(step_cnt):
-        error_context.context("Clean up", logging.info)
+        error_context.context("Clean up", test.log.info)
         if step_cnt >= STEP_5:
             # remove test file.
             cmd = "rm -f %s" % " ".join(test_file_list)
@@ -66,7 +65,7 @@ def run(test, params, env):
         session.cmd("echo 3 >/proc/sys/vm/drop_caches")
 
         error_context.context("test %s size block write performance in guest"
-                              " using dd commands" % blk_size, logging.info)
+                              " using dd commands" % blk_size, test.log.info)
         dd_cmd = "dd"
         dd_cmd += " if=/dev/zero"
         dd_cmd += " of=%s" % test_file
@@ -86,7 +85,7 @@ def run(test, params, env):
         session.cmd("echo 3 >/proc/sys/vm/drop_caches")
 
         error_context.context("test %s size block read performance in guest"
-                              " using dd commands" % blk_size, logging.info)
+                              " using dd commands" % blk_size, test.log.info)
         dd_cmd = "dd"
         dd_cmd += " if=%s" % test_file
         dd_cmd += " of=/dev/null"
@@ -105,7 +104,7 @@ def run(test, params, env):
         test.cancel("There is no 'write_perf_keyval' method in"
                     " test object, skip this test")
 
-    error_context.context("boot guest over virtio driver", logging.info)
+    error_context.context("boot guest over virtio driver", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -142,7 +141,7 @@ def run(test, params, env):
     # After STEP 2
 
     error_context.context("mount nfs server in guest with tcp protocol",
-                          logging.info)
+                          test.log.info)
     nfs_server = params.get("nfs_server")
     nfs_path = params.get("nfs_path")
     mnt_option = params.get("mnt_option")
@@ -187,8 +186,8 @@ def run(test, params, env):
         result_file.write("### %s\n" % mnt_cmd_out)
         result_file.write("Category:ALL\n")
     except (IOError, ValueError) as e:
-        logging.error("Failed to write to result file,"
-                      " error message:\n%s", e)
+        test.log.error("Failed to write to result file,"
+                       " error message:\n%s", e)
 
     result_list = ["%s|%016s|%016s" % ("blk_size", "Write", "Read")]
     speed_pattern = r"(\d+ bytes).*?([\d\.]+ s).*?([\d\.]+ [KkMmGgTt])B/s"
@@ -227,7 +226,7 @@ def run(test, params, env):
         try:
             result_file.write("\n".join(result_list))
         except (IOError, ValueError) as e:
-            logging.error("Failed to write to result file,"
-                          " error message:\n%s", e)
+            test.log.error("Failed to write to result file,"
+                           " error message:\n%s", e)
 
     _clean_up(STEP_6)

@@ -1,5 +1,4 @@
 import os
-import logging
 
 from virttest import data_dir
 from virttest import error_context
@@ -28,26 +27,26 @@ def run(test, params, env):
         exploit_file = os.path.join(data_dir.get_deps_dir(), 'nx', 'x64_sc_rdo.c')
         dst_dir = '/tmp'
 
-        error_context.context("Copy the Exploit file to guest.", logging.info)
+        error_context.context("Copy the Exploit file to guest.", test.log.info)
         vm.copy_files_to(exploit_file, dst_dir)
 
-        error_context.context("Build exploit program in guest.", logging.info)
+        error_context.context("Build exploit program in guest.", test.log.info)
         build_exploit = "gcc -o /tmp/nx_exploit /tmp/x64_sc_rdo.c"
         if session.cmd_status(build_exploit):
             test.error("Failed to build the exploit program")
 
         exploit_cmd = "/tmp/nx_exploit"
 
-    error_context.context("Run exploit program in guest.", logging.info)
+    error_context.context("Run exploit program in guest.", test.log.info)
     # if nx is enabled (by default), the program failed.
     # segmentation error. return value of shell is not zero.
     exec_res = session.cmd_status(exploit_cmd)
     nx_on = params.get('nx_on', 'yes')
     if nx_on == 'yes':
         if exec_res:
-            logging.info('NX works good.')
+            test.log.info('NX works good.')
             error_context.context("Using execstack to remove the protection.",
-                                  logging.info)
+                                  test.log.info)
             enable_exec = 'execstack -s %s' % exploit_cmd
             if session.cmd_status(enable_exec):
                 if session.cmd_status("execstack --help"):
@@ -58,7 +57,7 @@ def run(test, params, env):
             if session.cmd_status(exploit_cmd):
                 test.fail('NX is still protecting. Error.')
             else:
-                logging.info('NX is disabled as desired. good')
+                test.log.info('NX is disabled as desired. good')
         else:
             test.fail('Fatal Error: NX does not protect anything!')
     else:
@@ -66,6 +65,6 @@ def run(test, params, env):
             msg = "qemu fail to disable 'nx' flag or the exploit is corrupted."
             test.error(msg)
         else:
-            logging.info('NX is disabled, and this Test Case passed.')
+            test.log.info('NX is disabled, and this Test Case passed.')
     if session:
         session.close()

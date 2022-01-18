@@ -1,6 +1,5 @@
 import re
 import os
-import logging
 import pathlib
 
 from avocado.utils import process
@@ -47,14 +46,14 @@ def run(test, params, env):
             vm.wait_for_login()
             vm_pid = vm.get_pid()
 
-            error_context.context("Check vmflags in smaps file", logging.info)
+            error_context.context("Check vmflags in smaps file", test.log.info)
             with open('/proc/%s/smaps' % vm_pid, 'r') as fd:
                 content = fd.read()
             check_pattern = params["check_pattern"]
             vmflags_match = re.search(check_pattern, content, re.M)
             if vmflags_match:
                 vmflags = vmflags_match.group(1).strip()
-                logging.info("Get vmflags: %s", vmflags)
+                test.log.info("Get vmflags: %s", vmflags)
             else:
                 test.error("Didn't find VmFlags in smaps file")
             if 'sf' not in vmflags.split():

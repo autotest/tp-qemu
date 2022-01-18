@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_net
@@ -26,13 +24,13 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login(timeout=timeout)
     error_context.context("Check if the driver is installed and "
-                          "verified", logging.info)
+                          "verified", test.log.info)
     driver_verifier = params["driver_verifier"]
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,
                                                             driver_verifier,
                                                             timeout)
-    error_context.context("Install VIOPROT protocol", logging.info)
+    error_context.context("Install VIOPROT protocol", test.log.info)
     media_type = params["virtio_win_media_type"]
     try:
         get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
@@ -58,7 +56,7 @@ def run(test, params, env):
     inf_find_cmd %= (viowin_ltr, inf_middle_path)
     inf_path = session.cmd(inf_find_cmd, timeout=timeout).strip()
 
-    logging.info("Will install inf file found at '%s'", inf_path)
+    test.log.info("Will install inf file found at '%s'", inf_path)
     install_cmd = params["install_cmd"] % inf_path
     status, output = session.cmd_status_output(install_cmd, timeout=timeout)
     if status:
@@ -73,7 +71,7 @@ def run(test, params, env):
     if status:
         test.error("Bind netkvm protocol failed, output=%s" % output)
 
-    error_context.context("Ping out from guest", logging.info)
+    error_context.context("Ping out from guest", test.log.info)
     host_ip = utils_net.get_host_ip_address(params)
     status, output = utils_net.ping(host_ip, count=10, timeout=60,
                                     session=session)

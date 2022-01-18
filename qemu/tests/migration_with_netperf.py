@@ -1,4 +1,3 @@
-import logging
 import os
 
 from virttest import error_context
@@ -103,24 +102,24 @@ def run(test, params, env):
             status_test_command=params.get("status_test_command", "echo $?"),
             compile_option=params.get("compile_option_server_g", ""))
         error_context.base_context("Run netperf test between host and guest")
-        error_context.context("Start netserver in guest.", logging.info)
+        error_context.context("Start netserver in guest.", test.log.info)
         netperf_server_g.start()
         if netperf_server_h:
-            error_context.context("Start netserver in host.", logging.info)
+            error_context.context("Start netserver in host.", test.log.info)
             netperf_server_h.start()
 
-        error_context.context("Start Netperf in host", logging.info)
+        error_context.context("Start Netperf in host", test.log.info)
         test_option = "-l %s" % netperf_timeout
         netperf_client_h.bg_start(guest_address, test_option, client_num)
         if netperf_client_g:
-            error_context.context("Start Netperf in guest", logging.info)
+            error_context.context("Start Netperf in guest", test.log.info)
             netperf_client_g.bg_start(host_address, test_option, client_num)
 
         m_count = 0
         while netperf_client_h.is_netperf_running():
             m_count += 1
             error_context.context("Start migration iterations: %s " % m_count,
-                                  logging.info)
+                                  test.log.info)
             vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
     finally:
         if netperf_server_g:

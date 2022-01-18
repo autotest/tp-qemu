@@ -1,4 +1,3 @@
-import logging
 import time
 import random
 import os
@@ -36,7 +35,7 @@ def run(test, params, env):
         :param timeout: Timeout that will be used to verify if guest script
                 started properly.
         """
-        logging.debug("Starting guest script on guest %s", vm.name)
+        test.log.debug("Starting guest script on guest %s", vm.name)
         session.sendline("$(command -v python python3 | head -1) "
                          "/tmp/ksm_overcommit_guest.py")
         try:
@@ -58,8 +57,8 @@ def run(test, params, env):
 
         :return: Tuple (match index, data)
         """
-        logging.debug("Executing '%s' on guest script loop, vm: %s, timeout: "
-                      "%s", command, vm.name, timeout)
+        test.log.debug("Executing '%s' on guest script loop, vm: %s, timeout: "
+                       "%s", command, vm.name, timeout)
         session.sendline(command)
         try:
             (match, data) = session.read_until_last_line_matches(
@@ -78,7 +77,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     # Prepare work in guest
-    error_context.context("Turn off swap in guest", logging.info)
+    error_context.context("Turn off swap in guest", test.log.info)
     session.cmd_status_output("swapoff -a")
     script_file_path = os.path.join(data_dir.get_root_dir(),
                                     "shared/scripts/ksm_overcommit_guest.py")
@@ -108,9 +107,9 @@ def run(test, params, env):
     if query_regex:
         sharing_page_0 = re.findall(query_regex, sharing_page_0)[0]
 
-    error_context.context("Start to allocate pages inside guest", logging.info)
+    error_context.context("Start to allocate pages inside guest", test.log.info)
     _start_allocator(vm, session, 60)
-    error_context.context("Start to fill memory in guest", logging.info)
+    error_context.context("Start to fill memory in guest", test.log.info)
     mem_fill = "mem = MemFill(%s, 0, %s)" % (shared_mem, seed)
     _execute_allocator(mem_fill, vm, session, fill_timeout)
     cmd = "mem.value_fill()"
@@ -125,7 +124,7 @@ def run(test, params, env):
         sharing_page_1 = re.findall(query_regex, sharing_page_1)[0]
 
     error_context.context("Start to fill memory with random value in guest",
-                          logging.info)
+                          test.log.info)
     split = params.get("split")
     if split == "yes":
         if test_type == "negative":
@@ -143,7 +142,7 @@ def run(test, params, env):
         sharing_page_2 = re.findall(query_regex, sharing_page_2)[0]
 
     # clean up work in guest
-    error_context.context("Clean up env in guest", logging.info)
+    error_context.context("Clean up env in guest", test.log.info)
     session.cmd_output("die()", 20)
     session.cmd_status_output("swapon -a")
     session.cmd_output("echo 3 > /proc/sys/vm/drop_caches")
@@ -176,7 +175,7 @@ def run(test, params, env):
         turns = 0
         while (fail_type > 0):
             if fail_type % 2 == 1:
-                logging.error(fail[turns])
+                test.log.error(fail[turns])
             fail_type = fail_type / 2
             turns += 1
         test.fail("KSM test failed: %s %s %s" %

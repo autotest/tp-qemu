@@ -1,4 +1,3 @@
-import logging
 import re
 import random
 
@@ -68,12 +67,12 @@ drive=drive_stg32,write-cache=on,channel=0" % image.image_filename
         cmd_w = "dd if=/dev/zero of=/dev/%s bs=1M count=8" % disk
         cmd_r = "dd if=/dev/%s of=/dev/null bs=1M count=8" % disk
         error_context.context('Do dd writing test on the data disk.',
-                              logging.info)
+                              test.log.info)
         status = session.cmd_status(cmd_w, timeout=timeout)
         if status != 0:
             test.error("dd writing test failed")
         error_context.context('Do dd reading test on the data disk.',
-                              logging.info)
+                              test.log.info)
         status = session.cmd_status(cmd_r, timeout=timeout)
         if status != 0:
             test.error("dd reading test failed")

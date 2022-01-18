@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import process
 from virttest import env_process
@@ -68,15 +67,15 @@ def run(test, params, env):
 
     os_type = params["os_type"]
     if os_type == 'linux':
-        error_context.context("Check the numa memory size in guest", logging.info)
+        error_context.context("Check the numa memory size in guest", test.log.info)
         # Use 30 plus the gap of 'MemTotal' in OS and '-m' in cli as threshold
         mem_total = get_mem_info(session, 'MemTotal')
         mem_total = float(normalize_data_size('%s KB' % mem_total))
         error_context.context("MemTotal in guest os is %s MB"
-                              % mem_total, logging.info)
+                              % mem_total, test.log.info)
         threshold = float(params.get_numeric("mem") - mem_total) + 30
         error_context.context("The acceptable threshold is: %s"
-                              % threshold, logging.info)
+                              % threshold, test.log.info)
         guest_nodes_size = get_nodes_size(size_type='MemTotal', session=session)
         guest_nodes_size = dict(guest_nodes_size)
         for nodenr, node in enumerate(params.objects('guest_numa_nodes')):
@@ -88,7 +87,7 @@ def run(test, params, env):
                     test.fail("[Guest]Wrong size of numa node %d: %f. Expected:"
                               " %s" % (nodenr, guest_nodes_size[nodenr], size))
 
-    error_context.context("Check the numa memory policy in dest host", logging.info)
+    error_context.context("Check the numa memory policy in dest host", test.log.info)
     qemu_pid = vm.get_pid()
     for mem_dev in mem_devs:
         memdev_params = params.object_params(mem_dev)

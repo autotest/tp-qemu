@@ -1,4 +1,3 @@
-import logging
 import os
 
 from avocado.utils import aurl
@@ -47,7 +46,7 @@ def run(test, params, env):
         try:
             default_kernel = session.cmd_output("grubby --default-kernel")
         except Exception as e:
-            logging.warn("Save grub config failed: '%s'", e)
+            test.log.warn("Save grub config failed: '%s'", e)
 
         return default_kernel
 
@@ -55,7 +54,7 @@ def run(test, params, env):
         error_context.context("Restore the grub to old version")
 
         if not default_kernel:
-            logging.warn("Could not get previous grub config, do noting.")
+            test.log.warn("Could not get previous grub config, do noting.")
             return
 
         cmd = "grubby --set-default=%s" % default_kernel.strip()
@@ -69,8 +68,8 @@ def run(test, params, env):
             try:
                 os.unlink(f)
             except Exception as e:
-                logging.warn("Could remove tmp file '%s', error message: '%s'",
-                             f, e)
+                test.log.warn("Could remove tmp file '%s', error message: '%s'",
+                              f, e)
 
     def _build_params(param_str, default_value=""):
         param = _tmp_params_dict.get(param_str)
@@ -87,8 +86,8 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
-    logging.info("Guest kernel before install: %s",
-                 session.cmd('uname -a').strip())
+    test.log.info("Guest kernel before install: %s",
+                  session.cmd('uname -a').strip())
 
     error_context.context("Save current default kernel information")
     default_kernel = _save_bootloader_config(session)
@@ -176,8 +175,8 @@ def run(test, params, env):
             utils_test.run_virt_sub_test(test, params, env,
                                          sub_type=sub_test, tag=tag)
         except Exception as e:
-            logging.error("Fail to run sub_test '%s', error message: '%s'",
-                          sub_test, e)
+            test.log.error("Fail to run sub_test '%s', error message: '%s'",
+                           sub_test, e)
 
     if params.get("restore_defaut_kernel", "no") == "yes":
         # Restore grub
@@ -193,8 +192,8 @@ def run(test, params, env):
         vm.reboot()
 
     session = vm.wait_for_login(timeout=timeout)
-    logging.info("Guest kernel after install: %s",
-                 session.cmd('uname -a').strip())
+    test.log.info("Guest kernel after install: %s",
+                  session.cmd('uname -a').strip())
 
     # Finally, let me clean up the tmp files.
     _clean_up_tmp_files(_tmp_file_list)

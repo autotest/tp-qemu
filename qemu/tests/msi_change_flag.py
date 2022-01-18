@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 import ctypes
@@ -40,7 +39,7 @@ def run(test, params, env):
         """
         return: Return the md5sum value of the guest.
         """
-        logging.info("Get md5sum of the file:'%s'", file_name)
+        test.log.info("Get md5sum of the file:'%s'", file_name)
         s, o = session.cmd_status_output("md5sum %s" % file_name,
                                          timeout=timeout)
         if s != 0:
@@ -58,12 +57,12 @@ def run(test, params, env):
     session = vm.wait_for_serial_login()
 
     if params.get("os_type") == "linux":
-        error_context.context("Check the pci msi in guest", logging.info)
+        error_context.context("Check the pci msi in guest", test.log.info)
         pci_id = session.cmd("lspci |grep Eth |awk {'print $1'}").strip()
         status = session.cmd("lspci -vvv -s %s|grep MSI-X" % pci_id).strip()
         enable_status = re.search(r'Enable\+', status, re.M | re.I)
         if enable_status.group() == "Enable+":
-            error_context.context("Disable pci msi in guest", logging.info)
+            error_context.context("Disable pci msi in guest", test.log.info)
             utils_test.update_boot_option(vm, args_added="pci=nomsi")
             session_msi = vm.wait_for_serial_login(timeout=login_timeout)
             pci_id = session_msi.cmd("lspci |grep Eth |awk {'print $1'}").strip()
@@ -82,25 +81,25 @@ def run(test, params, env):
         devcon_folder = utils_misc.set_winutils_letter(session,
                                                        params["devcon_folder"])
         error_context.context("Boot guest with %s device" % driver,
-                              logging.info)
+                              test.log.info)
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test, driver_verifier,
                                                                 login_timeout)
         error_context.context("Check %s's irq number" % device_name,
-                              logging.info)
+                              test.log.info)
         irq_list = irq_check(session, device_name, devcon_folder)
         irq_nums = len(irq_list)
         if not irq_nums > 1 and\
                 max(ctypes.c_int32(int(irq)).value for irq in irq_list) < 0:
             test.fail("%s's irq is not correct." % device_name)
         if params.get("msi_cmd"):
-            error_context.context("Disable MSI in guest", logging.info)
+            error_context.context("Disable MSI in guest", test.log.info)
             hwid_msi = win_dev.get_hwids(session, device_name, devcon_folder,
                                          login_timeout)[0]
             session.cmd(params["msi_cmd"] % (hwid_msi, 0))
             session = vm.reboot(session=session)
             error_context.context("Check %s's irq number" % device_name,
-                                  logging.info)
+                                  test.log.info)
             irq_list = irq_check(session, device_name, devcon_folder)
             irq_nums = len(irq_list)
             if not irq_nums == 1 and \
@@ -111,19 +110,19 @@ def run(test, params, env):
     guest_path = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
     host_path = os.path.join(test.tmpdir, "tmp-%s" %
                              utils_misc.generate_random_string(8))
-    logging.info("Test setup: Creating %dMB file on host", filesize)
+    test.log.info("Test setup: Creating %dMB file on host", filesize)
     process.run(dd_cmd % host_path, shell=True)
 
     try:
         src_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data from src: %s", src_md5)
+        test.log.info("md5 value of data from src: %s", src_md5)
         # transfer data
         error_context.context("Transfer data from host to %s" % vm.name,
-                              logging.info)
+                              test.log.info)
         vm.copy_files_to(host_path, guest_path)
         dst_md5 = get_file_md5sum(guest_path, session,
                                   timeout=file_md5_check_timeout)
-        logging.info("md5 value of data in %s: %s", vm.name, dst_md5)
+        test.log.info("md5 value of data in %s: %s", vm.name, dst_md5)
         if dst_md5 != src_md5:
             test.fail("File changed after transfer host -> %s" % vm.name)
     finally:

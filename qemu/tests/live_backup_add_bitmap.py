@@ -4,7 +4,6 @@ Bitmap-add test.
 Add a bitmap with persistent on/off to drive with image raw/qcow2 and verify
 its existence after system reboot.
 """
-import logging
 
 from virttest import error_context
 from provider import block_dirty_bitmap
@@ -26,7 +25,7 @@ def run(test, params, env):
     def check_bitmap_existence_as_expected(bitmaps, existence_param):
         """Check bitmaps' existence."""
         bitmap_dict = block_dirty_bitmap.get_bitmaps(vm.monitor.info("block"))
-        logging.debug("bitmaps:\n%s", bitmap_dict)
+        test.log.debug("bitmaps:\n%s", bitmap_dict)
         msgs = []
         for bitmap_params in bitmaps:
             bitmap = bitmap_params.get("bitmap_name")
@@ -50,20 +49,20 @@ def run(test, params, env):
     for bitmap_params in bitmaps:
         block_dirty_bitmap.block_dirty_bitmap_add(vm, bitmap_params)
 
-    error_context.context("check bitmap existence", logging.info)
+    error_context.context("check bitmap existence", test.log.info)
     check_bitmap_existence_as_expected(bitmaps, "existence")
 
-    error_context.context("system powerdown", logging.info)
+    error_context.context("system powerdown", test.log.info)
     vm.monitor.system_powerdown()
     if not vm.wait_for_shutdown(int(params.get("shutdown_timeout", 360))):
         test.fail("guest refuses to go down")
 
-    error_context.context("start vm", logging.info)
+    error_context.context("start vm", test.log.info)
     vm.create()
     vm.verify_alive()
     # wait till boot finishes
     vm.wait_for_login(timeout=int(params.get("login_timeout", 360))).close()
 
     error_context.context("check bitmap exsitence after shutdown",
-                          logging.info)
+                          test.log.info)
     check_bitmap_existence_as_expected(bitmaps, "existence_after_shutdown")

@@ -1,4 +1,3 @@
-import logging
 import re
 
 import aexpect
@@ -79,7 +78,7 @@ def run(test, params, env):
 
     def enable_multi_queues(vm):
         sess = vm.wait_for_serial_login(timeout=login_timeout)
-        error_context.context("Enable multi queues in guest.", logging.info)
+        error_context.context("Enable multi queues in guest.", test.log.info)
         for nic_index, nic in enumerate(vm.virtnet):
             ifname = utils_net.get_linux_ifname(sess, nic.mac)
             queues = int(nic.queues)
@@ -94,7 +93,7 @@ def run(test, params, env):
             err += "Ping command log:\n %s" % "\n".join(output.splitlines()[-3:])
             test.fail(err)
 
-    error_context.context("Init guest and try to login", logging.info)
+    error_context.context("Init guest and try to login", test.log.info)
     login_timeout = int(params.get("login_timeout", 360))
     bg_stress_test = params.get("run_bgstress")
     vm = env.get_vm(params["main_vm"])
@@ -102,7 +101,7 @@ def run(test, params, env):
     vm.wait_for_login(timeout=login_timeout)
 
     if params.get("pci_nomsi", "no") == "yes":
-        error_context.context("Disable pci msi in guest", logging.info)
+        error_context.context("Disable pci msi in guest", test.log.info)
         utils_test.update_boot_option(vm, args_added="pci=nomsi")
         vm.wait_for_login(timeout=login_timeout)
 
@@ -126,26 +125,26 @@ def run(test, params, env):
             ifnames.append(ifname)
 
         error_context.context("Run test %s background" % bg_stress_test,
-                              logging.info)
+                              test.log.info)
         stress_thread = utils_misc.InterruptedThread(
             utils_test.run_virt_sub_test, (test, params, env),
             {"sub_type": bg_stress_test})
         stress_thread.start()
 
         if bg_ping == "yes":
-            error_context.context("Ping guest from host", logging.info)
+            error_context.context("Ping guest from host", test.log.info)
             args = (guest_ip, b_ping_time, b_ping_lost_ratio)
             bg_test = utils_misc.InterruptedThread(ping_test, args)
             bg_test.start()
 
-        error_context.context("Change queues number repeatly", logging.info)
+        error_context.context("Change queues number repeatly", test.log.info)
         repeat_counts = int(params.get("repeat_counts", 10))
         for nic_index, nic in enumerate(vm.virtnet):
             if "virtio" not in nic['nic_model']:
                 continue
             queues = int(vm.virtnet[nic_index].queues)
             if queues == 1:
-                logging.info("Nic with single queue, skip and continue")
+                test.log.info("Nic with single queue, skip and continue")
                 continue
             ifname = ifnames[nic_index]
             default_change_list = range(1, int(queues + 1))
@@ -157,7 +156,7 @@ def run(test, params, env):
 
             for repeat_num in range(1, repeat_counts + 1):
                 error_context.context("Change queues number -- %sth"
-                                      % repeat_num, logging.info)
+                                      % repeat_num, test.log.info)
                 try:
                     queues_status = get_queues_status(session, ifname)
                     for q_number in change_list:
@@ -180,17 +179,17 @@ def run(test, params, env):
             ext_host = utils_net.get_default_gateway(session)
             if not ext_host:
                 # Fallback to a hardcode host, eg:
-                logging.warn("Can't get specified host,"
-                             " Fallback to default host '%s'", default_host)
+                test.log.warn("Can't get specified host,"
+                              " Fallback to default host '%s'", default_host)
                 ext_host = default_host
             s_session = vm.wait_for_login(timeout=login_timeout)
             txt = "ping %s after changing queues in guest."
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
             ping_test(ext_host, f_ping_time, f_ping_lost_ratio, s_session)
 
         if stress_thread:
             error_context.context("wait for background test finish",
-                                  logging.info)
+                                  test.log.info)
             try:
                 stress_thread.join()
             except Exception as err:
@@ -205,7 +204,7 @@ def run(test, params, env):
             s_session.close()
         if bg_test:
             error_context.context("Wait for background ping test finish.",
-                                  logging.info)
+                                  test.log.info)
             try:
                 bg_test.join()
             except Exception as err:

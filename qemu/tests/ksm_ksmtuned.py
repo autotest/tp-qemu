@@ -1,7 +1,6 @@
 import re
 import os
 import time
-import logging
 
 from shutil import copyfile
 
@@ -39,8 +38,8 @@ def run(test, params, env):
         """
         def heavyload_install():
             if session.cmd_status(test_install_cmd) != 0:
-                logging.warning("Could not find installed heavyload in guest, "
-                                "will install it via winutils.iso ")
+                test.log.warning("Could not find installed heavyload in guest, "
+                                 "will install it via winutils.iso ")
                 winutil_drive = utils_misc.get_winutils_vol(session)
                 if not winutil_drive:
                     test.cancel("WIN_UTILS CDROM not found.")
@@ -88,9 +87,9 @@ def run(test, params, env):
         free_mem_host = utils_memory.freememtotal()
         ksm_status = process.getoutput(params['cmd_check_ksm_status'])
         vm.destroy()
-        logging.info("The ksm threshold is %sM, QEMU used memory is %sM, "
-                     "and the total free memory on host is %sM",
-                     ksm_thres // 1024, mem // 1024, free_mem_host // 1024)
+        test.log.info("The ksm threshold is %sM, QEMU used memory is %sM, "
+                      "and the total free memory on host is %sM",
+                      ksm_thres // 1024, mem // 1024, free_mem_host // 1024)
         if threshold_reached:
             if free_mem_host > ksm_thres:
                 test.error("Host memory is not consumed as much as expected")

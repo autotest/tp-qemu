@@ -1,4 +1,3 @@
-import logging
 import os
 
 from avocado.utils import process
@@ -21,16 +20,16 @@ def run(test, params, env):
         vm.verify_alive()
 
     kvm_unit_test_dir = os.path.join(test.logdir, "kvm_unit_tests/")
-    logging.info("kvm_unit_test_dir: %s", kvm_unit_test_dir)
+    test.log.info("kvm_unit_test_dir: %s", kvm_unit_test_dir)
     clone_cmd = params["clone_cmd"] % kvm_unit_test_dir
     process.system(clone_cmd)
     compile_cmd = params["compile_cmd"] % kvm_unit_test_dir
     process.system(compile_cmd, shell=True)
 
-    error_context.context("Run kvm_unit_tests on host", logging.info)
+    error_context.context("Run kvm_unit_tests on host", test.log.info)
     timeout = params.get_numeric("kvm_unit_test_timeout", 60)
     run_cmd = params["test_cmd"] % kvm_unit_test_dir
-    logging.info("Run command %s ", run_cmd)
+    test.log.info("Run command %s ", run_cmd)
     status, output = process.getstatusoutput(run_cmd, timeout)
 
     if output:

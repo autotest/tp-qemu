@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 
 
@@ -20,7 +18,7 @@ def run(test, params, env):
 
     def check_x2apic_flag():
         x2apic_enabled = False
-        error_context.context("Check x2apic enabled in guest", logging.info)
+        error_context.context("Check x2apic enabled in guest", test.log.info)
         x2apic_output = session.cmd_output(check_x2apic_cmd).strip()
         x2apic_check_string = params.get("x2apic_check_string").split(",")
         for check_string in x2apic_check_string:
@@ -30,7 +28,7 @@ def run(test, params, env):
             test.fail("x2apic is not enabled in guest.")
 
     def install_new_kernel():
-        error_context.context("Install a new kernel in guest", logging.info)
+        error_context.context("Install a new kernel in guest", test.log.info)
         try:
             # pylint: disable=E0611
             from qemu.tests import rh_kernel_update
@@ -60,7 +58,7 @@ def run(test, params, env):
 
     check_cur_kernel_cmd = params.get("check_cur_kernel_cmd")
     cur_kernel_version = session.cmd_output(check_cur_kernel_cmd).strip()
-    logging.info("Current kernel is: %s", cur_kernel_version)
+    test.log.info("Current kernel is: %s", cur_kernel_version)
     cmd = params.get("check_installed_kernel")
     output = session.cmd_output(cmd, timeout=cmd_timeout)
     kernels = output.split()
@@ -73,7 +71,7 @@ def run(test, params, env):
         test.error("Could not find new kernel, "
                    "command line output: %s" % output)
     msg = "Reboot to kernel %s through kexec" % new_kernel
-    error_context.context(msg, logging.info)
+    error_context.context(msg, test.log.info)
     cmd = params.get("get_kernel_image") % new_kernel
     kernel_file = session.cmd_output(cmd).strip().splitlines()[0]
     cmd = params.get("get_kernel_ramdisk") % new_kernel
@@ -84,7 +82,7 @@ def run(test, params, env):
     session.sendline(cmd)
     session = vm.wait_for_login(timeout=login_timeout)
     kernel = session.cmd_output(check_cur_kernel_cmd).strip()
-    logging.info("Current kernel is: %s", kernel)
+    test.log.info("Current kernel is: %s", kernel)
     if kernel.strip() != new_kernel.strip():
         test.fail("Fail to boot to kernel %s, current kernel is %s"
                   % (new_kernel, kernel))

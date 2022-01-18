@@ -1,4 +1,3 @@
-import logging
 import os
 import shutil
 import glob
@@ -32,7 +31,7 @@ def run(test, params, env):
     if not unittest_list:
         test.cancel("No unittest files available (did you run the "
                     "build test first?)")
-    logging.debug('Flat file list: %s', unittest_list)
+    test.log.debug('Flat file list: %s', unittest_list)
 
     unittest_cfg = os.path.join(unittest_dir, 'unittests.cfg')
     parser = ConfigParser()
@@ -41,20 +40,20 @@ def run(test, params, env):
 
     if not test_list:
         test.error("No tests listed on config file %s" % unittest_cfg)
-    logging.debug('Unit test list: %s', test_list)
+    test.log.debug('Unit test list: %s', test_list)
 
     if params.get('unittest_test_list'):
         test_list = params.get('unittest_test_list').split()
-        logging.info('Original test list overriden by user')
-        logging.info('User defined unit test list: %s', test_list)
+        test.log.info('Original test list overriden by user')
+        test.log.info('User defined unit test list: %s', test_list)
 
     black_list = params.get('unittest_test_blacklist', '').split()
     if black_list:
         for b in black_list:
             if b in test_list:
                 test_list.remove(b)
-        logging.info('Tests blacklisted by user: %s', black_list)
-        logging.info('Test list after blacklist: %s', test_list)
+        test.log.info('Tests blacklisted by user: %s', black_list)
+        test.log.info('Test list after blacklist: %s', test_list)
 
     nfail = 0
     tests_failed = []
@@ -64,7 +63,7 @@ def run(test, params, env):
     extra_params_original = params.get('extra_params')
 
     for t in test_list:
-        logging.info('Running %s', t)
+        test.log.info('Running %s', t)
 
         flat_file = None
         if parser.has_option(t, 'file'):
@@ -73,16 +72,16 @@ def run(test, params, env):
         if flat_file is None:
             nfail += 1
             tests_failed.append(t)
-            logging.error('Unittest config file %s has section %s but no '
-                          'mandatory option file', unittest_cfg, t)
+            test.log.error('Unittest config file %s has section %s but no '
+                           'mandatory option file', unittest_cfg, t)
             continue
 
         if flat_file not in unittest_list:
             nfail += 1
             tests_failed.append(t)
-            logging.error('Unittest file %s referenced in config file %s but '
-                          'was not found under the unittest dir', flat_file,
-                          unittest_cfg)
+            test.log.error('Unittest file %s referenced in config file %s but '
+                           'was not found under the unittest dir', flat_file,
+                           unittest_cfg)
             continue
 
         smp = None
@@ -118,7 +117,7 @@ def run(test, params, env):
                     msg += (", output in %s" % testlog)
                 else:
                     testlog = None
-                logging.info(msg)
+                test.log.info(msg)
 
                 if not utils_misc.wait_for(vm.is_dead, timeout):
                     test.fail("Timeout elapsed (%ss)" % timeout)
@@ -137,20 +136,20 @@ def run(test, params, env):
                 if status != good_status:
                     nfail += 1
                     tests_failed.append(t)
-                    logging.error("Unit test %s failed", t)
+                    test.log.error("Unit test %s failed", t)
 
             except Exception as e:
                 nfail += 1
                 tests_failed.append(t)
-                logging.error('Exception happened during %s: %s', t, str(e))
+                test.log.error('Exception happened during %s: %s', t, str(e))
         finally:
             try:
                 if testlog is not None:
                     shutil.copy(vm.get_testlog_filename(), testlog_path)
-                    logging.info("Unit test log collected and available "
-                                 "under %s", testlog_path)
+                    test.log.info("Unit test log collected and available "
+                                  "under %s", testlog_path)
             except (NameError, IOError):
-                logging.error("Not possible to collect logs")
+                test.log.error("Not possible to collect logs")
 
         # Restore the extra params so other tests can run normally
         params['extra_params'] = extra_params_original

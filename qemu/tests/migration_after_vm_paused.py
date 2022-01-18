@@ -7,6 +7,8 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class MigrationAfterVmPaused(object):
 
@@ -46,7 +48,7 @@ class MigrationAfterVmPaused(object):
             args=(self.test, self.params, self.env,),
             kwargs={"sub_type": self.guest_stress_test})
         self.bg.start()
-        logging.info("sleep %ds waiting guest stress test start.", timeout)
+        LOG_JOB.info("sleep %ds waiting guest stress test start.", timeout)
         time.sleep(timeout)
         if not self.bg.is_alive():
             self.test.fail("Failed to start guest stress test!")
@@ -58,7 +60,7 @@ class MigrationAfterVmPaused(object):
                 self.vm.verify_alive()
                 session = self.vm.wait_for_login()
                 if self.stress_stop_cmd:
-                    logging.warn("Killing background stress process "
+                    LOG_JOB.warn("Killing background stress process "
                                  "with cmd '%s', you would see some "
                                  "error message in client test result,"
                                  "it's harmless.", self.stress_stop_cmd)
@@ -82,7 +84,7 @@ class MigrationAfterVmPaused(object):
             # process is running
             session2 = self.vm.wait_for_login(timeout=self.login_timeout)
             error_context.context("Checking the background command in "
-                                  "the guest pre migration", logging.info)
+                                  "the guest pre migration", LOG_JOB.info)
             session2.cmd(self.bg_check_command, timeout=30)
             session2.close()
         else:
@@ -93,21 +95,21 @@ class MigrationAfterVmPaused(object):
     @error_context.context_aware
     def after_migration(self):
 
-        logging.info("Logging into guest after migration...")
+        LOG_JOB.info("Logging into guest after migration...")
         session2 = self.vm.wait_for_login(timeout=self.login_timeout)
-        logging.info("Logged in after migration")
+        LOG_JOB.info("Logged in after migration")
         error_context.context("Checking the background command in the guest "
-                              "post migration", logging.info)
+                              "post migration", LOG_JOB.info)
         session2.cmd(self.bg_check_command, timeout=30)
         output = session2.cmd_output(self.test_command)
         # Compare output to reference output
         if output != self.reference_output:
-            logging.info("Command output before migration differs from "
+            LOG_JOB.info("Command output before migration differs from "
                          "command output after migration")
-            logging.info("Command: %s", self.test_command)
-            logging.info("Output before: %s",
+            LOG_JOB.info("Command: %s", self.test_command)
+            LOG_JOB.info("Output before: %s",
                          utils_misc.format_str_for_message(self.reference_output))
-            logging.info("Output after: %s",
+            LOG_JOB.info("Output after: %s",
                          utils_misc.format_str_for_message(output))
             self.test.fail("Command '%s' produced different output "
                            "before and after migration" % self.test_command)
@@ -127,15 +129,15 @@ class MigrationAfterVmPaused(object):
                     if not int(details.status) == int(ignore_status):
                         raise
                 except aexpect.ShellTimeoutError:
-                    logging.debug("Remote session not responsive.")
+                    LOG_JOB.debug("Remote session not responsive.")
 
     def ping_pong_migration(self):
 
         for i in range(int(self.ping_pong)):
             if i % 2 == 0:
-                logging.info("Round %s ping...", (i / 2))
+                LOG_JOB.info("Round %s ping...", (i / 2))
             else:
-                logging.info("Round %s pong...", (i / 2))
+                LOG_JOB.info("Round %s pong...", (i / 2))
             self.vm.migrate(self.mig_timeout, self.mig_protocol,
                             self.mig_cancel_delay,
                             self.offline, self.check,

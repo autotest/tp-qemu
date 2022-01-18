@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import qemu_monitor
 
@@ -33,8 +31,8 @@ def run(test, params, env):
 
     black_cmds = params.get("black_cmds", "").split()
     error_context.context("Verify black commands are unavaliable in "
-                          "'%s' monitor" % protocol, logging.info)
-    logging.info("Black commands: %s", black_cmds)
+                          "'%s' monitor" % protocol, test.log.info)
+    test.log.info("Black commands: %s", black_cmds)
     cmds = [cmd for cmd in black_cmds if is_supported(cmd)]
     if cmds:
         msg = "Unexpected commands %s found in %s monitor" % (cmds, protocol)

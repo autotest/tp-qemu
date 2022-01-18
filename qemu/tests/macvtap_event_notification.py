@@ -1,5 +1,4 @@
 import functools
-import logging
 import time
 
 from avocado.utils import process
@@ -63,7 +62,7 @@ def run(test, params, env):
             test.error("cmd_type is not supported")
 
     if pre_cmd:
-        error_context.context("Run pre_cmd '%s'", logging.info)
+        error_context.context("Run pre_cmd '%s'", test.log.info)
         pre_cmd_type = params.get("pre_cmd_type", event_cmd_type)
         send_cmd(pre_cmd, pre_cmd_type)
 
@@ -71,12 +70,12 @@ def run(test, params, env):
     interface_name = utils_net.get_linux_ifname(session, mac)
 
     error_context.context("In guest, change network interface "
-                          "to promisc state.", logging.info)
+                          "to promisc state.", test.log.info)
     event_cmd = params.get("event_cmd") % interface_name
     send_cmd(event_cmd, event_cmd_type)
 
     error_context.context("Try to get qmp events in %s seconds!" % timeout,
-                          logging.info)
+                          test.log.info)
     end_time = time.time() + timeout
     qmp_monitors = vm.get_monitors_by_type("qmp")
     qmp_num = len(qmp_monitors)
@@ -86,7 +85,7 @@ def run(test, params, env):
             if event:
                 txt = "Monitr %s " % monitor.name
                 txt += "receive qmp %s event notification" % event_check
-                logging.info(txt)
+                test.log.info(txt)
                 qmp_num -= 1
                 qmp_monitors.remove(monitor)
         time.sleep(5)
@@ -104,7 +103,7 @@ def run(test, params, env):
     if post_cmd:
         for nic in vm.virtnet:
             post_cmd = post_cmd % nic.device_id
-            error_context.context("Run post_cmd '%s'" % post_cmd, logging.info)
+            error_context.context("Run post_cmd '%s'" % post_cmd, test.log.info)
             post_cmd_type = params.get("post_cmd_type", event_cmd_type)
             output = send_cmd(post_cmd, post_cmd_type)
             post_cmd_check = params.get("post_cmd_check")

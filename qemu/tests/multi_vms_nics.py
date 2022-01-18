@@ -1,4 +1,3 @@
-import logging
 import re
 
 from avocado.utils import process
@@ -48,7 +47,7 @@ def run(test, params, env):
         packet_size = params.get("packet_size", "").split() or d_packet_size
         for size in packet_size:
             error_context.context("Ping with packet size %s" % size,
-                                  logging.info)
+                                  test.log.info)
             status, output = utils_test.ping(dst_ip, 10, interface=nic,
                                              packetsize=size, timeout=30,
                                              session=session)
@@ -61,11 +60,11 @@ def run(test, params, env):
                 if status != 0:
                     test.fail("Ping returns non-zero value %s" % output)
 
-        error_context.context("Flood ping test", logging.info)
+        error_context.context("Flood ping test", test.log.info)
         utils_test.ping(dst_ip, None, interface=nic, flood=True,
                         output_func=None, timeout=flood_minutes * 60,
                         session=session)
-        error_context.context("Final ping test", logging.info)
+        error_context.context("Final ping test", test.log.info)
         counts = params.get("ping_counts", 100)
         status, output = utils_test.ping(dst_ip, counts, interface=nic,
                                          timeout=float(counts) * 1.5,
@@ -89,13 +88,13 @@ def run(test, params, env):
         cmd = params.get("file_create_cmd", cmd)
 
         error_context.context("Create file by dd command, cmd: %s" % cmd,
-                              logging.info)
+                              test.log.info)
         session.cmd(cmd)
 
         transfer_timeout = int(params.get("transfer_timeout"))
         log_filename = "scp-from-%s-to-%s.log" % (src, dst)
         error_context.context("Transfer file from %s to %s" % (src, dst),
-                              logging.info)
+                              test.log.info)
         remote.scp_between_remotes(src, dst, port, password, password,
                                    username, username, src_path, dst_path,
                                    log_filename=log_filename,
@@ -104,13 +103,13 @@ def run(test, params, env):
         dst_path = "/tmp/3"
         log_filename = "scp-from-%s-to-%s.log" % (dst, src)
         error_context.context("Transfer file from %s to %s" % (dst, src),
-                              logging.info)
+                              test.log.info)
         remote.scp_between_remotes(dst, src, port, password, password,
                                    username, username, src_path, dst_path,
                                    log_filename=log_filename,
                                    timeout=transfer_timeout)
         error_context.context("Compare original file and transferred file",
-                              logging.info)
+                              test.log.info)
 
         cmd1 = "md5sum /tmp/1"
         cmd2 = "md5sum /tmp/3"
@@ -151,12 +150,12 @@ def run(test, params, env):
     host_ip = utils_net.get_ip_address_by_interface(params.get("netdst"))
     host_ip = params.get("srchost", host_ip)
     flood_minutes = float(params["flood_minutes"])
-    error_context.context("Check irqbalance service status", logging.info)
+    error_context.context("Check irqbalance service status", test.log.info)
     o = process.system_output(check_irqbalance_cmd, ignore_status=True,
                               shell=True).decode()
     check_stop_irqbalance = False
     if re.findall(status_irqbalance, o):
-        logging.debug("stop irqbalance")
+        test.log.debug("stop irqbalance")
         process.run(stop_irqbalance_cmd, shell=True)
         check_stop_irqbalance = True
         o = process.system_output(check_irqbalance_cmd, ignore_status=True,
@@ -173,7 +172,7 @@ def run(test, params, env):
         thread_list.extend(vm.vcpu_threads)
         thread_list.extend(vm.vhost_threads)
         error_context.context("Check all the nics available or not",
-                              logging.info)
+                              test.log.info)
         for index, nic in enumerate(vm.virtnet):
             guest_ifname = utils_net.get_linux_ifname(session, nic.mac)
             guest_ip = vm.get_address(index)
@@ -183,7 +182,7 @@ def run(test, params, env):
                 test.fail(err_log)
             nic_interface = [guest_ifname, guest_ip, session]
             nic_interface_list.append(nic_interface)
-    error_context.context("Pin vcpus and vhosts to host cpus", logging.info)
+    error_context.context("Pin vcpus and vhosts to host cpus", test.log.info)
     host_numa_nodes = utils_misc.NumaInfo()
     vthread_num = 0
     for numa_node_id in host_numa_nodes.nodes:
@@ -192,30 +191,30 @@ def run(test, params, env):
             if vthread_num >= len(thread_list):
                 break
             vcpu_tid = thread_list[vthread_num]
-            logging.debug("pin vcpu/vhost thread(%s) to cpu(%s)",
-                          vcpu_tid, numa_node.pin_cpu(vcpu_tid))
+            test.log.debug("pin vcpu/vhost thread(%s) to cpu(%s)",
+                           vcpu_tid, numa_node.pin_cpu(vcpu_tid))
             vthread_num += 1
 
     nic_interface_list_len = len(nic_interface_list)
     # ping and file transfer test
     for src_ip_index in range(nic_interface_list_len):
-        error_context.context("Ping test from guest to host", logging.info)
+        error_context.context("Ping test from guest to host", test.log.info)
         src_ip_info = nic_interface_list[src_ip_index]
         ping(src_ip_info[2], src_ip_info[0], host_ip, strict_check,
              flood_minutes)
         error_context.context("File transfer test between guest and host",
-                              logging.info)
+                              test.log.info)
         file_transfer(src_ip_info[2], src_ip_info[1], host_ip)
         for dst_ip in nic_interface_list[src_ip_index:]:
             if src_ip_info[1] == dst_ip[1]:
                 continue
             txt = "Ping test between %s and %s" % (src_ip_info[1], dst_ip[1])
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
             ping(src_ip_info[2], src_ip_info[0], dst_ip[1], strict_check,
                  flood_minutes)
             txt = "File transfer test between %s " % src_ip_info[1]
             txt += "and %s" % dst_ip[1]
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
             file_transfer(src_ip_info[2], src_ip_info[1], dst_ip[1])
     if check_stop_irqbalance:
         process.run(start_irqbalance_cmd, shell=True)

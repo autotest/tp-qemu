@@ -7,6 +7,8 @@ from virttest.qemu_storage import QemuImg
 from avocado.core import exceptions
 from qemu.tests import block_copy
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class LiveSnapshot(block_copy.BlockCopy):
 
@@ -61,15 +63,15 @@ class LiveSnapshot(block_copy.BlockCopy):
         Create a live disk snapshot.
         """
         if self.snapshot_mode == "existing":
-            logging.info("Creating an image ...")
+            LOG_JOB.info("Creating an image ...")
             self.snapshot_file = self.create_image()
         else:
             self.snapshot_file = self.get_snapshot_file()
         self.trash_files.append(self.snapshot_file)
-        logging.info("Creating snapshot")
+        LOG_JOB.info("Creating snapshot")
         self.vm.monitor.live_snapshot(self.device, self.snapshot_file,
                                       **self.snapshot_args)
-        logging.info("Checking snapshot created successfully")
+        LOG_JOB.info("Checking snapshot created successfully")
         self.check_snapshot()
 
     def check_snapshot(self):
@@ -78,12 +80,12 @@ class LiveSnapshot(block_copy.BlockCopy):
         """
         snapshot_info = str(self.vm.monitor.info("block"))
         if self.snapshot_file not in snapshot_info:
-            logging.error(snapshot_info)
+            LOG_JOB.error(snapshot_info)
             raise exceptions.TestFail("Snapshot doesn't exist")
         if self.snapshot_node_name:
             match_string = "u?'node-name': u?'%s'" % self.snapshot_node_name
             if not re.search(match_string, snapshot_info):
-                logging.error(snapshot_info)
+                LOG_JOB.error(snapshot_info)
                 raise exceptions.TestFail("Can not find node name %s of"
                                           " snapshot in block info %s"
                                           % (self.snapshot_node_name,

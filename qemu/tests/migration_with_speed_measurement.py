@@ -1,7 +1,6 @@
 import os
 import re
 import six
-import logging
 import time
 
 from virttest import utils_misc
@@ -116,7 +115,7 @@ def run(test, params, env):
 
             last_transfer_mem = transfered_mem
 
-            logging.debug("Migration speed: %s MB/s", real_mig_speed)
+            test.log.debug("Migration speed: %s MB/s", real_mig_speed)
             mig_stat.record(real_mig_speed)
             time.sleep(1)
 
@@ -132,7 +131,7 @@ def run(test, params, env):
         cmd = ("%s/cpuflags-test --stressmem %d,%d" %
                (os.path.join(install_path, "cpu_flags", "src"),
                 vm_mem * 4, vm_mem / 2))
-        logging.debug("Sending command: %s", cmd)
+        test.log.debug("Sending command: %s", cmd)
         session.sendline(cmd)
 
         time.sleep(2)
@@ -148,14 +147,14 @@ def run(test, params, env):
         real_speed = mig_stat.get_average()
         ack_speed = mig_speed * mig_speed_accuracy
 
-        logging.info("Target migration speed: %d MB/s.", mig_speed)
-        logging.info(
+        test.log.info("Target migration speed: %d MB/s.", mig_speed)
+        test.log.info(
             "Average migration speed: %d MB/s", mig_stat.get_average())
-        logging.info("Minimum migration speed: %d MB/s", mig_stat.get_min())
-        logging.info("Maximum migration speed: %d MB/s", mig_stat.get_max())
+        test.log.info("Minimum migration speed: %d MB/s", mig_stat.get_min())
+        test.log.info("Maximum migration speed: %d MB/s", mig_stat.get_max())
 
-        logging.info("Maximum tolerable divergence: %3.1f%%",
-                     mig_speed_accuracy * 100)
+        test.log.info("Maximum tolerable divergence: %3.1f%%",
+                      mig_speed_accuracy * 100)
 
         if real_speed < mig_speed - ack_speed:
             divergence = (1 - float(real_speed) / float(mig_speed)) * 100

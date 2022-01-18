@@ -9,6 +9,8 @@ from virttest import error_context
 from virttest import utils_net
 from virttest import env_process
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def guest_ping(test, session, dst_ip, count=None, os_type="linux",
                p_size=1472, timeout=360):
@@ -25,7 +27,7 @@ def guest_ping(test, session, dst_ip, count=None, os_type="linux",
             ping_cmd += " -t "
         ping_cmd += " -l %s %s" % (p_size, dst_ip)
     try:
-        logging.debug("Ping dst vm with cmd: '%s'", ping_cmd)
+        LOG_JOB.debug("Ping dst vm with cmd: '%s'", ping_cmd)
         session.cmd(ping_cmd, timeout=timeout)
     except aexpect.ShellTimeoutError as err:
         if count:
@@ -34,7 +36,7 @@ def guest_ping(test, session, dst_ip, count=None, os_type="linux",
 
 def wait_guest_network_up(test, session, dst_ip, timeout=180):
     txt = "Check whether guest network up by ping %s " % dst_ip
-    error_context.context(txt, logging.info)
+    error_context.context(txt, LOG_JOB.info)
     end_time = time.time() + timeout
     while time.time() < end_time:
         try:
@@ -74,13 +76,13 @@ def run(test, params, env):
     try:
         ext_host = process.system_output(ext_host_get_cmd, shell=True)
     except process.CmdError:
-        logging.warn("Can't get specified host with cmd '%s',"
-                     " Fallback to default host '%s'",
-                     ext_host_get_cmd, default_host)
+        test.log.warn("Can't get specified host with cmd '%s',"
+                      " Fallback to default host '%s'",
+                      ext_host_get_cmd, default_host)
         ext_host = default_host
     try:
         txt = "Create and up %s macvtap devices in setting mode." % macvtap_num
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         for num in range(macvtap_num):
             mac = utils_net.generate_mac_address_simple()
             ifname = "%s_%s" % (macvtap_mode, num)
@@ -88,11 +90,11 @@ def run(test, params, env):
                                                       1, netdst, mac)
             check_cmd = "ip -d link show %s" % ifname
             output = process.system_output(check_cmd)
-            logging.debug(output)
+            test.log.debug(output)
             macvtap_ifnames.append(ifname)
         vms = params.get("vms").split()
         params["start_vm"] = "yes"
-        error_context.context("Boot multi guest with macvtap", logging.info)
+        error_context.context("Boot multi guest with macvtap", test.log.info)
         for vm_name in vms:
             env_process.preprocess_vm(test, params, env, vm_name)
         for vm_name in vms:
@@ -102,7 +104,7 @@ def run(test, params, env):
             if wait_guest_network_up(test, session, ext_host, timeout=timeout):
                 txt = " Ping from guests to %s for %s counts." % (ext_host,
                                                                   ping_count)
-                error_context.context(txt, logging.info)
+                error_context.context(txt, test.log.info)
                 guest_ping(test, session, ext_host, 100)
             else:
                 ipconfig_cmd = params.get("ipconfig_cmd", "ifconfig -a")
@@ -111,7 +113,7 @@ def run(test, params, env):
                 msg += "Guest network status (%s): %s" % (ipconfig_cmd, out)
                 test.fail(msg)
     finally:
-        error_context.context("Delete all macvtap interfaces.", logging.info)
+        error_context.context("Delete all macvtap interfaces.", test.log.info)
         for ifname in macvtap_ifnames:
             del_cmd = "ip link delete %s" % ifname
             process.system(del_cmd, ignore_status=True)

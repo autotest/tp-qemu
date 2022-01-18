@@ -1,4 +1,3 @@
-import logging
 import os
 
 from avocado.utils import crypto
@@ -48,8 +47,8 @@ def run(test, params, env):
             bg.start()
             try:
                 while bg.is_alive():
-                    logging.info("File transfer not ended, starting a round of "
-                                 "migration...")
+                    test.log.info("File transfer not ended, starting a round of "
+                                  "migration...")
                     if migrate_between_vhost_novhost == "yes":
                         vhost_status = vm.params.get("vhost")
                         if vhost_status == "vhost=on":
@@ -67,7 +66,7 @@ def run(test, params, env):
                 bg.join()
 
         error_context.context("transferring file to guest while migrating",
-                              logging.info)
+                              test.log.info)
         bg = utils_misc.InterruptedThread(
             vm.copy_files_to,
             (host_path, guest_path),
@@ -75,7 +74,7 @@ def run(test, params, env):
         run_and_migrate(bg)
 
         error_context.context("transferring file back to host while migrating",
-                              logging.info)
+                              test.log.info)
         bg = utils_misc.InterruptedThread(
             vm.copy_files_from,
             (guest_path, host_path_returned),
@@ -83,7 +82,7 @@ def run(test, params, env):
         run_and_migrate(bg)
 
         # Make sure the returned file is identical to the original one
-        error_context.context("comparing hashes", logging.info)
+        error_context.context("comparing hashes", test.log.info)
         orig_hash = crypto.hash_file(host_path)
         returned_hash = crypto.hash_file(host_path_returned)
         if orig_hash != returned_hash:

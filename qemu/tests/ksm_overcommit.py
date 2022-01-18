@@ -1,4 +1,3 @@
-import logging
 import time
 import random
 import math
@@ -71,7 +70,7 @@ def run(test, params, env):
         :param timeout: Timeout that will be used to verify if
                 ksm_overcommit_guest.py started properly.
         """
-        logging.debug("Starting ksm_overcommit_guest.py on guest %s", vm.name)
+        test.log.debug("Starting ksm_overcommit_guest.py on guest %s", vm.name)
         session.sendline("$(command -v python python3 | head -1) "
                          "/tmp/ksm_overcommit_guest.py")
         try:
@@ -93,8 +92,8 @@ def run(test, params, env):
 
         :return: Tuple (match index, data)
         """
-        logging.debug("Executing '%s' on ksm_overcommit_guest.py loop, "
-                      "vm: %s, timeout: %s", command, vm.name, timeout)
+        test.log.debug("Executing '%s' on ksm_overcommit_guest.py loop, "
+                       "vm: %s, timeout: %s", command, vm.name, timeout)
         session.sendline(command)
         try:
             (match, data) = session.read_until_last_line_matches(
@@ -123,11 +122,11 @@ def run(test, params, env):
         """
         Initialize guests (fill their memories with specified patterns).
         """
-        logging.info("Phase 1: filling guest memory pages")
+        test.log.info("Phase 1: filling guest memory pages")
         for session in lsessions:
             vm = lvms[lsessions.index(session)]
 
-            logging.debug("Turning off swap on vm %s", vm.name)
+            test.log.debug("Turning off swap on vm %s", vm.name)
             session.cmd("swapoff -a", timeout=300)
 
             # Start the allocator
@@ -148,57 +147,57 @@ def run(test, params, env):
             # (until shared mem reaches expected value)
             shm = 0
             j = 0
-            logging.debug("Target shared meminfo for guest %s: %s", vm.name,
-                          ksm_size)
+            test.log.debug("Target shared meminfo for guest %s: %s", vm.name,
+                           ksm_size)
             while ((new_ksm and (shm < (ksm_size * (i + 1)))) or
                     (not new_ksm and (shm < (ksm_size)))):
                 if j > 256:
-                    logging.debug(utils_test.get_memory_info(lvms))
+                    test.log.debug(utils_test.get_memory_info(lvms))
                     test.error("SHM didn't merge the memory until "
                                "the DL on guest: %s" % vm.name)
                 pause = ksm_size / 200 * perf_ratio
-                logging.debug("Waiting %ds before proceeding...", pause)
+                test.log.debug("Waiting %ds before proceeding...", pause)
                 time.sleep(pause)
                 if (new_ksm):
                     shm = get_ksmstat()
                 else:
                     shm = vm.get_shared_meminfo()
-                logging.debug("Shared meminfo for guest %s after "
-                              "iteration %s: %s", vm.name, j, shm)
+                test.log.debug("Shared meminfo for guest %s after "
+                               "iteration %s: %s", vm.name, j, shm)
                 j += 1
 
         # Keep some reserve
         pause = ksm_size / 200 * perf_ratio
-        logging.debug("Waiting %ds before proceeding...", pause)
+        test.log.debug("Waiting %ds before proceeding...", pause)
         time.sleep(pause)
 
-        logging.debug(utils_test.get_memory_info(lvms))
-        logging.info("Phase 1: PASS")
+        test.log.debug(utils_test.get_memory_info(lvms))
+        test.log.info("Phase 1: PASS")
 
     def separate_first_guest():
         """
         Separate memory of the first guest by generating special random series
         """
-        logging.info("Phase 2: Split the pages on the first guest")
+        test.log.info("Phase 2: Split the pages on the first guest")
 
         cmd = "mem.static_random_fill()"
         data = _execute_allocator(cmd, lvms[0], lsessions[0],
                                   fill_base_timeout * 2 * perf_ratio)[1]
 
         r_msg = data.splitlines()[-1]
-        logging.debug("Return message of static_random_fill: %s", r_msg)
+        test.log.debug("Return message of static_random_fill: %s", r_msg)
         out = int(r_msg.split()[4])
-        logging.debug("Performance: %dMB * 1000 / %dms = %dMB/s", ksm_size,
-                      out, (ksm_size * 1000 / out))
-        logging.debug(utils_test.get_memory_info(lvms))
-        logging.debug("Phase 2: PASS")
+        test.log.debug("Performance: %dMB * 1000 / %dms = %dMB/s", ksm_size,
+                       out, (ksm_size * 1000 / out))
+        test.log.debug(utils_test.get_memory_info(lvms))
+        test.log.debug("Phase 2: PASS")
 
     def split_guest():
         """
         Sequential split of pages on guests up to memory limit
         """
-        logging.info("Phase 3a: Sequential split of pages on guests up to "
-                     "memory limit")
+        test.log.info("Phase 3a: Sequential split of pages on guests up to "
+                      "memory limit")
         last_vm = 0
         session = None
         vm = None
@@ -212,14 +211,14 @@ def run(test, params, env):
             vm = lvms[i]
             session = lsessions[i]
             cmd = "mem.static_random_fill()"
-            logging.debug("Executing %s on ksm_overcommit_guest.py loop, "
-                          "vm: %s", cmd, vm.name)
+            test.log.debug("Executing %s on ksm_overcommit_guest.py loop, "
+                           "vm: %s", cmd, vm.name)
             session.sendline(cmd)
 
             out = ""
             try:
-                logging.debug("Watching host mem while filling vm %s memory",
-                              vm.name)
+                test.log.debug("Watching host mem while filling vm %s memory",
+                               vm.name)
                 while (not out.startswith("PASS") and
                        not out.startswith("FAIL")):
                     if not vm.is_alive():
@@ -230,7 +229,7 @@ def run(test, params, env):
                     if (ksm_swap):
                         free_mem = (free_mem +
                                     int(utils_memory.read_from_meminfo("SwapFree")))
-                    logging.debug("Free memory on host: %d", free_mem)
+                    test.log.debug("Free memory on host: %d", free_mem)
 
                     # We need to keep some memory for python to run.
                     if (free_mem < 64000) or (ksm_swap and
@@ -240,18 +239,18 @@ def run(test, params, env):
                             lvms[j].destroy(gracefully=False)
                         time.sleep(20)
                         vm.resume()
-                        logging.debug("Only %s free memory, killing %d guests",
-                                      free_mem, (i - 1))
+                        test.log.debug("Only %s free memory, killing %d guests",
+                                       free_mem, (i - 1))
                         last_vm = i
                     out = session.read_nonblocking(0.1, 1)
                     time.sleep(2)
             except OSError:
-                logging.debug("Only %s host free memory, killing %d guests",
-                              free_mem, (i - 1))
-                logging.debug("Stopping %s", vm.name)
+                test.log.debug("Only %s host free memory, killing %d guests",
+                               free_mem, (i - 1))
+                test.log.debug("Stopping %s", vm.name)
                 vm.pause()
                 for j in range(0, i):
-                    logging.debug("Destroying %s", lvms[j].name)
+                    test.log.debug("Destroying %s", lvms[j].name)
                     lvms[j].destroy(gracefully=False)
                 time.sleep(20)
                 vm.resume()
@@ -259,33 +258,33 @@ def run(test, params, env):
 
             if last_vm != 0:
                 break
-            logging.debug("Memory filled for guest %s", vm.name)
+            test.log.debug("Memory filled for guest %s", vm.name)
 
-        logging.info("Phase 3a: PASS")
+        test.log.info("Phase 3a: PASS")
 
-        logging.info("Phase 3b: Verify memory of the max stressed VM")
+        test.log.info("Phase 3b: Verify memory of the max stressed VM")
         for i in range(last_vm + 1, vmsc):
             lsessions[i].close()
             if i == (vmsc - 1):
-                logging.debug(utils_test.get_memory_info([lvms[i]]))
-            logging.debug("Destroying guest %s", lvms[i].name)
+                test.log.debug(utils_test.get_memory_info([lvms[i]]))
+            test.log.debug("Destroying guest %s", lvms[i].name)
             lvms[i].destroy(gracefully=False)
 
         # Verify last machine with randomly generated memory
         cmd = "mem.static_random_verify()"
         _execute_allocator(cmd, lvms[last_vm], lsessions[last_vm],
                            (mem / 200 * 50 * perf_ratio))
-        logging.debug(utils_test.get_memory_info([lvms[last_vm]]))
+        test.log.debug(utils_test.get_memory_info([lvms[last_vm]]))
 
         lsessions[last_vm].cmd_output("die()", 20)
         lvms[last_vm].destroy(gracefully=False)
-        logging.info("Phase 3b: PASS")
+        test.log.info("Phase 3b: PASS")
 
     def split_parallel():
         """
         Parallel page spliting
         """
-        logging.info("Phase 1: parallel page spliting")
+        test.log.info("Phase 1: parallel page spliting")
         # We have to wait until allocator is finished (it waits 5 seconds to
         # clean the socket
 
@@ -300,11 +299,11 @@ def run(test, params, env):
             # Start the allocator
             _start_allocator(vm, lsessions[i], 60 * perf_ratio)
 
-        logging.info("Phase 1: PASS")
+        test.log.info("Phase 1: PASS")
 
-        logging.info("Phase 2a: Simultaneous merging")
-        logging.debug("Memory used by allocator on guests = %dMB",
-                      (ksm_size / max_alloc))
+        test.log.info("Phase 2a: Simultaneous merging")
+        test.log.debug("Memory used by allocator on guests = %dMB",
+                       (ksm_size / max_alloc))
 
         for i in range(0, max_alloc):
             cmd = "mem = MemFill(%d, %s, %s)" % ((ksm_size / max_alloc),
@@ -318,25 +317,25 @@ def run(test, params, env):
         # Wait until ksm_overcommit_guest.py merges pages (3 * ksm_size / 3)
         shm = 0
         i = 0
-        logging.debug("Target shared memory size: %s", ksm_size)
+        test.log.debug("Target shared memory size: %s", ksm_size)
         while (shm < ksm_size):
             if i > 64:
-                logging.debug(utils_test.get_memory_info(lvms))
+                test.log.debug(utils_test.get_memory_info(lvms))
                 test.error("SHM didn't merge the memory until DL")
             pause = ksm_size / 200 * perf_ratio
-            logging.debug("Waiting %ds before proceed...", pause)
+            test.log.debug("Waiting %ds before proceed...", pause)
             time.sleep(pause)
             if (new_ksm):
                 shm = get_ksmstat()
             else:
                 shm = vm.get_shared_meminfo()
-            logging.debug("Shared meminfo after attempt %s: %s", i, shm)
+            test.log.debug("Shared meminfo after attempt %s: %s", i, shm)
             i += 1
 
-        logging.debug(utils_test.get_memory_info([vm]))
-        logging.info("Phase 2a: PASS")
+        test.log.debug(utils_test.get_memory_info([vm]))
+        test.log.info("Phase 2a: PASS")
 
-        logging.info("Phase 2b: Simultaneous spliting")
+        test.log.info("Phase 2b: Simultaneous spliting")
         # Actual splitting
         for i in range(0, max_alloc):
             cmd = "mem.static_random_fill()"
@@ -344,38 +343,38 @@ def run(test, params, env):
                                       fill_base_timeout * perf_ratio)[1]
 
             data = data.splitlines()[-1]
-            logging.debug(data)
+            test.log.debug(data)
             out = int(data.split()[4])
-            logging.debug("Performance: %dMB * 1000 / %dms = %dMB/s",
-                          (ksm_size / max_alloc), out,
-                          (ksm_size * 1000 / out / max_alloc))
-        logging.debug(utils_test.get_memory_info([vm]))
-        logging.info("Phase 2b: PASS")
+            test.log.debug("Performance: %dMB * 1000 / %dms = %dMB/s",
+                           (ksm_size / max_alloc), out,
+                           (ksm_size * 1000 / out / max_alloc))
+        test.log.debug(utils_test.get_memory_info([vm]))
+        test.log.info("Phase 2b: PASS")
 
-        logging.info("Phase 2c: Simultaneous verification")
+        test.log.info("Phase 2c: Simultaneous verification")
         for i in range(0, max_alloc):
             cmd = "mem.static_random_verify()"
             data = _execute_allocator(cmd, vm, lsessions[i],
                                       (mem / 200 * 50 * perf_ratio))[1]
-        logging.info("Phase 2c: PASS")
+        test.log.info("Phase 2c: PASS")
 
-        logging.info("Phase 2d: Simultaneous merging")
+        test.log.info("Phase 2d: Simultaneous merging")
         # Actual splitting
         for i in range(0, max_alloc):
             cmd = "mem.value_fill(%d)" % skeys[0]
             data = _execute_allocator(cmd, vm, lsessions[i],
                                       fill_base_timeout * 2 * perf_ratio)[1]
-        logging.debug(utils_test.get_memory_info([vm]))
-        logging.info("Phase 2d: PASS")
+        test.log.debug(utils_test.get_memory_info([vm]))
+        test.log.info("Phase 2d: PASS")
 
-        logging.info("Phase 2e: Simultaneous verification")
+        test.log.info("Phase 2e: Simultaneous verification")
         for i in range(0, max_alloc):
             cmd = "mem.value_check(%d)" % skeys[0]
             data = _execute_allocator(cmd, vm, lsessions[i],
                                       (mem / 200 * 50 * perf_ratio))[1]
-        logging.info("Phase 2e: PASS")
+        test.log.info("Phase 2e: PASS")
 
-        logging.info("Phase 2f: Simultaneous spliting last 96B")
+        test.log.info("Phase 2f: Simultaneous spliting last 96B")
         for i in range(0, max_alloc):
             cmd = "mem.static_random_fill(96)"
             data = _execute_allocator(cmd, vm, lsessions[i],
@@ -383,31 +382,31 @@ def run(test, params, env):
 
             data = data.splitlines()[-1]
             out = int(data.split()[4])
-            logging.debug("Performance: %dMB * 1000 / %dms = %dMB/s",
-                          ksm_size / max_alloc, out,
-                          (ksm_size * 1000 / out / max_alloc))
+            test.log.debug("Performance: %dMB * 1000 / %dms = %dMB/s",
+                           ksm_size / max_alloc, out,
+                           (ksm_size * 1000 / out / max_alloc))
 
-        logging.debug(utils_test.get_memory_info([vm]))
-        logging.info("Phase 2f: PASS")
+        test.log.debug(utils_test.get_memory_info([vm]))
+        test.log.info("Phase 2f: PASS")
 
-        logging.info("Phase 2g: Simultaneous verification last 96B")
+        test.log.info("Phase 2g: Simultaneous verification last 96B")
         for i in range(0, max_alloc):
             cmd = "mem.static_random_verify(96)"
             _, data = _execute_allocator(cmd, vm, lsessions[i],
                                          (mem / 200 * 50 * perf_ratio))
-        logging.debug(utils_test.get_memory_info([vm]))
-        logging.info("Phase 2g: PASS")
+        test.log.debug(utils_test.get_memory_info([vm]))
+        test.log.info("Phase 2g: PASS")
 
-        logging.debug("Cleaning up...")
+        test.log.debug("Cleaning up...")
         for i in range(0, max_alloc):
             lsessions[i].cmd_output("die()", 20)
         session.close()
         vm.destroy(gracefully=False)
 
     # Main test code
-    logging.info("Starting phase 0: Initialization")
+    test.log.info("Starting phase 0: Initialization")
     if process.run("ps -C ksmtuned", ignore_status=True).exit_status == 0:
-        logging.info("Killing ksmtuned...")
+        test.log.info("Killing ksmtuned...")
         process.run("killall ksmtuned")
     new_ksm = False
     if (os.path.exists("/sys/kernel/mm/ksm/run")):
@@ -490,15 +489,15 @@ def run(test, params, env):
         mem = host_mem
         # 32bit system adjustment
         if "64" not in params.get("vm_arch_name"):
-            logging.debug("Probably i386 guest architecture, "
-                          "max allocator mem = 2G")
+            test.log.debug("Probably i386 guest architecture, "
+                           "max allocator mem = 2G")
             # Guest can have more than 2G but
             # kvm mem + 1MB (allocator itself) can't
             if (host_mem > 3100):
                 mem = 3100
 
         if os.popen("uname -i").readline().startswith("i386"):
-            logging.debug("Host is i386 architecture, max guest mem is 2G")
+            test.log.debug("Host is i386 architecture, max guest mem is 2G")
             # Guest system with qemu overhead (64M) can't have more than 2G
             if mem > 3100 - 64:
                 mem = 3100 - 64
@@ -514,8 +513,8 @@ def run(test, params, env):
 
         # 32bit system adjustment
         if params["vm_arch_name"] == 'i686':
-            logging.debug("Probably i386 guest architecture, "
-                          "max allocator mem = 2G")
+            test.log.debug("Probably i386 guest architecture, "
+                           "max allocator mem = 2G")
             # Guest can have more than 2G but
             # kvm mem + 1MB (allocator itself) can't
             if mem - guest_reserve - 1 > 3100:
@@ -528,7 +527,7 @@ def run(test, params, env):
                 mem = int(math.floor(host_mem * overcommit / vmsc))
 
         if os.popen("uname -i").readline().startswith("i386"):
-            logging.debug("Host is i386 architecture, max guest mem is 2G")
+            test.log.debug("Host is i386 architecture, max guest mem is 2G")
             # Guest system with qemu overhead (64M) can't have more than 2G
             if mem > 3100 - 64:
                 vmsc = int(math.ceil((host_mem * overcommit) /
@@ -545,16 +544,16 @@ def run(test, params, env):
 
     swap = int(utils_memory.read_from_meminfo("SwapTotal")) / 1024
 
-    logging.debug("Overcommit = %f", overcommit)
-    logging.debug("True overcommit = %f ", (float(vmsc * mem) /
-                                            float(host_mem)))
-    logging.debug("Host memory = %dM", host_mem)
-    logging.debug("Guest memory = %dM", mem)
-    logging.debug("Using swap = %s", ksm_swap)
-    logging.debug("Swap = %dM", swap)
-    logging.debug("max_vms = %d", max_vms)
-    logging.debug("Count of all used VMs = %d", vmsc)
-    logging.debug("Performance_ratio = %f", perf_ratio)
+    test.log.debug("Overcommit = %f", overcommit)
+    test.log.debug("True overcommit = %f ", (float(vmsc * mem) /
+                                             float(host_mem)))
+    test.log.debug("Host memory = %dM", host_mem)
+    test.log.debug("Guest memory = %dM", mem)
+    test.log.debug("Using swap = %s", ksm_swap)
+    test.log.debug("Swap = %dM", swap)
+    test.log.debug("max_vms = %d", max_vms)
+    test.log.debug("Count of all used VMs = %d", vmsc)
+    test.log.debug("Performance_ratio = %f", perf_ratio)
 
     # Generate unique keys for random series
     skeys = []
@@ -570,8 +569,8 @@ def run(test, params, env):
             key = random.randrange(0, 999)
         dkeys.append(key)
 
-    logging.debug("skeys: %s", skeys)
-    logging.debug("dkeys: %s", dkeys)
+    test.log.debug("skeys: %s", skeys)
+    test.log.debug("dkeys: %s", dkeys)
 
     lvms = []
     lsessions = []
@@ -584,7 +583,7 @@ def run(test, params, env):
 
     # ksm_size: amount of memory used by allocator
     ksm_size = mem - guest_reserve
-    logging.debug("Memory used by allocator on guests = %dM", ksm_size)
+    test.log.debug("Memory used by allocator on guests = %dM", ksm_size)
     fill_base_timeout = ksm_size / 10
 
     # Creating the first guest
@@ -595,7 +594,7 @@ def run(test, params, env):
     if not lvms[0].is_alive():
         test.error("VM seems to be dead; Test requires a living VM")
 
-    logging.debug("Booting first guest %s", lvms[0].name)
+    test.log.debug("Booting first guest %s", lvms[0].name)
 
     lsessions.append(lvms[0].wait_for_login(timeout=360))
 
@@ -608,7 +607,7 @@ def run(test, params, env):
         env.register_vm(vm_name, lvms[i])
         params['vms'] += " " + vm_name
 
-        logging.debug("Booting guest %s", lvms[i].name)
+        test.log.debug("Booting guest %s", lvms[i].name)
         lvms[i].create()
         if not lvms[i].is_alive():
             test.error("VM %s seems to be dead; Test requires a"
@@ -618,9 +617,9 @@ def run(test, params, env):
 
     # Let guests rest a little bit :-)
     pause = vmsc * 2 * perf_ratio
-    logging.debug("Waiting %ds before proceed", pause)
+    test.log.debug("Waiting %ds before proceed", pause)
     time.sleep(vmsc * 2 * perf_ratio)
-    logging.debug(utils_test.get_memory_info(lvms))
+    test.log.debug(utils_test.get_memory_info(lvms))
 
     # Copy ksm_overcommit_guest.py into guests
     vksmd_src = os.path.join(data_dir.get_shared_dir(),
@@ -628,15 +627,15 @@ def run(test, params, env):
     dst_dir = "/tmp"
     for vm in lvms:
         vm.copy_files_to(vksmd_src, dst_dir)
-    logging.info("Phase 0: PASS")
+    test.log.info("Phase 0: PASS")
 
     if params['ksm_mode'] == "parallel":
-        logging.info("Starting KSM test parallel mode")
+        test.log.info("Starting KSM test parallel mode")
         split_parallel()
-        logging.info("KSM test parallel mode: PASS")
+        test.log.info("KSM test parallel mode: PASS")
     elif params['ksm_mode'] == "serial":
-        logging.info("Starting KSM test serial mode")
+        test.log.info("Starting KSM test serial mode")
         initialize_guests()
         separate_first_guest()
         split_guest()
-        logging.info("KSM test serial mode: PASS")
+        test.log.info("KSM test serial mode: PASS")

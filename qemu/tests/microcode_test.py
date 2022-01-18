@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import process
 from virttest import error_context
@@ -29,17 +28,17 @@ def run(test, params, env):
         return ver
 
     cmd = params["get_microcode_cmd"]
-    error_context.context("Get microcode version on host", logging.info)
+    error_context.context("Get microcode version on host", test.log.info)
     host_ver = get_microcode_ver(cmd)
-    logging.info("The microcode version on host is %s", host_ver)
+    test.log.info("The microcode version on host is %s", host_ver)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
     try:
-        error_context.context("Get microcode version in guest", logging.info)
+        error_context.context("Get microcode version in guest", test.log.info)
         guest_ver = get_microcode_ver(cmd)
-        logging.info("The microcode version in guest is %s", guest_ver)
+        test.log.info("The microcode version in guest is %s", guest_ver)
         if guest_ver != host_ver:
             test.fail("The microcode version in guest does not match host")
     finally:

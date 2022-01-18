@@ -1,6 +1,5 @@
 """Wild hot-plug-unplug test"""
 import copy
-import logging
 import time
 import os
 
@@ -59,7 +58,7 @@ def run(test, params, env):
             try:
                 vm.monitor.cmd("device_add", images_params[name], debug=False)
             except QMPCmdError as e:
-                logging.warning('Ignore hotplug error: %s', str(e))
+                test.log.warning('Ignore hotplug error: %s', str(e))
 
     def _hotunplug_images():
         for i in range(1, image_num):
@@ -67,7 +66,7 @@ def run(test, params, env):
             try:
                 vm.monitor.cmd("device_del", {"id": name}, debug=False)
             except QMPCmdError as e:
-                logging.warning('Ignore hotunplug error: %s', str(e))
+                test.log.warning('Ignore hotunplug error: %s', str(e))
 
     stg_image_size = params.get("stg_image_size", "256M")
     image_num = params.get_numeric("stg_image_num", 20)
@@ -75,38 +74,38 @@ def run(test, params, env):
     unplug_time = params.get_numeric("unplug_time", 5)
     plug_time = params.get_numeric("plug_time", 5)
     images_params = {}
-    error_context.context("Create images %d" % image_num, logging.info)
+    error_context.context("Create images %d" % image_num, test.log.info)
     _configure_images_params()
     params['start_vm'] = 'yes'
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params['main_vm'])
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    error_context.context("Get images params", logging.info)
+    error_context.context("Get images params", test.log.info)
     _get_images_params()
 
     disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=60))
-    logging.info("There are total %d disks", disks_num)
+    test.log.info("There are total %d disks", disks_num)
 
     guest_operation = params.get("guest_operation")
     if guest_operation:
-        logging.info("Run %s in guest ", guest_operation)
+        test.log.info("Run %s in guest ", guest_operation)
         locals_var = locals()
         locals_var[guest_operation]()
 
     for n in range(repeat_num):
-        error_context.context("Start unplug loop:%d" % n, logging.info)
+        error_context.context("Start unplug loop:%d" % n, test.log.info)
         _hotunplug_images()
         time.sleep(unplug_time)
-        error_context.context("Start plug loop:%d" % n, logging.info)
+        error_context.context("Start plug loop:%d" % n, test.log.info)
         _hotplug_images()
         time.sleep(plug_time)
 
-    error_context.context("Check disks in guest.", logging.info)
+    error_context.context("Check disks in guest.", test.log.info)
     # re-login in case previous session is expired
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     new_disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=300))
-    logging.info("There are total %d disks after hotplug", new_disks_num)
+    test.log.info("There are total %d disks after hotplug", new_disks_num)
     if new_disks_num != disks_num:
-        logging.warning("Find unmatched disk numbers %d %d", disks_num,
-                        new_disks_num)
+        test.log.warning("Find unmatched disk numbers %d %d", disks_num,
+                         new_disks_num)

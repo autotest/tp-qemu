@@ -1,5 +1,4 @@
 import time
-import logging
 
 from avocado.utils import process
 
@@ -30,7 +29,7 @@ def run(test, params, env):
         2). Get device info
         3). Create snapshot
         """
-        error_context.context("Creating live snapshot ...", logging.info)
+        error_context.context("Creating live snapshot ...", test.log.info)
         block_info = vm.monitor.info("block")
         if vm.monitor.protocol == 'qmp':
             device = block_info[0]["device"]
@@ -39,10 +38,10 @@ def run(test, params, env):
         format = params.get("snapshot_format", "qcow2")
         vm.monitor.live_snapshot(device, snapshot_file, format=format)
 
-        logging.info("Check snapshot is created ...")
+        test.log.info("Check snapshot is created ...")
         snapshot_info = str(vm.monitor.info("block"))
         if snapshot_file not in snapshot_info:
-            logging.error(snapshot_info)
+            test.log.error(snapshot_info)
             test.fail("Snapshot doesn't exist")
 
     snapshot_file = "images/%s" % params.get("snapshot_file")
@@ -59,10 +58,10 @@ def run(test, params, env):
             clean_cmd = params.get("clean_cmd")
             file_create = params.get("file_create")
             clean_cmd += " %s" % file_create
-            logging.info("Clean file before creation")
+            test.log.info("Clean file before creation")
             session.cmd(clean_cmd)
 
-            logging.info("Creating big file...")
+            test.log.info("Creating big file...")
             create_cmd = params.get("create_cmd") % file_create
 
             args = (create_cmd, dd_timeout)

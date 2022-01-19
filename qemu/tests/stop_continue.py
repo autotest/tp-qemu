@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import error_context
 from virttest import utils_test
@@ -37,14 +36,14 @@ def run(test, params, env):
         prepare_op = params.get("prepare_op")
         if prepare_op:
             error_context.context("Do preparation operation: '%s'"
-                                  % prepare_op, logging.info)
+                                  % prepare_op, test.log.info)
             op_timeout = float(params.get("prepare_op_timeout", 60))
             session.cmd(prepare_op, timeout=op_timeout)
 
         if start_bg_process:
             bg_cmd = params.get("bg_cmd")
             error_context.context("Start a background process: '%s'" % bg_cmd,
-                                  logging.info)
+                                  test.log.info)
             session_bg = vm.wait_for_login(timeout=login_timeout)
             bg_cmd_timeout = float(params.get("bg_cmd_timeout", 240))
             args = (bg_cmd, bg_cmd_timeout)
@@ -52,27 +51,27 @@ def run(test, params, env):
             bg = utils_test.BackgroundTest(session_bg.cmd, args)
             bg.start()
 
-        error_context.base_context("Stop the VM", logging.info)
+        error_context.base_context("Stop the VM", test.log.info)
         vm.pause()
         error_context.context("Verify the status of VM is 'paused'",
-                              logging.info)
+                              test.log.info)
         vm.verify_status("paused")
 
         error_context.context("Verify the session has no response",
-                              logging.info)
+                              test.log.info)
         if session.is_responsive():
             msg = "Session is still responsive after stop"
-            logging.error(msg)
+            test.log.error(msg)
             test.fail(msg)
         session.close()
         time.sleep(float(params.get("pause_time", 0)))
-        error_context.base_context("Resume the VM", logging.info)
+        error_context.base_context("Resume the VM", test.log.info)
         vm.resume()
         error_context.context("Verify the status of VM is 'running'",
-                              logging.info)
+                              test.log.info)
         vm.verify_status("running")
 
-        error_context.context("Re-login the guest", logging.info)
+        error_context.context("Re-login the guest", test.log.info)
         session = vm.wait_for_login(timeout=login_timeout)
 
         if start_bg_process:
@@ -82,7 +81,7 @@ def run(test, params, env):
         check_op = params.get("check_op")
         if check_op:
             error_context.context("Do check operation: '%s'" % check_op,
-                                  logging.info)
+                                  test.log.info)
             op_timeout = float(params.get("check_op_timeout", 60))
             s, o = session.cmd_status_output(check_op, timeout=op_timeout)
             if s != 0:
@@ -94,7 +93,7 @@ def run(test, params, env):
             if clean_op:
                 error_context.context(
                     "Do clean operation: '%s'" %
-                    clean_op, logging.info)
+                    clean_op, test.log.info)
                 # session close if exception raised, so get renew a session
                 # to do cleanup step.
                 session = vm.wait_for_login(timeout=login_timeout)
@@ -105,6 +104,6 @@ def run(test, params, env):
             if session_bg:
                 session_bg.close()
         except Exception as details:
-            logging.warn(
+            test.log.warn(
                 "Exception occur when clean test environment: %s",
                 details)

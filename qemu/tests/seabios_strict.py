@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -28,7 +27,7 @@ def run(test, params, env):
         """
         Create 'test' cdrom
         """
-        logging.info("creating test cdrom")
+        test.log.info("creating test cdrom")
         cdrom_test = params.get("cdrom_test", '/tmp/test.iso')
         cdrom_test = utils_misc.get_path(data_dir.get_data_dir(), cdrom_test)
         process.run("dd if=/dev/urandom of=test bs=10M count=1")
@@ -39,7 +38,7 @@ def run(test, params, env):
         """
         Remove 'test' cdrom
         """
-        logging.info("cleaning up test cdrom")
+        test.log.info("cleaning up test cdrom")
         cdrom_test = utils_misc.get_path(data_dir.get_data_dir(),
                                          params.get("cdrom_test"))
         os.remove(cdrom_test)
@@ -54,7 +53,7 @@ def run(test, params, env):
             output = vm.serial_console.get_output()
         return re.search(info, output, re.S)
 
-    error_context.context("Start guest with sga bios", logging.info)
+    error_context.context("Start guest with sga bios", test.log.info)
     create_cdrom()
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
@@ -75,7 +74,7 @@ def run(test, params, env):
     boot_strict = (params['boot_strict'] == 'on')
 
     try:
-        error_context.context("Check guest boot result", logging.info)
+        error_context.context("Check guest boot result", test.log.info)
         if not utils_misc.wait_for(lambda: boot_check(fail_infos), timeout, 1):
             err = "Guest does not boot from Hard Disk first and then NIC"
             test.fail(err)

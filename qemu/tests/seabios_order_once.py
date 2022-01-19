@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 
 from avocado.utils import process
 
@@ -28,7 +27,7 @@ def run(test, params, env):
         """
         Create 'test' cdrom with one file on it
         """
-        logging.info("creating test cdrom")
+        test.log.info("creating test cdrom")
         process.run("dd if=/dev/urandom of=test bs=10M count=1")
         process.run("mkisofs -o %s test" % cdrom_test)
         process.run("rm -f test")
@@ -37,7 +36,7 @@ def run(test, params, env):
         """
         Removes created cdrom
         """
-        logging.info("cleaning up temp cdrom images")
+        test.log.info("cleaning up temp cdrom images")
         os.remove(cdrom_test)
 
     def boot_check(info):
@@ -55,7 +54,7 @@ def run(test, params, env):
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
 
-    error_context.context("Start VM with sga bios", logging.info)
+    error_context.context("Start VM with sga bios", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -74,15 +73,15 @@ def run(test, params, env):
     bootorder_after = params["bootorder_after"]
 
     try:
-        error_context.context("Check boot order before reboot", logging.info)
+        error_context.context("Check boot order before reboot", test.log.info)
         if not utils_misc.wait_for(lambda: boot_check(boot_info1), timeout, 1):
             test.fail("Guest isn't booted as expected order before reboot: %s"
                       % bootorder_before)
 
-        error_context.context("Reboot", logging.info)
+        error_context.context("Reboot", test.log.info)
         vm.send_key(restart_key)
 
-        error_context.context("Check boot order after reboot", logging.info)
+        error_context.context("Check boot order after reboot", test.log.info)
         boot_info = boot_info1 + boot_info2
         if not utils_misc.wait_for(lambda: boot_check(boot_info), timeout, 1):
             test.fail("Guest isn't booted as expected order after reboot: %s"

@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -58,8 +57,8 @@ def run(test, params, env):
         """
         test_installed_cmd = 'dir "%s" | findstr /I heavyload' % install_path
         if session.cmd_status(test_installed_cmd) != 0:
-            logging.warning("Could not find installed heavyload in guest, will"
-                            " install it via winutils.iso ")
+            test.log.warning("Could not find installed heavyload in guest, will"
+                             " install it via winutils.iso ")
             winutil_drive = utils_misc.get_winutils_vol(session)
             if not winutil_drive:
                 test.cancel("WIN_UTILS CDROM not found.")
@@ -71,7 +70,7 @@ def run(test, params, env):
         Run stress inside guest, return guest cpu usage
         """
         error_context.context("Run stress in guest and get cpu usage",
-                              logging.info)
+                              test.log.info)
         if os_type == "linux":
             stress_args = params["stress_args"]
             stress_test = utils_test.VMStress(vm, "stress",
@@ -84,7 +83,7 @@ def run(test, params, env):
                 stress_test.unload_stress()
                 cpu_usage = re.findall(r":\s*(\d+.?\d+)\s*us", output)
                 cpu_usage = [float(x) for x in cpu_usage]
-                logging.info("Guest cpu usage is %s", cpu_usage)
+                test.log.info("Guest cpu usage is %s", cpu_usage)
                 unloaded_cpu = [x for x in cpu_usage if x < 20]
                 if unloaded_cpu:
                     test.fail("CPU(s) load percentage is less than 20%")
@@ -93,7 +92,7 @@ def run(test, params, env):
         else:
             install_path = params["install_path"]
             heavyload_install(install_path)
-            error_context.context("Run heavyload inside guest.", logging.info)
+            error_context.context("Run heavyload inside guest.", test.log.info)
             heavyload_bin = r'"%s\heavyload.exe" ' % install_path
             heavyload_options = ["/CPU %d" % vm.cpuinfo.smp,
                                  "/DURATION %d" % (stress_duration // 60),
@@ -121,7 +120,7 @@ def run(test, params, env):
         if vm.get_cpu_count() != vm.cpuinfo.smp:
             test.fail("Guest cpu number is not right")
         threads = get_guest_threads()
-        logging.info("Guest threads number is %s", threads)
+        test.log.info("Guest threads number is %s", threads)
         if threads != params.get_numeric("expected_threads", 1):
             test.fail("Guest cpu threads number is not right")
         run_stress()

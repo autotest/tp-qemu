@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
@@ -20,7 +18,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    error_context.context("Init guest and try to login", logging.info)
+    error_context.context("Init guest and try to login", test.log.info)
     login_timeout = int(params.get("login_timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -30,7 +28,7 @@ def run(test, params, env):
     try:
         if bg_stress_test:
             error_context.context("Run test %s background" % bg_stress_test,
-                                  logging.info)
+                                  test.log.info)
             stress_thread = ""
             wait_time = float(params.get("wait_bg_time", 60))
             bg_stress_run_flag = params.get("bg_stress_run_flag")
@@ -46,7 +44,7 @@ def run(test, params, env):
 
         suspend_type = params.get("guest_suspend_type")
         error_context.context("Run suspend '%s' test under stress"
-                              % suspend_type, logging.info)
+                              % suspend_type, test.log.info)
         bg_cmd = guest_suspend.run
         args = (test, params, env)
         bg = utils_test.BackgroundTest(bg_cmd, args)

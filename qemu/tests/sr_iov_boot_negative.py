@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import env_process
 
@@ -23,18 +21,18 @@ def run(test, params, env):
     params["start_vm"] = "yes"
     try:
         error_context.context("Try to boot VM with negative parameters",
-                              logging.info)
+                              test.log.info)
         case_fail = False
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         case_fail = True
     except Exception as e:
         if neg_msg:
             error_context.context("Check qemu-qemu error message",
-                                  logging.info)
+                                  test.log.info)
             if neg_msg not in str(e):
                 msg = "Could not find '%s' in error message '%s'" % (
                     neg_msg, e)
                 test.fail(msg)
-        logging.debug("Could not boot up vm, %s", e)
+        test.log.debug("Could not boot up vm, %s", e)
     if case_fail:
         test.fail("Did not raise exception during vm boot up")

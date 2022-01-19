@@ -31,6 +31,8 @@ from virttest import ppm_utils
 from virttest import step_editor
 from virttest import qemu_monitor
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class StepMaker(step_editor.StepMakerWindow):
 
@@ -155,7 +157,7 @@ class StepMaker(step_editor.StepMakerWindow):
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
         except qemu_monitor.MonitorError as e:
-            logging.warn(e)
+            LOG_JOB.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)
 
@@ -309,7 +311,7 @@ class StepMaker(step_editor.StepMakerWindow):
         try:
             self.vm.monitor.screendump(self.screendump_filename, debug=False)
         except qemu_monitor.MonitorError as e:
-            logging.warn(e)
+            LOG_JOB.warn(e)
         else:
             self.set_image_from_file(self.screendump_filename)
 

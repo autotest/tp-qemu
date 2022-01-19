@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 
@@ -26,7 +25,7 @@ def run(test, params, env):
         :param sve_opts: List of SVE options to be used.
         :param check_length: SVE length to be checked in dmesg.
         """
-        logging.info('Launch a guest with %s', sve_opts)
+        test.log.info('Launch a guest with %s', sve_opts)
         params['cpu_model_flags'] = 'sve=on,' + ','.join(sve_opts)
         vm.create(params=params)
         vm.verify_alive()
@@ -43,7 +42,7 @@ def run(test, params, env):
     sve_lengths = get_sve_supported_lengths()
     vm.destroy()
 
-    error_context.context('Launch a guest with sve=on', logging.info)
+    error_context.context('Launch a guest with sve=on', test.log.info)
     for length in sve_lengths:
         opts = ('{}={}'.format(
             sve, 'on' if sve_lengths.index(sve) <= sve_lengths.index(length)
@@ -51,7 +50,7 @@ def run(test, params, env):
         ) for sve in sve_lengths)
         launch_sve_guest(opts, length)
 
-    error_context.context('Launch a guest with sve=off', logging.info)
+    error_context.context('Launch a guest with sve=off', test.log.info)
     opts = ('{}={}'.format(sve, 'off') for sve in sve_lengths)
     params['cpu_model_flags'] = 'sve=off,' + ','.join(opts)
     vm.create(params=params)

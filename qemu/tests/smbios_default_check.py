@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -18,7 +17,7 @@ def run(test, params, env):
 
     def check_info(cmd, template):
         msg_log = "Check " + template + " info"
-        error_context.context(msg_log, logging.info)
+        error_context.context(msg_log, test.log.info)
         cmd_output = session.cmd_output(cmd)
         cmd_output_re = re.split('\n', cmd_output.strip('\n'))[-1].strip(' ')
         template = params[template]

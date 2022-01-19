@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -37,7 +36,7 @@ def run(test, params, env):
         return (len(re.findall(boot_menu_hint,
                                get_output(seabios_session))) > 1)
 
-    error_context.context("Start guest with sga bios", logging.info)
+    error_context.context("Start guest with sga bios", test.log.info)
     vm = env.get_vm(params["main_vm"])
     # Since the seabios is displayed in the beginning of guest boot,
     # booting guest here so that we can check all of sgabios/seabios
@@ -54,7 +53,7 @@ def run(test, params, env):
     seabios_session = vm.logsessions['seabios']
 
     if sgabios_info:
-        error_context.context("Display and check the SGABIOS info", logging.info)
+        error_context.context("Display and check the SGABIOS info", test.log.info)
 
         def info_check():
             return re.search(sgabios_info,
@@ -69,7 +68,7 @@ def run(test, params, env):
         test.fail("Could not get boot menu message.")
 
     if restart_key:
-        error_context.context("Restart vm and check it's ok", logging.info)
+        error_context.context("Restart vm and check it's ok", test.log.info)
         seabios_text = get_output(seabios_session)
         headline = seabios_text.split("\n")[0] + "\n"
         headline_count = seabios_text.count(headline)
@@ -88,7 +87,7 @@ def run(test, params, env):
     # Send boot menu key in monitor.
     vm.send_key(boot_menu_key)
 
-    error_context.context("Display and check the boot menu order", logging.info)
+    error_context.context("Display and check the boot menu order", test.log.info)
 
     def get_list():
         return re.findall(r"^\d+\. (.*)\s", get_output(seabios_session), re.M)
@@ -98,11 +97,11 @@ def run(test, params, env):
     if not boot_list:
         test.fail("Could not get boot entries list.")
 
-    logging.info("Got boot menu entries: '%s'", boot_list)
+    test.log.info("Got boot menu entries: '%s'", boot_list)
     for i, v in enumerate(boot_list, start=1):
         if re.search(boot_device, v, re.I):
             error_context.context("Start guest from boot entry '%s'" % v,
-                                  logging.info)
+                                  test.log.info)
             vm.send_key(str(i))
             break
     else:

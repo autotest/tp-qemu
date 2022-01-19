@@ -1,7 +1,6 @@
 import re
 import time
 import random
-import logging
 import netaddr
 
 from avocado.utils import process
@@ -117,7 +116,7 @@ def run(test, params, env):
     # introduced to choose whether configure VFs on host or not
     if configure_on_host:
         msg = "Configure all VFs in host."
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         for pci_id in vf_pci_id:
             ethname = utils_misc.get_interface_from_pci_id(pci_id)
             mac = utils_net.generate_mac_address_simple()
@@ -130,27 +129,27 @@ def run(test, params, env):
                 test.error("Network script creation failed - %s" % info)
 
         msg = "Check whether VFs could get ip in host."
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         for ethname in ethname_dict:
             utils_net.bring_down_ifname(ethname)
             _ip = check_network_interface_ip(ethname)
             if not _ip:
                 msg = "Interface '%s' could not get IP." % ethname
-                logging.error(msg)
+                test.log.error(msg)
             else:
                 ips[ethname] = _ip
-                logging.info("Interface '%s' get IP '%s'", ethname, _ip)
+                test.log.info("Interface '%s' get IP '%s'", ethname, _ip)
 
     for i in range(repeat_time):
         msg = "Bind/unbind device from host. Repeat %s/%s" % (i + 1,
                                                               repeat_time)
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         bind_device_num = random.randint(1, device_num)
         pci_assignable.request_devs(devices[:bind_device_num])
-        logging.info("Sleep 3s before releasing vf to host.")
+        test.log.info("Sleep 3s before releasing vf to host.")
         time.sleep(3)
         pci_assignable.release_devs()
-        logging.info("Sleep 3s after releasing vf to host.")
+        test.log.info("Sleep 3s after releasing vf to host.")
         time.sleep(3)
         if device_type == "vf":
             post_device_num = pci_assignable.get_vfs_count()
@@ -163,22 +162,22 @@ def run(test, params, env):
             test.fail(msg)
     dmesg = process.system_output("dmesg")
     file_name = "host_dmesg_after_unbind_device.txt"
-    logging.info("Log dmesg after bind/unbing device to '%s'.", file_name)
+    test.log.info("Log dmesg after bind/unbing device to '%s'.", file_name)
     if configure_on_host:
         msg = "Check whether VFs still get ip in host."
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         for ethname in ips:
             utils_net.bring_up_ifname(ethname)
             _ip = utils_net.get_ip_address_by_interface(ethname, ip_ver="ipv4")
             if not _ip:
                 msg = "Interface '%s' could not get IP." % ethname
                 msg += "Before bind/unbind it have IP '%s'." % ips[ethname]
-                logging.error(msg)
+                test.log.error(msg)
             else:
-                logging.info("Interface '%s' get IP '%s'", ethname, _ip)
+                test.log.info("Interface '%s' get IP '%s'", ethname, _ip)
 
     msg = "Try to boot up guest(s) with VF(s)."
-    error_context.context(msg, logging.info)
+    error_context.context(msg, test.log.info)
     regain_ip_cmd = params.get("regain_ip_cmd", None)
     timeout = int(params.get("login_timeout", 30))
 
@@ -202,8 +201,8 @@ def run(test, params, env):
                 "ip li| grep -i 'BROADCAST'|awk '{print $2}'| sed 's/://'")
             if not rc:
                 iface_probed = output.splitlines()
-                logging.info("probed VF Interface(s) in guest: %s",
-                             iface_probed)
+                test.log.info("probed VF Interface(s) in guest: %s",
+                              iface_probed)
                 for iface in iface_probed:
                     mac = utils_net.get_linux_mac(session, iface)
                     utils_net.set_guest_ip_addr(session, mac, IP_addr_VF)

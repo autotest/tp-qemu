@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import env_process
@@ -50,18 +49,18 @@ def run(test, params, env):
     boot_device = str(int(params["bootindex_image1"]) + 1)
     extra_img_num = int(params["extra_img_num"])
 
-    error_context.context("Preprocess params", logging.info)
+    error_context.context("Preprocess params", test.log.info)
     prepare_images(extra_img_num)
     params["start_vm"] = "yes"
     env_process.process_images(env_process.preprocess_image, test, params)
     env_process.preprocess_vm(test, params, env, params["main_vm"])
 
-    error_context.context("Start guest with sga bios", logging.info)
+    error_context.context("Start guest with sga bios", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     seabios_session = vm.logsessions['seabios']
 
-    error_context.context("Get boot menu list", logging.info)
+    error_context.context("Get boot menu list", test.log.info)
     if not utils_misc.wait_for(boot_menu, timeout, 1):
         test.fail("Could not get boot menu message")
     vm.send_key(boot_menu_key)
@@ -69,14 +68,14 @@ def run(test, params, env):
     boot_list = utils_misc.wait_for(get_boot_menu_list, timeout, 1)
     if not boot_list:
         test.fail("Could not get boot menu list")
-    logging.info("Got boot menu entries: '%s'", boot_list)
+    test.log.info("Got boot menu entries: '%s'", boot_list)
 
-    error_context.context("Login into the guest", logging.info)
+    error_context.context("Login into the guest", test.log.info)
     vm.send_key(boot_device)
 
     session = vm.wait_for_login()
 
-    error_context.context("Check kernel crash message", logging.info)
+    error_context.context("Check kernel crash message", test.log.info)
     vm.verify_kernel_crash()
 
     session.close()

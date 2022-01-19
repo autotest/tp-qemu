@@ -1,7 +1,6 @@
 import os
 import re
 import shutil
-import logging
 
 from avocado.utils import process
 
@@ -21,7 +20,7 @@ def run(test, params, env):
         process.run(git_cmd, timeout=360, shell=True)
         s, o = process.getstatusoutput(compile_cmd, timeout=180)
         if s:
-            logging.error('Compile output: %s', o)
+            test.log.error('Compile output: %s', o)
             test.error('Failed to compile the test suite.')
 
     dst_dir = params['dst_dir']
@@ -34,7 +33,7 @@ def run(test, params, env):
     if not utils_package.package_install(required_pkgs):
         test.error("Failed to install required packages in host")
     error_context.base_context('Check if the CPU of host supports SVE',
-                               logging.info)
+                               test.log.info)
     cpu_utils.check_cpu_flags(params, 'sve', test)
 
     try:
@@ -44,8 +43,8 @@ def run(test, params, env):
             test.fail('The exit code of "get-reg-list" test suite is not 0.')
         elif not all([result == "PASS" for result in
                       re.findall(r'^sve\S*: (\w+)$', o, re.M)]):
-            logging.error('Test result: %s', o)
+            test.log.error('Test result: %s', o)
             test.fail('The sve part of the "get-reg-list" test failed')
-        logging.info('get-reg-list test passed')
+        test.log.info('get-reg-list test passed')
     finally:
         shutil.rmtree(dst_dir, ignore_errors=True)

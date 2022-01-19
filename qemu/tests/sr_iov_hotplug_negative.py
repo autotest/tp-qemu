@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest import error_context
@@ -81,37 +79,37 @@ def run(test, params, env):
             pci_add_cmd = make_device_add_cmd(pa_pci_ids[0], pci_invaild_addr)
         try:
             msg = "Adding pci device with command '%s'" % pci_add_cmd
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             case_fail = False
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
             case_fail = True
         except Exception as err:
             if neg_msg:
                 msg = "Check negative hotplug error message"
-                error_context.context(msg, logging.info)
+                error_context.context(msg, test.log.info)
                 if neg_msg not in str(err):
                     msg = "Could not find '%s' in" % neg_msg
                     msg += " command output '%s'" % add_output
                     test.fail(msg)
-            logging.debug("Could not boot up vm, %s", err)
+            test.log.debug("Could not boot up vm, %s", err)
         if case_fail:
             if neg_msg:
                 msg = "Check negative hotplug error message"
-                error_context.context(msg, logging.info)
+                error_context.context(msg, test.log.info)
                 if neg_msg not in str(add_output):
                     msg = "Could not find '%s' in" % neg_msg
                     msg += " command output '%s'" % add_output
                     test.fail(msg)
-            logging.debug("Could not boot up vm, %s", add_output)
+            test.log.debug("Could not boot up vm, %s", add_output)
 
     if modprobe_cmd:
         # negative test, both guest and host should still work well.
         msg = "Negative test:Try to remove sr-iov module in host."
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         driver = params.get("driver", "igb")
         modprobe_cmd = modprobe_cmd % driver
         try:
             process.system(modprobe_cmd, timeout=120, ignore_status=True,
                            shell=True)
         except process.CmdError as err:
-            logging.error(err)
+            test.log.error(err)

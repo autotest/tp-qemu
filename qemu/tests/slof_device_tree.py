@@ -1,4 +1,3 @@
-import logging
 from avocado.utils import process
 from virttest import error_context
 
@@ -26,7 +25,7 @@ def run(test, params, env):
         output = vm_session.cmd_output(
             "echo `cat /proc/device-tree/%s`" % guest_info)
         if match_str in output:
-            logging.info(output)
+            test.log.info(output)
             return None
         return output.strip().splitlines()[-1]
 
@@ -45,7 +44,7 @@ def run(test, params, env):
         status = vm_session.cmd_status(
             "test -f /proc/device-tree/aliases/cdrom")
         error_context.context(
-            "Checking whether aliases file is indeed nonexisting", logging.info)
+            "Checking whether aliases file is indeed nonexisting", test.log.info)
         if status == 0:
             test.fail("Nonexist cdrom aliases check failed.")
 

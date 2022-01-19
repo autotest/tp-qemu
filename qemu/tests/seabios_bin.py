@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import env_process
 from virttest import utils_misc
@@ -29,14 +27,14 @@ def run(test, params, env):
                    '2.11': 'bios-256k.bin'
                }
 
-    error_context.context("Get available bin files", logging.info)
+    error_context.context("Get available bin files", test.log.info)
     output = process.system_output('ls /usr/share/seabios', shell=True).decode()
     bin_file_skip = params.get("bin_file_skip", "")
     for value in bin_dict.values():
         if value not in output and value != bin_file_skip:
             test.fail("%s is not available" % value)
 
-    error_context.context("Get supported machine types", logging.info)
+    error_context.context("Get supported machine types", test.log.info)
     qemu_binary = utils_misc.get_qemu_binary(params)
     machine_type_cmd = qemu_binary + " -machine help | awk '{ print $1 }'"
     output = process.system_output(machine_type_cmd, shell=True).decode()
@@ -44,11 +42,11 @@ def run(test, params, env):
     machine_type_remove = params['machine_type_remove'].split()
     for i in machine_type_remove:
         machine_types.remove(i)
-    logging.info(machine_types)
+    test.log.info(machine_types)
 
     for machine in machine_types:
         error_context.context("Check bin file with machine type: %s" % machine,
-                              logging.info)
+                              test.log.info)
         for key in bin_dict:
             if key in machine:
                 bin_file = bin_dict[key]

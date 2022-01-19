@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_package
@@ -21,7 +20,7 @@ def run(test, params, env):
         return sve_list
 
     def compile_test_suite():
-        error_context.context('Compose the test suite......', logging.info)
+        error_context.context('Compose the test suite......', test.log.info)
         git_cmd = 'git clone --depth=1 {} {} 2>/dev/null'.format(git_repo,
                                                                  dst_dir)
         session.cmd(git_cmd, timeout=180)
@@ -32,21 +31,21 @@ def run(test, params, env):
         test_lengths = re.findall(r'# (\d+)$', o, re.M)
         if s or not test_lengths:
             test.error('Could not get supported SVE lengths by "sve-probe-vls"')
-        logging.info('The lengths of SVE used for testing are: %s', test_lengths)
+        test.log.info('The lengths of SVE used for testing are: %s', test_lengths)
         for sve_length in test_lengths:
             out = session.cmd_output(execute_suite_cmd.format(sve_length),
                                      timeout=(suite_timeout + 10))
             results_lines = [result for result in out.splitlines() if
                              result.startswith('Terminated by')]
             if len(re.findall(r'no error', out, re.M)) != len(results_lines):
-                logging.debug('Test results: %s', results_lines)
+                test.log.debug('Test results: %s', results_lines)
                 test.fail('SVE stress test failed')
 
     def optimized_routines():
         out = session.cmd_output(execute_suite_cmd, timeout=suite_timeout)
         results = re.findall(r'^(\w+) \w+sve$', out, re.M)
         if not all([result == "PASS" for result in results]):
-            logging.debug('Test results: %s', results)
+            test.log.debug('Test results: %s', results)
             test.fail('optimized routines suite test failed')
 
     cpu_utils.check_cpu_flags(params, 'sve', test)
@@ -62,7 +61,7 @@ def run(test, params, env):
     required_pkgs = params.objects('required_pkgs')
     execute_suite_cmd = params['execute_suite_cmd']
 
-    error_context.context('Launch a guest with sve=on', logging.info)
+    error_context.context('Launch a guest with sve=on', test.log.info)
     sve_opts = ('{}={}'.format(sve, 'on') for sve in sve_lengths)
     params['cpu_model_flags'] = 'sve=on,' + ','.join(sve_opts)
     vm.create(params=params)
@@ -73,5 +72,5 @@ def run(test, params, env):
     if not utils_package.package_install(required_pkgs, session):
         test.error("Failed to install required packages in guest")
     compile_test_suite()
-    error_context.context('Execute the test suite......', logging.info)
+    error_context.context('Execute the test suite......', test.log.info)
     locals()[suite_type]()

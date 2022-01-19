@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -39,7 +38,7 @@ def run(test, params, env):
     vms = []
     sids = {}
     sid_same = []
-    error_context.context("Check guest's System ID.", logging.info)
+    error_context.context("Check guest's System ID.", test.log.info)
     output = session.cmd_output(check_sid_cmd, timeout=60)
     try:
         sid = re.findall(re_sid, output)[0]
@@ -47,14 +46,14 @@ def run(test, params, env):
         msg = "Fail to get guest's System ID. "
         msg += "Output from check System ID command: %s" % output
         test.fail(msg)
-    logging.info("VM guest System ID is: %s", sid)
+    test.log.info("VM guest System ID is: %s", sid)
     sids[sid] = ["pre_%s" % vm.name]
     file_dir = tmp_path + unattended_file
     sysprep_cmd = sysprep_cmd % file_dir
     error_context.context("Run sysprep command in guest. %s" % sysprep_cmd,
-                          logging.info)
+                          test.log.info)
     session.sendline(sysprep_cmd)
-    error_context.context("Waiting guest power down.....", logging.info)
+    error_context.context("Waiting guest power down.....", test.log.info)
     status = utils_misc.wait_for(vm.is_dead, timeout * 3, 3)
     if not status:
         test.fail("VM did not shutdown after sysprep command")
@@ -70,8 +69,8 @@ def run(test, params, env):
     for vm_i in vms:
         session = vm_i.wait_for_login(timeout=restart_timeout)
         vm_i_ip = vm_i.get_address()
-        logging.info("VM: %s got IP: %s", vm_i.name, vm_i_ip)
-        error_context.context("Check guest's System ID.", logging.info)
+        test.log.info("VM: %s got IP: %s", vm_i.name, vm_i_ip)
+        error_context.context("Check guest's System ID.", test.log.info)
         output = session.cmd_output(check_sid_cmd, timeout=60)
         try:
             sid = re.findall(re_sid, output)[0]
@@ -79,11 +78,11 @@ def run(test, params, env):
             msg = "Fail to get System ID of %s" % vm_i.name
             msg += "Output from check System ID command: %s" % output
             test.error(msg)
-        logging.info("VM:%s System ID is: %s", vm_i.name, sid)
+        test.log.info("VM:%s System ID is: %s", vm_i.name, sid)
         if sid in sids.keys():
-            logging.error("VM: %s have duplicate System ID: %s",
-                          vm_i.name,
-                          sid)
+            test.log.error("VM: %s have duplicate System ID: %s",
+                           vm_i.name,
+                           sid)
             sid_same.append(sid)
             sids[sid].append(vm_i.name)
         else:

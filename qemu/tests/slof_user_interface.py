@@ -4,7 +4,6 @@ slof_user_interface.py include following case:
  2. SLOF user interface testing - boot.
  3. SLOF user interface testing - reset-all.
 """
-import logging
 import os
 import re
 import time
@@ -49,7 +48,7 @@ def run(test, params, env):
 
     def _send_custom_key(keystr):
         """ Send custom keyword to SLOF's user interface. """
-        logging.info('Sending \"%s\" to SLOF user interface.', keystr)
+        test.log.info('Sending \"%s\" to SLOF user interface.', keystr)
         for key in keystr:
             key = 'minus' if key == '-' else key
             vm.send_key(key)
@@ -66,7 +65,7 @@ def run(test, params, env):
         time.sleep(sleep)
         content, _ = slof.get_boot_content(vm, 0, k_params['start'], k_params['end'])
         if content:
-            logging.info('Output of SLOF:\n%s', ''.join(content))
+            test.log.info('Output of SLOF:\n%s', ''.join(content))
             return ''.join(content)
         return None
 
@@ -75,8 +74,8 @@ def run(test, params, env):
         bootable_num = ''
         for i in range(1, int(params['boot_dev_num']) + 1):
             option = params['menu_option%d' % i]
-            logging.info('Checking the device(%s) if is included in menu list.',
-                         '->'.join(option.split()))
+            test.log.info('Checking the device(%s) if is included in menu list.',
+                          '->'.join(option.split()))
 
             dev_type, hba_type, child_bus, addr = option.split()
             addr = re.sub(r'^0x0?', '', addr)
@@ -143,12 +142,12 @@ def run(test, params, env):
     main_tests[keys]()
 
     error_context.context("Try to log into guest '%s'." % vm.name,
-                          logging.info)
+                          test.log.info)
     session = vm.wait_for_login(timeout=float(params['login_timeout']))
-    logging.info("log into guest '%s' successfully.", vm.name)
+    test.log.info("log into guest '%s' successfully.", vm.name)
 
-    error_context.context("Try to ping external host.", logging.info)
+    error_context.context("Try to ping external host.", test.log.info)
     extra_host_ip = utils_net.get_host_ip_address(params)
     session.cmd('ping %s -c 5' % extra_host_ip)
-    logging.info("Ping host(%s) successfully.", extra_host_ip)
+    test.log.info("Ping host(%s) successfully.", extra_host_ip)
     vm.destroy(gracefully=True)

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import utils_test, env_process
 from virttest.staging import utils_memory
 
@@ -21,21 +19,21 @@ def run(test, params, env):
         vm = env.get_vm(vm_name)
         ip = vm.get_address()
         path = params.get("download_url")
-        logging.info("kernel path = %s", path)
+        test.log.info("kernel path = %s", path)
         get_kernel_cmd = "wget %s" % path
         try:
             status, output = session.cmd_status_output(get_kernel_cmd,
                                                        timeout=240)
             if status != 0:
-                logging.error(output)
+                test.log.error(output)
                 test.fail("Fail to download the kernel in %s" % vm_name)
             else:
-                logging.info("Completed download the kernel src"
-                             " in %s", vm_name)
+                test.log.info("Completed download the kernel src"
+                              " in %s", vm_name)
             test_cmd = params.get("test_cmd")
             status, output = session.cmd_status_output(test_cmd, timeout=1200)
             if status != 0:
-                logging.error(output)
+                test.log.error(output)
         finally:
             status, _ = utils_test.ping(ip, count=10, timeout=30)
             if status != 0:
@@ -45,8 +43,8 @@ def run(test, params, env):
     guest_number = int(params.get("guest_number", "1"))
 
     if guest_number < 1:
-        logging.warn("At least boot up one guest for this test,"
-                     " set up guest number to 1")
+        test.log.warn("At least boot up one guest for this test,"
+                      " set up guest number to 1")
         guest_number = 1
 
     for tag in range(1, guest_number):
@@ -77,7 +75,7 @@ def run(test, params, env):
 
     # run kernel compile in vms
     try:
-        logging.info("run kernel compile in vms")
+        test.log.info("run kernel compile in vms")
         bg_threads = []
         for session_info in sessions_info:
             session = session_info[0]

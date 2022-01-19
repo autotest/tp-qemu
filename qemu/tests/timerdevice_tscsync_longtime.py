@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -24,31 +23,31 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     error_context.context("Check for an appropriate clocksource on host",
-                          logging.info)
+                          test.log.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
     if "tsc" not in process.getoutput(host_cmd):
         test.cancel("Host must use 'tsc' clocksource")
 
     error_context.context("Check host has more than one cpu socket",
-                          logging.info)
+                          test.log.info)
     host_socket_cnt_cmd = params["host_socket_cnt_cmd"]
     if process.system_output(host_socket_cnt_cmd, shell=True).strip() == "1":
         test.cancel("Host must have more than 1 socket")
 
-    error_context.context("Boot the guest with one cpu socket", logging.info)
+    error_context.context("Boot the guest with one cpu socket", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Copy time-warp-test.c to guest", logging.info)
+    error_context.context("Copy time-warp-test.c to guest", test.log.info)
     src_file_name = os.path.join(data_dir.get_deps_dir(), "tsc_sync",
                                  "time-warp-test.c")
     vm.copy_files_to(src_file_name, "/tmp")
 
-    error_context.context("Compile the time-warp-test.c", logging.info)
+    error_context.context("Compile the time-warp-test.c", test.log.info)
     cmd = "cd /tmp/;"
     cmd += " yum install -y popt-devel;"
     cmd += " rm -f time-warp-test;"
@@ -56,7 +55,7 @@ def run(test, params, env):
     session.cmd(cmd)
 
     error_context.context("Run time-warp-test for minimum 4 hours",
-                          logging.info)
+                          test.log.info)
     test_run_timeout = int(params.get("test_run_timeout", 14400))
     session.sendline("$(sleep %d; pkill time-warp-test) &" % test_run_timeout)
     cmd = "/tmp/time-warp-test"

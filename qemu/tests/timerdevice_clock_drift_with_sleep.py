@@ -1,4 +1,3 @@
-import logging
 import re
 
 from avocado.utils import process
@@ -47,11 +46,11 @@ def run(test, params, env):
                       % (output, times_list))
 
     error_context.context("Sync the host system time with ntp server",
-                          logging.info)
+                          test.log.info)
     ntp_sync_cmd = params.get("ntp_sync_cmd")
     process.system(ntp_sync_cmd, shell=True)
 
-    error_context.context("Boot the guest", logging.info)
+    error_context.context("Boot the guest", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -59,7 +58,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Check the clock source currently used on guest",
-                          logging.info)
+                          test.log.info)
     cmd = "cat /sys/devices/system/clocksource/"
     cmd += "clocksource0/current_clocksource"
     if "kvm-clock" not in session.cmd(cmd):
@@ -71,7 +70,7 @@ def run(test, params, env):
         vm.destroy()
         env.unregister_vm(vm.name)
         error_context.context("Update guest kernel cli to kvm-clock",
-                              logging.info)
+                              test.log.info)
         image_filename = storage.get_image_filename(params,
                                                     data_dir.get_data_dir())
         kernel_cfg_pattern = params.get("kernel_cfg_pos_reg",
@@ -80,7 +79,7 @@ def run(test, params, env):
         disk_obj = utils_disk.GuestFSModiDisk(image_filename)
         kernel_cfg_original = disk_obj.read_file(grub_file)
         try:
-            logging.warn("Update the first kernel entry to kvm-clock only")
+            test.log.warn("Update the first kernel entry to kvm-clock only")
             kernel_cfg = re.findall(kernel_cfg_pattern,
                                     kernel_cfg_original)[0]
         except IndexError as detail:
@@ -93,7 +92,7 @@ def run(test, params, env):
             disk_obj.replace_image_file_content(grub_file, kernel_cfg,
                                                 kernel_cfg_new)
 
-        error_context.context("Boot the guest", logging.info)
+        error_context.context("Boot the guest", test.log.info)
         vm_name = params["main_vm"]
         cpu_model_flags = params.get("cpu_model_flags")
         params["cpu_model_flags"] = cpu_model_flags + ",-kvmclock"
@@ -102,14 +101,14 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Sync time from guest to ntpserver", logging.info)
+    error_context.context("Sync time from guest to ntpserver", test.log.info)
     session.cmd(ntp_sync_cmd, timeout=timeout)
 
     error_context.context("Sleep a while and check the time drift on guest"
-                          " (without any pinned vcpu)", logging.info)
+                          " (without any pinned vcpu)", test.log.info)
     verify_elapsed_time()
 
-    error_context.context("Pin every vcpu to physical cpu", logging.info)
+    error_context.context("Pin every vcpu to physical cpu", test.log.info)
     host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
     host_cpu_num = process.system_output(host_cpu_cnt_cmd, shell=True).strip()
     host_cpu_list = (_ for _ in range(int(host_cpu_num)))
@@ -121,10 +120,10 @@ def run(test, params, env):
         process.system("taskset -p -c %s %s" % (pcpu, vcpu))
         if not check_one_cpu_pinned:
             error_context.context("Sleep a while and check the time drift on"
-                                  "guest (with one pinned vcpu)", logging.info)
+                                  "guest (with one pinned vcpu)", test.log.info)
             verify_elapsed_time()
             check_one_cpu_pinned = True
 
     error_context.context("Sleep a while and check the time drift on"
-                          "guest (with all pinned vcpus)", logging.info)
+                          "guest (with all pinned vcpus)", test.log.info)
     verify_elapsed_time()

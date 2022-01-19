@@ -1,5 +1,4 @@
 import os
-import logging
 import time
 
 from avocado.utils import process
@@ -43,7 +42,7 @@ def run(test, params, env):
         time_conv = time.time() - start_time
         time_list.append(time_conv)
         process.run("rm -f %s" % conv_img)
-    logging.info("The time list is: %s", time_list)
+    test.log.info("The time list is: %s", time_list)
     max_time = params["max_time"]
     unexpected_time = [_ for _ in time_list if float(_) > float(max_time)]
     if unexpected_time:

@@ -1,4 +1,3 @@
-import logging
 import time
 
 from avocado.utils import process
@@ -16,13 +15,13 @@ class GuestSuspendSerialConsole(GuestSuspendBaseTest):
     @error_context.context_aware
     def action_during_suspend(self, **args):
         error_context.context("Sleep a while before resuming guest",
-                              logging.info)
+                              self.test.log.info)
 
         time.sleep(float(self.params.get("wait_timeout", "1800")))
         if self.os_type == "windows":
             # Due to WinXP/2003 won't suspend immediately after issue S3 cmd,
             # delay 10~60 secs here, maybe there's a bug in windows os.
-            logging.info("WinXP/2003 need more time to suspend, sleep 50s.")
+            self.test.log.info("WinXP/2003 need more time to suspend, sleep 50s.")
             time.sleep(50)
 
 
@@ -31,10 +30,10 @@ def subw_guest_suspend(test, params, vm, session):
 
     suspend_type = params.get("guest_suspend_type")
     if suspend_type == gs.SUSPEND_TYPE_MEM:
-        error_context.context("Suspend vm to mem", logging.info)
+        error_context.context("Suspend vm to mem", test.log.info)
         gs.guest_suspend_mem(params)
     elif suspend_type == gs.SUSPEND_TYPE_DISK:
-        error_context.context("Suspend vm to disk", logging.info)
+        error_context.context("Suspend vm to disk", test.log.info)
         gs.guest_suspend_disk(params)
     else:
         test.error("Unknown guest suspend type, Check your"
@@ -116,19 +115,19 @@ def run(test, params, env):
 
     vm_name = params.get("vms")
     vm = env.get_vm(vm_name)
-    error_context.context("Sync host machine with clock server", logging.info)
+    error_context.context("Sync host machine with clock server", test.log.info)
     process.system(clock_sync_command, shell=True)
 
     session = vm.wait_for_login(timeout=login_timeout)
     error_context.context("Get clock from host and guest VM using `date`",
-                          logging.info)
+                          test.log.info)
 
     before_date = utils_test.get_time(session,
                                       date_time_command,
                                       date_time_filter_re,
                                       date_time_format)
-    logging.debug("date: host time=%ss guest time=%ss",
-                  *before_date)
+    test.log.debug("date: host time=%ss guest time=%ss",
+                   *before_date)
 
     session.close()
 
@@ -141,13 +140,13 @@ def run(test, params, env):
     vm = env.get_vm(vm_name)
     session = vm.wait_for_login(timeout=login_timeout)
     error_context.context("Get clock from host and guest VM using `date`",
-                          logging.info)
+                          test.log.info)
     after_date = utils_test.get_time(session,
                                      date_time_command,
                                      date_time_filter_re,
                                      date_time_format)
-    logging.debug("date: host time=%ss guest time=%ss",
-                  *after_date)
+    test.log.debug("date: host time=%ss guest time=%ss",
+                   *after_date)
 
     if test_type == 'guest_suspend':
         date_diff = time_diff(before_date, after_date)

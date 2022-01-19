@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import utils_test
@@ -66,7 +65,7 @@ def run(test, params, env):
         offline_cpu_cmd = params.get("offline_cpu_cmd")
         s, o = session.cmd_status_output(offline_cpu_cmd)
         if s != 0:
-            logging.error(o)
+            test.log.error(o)
             test.error("Failed set guest cpu offline")
 
         # Sleep for a while after set cpu offline
@@ -80,9 +79,9 @@ def run(test, params, env):
         host_delta = ht1 - ht0
         guest_delta = gt1 - gt0
         drift = 100.0 * (host_delta - guest_delta) / host_delta
-        logging.info("Host duration: %.2f", host_delta)
-        logging.info("Guest duration: %.2f", guest_delta)
-        logging.info("Drift: %.2f%%", drift)
+        test.log.info("Host duration: %.2f", host_delta)
+        test.log.info("Guest duration: %.2f", guest_delta)
+        test.log.info("Drift: %.2f%%", drift)
         if abs(drift) > drift_threshold:
             test.fail("Time drift too large: %.2f%%" % drift)
 
@@ -91,7 +90,7 @@ def run(test, params, env):
         online_cpu_cmd = params.get("online_cpu_cmd")
         s, o = session.cmd_status_output(online_cpu_cmd)
         if s != 0:
-            logging.error(o)
+            test.log.error(o)
             test.error("Failed set guest cpu online")
 
         error_context.context("get time after set cpu online")
@@ -105,9 +104,9 @@ def run(test, params, env):
             host_delta = ht1 - ht0
             guest_delta = gt1 - gt0
             drift = 100.0 * (host_delta - guest_delta) / host_delta
-            logging.info("Host duration: %.2f", host_delta)
-            logging.info("Guest duration: %.2f", guest_delta)
-            logging.info("Drift: %.2f%%", drift)
+            test.log.info("Host duration: %.2f", host_delta)
+            test.log.info("Guest duration: %.2f", guest_delta)
+            test.log.info("Drift: %.2f%%", drift)
             time.sleep(interval_gettime)
         if abs(drift) > drift_threshold:
             test.fail("Time drift too large: %.2f%%" % drift)

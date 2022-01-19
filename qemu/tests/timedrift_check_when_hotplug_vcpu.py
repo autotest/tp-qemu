@@ -1,6 +1,5 @@
 import re
 import time
-import logging
 
 from avocado.utils import process
 
@@ -29,7 +28,7 @@ def run(test, params, env):
     ntp_cmd = params["ntp_cmd"]
     ntp_host_cmd = params.get("ntp_host_cmd", ntp_cmd)
 
-    error_context.context("Sync host system time with ntpserver", logging.info)
+    error_context.context("Sync host system time with ntpserver", test.log.info)
     process.system(ntp_host_cmd, shell=True)
 
     vm = env.get_vm(params["main_vm"])
@@ -42,14 +41,14 @@ def run(test, params, env):
     query_internal = float(params.get("query_internal", "600"))
     drift_threshold = float(params.get("drift_threshold", "3"))
 
-    error_context.context("Sync time from guest to ntpserver", logging.info)
+    error_context.context("Sync time from guest to ntpserver", test.log.info)
     if os_type == "windows":
         w32time_conf_cmd = params["w32time_conf_cmd"]
         session.cmd(w32time_conf_cmd)
         utils_test.start_windows_service(session, "w32time")
     session.cmd(ntp_cmd)
 
-    error_context.context("Hotplug a vcpu to guest", logging.info)
+    error_context.context("Hotplug a vcpu to guest", test.log.info)
     if int(params["smp"]) < int(params["vcpus_maxcpus"]):
         vm.hotplug_vcpu_device(params["vcpu_devices"])
         time.sleep(1)
@@ -57,7 +56,7 @@ def run(test, params, env):
         test.error("Invalid operation, valid index range 0:%d, used range 0:%d"
                    % (int(params["vcpus_maxcpus"])-1, int(params["smp"]) - 1))
 
-    error_context.context("Check time offset via ntp server", logging.info)
+    error_context.context("Check time offset via ntp server", test.log.info)
     for query in range(query_times):
         output = session.cmd_output(ntp_query_cmd)
         try:

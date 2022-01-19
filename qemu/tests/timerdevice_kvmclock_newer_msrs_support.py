@@ -1,5 +1,4 @@
 import re
-import logging
 
 
 def run(test, params, env):
@@ -29,5 +28,5 @@ def run(test, params, env):
             test.fail("Except msrs (%s), " % msrs +
                       "got (%s)" % current_msrs)
     else:
-        logging.debug(dmesg)
+        test.log.debug(dmesg)
         test.fail("No newer msr available for kvm-clock")

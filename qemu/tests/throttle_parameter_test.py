@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 
 from provider.storage_benchmark import generate_instance
@@ -20,13 +18,13 @@ def run(test, params, env):
         3) Execute one disk or all disks testing on groups parallel.
     """
 
-    error_context.context("Get the main VM", logging.info)
+    error_context.context("Get the main VM", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=360)
 
-    error_context.context("Deploy fio", logging.info)
+    error_context.context("Deploy fio", test.log.info)
     fio = generate_instance(params, vm, 'fio')
 
     tgm = ThrottleGroupManager(vm)
@@ -37,13 +35,13 @@ def run(test, params, env):
         images = params["throttle_group_member_%s" % group].split()
         tester = ThrottleTester(test, params, vm, session, group, images)
         error_context.context("Build test stuff for %s:%s" % (group, images),
-                              logging.info)
+                              test.log.info)
         tester.build_default_option()
         tester.build_images_fio_option()
         tester.set_fio(fio)
         testers.append(tester)
 
-    error_context.context("Start groups testing:%s" % groups, logging.info)
+    error_context.context("Start groups testing:%s" % groups, test.log.info)
     groups_tester = ThrottleGroupsTester(testers)
 
     groups_tester.start()

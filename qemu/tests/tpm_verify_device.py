@@ -1,4 +1,3 @@
-import logging
 import re
 
 from avocado.utils import process
@@ -22,7 +21,7 @@ def run(test, params, env):
     """
 
     def search_keywords(patterns, string, flags=re.M, split_string=';'):
-        logging.info(string)
+        test.log.info(string)
         for pattern in patterns.split(split_string):
             if not re.search(r'%s' % pattern, string, flags):
                 test.fail('No Found pattern "%s" from "%s".' % (pattern, string))
@@ -38,7 +37,7 @@ def run(test, params, env):
         if cmd_get_tpm_ver:
             actual_tpm_ver = process.system_output(cmd_get_tpm_ver,
                                                    shell=True).decode().strip()
-            logging.info('The TPM device version is %s.', actual_tpm_ver)
+            test.log.info('The TPM device version is %s.', actual_tpm_ver)
             required_tmp_ver = params.get('required_tmp_version')
             if actual_tpm_ver != required_tmp_ver:
                 test.cancel('Cancel to test due to require TPM device version %s, '
@@ -55,7 +54,7 @@ def run(test, params, env):
             sessions.append(vm.wait_for_login())
         for vm, session in zip(vms, sessions):
             error_context.context("%s: Check TPM info inside guest." % vm.name,
-                                  logging.info)
+                                  test.log.info)
             for name in params.get('check_cmd_names').split():
                 if name:
                     pattern = params.get('pattern_output_%s' % name)
@@ -64,11 +63,11 @@ def run(test, params, env):
 
             reboot_method = params.get("reboot_method")
             if reboot_method:
-                error_context.context("Reboot guest '%s'." % vm.name, logging.info)
+                error_context.context("Reboot guest '%s'." % vm.name, test.log.info)
                 vm.reboot(session, reboot_method).close()
                 continue
 
-            error_context.context("Check TPM info on host.", logging.info)
+            error_context.context("Check TPM info on host.", test.log.info)
             cmd_check_log = params.get('cmd_check_log')
             if cmd_check_log:
                 output = process.system_output(cmd_check_log).decode()

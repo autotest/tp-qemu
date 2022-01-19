@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -39,7 +38,7 @@ def run(test, params, env):
         """
         Get file md5sum from guest.
         """
-        logging.info("Get md5sum of the file:'%s'", file_name)
+        test.log.info("Get md5sum of the file:'%s'", file_name)
         s, o = session.cmd_status_output("md5sum %s" % file_name, timeout=timeout)
         if s != 0:
             test.error("Get file md5sum failed as %s" % o)
@@ -50,7 +49,7 @@ def run(test, params, env):
     inet_name = {}
     vms = []
 
-    error_context.context("Boot vms for test", logging.info)
+    error_context.context("Boot vms for test", test.log.info)
     for vm_name in params.get("vms", "vm1 vm2").split():
         vms.append(env.get_vm(vm_name))
 
@@ -60,7 +59,7 @@ def run(test, params, env):
         params, ip_ver="ipv6", linklocal=True)
 
     error_context.context("Get ipv6 address of host: %s" % host_address,
-                          logging.info)
+                          test.log.info)
     for vm in vms:
         vm.verify_alive()
         sessions[vm] = vm.wait_for_login(timeout=timeout)
@@ -75,24 +74,24 @@ def run(test, params, env):
             linklocal=True)
 
         error_context.context("Get ipv6 address of %s: %s" % (vm.name, addresses[vm]),
-                              logging.info)
+                              test.log.info)
 
     # prepare test data
     guest_path = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
     dest_path = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))
     host_path = os.path.join(test.tmpdir, "tmp-%s" %
                              utils_misc.generate_random_string(8))
-    logging.info("Test setup: Creating %dMB file on host", filesize)
+    test.log.info("Test setup: Creating %dMB file on host", filesize)
     process.run(dd_cmd % (host_path, filesize), shell=True)
 
     try:
         src_md5 = (crypto.hash_file(host_path, algorithm="md5"))
         error_context.context("md5 value of data from src: %s" % src_md5,
-                              logging.info)
+                              test.log.info)
         # transfer data
         for vm in vms:
             error_context.context("Transfer data from host to %s" % vm.name,
-                                  logging.info)
+                                  test.log.info)
             remote.copy_files_to(addresses[vm],
                                  client, username, password, port,
                                  host_path, guest_path,
@@ -101,7 +100,7 @@ def run(test, params, env):
             dst_md5 = get_file_md5sum(guest_path, sessions[vm],
                                       timeout=file_md5_check_timeout)
             error_context.context("md5 value of data in %s: %s" % (vm.name, dst_md5),
-                                  logging.info)
+                                  test.log.info)
             if dst_md5 != src_md5:
                 test.fail("File changed after transfer host -> %s" % vm.name)
 
@@ -111,7 +110,7 @@ def run(test, params, env):
                     if vm_src != vm_dst:
                         error_context.context("Transferring data from %s to %s" %
                                               (vm_src.name, vm_dst.name),
-                                              logging.info)
+                                              test.log.info)
                         remote.scp_between_remotes(addresses[vm_src],
                                                    addresses[vm_dst],
                                                    port, password, password,
@@ -123,24 +122,24 @@ def run(test, params, env):
                         dst_md5 = get_file_md5sum(dest_path, sessions[vm_dst],
                                                   timeout=file_md5_check_timeout)
                         error_context.context("md5 value of data in %s: %s" % (vm.name, dst_md5),
-                                              logging.info)
+                                              test.log.info)
                         if dst_md5 != src_md5:
                             test.fail("File changed transfer %s -> %s"
                                       % (vm_src.name, vm_dst.name))
 
         for vm in vms:
             error_context.context("Transfer data from %s to host" % vm.name,
-                                  logging.info)
+                                  test.log.info)
             remote.copy_files_from(addresses[vm],
                                    client, username, password, port,
                                    guest_path, host_path,
                                    timeout=file_trans_timeout,
                                    interface=host_ifname)
             error_context.context("Check whether the file changed after trans",
-                                  logging.info)
+                                  test.log.info)
             dst_md5 = (crypto.hash_file(host_path, algorithm="md5"))
             error_context.context("md5 value of data after copying to host: %s" % dst_md5,
-                                  logging.info)
+                                  test.log.info)
 
             if dst_md5 != src_md5:
                 test.fail("File changed after transfer (md5sum mismatch)")

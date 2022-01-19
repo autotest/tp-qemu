@@ -1,4 +1,3 @@
-import logging
 import re
 import os
 import shutil
@@ -32,7 +31,7 @@ def run(test, params, env):
         param timeout: the timeout for running this command
         return: the output of the host_cmd
         """
-        logging.info("Executing host command: %s", host_cmd)
+        test.log.info("Executing host command: %s", host_cmd)
         cmd_result = process.run(host_cmd, timeout=timeout, shell=True)
         output = cmd_result.stdout_text
         return output
@@ -63,31 +62,31 @@ def run(test, params, env):
     timeout = params.get_numeric("timeout", 60)
 
     error_context.context("Copy %s to %s" % (tcpreplay_file_name, tmp_dir),
-                          logging.info)
+                          test.log.info)
     tcpreplay_full_path = copy_file_from_deps(tcpreplay_file_name,
                                               tcpreplay_dir, tmp_dir)
 
-    error_context.context("Compile tcpreplay", logging.info)
+    error_context.context("Compile tcpreplay", test.log.info)
     uncompress_full_path = os.path.join(tmp_dir, uncompress_dir)
 
-    logging.info("Remove old uncompress directory")
+    test.log.info("Remove old uncompress directory")
     shutil.rmtree(uncompress_full_path, ignore_errors=True)
 
-    logging.info(
+    test.log.info(
         "Uncompress %s to %s", tcpreplay_full_path, uncompress_full_path)
     uncompress_dir = archive.uncompress(
         tcpreplay_full_path, tmp_dir)
     if not uncompress_dir:
         test.error("Can't uncompress %s" % tcpreplay_full_path)
 
-    logging.info("Compile files at %s", uncompress_full_path)
+    test.log.info("Compile files at %s", uncompress_full_path)
     execute_host_cmd(tcpreplay_compile_cmd % uncompress_full_path, timeout)
 
     error_context.context("Copy %s to %s" % (pcap_file_name, tmp_dir),
-                          logging.info)
+                          test.log.info)
     copy_file_from_deps(pcap_file_name, tcpreplay_dir, tmp_dir)
 
-    error_context.context("Run tcpreplay with pcap file", logging.info)
+    error_context.context("Run tcpreplay with pcap file", test.log.info)
     output = execute_host_cmd(run_tcpreplay_cmd)
     result = re.search(r'Successful packets:\s+(\d+)', output)
     success_packet = 0

@@ -1,5 +1,4 @@
 import os
-import logging
 import shutil
 
 from virttest import error_context
@@ -37,7 +36,7 @@ def run(test, params, env):
             dst_filename = os.path.join(
                 dst_dir, '%s.%s' % (vm_name, src_format))
             if not os.path.exists(dst_filename):
-                logging.info('Copying %s to %s.', src_filename, dst_filename)
+                test.log.info('Copying %s to %s.', src_filename, dst_filename)
                 shutil.copy(src_filename, dst_filename)
 
     def wait_for_login_all_vms():
@@ -46,11 +45,11 @@ def run(test, params, env):
 
     @error_context.context_aware
     def fio_on_vm(vm_t, session_t):
-        error_context.context("Deploy fio", logging.info)
+        error_context.context("Deploy fio", test.log.info)
         fio = generate_instance(params, vm_t, 'fio')
-        logging.info("fio: %s", fio)
+        test.log.info("fio: %s", fio)
         tgm = ThrottleGroupManager(vm_t)
-        logging.info("tgm: %s", tgm)
+        test.log.info("tgm: %s", tgm)
         groups = params["throttle_groups"].split()
         testers = []
         for group in groups:
@@ -59,23 +58,23 @@ def run(test, params, env):
             tester = ThrottleTester(test, params, vm_t, session_t,
                                     group, images)
             error_context.context("Build test stuff for %s:%s"
-                                  % (group, images), logging.info)
+                                  % (group, images), test.log.info)
             tester.build_default_option()
             tester.build_images_fio_option()
             tester.set_fio(fio)
             testers.append(tester)
-        error_context.context("Start groups testing:%s" % groups, logging.info)
+        error_context.context("Start groups testing:%s" % groups, test.log.info)
         groups_tester = ThrottleGroupsTester(testers)
         groups_tester.start()
 
     def fio_on_vms():
         """Run fio on all started vms at the same time."""
-        logging.info("Start to do fio on  multi-vms:")
+        test.log.info("Start to do fio on  multi-vms:")
         fio_parallel_params = []
         for vm, session in zip(vms, sessions):
             fio_parallel_params.append((fio_on_vm, (vm, session)))
         utils_misc.parallel(fio_parallel_params)
-        logging.info("Done fio on multi-vms.")
+        test.log.info("Done fio on multi-vms.")
 
     vms_list = params['vms'].split()
     copy_base_vm_image()

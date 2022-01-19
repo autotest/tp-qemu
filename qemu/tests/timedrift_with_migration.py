@@ -1,5 +1,3 @@
-import logging
-
 from virttest import utils_test
 from virttest import utils_time
 
@@ -58,13 +56,13 @@ def run(test, params, env):
                                                time_filter_re, time_format)
             session.close()
             # Run current iteration
-            logging.info("Migrating: iteration %d of %d...",
-                         (i + 1), migration_iterations)
+            test.log.info("Migrating: iteration %d of %d...",
+                          (i + 1), migration_iterations)
             vm.migrate()
             # Log in
-            logging.info("Logging in after migration...")
+            test.log.info("Logging in after migration...")
             session = vm.wait_for_login(timeout=30)
-            logging.info("Logged in after migration")
+            test.log.info("Logged in after migration")
             # Get time after current iteration
             (ht1_, gt1_) = utils_test.get_time(session, time_command,
                                                time_filter_re, time_format)
@@ -72,12 +70,12 @@ def run(test, params, env):
             host_delta = ht1_ - ht0_
             guest_delta = gt1_ - gt0_
             drift = abs(host_delta - guest_delta)
-            logging.info("Host duration (iteration %d): %.2f",
-                         (i + 1), host_delta)
-            logging.info("Guest duration (iteration %d): %.2f",
-                         (i + 1), guest_delta)
-            logging.info("Drift at iteration %d: %.2f seconds",
-                         (i + 1), drift)
+            test.log.info("Host duration (iteration %d): %.2f",
+                          (i + 1), host_delta)
+            test.log.info("Guest duration (iteration %d): %.2f",
+                          (i + 1), guest_delta)
+            test.log.info("Drift at iteration %d: %.2f seconds",
+                          (i + 1), drift)
             # Fail if necessary
             if drift > drift_threshold_single:
                 test.fail("Time drift too large at iteration %d: "
@@ -100,12 +98,12 @@ def run(test, params, env):
     host_delta = ht1 - ht0
     guest_delta = gt1 - gt0
     drift = abs(host_delta - guest_delta)
-    logging.info("Host duration (%d migrations): %.2f",
-                 migration_iterations, host_delta)
-    logging.info("Guest duration (%d migrations): %.2f",
-                 migration_iterations, guest_delta)
-    logging.info("Drift after %d migrations: %.2f seconds",
-                 migration_iterations, drift)
+    test.log.info("Host duration (%d migrations): %.2f",
+                  migration_iterations, host_delta)
+    test.log.info("Guest duration (%d migrations): %.2f",
+                  migration_iterations, guest_delta)
+    test.log.info("Drift after %d migrations: %.2f seconds",
+                  migration_iterations, drift)
 
     # Fail if necessary
     if drift > drift_threshold:

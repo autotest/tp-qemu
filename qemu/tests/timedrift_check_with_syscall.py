@@ -1,5 +1,4 @@
 import os
-import logging
 
 import aexpect
 from virttest import data_dir
@@ -33,15 +32,15 @@ def run(test, params, env):
         src_file = os.path.join(src_dir, "clktest.c")
         dst_file = os.path.join(tmp_dir, "clktest.c")
         error_context.context("transfer '%s' to guest('%s')" %
-                              (src_file, dst_file), logging.info)
+                              (src_file, dst_file), test.log.info)
         vm.copy_files_to(src_file, tmp_dir, timeout=120)
 
         build_cmd = params.get("build_cmd", "gcc -lrt clktest.c -o clktest")
-        error_context.context("build binary file 'clktest'", logging.info)
+        error_context.context("build binary file 'clktest'", test.log.info)
         session.cmd(build_cmd)
 
-    error_context.context("check clock offset via `clktest`", logging.info)
-    logging.info("set check timeout to %s seconds", check_timeout)
+    error_context.context("check clock offset via `clktest`", test.log.info)
+    test.log.info("set check timeout to %s seconds", check_timeout)
     try:
         session.cmd_output(test_cmd, timeout=check_timeout)
     except aexpect.ShellTimeoutError as msg:

@@ -1,6 +1,5 @@
 """IO-Throttling group and other operation relevant testing"""
 import json
-import logging
 
 from virttest import error_context
 from virttest.qemu_monitor import QMPCmdError
@@ -41,9 +40,9 @@ def run(test, params, env):
             except QMPCmdError as err:
                 qmp_desc = err.data["desc"]
                 if qmp_desc.find(err_msg) >= 0:
-                    logging.info("Find expected result for %s", name)
+                    test.log.info("Find expected result for %s", name)
                     continue
-                logging.error(
+                test.log.error(
                     "Cannot got expected wrong result on %s: %s in %s",
                     name, err_msg, qmp_desc)
                 raise err
@@ -93,13 +92,13 @@ def run(test, params, env):
         snapshot_test.prepare_snapshot_file()
         snapshot_test.create_snapshot()
 
-    error_context.context("Get the main VM", logging.info)
+    error_context.context("Get the main VM", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=360)
 
-    error_context.context("Deploy fio", logging.info)
+    error_context.context("Deploy fio", test.log.info)
     fio = generate_instance(params, vm, 'fio')
 
     tgm = ThrottleGroupManager(vm)
@@ -107,7 +106,7 @@ def run(test, params, env):
     operation = params["operation"]
 
     # simple test on group1
-    error_context.context("Execute simple test on group1", logging.info)
+    error_context.context("Execute simple test on group1", test.log.info)
     tester = ThrottleTester(test, params, vm, session, "group1", ["stg1"])
     tester.build_default_option()
     tester.build_images_fio_option()
@@ -115,7 +114,7 @@ def run(test, params, env):
     tester.start()
 
     # execute relevant operation
-    error_context.context("Execute operation %s" % operation, logging.info)
+    error_context.context("Execute operation %s" % operation, test.log.info)
     locals_var = locals()
     locals_var[operation]()
     # test after operation
@@ -126,20 +125,20 @@ def run(test, params, env):
         tgm.get_throttle_group_props(group)
         images = params.get("throttle_group_member_%s" % group, "").split()
         if len(images) == 0:
-            logging.warning("No images in group %s", group)
+            test.log.warning("No images in group %s", group)
             continue
         tester = ThrottleTester(test, params, vm, session, group, images)
         error_context.context("Build test stuff for %s:%s" % (group, images),
-                              logging.info)
+                              test.log.info)
         tester.build_default_option()
         tester.build_images_fio_option()
         tester.set_fio(fio)
         testers.append(tester)
 
-    error_context.context("Start groups testing:%s" % groups, logging.info)
+    error_context.context("Start groups testing:%s" % groups, test.log.info)
     groups_tester = ThrottleGroupsTester(testers)
 
     repeat_test = params.get_numeric("repeat_test", 1)
     for repeat in range(repeat_test):
-        error_context.context("Begin test loop:%d" % repeat, logging.info)
+        error_context.context("Begin test loop:%d" % repeat, test.log.info)
         groups_tester.start()

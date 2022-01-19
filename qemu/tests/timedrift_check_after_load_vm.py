@@ -1,6 +1,5 @@
 import re
 import time
-import logging
 
 from avocado.utils import process
 from virttest import env_process
@@ -36,9 +35,9 @@ def run(test, params, env):
        :params module_param: the value of kvmclock_periodic_sync
        """
         error_context.context("Load kvm module with kvmclock_periodic_sync=%s"
-                              % module_param, logging.info)
+                              % module_param, test.log.info)
         check_modules = arch.get_kvm_module_list()
-        error_context.context("check_module: '%s'" % check_modules, logging.info)
+        error_context.context("check_module: '%s'" % check_modules, test.log.info)
         check_modules.reverse()
         for module in check_modules:
             rm_mod_cmd = "modprobe -r %s" % module
@@ -61,13 +60,13 @@ def run(test, params, env):
         """
         if arch.ARCH not in ('ppc64', 'ppc64le'):
             _load_kvm_module_with_kvmclock_periodic_sync("N")
-        error_context.context("Sync host time with ntp server", logging.info)
+        error_context.context("Sync host time with ntp server", test.log.info)
         ntp_cmd = params.get("ntp_cmd")
         status = process.system(ntp_cmd, shell=True)
         if status != 0:
             test.cancel("Fail to sync host time with ntp server.")
 
-        error_context.context("Boot the guest", logging.info)
+        error_context.context("Boot the guest", test.log.info)
         params["start_vm"] = "yes"
         vm = env.get_vm(params["main_vm"])
         env_process.preprocess_vm(test, params, env, vm.name)
@@ -102,7 +101,7 @@ def run(test, params, env):
         :params qmp_cmd: qmp command
         """
         output = qmp_port.send_args_cmd(qmp_cmd)
-        logging.info("QMP command: '%s' \n Output: '%s'", qmp_cmd, output)
+        test.log.info("QMP command: '%s' \n Output: '%s'", qmp_cmd, output)
 
     def query_ntp_time():
         """
@@ -110,9 +109,9 @@ def run(test, params, env):
         """
         ntp_query_cmd = params["ntp_query_cmd"]
         output = session.cmd_output_safe(ntp_query_cmd)
-        error_context.context("Verify guest time offset", logging.info)
+        error_context.context("Verify guest time offset", test.log.info)
         offset = float(re.findall(r"[+|-]*\s*(\d+\.\d+)\s*sec", output)[-1])
-        error_context.context("offset: '%.2f'" % offset, logging.info)
+        error_context.context("offset: '%.2f'" % offset, test.log.info)
         exptected_time_drift = params.get("expected_time_drift", 3)
         if offset > float(exptected_time_drift):
             test.fail("After loadvm, the time drift of guest is too large.")
@@ -121,7 +120,7 @@ def run(test, params, env):
     session = vm.wait_for_login()
     try:
         error_context.context("Check the clocksource currently in use",
-                              logging.info)
+                              test.log.info)
         clocksource = params.get("clocksource", "kvm-clock")
         clocksource_cmd = "cat /sys/devices/system/clocksource/clocksource0"
         clocksource_cmd += "/current_clocksource"
@@ -130,12 +129,12 @@ def run(test, params, env):
             test.cancel("Mismatch clocksource, current clocksource: %s",
                         currentsource)
         error_context.context("Stop chronyd and sync guest time with ntp server",
-                              logging.info)
+                              test.log.info)
         ntp_cmd = params.get("ntp_cmd")
         status, output = session.cmd_status_output(ntp_cmd)
         if status != 0:
             test.error("Failed to sync guest time with ntp server.")
-        error_context.context("Setup qemu-guest-agent in guest", logging.info)
+        error_context.context("Setup qemu-guest-agent in guest", test.log.info)
         gagent = setup_gagent()
 
         qmp_ports = vm.get_monitors_by_type('qmp')
@@ -143,7 +142,7 @@ def run(test, params, env):
             qmp_port = qmp_ports[0]
         else:
             test.cancel("Incorrect configuration, no QMP monitor found.")
-        error_context.context("Save/load VM", logging.info)
+        error_context.context("Save/load VM", test.log.info)
         qmp_savevm_cmd = params["qmp_savevm_cmd"]
         run_qmp_cmd(qmp_port, qmp_savevm_cmd)
         qmp_loadvm_cmd = params["qmp_loadvm_cmd"]
@@ -153,7 +152,7 @@ def run(test, params, env):
         gagent.gagent.set_time()
 
         error_context.context("Execute 'rtc-reset-reinjection' in qmp"
-                              " monitor, not for power platform", logging.info)
+                              " monitor, not for power platform", test.log.info)
         if arch.ARCH not in ('ppc64', 'ppc64le'):
             qmp_rtc_reset_cmd = params["qmp_rtc_reset_cmd"]
             run_qmp_cmd(qmp_port, qmp_rtc_reset_cmd)

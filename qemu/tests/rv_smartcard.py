@@ -7,7 +7,6 @@ The test also assumes that the guest is setup with the correct
 options to handle smartcards.
 
 """
-import logging
 
 
 def run(test, params, env):
@@ -44,15 +43,15 @@ def run(test, params, env):
     # Verify remote-viewer is running
     try:
         pid = client_session.cmd("pgrep remote-viewer")
-        logging.info("remote-viewer is running as PID %s", pid.strip())
+        test.log.info("remote-viewer is running as PID %s", pid.strip())
     except:
         test.fail("remote-viewer is not running")
 
     # verify the smart card reader can be seen
     output = guest_session.cmd("lsusb")
-    logging.debug("lsusb output: %s", output)
+    test.log.debug("lsusb output: %s", output)
     if "Gemalto (was Gemplus) GemPC433-Swap" in output:
-        logging.info("Smartcard reader, Gemalto GemPC433-Swap detected.")
+        test.log.info("Smartcard reader, Gemalto GemPC433-Swap detected.")
     else:
         test.fail("No smartcard reader found")
 
@@ -70,14 +69,14 @@ def run(test, params, env):
                 test.fail("Test failed trying to get the output"
                           " of pkcs11_listcerts")
 
-        logging.info("Listing Certs available on the guest:  %s",
-                     listcerts_output)
+        test.log.info("Listing Certs available on the guest:  %s",
+                      listcerts_output)
 
         for cert in cert_list:
             subj_string = "CN=" + cert
             if subj_string in listcerts_output:
-                logging.debug("%s has been found as a listed cert in the guest",
-                              subj_string)
+                test.log.debug("%s has been found as a listed cert in the guest",
+                               subj_string)
             else:
                 test.fail("Certificate %s was not found as a listed"
                           " cert in the guest" % subj_string)
@@ -106,22 +105,22 @@ def run(test, params, env):
                 testindex = string_aftercheck.find(checkstr)
                 # print testindex
                 if testindex >= 0:
-                    logging.debug("Found %s in output of pklogin", checkstr)
+                    test.log.debug("Found %s in output of pklogin", checkstr)
                     string_aftercheck = string_aftercheck[testindex:]
                     testindex2 = string_aftercheck.find(subj_string)
                     if testindex >= 0:
-                        logging.debug("Found %s in output of pklogin",
-                                      subj_string)
+                        test.log.debug("Found %s in output of pklogin",
+                                       subj_string)
                         string_aftercheck = string_aftercheck[testindex2:]
                         testindex3 = string_aftercheck.find(certcheck1)
                         if testindex3 >= 0:
-                            logging.debug("Found %s in output of pklogin",
-                                          certcheck1)
+                            test.log.debug("Found %s in output of pklogin",
+                                           certcheck1)
                             string_aftercheck = string_aftercheck[testindex3:]
                             testindex4 = string_aftercheck.find(certcheck2)
                             if testindex4 >= 0:
-                                logging.debug("Found %s in output of pklogin",
-                                              certcheck2)
+                                test.log.debug("Found %s in output of pklogin",
+                                               certcheck2)
                             else:
                                 test.fail(certcheck2 + " not found"
                                           " in output of pklogin "
@@ -143,7 +142,7 @@ def run(test, params, env):
             test.fail(searchstr + " not found in output of pklogin"
                       " on the guest")
 
-        logging.info("Certs Info on the guest:  %s", certsinfo_output)
+        test.log.info("Certs Info on the guest:  %s", certsinfo_output)
     else:
         test.fail("Please specify a valid smartcard testype")
 
@@ -155,10 +154,10 @@ def run(test, params, env):
         try:
             output = client_session.cmd(cmd)
         except:
-            logging.warning(
+            test.log.warning(
                 "Deleting of %s certificate from the client failed",
                 cert)
-        logging.debug("Output of " + cmd + ": " + output)
+        test.log.debug("Output of " + cmd + ": " + output)
 
     client_session.close()
     guest_session.close()

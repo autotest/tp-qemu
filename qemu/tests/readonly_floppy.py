@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -32,7 +31,7 @@ def run(test, params, env):
         params["start_vm"] = "yes"
         params["pre_command"] = params.get("pre_cmd") % (vt_data_dir, vt_data_dir)
         env_process.preprocess(test, params, env)
-    error_context.context("Boot up guest with floppies", logging.info)
+    error_context.context("Boot up guest with floppies", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -43,15 +42,15 @@ def run(test, params, env):
     # if it is a windows OS,wait for 20 seconds until the floppies
     # are ready for testing
     if sleep:
-        logging.info("Windows system being tested,sleep for 20"
-                     " seconds until floppies are ready to be use")
+        test.log.info("Windows system being tested,sleep for 20"
+                      " seconds until floppies are ready to be use")
         time.sleep(20)
     try:
         # if it is a linux OS,load the floppy module
         if not sleep:
-            logging.info("Loading the floppy module...")
+            test.log.info("Loading the floppy module...")
             status = session.cmd_status("modprobe floppy")
-            logging.info("Sleep 5 seconds after loading the floppy module")
+            test.log.info("Sleep 5 seconds after loading the floppy module")
             time.sleep(5)
             if status:
                 test.error("Unable to load the floppy module")
@@ -63,7 +62,7 @@ def run(test, params, env):
 
         for floppy_index in range(floppy_count):
             error_context.context("Format the %s floppy disk" % floppy_index,
-                                  logging.info)
+                                  test.log.info)
             s, o = session.cmd_status_output(
                 format_cmd_list[floppy_index],
                 timeout=float(params.get("format_floppy_timeout", 60)))
@@ -71,15 +70,15 @@ def run(test, params, env):
                 test.error("Floppy disk %s is not readonly and"
                            " it's formatted successfully" % floppy_index)
             error_context.context("Check the %s floppy is readonly"
-                                  % floppy_index, logging.info)
+                                  % floppy_index, test.log.info)
             found = re.search('(Read-only)|(protected)', o)
-            logging.debug("Output of format command: %s", o)
+            test.log.debug("Output of format command: %s", o)
             if not found:
                 test.error("Floppy disk %s cannot be formatted"
                            " for reasons other than readonly" % floppy_index)
             else:
-                logging.info("Floppy disk %s is Read-only and cannot be"
-                             " formatted", floppy_index)
+                test.log.info("Floppy disk %s is Read-only and cannot be"
+                              " formatted", floppy_index)
 
     finally:
         if session:

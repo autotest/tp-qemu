@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import env_process
@@ -54,7 +53,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Read virtio-rng device to get random number",
-                          logging.info)
+                          test.log.info)
     check_rngd_service = params.get("check_rngd_service")
     if check_rngd_service:
         if not utils_misc.wait_for(_is_rngd_running, 30, first=5):
@@ -74,7 +73,7 @@ def run(test, params, env):
         s, o = session.cmd_status_output(read_rng_cmd, timeout=read_rng_timeout)
         if s:
             test.error(o)
-        logging.info(o)
+        test.log.info(o)
         data_rate = re.search(r'\s(\d+\.\d+) kB/s', o, re.M)
         expected_data_rate = float(params["expected_data_rate"])
         if float(data_rate.group(1)) > expected_data_rate * 1.1:

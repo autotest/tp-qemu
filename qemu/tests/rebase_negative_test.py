@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import qemu_storage
 from virttest import error_context
@@ -23,7 +22,7 @@ def run(test, params, env):
     """
     rebase_chain = params.get("rebase_list", "").split(";")
     error_context.context("Change the backing file of snapshot",
-                          logging.info)
+                          test.log.info)
     for images in rebase_chain:
         output = ""
         images = re.split(r"\s*>\s*", images)
@@ -48,8 +47,8 @@ def run(test, params, env):
                 test.fail(msg)
         except process.CmdError as err:
             output = err.result.stderr.decode()
-            logging.info("Rebase image('%s') failed: %s.",
-                         image, output)
+            test.log.info("Rebase image('%s') failed: %s.",
+                          image, output)
             if negtive_test == "no":
                 msg = "Fail to rebase image('%s'): %s" % (image, output)
                 test.fail(msg)

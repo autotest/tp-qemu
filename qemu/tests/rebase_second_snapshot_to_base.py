@@ -1,5 +1,4 @@
 import json
-import logging
 
 from avocado import fail_on
 
@@ -38,7 +37,7 @@ def run(test, params, env):
             """Get compat version from params."""
             return params.get("qcow2_compatible", "1.1")
 
-        logging.info("Verify snapshot's backing file information.")
+        test.log.info("Verify snapshot's backing file information.")
         for image, img_info in zip(images, reversed(output)):
             # skip base layer
             if not image.base_tag:
@@ -68,8 +67,8 @@ def run(test, params, env):
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
     for image in images[1:]:
-        logging.debug("Create snapshot %s based on %s",
-                      image.image_filename, image.base_image_filename)
+        test.log.debug("Create snapshot %s based on %s",
+                       image.image_filename, image.base_image_filename)
         image.create(image.params)
         info_output = json.loads(image.info(output="json"))
         verify_qemu_img_info_backing_chain(info_output)
@@ -81,12 +80,12 @@ def run(test, params, env):
         if rebase_mode == "safe" or image in (base, active_layer):
             vm = img_utils.boot_vm_with_images(test, params, env, (image.tag,))
             guest_file = params["guest_tmp_filename"] % image.tag
-            logging.debug("Create tmp file %s in image %s", guest_file,
-                          image.image_filename)
+            test.log.debug("Create tmp file %s in image %s", guest_file,
+                           image.image_filename)
             img_utils.save_random_file_to_vm(vm, guest_file,
                                              2048 * 100, sync_bin)
             session = vm.wait_for_login(timeout=timeout)
-            logging.debug("Get md5 value fo the temporary file")
+            test.log.debug("Get md5 value fo the temporary file")
             hashes[guest_file] = img_utils.check_md5sum(guest_file,
                                                         md5sum_bin, session)
             session.close()
@@ -96,14 +95,14 @@ def run(test, params, env):
     if rebase_mode == "unsafe":
         for image in images:
             if image not in (base, active_layer):
-                logging.debug("Remove the snapshot %s before rebase.",
-                              image.image_filename)
+                test.log.debug("Remove the snapshot %s before rebase.",
+                               image.image_filename)
                 image.remove()
 
     cache_mode = params.get("cache_mode")
     msg = "Rebase the snapshot %s to %s"
     msg += "with cache %s." % cache_mode if cache_mode else "."
-    logging.info(msg)
+    test.log.info(msg)
     active_layer.base_tag = base.tag
     active_layer.rebase(active_layer.params, cache_mode)
     info_output = json.loads(active_layer.info(output="json"))

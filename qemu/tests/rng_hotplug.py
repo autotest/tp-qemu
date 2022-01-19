@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -36,26 +35,26 @@ def run(test, params, env):
         return device_list
 
     def hotplug_rng(vm, dev):
-        error_context.context("Hotplug %s" % dev, logging.info)
+        error_context.context("Hotplug %s" % dev, test.log.info)
         out, ver_out = vm.devices.simple_hotplug(dev, vm.monitor)
         if not ver_out:
             msg = "no % device in qtree after hotplug" % dev
             raise exceptions.TestFail(msg)
-        logging.info("%s is hotpluged successfully", dev)
+        test.log.info("%s is hotpluged successfully", dev)
 
     def unplug_rng(vm, dev):
-        error_context.context("Hot-unplug %s" % dev, logging.info)
+        error_context.context("Hot-unplug %s" % dev, test.log.info)
         out, ver_out = vm.devices.simple_unplug(dev, vm.monitor)
         if not ver_out:
             msg = "Still get %s in qtree after unplug" % dev
             raise exceptions.TestFail(msg)
         time.sleep(15)
-        logging.info("%s is unpluged successfully", dev)
+        test.log.info("%s is unpluged successfully", dev)
 
     def restart_rngd(vm):
         if params.get("restart_rngd"):
             session = vm.wait_for_login()
-            error_context.context("Restart rngd service", logging.info)
+            error_context.context("Restart rngd service", test.log.info)
             status, output = session.cmd_status_output("service rngd restart")
             if status != 0:
                 raise exceptions.TestError(output)
@@ -65,7 +64,7 @@ def run(test, params, env):
         if params.get("stop_rngd"):
             session = vm.wait_for_login()
             error_context.context("Disable rngd service before unplug",
-                                  logging.info)
+                                  test.log.info)
             status, output = session.cmd_status_output(params.get("stop_rngd"))
             if status != 0:
                 raise exceptions.TestError(output)
@@ -105,7 +104,7 @@ def run(test, params, env):
     for i in range(repeat_times):
         dev_list = []
         error_context.context("Hotplug/unplug rng devices the %s time"
-                              % (i+1), logging.info)
+                              % (i+1), test.log.info)
 
         for num in range(rng_num):
             vm.devices.set_dirty()

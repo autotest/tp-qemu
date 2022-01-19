@@ -15,6 +15,8 @@ import re
 from virttest import utils_misc
 from virttest import remote
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def launch_totem(test, guest_session, params):
     """
@@ -24,17 +26,17 @@ def launch_totem(test, guest_session, params):
     """
 
     totem_version = guest_session.cmd_output("totem --version")
-    logging.info("Totem version: %s", totem_version)
+    LOG_JOB.info("Totem version: %s", totem_version)
 
     # repeat parameters for totem
-    logging.info("Set up video repeat to '%s' to the Totem.",
+    LOG_JOB.info("Set up video repeat to '%s' to the Totem.",
                  params.get("repeat_video"))
 
     # Check for RHEL6 or RHEL7
     # RHEL7 uses gsettings and RHEL6 uses gconftool-2
     try:
         release = guest_session.cmd("cat /etc/redhat-release")
-        logging.info("Redhat Release: %s", release)
+        LOG_JOB.info("Redhat Release: %s", release)
     except:
         test.cancel("Test is only currently supported on "
                     "RHEL and Fedora operating systems")
@@ -73,17 +75,17 @@ def launch_totem(test, guest_session, params):
     cmd = "pgrep totem"
     pid = guest_session.cmd_output(cmd)
     if pid:
-        logging.info("PID: %s", pid)
+        LOG_JOB.info("PID: %s", pid)
 
         if not re.search(r"^(\d+)", pid):
-            logging.info("Could not find Totem running! Try starting again!")
+            LOG_JOB.info("Could not find Totem running! Try starting again!")
             # Sometimes totem doesn't start properly; try again
             cmd = "nohup totem %s %s --display=:0.0 &> /dev/null &" \
                   % (fullscreen, params.get("destination_video_file_path"))
             guest_session.cmd(cmd)
             cmd = "pgrep totem"
             pid = guest_session.cmd_output(cmd)
-            logging.info("PID: %s", pid)
+            LOG_JOB.info("PID: %s", pid)
 
 
 def deploy_video_file(test, vm_obj, params):

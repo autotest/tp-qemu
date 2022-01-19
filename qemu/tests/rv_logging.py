@@ -6,7 +6,6 @@ Verifying that the spice vdagent daemon logs correctly on the guest
 Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
-import logging
 import os
 
 from virttest import utils_misc
@@ -45,9 +44,9 @@ def run(test, params, env):
     script_path = utils_misc.get_path(test.virtdir, scriptdir)
 
     # Copying the clipboard script to the guest to test spice vdagent
-    logging.info("Transferring the clipboard script to the guest,"
-                 "destination directory: %s, source script location: %s",
-                 dst_path, script_path)
+    test.log.info("Transferring the clipboard script to the guest,"
+                  "destination directory: %s, source script location: %s",
+                  dst_path, script_path)
     guest_vm.copy_files_to(script_path, dst_path, timeout=60)
 
     # Some logging tests need the full desktop environment
@@ -55,7 +54,7 @@ def run(test, params, env):
 
     # Logging test for the qxl driver
     if(log_test == 'qxl'):
-        logging.info("Running the logging test for the qxl driver")
+        test.log.info("Running the logging test for the qxl driver")
         guest_root_session.cmd("grep -i qxl " + qxl_logfile)
     # Logging test for spice-vdagent
     elif(log_test == 'spice-vdagent'):
@@ -64,7 +63,7 @@ def run(test, params, env):
         # RHEL7 uses gsettings and RHEL6 uses gconftool-2
         try:
             release = guest_session.cmd("cat /etc/redhat-release")
-            logging.info("Redhat Release: %s", release)
+            test.log.info("Redhat Release: %s", release)
         except:
             test.cancel("Test is only currently supported on "
                         "RHEL and Fedora operating systems")
@@ -80,45 +79,45 @@ def run(test, params, env):
                "/etc/sysconfig/spice-vdagentd")
         guest_root_session.cmd(cmd)
 
-        logging.info("Running the logging test for spice-vdagent daemon")
+        test.log.info("Running the logging test for spice-vdagent daemon")
         utils_spice.start_vdagent(guest_root_session, test_timeout=15)
 
         # Testing the log after stopping spice-vdagentd
         utils_spice.stop_vdagent(guest_root_session, test_timeout=15)
         cmd = spice_vdagent_loginfo_cmd + " | tail -n 3 | grep \"vdagentd quitting\""
         output = guest_root_session.cmd(cmd)
-        logging.debug(output)
+        test.log.debug(output)
 
         # Testing the log after starting spice-vdagentd
         utils_spice.start_vdagent(guest_root_session, test_timeout=15)
         cmd = spice_vdagent_loginfo_cmd + "| tail -n 7 | grep \"opening vdagent virtio channel\""
         output = guest_root_session.cmd(cmd)
-        logging.debug(output)
+        test.log.debug(output)
 
         # Testing the log after restart spice-vdagentd
         utils_spice.restart_vdagent(guest_root_session, test_timeout=10)
         cmd = spice_vdagent_loginfo_cmd + "| tail -n 7 | grep 'opening vdagent virtio channel'"
         output = guest_root_session.cmd(cmd)
-        logging.debug(output)
+        test.log.debug(output)
 
         # Finally test copying text within the guest
         cmd = "%s %s %s %s" % (interpreter, script_call,
                                script_params, testing_text)
-        logging.info("This command here: %s", cmd)
+        test.log.info("This command here: %s", cmd)
 
         try:
-            logging.debug("------------ Script output ------------")
+            test.log.debug("------------ Script output ------------")
             output = guest_session.cmd(cmd)
 
             if "The text has been placed into the clipboard." in output:
-                logging.info("Copying of text was successful")
+                test.log.info("Copying of text was successful")
             else:
                 test.fail("Copying to the clipboard failed. %s" % output)
         except:
             test.fail("Copying to the clipboard failed try block failed")
 
-        logging.debug("------------ End of script output of the Copying"
-                      " Session ------------")
+        test.log.debug("------------ End of script output of the Copying"
+                       " Session ------------")
 
         output = guest_root_session.cmd(spice_vdagent_loginfo_cmd + "| tail -n 2" +
                                         " | grep 'clipboard grab'")

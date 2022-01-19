@@ -7,7 +7,6 @@ rv_fullscreen.py - remote-viewer full screen
 Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
-import logging
 
 from aexpect import ShellCmdError
 
@@ -36,7 +35,7 @@ def run(test, params, env):
         timeout=int(params.get("login_timeout", 360)))
 
     # Get the resolution of the client & guest
-    logging.info("Getting the Resolution on the client")
+    test.log.info("Getting the Resolution on the client")
     client_session.cmd("export DISPLAY=:0.0")
 
     try:
@@ -50,7 +49,7 @@ def run(test, params, env):
         test.fail("Could not get guest resolution, xrandr output:"
                   " %s" % client_res_raw)
 
-    logging.info("Getting the Resolution on the guest")
+    test.log.info("Getting the Resolution on the guest")
     guest_session.cmd("export DISPLAY=:0.0")
 
     try:
@@ -64,20 +63,20 @@ def run(test, params, env):
         test.fail("Could not get guest resolution, xrandr output:"
                   " %s" % guest_res_raw)
 
-    logging.info("Here's the information I have: ")
-    logging.info("\nClient Resolution: %s", client_res)
-    logging.info("\nGuest Resolution: %s", guest_res)
+    test.log.info("Here's the information I have: ")
+    test.log.info("\nClient Resolution: %s", client_res)
+    test.log.info("\nGuest Resolution: %s", guest_res)
 
     # Positive Test, verify the guest takes the resolution of the client
     if full_screen == "yes":
         if(client_res == guest_res):
-            logging.info("PASS: Guest resolution is the same as the client")
+            test.log.info("PASS: Guest resolution is the same as the client")
         else:
             test.fail("Guest resolution differs from the client")
     # Negative Test, verify the resolutions are not equal
     elif full_screen == "no":
         if(client_res != guest_res):
-            logging.info("PASS: Guest resolution differs from the client")
+            test.log.info("PASS: Guest resolution differs from the client")
         else:
             test.fail("Guest resolution is the same as the client")
     else:

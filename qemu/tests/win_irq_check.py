@@ -1,4 +1,3 @@
-import logging
 import re
 import ctypes
 
@@ -75,7 +74,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     restore_msi = False
 
-    error_context.context("Boot guest with %s device" % driver, logging.info)
+    error_context.context("Boot guest with %s device" % driver, test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
@@ -83,10 +82,10 @@ def run(test, params, env):
                                                             test, driver_verifier,
                                                             timeout)
 
-    error_context.context("Check %s's irq number" % device_name, logging.info)
+    error_context.context("Check %s's irq number" % device_name, test.log.info)
     devcon_folder = utils_misc.set_winutils_letter(session, params["devcon_folder"])
     if params.get("msi_cmd"):
-        error_context.context("Set MSI in guest", logging.info)
+        error_context.context("Set MSI in guest", test.log.info)
         set_msi_fguest(enable=True)
         session = vm.reboot(session=session)
         restore_msi = True

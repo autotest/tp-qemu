@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import env_process
 from virttest import error_context
@@ -33,8 +32,8 @@ def run(test, params, env):
         params['start_vm'] = 'yes'
         vm_name = params['main_vm']
         L3_existence = 'present' if check_L3 else 'not present'
-        logging.info('Boot guest with machine type %s and expect L3 cache %s'
-                     ' inside guest', machine_type, L3_existence)
+        test.log.info('Boot guest with machine type %s and expect L3 cache %s'
+                      ' inside guest', machine_type, L3_existence)
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         session = vm.wait_for_login()
@@ -75,4 +74,4 @@ def run(test, params, env):
             boot_and_check_guest(m_type)
             break
     else:
-        logging.warning('Old machine type is not supported, skip checking.')
+        test.log.warning('Old machine type is not supported, skip checking.')

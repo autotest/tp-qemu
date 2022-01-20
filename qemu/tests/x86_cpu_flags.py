@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context, env_process, cpu
 from provider.cpu_utils import check_cpu_flags
 
@@ -37,7 +35,7 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)
-    error_context.context("Try to log into guest", logging.info)
+    error_context.context("Try to log into guest", test.log.info)
     session = vm.wait_for_login()
     if params["os_type"] == "linux":
         if params.get("guest_flags"):
@@ -54,7 +52,7 @@ def run(test, params, env):
                     test.fail("'%s' can't be found inside guest" % expect_items)
 
     if params.get("reboot_method"):
-        error_context.context("Reboot guest '%s'." % vm.name, logging.info)
+        error_context.context("Reboot guest '%s'." % vm.name, test.log.info)
         session = vm.reboot(session=session)
 
     vm.verify_kernel_crash()

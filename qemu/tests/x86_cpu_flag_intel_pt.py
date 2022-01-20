@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest import utils_misc
@@ -45,7 +43,7 @@ def run(test, params, env):
         params["start_vm"] = "yes"
         env_process.preprocess(test, params, env)
         vm = env.get_vm(params["main_vm"])
-        error_context.context("Try to log into guest", logging.info)
+        error_context.context("Try to log into guest", test.log.info)
         session = vm.wait_for_login()
         if params["os_type"] == "linux":
             check_cpu_flags(params, flags, test, session)

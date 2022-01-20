@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 
 from avocado.utils import process
 
@@ -54,12 +53,12 @@ def run(test, params, env):
         vm.wait_for_login()
         guest_ip_list.append(vm.get_address())
 
-    logging.info("Cloning %s", playbook_repo)
+    test.log.info("Cloning %s", playbook_repo)
     process.run("git clone {src} {dst}".format(src=playbook_repo,
                                                dst=playbook_dir), verbose=False)
 
     error_context.base_context("Generate playbook related options.",
-                               logging.info)
+                               test.log.info)
     extra_vars = {"ansible_ssh_extra_args": ansible_ssh_extra_args,
                   "ansible_ssh_pass": guest_passwd,
                   "test_harness_log_dir": test_harness_log_dir}
@@ -68,7 +67,7 @@ def run(test, params, env):
     for cev in custom_extra_vars:
         extra_vars[cev] = custom_params[cev]
 
-    error_context.context("Execute the ansible playbook.", logging.info)
+    error_context.context("Execute the ansible playbook.", test.log.info)
     playbook_executor = ansible.PlaybookExecutor(
         inventory="{},".format(",".join(guest_ip_list)),
         site_yml=toplevel_playbook,
@@ -87,7 +86,7 @@ def run(test, params, env):
         if playbook_executor.get_status() != 0:
             test.fail("Ansible playbook execution failed, please check the {} "
                       "for details.".format(ansible_log))
-        logging.info("Ansible playbook execution passed.")
+        test.log.info("Ansible playbook execution passed.")
     finally:
         playbook_executor.store_playbook_log(test_harness_log_dir, ansible_log)
         playbook_executor.close()

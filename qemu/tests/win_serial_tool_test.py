@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -53,7 +52,7 @@ def run(test, params, env):
             try:
                 tmp = port.sock.recv(1024)[:-1]
             except IOError as failure_detail:
-                logging.warn("Got err while recv: %s", failure_detail)
+                test.log.warn("Got err while recv: %s", failure_detail)
             if tmp != transfer_data:
                 test.fail("Incorrect data: '%s' != '%s'" % (transfer_data, tmp))
         port.close()
@@ -82,8 +81,8 @@ def run(test, params, env):
                                                             test, driver_name)
     port = VirtioPortTest(test, env, params).get_virtio_ports(vm)[1][0]
 
-    error_context.context("Tranfer data from host to guest", logging.info)
+    error_context.context("Tranfer data from host to guest", test.log.info)
     transfer_from_host_to_guest(port)
 
-    error_context.context("Tranfer data from guest to host", logging.info)
+    error_context.context("Tranfer data from guest to host", test.log.info)
     transfer_from_guest_to_host(port)

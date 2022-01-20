@@ -1,4 +1,3 @@
-import logging
 import time
 
 from avocado.core import exceptions
@@ -26,7 +25,7 @@ def run(test, params, env):
                                                   params["mplayer_path"])
     video_url = params["video_url"]
     play_video_cmd = params["play_video_cmd"] % (video_player, video_url)
-    error_context.context("Play video", logging.info)
+    error_context.context("Play video", test.log.info)
     try:
         session.cmd(play_video_cmd, timeout=240)
     except Exception as details:

@@ -1,5 +1,4 @@
 import os
-import logging
 
 from virttest import utils_test
 
@@ -20,7 +19,7 @@ def run(test, params, env):
     mount_dir = params.get("9p_mount_dir")
 
     if mount_dir is None:
-        logging.info("User Variable for mount dir is not set")
+        test.log.info("User Variable for mount dir is not set")
     else:
         session.cmd("mkdir -p %s" % mount_dir)
 
@@ -37,12 +36,12 @@ def run(test, params, env):
         if posix_acl == "yes":
             mount_option += ",posixacl"
 
-        logging.info("Mounting 9p mount point with options %s", mount_option)
+        test.log.info("Mounting 9p mount point with options %s", mount_option)
         cmd = "mount -t 9p -o %s autotest_tag %s" % (mount_option, mount_dir)
         mount_status = session.cmd_status(cmd)
 
         if (mount_status != 0):
-            logging.error("mount failed")
+            test.log.error("mount failed")
             test.fail('mount failed.')
 
         # Collect test parameters

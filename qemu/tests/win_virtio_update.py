@@ -1,6 +1,5 @@
 import time
 import re
-import logging
 import os
 
 from avocado.utils import process, download
@@ -33,8 +32,8 @@ def run(test, params, env):
                 nic_idx -= 1
                 if nic_idx < 0:
                     raise
-                logging.warn("Unable to login guest, "
-                             "try to login via nic %d", nic_idx)
+                test.log.warn("Unable to login guest, "
+                              "try to login via nic %d", nic_idx)
 
     def check_cdrom(timeout):
         cdrom_chk_cmd = "echo list volume > cmd && echo exit >>"
@@ -51,7 +50,7 @@ def run(test, params, env):
 
     if params.get("case_type") == "driver_install":
         error_context.context("Update the device type to default.",
-                              logging.info)
+                              test.log.info)
         default_drive_format = params.get("default_drive_format", "ide")
         default_nic_model = params.get("default_nic_model", "rtl8139")
         default_display = params.get("default_display", "vnc")
@@ -94,7 +93,7 @@ def run(test, params, env):
     op_cmds = {}
     setup_ps = False
 
-    error_context.context("Fill up driver install command line", logging.info)
+    error_context.context("Fill up driver install command line", test.log.info)
     for driver in drivers_install:
         params_driver = params.object_params(driver)
         mount_point = params_driver.get("mount_point")
@@ -166,7 +165,7 @@ def run(test, params, env):
                                cmd_c)
                 check_cmds[driver][cmd_n] = cmd_c
 
-    error_context.context("Boot up guest with setup parameters", logging.info)
+    error_context.context("Boot up guest with setup parameters", test.log.info)
     params["start_vm"] = "yes"
     vm_name = params['main_vm']
     env_process.preprocess_vm(test, params, env, vm_name)
@@ -178,7 +177,7 @@ def run(test, params, env):
     init_timeout = int(params.get("init_timeout", "60"))
     driver_install_timeout = int(params.get('driver_install_timeout', 720))
 
-    error_context.context("Check the cdrom is available")
+    error_context.context("Check the cdrom is available", test.log.info)
     volumes = check_cdrom(init_timeout)
     vol_info = []
     for volume in volumes:
@@ -193,9 +192,9 @@ def run(test, params, env):
     else:
         vol_utils = vol_info[0][0]
 
-    error_context.context("Install drivers", logging.info)
+    error_context.context("Install drivers", test.log.info)
     for driver in drivers_install:
-        error_context.context("Install drivers %s" % driver, logging.info)
+        error_context.context("Install drivers %s" % driver, test.log.info)
         if params.get("kill_rundll", "no") == "yes":
             kill_cmd = 'tasklist | find /I "rundll32"'
             status, tasks = session.cmd_status_output(kill_cmd)
@@ -215,7 +214,7 @@ def run(test, params, env):
         fail_log = "Failed to install:"
     error_log = open("%s/error_log" % test.resultsdir, "w")
     fail_flag = False
-    error_context.context("Check driver available in guest", logging.info)
+    error_context.context("Check driver available in guest", test.log.info)
     if setup_ps:
         setup_cmd = params.get("python_scripts")
         session.cmd(setup_cmd)
@@ -243,7 +242,7 @@ def run(test, params, env):
 
     if op_cmds:
         error_context.context("Do more operates in guest to check the driver",
-                              logging.info)
+                              test.log.info)
         for driver in drivers_install:
             if driver not in op_cmds:
                 continue

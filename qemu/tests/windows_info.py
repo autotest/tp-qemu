@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -23,17 +22,17 @@ def run(test, params, env):
     drivers_pattern = "|".join(drivers_keywords)
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Get OS version and name.", logging.info)
+    error_context.context("Get OS version and name.", test.log.info)
     output = session.cmd("ver")
-    logging.info("Windows version: %s", output.strip())
+    test.log.info("Windows version: %s", output.strip())
     output = session.cmd("wmic os get Name")
     output = output.strip().split()[-1]
-    logging.info("Windows name: %s", output)
+    test.log.info("Windows name: %s", output)
 
     error_context.context("Get driver version information in guest.",
-                          logging.info)
+                          test.log.info)
     system_drivers = session.cmd("wmic sysdriver get DisplayName,PathName")
-    logging.debug("Drivers exist in the system:\n %s", system_drivers)
+    test.log.debug("Drivers exist in the system:\n %s", system_drivers)
     for i in system_drivers.splitlines():
         if re.findall(drivers_pattern, i, re.I):
             driver_info = i.strip().split()
@@ -45,5 +44,5 @@ def run(test, params, env):
             output = session.cmd(driver_ver_cmd)
             msg = "Driver %s" % driver_name
             msg += " version is %s" % output.strip().split()[-1]
-            logging.info(msg)
+            test.log.info(msg)
     session.close()

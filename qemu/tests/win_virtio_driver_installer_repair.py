@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -70,13 +69,13 @@ def run(test, params, env):
         driver_name_list.append('qemufwcfg')
 
     error_context.context("Run virtio-win-guest-tools.exe repair test",
-                          logging.info)
+                          test.log.info)
     unrepaired_driver = []
     for driver_name, device_name, device_hwid in zip(driver_name_list,
                                                      device_name_list,
                                                      device_hwid_list):
         error_context.context("Uninstall %s driver"
-                              % driver_name, logging.info)
+                              % driver_name, test.log.info)
         win_driver_utils.uninstall_driver(session, test, devcon_path,
                                           driver_name, device_name,
                                           device_hwid)
@@ -84,11 +83,11 @@ def run(test, params, env):
         vm.send_key('meta_l-d')
         time.sleep(30)
         run_repair_cmd = utils_misc.set_winutils_letter(
-                                           session, params["run_repair_cmd"])
+            session, params["run_repair_cmd"])
         session.cmd(run_repair_cmd)
         time.sleep(30)
         error_context.context("Check if %s driver is repaired"
-                              % driver_name, logging.info)
+                              % driver_name, test.log.info)
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
         status = session.cmd_status(chk_cmd)
         if status != 0:

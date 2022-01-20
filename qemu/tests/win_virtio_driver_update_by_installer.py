@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
@@ -42,7 +40,7 @@ def run(test, params, env):
         """
         virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                          cdrom_virtio)
-        logging.info("Changing virtio iso image to '%s'", virtio_iso)
+        test.log.info("Changing virtio iso image to '%s'", virtio_iso)
         vm.change_media("drive_virtio", virtio_iso)
 
     devcon_path = params["devcon_path"]
@@ -76,7 +74,7 @@ def run(test, params, env):
 
     if params.get("update_from_previous_installer", "no") == "yes":
         error_context.context("install drivers from previous installer",
-                              logging.info)
+                              test.log.info)
         install_test_with_screen_on_desktop(vm, session, test,
                                             run_install_cmd,
                                             installer_pkg_check_cmd,
@@ -94,7 +92,7 @@ def run(test, params, env):
                        gagent_pkg_info_cmd)
 
     error_context.context("Upgrade virtio driver to original",
-                          logging.info)
+                          test.log.info)
     change_virtio_media(params["cdrom_virtio"])
     install_test_with_screen_on_desktop(vm, session, test,
                                         run_install_cmd,

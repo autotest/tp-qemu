@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import error_context
 
@@ -30,7 +28,7 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)
-    error_context.context("Try to log into guest", logging.info)
+    error_context.context("Try to log into guest", test.log.info)
     session = vm.wait_for_login()
     check_cpu_flags(params, '', test, session)
 

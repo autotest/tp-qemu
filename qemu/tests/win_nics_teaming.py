@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 import random
@@ -53,15 +52,15 @@ def run(test, params, env):
     guest_path = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
     host_path = os.path.join(test.tmpdir, "tmp-%s" %
                              utils_misc.generate_random_string(8))
-    logging.info("Test setup: Creating %dMB file on host", filesize)
+    test.log.info("Test setup: Creating %dMB file on host", filesize)
     process.run(dd_cmd % host_path, shell=True)
 
     try:
         netsh_set_cmd = "netsh interface set interface \"%s\" %s"
         # transfer data
         original_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data original: %s", original_md5)
-        logging.info("Failover test with file transfer")
+        test.log.info("md5 value of data original: %s", original_md5)
+        test.log.info("Failover test with file transfer")
         transfer_thread = utils_misc.InterruptedThread(
             vm.copy_files_to, (host_path, guest_path))
         transfer_thread.start()
@@ -79,8 +78,8 @@ def run(test, params, env):
             transfer_thread.join()
 
         os.remove(host_path)
-        logging.info('Cleaning temp file on host')
-        logging.info("Failover test 2 with file transfer")
+        test.log.info('Cleaning temp file on host')
+        test.log.info("Failover test 2 with file transfer")
         transfer_thread = utils_misc.InterruptedThread(
             vm.copy_files_from, (guest_path, host_path))
         transfer_thread.start()
@@ -103,7 +102,7 @@ def run(test, params, env):
         else:
             transfer_thread.join()
         current_md5 = crypto.hash_file(host_path, algorithm="md5")
-        logging.info("md5 value of data current: %s", current_md5)
+        test.log.info("md5 value of data current: %s", current_md5)
         if original_md5 != current_md5:
             test.fail("File changed after transfer host -> guest "
                       "and guest -> host")

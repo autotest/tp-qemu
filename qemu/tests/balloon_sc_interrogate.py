@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import utils_test
 from virttest import error_context
@@ -23,13 +22,13 @@ def run(test, params, env):
         Sending INTERROGATE to balloon service.
         :param session: VM session.
         """
-        logging.info("Send INTERROGATE to balloon service")
+        test.log.info("Send INTERROGATE to balloon service")
         sc_interrogate_cmd = params["sc_interrogate_cmd"]
         status, output = session.cmd_status_output(sc_interrogate_cmd)
         if status:
             test.error(output)
 
-    error_context.context("Boot guest with balloon device", logging.info)
+    error_context.context("Boot guest with balloon device", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
@@ -56,13 +55,13 @@ def run(test, params, env):
 
     finally:
         try:
-            error_context.context("Clear balloon service in guest", logging.info)
+            error_context.context("Clear balloon service in guest", test.log.info)
             balloon_test.operate_balloon_service(session, "uninstall")
         except Exception as uninst_err:
             if not err:
                 err = uninst_err
             else:
-                logging.error(uninst_err)
+                test.log.error(uninst_err)
         session.close()
         if err:
             raise err   # pylint: disable=E0702

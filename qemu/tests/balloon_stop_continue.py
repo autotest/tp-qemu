@@ -1,5 +1,4 @@
 import time
-import logging
 import random
 
 from virttest import error_context
@@ -25,14 +24,14 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     end_time = time.time() + repeat_timeout
     while time.time() < end_time:
-        error_context.context("Query balloon memory from monitor", logging.info)
+        error_context.context("Query balloon memory from monitor", test.log.info)
         vm.monitor.info("balloon")
-        error_context.context("Stop and continue vm from monitor", logging.info)
+        error_context.context("Stop and continue vm from monitor", test.log.info)
         vm.monitor.cmd("stop")
         vm.monitor.cmd('cont')
         vm.verify_alive()
         time.sleep(random.randint(0, 3))
 
-    error_context.context("Login guest after the test", logging.info)
+    error_context.context("Login guest after the test", test.log.info)
     session = vm.wait_for_login(timeout=timeout)
     session.close()

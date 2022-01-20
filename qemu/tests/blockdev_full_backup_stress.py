@@ -1,6 +1,5 @@
 import time
 import random
-import logging
 
 from virttest import utils_test
 from virttest import error_context
@@ -17,7 +16,7 @@ class BlockdevFullBackupStressTest(BlockdevFullBackupParallelTest):
 
     @error_context.context_aware
     def load_stress(self):
-        error_context.context("load stress app in guest", logging.info)
+        error_context.context("load stress app in guest", self.test.log.info)
         stress_test = utils_test.VMStress(self.main_vm, "stress", self.params)
         stress_test.load_stress_tool()
 

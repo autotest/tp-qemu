@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_misc
 
@@ -32,14 +30,14 @@ class BlockStream(block_copy.BlockCopy):
         params = self.parser_test_args()
         default_speed = params.get("default_speed")
 
-        error_context.context("start to stream block device", logging.info)
+        error_context.context("start to stream block device", self.test.log.info)
         self.vm.block_stream(self.device, default_speed, self.base_image, self.ext_args)
         status = self.get_status()
         if not status:
             self.test.fail("no active job found")
         msg = "block stream job running, "
         msg += "with limited speed %s B/s" % default_speed
-        logging.info(msg)
+        self.test.log.info(msg)
 
     @error_context.context_aware
     def create_snapshots(self):
@@ -49,15 +47,15 @@ class BlockStream(block_copy.BlockCopy):
         params = self.parser_test_args()
         image_format = params["snapshot_format"]
         snapshots = params["snapshot_chain"].split()
-        error_context.context("create live snapshots", logging.info)
+        error_context.context("create live snapshots", self.test.log.info)
         for snapshot in snapshots:
             snapshot = utils_misc.get_path(self.data_dir, snapshot)
             image_file = self.get_image_file()
             device = self.vm.live_snapshot(image_file, snapshot, image_format)
             if device != self.device:
                 image_file = self.get_image_file()
-                logging.info("expect file: %s" % snapshot +
-                             "opening file: %s" % image_file)
+                self.test.log.info("expect file: %s" % snapshot +
+                                   "opening file: %s" % image_file)
                 self.test.fail("create snapshot '%s' fail" % snapshot)
             self.trash_files.append(snapshot)
 

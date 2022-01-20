@@ -1,4 +1,3 @@
-import logging
 import random
 
 from avocado.core import exceptions
@@ -40,7 +39,7 @@ class BallooningTestPause(BallooningTest):
         :return: memory size get from monitor and guest
         :rtype: tuple
         """
-        error_context.context("Check memory status %s" % step, logging.info)
+        error_context.context("Check memory status %s" % step, self.test.log.info)
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
         if self.pre_gmem:
@@ -65,7 +64,7 @@ class BallooningTestPause(BallooningTest):
         :param new_mem: New desired memory.
         :type new_mem: int
         """
-        error_context.context("Change VM memory to %s" % new_mem, logging.info)
+        error_context.context("Change VM memory to %s" % new_mem, self.test.log.info)
         try:
             self.vm.balloon(new_mem)
         except Exception as e:
@@ -74,7 +73,7 @@ class BallooningTestPause(BallooningTest):
                 if self.get_ballooned_memory() != self.pre_mem:
                     self.test.fail("Memory changed before guest resumed")
 
-                logging.info("Resume the guest")
+                self.test.log.info("Resume the guest")
                 self.vm.resume()
             elif new_mem == self.get_ballooned_memory():
                 pass
@@ -113,13 +112,13 @@ class BallooningTestPause(BallooningTest):
         :param monitor_value: memory size report from monitor
         :param guest_value: memory size report from guest
         """
-        logging.error("Memory size mismatch %s:\n", step)
+        self.test.log.error("Memory size mismatch %s:\n", step)
         error_msg = "Wanted to be changed: %s\n" % (expect_value - self.pre_mem)
         error_msg += "Changed in monitor: %s\n" % (monitor_value
                                                    - self.pre_mem)
         if self.pre_gmem:
             error_msg += "Changed in guest: %s\n" % (guest_value - self.pre_gmem)
-        logging.error(error_msg)
+        self.test.log.error(error_msg)
 
 
 class BallooningTestPauseWin(BallooningTestPause):
@@ -196,11 +195,11 @@ def run(test, params, env):
         if vm.monitor.verify_status('paused'):
             error_context.context("Running balloon %s test when"
                                   " the guest in paused status" % tag,
-                                  logging.info)
+                                  test.log.info)
         else:
             error_context.context("Running balloon %s test after"
                                   " the guest turned to running status" % tag,
-                                  logging.info)
+                                  test.log.info)
         params_tag = params.object_params(tag)
         balloon_type = params_tag['balloon_type']
         if balloon_type == 'evict':
@@ -217,7 +216,7 @@ def run(test, params, env):
     subtest = params.get("sub_test_after_balloon")
     if subtest:
         error_context.context("Running subtest after guest balloon test",
-                              logging.info)
+                              test.log.info)
         qemu_should_quit = balloon_test.run_balloon_sub_test(test, params,
                                                              env, subtest)
         if qemu_should_quit == 1:
@@ -233,5 +232,5 @@ def run(test, params, env):
                       "after %s seconds" % timeout)
 
     error_context.context("Reset guest memory to original one after all the "
-                          "test", logging.info)
+                          "test", test.log.info)
     balloon_test.reset_memory()

@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 
@@ -36,7 +35,7 @@ def run(test, params, env):
         else:
             return stress_bg.app_running()
 
-    error_context.context("Boot guest with balloon device", logging.info)
+    error_context.context("Boot guest with balloon device", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -52,7 +51,7 @@ def run(test, params, env):
     else:
         balloon_test = BallooningTestLinux(test, params, env)
 
-    error_context.context("Run stress background", logging.info)
+    error_context.context("Run stress background", test.log.info)
     stress_test = params.get("stress_test")
     if params['os_type'] == 'windows':
         utils_test.run_virt_sub_test(test, params, env, stress_test)
@@ -67,10 +66,10 @@ def run(test, params, env):
     repeat_times = int(params.get("repeat_times", 1000))
     min_sz, max_sz = balloon_test.get_memory_boundary()
 
-    error_context.context("balloon vm memory in loop", logging.info)
+    error_context.context("balloon vm memory in loop", test.log.info)
     try:
         for i in range(1, int(repeat_times+1)):
-            logging.info("repeat times: %d", i)
+            test.log.info("repeat times: %d", i)
             balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
             if not check_bg_running():
                 test.error("Background stress process is not alive")

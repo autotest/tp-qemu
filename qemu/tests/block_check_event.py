@@ -1,5 +1,3 @@
-import logging
-
 from virttest import utils_test
 
 
@@ -19,7 +17,7 @@ def run(test, params, env):
     """
     def query_system_events(filter_options):
         """Query the system events in filter options."""
-        logging.info("Query the system event log.")
+        test.log.info("Query the system event log.")
         cmd = 'wevtutil qe system /q:\"%s\" /f:text' % filter_options
         return session.cmd(cmd).strip()
 
@@ -27,7 +25,7 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = utils_test.qemu.windrv_check_running_verifier(
-            vm.wait_for_login(), vm, test, 'viostor', 300)
+        vm.wait_for_login(), vm, test, 'viostor', 300)
 
     if query_system_events(params['filter_options']):
         test.fail('Found the error event(id: %s).' % params['event_id'])

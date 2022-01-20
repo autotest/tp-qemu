@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest import error_context
@@ -35,14 +33,14 @@ def run(test, params, env):
         info = ('The number of AIO file descriptors is %s '
                 'after %s block device.')
         for i in range(times):
-            logging.info('Iteration %d: Hot plug then unplug '
-                         'block device.', i)
+            test.log.info('Iteration %d: Hot plug then unplug '
+                          'block device.', i)
             plug.hotplug_devs_serial()
             orig_fds_num = _get_aio_fds_num(vm_pid)
-            logging.info(info, orig_fds_num, 'hot plugging')
+            test.log.info(info, orig_fds_num, 'hot plugging')
             plug.unplug_devs_serial()
             new_fds_num = _get_aio_fds_num(vm_pid)
-            logging.info(info, new_fds_num, 'unplugging')
+            test.log.info(info, new_fds_num, 'unplugging')
             if new_fds_num != orig_fds_num:
                 test.fail('The the number of AIO descriptors is '
                           'changed, from %s to %s.' % (orig_fds_num,

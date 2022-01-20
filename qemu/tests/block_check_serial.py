@@ -1,6 +1,5 @@
 """Test serial length """
 
-import logging
 
 from virttest import error_context
 from virttest.utils_misc import get_linux_drive_path
@@ -29,7 +28,7 @@ def run(test, params, env):
         for img in images:
             image_params = params.object_params(img)
             serial = image_params['image_serial']
-            logging.info("Try to Find the image %s by %s", img, serial)
+            test.log.info("Try to Find the image %s by %s", img, serial)
             os_type = params['os_type']
             cmd = params['cmd_get_disk_id']
             if os_type == "windows":
@@ -45,11 +44,11 @@ def run(test, params, env):
                     cmd = cmd.format(disk, tmp_file, serial)
                     status, output = session.cmd_status_output(cmd)
                     if status != 0:
-                        logging.error("Check %s vpd fail: %s", disk, output)
+                        test.log.error("Check %s vpd fail: %s", disk, output)
                         disk = ""
 
             if len(disk) > 4:
-                logging.info("Find disk %s %s ", img, disk)
+                test.log.info("Find disk %s %s ", img, disk)
             else:
                 wrong_disks.append(img)
 

@@ -1,4 +1,3 @@
-import logging
 import random
 
 from virttest.qemu_monitor import QMPCmdError
@@ -36,7 +35,7 @@ class BlockdevCommitSpeedLimit(BlockDevCommitTest):
                                      {'device': job_id,
                                       'speed': commit_speed})
         except QMPCmdError as e:
-            logging.info("Error message is %s", e.data)
+            self.test.log.info("Error message is %s", e.data)
             if self.params.get("error_msg") not in str(e.data):
                 self.test.fail("Error message not as expected")
         else:

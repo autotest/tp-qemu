@@ -1,5 +1,4 @@
 import time
-import logging
 import random
 import re
 
@@ -29,7 +28,7 @@ def run(test, params, env):
             serial_output = vm.serial_console.get_output()
             if serial_output and re.search(tag, serial_output, re.M):
                 return True
-        logging.info("vm has not started yet")
+        test.log.info("vm has not started yet")
         return False
 
     block_test = BlockdevCommitInstall(test, params, env)
@@ -39,7 +38,7 @@ def run(test, params, env):
     if bg.is_alive():
         tag = params.get("tag_for_install_start", "Starting Login Service")
         if utils_misc.wait_for(lambda: tag_for_install(block_test.main_vm, tag), 240, 10, 5):
-            logging.info("sleep random time before do snapshots")
+            test.log.info("sleep random time before do snapshots")
             time.sleep(random.randint(10, 120))
             block_test.pre_test()
             try:

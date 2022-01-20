@@ -1,5 +1,3 @@
-import logging
-
 from provider.block_devices_plug import BlockDevicesPlug
 from virttest import error_context
 
@@ -66,8 +64,8 @@ def run(test, params, env):
         for cap in capbilities:
             check_cmd = "lspci -vvv -s %s | grep '%s'" % (dev_addr, cap)
             if session.cmd_status(check_cmd) != 0:
-                logging.error("Failed to get capability '%s' for device %s",
-                              cap, dev_id)
+                test.log.error("Failed to get capability '%s' for device %s",
+                               cap, dev_id)
                 return False
         return True
 

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context, env_process
 from virttest.utils_virtio_port import VirtioPortTest
 
@@ -22,7 +20,7 @@ def run(test, params, env):
     def send_data_from_guest_to_host():
         session = vm.wait_for_login()
         port.open()
-        error_context.context("send data from guest to host", logging.info)
+        error_context.context("send data from guest to host", test.log.info)
         if params['os_type'] == 'windows':
             vport_name = '\\\\.\\Global\\' + port.name
             cmd = 'dd if=/dev/zero of=%s bs=1024 count=1' % vport_name
@@ -34,7 +32,7 @@ def run(test, params, env):
     @error_context.context_aware
     def send_data_from_host_to_guest():
         port.open()
-        error_context.context("send data from host to guest", logging.info)
+        error_context.context("send data from host to guest", test.log.info)
         data = 'Hello world \n' * 100
         data = data.encode()
         port.sock.send(data)

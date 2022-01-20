@@ -1,7 +1,6 @@
 import random
 import signal
 import os
-import logging
 
 from avocado.utils import path
 from avocado.utils import process
@@ -40,7 +39,7 @@ def kill_host_receive_process(test, rec_session):
     :param rec_session: vsock receive session
     """
     error_context.context("Kill the vsock process on host...",
-                          logging.info)
+                          test.log.info)
     rec_session.kill(sig=signal.SIGINT)
     if not utils_misc.wait_for(lambda: not rec_session.is_alive(),
                                timeout=1, step=0.1):
@@ -80,7 +79,7 @@ def run(test, params, env):
         conn_cmd = "%s --vsock %s %s" % (tool_bin, guest_cid, port)
     connected_str = "Connection reset by peer"
     error_context.context("Connect vsock from host without"
-                          " listening on guest.", logging.info)
+                          " listening on guest.", test.log.info)
     try:
         process.system_output(conn_cmd)
     except process.CmdError as e:

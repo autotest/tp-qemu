@@ -1,4 +1,3 @@
-import logging
 import re
 
 from avocado.utils import process
@@ -19,7 +18,7 @@ def run(test, params, env):
     """
     cmd_get_vfsd_ver = params.get("cmd_get_vfsd_ver")
     cmd_get_qemu_ver = params.get("cmd_get_qemu_ver")
-    error_context.context("Check virtiofsd info", logging.info)
+    error_context.context("Check virtiofsd info", test.log.info)
     vfsd_info = process.system_output(cmd_get_vfsd_ver, shell=True).strip()
     pattern_ver = r'version.*(\d+.\d+.\d+)'.encode()
     vfsd_ver = re.findall(pattern_ver, vfsd_info, re.I)[0]

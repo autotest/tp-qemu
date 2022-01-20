@@ -1,4 +1,3 @@
-import logging
 import re
 
 from aexpect import ShellCmdError
@@ -41,7 +40,7 @@ def run(test, params, env):
         except ShellCmdError as e:
             if re.findall(catch_date % (addresses[1], addresses[0]), str(e)):
                 test.fail("God! Capture the transfet data:'%s'" % str(e))
-            logging.info("Guest3 catch data is '%s'", str(e))
+            test.log.info("Guest3 catch data is '%s'", str(e))
 
     timeout = int(params.get("login_timeout", '360'))
     password = params.get("password")
@@ -78,27 +77,27 @@ def run(test, params, env):
     try:
         # Before transfer, run tcpdump to try to catche data
         error_msg = "In guest3, try to capture the packets(guest1 <-> guest2)"
-        error_context.context(error_msg, logging.info)
+        error_context.context(error_msg, test.log.info)
         if params.get("os_type") == "linux":
             if_func = utils_net.get_linux_ifname
             args = (mon_session, mon_macaddr)
         else:
             if_func = utils_net.get_windows_nic_attribute
             args = (mon_session, "macaddress", mon_macaddr, "netconnectionid")
-            error_context.context("Install wireshark", logging.info)
+            error_context.context("Install wireshark", test.log.info)
             install_wireshark_cmd = params.get("install_wireshark_cmd")
             install_wireshark_cmd = utils_misc.set_winutils_letter(
-                    sessions[2], install_wireshark_cmd)
+                sessions[2], install_wireshark_cmd)
             status, output = sessions[2].cmd_status_output(install_wireshark_cmd,
                                                            timeout=timeout)
             if status:
                 test.error("Failed to install wireshark, status=%s, output=%s"
                            % (status, output))
-            logging.info("Wait for wireshark installation to complete")
+            test.log.info("Wait for wireshark installation to complete")
             utils_misc.wait_for(
                 lambda: _is_process_finished(sessions[2], wireshark_name),
                 timeout, 20, 3)
-            logging.info("Wireshark is already installed")
+            test.log.info("Wireshark is already installed")
         interface_name = if_func(*args)
         tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
                                      interface_name)
@@ -107,13 +106,13 @@ def run(test, params, env):
                                                 tcpdump_cmd,
                                                 mon_process_timeout))
 
-        logging.info("Tcpdump mon start ...")
-        logging.info("Creating %dMB file on guest1", filesize)
+        test.log.info("Tcpdump mon start ...")
+        test.log.info("Creating %dMB file on guest1", filesize)
         sessions[0].cmd(dd_cmd % (src_file, filesize), timeout=timeout)
         dthread.start()
 
         error_context.context("Transferring file guest1 -> guest2",
-                              logging.info)
+                              test.log.info)
         if params.get("os_type") == "windows":
             cp_cmd = params["copy_cmd"]
             cp_cmd = cp_cmd % (addresses[1], params['file_transfer_port'],
@@ -125,17 +124,17 @@ def run(test, params, env):
                                        username, username, src_file, dst_file)
 
         error_context.context("Check the src and dst file is same",
-                              logging.info)
+                              test.log.info)
         src_md5 = sessions[0].cmd_output(md5_check % src_file).split()[0]
         dst_md5 = sessions[1].cmd_output(md5_check % dst_file).split()[0]
 
         if dst_md5 != src_md5:
             debug_msg = "Files md5sum mismatch!"
             debug_msg += "source file md5 is '%s', after transfer md5 is '%s'"
-            test.fail(debug_msg % (src_md5, dst_md5), logging.info)
-        logging.info("Files md5sum match, file md5 is '%s'", src_md5)
+            test.fail(debug_msg % (src_md5, dst_md5), test.log.info)
+        test.log.info("Files md5sum match, file md5 is '%s'", src_md5)
 
-        error_context.context("Checking network private", logging.info)
+        error_context.context("Checking network private", test.log.info)
         tcpdump_check_cmd = params["tcpdump_check_cmd"]
         tcpdump_kill_cmd = params["tcpdump_kill_cmd"]
         tcpdump_check_cmd = re.sub("ADDR0", addresses[0], tcpdump_check_cmd)

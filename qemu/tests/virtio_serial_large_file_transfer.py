@@ -1,7 +1,6 @@
 import os
 import time
 import signal
-import logging
 
 from avocado.utils import process
 from virttest import error_context
@@ -46,7 +45,7 @@ def run(test, params, env):
     check_pid_cmd = 'ps aux | grep "%s"| grep -v "grep"'
     host_script = params['host_script']
     guest_script = params["guest_script"]
-    logging.info('Transfer data from %s', sender)
+    test.log.info('Transfer data from %s', sender)
     try:
         test_time = time.time() + continue_time
         while time.time() < test_time:
@@ -56,11 +55,11 @@ def run(test, params, env):
         guest_proc = session.cmd_output(check_pid_cmd % guest_script)
         if host_proc:
             host_pid = host_proc.split()[1]
-            logging.info("Kill serial process on host")
+            test.log.info("Kill serial process on host")
             os.kill(int(host_pid), signal.SIGINT)
         if guest_proc:
             guest_pid = guest_proc.split()[1]
-            logging.info("Kill serial process on guest")
+            test.log.info("Kill serial process on guest")
             session.cmd('kill -9 %s' % guest_pid)
     finally:
         clean_cmd = params['clean_cmd']

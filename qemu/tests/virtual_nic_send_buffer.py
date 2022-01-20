@@ -1,5 +1,3 @@
-import logging
-
 from virttest import remote
 from virttest import utils_misc
 from virttest import utils_test
@@ -27,7 +25,7 @@ def run(test, params, env):
     dst_ses = None
     try:
         error_context.context("Transfer file between host and guest",
-                              logging.info)
+                              test.log.info)
         utils_test.run_file_transfer(test, params, env)
 
         dsthost = params.get("dsthost")
@@ -49,7 +47,7 @@ def run(test, params, env):
 
         bg_stress_test = params.get("background_stress_test", 'netperf_stress')
         error_context.context(("Run subtest %s between host and guest." %
-                               bg_stress_test), logging.info)
+                               bg_stress_test), test.log.info)
 
         wait_time = float(params.get("wait_bg_time", 60))
         bg_stress_run_flag = params.get("bg_stress_run_flag")
@@ -67,7 +65,7 @@ def run(test, params, env):
         ping_timeout = int(params.get("ping_timeout", 60))
         host_ip = utils_net.get_host_ip_address(params)
         txt = "Ping %s from %s during netperf testing" % (host_ip, dsthost)
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         status, output = utils_test.ping(host_ip, session=dst_ses,
                                          timeout=ping_timeout)
         if status != 0:
@@ -80,7 +78,7 @@ def run(test, params, env):
                                                             dsthost)
         if package_lost > package_lost_ratio:
             test.fail(txt)
-        logging.info(txt)
+        test.log.info(txt)
 
     finally:
         try:

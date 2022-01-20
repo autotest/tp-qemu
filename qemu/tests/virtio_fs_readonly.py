@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_disk
@@ -28,19 +26,19 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     error_context.context("Create a destination directory inside guest.",
-                          logging.info)
+                          test.log.info)
     utils_misc.make_dirs(fs_dest, session)
 
     error_context.context("Mount the virtiofs target with read-only to "
-                          "the destination directory inside guest.", logging.info)
+                          "the destination directory inside guest.", test.log.info)
     if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', 'ro', session=session):
         test.fail('Mount virtiofs target failed.')
 
     try:
         error_context.context("Create file under the destination "
-                              "directory inside guest.", logging.info)
+                              "directory inside guest.", test.log.info)
         output = session.cmd_output(params.get('cmd_create_file'))
-        logging.info(output)
+        test.log.info(output)
         if params.get('check_str') not in output:
             test.fail('Failed to mount the virtiofs target with read-only.')
     finally:

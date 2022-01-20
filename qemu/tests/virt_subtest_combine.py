@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import utils_test
 from virttest import error_context
@@ -26,7 +24,7 @@ def run(test, params, env):
             params_vm_subtest = params_vm.object_params(subtest_tag)
             if params_vm_subtest.get('cmd'):
                 error_context.context("Try to log into guest '%s'." % vm.name,
-                                      logging.info)
+                                      test.log.info)
                 session = vm.wait_for_login(timeout=timeout)
                 cmd_timeout = int(params_vm_subtest.get("cmd_timeout", 240))
                 cmd = params_vm_subtest['cmd']
@@ -42,7 +40,7 @@ def run(test, params, env):
 
     for subtest in subtests:
         params_subtest = params.object_params(subtest)
-        error_context.context("Run test %s" % subtest, logging.info)
+        error_context.context("Run test %s" % subtest, test.log.info)
         if params_subtest.get("subtest_type") == "guests":
             exe_cmd_in_guests(subtest)
         elif params_subtest.get("subtest_type") == "host":
@@ -54,7 +52,7 @@ def run(test, params, env):
             vms = env.get_all_vms()
             for vm in vms:
                 error_context.context("Check %s status" % vm.name,
-                                      logging.info)
+                                      test.log.info)
                 vm.verify_userspace_crash()
                 vm.verify_kernel_crash()
                 vm.verify_kvm_internal_error()

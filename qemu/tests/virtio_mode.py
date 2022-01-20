@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -125,8 +124,8 @@ def run(test, params, env):
     session = vm.wait_for_login()
     virtio_mode = params["virtio_mode"]
 
-    error_context.context("Verify virtio mode in qtree", logging.info)
+    error_context.context("Verify virtio mode in qtree", test.log.info)
     verify_virtio_mode_qtree()
 
-    error_context.context("Verify virtio mode in guest", logging.info)
+    error_context.context("Verify virtio mode in guest", test.log.info)
     verify_virtio_mode_guest(session, virtio_mode)

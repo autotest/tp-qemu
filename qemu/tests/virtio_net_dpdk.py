@@ -13,6 +13,8 @@ from virttest import data_dir
 from virttest import utils_misc
 from virttest import utils_test
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def format_result(result, base="12", fbase="2"):
     """
@@ -206,7 +208,7 @@ def run(test, params, env):
     process.system_output("numactl --hardware")
     process.system_output("numactl --show")
     _pin_vm_threads(params.get("numa_node"))
-    error_context.context("Prepare env of vm/generator host", logging.info)
+    error_context.context("Prepare env of vm/generator host", test.log.info)
 
     session = vm.wait_for_login(nic_index=0, timeout=login_timeout)
 
@@ -279,13 +281,13 @@ def run(test, params, env):
 
         if pkt_cate == "rx":
             error_context.context("test guest rx pps performance",
-                                  logging.info)
+                                  test.log.info)
             port = 1
             record = "Rx-pps"
             mac = vm.get_mac_address(1)
         if pkt_cate == "tx":
             error_context.context("test guest tx pps performance",
-                                  logging.info)
+                                  test.log.info)
             port = 0
             record = "Tx-pps"
             mac = vm.get_mac_address(2)
@@ -298,7 +300,7 @@ def run(test, params, env):
                              cores, queues, running_time)
         if status is True:
             error_context.context("%s test is finished" %
-                                  pkt_cate, logging.info)
+                                  pkt_cate, test.log.info)
         else:
             test.fail("test is failed, please check your command and env")
 
@@ -363,7 +365,7 @@ def launch_test(session, generator1, generator2,
 
     if utils_misc.wait_for(lambda: run_moongen_up(generator2), 30,
                            text="Wait until devices is up to work"):
-        logging.debug("MoonGen start to work")
+        LOG_JOB.debug("MoonGen start to work")
         testpmd_thread = threading.Thread(target=start_testpmd, args=(
             session, exec_file, nic1_driver, nic2_driver, whitelist_option,
             nic_pci_1, nic_pci_2, cores, queues, running_time))

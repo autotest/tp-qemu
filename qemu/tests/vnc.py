@@ -8,6 +8,8 @@ from virttest import utils_misc
 from virttest.RFBDes import Des
 from virttest import error_context
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class VNC(object):
 
@@ -27,8 +29,8 @@ class VNC(object):
         Dealing with handshake message.
         """
         rfb_server_version = self.sock.recv(12)
-        logging.debug("VNC server rfb version: %s", rfb_server_version)
-        logging.debug("Handshake with rfb protocol version: %s",
+        LOG_JOB.debug("VNC server rfb version: %s", rfb_server_version)
+        LOG_JOB.debug("Handshake with rfb protocol version: %s",
                       self.rfb_version)
         rfb_version = "RFB 00%s.00%s\n" % (self.rfb_version.split(".")[0],
                                            self.rfb_version.split(".")[1])
@@ -40,26 +42,26 @@ class VNC(object):
                 rec = self.sock.recv(4)
                 (reason_len, ) = struct.unpack('!I', rec)
                 reason = self.sock.recv(reason_len)
-                logging.error("Connection failed: %s", reason)
+                LOG_JOB.error("Connection failed: %s", reason)
                 return False
             else:
                 rec = self.sock.recv(auth)
                 (auth_type,) = struct.unpack('!%sB' % auth, rec)
-                logging.debug("Server support '%s' security types", auth_type)
+                LOG_JOB.debug("Server support '%s' security types", auth_type)
         else:
             rec = self.sock.recv(4)
             (auth_type, ) = struct.unpack('!I', rec)
-            logging.debug("Server support %s security types", auth_type)
+            LOG_JOB.debug("Server support %s security types", auth_type)
 
         if auth_type == 0:
-            logging.error("Invalid security types")
+            LOG_JOB.error("Invalid security types")
             return False
         elif auth_type == 1:
             if password is not None:
-                logging.error("Security types is None")
+                LOG_JOB.error("Security types is None")
                 return False
         elif auth_type == 2:
-            logging.debug("VNC Authentication")
+            LOG_JOB.debug("VNC Authentication")
             if self.rfb_version != "3.3":
                 self.sock.send(struct.pack('!B', 2))
             rec = self.sock.recv(16)
@@ -74,7 +76,7 @@ class VNC(object):
                     rec = self.sock.recv(4)
                     (str_len, ) = struct.unpack('!I', rec)
                     reason = self.sock.recv(str_len)
-                    logging.debug("Handshaking failed : %s", reason)
+                    LOG_JOB.debug("Handshaking failed : %s", reason)
                 return False
             elif status == 0:
                 return True
@@ -91,7 +93,7 @@ class VNC(object):
          red_max, green_max, blue_max, red_shift, green_shift,
          blue_shift) = struct.unpack("!BBBBHHHBBBxxx", pixformat)
         server_name = self.sock.recv(name_len)
-        logging.info("vnc server name: %s", server_name)
+        LOG_JOB.info("vnc server name: %s", server_name)
 
     def close(self):
         self.sock.close()
@@ -130,9 +132,9 @@ def run(test, params, env):
         rand = random.SystemRandom()
         rand.seed()
         password = utils_misc.generate_random_string(rand.randint(1, 8))
-        logging.info("Set VNC password to: %s", password)
+        test.log.info("Set VNC password to: %s", password)
         timeout = rand.randint(10, 100)
-        logging.info("VNC password timeout is: %s", timeout)
+        test.log.info("VNC password timeout is: %s", timeout)
         vm.monitor.send_args_cmd(change_passwd_cmd % (password, timeout))
 
         error_context.context("Connect to VNC server after setting password"
@@ -144,8 +146,8 @@ def run(test, params, env):
         if not status:
             test.fail("VNC Authentication failed.")
 
-        logging.info("VNC Authentication pass")
-        logging.info("Waiting for vnc password timeout.")
+        test.log.info("VNC Authentication pass")
+        test.log.info("Waiting for vnc password timeout.")
         time.sleep(timeout + 5)
         error_context.context("Connect to VNC server after password expires")
         vnc = VNC(port=port, rfb_version=rfb_version)

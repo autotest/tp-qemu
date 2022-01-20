@@ -1,4 +1,3 @@
-import logging
 import os
 
 import aexpect
@@ -38,7 +37,7 @@ def run(test, params, env):
         """
         Get viofs.exe from virtio win iso,such as E:\viofs\2k19\amd64
         """
-        logging.info("Get virtiofs exe full path.")
+        test.log.info("Get virtiofs exe full path.")
         media_type = params["virtio_win_media_type"]
         try:
             get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
@@ -64,7 +63,7 @@ def run(test, params, env):
         exe_find_cmd = 'dir /b /s %s\\%s | findstr "\\%s\\\\"'
         exe_find_cmd %= (viowin_ltr, exe_file_name, exe_middle_path)
         exe_path = session.cmd(exe_find_cmd).strip()
-        logging.info("Found exe file '%s'", exe_path)
+        test.log.info("Found exe file '%s'", exe_path)
         return exe_path
 
     def get_stdev(file):
@@ -72,7 +71,7 @@ def run(test, params, env):
         Get file's st_dev value.
         """
         stdev = session.cmd_output(cmd_get_stdev % file).strip()
-        logging.info("%s device id is %s.", file, stdev)
+        test.log.info("%s device id is %s.", file, stdev)
         return stdev
 
     def check_socket_group():
@@ -149,7 +148,7 @@ def run(test, params, env):
         # /dev/shm is the default memory-backend-file, the default value is the
         # half of the host memory. Increase it to guest memory size to avoid crash
         ori_tmpfs_size = process.run(cmd_get_tmpfs, shell=True).stdout_text.replace("\n", "")
-        logging.debug("original tmpfs size is %s", ori_tmpfs_size)
+        test.log.debug("original tmpfs size is %s", ori_tmpfs_size)
         params["post_command"] = cmd_set_tmpfs % ori_tmpfs_size
         params["pre_command"] = cmd_set_tmpfs % size_mem1
 
@@ -192,10 +191,10 @@ def run(test, params, env):
                                                                     driver_name)
             # install winfsp tool
             error_context.context("Install winfsp for windows guest.",
-                                  logging.info)
+                                  test.log.info)
             installed = session.cmd_status(check_installed_cmd) == 0
             if installed:
-                logging.info("Winfsp tool is already installed.")
+                test.log.info("Winfsp tool is already installed.")
             else:
                 install_cmd = utils_misc.set_winutils_letter(session,
                                                              params["install_cmd"])
@@ -219,44 +218,44 @@ def run(test, params, env):
 
             if os_type == "linux":
                 error_context.context("Create a destination directory %s "
-                                      "inside guest." % fs_dest, logging.info)
+                                      "inside guest." % fs_dest, test.log.info)
                 utils_misc.make_dirs(fs_dest, session)
                 if not cmd_xfstest:
                     error_context.context("Mount virtiofs target %s to %s inside"
                                           " guest." % (fs_target, fs_dest),
-                                          logging.info)
+                                          test.log.info)
                     if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
                         test.fail('Mount virtiofs target failed.')
 
             else:
-                error_context.context("Start virtiofs service in guest.", logging.info)
+                error_context.context("Start virtiofs service in guest.", test.log.info)
                 viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
                 viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
                 viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
 
-                logging.info("Check if virtiofs service is registered.")
+                test.log.info("Check if virtiofs service is registered.")
                 status, output = session.cmd_status_output(viofs_sc_query_cmd)
                 if "not exist as an installed service" in output:
-                    logging.info("Register virtiofs service in windows guest.")
+                    test.log.info("Register virtiofs service in windows guest.")
                     exe_path = get_viofs_exe(session)
                     viofs_sc_create_cmd = viofs_sc_create_cmd % exe_path
                     sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
                     if sc_create_s != 0:
                         test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
 
-                logging.info("Check if virtiofs service is started.")
+                test.log.info("Check if virtiofs service is started.")
                 status, output = session.cmd_status_output(viofs_sc_query_cmd)
                 if "RUNNING" not in output:
-                    logging.info("Start virtiofs service.")
+                    test.log.info("Start virtiofs service.")
                     sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
                     if sc_start_s != 0:
                         test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
                 else:
-                    logging.info("Virtiofs service is running.")
+                    test.log.info("Virtiofs service is running.")
 
                 viofs_log_file_cmd = params.get("viofs_log_file_cmd")
                 if viofs_log_file_cmd:
-                    error_context.context("Check if LOG file is created.", logging.info)
+                    error_context.context("Check if LOG file is created.", test.log.info)
                     log_dir_s = session.cmd_status(viofs_log_file_cmd)
                     if log_dir_s != 0:
                         test.fail("Virtiofs log is not created.")
@@ -265,7 +264,7 @@ def run(test, params, env):
                 virtio_fs_disk_label = fs_target
                 error_context.context("Get Volume letter of virtio fs target, the disk"
                                       "lable is %s." % virtio_fs_disk_label,
-                                      logging.info)
+                                      test.log.info)
                 vol_con = "VolumeName='%s'" % virtio_fs_disk_label
                 volume_letter = utils_misc.wait_for(
                     lambda: utils_misc.get_win_disk_vol(session, condition=vol_con), cmd_timeout)
@@ -274,12 +273,12 @@ def run(test, params, env):
                 fs_dest = "%s:" % volume_letter
 
             guest_file = os.path.join(fs_dest, test_file)
-            logging.info("The guest file in shared dir is %s", guest_file)
+            test.log.info("The guest file in shared dir is %s", guest_file)
 
             try:
                 if cmd_dd:
                     error_context.context("Creating file under %s inside "
-                                          "guest." % fs_dest, logging.info)
+                                          "guest." % fs_dest, test.log.info)
                     session.cmd(cmd_dd % guest_file, io_timeout)
 
                     if os_type == "linux":
@@ -289,7 +288,7 @@ def run(test, params, env):
                         cmd_md5_vm = cmd_md5 % (volume_letter, guest_file_win)
                     md5_guest = session.cmd_output(cmd_md5_vm, io_timeout).strip().split()[0]
 
-                    logging.info(md5_guest)
+                    test.log.info(md5_guest)
                     md5_host = process.run("md5sum %s" % host_data,
                                            io_timeout).stdout_text.strip().split()[0]
                     if md5_guest != md5_host:
@@ -297,7 +296,7 @@ def run(test, params, env):
 
                 if folder_test == 'yes':
                     error_context.context("Folder test under %s inside "
-                                          "guest." % fs_dest, logging.info)
+                                          "guest." % fs_dest, test.log.info)
                     session.cmd(cmd_new_folder % fs_dest)
                     try:
                         session.cmd(cmd_copy_file)
@@ -312,7 +311,7 @@ def run(test, params, env):
 
                 if cmd_symblic_file:
                     error_context.context("Symbolic test under %s inside "
-                                          "guest." % fs_dest, logging.info)
+                                          "guest." % fs_dest, test.log.info)
                     session.cmd(cmd_new_folder % fs_dest)
                     if session.cmd_status(cmd_symblic_file):
                         test.fail("Creat symbolic files failed.")
@@ -322,7 +321,7 @@ def run(test, params, env):
                         session.cmd("cd -")
 
                 if fio_options:
-                    error_context.context("Run fio on %s." % fs_dest, logging.info)
+                    error_context.context("Run fio on %s." % fs_dest, test.log.info)
                     fio = generate_instance(params, vm, 'fio')
                     try:
                         fio.run(fio_options % guest_file, io_timeout)
@@ -331,7 +330,7 @@ def run(test, params, env):
                     vm.verify_dmesg()
 
                 if cmd_pjdfstest:
-                    error_context.context("Run pjdfstest on %s." % fs_dest, logging.info)
+                    error_context.context("Run pjdfstest on %s." % fs_dest, test.log.info)
                     host_path = os.path.join(data_dir.get_deps_dir('pjdfstest'), pjdfstest_pkg)
                     scp_to_remote(host_addr, port, username, password, host_path, fs_dest)
                     session.cmd(cmd_unpack.format(fs_dest), 180)
@@ -342,11 +341,11 @@ def run(test, params, env):
                     status, output = session.cmd_status_output(
                         cmd_pjdfstest % fs_dest, io_timeout)
                     if status != 0:
-                        logging.info(output)
+                        test.log.info(output)
                         test.fail('The pjdfstest failed.')
 
                 if cmd_xfstest:
-                    error_context.context("Run xfstest on guest.", logging.info)
+                    error_context.context("Run xfstest on guest.", test.log.info)
                     utils_misc.make_dirs(fs_dest_fs2, session)
                     if session.cmd_status(cmd_download_xfstest, 360):
                         test.error("Failed to download xfstests-dev")
@@ -356,7 +355,7 @@ def run(test, params, env):
                     # needed for compilation here.
                     status, output = session.cmd_status_output(cmd_make_xfs, 900)
                     if status != 0:
-                        logging.info(output)
+                        test.log.info(output)
                         test.error("Failed to build xfstests-dev")
                     session.cmd(cmd_setenv, 180)
                     session.cmd(cmd_setenv_nfs, 180)
@@ -364,7 +363,7 @@ def run(test, params, env):
 
                     try:
                         output = session.cmd_output(cmd_xfstest, io_timeout)
-                        logging.info("%s", output)
+                        test.log.info("%s", output)
                         if 'Failed' in output:
                             test.fail('The xfstest failed.')
                         else:
@@ -374,7 +373,7 @@ def run(test, params, env):
 
                 if cmd_get_stdev:
                     error_context.context("Create files in local device and"
-                                          " nfs device ", logging.info)
+                                          " nfs device ", test.log.info)
                     file_in_local_host = os.path.join(fs_source, "file_test")
                     file_in_nfs_host = os.path.join(fs_source, nfs_mount_dst_name,
                                                     "file_test")
@@ -382,7 +381,7 @@ def run(test, params, env):
                                                                file_in_nfs_host)
                     process.run(cmd_touch_file)
                     error_context.context("Check if the two files' st_dev are"
-                                          " the same on guest.", logging.info)
+                                          " the same on guest.", test.log.info)
                     file_in_local_guest = os.path.join(fs_dest, "file_test")
                     file_in_nfs_guest = os.path.join(fs_dest, nfs_mount_dst_name,
                                                      "file_test")
@@ -427,11 +426,11 @@ def run(test, params, env):
             return vfsd_num
 
         error_context.context("Check virtiofs daemon before reboot vm.",
-                              logging.info)
+                              test.log.info)
 
         vfsd_num_bf = get_vfsd_num()
         error_context.context("Reboot guest and check virtiofs daemon.",
-                              logging.info)
+                              test.log.info)
         vm.reboot()
         if not vm.is_alive():
             test.fail("After rebooting vm quit unexpectedly.")

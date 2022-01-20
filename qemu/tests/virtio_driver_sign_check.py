@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -27,8 +26,8 @@ def get_driver_file_path(session, params):
     guest_arch = get_arch_dirname(session)
     path = ("{letter}\\{driver}\\{name}\\{arch}\\" if media_type == "iso"
             else "{letter}\\{arch}\\{name}\\{driver}").format(
-                    letter=drive_letter, driver=driver_path,
-                    name=guest_name, arch=guest_arch)
+        letter=drive_letter, driver=driver_path,
+        name=guest_name, arch=guest_arch)
     return drive_letter, path
 
 
@@ -53,7 +52,7 @@ def run(test, params, env):
 
     try:
         error_context.context("Running SignTool check test in guest...",
-                              logging.info)
+                              test.log.info)
         file_type = [".cat", ".sys", ".inf", "Wdf"]
         tested_list = []
         viowin_letter, path = get_driver_file_path(session, params)

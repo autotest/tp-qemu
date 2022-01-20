@@ -1,7 +1,6 @@
 import json
 import os
 import time
-import logging
 
 from virttest import error_context
 from virttest import utils_test
@@ -76,15 +75,15 @@ def key_tap_test(test, params, vm):
     key_check_cfg = get_keycode_cfg(key_table_file)
     wait_time = float(params.get("wait_time", 0.2))
 
-    error_context.context("Start event listener in guest", logging.info)
+    error_context.context("Start event listener in guest", test.log.info)
     listener = input_event_proxy.EventListener(vm)
 
     console = graphical_console.GraphicalConsole(vm)
     for key in key_check_cfg.keys():
-        error_context.context("Send %s key tap to guest" % key, logging.info)
+        error_context.context("Send %s key tap to guest" % key, test.log.info)
         console.key_tap(key)
         error_context.context("Check %s key tap event received"
-                              "correct in guest" % key, logging.info)
+                              "correct in guest" % key, test.log.info)
         time.sleep(wait_time)
         key_check(key)
 
@@ -112,13 +111,13 @@ def run(test, params, env):
     if params["os_type"] == "windows":
         session = vm.wait_for_login()
 
-        error_context.context("Check vioinput driver is running", logging.info)
+        error_context.context("Check vioinput driver is running", test.log.info)
         utils_test.qemu.windrv_verify_running(session, test, driver.split()[0])
 
         error_context.context("Enable all vioinput related driver verified",
-                              logging.info)
+                              test.log.info)
         session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
         session.close()
 
-    error_context.context("Run keyboard testing", logging.info)
+    error_context.context("Run keyboard testing", test.log.info)
     key_tap_test(test, params, vm)

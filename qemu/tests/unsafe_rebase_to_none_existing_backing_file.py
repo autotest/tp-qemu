@@ -1,4 +1,3 @@
-import logging
 import json
 
 from avocado.utils import process
@@ -36,7 +35,7 @@ def run(test, params, env):
 
     def _verify_qemu_img_info(output, b_fmt, b_name):
         """Verify qemu-img info output for this case."""
-        logging.info("Verify snapshot's backing file information.")
+        test.log.info("Verify snapshot's backing file information.")
         res = json.loads(output)
         if (res["backing-filename-format"] != b_fmt or
                 res["backing-filename"] != b_name):
@@ -50,7 +49,7 @@ def run(test, params, env):
 
     def _verify_unsafe_rebase(img):
         """Verify qemu-img check output for this case."""
-        logging.info("Verify snapshot's unsafe check information.")
+        test.log.info("Verify snapshot's unsafe check information.")
         res = process.run("%s check %s" % (img.image_cmd, img.image_filename),
                           ignore_status=True)
         expected = ["Could not open backing file", img.base_image_filename,
@@ -64,7 +63,7 @@ def run(test, params, env):
     base_img, _ = _get_img_obj_and_params(base)
     sn_img, sn_img_params = _get_img_obj_and_params(snapshot)
 
-    logging.info("Create a snapshot %s based on %s.", snapshot, base)
+    test.log.info("Create a snapshot %s based on %s.", snapshot, base)
     # workaround to assign system disk's image_name to image_name_image1
     params["image_name_image1"] = params["image_name"]
     QemuImgTest(test, params, env, snapshot).create_snapshot()

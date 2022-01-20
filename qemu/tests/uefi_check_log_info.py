@@ -1,6 +1,5 @@
 import re
 import os
-import logging
 
 from avocado.utils import process
 
@@ -33,7 +32,7 @@ def run(test, params, env):
         """
         Create 'test' cdrom with one file on it
         """
-        logging.info("creating test cdrom")
+        test.log.info("creating test cdrom")
         process.run("dd if=/dev/urandom of=test bs=10M count=1")
         process.run("mkisofs -o %s test" % cdrom_test)
         process.run("rm -f test")
@@ -63,5 +62,5 @@ def run(test, params, env):
                       % expect_result)
     finally:
         if params.get("cdroms") == "test":
-            logging.info("cleaning up temp cdrom images")
+            test.log.info("cleaning up temp cdrom images")
             os.remove(cdrom_test)

@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 
 from avocado.utils import process
 
@@ -27,7 +26,7 @@ def run(test, params, env):
         """
         Create 'test' cdrom with one file on it
         """
-        logging.info("creating test cdrom")
+        test.log.info("creating test cdrom")
         process.run("dd if=/dev/urandom of=test bs=10M count=1")
         process.run("mkisofs -o %s test" % cdrom_test)
         process.run("rm -f test")
@@ -36,7 +35,7 @@ def run(test, params, env):
         """
         Removes created cdrom
         """
-        logging.info("cleaning up temp cdrom images")
+        test.log.info("cleaning up temp cdrom images")
         os.remove(cdrom_test)
 
     def boot_check(info):
@@ -83,7 +82,7 @@ def run(test, params, env):
                 vm.send_key("down")
             vm.send_key("kp_enter")
 
-        error_context.context("Check boot result", logging.info)
+        error_context.context("Check boot result", test.log.info)
         if not utils_misc.wait_for(lambda: boot_check(boot_entry_info),
                                    timeout, 1):
             test.fail("Could not boot from '%s'" % dev_name)

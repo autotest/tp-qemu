@@ -1,7 +1,6 @@
 import re
 import os
 import time
-import logging
 
 from avocado.utils import process
 
@@ -38,31 +37,31 @@ def run(test, params, env):
 
     @error_context.context_aware
     def usb_dev_hotplug(dev):
-        error_context.context("Hotplug usb-host device", logging.info)
+        error_context.context("Hotplug usb-host device", test.log.info)
         session.cmd_status("dmesg -c")
         vm.devices.simple_hotplug(dev, vm.monitor)
         session.cmd_status("sleep 2")
         session.cmd_status("udevadm settle")
         messages_add = session.cmd("dmesg")
         for line in messages_add.splitlines():
-            logging.debug("[dmesg add] %s", line)
+            test.log.debug("[dmesg add] %s", line)
         if messages_add.find(match_add) == -1:
             test.fail("kernel didn't detect plugin")
 
     @error_context.context_aware
     def usb_dev_verify():
-        error_context.context("Check usb device in guest", logging.info)
+        error_context.context("Check usb device in guest", test.log.info)
         session.cmd(lsusb_cmd)
 
     @error_context.context_aware
     def usb_dev_unplug(dev):
-        error_context.context("Unplug usb-host device", logging.info)
+        error_context.context("Unplug usb-host device", test.log.info)
         session.cmd("dmesg -c")
         vm.devices.simple_unplug(dev, vm.monitor)
         session.cmd_status("sleep 2")
         messages_del = session.cmd("dmesg -c")
         for line in messages_del.splitlines():
-            logging.debug("[dmesg del] %s", line)
+            test.log.debug("[dmesg del] %s", line)
         if messages_del.find(match_del) == -1:
             test.fail("kernel didn't detect unplug")
 
@@ -93,7 +92,7 @@ def run(test, params, env):
         """
         Do I/O operations on passthrough usb stick
         """
-        error_context.context("Read and write on usb stick ", logging.info)
+        error_context.context("Read and write on usb stick ", test.log.info)
         testfile = os.path.join(mount_point, 'testfile')
         if bg:
             iozone_cmd = params.get("iozone_cmd_bg", " -az -I -g 1g -f %s")
@@ -125,7 +124,7 @@ def run(test, params, env):
             try:
                 vm.devices.simple_hotplug(dev, vm.monitor)
             except QMPCmdError as detail:
-                logging.warn(detail)
+                test.log.warn(detail)
                 for msg in usb_reply_msg_list:
                     if msg in detail.data['desc']:
                         break
@@ -158,7 +157,7 @@ def run(test, params, env):
     match_del = "USB disconnect"
     usb_stick = "Mass Storage" in process.getoutput(lsusb_cmd)
 
-    error_context.context("Log into guest", logging.info)
+    error_context.context("Log into guest", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
@@ -183,7 +182,7 @@ def run(test, params, env):
                 isobufs = (2 << (i % 3 + 1))
                 usb_params["isobufs"] = isobufs
                 msg += ", with 'isobufs' option set to %d." % isobufs
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             usb_dev = qdevices.QDevice("usb-host", usb_params)
             usb_dev_hotplug(usb_dev)
             usb_dev_verify()

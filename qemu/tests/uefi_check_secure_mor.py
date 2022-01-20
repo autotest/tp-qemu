@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import data_dir
 
@@ -49,7 +47,7 @@ def run(test, params, env):
         # Copy Device Guard to guest
         dgreadiness_host_path = data_dir.get_deps_dir("dgreadiness")
         dst_path = params["dst_path"]
-        logging.info("Copy Device Guuard to guest.")
+        test.log.info("Copy Device Guuard to guest.")
         s, o = session.cmd_status_output("mkdir %s" % dst_path)
         if s and "already exists" not in o:
             test.error("Could not create Device Guard directory in "

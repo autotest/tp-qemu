@@ -1,4 +1,3 @@
-import logging
 import re
 import uuid
 
@@ -58,14 +57,14 @@ def run(test, params, env):
             ignore_case = True
 
         error_context.context("Finding matched sub-string with regex"
-                              " pattern '%s'" % regex_str, logging.info)
+                              " pattern '%s'" % regex_str, test.log.info)
         m = re.findall(regex_str, string, search_opt)
         if not m:
-            logging.debug(string)
+            test.log.debug(string)
             test.error("Could not find matched sub-string")
 
         error_context.context("Verify matched string is same as expected",
-                              logging.info)
+                              test.log.info)
         actual_result = m[0]
         if "removable" in regex_str:
             if actual_result in ["on", "yes", "true"]:
@@ -85,7 +84,7 @@ def run(test, params, env):
                 fail_log.append(ret)
 
         if fail_log:
-            logging.debug(string)
+            test.log.debug(string)
             test.fail("Could not find expected string:\n %s" %
                       ("\n".join(fail_log)))
 
@@ -124,14 +123,14 @@ def run(test, params, env):
     @error_context.context_aware
     def _check_serial_option(serial, regex_str, expect_str):
         error_context.context("Set serial option to '%s'" % serial,
-                              logging.info)
+                              test.log.info)
         _restart_vm({"blk_extra_params_stg": "serial=" + serial})
 
-        error_context.context("Check serial option in monitor", logging.info)
+        error_context.context("Check serial option in monitor", test.log.info)
         output = str(vm.monitor.info("qtree"))
         _verify_string(regex_str, output, [expect_str], re.S)
 
-        error_context.context("Check serial option in guest", logging.info)
+        error_context.context("Check serial option in guest", test.log.info)
         session = _login()
         output = session.cmd("lsusb -v")
         if serial not in ["EMPTY_STRING", "NO_EQUAL_STRING"]:
@@ -142,16 +141,16 @@ def run(test, params, env):
     @error_context.context_aware
     def _check_removable_option(removable, expect_str):
         error_context.context("Set removable option to '%s'" % removable,
-                              logging.info)
+                              test.log.info)
         _restart_vm({"removable_stg": removable})
 
         error_context.context("Check removable option in monitor",
-                              logging.info)
+                              test.log.info)
         output = str(vm.monitor.info("qtree"))
         regex_str = r'usb-storage.*?removable = (.*?)\s'
         _verify_string(regex_str, output, [removable], re.S)
 
-        error_context.context("Check removable option in guest", logging.info)
+        error_context.context("Check removable option in guest", test.log.info)
         session = _login()
         cmd = "dmesg | grep %s" % _get_usb_disk_name_in_guest(session)
         output = session.cmd(cmd)
@@ -161,7 +160,7 @@ def run(test, params, env):
     @error_context.context_aware
     def _check_io_size_option(min_io_size="512", opt_io_size="0"):
         error_context.context("Set min_io_size to %s, opt_io_size to %s" %
-                              (min_io_size, opt_io_size), logging.info)
+                              (min_io_size, opt_io_size), test.log.info)
         opt = {}
         opt["min_io_size_stg"] = min_io_size
         opt["opt_io_size_stg"] = opt_io_size
@@ -169,13 +168,13 @@ def run(test, params, env):
         _restart_vm(opt)
 
         error_context.context("Check min/opt io_size option in monitor",
-                              logging.info)
+                              test.log.info)
         output = str(vm.monitor.info("qtree"))
         regex_str = r"usb-storage.*?min_io_size = (\d+).*?opt_io_size = (\d+)"
         _verify_string(regex_str, output, [min_io_size, opt_io_size], re.S)
 
         error_context.context("Check min/opt io_size option in guest",
-                              logging.info)
+                              test.log.info)
         session = _login()
         d = _get_usb_disk_name_in_guest(session)
         cmd = ("cat /sys/block/%s/queue/{minimum,optimal}_io_size" % d)
@@ -200,7 +199,7 @@ def run(test, params, env):
     for rt in range(1, repeat_times+1):
         disk_hotplugged = []
         if hotplug_unplug:
-            error_context.context("Hotplug the %s times." % rt, logging.info)
+            error_context.context("Hotplug the %s times." % rt, test.log.info)
             image_name = params.objects("images")[-1]
             image_params = params.object_params(image_name)
             devices = vm.devices.images_define_by_params(image_name,
@@ -215,14 +214,14 @@ def run(test, params, env):
             disk_hotplugged.append(devices[-1])
 
         error_context.context("Check usb device information in monitor",
-                              logging.info)
+                              test.log.info)
         output = str(vm.monitor.info("usb"))
         if "Product QEMU USB MSD" not in output:
-            logging.debug(output)
+            test.log.debug(output)
             test.fail("Could not find mass storage device")
 
         error_context.context("Check usb device information in guest",
-                              logging.info)
+                              test.log.info)
         session = _login()
         output = session.cmd(params["chk_usb_info_cmd"])
         # No bus specified, default using "usb.0" for "usb-storage"
@@ -233,24 +232,24 @@ def run(test, params, env):
 
         # this part is linux only
         if params.get("check_serial_option") == "yes":
-            error_context.context("Check usb serial option", logging.info)
+            error_context.context("Check usb serial option", test.log.info)
             serial = uuid.uuid4().hex
             regex_str = r'usb-storage.*?serial = "(.*?)"\s'
             _check_serial_option(serial, regex_str, serial)
 
-            logging.info("Check this option with some illegal string")
-            logging.info("Set usb serial to a empty string")
+            test.log.info("Check this option with some illegal string")
+            test.log.info("Set usb serial to a empty string")
             # An empty string, ""
             serial = "EMPTY_STRING"
             regex_str = r'usb-storage.*?serial = (.*?)\s'
             _check_serial_option(serial, regex_str, '""')
 
-            logging.info("Leave usb serial option blank")
+            test.log.info("Leave usb serial option blank")
             serial = "NO_EQUAL_STRING"
             _check_serial_option(serial, regex_str, '"on"')
 
         if params.get("check_removable_option") == "yes":
-            error_context.context("Check usb removable option", logging.info)
+            error_context.context("Check usb removable option", test.log.info)
             removable = "on"
             expect_str = "Attached SCSI removable disk"
             _check_removable_option(removable, expect_str)
@@ -260,7 +259,7 @@ def run(test, params, env):
             _check_removable_option(removable, expect_str)
 
         if params.get("check_io_size_option") == "yes":
-            error_context.context("Check usb min/opt io_size option", logging.info)
+            error_context.context("Check usb min/opt io_size option", test.log.info)
             _check_io_size_option("0", "0")
             # NOTE: Guest can't recognize correct value which we set now,
             # So comment these test temporary.
@@ -268,7 +267,7 @@ def run(test, params, env):
             # _check_io_size_option("4096", "4096")
 
         if hotplug_unplug:
-            error_context.context("Hotunplug the %s times." % rt, logging.info)
+            error_context.context("Hotunplug the %s times." % rt, test.log.info)
             for dev in disk_hotplugged:
                 ret = vm.devices.simple_unplug(dev, vm.monitor)
                 if ret[1] is False:

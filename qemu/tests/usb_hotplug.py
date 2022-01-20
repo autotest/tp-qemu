@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -16,7 +15,7 @@ def run(test, params, env):
     """
     @error_context.context_aware
     def usb_dev_hotplug():
-        error_context.context("Plugin usb device", logging.info)
+        error_context.context("Plugin usb device", test.log.info)
         session.cmd(clear_guest_log_cmd)
         reply = vm.monitor.cmd(monitor_add)
         if params.get("usb_negative_test") == "yes":
@@ -33,23 +32,23 @@ def run(test, params, env):
     @error_context.context_aware
     def usb_dev_verify():
         error_context.context("Verify usb device is pluged on guest",
-                              logging.info)
+                              test.log.info)
         time.sleep(sleep_time)
         session.cmd(udev_refresh_cmd)
         messages_add = session.cmd(query_syslog_cmd)
         for line in messages_add.splitlines():
-            logging.debug("[Guest add] %s", line)
+            test.log.debug("[Guest add] %s", line)
         if not re.search(match_add, messages_add, re.I):
             test.fail("Guest didn't detect plugin")
 
     @error_context.context_aware
     def usb_dev_unplug():
-        error_context.context("Unplug usb device", logging.info)
+        error_context.context("Unplug usb device", test.log.info)
         vm.monitor.cmd(monitor_del)
         time.sleep(sleep_time)
         messages_del = session.cmd(query_syslog_cmd)
         for line in messages_del.splitlines():
-            logging.debug("[Guest del] %s", line)
+            test.log.debug("[Guest del] %s", line)
         if messages_del.find(match_del) == -1:
             test.fail("Guest didn't detect unplug")
 
@@ -69,14 +68,14 @@ def run(test, params, env):
     sleep_time = float(params["usb_sleep_time"])
     udev_refresh_cmd = params.get("usb_udev_refresh_cmd", "udevadm settle")
 
-    error_context.context("Log into guest", logging.info)
+    error_context.context("Log into guest", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
 
     repeat_times = int(params["usb_repeat_times"])
     for i in range(repeat_times):
-        error_context.context("Hotplug (iteration %i)" % (i + 1), logging.info)
+        error_context.context("Hotplug (iteration %i)" % (i + 1), test.log.info)
         usb_dev_hotplug()
         if not params.get("usb_negative_test") == "yes":
             usb_dev_verify()

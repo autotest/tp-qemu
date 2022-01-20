@@ -1,4 +1,3 @@
-import logging
 import re
 import os
 
@@ -41,7 +40,7 @@ def run(test, params, env):
         rv_thread.start()
 
     def create_repo():
-        logging.info("Create temp repository")
+        test.log.info("Create temp repository")
         version_cmd = 'grep "^VERSION_ID=" /etc/os-release | cut -d = -f2'
         version_id = process.getoutput(version_cmd).strip('"')
         major, minor = version_id.split('.')
@@ -64,11 +63,11 @@ def run(test, params, env):
                 status = False
                 err_msg = "Fail to get the USB device info in host dmesg"
                 return (status, err_msg)
-            error_context.context("Make USB device unconfigured", logging.info)
+            error_context.context("Make USB device unconfigured", test.log.info)
             unconfig_value = params["usbredir_unconfigured_value"]
             cmd = "echo %s > /sys/bus/usb/devices/%s/bConfigurationValue"
             cmd = cmd % (unconfig_value, obj.group(1))
-            logging.info(cmd)
+            test.log.info(cmd)
             s, o = process.getstatusoutput(cmd)
             if s:
                 status = False
@@ -157,7 +156,7 @@ def run(test, params, env):
             s, o = process.getstatusoutput(cmd)
             if s:
                 return False
-            logging.info("netstat output:\n%s", o)
+            test.log.info("netstat output:\n%s", o)
             return True
         status = True
         err_msg = ''
@@ -181,7 +180,7 @@ def run(test, params, env):
         return re.search(info, vm.serial_console.get_stripped_output())
 
     def _usb_dev_verify():
-        error_context.context("Check USB device in guest", logging.info)
+        error_context.context("Check USB device in guest", test.log.info)
         if session.cmd_status(lsusb_cmd):
             return False
         return True
@@ -213,7 +212,7 @@ def run(test, params, env):
         """
         Do I/O operations on passthrough USB stick
         """
-        error_context.context("Read and write on USB stick ", logging.info)
+        error_context.context("Read and write on USB stick ", test.log.info)
         testfile = os.path.join(mount_point, 'testfile')
         iozone_cmd = params.get("iozone_cmd",
                                 " -a -I -r 64k -s 1m -i 0 -i 1 -f %s")
@@ -236,7 +235,7 @@ def run(test, params, env):
     usb_stick = "Mass Storage" in process.getoutput(lsusb_cmd)
     rv_binary = params.get('rv_binary', 'remote-viewer')
 
-    error_context.context("Check host configurations", logging.info)
+    error_context.context("Check host configurations", test.log.info)
     s, o = _host_config_check()
     if not s:
         test.error(o)
@@ -245,20 +244,20 @@ def run(test, params, env):
         free_port = utils_misc.find_free_port()
         _start_usbredir_server()
 
-    error_context.context("Preprocess VM", logging.info)
+    error_context.context("Preprocess VM", test.log.info)
     _usbredir_preprocess()
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     if backend == 'spicevmc':
-        error_context.context("Start USB redirection via spice", logging.info)
+        error_context.context("Start USB redirection via spice", test.log.info)
         s, o = _start_spice_redirection()
         if not s:
             test.error(o)
         vm.resume()
 
     if option == "with_bootindex":
-        error_context.context("Check 'bootindex' option", logging.info)
+        error_context.context("Check 'bootindex' option", test.log.info)
         boot_menu_hint = params["boot_menu_hint"]
         boot_menu_key = params["boot_menu_key"]
         if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint),
@@ -272,7 +271,7 @@ def run(test, params, env):
         boot_list = re.findall(r"^\d+\. (.*)\s", output, re.M)
         if not boot_list:
             test.fail("Could not get boot entries list")
-        logging.info("Got boot menu entries: '%s'", boot_list)
+        test.log.info("Got boot menu entries: '%s'", boot_list)
 
         bootindex = int(params["usbdev_option_bootindex_%s" % usbredirdev_name])
         if "USB" not in boot_list[bootindex]:
@@ -280,7 +279,7 @@ def run(test, params, env):
 
         if usb_stick:
             error_context.context("Boot from redirected USB stick",
-                                  logging.info)
+                                  test.log.info)
             boot_entry_info = params["boot_entry_info"]
             vm.send_key(str(bootindex + 1))
             if not utils_misc.wait_for(lambda: boot_check(boot_entry_info),
@@ -288,7 +287,7 @@ def run(test, params, env):
                 test.fail("Could not boot from redirected USB stick")
         return
 
-    error_context.context("Login to guest", logging.info)
+    error_context.context("Login to guest", test.log.info)
     session = vm.wait_for_login()
 
     if params.get("policy") == "deny":

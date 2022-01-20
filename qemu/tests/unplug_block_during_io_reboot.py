@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -45,7 +44,7 @@ def run(test, params, env):
 
     def _run_stress_background():
         """ Run stress under background. """
-        logging.info("Start io stress under background.")
+        test.log.info("Start io stress under background.")
         thread = utils_misc.InterruptedThread(
             target[os_type]['name'], (target[os_type]['args'],))
         thread.start()
@@ -79,5 +78,5 @@ def run(test, params, env):
     stress_thread.join(suppress_exception=True)
     session.close()
     vm.monitor.system_reset()
-    logging.info('Login guest after reboot.')
+    test.log.info('Login guest after reboot.')
     session = vm.wait_for_login(timeout=360)

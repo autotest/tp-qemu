@@ -1,4 +1,3 @@
-import logging
 import re
 import os
 
@@ -69,7 +68,7 @@ def run(test, params, env):
         err_msg = ''
         required_groups = ('Server with GUI', 'Smart Card Support')
         s, out = session.cmd_status_output('yum group list --installed')
-        logging.info(out)
+        test.log.info(out)
         if s:
             status = False
             err_msg = 'Fail to get installed group list in guest, '
@@ -86,7 +85,7 @@ def run(test, params, env):
                     err_msg += "output: %s" % o
                     return (status, err_msg)
         o = session.cmd_output('systemctl status pcscd')
-        logging.info(o)
+        test.log.info(o)
         if 'running' not in o:
             s, o = session.cmd_status_output('sytemctl restart pcscd')
             if s:
@@ -100,14 +99,14 @@ def run(test, params, env):
         status = True
         err_msg = ''
         o = session.cmd_output('lsusb')
-        logging.info(o)
+        test.log.info(o)
         if ccid_info not in o:
             status = False
             err_msg = 'USB CCID device is not present in guest.'
             return (status, err_msg)
         list_certs_cmd = 'pkcs11-tool --list-objects --type cert'
         s, o = session.cmd_status_output(list_certs_cmd)
-        logging.info(o)
+        test.log.info(o)
         if s:
             status = False
             err_msg = 'Fail to list certificates on the smartcard.'
@@ -122,7 +121,7 @@ def run(test, params, env):
             s, o = process.getstatusoutput(cmd)
             if s:
                 return False
-            logging.info("netstat output:\n%s", o)
+            test.log.info("netstat output:\n%s", o)
             return True
         status = True
         err_msg = ''
@@ -151,23 +150,23 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Check client configurations", logging.info)
+    error_context.context("Check client configurations", test.log.info)
     s, o = _client_config_check()
     if not s:
         test.error(o)
 
-    error_context.context("Start smartcard sharing via spice", logging.info)
+    error_context.context("Start smartcard sharing via spice", test.log.info)
     s, o = _start_rv_smartcard()
     if not s:
         test.error(o)
 
-    error_context.context("Check guest configurations", logging.info)
+    error_context.context("Check guest configurations", test.log.info)
     session = vm.wait_for_login()
     s, o = _guest_config_check()
     if not s:
         test.error(o)
 
-    error_context.context("Check the smartcard in guest", logging.info)
+    error_context.context("Check the smartcard in guest", test.log.info)
     s, o = _check_sc_in_guest()
     if not s:
         test.fail(o)

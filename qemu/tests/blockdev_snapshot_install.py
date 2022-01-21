@@ -1,5 +1,4 @@
 import time
-import logging
 import random
 import re
 
@@ -27,7 +26,7 @@ def run(test, params, env):
             serial_output = vm.serial_console.get_output()
             if serial_output and re.search(tag, serial_output, re.M):
                 return True
-        logging.info("VM has not started yet")
+        test.log.info("VM has not started yet")
         return False
 
     base_image = params.get("images", "image1").split()[0]
@@ -40,7 +39,7 @@ def run(test, params, env):
     if bg.is_alive():
         tag = params["tag_for_install_start"]
         if utils_misc.wait_for(lambda: tag_for_install(snapshot_test.main_vm, tag), 120, 10, 5):
-            logging.info("sleep random time before do snapshots")
+            test.log.info("sleep random time before do snapshots")
             time.sleep(random.randint(120, 600))
             snapshot_test.pre_test()
             try:

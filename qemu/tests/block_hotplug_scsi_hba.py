@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -34,7 +33,7 @@ def run(test, params, env):
         return set(session.cmd('wmic diskdrive get index').split()[1:])
 
     def _get_scsi_host_id(session):
-        logging.info("Get the scsi host id which is hot plugged.")
+        test.log.info("Get the scsi host id which is hot plugged.")
         output = session.cmd("dmesg | grep \"scsi host\" | "
                              "awk 'END{print}' | awk '{print $4}'")
         return re.search(r'(\d+)', output).group(1)
@@ -49,7 +48,7 @@ def run(test, params, env):
 
     def rescan_hba_controller(session):
         """Rescan the scsi hba controller."""
-        error_context.context("Rescan the scsi hba controller.", logging.info)
+        error_context.context("Rescan the scsi hba controller.", test.log.info)
         if is_linux:
             _rescan_hba_controller_linux(session)
         else:
@@ -70,7 +69,7 @@ def run(test, params, env):
     if params['need_rescan_hba'] == 'yes':
         if utils_misc.wait_for(
                 lambda: bool(list_all_disks(session) - orig_disks), 30, step=3):
-            logging.debug('The all disks: %s.', list_all_disks(session))
+            test.log.debug('The all disks: %s.', list_all_disks(session))
             test.fail('Found a new disk with virtio-scsi-pci.hotplug=off '
                       'before rescan scsi hba controller.')
         rescan_hba_controller(session)

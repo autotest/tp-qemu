@@ -5,6 +5,8 @@ from provider import backup_utils
 from provider.blockdev_base import BlockdevBaseTest
 from provider.blockdev_stream_parallel import BlockdevStreamParallelTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevStreamMultipleBlocksTest(BlockdevStreamParallelTest,
                                        BlockdevBaseTest):
@@ -58,7 +60,7 @@ class BlockdevStreamMultipleBlocksTest(BlockdevStreamParallelTest,
             self.clone_vm.destroy()
             self.clean_images()
         except Exception as error:
-            logging.error(str(error))
+            LOG_JOB.error(str(error))
 
     def do_test(self):
         self.create_snapshots()

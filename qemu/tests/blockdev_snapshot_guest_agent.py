@@ -7,6 +7,8 @@ from virttest import guest_agent
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevSnapshotGuestAgentTest(BlockDevSnapshotTest):
 
@@ -33,14 +35,14 @@ class BlockdevSnapshotGuestAgentTest(BlockDevSnapshotTest):
     def create_snapshot(self):
         bg_test = utils_test.BackgroundTest(self.scp_test, "")
         bg_test.start()
-        logging.info("Sleep some time to wait for scp's preparation done")
+        LOG_JOB.info("Sleep some time to wait for scp's preparation done")
         time.sleep(30)
         error_context.context("freeze guest before snapshot",
-                              logging.info)
+                              LOG_JOB.info)
         self.guest_agent.fsfreeze()
         super(BlockdevSnapshotGuestAgentTest, self).create_snapshot()
         error_context.context("thaw guest after snapshot",
-                              logging.info)
+                              LOG_JOB.info)
         self.guest_agent.fsthaw()
         bg_test.join()
 

@@ -8,6 +8,8 @@ from provider import backup_utils
 from provider.virt_storage.storage_admin import sp_admin
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevSnapshotMultiDisksTest(BlockDevSnapshotTest):
 
@@ -66,7 +68,7 @@ class BlockdevSnapshotMultiDisksTest(BlockDevSnapshotTest):
     @error_context.context_aware
     def create_snapshot(self):
         error_context.context("do snaoshot on multi_disks",
-                              logging.info)
+                              LOG_JOB.info)
         assert len(
             self.target_disks) == len(
             self.source_disks), "No enough target disks define in cfg!"
@@ -113,7 +115,7 @@ class BlockdevSnapshotMultiDisksTest(BlockDevSnapshotTest):
                 snapshot_image = self.get_image_by_tag(snapshot_tag)
                 snapshot_image.remove()
         except Exception as error:
-            logging.error(str(error))
+            LOG_JOB.error(str(error))
 
 
 def run(test, params, env):

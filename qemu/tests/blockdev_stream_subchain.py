@@ -9,6 +9,8 @@ from provider import backup_utils
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevStreamSubChainTest(BlockDevStreamTest):
     """Do block-stream based on an existed snapshot in snapshot chain"""
@@ -60,7 +62,7 @@ class BlockdevStreamSubChainTest(BlockDevStreamTest):
                 self.clone_vm.destroy()
             self._remove_images()
         except Exception as e:
-            logging.warning(str(e))
+            LOG_JOB.warning(str(e))
 
     def _is_same_file(self, file_params, file_opts):
         # FIXME: this should be supported in VT

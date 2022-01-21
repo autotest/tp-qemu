@@ -1,5 +1,4 @@
 import re
-import logging
 import time
 
 from virttest import utils_test
@@ -87,7 +86,7 @@ def run(test, params, env):
     def _change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
-        logging.info('Sending command(%s): %s', method, command)
+        test.log.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             power_session = vm.wait_for_login(timeout=360)
             power_session.sendline(command)
@@ -102,7 +101,7 @@ def run(test, params, env):
         action = 'shutdown' if shutdown_vm else 'login'
         if not getattr(vm, 'wait_for_%s' % action)(timeout=362):
             test.fail('Failed to %s vm.' % action)
-        logging.info('%s vm successfully.', action.capitalize())
+        test.log.info('%s vm successfully.', action.capitalize())
 
     def run_power_management_test():
         """ Run power management test inside guest. """
@@ -111,7 +110,7 @@ def run(test, params, env):
 
     def run_bg_test(target, args=(), kwargs={}):
         """ Run the test background. """
-        error_context.context(target.__doc__, logging.info)
+        error_context.context(target.__doc__, test.log.info)
         thread = utils_misc.InterruptedThread(target, args, kwargs)
         thread.daemon = True
         thread.start()

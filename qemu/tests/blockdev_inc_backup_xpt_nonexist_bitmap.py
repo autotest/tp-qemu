@@ -9,6 +9,8 @@ from virttest import utils_misc
 from provider.blockdev_base import BlockdevBaseTest
 from provider.nbd_image_export import QemuNBDExportImage
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlkdevIncXptNonexistBitmap(BlockdevBaseTest):
 
@@ -56,7 +58,7 @@ class BlkdevIncXptNonexistBitmap(BlockdevBaseTest):
                                                                  **cmd_dict)
             return pid_file, cmdline
 
-        logging.info("Export inconsistent bitmap with qemu-nbd")
+        LOG_JOB.info("Export inconsistent bitmap with qemu-nbd")
         pid_file, cmd = _nbd_expose_cmd(self.nbd_exports[0]._qemu_nbd,
                                         self.nbd_exports[0]._local_filename,
                                         self.nbd_exports[0]._tag,

@@ -13,6 +13,8 @@ from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 from provider.job_utils import query_jobs
 from provider.nbd_image_export import InternalNBDExportImage
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
     """Poweroff VM during pulling image from 4 clients"""
@@ -99,7 +101,7 @@ class BlockdevIncBackupPullModePoweroffVMTest(BlockdevLiveBackupBaseTest):
             # qemu should quit after vm poweroff, or we have to do some checks
             self._check_qemu_responsive()
         else:
-            logging.info('qemu quit after vm poweroff')
+            LOG_JOB.info('qemu quit after vm poweroff')
 
     def destroy_vms(self):
         if self._is_qemu_hang:

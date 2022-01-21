@@ -1,7 +1,6 @@
 """
 hot-plug discard disk testing
 """
-import logging
 
 from avocado.utils import process
 
@@ -74,7 +73,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     plug = BlockDevicesPlug(vm)
-    error_context.context("Hot-plug discarded disk in guest.", logging.info)
+    error_context.context("Hot-plug discarded disk in guest.", test.log.info)
     plug.hotplug_devs_serial(data_tag)
     guest_disk_name = '/dev/' + plug[0]
 
@@ -83,28 +82,28 @@ def run(test, params, env):
     guest_dd_command = params["guest_dd_command"]
     guest_rm_command = params["guest_rm_command"]
 
-    error_context.context("Format disk in guest.", logging.info)
+    error_context.context("Format disk in guest.", test.log.info)
     session.cmd(guest_format_command)
 
-    error_context.context("Fill data disk in guest.", logging.info)
+    error_context.context("Fill data disk in guest.", test.log.info)
     session.cmd(guest_dd_command, ignore_all_errors=True)
 
     old_count = check_disk_allocation()
-    error_context.context("Blocks before trim: %d" % old_count, logging.info)
+    error_context.context("Blocks before trim: %d" % old_count, test.log.info)
 
-    error_context.context("Remove data from disk in guest.", logging.info)
+    error_context.context("Remove data from disk in guest.", test.log.info)
     session.cmd(guest_rm_command)
 
     guest_fstrim_command = params["guest_fstrim_command"]
     session.cmd(guest_fstrim_command)
     new_count = check_disk_allocation()
-    error_context.context("Blocks after trim: %d" % new_count, logging.info)
+    error_context.context("Blocks after trim: %d" % new_count, test.log.info)
     if new_count >= old_count:
         test.fail("Unexpected fstrim result")
 
-    error_context.context("Hot-unplug discarded disk in guest.", logging.info)
+    error_context.context("Hot-unplug discarded disk in guest.", test.log.info)
     plug.unplug_devs_serial(data_tag)
 
-    error_context.context("Reboot guest.", logging.info)
+    error_context.context("Reboot guest.", test.log.info)
     vm.reboot()
     vm.wait_for_login(timeout=timeout)

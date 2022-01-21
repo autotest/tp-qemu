@@ -5,6 +5,8 @@ from virttest import data_dir
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
     def pre_test(self):
@@ -71,7 +73,7 @@ class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
             for snapshot_image in self.snapshot_images:
                 sp_admin.remove_volume(snapshot_image)
         except Exception as error:
-            logging.error(str(error))
+            LOG_JOB.error(str(error))
 
 
 def run(test, params, env):

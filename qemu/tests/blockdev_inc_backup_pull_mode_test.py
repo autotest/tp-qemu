@@ -12,6 +12,8 @@ from provider.virt_storage.storage_admin import sp_admin
 from virttest import qemu_storage
 from virttest import utils_disk
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
 
@@ -183,7 +185,7 @@ class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
                 else:
                     sp_admin.remove_volume(img)
             except Exception as e:
-                logging.warn(str(e))
+                LOG_JOB.warn(str(e))
 
     def rebase_backup_image(self):
         """rebase image back2 onto back1"""
@@ -214,7 +216,7 @@ class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
                 file_path = "%s/%s" % (info[1], non_existed_files[tag])
                 cat_cmd = "cat %s" % file_path
 
-                logging.info('Check %s should not exist', file_path)
+                LOG_JOB.info('Check %s should not exist', file_path)
                 s, o = session.cmd_status_output(cat_cmd)
                 if s == 0:
                     self.test.fail('File (%s) exists' % non_existed_files[tag])

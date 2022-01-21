@@ -5,6 +5,8 @@ from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 from provider.job_utils import BLOCK_JOB_COMPLETED_EVENT
 from provider.job_utils import get_event_by_condition
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevIncbkNoSpaceTest(BlockdevLiveBackupBaseTest):
     """Do full backup to an image without enough space"""
@@ -14,7 +16,7 @@ class BlockdevIncbkNoSpaceTest(BlockdevLiveBackupBaseTest):
         self._bitmaps = []
 
     def release_target_space(self):
-        logging.info('Release space to extend target image size')
+        LOG_JOB.info('Release space to extend target image size')
         os.unlink(self.params['dummy_image_file'])
 
     def check_no_space_error(self):

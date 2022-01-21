@@ -7,6 +7,8 @@ from provider import backup_utils
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlkSnapshotWithDatafile(BlockDevSnapshotTest):
 
@@ -51,7 +53,7 @@ class BlkSnapshotWithDatafile(BlockDevSnapshotTest):
             for image in self.trash:
                 sp_admin.remove_volume(image)
         except Exception as error:
-            logging.error(str(error))
+            LOG_JOB.error(str(error))
 
 
 @error_context.context_aware

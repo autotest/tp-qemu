@@ -1,5 +1,4 @@
 """Test to install the Windows OS on the 4k disk."""
-import logging
 
 from avocado.utils import process
 
@@ -43,12 +42,12 @@ def run(test, params, env):
         if not dev_name:
             test.error('Can not get the iSCSI device.')
 
-        logging.info('Prepare env on: %s', dev_name)
+        test.log.info('Prepare env on: %s', dev_name)
         _prepare()
-        logging.info('Start to install ...')
+        test.log.info('Start to install ...')
         vm = env.get_vm(params["main_vm"])
         unattended_install.run(test, params, env)
-        logging.info('Install completed')
+        test.log.info('Install completed')
         vm.destroy()
         vm = None
     finally:

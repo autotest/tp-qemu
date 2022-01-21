@@ -4,6 +4,8 @@ from virttest import error_context
 
 from qemu.tests import blk_stream
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockStreamSimple(blk_stream.BlockStream):
 
@@ -15,7 +17,7 @@ class BlockStreamSimple(blk_stream.BlockStream):
         """
         query running block streaming job info;
         """
-        error_context.context("query job status", logging.info)
+        error_context.context("query job status", LOG_JOB.info)
         if not self.get_status():
             self.test.fail("No active job")
 

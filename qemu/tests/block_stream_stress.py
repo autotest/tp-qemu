@@ -7,6 +7,8 @@ from virttest import error_context
 
 from qemu.tests import blk_stream
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockStreamStress(blk_stream.BlockStream):
 
@@ -15,7 +17,7 @@ class BlockStreamStress(blk_stream.BlockStream):
         """
         load IO/CPU/Memoery stress in guest;
         """
-        error_context.context("launch stress app in guest", logging.info)
+        error_context.context("launch stress app in guest", LOG_JOB.info)
         args = (self.test, self.params, self.env, self.params["stress_test"])
         bg_test = utils_test.BackgroundTest(utils_test.run_virt_sub_test, args)
         bg_test.start()
@@ -39,12 +41,12 @@ class BlockStreamStress(blk_stream.BlockStream):
             session.close()
             return self.app_running()
 
-        error_context.context("stop stress app in guest", logging.info)
+        error_context.context("stop stress app in guest", LOG_JOB.info)
         stopped = utils_misc.wait_for(_unload_stress, first=2.0,
                                       text="wait stress app quit",
                                       step=1.0, timeout=120)
         if not stopped:
-            logging.warn("stress app is still running")
+            LOG_JOB.warn("stress app is still running")
 
     def app_running(self):
         """

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_test
 from virttest import env_process
@@ -46,7 +44,7 @@ def run(test, params, env):
         if not port_params['serial_type'].startswith('virtserial'):
             continue
         params['file_transfer_serial_port'] = port
-        error_context.context("Transfer data with %s" % port, logging.info)
+        error_context.context("Transfer data with %s" % port, test.log.info)
         transfer_data(params, vm, sender='both')
     vm.verify_alive()
     vm.verify_kernel_crash()

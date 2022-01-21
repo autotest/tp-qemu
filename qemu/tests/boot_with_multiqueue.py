@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -26,7 +25,7 @@ def run(test, params, env):
     # boot the vm with the queues
     queues = int(params["queues"])
     error_context.context("Boot the guest with queues = %s" % queues,
-                          logging.info)
+                          test.log.info)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -51,7 +50,7 @@ def run(test, params, env):
                       (queues, nic.nic_name))
 
         # check the msi for linux guest
-        error_context.context("Check the msi number in guest", logging.info)
+        error_context.context("Check the msi number in guest", test.log.info)
         devices = session.cmd_output("lspci | grep Ethernet",
                                      timeout=cmd_timeout, safe=True).strip()
         for device in devices.split("\n"):
@@ -71,14 +70,14 @@ def run(test, params, env):
     else:
         # verify driver
         error_context.context("Check if the driver is installed and "
-                              "verified", logging.info)
+                              "verified", test.log.info)
         driver_name = params.get("driver_name", "netkvm")
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test,
                                                                 driver_name,
                                                                 cmd_timeout)
         # check the msi for windows guest with trace view
-        error_context.context("Check the msi number in guest", logging.info)
+        error_context.context("Check the msi number in guest", test.log.info)
         msis, cur_queues = utils_net.get_msis_and_queues_windows(params,
                                                                  vm)
         if cur_queues != queues or msis != 2 * queues + 2:
@@ -86,7 +85,7 @@ def run(test, params, env):
                       (cur_queues, queues))
 
     # start scp test
-    error_context.context("Start scp file transfer test", logging.info)
+    error_context.context("Start scp file transfer test", test.log.info)
     scp_count = int(params.get("scp_count", 10))
     for i in range(scp_count):
         utils_test.run_file_transfer(test, params, env)

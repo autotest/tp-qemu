@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_test
 from virttest import env_process
@@ -31,7 +29,7 @@ def run(test, params, env):
         if params["os_type"] == "linux":
             devices = session.cmd_output("lspci | grep Eth").strip()
             error_context.context("Check if vnic inside guest support msi.",
-                                  logging.info)
+                                  test.log.info)
             for device in devices.splitlines():
                 if not device:
                     continue
@@ -43,7 +41,7 @@ def run(test, params, env):
                                                                args="pci=nomsi")
                     if not req_args:
                         if "MSI-X: Enable-" in output:
-                            logging.info("MSI-X is disabled")
+                            test.log.info("MSI-X is disabled")
                         else:
                             msg = "Command %s get wrong" % msi_check_cmd
                             msg += " output when no vectors in qemu cmd"

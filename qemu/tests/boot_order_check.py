@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -63,7 +62,7 @@ def run(test, params, env):
         return dev_addr
 
     error_context.context("Boot vm by passing boot order decided",
-                          logging.info)
+                          test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -100,7 +99,7 @@ def run(test, params, env):
                                          list_nic_addr[1][0],
                                          list_nic_addr[2][0])
 
-    error_context.context("Check the guest boot result", logging.info)
+    error_context.context("Check the guest boot result", test.log.info)
     start = time.time()
     while True:
         if params["enable_sga"] == "yes":

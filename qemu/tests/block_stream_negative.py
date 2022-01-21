@@ -4,6 +4,8 @@ from virttest import error_context
 
 from qemu.tests import blk_stream
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockStreamNegative(blk_stream.BlockStream):
 
@@ -22,7 +24,7 @@ class BlockStreamNegative(blk_stream.BlockStream):
         if params.get("need_convert_to_int", "no") == "yes":
             expected_speed = int(expected_speed)
         error_context.context("set speed to %s B/s" % expected_speed,
-                              logging.info)
+                              LOG_JOB.info)
         args = {"device": self.device,
                 "speed": expected_speed}
         response = str(self.vm.monitor.cmd_qmp("block-job-set-speed", args))
@@ -32,7 +34,7 @@ class BlockStreamNegative(blk_stream.BlockStream):
         if match_str not in response:
             self.test.fail("Fail to get expected result. %s is expected in %s"
                            % (match_str, response))
-        logging.info("Keyword '%s' is found in QMP output '%s'.",
+        LOG_JOB.info("Keyword '%s' is found in QMP output '%s'.",
                      match_str, response)
 
 

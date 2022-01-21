@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -17,7 +16,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    error_context.context("Get supported machine type", logging.info)
+    error_context.context("Get supported machine type", test.log.info)
     qemu_binary = utils_misc.get_qemu_binary(params)
     machine_types = []
     machine_type_mapping = {"pc": ["i440FX", "RHEL 6"], "q35": ["Q35"], "pseries": ["pSeries"],
@@ -31,14 +30,14 @@ def run(test, params, env):
     if not machine_types:
         test.fail("Failed to get machine types")
     else:
-        logging.info("Actual supported machine types are: %s", ', '.join(map(str, machine_types)))
+        test.log.info("Actual supported machine types are: %s", ', '.join(map(str, machine_types)))
 
         for m_type in machine_types:
             params["machine_type"] = m_type
             params["start_vm"] = "yes"
             vm_name = params['main_vm']
             error_context.context("Start vm with machine type '%s'"
-                                  % m_type, logging.info)
+                                  % m_type, test.log.info)
             env_process.preprocess(test, params, env)
             vm = env.get_vm(vm_name)
             vm.verify_alive()
@@ -50,5 +49,5 @@ def run(test, params, env):
 
             session.close()
             error_context.context("Quit guest and check the process quit normally",
-                                  logging.info)
+                                  test.log.info)
             vm.destroy(gracefully=False)

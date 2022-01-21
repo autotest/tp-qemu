@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import env_process
 from virttest import virt_vm
@@ -29,7 +27,7 @@ def run(test, params, env):
     vm1.wait_for_login(timeout=360)
 
     try:
-        error_context.context('Start another vm with the data image.', logging.info)
+        error_context.context('Start another vm with the data image.', test.log.info)
         params['images'] = params['images'].split()[-1]
         env_process.preprocess_vm(test, params, env, "avocado-vt-vm2")
         vm2 = env.get_vm("avocado-vt-vm2")

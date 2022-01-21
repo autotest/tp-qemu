@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -27,7 +26,7 @@ def run(test, params, env):
         """
         if os_type == "windows":
             disk_op_cmd = utils_misc.set_winutils_letter(session, disk_op_cmd)
-            logging.info("Get windows disk index that to be formatted")
+            test.log.info("Get windows disk index that to be formatted")
             disk_id = utils_disk.get_windows_disks_index(session, disk_size)
             if not utils_disk.update_windows_disk_attributes(session, disk_id):
                 test.error("Failed to enable data disk %s" % disk_id)

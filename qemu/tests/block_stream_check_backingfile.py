@@ -5,6 +5,8 @@ from virttest import utils_misc
 
 from qemu.tests import blk_stream
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockStreamCheckBackingfile(blk_stream.BlockStream):
 
@@ -17,16 +19,16 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
         check no backingfile found after stream job done via qemu-img info;
         """
         fail = False
-        logging.info("Check image file backing-file")
+        LOG_JOB.info("Check image file backing-file")
         backingfile = self.get_backingfile("qemu-img")
         if backingfile:
             img_file = self.get_image_file()
-            logging.debug("Got backing-file: %s" % backingfile +
+            LOG_JOB.debug("Got backing-file: %s" % backingfile +
                           "by 'qemu-img info %s'" % img_file)
             fail |= bool(backingfile)
         backingfile = self.get_backingfile("monitor")
         if backingfile:
-            logging.debug("Got backing-file: %s" % backingfile +
+            LOG_JOB.debug("Got backing-file: %s" % backingfile +
                           "by 'info/query block' " +
                           "in %s monitor" % self.vm.monitor.protocol)
             fail |= bool(backingfile)
@@ -51,7 +53,7 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
         params = self.parser_test_args()
         exp_img_file = params["expected_image_file"]
         exp_img_file = utils_misc.get_path(self.data_dir, exp_img_file)
-        logging.info("Check image file is '%s'", exp_img_file)
+        LOG_JOB.info("Check image file is '%s'", exp_img_file)
         img_file = self.get_image_file()
         if exp_img_file != img_file:
             msg = "Excepted image file: %s," % exp_img_file

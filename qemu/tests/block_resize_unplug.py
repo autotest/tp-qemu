@@ -1,5 +1,4 @@
 import json
-import logging
 import re
 
 from virttest import data_dir
@@ -39,7 +38,7 @@ def run(test, params, env):
     def _change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
-        logging.info('Sending command(%s): %s', method, command)
+        test.log.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             power_session = vm.wait_for_login()
             power_session.sendline(command)
@@ -63,8 +62,8 @@ def run(test, params, env):
         size = str(
             data_image_size + resize_size) if resize_op == ENLARGE else str(
             data_image_size - resize_size)
-        logging.info("Start to %s image '%s' to %sB.",
-                     resize_op, data_image, size)
+        test.log.info("Start to %s image '%s' to %sB.",
+                      resize_op, data_image, size)
         if vm.check_capability(Flags.BLOCKDEV):
             args = (None, size, dev)
         else:
@@ -98,7 +97,7 @@ def run(test, params, env):
 
     if is_windows:
         utils_test.qemu.windrv_check_running_verifier(
-                session, vm, test, params['driver_name'], 300)
+            session, vm, test, params['driver_name'], 300)
     _check_img_size(_block_resize(vm.get_block({'file': data_image_filename})))
 
     if reboot:

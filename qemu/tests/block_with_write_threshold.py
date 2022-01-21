@@ -1,4 +1,3 @@
-import logging
 import re
 
 from avocado.utils.wait import wait_for
@@ -46,7 +45,7 @@ def run(test, params, env):
     def set_block_write_threshold(monitor, node_name, size):
         """ Set block write threshold for the block drive. """
         error_context.context("Set block write threshold to %s for the block "
-                              "drive in QMP." % size, logging.info)
+                              "drive in QMP." % size, test.log.info)
         monitor.cmd('block-set-write-threshold',
                     {"node-name": node_name, "write-threshold": size})
 
@@ -74,7 +73,7 @@ def run(test, params, env):
 
     def run_io_stress(stress_func, target):
         """ Run io stress inside guest. """
-        error_context.context("Run io stress inside guest.", logging.info)
+        error_context.context("Run io stress inside guest.", test.log.info)
         stress_func(target)
 
     is_linux = params['os_type'] == 'linux'

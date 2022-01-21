@@ -1,6 +1,5 @@
 import sys
 import traceback
-import logging
 import six
 
 from avocado.utils import process
@@ -44,8 +43,8 @@ def run(test, params, env):
             if _e is None:
                 raise
             else:
-                logging.error("Cleaning function raised exception too: \n%s",
-                              "".join(traceback.format_exception(e[0],
-                                                                 e[1],
-                                                                 e[2])))
+                test.log.error("Cleaning function raised exception too: \n%s",
+                               "".join(traceback.format_exception(e[0],
+                                                                  e[1],
+                                                                  e[2])))
                 six.reraise(_e[0], _e[1], _e[2])

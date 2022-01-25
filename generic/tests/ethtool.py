@@ -1,4 +1,3 @@
-import logging
 import re
 
 import aexpect
@@ -55,14 +54,14 @@ def run(test, params, env):
                 temp = re.findall(
                     "%s: (.*)" % feature_pattern.get(f), o)[0]
                 if temp.find("[fixed]") != -1:
-                    logging.debug("%s is fixed", f)
+                    test.log.debug("%s is fixed", f)
                     continue
                 status[f] = temp
             except IndexError:
                 status[f] = None
-                logging.debug("(%s) failed to get status '%s'", ethname, f)
+                test.log.debug("(%s) failed to get status '%s'", ethname, f)
 
-        logging.debug("(%s) offload status: '%s'", ethname, str(status))
+        test.log.debug("(%s) offload status: '%s'", ethname, str(status))
         return status
 
     def ethtool_set(session, status):
@@ -73,7 +72,7 @@ def run(test, params, env):
         """
         txt = "Set offload status for device "
         txt += "'%s': %s" % (ethname, str(status))
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
 
         cmd = "ethtool -K %s " % ethname
         cmd += " ".join([o + ' ' + s for o, s in status.items()])
@@ -81,39 +80,39 @@ def run(test, params, env):
         try:
             session.cmd_output_safe(cmd)
         except aexpect.ShellCmdError as e:
-            logging.error("%s, detail: %s", err_msg, e)
+            test.log.error("%s, detail: %s", err_msg, e)
             return False
 
         curr_status = dict((k, v) for k, v in ethtool_get(session).items()
                            if k in status.keys())
         if curr_status != status:
-            logging.error("%s, got: '%s', expect: '%s'", err_msg,
-                          str(curr_status), str(status))
+            test.log.error("%s, got: '%s', expect: '%s'", err_msg,
+                           str(curr_status), str(status))
             return False
 
         return True
 
     def ethtool_save_params(session):
-        error_context.context("Saving ethtool configuration", logging.info)
+        error_context.context("Saving ethtool configuration", test.log.info)
         return ethtool_get(session)
 
     def ethtool_restore_params(session, status):
         cur_stat = ethtool_get(session)
         if cur_stat != status:
-            error_context.context("Restoring ethtool configuration", logging.info)
+            error_context.context("Restoring ethtool configuration", test.log.info)
             ethtool_set(session, status)
 
     def compare_md5sum(name):
         txt = "Comparing md5sum of the files on guest and host"
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         host_result = crypto.hash_file(name, algorithm="md5")
         try:
             o = session.cmd_output("md5sum %s" % name)
             guest_result = re.findall(r"\w+", o)[0]
         except IndexError:
-            logging.error("Could not get file md5sum in guest")
+            test.log.error("Could not get file md5sum in guest")
             return False
-        logging.debug("md5sum: guest(%s), host(%s)", guest_result, host_result)
+        test.log.debug("md5sum: guest(%s), host(%s)", guest_result, host_result)
         return guest_result == host_result
 
     def transfer_file(src):
@@ -130,7 +129,7 @@ def run(test, params, env):
                   (filename, params.get("filesize")))
         failure = (False, "Failed to create file using dd, cmd: %s" % dd_cmd)
         txt = "Creating file in source host, cmd: %s" % dd_cmd
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         ethname = utils_net.get_linux_ifname(session,
                                              vm.get_mac_address(0))
         tcpdump_cmd = "tcpdump -lep -i %s -s 0 tcp -vv port ssh" % ethname
@@ -158,14 +157,14 @@ def run(test, params, env):
             tcpdump_cmd += " and not port %s" % i
 
         txt = "Listening traffic using command: %s" % tcpdump_cmd
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         sess.sendline(tcpdump_cmd)
         if not utils_misc.wait_for(
                 lambda: session.cmd_status("pgrep tcpdump") == 0, 30):
             return (False, "Tcpdump process wasn't launched")
 
         txt = "Transferring file %s from %s" % (filename, src)
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         try:
             copy_files_func(filename, filename)
         except remote.SCPError as e:
@@ -184,23 +183,23 @@ def run(test, params, env):
     def tx_callback(status="on"):
         s, o = transfer_file("guest")
         if not s:
-            logging.error(o)
+            test.log.error(o)
             return False
         return True
 
     def rx_callback(status="on"):
         s, o = transfer_file("host")
         if not s:
-            logging.error(o)
+            test.log.error(o)
             return False
         return True
 
     def so_callback(status="on"):
         s, o = transfer_file("guest")
         if not s:
-            logging.error(o)
+            test.log.error(o)
             return False
-        error_context.context("Check if contained large frame", logging.info)
+        error_context.context("Check if contained large frame", test.log.info)
         # MTU: default IPv4 MTU is 1500 Bytes, ethernet header is 14 Bytes
         return (status == "on") ^ (len([i for i in re.findall(
                                    r"length (\d*):", o) if int(i) > mtu]) == 0)
@@ -208,13 +207,13 @@ def run(test, params, env):
     def ro_callback(status="on"):
         s, o = transfer_file("host")
         if not s:
-            logging.error(o)
+            test.log.error(o)
             return False
         return True
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    error_context.context("Log into a guest.", logging.info)
+    error_context.context("Log into a guest.", test.log.info)
     login_timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
 
@@ -260,11 +259,11 @@ def run(test, params, env):
                 offload_stat.update(dict.fromkeys(test_matrix[f_type][2], "off"))
             if not ethtool_set(session, offload_stat):
                 e_msg = "Failed to set offload status"
-                logging.error(e_msg)
+                test.log.error(e_msg)
                 failed_tests.append(e_msg)
 
             txt = "Run callback function %s" % callback.__name__
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
 
             # Some older kernel versions split packets by GSO
             # before tcpdump can capture the big packet, which
@@ -272,18 +271,18 @@ def run(test, params, env):
             # enabled.
             if not callback(status="on") and f_type != "gso":
                 e_msg = "Callback failed after enabling %s" % f_type
-                logging.error(e_msg)
+                test.log.error(e_msg)
                 failed_tests.append(e_msg)
 
             if not ethtool_set(session, {f_type: "off"}):
                 e_msg = "Failed to disable %s" % f_type
-                logging.error(e_msg)
+                test.log.error(e_msg)
                 failed_tests.append(e_msg)
             txt = "Run callback function %s" % callback.__name__
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
             if not callback(status="off"):
                 e_msg = "Callback failed after disabling %s" % f_type
-                logging.error(e_msg)
+                test.log.error(e_msg)
                 failed_tests.append(e_msg)
 
         if failed_tests:
@@ -294,11 +293,11 @@ def run(test, params, env):
             if session:
                 session.close()
         except Exception as detail:
-            logging.error("Fail to close session: '%s'", detail)
+            test.log.error("Fail to close session: '%s'", detail)
 
         try:
             session = vm.wait_for_serial_login(timeout=login_timeout)
             ethtool_restore_params(session, pretest_status)
         except Exception as detail:
-            logging.warn("Could not restore parameter of"
-                         " eth card: '%s'", detail)
+            test.log.warn("Could not restore parameter of"
+                          " eth card: '%s'", detail)

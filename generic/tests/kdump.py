@@ -7,6 +7,8 @@ from virttest import utils_misc
 from virttest import utils_net
 from virttest import error_context
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 @error_context.context_aware
 def preprocess_kdump(test, vm, timeout):
@@ -27,15 +29,15 @@ def preprocess_kdump(test, vm, timeout):
         create_key_cmd = ("/bin/touch %s" % auth_key_path)
         if not os.path.exists("/root/.ssh"):
             process.run("mkdir /root/.ssh", shell=True)
-        logging.info("Create authorized_keys file if it not existed.")
+        test.log.info("Create authorized_keys file if it not existed.")
         process.run(create_key_cmd, shell=True)
-        logging.info("Backup authorized_keys file.")
+        test.log.info("Backup authorized_keys file.")
         process.run(backup_key_cmd, shell=True)
-    logging.info("Backup kdump.conf file.")
+    test.log.info("Backup kdump.conf file.")
     status, output = session.cmd_status_output(cp_kdumpcf_cmd)
 
     if status != 0:
-        logging.error(output)
+        test.log.error(output)
         test.error("Fail to backup the kdump.conf")
 
     session.close()
@@ -59,13 +61,13 @@ def postprocess_kdump(test, vm, timeout):
     if auth_key_path:
         restore_key_cmd = ("/bin/cp -f %s-bk %s" %
                            (auth_key_path, auth_key_path))
-        logging.info("Restore authorized_keys file.")
+        test.log.info("Restore authorized_keys file.")
         process.run(restore_key_cmd, shell=True)
 
-    logging.info("Restore kdump.conf")
+    test.log.info("Restore kdump.conf")
     status, output = session.cmd_status_output(restore_kdumpcf_cmd)
     if status != 0:
-        logging.error(output)
+        test.log.error(output)
         test.error("Fail to restore the kdump.conf")
 
     session.close()
@@ -92,16 +94,16 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
     kdump_enable_timeout = int(vm.params.get("kdump_enable_timeout", 360))
 
     error_context.context("Try to log into guest '%s'." % vm_name,
-                          logging.info)
+                          LOG_JOB.info)
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Checking the existence of crash kernel in %s" %
-                          vm_name, logging.info)
+                          vm_name, LOG_JOB.info)
     try:
         session.cmd(crash_kernel_prob_cmd)
     except Exception:
         error_context.context("Crash kernel is not loaded. Trying to load it",
-                              logging.info)
+                              LOG_JOB.info)
         session.cmd(kernel_param_cmd)
         session = vm.reboot(session, timeout=timeout)
 
@@ -112,7 +114,7 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
             kdump_config = kdump_config % (host_ip, vmcore_path)
 
         error_context.context("Configuring the Core Collector...",
-                              logging.info)
+                              LOG_JOB.info)
 
         session.cmd("cat /dev/null > %s" % kdump_cfg_path)
         session.cmd("echo 'core_collector makedumpfile -F -c -d 31' > %s"
@@ -128,7 +130,7 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
         guest_ip = vm.get_address()
 
         error_context.context("Setup ssh login without password...",
-                              logging.info)
+                              LOG_JOB.info)
         session.cmd("rm -rf /root/.ssh/*")
 
         ssh_connection = utils_conn.SSHConnection(server_ip=host_ip,
@@ -141,12 +143,12 @@ def kdump_enable(vm, vm_name, crash_kernel_prob_cmd,
             ssh_connection.conn_setup()
             ssh_connection.conn_check()
 
-        logging.info("Trying to propagate with command '%s'",
+        LOG_JOB.info("Trying to propagate with command '%s'",
                      kdump_propagate_cmd)
         session.cmd(kdump_propagate_cmd, timeout=120)
 
     error_context.context("Enabling kdump service...",
-                          logging.info)
+                          LOG_JOB.info)
     # the initrd may be rebuilt here so we need to wait a little more
     session.cmd(kdump_enable_cmd, timeout=kdump_enable_timeout)
 
@@ -174,7 +176,7 @@ def crash_test(test, vm, vcpu, crash_cmd, timeout):
                                         'kdumpctl propagate')
 
     session = vm.wait_for_login(timeout=timeout)
-    logging.info("Delete the vmcore file.")
+    test.log.info("Delete the vmcore file.")
     if kdump_method == "ssh":
         output = session.cmd("cat %s" % vm.params["kdump_rsa_path"])
         process.run(vmcore_rm_cmd, shell=True)
@@ -191,16 +193,16 @@ def crash_test(test, vm, vcpu, crash_cmd, timeout):
     debug_msg = "Kdump service status before our testing:\n"
     debug_msg += session.cmd(kdump_status_cmd)
 
-    logging.debug(debug_msg)
+    test.log.debug(debug_msg)
 
     try:
         if crash_cmd == "nmi":
-            logging.info("Triggering crash with 'nmi' interrupt")
+            test.log.info("Triggering crash with 'nmi' interrupt")
             send_nmi_cmd = vm.params.get("send_nmi_cmd")
             session.cmd(send_nmi_cmd)
             vm.monitor.nmi()
         else:
-            logging.info("Triggering crash on vcpu %d ...", vcpu)
+            test.log.info("Triggering crash on vcpu %d ...", vcpu)
             session.sendline("taskset -c %d %s" % (vcpu, crash_cmd))
     except Exception:
         postprocess_kdump(test, vm, timeout)
@@ -222,20 +224,20 @@ def check_vmcore(test, vm, session, timeout):
         test.fail("Could not trigger crash.")
 
     error_context.context("Waiting for kernel crash dump to complete",
-                          logging.info)
+                          test.log.info)
     if vm.params.get("kdump_method") != "ssh":
         session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Probing vmcore file...", logging.info)
+    error_context.context("Probing vmcore file...", test.log.info)
     if vm.params.get("kdump_method") == "ssh":
-        logging.info("Checking vmcore file on host")
+        test.log.info("Checking vmcore file on host")
         status = utils_misc.wait_for(lambda:
                                      process.system(vmcore_chk_cmd,
                                                     shell=True) == 0,
                                      ignore_errors=True,
                                      timeout=200)
     else:
-        logging.info("Checking vmcore file on guest")
+        test.log.info("Checking vmcore file on guest")
         status = utils_misc.wait_for(lambda:
                                      session.cmd_status(vmcore_chk_cmd) == 0,
                                      ignore_errors=True,
@@ -244,7 +246,7 @@ def check_vmcore(test, vm, session, timeout):
         postprocess_kdump(test, vm, timeout)
         test.fail("Could not found vmcore file.")
 
-    logging.info("Found vmcore.")
+    test.log.info("Found vmcore.")
 
 
 @error_context.context_aware
@@ -295,7 +297,7 @@ def run(test, params, env):
 
         for vm in vm_list:
             error_context.context("Kdump Testing, force the Linux kernel"
-                                  " to crash", logging.info)
+                                  " to crash", test.log.info)
             crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
 
             session = vm.wait_for_login(timeout=timeout)
@@ -312,7 +314,7 @@ def run(test, params, env):
 
         for i in range(len(vm_list)):
             error_context.context("Check the vmcore file after triggering"
-                                  " a crash", logging.info)
+                                  " a crash", test.log.info)
             check_vmcore(test, vm_list[i], session_list[i], crash_timeout)
     finally:
         for s in session_list:

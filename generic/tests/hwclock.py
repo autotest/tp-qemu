@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 
@@ -18,7 +17,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=240)
 
-    logging.info("Setting hwclock to 2/2/80 03:04:00")
+    test.log.info("Setting hwclock to 2/2/80 03:04:00")
     session.cmd('/sbin/hwclock --set --date "2/2/80 03:04:00"')
     date = session.cmd_output('LC_ALL=C /sbin/hwclock')
     if not re.match(date_pattern, date):

@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 
@@ -82,12 +81,12 @@ def run(test, params, env):
         target_ifaces = set(ifaces_in_use) - set(br_in_use)
 
     error_context.context("Change all Bridge NICs MTU to %s" %
-                          mtu, logging.info)
+                          mtu, test.log.info)
     for iface in target_ifaces:
         process.run(host_mtu_cmd % (iface, mtu), shell=True)
 
     try:
-        error_context.context("Changing the MTU of guest", logging.info)
+        error_context.context("Changing the MTU of guest", test.log.info)
         # Environment preparation
         mac = vm.get_mac_address(0)
         if os_type == "linux":
@@ -122,7 +121,7 @@ def run(test, params, env):
                                                     connection_id,
                                                     mode=mode)
 
-        error_context.context("Chaning the MTU of host tap ...", logging.info)
+        error_context.context("Chaning the MTU of host tap ...", test.log.info)
         host_mtu_cmd = "ifconfig %s mtu %s"
         # Before change macvtap mtu, must set the base interface mtu
         if params.get("nettype") == "macvtap":
@@ -131,7 +130,7 @@ def run(test, params, env):
         process.run(host_mtu_cmd % (ifname, mtu), shell=True)
 
         error_context.context("Add a temporary static ARP entry ...",
-                              logging.info)
+                              test.log.info)
         arp_add_cmd = "arp -s %s %s -i %s" % (guest_ip, mac, ifname)
         process.run(arp_add_cmd, shell=True)
 
@@ -142,26 +141,26 @@ def run(test, params, env):
             return status == 0
 
         def verify_mtu():
-            logging.info("Verify the path MTU")
+            test.log.info("Verify the path MTU")
             status, output = utils_test.ping(guest_ip, 10,
                                              packetsize=max_icmp_pkt_size,
                                              hint="do", timeout=15)
             if status != 0:
-                logging.error(output)
+                test.log.error(output)
                 test.fail("Path MTU is not as expected")
             if utils_test.get_loss_ratio(output) != 0:
-                logging.error(output)
+                test.log.error(output)
                 test.fail("Packet loss ratio during MTU "
                           "verification is not zero")
 
         def flood_ping():
-            logging.info("Flood with large frames")
+            test.log.info("Flood with large frames")
             utils_test.ping(guest_ip,
                             packetsize=max_icmp_pkt_size,
                             flood=True, timeout=float(flood_time))
 
         def large_frame_ping(count=100):
-            logging.info("Large frame ping")
+            test.log.info("Large frame ping")
             _, output = utils_test.ping(guest_ip, count,
                                         packetsize=max_icmp_pkt_size,
                                         timeout=float(count) * 2)
@@ -170,9 +169,9 @@ def run(test, params, env):
                 test.fail("Loss ratio of large frame ping is %s" % ratio)
 
         def size_increase_ping(step=random.randrange(90, 110)):
-            logging.info("Size increase ping")
+            test.log.info("Size increase ping")
             for size in range(0, max_icmp_pkt_size + 1, step):
-                logging.info("Ping %s with size %s", guest_ip, size)
+                test.log.info("Ping %s with size %s", guest_ip, size)
                 status, output = utils_test.ping(guest_ip, 1,
                                                  packetsize=size,
                                                  hint="do", timeout=1)
@@ -188,19 +187,19 @@ def run(test, params, env):
                         test.fail("Ping loss ratio is greater "
                                   "than 50% for size %s" % size)
 
-        logging.info("Waiting for the MTU to be OK")
+        test.log.info("Waiting for the MTU to be OK")
         wait_mtu_ok = 10
         if not utils_misc.wait_for(is_mtu_ok, wait_mtu_ok, 0, 1):
-            logging.debug(process.getoutput("ifconfig -a",
-                                            verbose=False,
-                                            ignore_status=True,
-                                            shell=True))
+            test.log.debug(process.getoutput("ifconfig -a",
+                                             verbose=False,
+                                             ignore_status=True,
+                                             shell=True))
             test.error("MTU is not as expected even after %s "
                        "seconds" % wait_mtu_ok)
 
         # Functional Test
         error_context.context("Checking whether MTU change is ok",
-                              logging.info)
+                              test.log.info)
         verify_mtu()
         large_frame_ping()
         size_increase_ping()
@@ -217,8 +216,8 @@ def run(test, params, env):
         if process.system(grep_cmd, shell=True) == '0':
             process.run("arp -d %s -i %s" % (guest_ip, ifname),
                         shell=True)
-            logging.info("Removing the temporary ARP entry successfully")
+            test.log.info("Removing the temporary ARP entry successfully")
 
-        logging.info("Change back Bridge NICs MTU to %s", mtu_default)
+        test.log.info("Change back Bridge NICs MTU to %s", mtu_default)
         for iface in target_ifaces:
             process.run(host_mtu_cmd % (iface, mtu_default), shell=True)

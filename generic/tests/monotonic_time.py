@@ -6,6 +6,8 @@ from inspect import ismethod
 from virttest import data_dir
 from virttest import error_context
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class TimeClientTest(object):
     def __init__(self, test, params, env, test_name):
@@ -16,7 +18,7 @@ class TimeClientTest(object):
         self.src_dir = os.path.join("/tmp/", test_name)
 
     def setUp(self):
-        logging.info("Copy files to guest")
+        LOG_JOB.info("Copy files to guest")
         self.vm.copy_files_to(self.host_dir, os.path.dirname(self.src_dir))
         self.session.cmd("cd %s && make clobber && make" % self.src_dir)
 
@@ -45,7 +47,7 @@ class MonotonicTime(TimeClientTest):
         """
         if not test_type:
             self.test.error('missing test type')
-        logging.info("Test type: %s", test_type)
+        LOG_JOB.info("Test type: %s", test_type)
         timeout = float(duration) + 100.0
 
         cmd = self.src_dir + '/time_test'
@@ -55,7 +57,7 @@ class MonotonicTime(TimeClientTest):
         cmd += ' ' + test_type
 
         (exit_status, stdout) = self.session.cmd_status_output(cmd, timeout=timeout)
-        logging.info('Time test command exit status: %s',
+        LOG_JOB.info('Time test command exit status: %s',
                      exit_status)
         if exit_status != 0:
             for line in stdout.splitlines():

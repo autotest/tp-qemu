@@ -1,4 +1,3 @@
-import logging
 import time
 import tempfile
 import os
@@ -52,7 +51,7 @@ def run(test, params, env):
 
     successful_login = False
     while (time.time() - start_time) < savevm_login_timeout:
-        logging.info("Save/Restore cycle %d", cycles + 1)
+        test.log.info("Save/Restore cycle %d", cycles + 1)
         time.sleep(savevm_delay)
         vm.pause()
         if params['save_method'] == 'save_to_file':
@@ -77,7 +76,7 @@ def run(test, params, env):
     if not successful_login:
         test.fail("Can't log on '%s' %s" % (vm.name, info))
     else:
-        logging.info("Test ended %s", info)
+        test.log.info("Test ended %s", info)
 
     if params.get("with_floppy") == "yes":
         vm.destroy()

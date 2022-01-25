@@ -1,6 +1,5 @@
 import re
 import os
-import logging
 import shutil
 
 from avocado.utils import process
@@ -35,8 +34,8 @@ def test_setting_params(test, ksmctler, params):
             continue
         else:
             set_values[key] = default_values[key] + value_delta
-    logging.debug("\nDefault parameters:%s\n"
-                  "Set parameters:%s", default_values, set_values)
+    test.log.debug("\nDefault parameters:%s\n"
+                   "Set parameters:%s", default_values, set_values)
 
     try:
         # Setting new value
@@ -50,12 +49,12 @@ def test_setting_params(test, ksmctler, params):
         fail_flag = 0
         for key, value in set_values.items():
             if ksmctler.get_ksm_feature(key) != str(value):
-                logging.error("Set value do not match:%s - %s", key, value)
+                test.log.error("Set value do not match:%s - %s", key, value)
                 fail_flag = 1
         if fail_flag:
             test.fail("Set writable parameters failed.")
     finally:
-        logging.debug("Recover parameters' default value...")
+        test.log.debug("Recover parameters' default value...")
         ksmctler.set_ksm_feature(default_values)
 
 
@@ -85,7 +84,7 @@ def test_ksmtuned_service(test, ksmctler, params):
             elif re.match("^.*DEBUG.*", con):
                 con = "DEBUG=%s\n" % debug
             new_contents.append(con)
-        logging.debug("\nksmtuned configures:\n%s", new_contents)
+        test.log.debug("\nksmtuned configures:\n%s", new_contents)
         try:
             fd = open(ksmtuned_conf, 'w')
             fd.writelines(new_contents)

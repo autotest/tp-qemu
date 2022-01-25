@@ -1,4 +1,3 @@
-import logging
 import os
 
 from virttest import error_context
@@ -37,9 +36,9 @@ def run(test, params, env):
         session.cmd("gcc -lrt -o %s %s" % (getres_cmd, dest_name))
 
     session.cmd(getres_cmd)
-    logging.info("PASS: Guest reported appropriate clock resolution")
+    test.log.info("PASS: Guest reported appropriate clock resolution")
     sub_test = params.get("sub_test")
     if sub_test:
         error_context.context("Run sub test '%s' after checking"
-                              " clock resolution" % sub_test, logging.info)
+                              " clock resolution" % sub_test, test.log.info)
         utils_test.run_virt_sub_test(test, params, env, sub_test)

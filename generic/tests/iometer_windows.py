@@ -2,7 +2,6 @@
 :author: Golita Yue <gyue@redhat.com>
 :author: Amos Kong <akong@redhat.com>
 """
-import logging
 import time
 import re
 import os
@@ -30,17 +29,17 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     def install_iometer():
-        error_context.context("Install Iometer", logging.info)
+        error_context.context("Install Iometer", test.log.info)
         session.cmd(re.sub("WIN_UTILS", vol_utils, ins_cmd), cmd_timeout)
         time.sleep(0.5)
 
     def register_iometer():
-        error_context.context("Register Iometer", logging.info)
+        error_context.context("Register Iometer", test.log.info)
         session.cmd_output(
             re.sub("WIN_UTILS", vol_utils, params["register_cmd"]), cmd_timeout)
 
     def prepare_ifc_file():
-        error_context.context("Prepare icf for Iometer", logging.info)
+        error_context.context("Prepare icf for Iometer", test.log.info)
         icf_file = os.path.join(data_dir.get_deps_dir(), "iometer", icf_name)
         vm.copy_files_to(icf_file, "%s\\%s" % (ins_path, icf_name))
 
@@ -59,7 +58,7 @@ def run(test, params, env):
         thread.start()
 
     def run_iometer():
-        error_context.context("Start Iometer", logging.info)
+        error_context.context("Start Iometer", test.log.info)
         args = (
             ' && '.join((("cd %s" % ins_path), run_cmd % (icf_name, res_file))),
             run_timeout)
@@ -71,12 +70,12 @@ def run(test, params, env):
         else:
             session.cmd(*args)
             error_context.context(
-                "Copy result '%s' to host" % res_file, logging.info)
+                "Copy result '%s' to host" % res_file, test.log.info)
             vm.copy_files_from(res_file, test.resultsdir)
 
     def change_vm_status():
         method, command = params.get('command_opts').split(',')
-        logging.info('Sending command(%s): %s', method, command)
+        test.log.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             vm.wait_for_login(timeout=360).sendline(command)
         else:
@@ -94,7 +93,7 @@ def run(test, params, env):
         disk_letters = params["disk_letters"].split()
         disk_indexes = params["disk_indexes"].split()
         disk_fstypes = params["disk_fstypes"].split()
-        error_context.context("Format the multiple disks.", logging.info)
+        error_context.context("Format the multiple disks.", test.log.info)
         for index, letter, fstype in zip(disk_indexes, disk_letters, disk_fstypes):
             utils_misc.format_windows_disk(session, index, letter, fstype=fstype)
 

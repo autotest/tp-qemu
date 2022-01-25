@@ -1,4 +1,3 @@
-import logging
 import time
 import random
 import six
@@ -32,20 +31,20 @@ def run(test, params, env):
     session2 = vm.wait_for_login(timeout=login_timeout)
 
     bg_cmd = params.get("background_cmd")
-    error_context.context("Add IO workload for guest OS.", logging.info)
+    error_context.context("Add IO workload for guest OS.", test.log.info)
     session.cmd_output(bg_cmd, timeout=60)
 
     error_context.context("Verify the background process is running")
     check_cmd = params.get("check_cmd")
     session2.cmd(check_cmd, timeout=360)
 
-    error_context.context("Sleep for a random time", logging.info)
+    error_context.context("Sleep for a random time", test.log.info)
     time.sleep(random.randrange(30, 100))
     session2.cmd(check_cmd, timeout=360)
 
-    error_context.context("Kill the VM", logging.info)
+    error_context.context("Kill the VM", test.log.info)
     utils_misc.kill_process_tree(vm.process.get_pid(), timeout=60)
-    error_context.context("Check img after kill VM", logging.info)
+    error_context.context("Check img after kill VM", test.log.info)
     base_dir = data_dir.get_data_dir()
     image_name = params.get("image_name")
     image = qemu_storage.QemuImg(params, base_dir, image_name)
@@ -55,7 +54,7 @@ def run(test, params, env):
         if "Leaked clusters" not in six.text_type(exc):
             raise
         error_context.context("Detected cluster leaks, try to repair it",
-                              logging.info)
+                              test.log.info)
         restore_cmd = params.get("image_restore_cmd") % image.image_filename
         cmd_status = process.system(restore_cmd, shell=True)
         if cmd_status:

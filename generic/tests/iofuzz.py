@@ -1,4 +1,3 @@
-import logging
 import re
 import random
 
@@ -48,13 +47,13 @@ def run(test, params, env):
         :param data: Integer value that will be written on the port. This
                 value will be converted to octal before its written.
         """
-        logging.debug("outb(0x%x, 0x%x)", port, data)
+        test.log.debug("outb(0x%x, 0x%x)", port, data)
         outb_cmd = ("echo -e '\\%s' | dd of=/dev/port seek=%d bs=1 count=1" %
                     (oct(data), port))
         try:
             session.cmd(outb_cmd)
         except aexpect.ShellError as err:
-            logging.debug(err)
+            test.log.debug(err)
 
     def inb(session, port):
         """
@@ -63,12 +62,12 @@ def run(test, params, env):
         :param session: SSH session stablished to a VM
         :param port: Port where we'll read data
         """
-        logging.debug("inb(0x%x)", port)
+        test.log.debug("inb(0x%x)", port)
         inb_cmd = "dd if=/dev/port seek=%d of=/dev/null bs=1 count=1" % port
         try:
             session.cmd(inb_cmd)
         except aexpect.ShellError as err:
-            logging.debug(err)
+            test.log.debug(err)
 
     def fuzz(test, session, inst_list):
         """
@@ -91,7 +90,7 @@ def run(test, params, env):
                 test.error("Unknown command %s" % wr_op)
 
             if not session.is_responsive():
-                logging.debug("Session is not responsive")
+                test.log.debug("Session is not responsive")
                 try:
                     vm.verify_alive()
                 except qemu_vm.QemuSegFaultError as err:
@@ -99,14 +98,14 @@ def run(test, params, env):
                 except virt_vm.VMDeadKernelCrashError as err:
                     test.fail("Guest kernel crash, info: %s" % err)
                 else:
-                    logging.warn("Guest is not alive during test")
+                    test.log.warn("Guest is not alive during test")
 
                 if vm.process.is_alive():
-                    logging.debug("VM is alive, try to re-login")
+                    test.log.debug("VM is alive, try to re-login")
                     try:
                         session = vm.wait_for_login(timeout=10)
                     except Exception:
-                        logging.debug("Could not re-login, reboot the guest")
+                        test.log.debug("Could not re-login, reboot the guest")
                         qemu_img_check()
                         session = vm.reboot(method="system_reset")
                 else:
@@ -122,9 +121,9 @@ def run(test, params, env):
         ports = {}
         o_random = random.SystemRandom()
 
-        logging.info("Enumerate guest devices through /proc/ioports")
+        test.log.info("Enumerate guest devices through /proc/ioports")
         ioports = session.cmd_output("cat /proc/ioports")
-        logging.debug(ioports)
+        test.log.debug(ioports)
         devices = re.findall(r"(\w+)-(\w+)\ : (.*)", ioports)
 
         skip_devices = params.get("skip_devices", "")
@@ -136,10 +135,10 @@ def run(test, params, env):
         for (beg, end) in ports.keys():
             name = ports[(beg, end)]
             if name in skip_devices:
-                logging.info("Skipping device %s", name)
+                test.log.info("Skipping device %s", name)
                 continue
 
-            logging.info("Fuzzing %s, port range 0x%x-0x%x", name, beg, end)
+            test.log.info("Fuzzing %s, port range 0x%x-0x%x", name, beg, end)
             inst = []
 
             # Read all ports of the range

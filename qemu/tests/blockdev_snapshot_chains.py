@@ -32,6 +32,11 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
             snapshot_format = params.get("snapshot_format", "qcow2")
             params["image_format_%s" % snapshot_tag] = snapshot_format
             self.params["image_format_%s" % snapshot_tag] = snapshot_format
+            if self.params["image_backend"] == "iscsi_direct":
+                self.params.update({"enable_iscsi_%s" % snapshot_tag: "no"})
+                self.params.update({"image_raw_device_%s" % snapshot_tag: "no"})
+            elif self.params["image_backend"] == "ceph":
+                self.params.update({"enable_ceph_%s" % snapshot_tag: "no"})
             image = sp_admin.volume_define_by_params(snapshot_tag, params)
             image.hotplug(self.main_vm)
 

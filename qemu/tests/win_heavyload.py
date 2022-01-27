@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 import time
 
 import aexpect
@@ -77,7 +76,7 @@ def run(test, params, env):
         if download_url:
             dst = r"c:\\"
             pkg_md5sum = params["pkg_md5sum"]
-            error_context.context("Download HeavyLoadSetup.exe", logging.info)
+            error_context.context("Download HeavyLoadSetup.exe", test.log.info)
             pkg_name = os.path.basename(download_url)
             pkg_path = os.path.join(tmp_dir, pkg_name)
             download.get_file(download_url, pkg_path, hash_expected=pkg_md5sum)
@@ -85,7 +84,7 @@ def run(test, params, env):
         else:
             dst = r"%s:\\" % utils_misc.get_winutils_vol(session)
 
-        error_context.context("Install HeavyLoad in guest", logging.info)
+        error_context.context("Install HeavyLoad in guest", test.log.info)
         install_cmd = params["install_cmd"]
         install_cmd = re.sub(r"DRIVE:\\+", dst, install_cmd)
         session.cmd(install_cmd)
@@ -93,7 +92,7 @@ def run(test, params, env):
         if config_cmd:
             session.cmd(config_cmd)
 
-    error_context.context("Start heavyload in guest", logging.info)
+    error_context.context("Start heavyload in guest", test.log.info)
     # genery heavyload command automaticly
     if params.get("autostress") == "yes":
         free_mem = utils_misc.get_free_mem(session, "windows")
@@ -108,14 +107,14 @@ def run(test, params, env):
     test_timeout = int(params.get("timeout", "60"))
     steping = 60
     if test_timeout < 60:
-        logging.warn("Heavyload use mins as unit of timeout, given timeout "
-                     "is too small (%ss), force set to 60s", test_timeout)
+        test.log.warn("Heavyload use mins as unit of timeout, given timeout "
+                      "is too small (%ss), force set to 60s", test_timeout)
         test_timeout = 60
         steping = 30
     start_cmd = add_option(start_cmd, 'DURATION', test_timeout / 60)
     start_cmd = add_option(start_cmd, 'START', '')
     start_cmd = add_option(start_cmd, 'AUTOEXIT', '')
-    logging.info("heavyload cmd: %s", start_cmd)
+    test.log.info("heavyload cmd: %s", start_cmd)
     session.sendline(start_cmd)
     if not loop_session_cmd(session, check_running_cmd):
         test.error("heavyload process is not started")
@@ -124,7 +123,7 @@ def run(test, params, env):
                                             "0"))
     time.sleep(sleep_before_migration)
 
-    error_context.context("Verify vm is alive", logging.info)
+    error_context.context("Verify vm is alive", test.log.info)
     utils_misc.wait_for(vm.verify_alive,
                         timeout=test_timeout * 1.2, step=steping)
 

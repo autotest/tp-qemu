@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 
 from avocado.utils import process
 from avocado.utils.network.ports import find_free_port
@@ -61,12 +60,12 @@ def run(test, params, env):
         vm.wait_for_login()
         guest_ip_list.append(vm.get_address())
 
-    logging.info("Cloning %s", playbook_repo)
+    test.log.info("Cloning %s", playbook_repo)
     process.run("git clone {src} {dst}".format(src=playbook_repo,
                                                dst=playbook_dir), verbose=False)
 
     error_context.base_context("Generate playbook related options.",
-                               logging.info)
+                               test.log.info)
     extra_vars = {"ansible_ssh_extra_args": ansible_ssh_extra_args,
                   "ansible_ssh_pass": guest_passwd,
                   "mq_port": mq_listen_port,
@@ -76,7 +75,7 @@ def run(test, params, env):
     for cev in custom_extra_vars:
         extra_vars[cev] = custom_params[cev]
 
-    error_context.context("Execute the ansible playbook.", logging.info)
+    error_context.context("Execute the ansible playbook.", test.log.info)
     playbook_executor = ansible.PlaybookExecutor(
         inventory="{},".format(",".join(guest_ip_list)),
         site_yml=toplevel_playbook,
@@ -89,26 +88,26 @@ def run(test, params, env):
     mq_publisher = message_queuing.MQPublisher(mq_listen_port)
     try:
         error_context.base_context('Confirm remote subscriber has accessed to '
-                                   'activate migrating guests.', logging.info)
+                                   'activate migrating guests.', test.log.info)
         try:
             mq_publisher.confirm_access(wait_response_timeout)
         except message_queuing.MessageNotFoundError as err:
-            logging.error(err)
+            test.log.error(err)
             test.fail("Failed to capture the 'ACCESS' message.")
-        logging.info("Already captured the 'ACCESS' message.")
+        test.log.info("Already captured the 'ACCESS' message.")
 
         error_context.context("Migrate guests after subscriber accessed.",
-                              logging.info)
+                              test.log.info)
         for vm in vms:
             vm.migrate()
     except VMMigrateFailedError:
         error_context.context("Send the 'ALERT' message to notify the remote "
-                              "subscriber to stop the test.", logging.info)
+                              "subscriber to stop the test.", test.log.info)
         mq_publisher.alert()
         raise
     else:
         error_context.context("Send the 'APPROVE' message to notify the remote "
-                              "subscriber to continue the test.", logging.info)
+                              "subscriber to continue the test.", test.log.info)
         mq_publisher.approve()
     finally:
         ansible_log = "ansible_playbook.log"
@@ -120,7 +119,7 @@ def run(test, params, env):
             if playbook_executor.get_status() != 0:
                 test.fail("Ansible playbook execution failed, please check the "
                           "{} for details.".format(ansible_log))
-            logging.info("Ansible playbook execution passed.")
+            test.log.info("Ansible playbook execution passed.")
         finally:
             playbook_executor.store_playbook_log(test_harness_log_dir,
                                                  ansible_log)

@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -35,7 +34,7 @@ def run(test, params, env):
     check_sigverif_cmd = params["check_sigverif_cmd"] % driver_name
     clean_sigverif_cmd = params["clean_sigverif_cmd"]
 
-    error_context.context("Run sigverif in windows guest", logging.info)
+    error_context.context("Run sigverif in windows guest", test.log.info)
     session.cmd(clean_sigverif_cmd, ignore_all_errors=True)
     vm.send_key('meta_l-d')
     time.sleep(60)
@@ -50,12 +49,12 @@ def run(test, params, env):
 
     try:
         error_context.context("Open sigverif logs and check driver signature"
-                              " status", logging.info)
+                              " status", test.log.info)
         output = session.cmd_output(check_sigverif_cmd)
         pattern = r"%s.sys.*\s{2,}Signed" % driver_name
         if not re.findall(pattern, output, re.M):
             test.fail("%s driver is not digitally signed, details info is:\n %s"
                       % (driver_name, output))
     finally:
-        error_context.context("Clean sigverif logs", logging.info)
+        error_context.context("Clean sigverif logs", test.log.info)
         session.cmd(clean_sigverif_cmd, ignore_all_errors=True)

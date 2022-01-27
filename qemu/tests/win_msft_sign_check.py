@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_test
 
@@ -28,7 +26,7 @@ def run(test, params, env):
     device_name = params["device_name"]
     chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
     chk_timeout = int(params.get("chk_timeout", 240))
-    error_context.context("%s Driver Check" % driver_name, logging.info)
+    error_context.context("%s Driver Check" % driver_name, test.log.info)
     chk_output = session.cmd_output(chk_cmd, timeout=chk_timeout)
     if "FALSE" in chk_output:
         fail_log = "VirtIO driver is not digitally signed!"

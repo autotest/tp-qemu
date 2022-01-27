@@ -1,5 +1,4 @@
 import os
-import logging
 
 from virttest import cpu
 from virttest import data_dir
@@ -45,7 +44,7 @@ def run(test, params, env):
     boot_option = params["boot_option"]
     check_output = str(session.cmd(proc_cmdline, timeout=60)).split()
     if boot_option and boot_option not in check_output:
-        error_context.context("Add '%s' to guest" % boot_option, logging.info)
+        error_context.context("Add '%s' to guest" % boot_option, test.log.info)
         update_boot_option(vm, args_added=boot_option)
         session = vm.wait_for_login()
 

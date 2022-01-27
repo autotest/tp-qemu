@@ -15,10 +15,12 @@ from avocado.utils import process
 from virttest import data_dir
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def which(cmd):
     """Return command path if available, otherwise cancel the test."""
-    logging.debug("check if command '%s' is available", cmd)
+    LOG_JOB.debug("check if command '%s' is available", cmd)
     try:
         return path.find_command(cmd)
     except path.CmdNotFoundError as detail:
@@ -48,12 +50,12 @@ def chcwd(path):
 
 def get_qemu_version(params, target):
     """Get installed QEMU version."""
-    logging.debug("check QEMU version")
+    LOG_JOB.debug("check QEMU version")
     qemu_binary = utils_misc.get_qemu_binary(params)
     cmd = "%s --version" % qemu_binary
     line = process.run(cmd).stdout_text.splitlines()[0]
     version = line.split()[-1].strip("()")
-    logging.debug("QEMU version: %s", version)
+    LOG_JOB.debug("QEMU version: %s", version)
     target.send(version)
 
 
@@ -65,7 +67,7 @@ def brew_download_build(target):
         filename = "%s.src.rpm" % version
         root_dir = data_dir.get_data_dir()
         save_path = os.path.join(root_dir, filename)
-        logging.debug("download source rpm to %s", save_path)
+        LOG_JOB.debug("download source rpm to %s", save_path)
         if not os.path.isfile(save_path):
             with chcwd(root_dir):
                 cmd = "brew download-build -q --rpm {filename}".format(
@@ -79,7 +81,7 @@ def unpack_source(target):
     """Unpack source rpm."""
     while True:
         path = yield
-        logging.debug("unpack source rpm")
+        LOG_JOB.debug("unpack source rpm")
         process.run("rpm -ivhf {path}".format(path=path))
         process.run("rpmbuild -bp /root/rpmbuild/SPECS/qemu-kvm.spec --nodeps")
         version = re.search(r"\d+.\d+.\d+", path).group()
@@ -93,14 +95,14 @@ def run_aio_tests(target):
     while True:
         path = yield
         with chcwd(path):
-            logging.debug("compile source code of QEMU")
+            LOG_JOB.debug("compile source code of QEMU")
             process.run("./configure")
             cpu_count = cpu.online_count()
             aio_path = "tests/test-aio"
             make_cmd = "make {aio_path} -j{cpu_count}".format(
                 aio_path=aio_path, cpu_count=cpu_count)
             process.run(make_cmd)
-            logging.debug("run aio tests")
+            LOG_JOB.debug("run aio tests")
             result = process.run(aio_path)
         target.send(result.stdout_text)
 
@@ -114,11 +116,11 @@ def parse_result():
         for line in result.splitlines():
             if "OK" not in line:
                 err = True
-                logging.error(line)
+                LOG_JOB.error(line)
         if err:
             raise TestFail("aio test failed.")
         else:
-            logging.debug("all aio tests have passed")
+            LOG_JOB.debug("all aio tests have passed")
 
 
 def run(test, params, env):

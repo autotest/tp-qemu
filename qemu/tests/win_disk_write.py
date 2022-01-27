@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 
 
@@ -19,7 +17,7 @@ def run(test, params, env):
     http://crystalmark.info/software/CrystalDiskMark/manual-en/License.html
     :see:: http://crystalmark.info/software/CrystalDiskMark/index-e.html
     """
-    error_context.context("Try to log into guest.", logging.info)
+    error_context.context("Try to log into guest.", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
@@ -29,13 +27,13 @@ def run(test, params, env):
     crystal_run_cmd = params.get("crystal_run_cmd")
     test_timeout = float(params.get("test_timeout", "7200"))
 
-    error_context.context("Install Crystal Disk Mark", logging.info)
+    error_context.context("Install Crystal Disk Mark", test.log.info)
     if crystal_install_cmd:
         session.cmd(crystal_install_cmd, timeout=test_timeout)
     else:
         test.error("Can not get the crystal disk mark install command.")
 
-    error_context.context("Start the write load", logging.info)
+    error_context.context("Start the write load", test.log.info)
     if crystal_run_cmd:
         session.cmd(crystal_run_cmd, timeout=test_timeout)
     else:

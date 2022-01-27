@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -64,11 +63,11 @@ def run(test, params, env):
     driver_check(session, test, params)
 
     error_context.context("Run virtio-win-guest-tools.exe uninstall test",
-                          logging.info)
+                          test.log.info)
     vm.send_key('meta_l-d')
     time.sleep(30)
     run_uninstall_cmd = utils_misc.set_winutils_letter(
-                                session, params["run_uninstall_cmd"])
+        session, params["run_uninstall_cmd"])
     session.cmd(run_uninstall_cmd)
     time.sleep(30)
     s_check, o_check = session.cmd_status_output(installer_pkg_check_cmd)
@@ -78,7 +77,7 @@ def run(test, params, env):
     session = vm.reboot(session)
 
     error_context.context("Check if all drivers are uninstalled.",
-                          logging.info)
+                          test.log.info)
     uninstalled_device = []
     device_name_list = ['VirtIO RNG Device', 'VirtIO Serial Driver',
                         'VirtIO Balloon Driver', 'QEMU PVPanic Device',
@@ -97,7 +96,7 @@ def run(test, params, env):
     if uninstalled_device:
         test.fail("%s uninstall failed" % uninstalled_device)
 
-    error_context.context("Check qemu-ga service.", logging.info)
+    error_context.context("Check qemu-ga service.", test.log.info)
     gagent_status_cmd = 'sc query qemu-ga |findstr "RUNNING" '
     status = session.cmd_status(gagent_status_cmd)
     if status == 0:

@@ -1,4 +1,3 @@
-import logging
 import re
 import json
 
@@ -65,10 +64,10 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)
-    error_context.context("Try to log into guest", logging.info)
+    error_context.context("Try to log into guest", test.log.info)
     session = vm.wait_for_login()
 
-    error_context.context("Check cpu model inside guest", logging.info)
+    error_context.context("Check cpu model inside guest", test.log.info)
     cmd = params["get_model_cmd"]
     out = session.cmd_output(cmd)
     if not re.search(guest_model, out):
@@ -94,7 +93,7 @@ def run(test, params, env):
         check_cpu_flags(params, flags, test, session)
 
     if params.get("reboot_method"):
-        error_context.context("Reboot guest '%s'." % vm.name, logging.info)
+        error_context.context("Reboot guest '%s'." % vm.name, test.log.info)
         session = vm.reboot(session=session)
 
     vm.verify_kernel_crash()

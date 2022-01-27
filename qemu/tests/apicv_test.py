@@ -1,7 +1,6 @@
 import re
 import os
 import time
-import logging
 
 from avocado.utils import process
 from virttest import error_context
@@ -39,7 +38,7 @@ def run(test, params, env):
         """
         Run netperf test, return average throughput
         """
-        error_context.context("Run netperf test", logging.info)
+        error_context.context("Run netperf test", test.log.info)
         n_server.start()
         n_client.session = session
         throughput = 0
@@ -54,7 +53,7 @@ def run(test, params, env):
 
     module = params["module_name"]
     mod_param = params["mod_param"]
-    error_context.context("Enable apicv on host", logging.info)
+    error_context.context("Enable apicv on host", test.log.info)
     cmd = "cat /sys/module/%s/parameters/%s" % (module, mod_param)
     ori_apicv = process.getoutput(cmd)
     if ori_apicv != 'Y':
@@ -89,15 +88,15 @@ def run(test, params, env):
     repeat_times = params.get_numeric("repeat_times", 10)
     try:
         value_on = run_netperf()
-        logging.info("When enable apicv, average throughput is %s", value_on)
+        test.log.info("When enable apicv, average throughput is %s", value_on)
         vm.destroy()
 
-        error_context.context("Disable apicv on host", logging.info)
+        error_context.context("Disable apicv on host", test.log.info)
         reload_module("N")
         vm.create(params=params)
         session = vm.wait_for_login()
         value_off = run_netperf()
-        logging.info("When disable apicv, average throughput is %s", value_off)
+        test.log.info("When disable apicv, average throughput is %s", value_off)
         threshold = float(params.get("threshold", 0.9))
         if value_on <= value_off*threshold:
             test.fail("Throughput is smaller when apicv is on than off")

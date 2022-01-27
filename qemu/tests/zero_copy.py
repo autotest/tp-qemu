@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import env_process
 from virttest import utils_test
@@ -45,13 +43,13 @@ def run(test, params, env):
             test.cancel("Set vhost_net zcopytx failed")
 
     error_context.context("Set host vhost_net experimental_zcopytx",
-                          logging.info)
+                          test.log.info)
     if params.get("enable_zerocp", 'yes') == 'yes':
         enable_zerocopytx_in_host(test)
     else:
         enable_zerocopytx_in_host(test, False)
 
-    error_context.context("Boot vm with 'vhost=on'", logging.info)
+    error_context.context("Boot vm with 'vhost=on'", test.log.info)
     if params.get("nettype") == "user":
         test.cancel("Unable start test with user networking, please "
                     "change nettype.")
@@ -64,7 +62,7 @@ def run(test, params, env):
     vm.wait_for_login(timeout=login_timeout)
     guest_ip = vm.get_address()
 
-    error_context.context("Check guest nic is works by ping", logging.info)
+    error_context.context("Check guest nic is works by ping", test.log.info)
     status, output = utils_test.ping(guest_ip, count=10, timeout=20)
     if status:
         err_msg = "Run ping %s failed, after set zero copy" % guest_ip
@@ -75,5 +73,5 @@ def run(test, params, env):
 
     # in vm.verify_alive will check whether have userspace or kernel crash
     error_context.context("Check guest is alive and have no crash",
-                          logging.info)
+                          test.log.info)
     vm.verify_alive()

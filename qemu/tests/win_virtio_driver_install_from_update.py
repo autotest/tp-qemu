@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -56,15 +55,15 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
 
-    error_context.context("Start wuauserv service", logging.info)
+    error_context.context("Start wuauserv service", test.log.info)
     start_wuauserv_service(session)
 
-    error_context.context("Uninstall %s driver" % driver_name, logging.info)
+    error_context.context("Uninstall %s driver" % driver_name, test.log.info)
     win_driver_utils.uninstall_driver(session, test, devcon_path, driver_name,
                                       device_name, device_hwid)
     session = vm.reboot(session)
 
-    error_context.context("Install drivers from windows update", logging.info)
+    error_context.context("Install drivers from windows update", test.log.info)
     install_driver_cmd = utils_misc.set_winutils_letter(session,
                                                         install_driver_cmd)
     vm.send_key('meta_l-d')
@@ -79,7 +78,7 @@ def run(test, params, env):
         test.fail("%s Driver can not be installed correctly from "
                   "windows update" % driver_name)
 
-    error_context.context("%s Driver Check" % driver_name, logging.info)
+    error_context.context("%s Driver Check" % driver_name, test.log.info)
     session = vm.reboot(session)
 
     chk_output = session.cmd_output(chk_cmd, timeout=chk_timeout)

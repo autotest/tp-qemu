@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import env_process
 from virttest import error_context
@@ -43,7 +42,7 @@ def run(test, params, env):
         session.close()
         vm.destroy()
 
-        logging.info("check guest's dmesg, should see Async PF enabled")
+        test.log.info("check guest's dmesg, should see Async PF enabled")
         if int(g_async_PF) != int(g_vcpus):
             test.fail("Async PF %s is not equal to cpu count %s"
                       % (g_async_PF, g_vcpus))

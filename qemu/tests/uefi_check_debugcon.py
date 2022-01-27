@@ -1,5 +1,3 @@
-import logging
-
 from virttest import utils_test
 from virttest import utils_misc
 from virttest import utils_package
@@ -63,7 +61,7 @@ def run(test, params, env):
     utils_package.package_install("trace-cmd")
     if params.get("ovmf_log"):
         error_context.context("Append debugcon parameter to "
-                              "qemu command lines.", logging.info)
+                              "qemu command lines.", test.log.info)
         ovmf_log = utils_misc.get_path(test.debugdir, params["ovmf_log"])
         params["extra_params"] %= ovmf_log
         params["start_vm"] = "yes"
@@ -79,11 +77,11 @@ def run(test, params, env):
     timeout = int(params.get("timeout", 120))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    error_context.context("Remove the existing isa-log device.", logging.info)
+    error_context.context("Remove the existing isa-log device.", test.log.info)
     remove_isa_debugcon(vm)
     vm.destroy()
     error_context.context("Run trace record command on host.",
-                          logging.info)
+                          test.log.info)
     bg = utils_test.BackgroundTest(trace_kvm_pio, ())
     bg.start()
     if not utils_misc.wait_for(lambda: bg.is_alive, timeout):

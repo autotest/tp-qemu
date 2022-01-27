@@ -8,6 +8,8 @@ from collections import OrderedDict
 
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def parse_usb_topology(params):
     """
@@ -126,27 +128,27 @@ def verify_usb_device_in_guest(params, session, devs):
             else:
                 o = output
             if dev[1] not in o:
-                logging.info("%s does not exist", dev[1])
+                LOG_JOB.info("%s does not exist", dev[1])
                 return False
         # match number of devices
         dev_list = [dev[1] for dev in devs]
         dev_nums = dict((i, dev_list.count(i)) for i in dev_list)
         for k, v in dev_nums.items():
-            logging.info("the number of %s is %s", k, v)
+            LOG_JOB.info("the number of %s is %s", k, v)
             if "Hub" in k and os_type == "linux":
                 o = hub_output
             else:
                 o = output
             count = o.count(k)
             if count != v:
-                logging.info("expected %s %s, got %s in the guest",
+                LOG_JOB.info("expected %s %s, got %s in the guest",
                              v, k, count)
                 return False
         return True
 
     os_type = params.get("os_type")
     if os_type == "linux":
-        logging.info("checking if there is I/O error in dmesg")
+        LOG_JOB.info("checking if there is I/O error in dmesg")
         output = session.cmd_output("dmesg | grep -i usb",
                                     float(params["cmd_timeout"]))
         for line in output.splitlines():

@@ -1,6 +1,5 @@
 import time
 import re
-import logging
 
 import aexpect
 from virttest import utils_misc
@@ -12,7 +11,7 @@ def check_usb_device_monitor(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Verify USB device in monitor.", logging.info)
+    error_context.context("Verify USB device in monitor.", test.log.info)
     o = vm.monitor.info("usb")
     if isinstance(o, dict):
         o = o.get("return")
@@ -94,9 +93,9 @@ def check_usb_device(test, params, env):
 
     if io_error_msg:
         e_msg = "Error found in guest's dmesg"
-        logging.error(e_msg)
+        test.log.error(e_msg)
         for line in io_error_msg:
-            logging.error(line)
+            test.log.error(line)
         test.fail(e_msg)
 
 
@@ -126,14 +125,14 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
-    error_context.context("Try to log into guest.", logging.info)
+    error_context.context("Try to log into guest.", test.log.info)
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Verify device(s) before rebooting.")
     _check_dev()
 
     if params.get("reboot_method"):
-        error_context.context("Reboot guest.", logging.info)
+        error_context.context("Reboot guest.", test.log.info)
         if params["reboot_method"] == "system_reset":
             time.sleep(int(params.get("sleep_before_reset", 10)))
         session = vm.reboot(session, params["reboot_method"], 0, timeout)

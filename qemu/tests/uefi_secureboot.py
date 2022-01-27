@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -65,11 +64,11 @@ def run(test, params, env):
     sign_info = session.cmd_output(check_sign_cmd)
     signed = _check_signed()
     error_context.context('Guest signed status is %s, shutdown and reboot '
-                          'guest with secure boot' % signed, logging.info)
+                          'guest with secure boot' % signed, test.log.info)
     session.close()
     vm.destroy()
     if utils_misc.wait_for(vm.is_dead, 180, 1, 1):
-        logging.info("Guest managed to shutdown cleanly")
+        test.log.info("Guest managed to shutdown cleanly")
     params['ovmf_vars_filename'] = 'OVMF_VARS.secboot.fd'
     env_process.preprocess_vm(test, params, env, params['main_vm'])
     vm = env.get_vm(params['main_vm'])

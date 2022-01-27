@@ -10,6 +10,8 @@ from virttest import utils_net
 from virttest import utils_misc
 from virttest import env_process
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class UEFIShellTest(object):
     """
@@ -106,7 +108,7 @@ class UEFIShellTest(object):
         :param interval: time interval between commands
         :return if check_result is not None, return matched string list
         """
-        logging.info("Send uefishell command: %s", command)
+        LOG_JOB.info("Send uefishell command: %s", command)
         output = self.session.cmd_output(command)
         time.sleep(interval)
         # Judge if cmd is run successfully via environment variable 'lasterror'

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import error_context
 from qemu.tests.usb_common import (parse_usb_topology,
@@ -23,14 +21,14 @@ def run(test, params, env):
     """
     def _check_test_step_result(result, output):
         if result:
-            logging.info(output)
+            test.log.info(output)
         else:
             test.fail(output)
 
     # parse the usb topology from cfg
     parsed_devs = parse_usb_topology(params)
 
-    logging.info("starting vm according to the usb topology")
+    test.log.info("starting vm according to the usb topology")
     env_process.process(test, params, env,
                         env_process.preprocess_image,
                         env_process.preprocess_vm)
@@ -41,7 +39,7 @@ def run(test, params, env):
     devs = collect_usb_dev(params, vm, parsed_devs, "for_qemu")
 
     error_context.context("verify usb devices information in qemu...",
-                          logging.info)
+                          test.log.info)
     result, output = verify_usb_device_in_monitor_qtree(vm, devs)
     _check_test_step_result(result, output)
 
@@ -51,7 +49,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=login_timeout)
 
     error_context.context("verify usb devices information in guest...",
-                          logging.info)
+                          test.log.info)
     result, output = verify_usb_device_in_guest(params, session, devs)
     _check_test_step_result(result, output)
 

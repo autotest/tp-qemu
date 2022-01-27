@@ -1,5 +1,3 @@
-import logging
-
 from virttest import (env_process,
                       error_context,
                       virt_vm)
@@ -20,10 +18,10 @@ def run(test, params, env):
     """
     # parse the usb topology from cfg
     parse_usb_topology(params)
-    logging.info("starting vm according to the usb topology")
+    test.log.info("starting vm according to the usb topology")
     error_info = params["error_info"]
     error_context.context(("verify [%s] is reported by QEMU..." %
-                           error_info), logging.info)
+                           error_info), test.log.info)
     try:
         env_process.process(test, params, env,
                             env_process.preprocess_image,

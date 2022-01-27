@@ -1,6 +1,5 @@
 import re
 import json
-import logging
 
 from avocado.utils import process
 from virttest import error_context
@@ -39,7 +38,7 @@ def run(test, params, env):
 
     query_package = params["query_package"]
     error_context.context("Check edk2-ovmf package has been "
-                          "installed already", logging.info)
+                          "installed already", test.log.info)
     status, output = process.getstatusoutput(query_package,
                                              ignore_status=True,
                                              shell=True)
@@ -62,7 +61,7 @@ def run(test, params, env):
                   "equal to %s. The actual file list is %s",
                   params["number_of_files"], meta_files)
     error_context.context("Check the 'filename' elements in both json"
-                          " files point to valid files.", logging.info)
+                          " files point to valid files.", test.log.info)
     for meta_file in meta_files:
         with open(meta_file, "r") as f:
             content = json.load(f)

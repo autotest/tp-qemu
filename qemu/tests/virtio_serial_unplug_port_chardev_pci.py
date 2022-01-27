@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import error_context
 from virttest import utils_test
@@ -52,7 +51,7 @@ def run(test, params, env):
             test.error("Failed to get device %s" % chardev_qid)
         params['file_transfer_serial_port'] = port
         virtio_serial_pci = get_virtio_serial_pci(vm, virtio_port)
-        logging.info("Transfer data with %s before hot-unplugging", port)
+        test.log.info("Transfer data with %s before hot-unplugging", port)
         transfer_data(params, vm, sender='both')
         vm.devices.simple_unplug(virtio_port, vm.monitor)
         vm.devices.simple_unplug(port_chardev, vm.monitor)

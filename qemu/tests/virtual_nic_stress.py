@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_net
 from virttest import utils_test
@@ -26,7 +24,7 @@ def run(test, params, env):
 
         """
         flood_minutes = int(params["flood_minutes"])
-        logging.info("Flood ping for %s minutes", flood_minutes)
+        test.log.info("Flood ping for %s minutes", flood_minutes)
         utils_net.ping(guest_ip, flood=True, timeout=flood_minutes * 60)
 
     def load_stress():
@@ -34,7 +32,7 @@ def run(test, params, env):
         Load background IO/CPU/Memory stress in guest
 
         """
-        error_context.context("launch stress app in guest", logging.info)
+        error_context.context("launch stress app in guest", test.log.info)
         args = (test, params, env, params["stress_test"])
         bg_test = utils_test.BackgroundTest(
             utils_test.run_virt_sub_test, args)
@@ -49,7 +47,7 @@ def run(test, params, env):
 
         :param session: guest session
         """
-        error_context.context("stop stress app in guest", logging.info)
+        error_context.context("stop stress app in guest", test.log.info)
         cmd = params.get("stop_cmd")
         session.sendline(cmd)
 
@@ -62,7 +60,7 @@ def run(test, params, env):
     if os_type == "linux":
         session.cmd("swapoff -a", timeout=300)
 
-    error_context.context("Run memory heavy stress in guest", logging.info)
+    error_context.context("Run memory heavy stress in guest", test.log.info)
     if os_type == "linux":
         test_mem = params.get("memory", 256)
         stress_args = "--cpu 4 --io 4 --vm 2 --vm-bytes %sM" % int(test_mem)
@@ -80,7 +78,7 @@ def run(test, params, env):
 
     error_context.context("Ping test after flood ping,"
                           " Check if the network is still alive",
-                          logging.info)
+                          test.log.info)
     count = params["count"]
     timeout = float(count) * 2
     status, output = utils_net.ping(guest_ip, count,

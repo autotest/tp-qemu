@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest.env_process import preprocess
 from virttest.staging.utils_cgroup import Cgroup, CgroupModules
@@ -33,7 +31,7 @@ def run(test, params, env):
                 test.fail("Failed to move all VM threads to cgroup")
 
     error_context.context("Test Setup: Cgroup initialize in host",
-                          logging.info)
+                          test.log.info)
     modules = CgroupModules()
     if (modules.init(['cpu']) != 1):
         test.fail("Can't mount cpu cgroup modules")
@@ -42,7 +40,7 @@ def run(test, params, env):
     cgroup.initialize(modules)
 
     error_context.context("Boot guest and attach vhost to cgroup your"
-                          " setting(cpu)", logging.info)
+                          " setting(cpu)", test.log.info)
     params["start_vm"] = "yes"
     preprocess(test, params, env)
     vm = env.get_vm(params["main_vm"])
@@ -56,15 +54,15 @@ def run(test, params, env):
     vhost_pids = process.system_output("pgrep vhost", shell=True).decode()
     if not vhost_pids:
         test.error("Vhost process does not exist")
-    logging.info("Vhost have started with pid %s", vhost_pids)
+    test.log.info("Vhost have started with pid %s", vhost_pids)
     for vhost_pid in vhost_pids.strip().split():
         cgroup.set_cgroup(int(vhost_pid))
 
     error_context.context("Check whether vhost attached to"
-                          " cgroup successfully", logging.info)
+                          " cgroup successfully", test.log.info)
     cgroup_tasks = " ".join(cgroup.get_property("tasks"))
     for vhost_pid in vhost_pids.strip().split():
         if vhost_pid not in cgroup_tasks:
             test.error("vhost process attach to cgroup FAILED!"
                        " Tasks in cgroup is:%s" % cgroup_tasks)
-    logging.info("Vhost process attach to cgroup successfully")
+    test.log.info("Vhost process attach to cgroup successfully")

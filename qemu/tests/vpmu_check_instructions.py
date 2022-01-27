@@ -1,5 +1,4 @@
 import os
-import logging
 import re
 
 from shutil import copyfile
@@ -39,13 +38,13 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
-    error_context.context("build binary file 'million' in host", logging.info)
+    error_context.context("build binary file 'million' in host", test.log.info)
     copyfile(src_file, dst_file)
     s, o = process.getstatusoutput(build_cmd % host_arch)
     if s:
         test.fail("Failed to build test command")
 
-    error_context.context("running test command in host", logging.info)
+    error_context.context("running test command in host", test.log.info)
     s, o = process.getstatusoutput(test_cmd)
     if s:
         test.fail("Failed to run test command")
@@ -56,13 +55,13 @@ def run(test, params, env):
         test.error("Install dependency packages failed")
     src_file = os.path.join(src_dir, "million-%s.s" % vm_arch)
     error_context.context("transfer '%s' to guest('%s')" %
-                          (src_file, dst_file), logging.info)
+                          (src_file, dst_file), test.log.info)
     vm.copy_files_to(src_file, tmp_dir, timeout=timeout)
 
-    error_context.context("build binary file 'million' in guest", logging.info)
+    error_context.context("build binary file 'million' in guest", test.log.info)
     session.cmd(build_cmd % vm_arch)
 
-    error_context.context("running test command in guest", logging.info)
+    error_context.context("running test command in guest", test.log.info)
     output = session.cmd_output(test_cmd, timeout=timeout)
     guest_cpu_cycles = re.findall(r"(\d+) *instructions:u", output, re.M)
     if host_cpu_cycles != guest_cpu_cycles:

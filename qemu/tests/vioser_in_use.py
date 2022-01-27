@@ -13,6 +13,8 @@ from virttest import qemu_migration
 from qemu.tests import virtio_serial_file_transfer
 from qemu.tests.timedrift_no_net import subw_guest_pause_resume  # pylint: disable=W0611
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 @error_context.context_aware
 def reboot_guest(test, params, vm, session):
@@ -57,7 +59,7 @@ def vcpu_hotplug_guest(test, params, vm, session):
     vcpu_devices = params.objects("vcpu_devices")
     for vcpu_device in vcpu_devices:
         error_context.context("hot-pluging vCPU %s" % vcpu_device,
-                              logging.info)
+                              test.log.info)
         vm.hotplug_vcpu_device(vcpu_id=vcpu_device)
         # make the cpu hotplug has slot during data transfer
         time.sleep(2)
@@ -78,7 +80,7 @@ def kill_host_serial_pid(params, vm):
     host_process = re.findall(r'(.*?)%s(.*?)\n' % port_path, host_process)
     if host_process:
         host_process = str(host_process[0]).split()[1]
-        logging.info("Kill previous serial process on host")
+        LOG_JOB.info("Kill previous serial process on host")
         os.kill(int(host_process), signal.SIGINT)
 
 
@@ -94,7 +96,7 @@ def run_bg_test(test, params, vm, sender="both"):
     from qemu.tests import driver_in_use
 
     error_context.context("Run serial transfer test in background",
-                          logging.info)
+                          test.log.info)
     stress_thread = utils_misc.InterruptedThread(
         virtio_serial_file_transfer.transfer_data, (params, vm),
         {"sender": sender})
@@ -140,7 +142,7 @@ def run(test, params, env):
     # for vcpu hotplug subtest, only check guest crash.
     vcpu_hotplug = params.get_boolean("vcpu_hotplug")
     if vcpu_hotplug:
-        error_context.context("Check if guest is alive.", logging.info)
+        error_context.context("Check if guest is alive.", test.log.info)
         vm.verify_kernel_crash()
         session = vm.wait_for_login(timeout=timeout)
         session.close()

@@ -1,5 +1,4 @@
 from __future__ import division
-import logging
 import time
 
 from collections import Counter
@@ -38,7 +37,7 @@ def mouse_btn_test(test, params, console, listener, wait_time):
                      'extra': 'BTN_EXTRA'}
     btns = params.objects("btns")
     for btn in btns:
-        error_context.context("Click mouse %s button" % btn, logging.info)
+        error_context.context("Click mouse %s button" % btn, test.log.info)
         console.btn_click(btn)
 
         keycode = mouse_btn_map[btn]
@@ -48,7 +47,7 @@ def mouse_btn_test(test, params, console, listener, wait_time):
         btn_event = list()
 
         error_context.context("Check correct button event is received",
-                              logging.info)
+                              test.log.info)
         while not events_queue.empty():
             events = events_queue.get()
             # some windows os will return pointer move event first
@@ -79,7 +78,7 @@ def mouse_scroll_test(test, params, console, listener, wait_time, count=1):
     scrolls = params.objects("scrolls")
     exp_events = {'wheel-up': ("WHEELFORWARD", 0), 'wheel-down': ('WHEELBACKWARD', 0)}
     for scroll in scrolls:
-        error_context.context("Scroll mouse %s" % scroll, logging.info)
+        error_context.context("Scroll mouse %s" % scroll, test.log.info)
         if "up" in scroll:
             console.scroll_forward(count)
         else:
@@ -87,7 +86,7 @@ def mouse_scroll_test(test, params, console, listener, wait_time, count=1):
 
         events_queue = listener.events
         time.sleep(wait_time)
-        error_context.context("Check correct scroll event is received", logging.info)
+        error_context.context("Check correct scroll event is received", test.log.info)
         exp_event = exp_events.get(scroll)
         samples = []
         while not events_queue.empty():
@@ -216,17 +215,17 @@ def run(test, params, env):
     if params["os_type"] == "windows":
         session = vm.wait_for_login()
 
-        error_context.context("Check vioinput driver is running", logging.info)
+        error_context.context("Check vioinput driver is running", test.log.info)
         utils_test.qemu.windrv_verify_running(session, test, driver.split()[0])
 
         error_context.context("Enable all vioinput related driver verified",
-                              logging.info)
+                              test.log.info)
         session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
 
     mice_name = params.get("mice_name", "QEMU PS/2 Mouse")
     mice_info = query_mice_status(vm, mice_name)
     error_context.context("Check if %s device is working" % mice_name,
-                          logging.info)
+                          test.log.info)
     if not mice_info["current"]:
         test.fail("%s does not worked currently" % mice_name)
 

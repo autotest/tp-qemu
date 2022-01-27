@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -40,7 +39,7 @@ def run(test, params, env):
             port_params = params.object_params(serial_port)
             if not port_params['serial_type'].startswith('virtserial'):
                 continue
-            logging.info("transfer data with port %s", serial_port)
+            test.log.info("transfer data with port %s", serial_port)
             params['file_transfer_serial_port'] = serial_port
             transfer_data(params, vm, sender='both')
 
@@ -90,7 +89,7 @@ def run(test, params, env):
     thread_transfer = run_bg_test()
 
     error_context.context("hotplug existed virtserialport and chardev",
-                          logging.info)
+                          test.log.info)
     try:
         serial_devices[0].hotplug(vm.monitor, vm.devices.qemu_version)
     except QMPCmdError as e:
@@ -120,7 +119,7 @@ def run(test, params, env):
     thread_transfer.join()
     if not thread_transfer.is_alive():
         error_context.context("hot-unplug all virtserialport and chardev",
-                              logging.info)
+                              test.log.info)
         for i in range(0, num_chardev):
             if i < num_serial_ports:
                 vm.devices.simple_unplug(serial_devices[i], vm.monitor)

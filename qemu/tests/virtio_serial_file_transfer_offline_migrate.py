@@ -1,5 +1,4 @@
 import os
-import logging
 
 from virttest import utils_test
 from virttest import utils_misc
@@ -44,7 +43,7 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(
             session, vm, test, driver_name)
         session.close()
-    error_context.context("transferring data on source guest", logging.info)
+    error_context.context("transferring data on source guest", test.log.info)
     run_serial_data_transfer()
     mig_protocol = params.get("migration_protocol", "tcp")
     mig_exec_cmd_src = params.get("migration_exec_cmd_src")
@@ -59,7 +58,7 @@ def run(test, params, env):
                    migration_exec_cmd_src=mig_exec_cmd_src,
                    migration_exec_cmd_dst=mig_exec_cmd_dst)
         error_context.context("transferring data on destination guest",
-                              logging.info)
+                              test.log.info)
         run_serial_data_transfer()
         vm.verify_kernel_crash()
     finally:

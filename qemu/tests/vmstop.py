@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 
@@ -40,29 +39,29 @@ def run(test, params, env):
         bg = utils_misc.InterruptedThread(vm.copy_files_to,
                                           ("/tmp/file", guest_path),
                                           dict(verbose=True, timeout=60))
-        logging.info("Start the background transfer")
+        test.log.info("Start the background transfer")
         bg.start()
 
         try:
             # wait for the transfer start
             time.sleep(5)
-            logging.info("Stop the VM")
+            test.log.info("Stop the VM")
             vm.pause()
 
             # check with monitor
-            logging.info("Check the status through monitor")
+            test.log.info("Check the status through monitor")
             if not vm.monitor.verify_status("paused"):
                 status = str(vm.monitor.info("status"))
                 test.fail("Guest did not pause after sending stop,"
                           " guest status is %s" % status)
 
             # check through session
-            logging.info("Check the session")
+            test.log.info("Check the session")
             if session.is_responsive():
                 test.fail("Session still alive after sending stop")
 
             # Check with the migration file
-            logging.info("Save and check the state files")
+            test.log.info("Save and check the state files")
             for p in [save1, save2]:
                 vm.save_to_file(p)
                 time.sleep(1)
@@ -80,7 +79,7 @@ def run(test, params, env):
     finally:
         session.close()
         if clean_save:
-            logging.debug("Clean the state files")
+            test.log.debug("Clean the state files")
             if os.path.isfile(save1):
                 os.remove(save1)
             if os.path.isfile(save2):

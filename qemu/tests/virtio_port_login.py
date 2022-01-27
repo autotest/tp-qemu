@@ -3,8 +3,6 @@ Collection of virtio_console and virtio_serialport tests.
 
 :copyright: 2010-2012 Red Hat Inc.
 """
-import logging
-
 import aexpect
 from virttest import utils_misc
 from virttest import remote
@@ -22,7 +20,7 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
 
     @error_context.context_aware
     def pre_step(self):
-        error_context.context("Config guest and reboot it", logging.info)
+        error_context.context("Config guest and reboot it", self.test.log.info)
         pre_cmd = self.params.get("pre_cmd") + self.params.get("pre_cmd_extra")
         session = self.vm.wait_for_login(timeout=360)
         session.cmd(pre_cmd, timeout=240)
@@ -31,7 +29,7 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
 
     @error_context.context_aware
     def virtio_console_login(self, port='vc1'):
-        error_context.context("Login guest via '%s'" % port, logging.info)
+        error_context.context("Login guest via '%s'" % port, self.test.log.info)
         session = self.vm.wait_for_serial_login(timeout=180, virtio=port)
         self.__sessions__.append(session)
         return session
@@ -42,7 +40,7 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
     @error_context.context_aware
     def virtio_serial_login(self, port='vs1'):
         error_context.context("Try to login guest via '%s'" % port,
-                              logging.info)
+                              self.test.log.info)
         username = self.params.get("username")
         password = self.params.get("password")
         prompt = self.params.get("shell_prompt", "[#$]")
@@ -69,7 +67,7 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
                            "channel to login")
         except remote.LoginTimeoutError:
             self.__sessions__.append(session)
-            logging.info("Can't login via %s", port)
+            self.test.log.info("Can't login via %s", port)
         return session
 
     def serial_login(self, port="vc1"):
@@ -78,7 +76,7 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
     @error_context.context_aware
     def cleanup(self):
         error_context.context("Close open connection and destroy vm",
-                              logging.info)
+                              self.test.log.info)
         for session in self.__sessions__:
             if session:
                 session.close()
@@ -102,13 +100,13 @@ def run(test, params, env):
         console_test.pre_step()
         port_type = console_params.get("virtio_port_type")
         login_func = "%s_login" % port_type
-        logging.info("Login function: %s", login_func)
+        test.log.info("Login function: %s", login_func)
         session = getattr(console_test, login_func)(login_console)
         if "serial" not in port_type:
             for cmd in params.get("shell_cmd_list", "dir").split(","):
-                logging.info("sending command: %s", cmd)
+                test.log.info("sending command: %s", cmd)
                 output = session.cmd_output(cmd, timeout=240)
-                logging.info("output:%s", output)
+                test.log.info("output:%s", output)
             clean_cmd = params["clean_cmd"]
             session.cmd(clean_cmd, timeout=180)
             session.close()

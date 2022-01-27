@@ -1,5 +1,4 @@
 import aexpect
-import logging
 import os
 
 from virttest import data_dir
@@ -60,7 +59,7 @@ def run(test, params, env):
         if is_aarch64:
             pci = session.cmd_output(check_pci_cmd).strip()
             capability_info = session.cmd_output(check_capability_cmd % pci)
-            logging.info("The pvpanic capability info of guest: %s", capability_info)
+            test.log.info("The pvpanic capability info of guest: %s", capability_info)
         session.cmd(trigger_crash, timeout=5)
     except aexpect.ShellTimeoutError:
         pass

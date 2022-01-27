@@ -1,4 +1,3 @@
-import logging
 import time
 
 from avocado.utils import process
@@ -29,10 +28,10 @@ def run(test, params, env):
         if s != 0:
             test.error("Fail to install valgrind")
         else:
-            logging.info("Install valgrind successfully.")
+            test.log.info("Install valgrind successfully.")
 
     valgring_support_check_cmd = params.get("valgring_support_check_cmd")
-    error_context.context("Check valgrind installed in host", logging.info)
+    error_context.context("Check valgrind installed in host", test.log.info)
     try:
         process.system(valgring_support_check_cmd, timeout=interval,
                        shell=True)
@@ -41,19 +40,19 @@ def run(test, params, env):
 
     params['mem'] = 384
     params["start_vm"] = "yes"
-    error_context.context("Start guest with specific parameters", logging.info)
+    error_context.context("Start guest with specific parameters", test.log.info)
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
 
     time.sleep(interval)
     error_context.context("Verify guest status is running after cont",
-                          logging.info)
+                          test.log.info)
     if params.get('machine_type').startswith("s390"):
         vm.monitor.cmd("cont")
     vm.verify_status(params.get("expected_status", "running"))
 
     error_context.context("Quit guest and check the process quit normally",
-                          logging.info)
+                          test.log.info)
     vm.monitor.quit()
     vm.wait_until_dead(5, 0.5, 0.5)
     vm.verify_userspace_crash()

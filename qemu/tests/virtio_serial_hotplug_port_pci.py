@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import env_process
 from virttest.qemu_monitor import QMPCmdError
@@ -101,7 +99,7 @@ def run(test, params, env):
         vm, params, char_devices, serials)
     for i in range(repeat_times):
         error_context.context("Hotplug/unplug serial devices the %s time"
-                              % (i+1), logging.info)
+                              % (i+1), test.log.info)
         vm.devices.simple_hotplug(buses[0], vm.monitor)
         vm.devices.simple_hotplug(serial_devices[0], vm.monitor)
         pre_nr = serial_devices[0].get_param('nr')
@@ -129,7 +127,7 @@ def run(test, params, env):
         run_serial_data_transfer()
 
         if interrupt_test_after_plug:
-            logging.info("Run %s after hotplug", interrupt_test_after_plug)
+            test.log.info("Run %s after hotplug", interrupt_test_after_plug)
             run_interrupt_test(interrupt_test_after_plug)
             if not vm.is_alive():
                 return
@@ -143,6 +141,6 @@ def run(test, params, env):
                 msg = "Hot-unplug device %s failed" % buses[0]
                 test.fail(msg)
             if interrupt_test_after_unplug:
-                logging.info("Run %s after hot-unplug",
-                             interrupt_test_after_unplug)
+                test.log.info("Run %s after hot-unplug",
+                              interrupt_test_after_unplug)
                 run_interrupt_test(interrupt_test_after_unplug)

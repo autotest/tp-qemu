@@ -1,6 +1,5 @@
 import ast
 import re
-import logging
 
 from virttest import env_process
 from virttest import error_context
@@ -27,7 +26,7 @@ def run(test, params, env):
     """
     def check_attribute_in_qtree(dev_id, name, excepted_val):
         """Check if discard and write-zeroes attribute work."""
-        error_context.context('Check if %s attribute works.' % name, logging.info)
+        error_context.context('Check if %s attribute works.' % name, test.log.info)
         qtree = qemu_qtree.QtreeContainer()
         qtree.parse_info_qtree(vm.monitor.info('qtree'))
         for node in qtree.get_nodes():
@@ -39,8 +38,8 @@ def run(test, params, env):
                         test.fail('The qtree device %s has no property %s.' %
                                   (dev_id, name))
                     elif _node.qtree.get(name) == excepted_val:
-                        logging.info('The "%s" matches with qtree device "%s"'
-                                     '(%s).', name, dev_id, excepted_val)
+                        test.log.info('The "%s" matches with qtree device "%s"'
+                                      '(%s).', name, dev_id, excepted_val)
                         break
                     else:
                         test.fail('The "%s" mismatches with qtree device "%s"'
@@ -64,7 +63,7 @@ def run(test, params, env):
 
     def dd_test(session, target):
         """Do dd test on the data disk."""
-        error_context.context('Do dd test on the data disk.', logging.info)
+        error_context.context('Do dd test on the data disk.', test.log.info)
         session.cmd(params['cmd_dd'].format(target), 600)
 
     data_tag = params["images"].split()[1]

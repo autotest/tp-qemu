@@ -1,5 +1,4 @@
 import time
-import logging
 
 from avocado.utils import process
 from virttest import utils_test
@@ -45,7 +44,7 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(
             session, vm, test, driver_name)
     if module and check_module:
-        error_context.context("Load module %s" % module, logging.info)
+        error_context.context("Load module %s" % module, test.log.info)
         session.cmd("modprobe %s" % module)
         time.sleep(1)
     session.close()
@@ -71,33 +70,33 @@ def run(test, params, env):
             repeat += 1
             if module and check_module:
                 error_context.context("Unload module %s" % module,
-                                      logging.info)
+                                      test.log.info)
                 session.cmd("modprobe -r %s" % module)
                 time.sleep(1)
             error_context.context("Unplug virtio port '%s' in %d tune(s)" %
-                                  (port, repeat), logging.info)
+                                  (port, repeat), test.log.info)
             vm.devices.simple_unplug(virtio_port, vm.monitor)
             if port_params.get("unplug_chardev") == "yes":
                 error_context.context(
                     "Unplug chardev '%s' for virtio port '%s'" %
-                    (port, chardev_qid), logging.info)
+                    (port, chardev_qid), test.log.info)
                 vm.devices.simple_unplug(port_chardev, vm.monitor)
                 time.sleep(0.5)
                 vm.devices.simple_hotplug(port_chardev, vm.monitor)
             vm.devices.simple_hotplug(virtio_port, vm.monitor)
             if module and check_module:
-                error_context.context("Load  module %s" % module, logging.info)
+                error_context.context("Load  module %s" % module, test.log.info)
                 session.cmd("modprobe %s" % module)
                 time.sleep(1)
         session.close()
         test_set = set(process.getoutput(check_pid_command).splitlines())
         difference = test_set.difference(orig_set)
         if difference:
-            logging.info("Kill the first serial process on host")
+            test.log.info("Kill the first serial process on host")
             result = process.system('kill -9 %s' % difference.pop(),
                                     shell=True)
             if result != 0:
-                logging.error("Failed to kill the first serial process on host!")
+                test.log.error("Failed to kill the first serial process on host!")
         if transfer_data(params, vm) is not True:
             test.fail("Serial data transfter test failed.")
     vm.reboot()

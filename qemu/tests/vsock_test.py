@@ -10,6 +10,8 @@ from virttest import data_dir
 from virttest import error_context
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def compile_nc_vsock(test, vm, session):
     """
@@ -60,7 +62,7 @@ def vsock_listen(tool_bin, port, session):
         lstn_cmd = "%s -l %s" % (tool_bin, port)
 
     session.read_nonblocking(0, timeout=10)
-    logging.info("Listening to the vsock port from guest: %s", lstn_cmd)
+    LOG_JOB.info("Listening to the vsock port from guest: %s", lstn_cmd)
     session.sendline(lstn_cmd)
 
 
@@ -97,7 +99,7 @@ def vsock_connect(tool_bin, guest_cid, port):
         conn_cmd = "%s --vsock %s %s" % (tool_bin, guest_cid, port)
     if "nc-vsock" in tool_bin:
         conn_cmd = "%s %s %s" % (tool_bin, guest_cid, port)
-    logging.info("Connect to the vsock port on host: %s", conn_cmd)
+    LOG_JOB.info("Connect to the vsock port on host: %s", conn_cmd)
 
     return aexpect.Expect(
         conn_cmd,
@@ -128,7 +130,7 @@ def send_data_from_guest_to_host(guest_session, tool_bin,
     if "nc-vsock" in tool_bin:
         cmd_transfer = '%s -l %s < %s' % (tool_bin, port, tmp_file)
     error_context.context('Transfer file from guest via command: %s'
-                          % cmd_transfer, logging.info)
+                          % cmd_transfer, LOG_JOB.info)
     guest_session.sendline(cmd_transfer)
     if "ncat" in tool_bin:
         cmd_receive = '%s --vsock %s %s > %s' % (
@@ -208,7 +210,7 @@ def run(test, params, env):
         check_received_data(test, session, connected_str)
 
     send_data = "Hello world"
-    error_context.context('Input "Hello world" to vsock.', logging.info)
+    error_context.context('Input "Hello world" to vsock.', test.log.info)
     host_vsock_session.sendline(send_data)
     check_received_data(test, session, send_data)
     host_vsock_session.close()

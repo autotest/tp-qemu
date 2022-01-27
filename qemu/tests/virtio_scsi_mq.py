@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -46,12 +45,12 @@ def run(test, params, env):
 
     def check_irqbalance_status():
         """ Check the status of irqbalance service. """
-        error_context.context("Check irqbalance service status.", logging.info)
+        error_context.context("Check irqbalance service status.", test.log.info)
         return re.findall("Active: active", session.cmd_output(status_cmd))
 
     def start_irqbalance_service():
         """ Start the irqbalance service. """
-        error_context.context("Start the irqbalance service.", logging.info)
+        error_context.context("Start the irqbalance service.", test.log.info)
         session.cmd("systemctl start irqbalance")
         output = utils_misc.strip_console_codes(session.cmd_output(status_cmd))
         if not re.findall("Active: active", output):
@@ -59,7 +58,7 @@ def run(test, params, env):
 
     def pin_vcpus2host_cpus():
         """ Pint the vcpus to the host cpus. """
-        error_context.context("Pin vcpus to host cpus.", logging.info)
+        error_context.context("Pin vcpus to host cpus.", test.log.info)
         host_numa_nodes = utils_misc.NumaInfo()
         vcpu_num = 0
         for numa_node_id in host_numa_nodes.nodes:
@@ -68,14 +67,14 @@ def run(test, params, env):
                 if vcpu_num >= len(vm.vcpu_threads):
                     break
                 vcpu_tid = vm.vcpu_threads[vcpu_num]
-                logging.debug(
+                test.log.debug(
                     "pin vcpu thread(%s) to cpu(%s)",
                     vcpu_tid, numa_node.pin_cpu(vcpu_tid))
                 vcpu_num += 1
 
     def verify_num_queues():
         """ Verify the number of queues. """
-        error_context.context("Verify num_queues from monitor.", logging.info)
+        error_context.context("Verify num_queues from monitor.", test.log.info)
         qtree = qemu_qtree.QtreeContainer()
         try:
             qtree.parse_info_qtree(vm.monitor.info('qtree'))
@@ -105,13 +104,13 @@ def run(test, params, env):
 
     def check_interrupts():
         """ Check the interrupt queues in guest. """
-        error_context.context("Check the interrupt queues in guest.", logging.info)
+        error_context.context("Check the interrupt queues in guest.", test.log.info)
         return session.cmd_output(irq_check_cmd)
 
     def check_interrupts2vcpus(irq_map):
         """ Check the status of interrupters to vcpus. """
         error_context.context(
-            "Check the status of interrupters to vcpus.", logging.info)
+            "Check the status of interrupters to vcpus.", test.log.info)
         cpu_selects = {}
         cpu_select = 1
         for _ in range(int(num_queues)):
@@ -139,7 +138,7 @@ def run(test, params, env):
                 "echo %s > /proc/irq/%s/smp_affinity" % (cpu_select, irq_id))
             cpu_irq_map[irq_id] = cpu_selects[cpu_select]
         if bind_cpu_cmd:
-            error_context.context("Pin interrupters to vcpus", logging.info)
+            error_context.context("Pin interrupters to vcpus", test.log.info)
             session.cmd(' && '.join(bind_cpu_cmd))
         return cpu_irq_map
 
@@ -158,7 +157,7 @@ def run(test, params, env):
 
     def load_io_data_disks():
         """ Load I/O on data disks. """
-        error_context.context("Load I/O in all targets", logging.info)
+        error_context.context("Load I/O in all targets", test.log.info)
         dd_session = vm.wait_for_login(timeout=360)
         dd_timeout = int(re.findall(r"\d+", extra_image_size)[0])
         cmd = "dd of=%s if=/dev/urandom bs=1M count=%s oflag=direct &"
@@ -185,9 +184,9 @@ def run(test, params, env):
                 cpu_not_used.append('CPU%s' % cpu)
             else:
                 diff_interrupts[cpu] = diff_val
-        logging.debug('The changed number of interrupts:')
+        test.log.debug('The changed number of interrupts:')
         for k, v in sorted(diff_interrupts.items()):
-            logging.debug('  CPU%s: %d', k, v)
+            test.log.debug('  CPU%s: %d', k, v)
         if cpu_not_used:
             cpus = " ".join(cpu_not_used)
             error_msg = ("%s are not used during test. "
@@ -201,7 +200,7 @@ def run(test, params, env):
         session = utils_test.qemu.windrv_check_running_verifier(
             session, vm, test, driver_name, timeout)
         wmi_check_cmd = utils_misc.set_winutils_letter(session, wmi_check_cmd)
-        error_context.context("Run wmi check in guest.", logging.info)
+        error_context.context("Run wmi check in guest.", test.log.info)
         output = session.cmd_output(wmi_check_cmd)
         queue_num = re.findall(pattern, output, re.M)
         try:
@@ -228,7 +227,7 @@ def run(test, params, env):
 
     error_context.context("Boot up guest with block devcie with num_queues"
                           " is %s and smp is %s" % (num_queues, params['smp']),
-                          logging.info)
+                          test.log.info)
     for vm in env.get_all_vms():
         if vm.is_alive():
             vm.destroy()

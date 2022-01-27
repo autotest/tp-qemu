@@ -10,6 +10,8 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import qemu_virtio_port
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 @error_context.context_aware
 def get_abstract_address(hostfile):
@@ -33,7 +35,7 @@ def copy_scripts(guest_scripts, guest_path, vm):
     :param guest_path: guest path to locate the scripts
     :param vm: VM Object
     """
-    error_context.context("Copy test scripts to guest.", logging.info)
+    error_context.context("Copy test scripts to guest.", LOG_JOB.info)
     for script in guest_scripts.split(";"):
         link = os.path.join(data_dir.get_root_dir(), "shared", "deps",
                             "serial", script)
@@ -100,11 +102,11 @@ def generate_data_file(dir_name, file_size=0, session=None):
     cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (data_file, int(file_size))
     if not session:
         error_context.context(
-            "Creating %dMB file on host" % file_size, logging.info)
+            "Creating %dMB file on host" % file_size, LOG_JOB.info)
         process.run(cmd)
     else:
         error_context.context(
-            "Creating %dMB file on guest" % file_size, logging.info)
+            "Creating %dMB file on guest" % file_size, LOG_JOB.info)
         session.cmd(cmd, timeout=600)
     return data_file
 
@@ -146,7 +148,7 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
                   'shell': True,
                   'timeout': timeout}
         error_context.context("Send host command: %s"
-                              % host_cmd, logging.info)
+                              % host_cmd, LOG_JOB.info)
         host_thread = utils_misc.InterruptedThread(process.getoutput,
                                                    kwargs=kwargs)
         host_thread.daemon = True
@@ -252,7 +254,7 @@ def run(test, params, env):
     sender = params['file_sender']
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    logging.info('Transfer data from %s', sender)
+    test.log.info('Transfer data from %s', sender)
     result = transfer_data(params, vm, sender=sender)
     vm.destroy()
     if result is not True:

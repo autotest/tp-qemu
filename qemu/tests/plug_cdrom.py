@@ -65,16 +65,19 @@ def run(test, params, env):
         logging.info('Check if the file \"%s\" is in the cdrom.', iso_name)
         cmd_map = {'linux': 'mount /dev/sr{0} /mnt && ls /mnt && umount /mnt',
                    'windows': 'dir {0}:\\'}
-        if is_windows:
-            get_letter_cmd = "wmic logicaldisk where (Description='CD-ROM Disc') get DeviceID"
-            letters = utils_misc.wait_for(lambda: re.findall(r'(\w):',
-                                                             session.cmd(get_letter_cmd),
-                                                             re.M), 3)
-            if not letters:
-                test.error('No available CD-ROM devices')
+        cd_exp_map = {'linux': r'sr([0-9])', 'windows': r'(\w):'}
+        get_cd_map = {'linux': 'lsblk -nb',
+                      'windows': 'wmic logicaldisk where (Description='
+                                 '\'CD-ROM Disc\') get DeviceID'}
+        letters = utils_misc.wait_for(lambda:
+                                      re.findall(cd_exp_map[os_type],
+                                                 session.cmd(get_cd_map[os_type]),
+                                                 re.M), 3)
+        if not letters:
+            test.error('No available CD-ROM devices')
         for index in range(len(cdroms)):
             if iso_name in session.cmd(cmd_map[os_type].format(
-                    letters[index] if is_windows else index)).lower():
+                    letters[index])).lower():
                 break
         else:
             test.fail('No such the file \"%s\" in cdrom.' % iso_name)

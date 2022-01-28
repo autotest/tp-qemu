@@ -5,6 +5,7 @@ from avocado.utils import process
 
 from virttest import error_context
 from virttest import env_process
+from virttest import utils_package
 
 
 @error_context.context_aware
@@ -31,6 +32,14 @@ def run(test, params, env):
 
     cmd_get_tpm_ver = params.get('cmd_get_tpm_version')
     cmd_check_tpm_dev = params.get('cmd_check_tpm_device')
+    depends_pkgs = params.get('depends_pkgs')
+
+    if not utils_package.package_install(depends_pkgs):
+        test.cancel("Please install %s on host", depends_pkgs)
+    if not cmd_check_tpm_dev:
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params["main_vm"])
+
     if cmd_check_tpm_dev:
         status, output = process.getstatusoutput(cmd_check_tpm_dev)
         if status:

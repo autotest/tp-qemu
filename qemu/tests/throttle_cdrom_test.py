@@ -1,6 +1,5 @@
 """IO-Throttling cdrom relevant testing"""
 
-import logging
 
 from virttest import error_context
 from virttest.qemu_capabilities import Flags
@@ -19,7 +18,7 @@ def run(test, params, env):
         5) Execute eject media operation
     """
 
-    error_context.context("Get the main VM", logging.info)
+    error_context.context("Get the main VM", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -31,7 +30,7 @@ def run(test, params, env):
     if device_name is None:
         test.fail("Fail to get cdrom device with drv throttle")
 
-    logging.info("Found cdrom device %s", device_name)
+    test.log.info("Found cdrom device %s", device_name)
 
     eject_check = QMPEventCheckCDEject(vm, device_name)
     change_check = QMPEventCheckCDChange(vm, device_name)
@@ -43,12 +42,12 @@ def run(test, params, env):
 
     # change media
     new_img_name = params.get("new_img_name")
-    error_context.context("Insert new image to device.", logging.info)
+    error_context.context("Insert new image to device.", test.log.info)
     with change_check:
         vm.change_media(device_name, new_img_name)
 
     # After change medium throttle property is expected to be removed
-    error_context.context("Query cdrom device with new image.", logging.info)
+    error_context.context("Query cdrom device with new image.", test.log.info)
     p_dict = {"removable": True, "file": new_img_name}
     device_name = vm.get_block(p_dict)
 
@@ -56,7 +55,7 @@ def run(test, params, env):
         test.fail("Fail to get cdrom device with new image after change")
 
     # eject media
-    error_context.context("Eject device.", logging.info)
+    error_context.context("Eject device.", test.log.info)
     with eject_check:
         monitor.blockdev_open_tray(qdev, force=True)
         monitor.blockdev_remove_medium(qdev)

@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -55,7 +54,7 @@ def run(test, params, env):
             str_time = re.findall(hwclock_time_filter_re, output)[0]
             guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
         except Exception as err:
-            logging.debug(
+            test.log.debug(
                 "(time_format, time_string): (%s, %s)", hwclock_time_format, str_time)
             raise err
         return guest_time
@@ -78,7 +77,7 @@ def run(test, params, env):
 
         time_type = "system" if not is_hardware else "harware"
         error_context.context("Check the %s time on guest" % time_type,
-                              logging.info)
+                              test.log.info)
         host_time, guest_time = utils_test.get_time(session, time_command,
                                                     time_filter_re,
                                                     time_format)
@@ -128,13 +127,13 @@ def run(test, params, env):
                        "available clocksources: %s" % avail_clksrc)
 
     error_context.context("sync host time with NTP server",
-                          logging.info)
+                          test.log.info)
     clock_sync_command = params["clock_sync_command"]
     process.system(clock_sync_command, shell=True)
 
     timerdevice_host_load_cmd = params.get("timerdevice_host_load_cmd")
     if timerdevice_host_load_cmd:
-        error_context.context("Add some load on host", logging.info)
+        error_context.context("Add some load on host", test.log.info)
         host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
         host_cpu_cnt = int(process.system_output(host_cpu_cnt_cmd, shell=True).strip())
         if params["os_type"] == "linux":
@@ -157,7 +156,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Sync guest timezone before test", logging.info)
+    error_context.context("Sync guest timezone before test", test.log.info)
     timeout = int(params.get("login_timeout", 360))
     if params["os_type"] == 'linux':
         utils_time.sync_timezone_linux(vm, timeout)
@@ -170,14 +169,14 @@ def run(test, params, env):
     need_restore_clksrc = False
     if timerdevice_clksource:
         origin_clksrc = get_current_clksrc(session)
-        logging.info("guest is booted with %s", origin_clksrc)
+        test.log.info("guest is booted with %s", origin_clksrc)
 
         if timerdevice_clksource != origin_clksrc:
             update_clksrc(session, timerdevice_clksource)
             need_restore_clksrc = True
 
     error_context.context("check timedrift between guest and host.",
-                          logging.info)
+                          test.log.info)
     verify_timedrift(session)
     if params["os_type"] == "linux":
         verify_timedrift(session, is_hardware=True)
@@ -195,12 +194,12 @@ def run(test, params, env):
         sleep_time = params.get("timerdevice_sleep_time")
         if sleep_time:
             error_context.context("Sleep '%s' secs before reboot" % sleep_time,
-                                  logging.info)
+                                  test.log.info)
             sleep_time = int(sleep_time)
             time.sleep(sleep_time)
 
         error_context.context("Check timedrift between guest and host "
-                              "after reboot.", logging.info)
+                              "after reboot.", test.log.info)
         vm.reboot(timeout=timeout, serial=True)
         verify_timedrift(session)
         if params["os_type"] == "linux":

@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -26,23 +25,23 @@ def run(test, params, env):
 
     cmd_install_bitlocker = params.get('cmd_install_bitlocker')
     if cmd_install_bitlocker:
-        error_context.context("Install BitLocker inside guest", logging.info)
+        error_context.context("Install BitLocker inside guest", test.log.info)
         session.cmd(cmd_install_bitlocker, 360)
         session = vm.reboot(session, timeout=480)
 
     error_context.context("Prepares hard drive for BitLocker Drive "
-                          "Encryption inside guest", logging.info)
+                          "Encryption inside guest", test.log.info)
     cmd_bdehdcfg = session.cmd_output(params.get('cmd_bdehdcfg'))
     if re.search(r'error', cmd_bdehdcfg, re.M | re.A):
         test.fail('Found error message.')
 
     error_context.context("Encrypts the volume and turns BitLocker "
-                          "protection on inside guest", logging.info)
+                          "protection on inside guest", test.log.info)
     session.cmd(params.get('cmd_manage_bde_on'))
     session = vm.reboot(session, timeout=480)
 
     error_context.context("Wait until Percentage Encrypted finished",
-                          logging.info)
+                          test.log.info)
     finished_keywords = params.get('finished_keywords')
     cmd_manage_bde_status = params.get('cmd_manage_bde_status')
     if not utils_misc.wait_for(lambda: finished_keywords in session.cmd(

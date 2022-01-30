@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 import signal
@@ -69,13 +68,13 @@ def run(test, params, env):
             (ht0_, gt0_) = utils_test.get_time(session, time_command,
                                                time_filter_re, time_format)
             # Run current iteration
-            logging.info("Stop %s second: iteration %d of %d...",
-                         stop_time, (i + 1), stop_iterations)
+            test.log.info("Stop %s second: iteration %d of %d...",
+                          stop_time, (i + 1), stop_iterations)
             if stop_with_signal:
-                logging.debug("Stop guest")
+                test.log.debug("Stop guest")
                 os.kill(pid, signal.SIGSTOP)
                 time.sleep(stop_time)
-                logging.debug("Continue guest")
+                test.log.debug("Continue guest")
                 os.kill(pid, signal.SIGCONT)
             else:
                 vm.pause()
@@ -83,7 +82,7 @@ def run(test, params, env):
                 vm.resume()
 
             # Sleep for a while to wait the interrupt to be reinjected
-            logging.info("Waiting for the interrupt to be reinjected ...")
+            test.log.info("Waiting for the interrupt to be reinjected ...")
             time.sleep(sleep_time)
 
             # Get time after current iteration
@@ -99,12 +98,12 @@ def run(test, params, env):
                 drift = abs(drift - stop_time)
                 if params.get("os_type") == "windows" and rtc_clock == "host":
                     drift = abs(host_delta - guest_delta)
-            logging.info("Host duration (iteration %d): %.2f",
-                         (i + 1), host_delta)
-            logging.info("Guest duration (iteration %d): %.2f",
-                         (i + 1), guest_delta)
-            logging.info("Drift at iteration %d: %.2f seconds",
-                         (i + 1), drift)
+            test.log.info("Host duration (iteration %d): %.2f",
+                          (i + 1), host_delta)
+            test.log.info("Guest duration (iteration %d): %.2f",
+                          (i + 1), guest_delta)
+            test.log.info("Drift at iteration %d: %.2f seconds",
+                          (i + 1), drift)
             # Fail if necessary
             if drift > drift_threshold_single:
                 test.fail("Time drift too large at iteration %d: "
@@ -133,12 +132,12 @@ def run(test, params, env):
         drift = abs(drift - stop_time)
         if params.get("os_type") == "windows" and rtc_clock == "host":
             drift = abs(host_delta - guest_delta)
-    logging.info("Host duration (%d stops): %.2f",
-                 stop_iterations, host_delta)
-    logging.info("Guest duration (%d stops): %.2f",
-                 stop_iterations, guest_delta)
-    logging.info("Drift after %d stops: %.2f seconds",
-                 stop_iterations, drift)
+    test.log.info("Host duration (%d stops): %.2f",
+                  stop_iterations, host_delta)
+    test.log.info("Guest duration (%d stops): %.2f",
+                  stop_iterations, guest_delta)
+    test.log.info("Drift after %d stops: %.2f seconds",
+                  stop_iterations, drift)
 
     # Fail if necessary
     if drift > drift_threshold:

@@ -1,4 +1,3 @@
-import logging
 import time
 
 import aexpect
@@ -55,9 +54,9 @@ def run(test, params, env):
     vmnames = [params["main_vm"]]
 
     # Run some load on the host
-    logging.info("Starting load on host.")
+    test.log.info("Starting load on host.")
     host_load_sessions.append(aexpect.run_bg(host_load_command,
-                                             output_func=logging.debug,
+                                             output_func=test.log.debug,
                                              output_prefix="host load ",
                                              timeout=0.5))
     # Boot the VMs
@@ -73,7 +72,7 @@ def run(test, params, env):
             params["vms"] += " " + vm_name
 
             sessions.append(curr_vm.wait_for_login(timeout=login_timeout))
-            logging.info("Guest #%d booted up successfully", num)
+            test.log.info("Guest #%d booted up successfully", num)
 
             # Check whether all previous shell sessions are responsive
             error_context.context("checking responsiveness of the booted"
@@ -87,7 +86,7 @@ def run(test, params, env):
                 # Get the respective vm object
                 vm = env.get_vm(vmnames[vmid])
                 # Run current iteration
-                logging.info(
+                test.log.info(
                     "Rebooting:vm%d iteration %d ", (vmid + 1), itr)
                 se = vm.reboot(se, timeout=timeout)
                 # Remember the current changed session
@@ -116,17 +115,17 @@ def run(test, params, env):
             time.sleep(30)
             itr += 1
 
-        logging.info("The time drift values for all VM sessions/iterations")
-        logging.info("VM-Name:%s", vmnames)
+        test.log.info("The time drift values for all VM sessions/iterations")
+        test.log.info("VM-Name:%s", vmnames)
         for idx, value in enumerate(totaldrift):
-            logging.info("itr-%2d:%s", idx + 1, value)
+            test.log.info("itr-%2d:%s", idx + 1, value)
 
     finally:
         for se in sessions:
             # Closing all the sessions.
             se.close()
-        logging.info("killing load on host.")
+        test.log.info("killing load on host.")
         host_load_sessions.append(aexpect.run_bg(host_load_kill_command,
-                                                 output_func=logging.debug,
+                                                 output_func=test.log.debug,
                                                  output_prefix="host load kill",
                                                  timeout=0.5))

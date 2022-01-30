@@ -1,5 +1,4 @@
 import os
-import logging
 
 from avocado.utils import genio
 from avocado.utils import path as utils_path
@@ -69,7 +68,7 @@ def run(test, params, env):
     utils_path.find_command("lsblk")
     host_scsi_id, disk_name = get_host_scsi_disk()
     provisioning_mode = get_provisioning_mode(disk_name, host_scsi_id)
-    logging.info("Current host provisioning_mode = '%s'", provisioning_mode)
+    test.log.info("Current host provisioning_mode = '%s'", provisioning_mode)
 
     # prepare params to boot vm with scsi_debug disk.
     vm_name = params["main_vm"]
@@ -80,7 +79,7 @@ def run(test, params, env):
     params["image_name_%s" % data_tag] = disk_name
 
     error_context.context("boot guest with disk '%s'" % disk_name,
-                          logging.info)
+                          test.log.info)
     # boot guest with scsi_debug disk
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
@@ -94,6 +93,6 @@ def run(test, params, env):
         test.fail("Can not get output file path in guest.")
 
     mode = get_guest_provisioning_mode(output_path)
-    error_context.context("Checking provision mode %s" % mode, logging.info)
+    error_context.context("Checking provision mode %s" % mode, test.log.info)
     if mode != target_mode:
         test.fail("Got unexpected mode:%s", mode)

@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 import re
@@ -66,20 +65,20 @@ def run(test, params, env):
 
     try:
         # take time
-        logging.info("Start take guest time")
+        test.log.info("Start take guest time")
         bg = utils_misc.InterruptedThread(get_time, (cmd, test_time, session1))
         bg.start()
 
         # migration
-        logging.info("Start migration")
+        test.log.info("Start migration")
         vm.migrate()
 
         # log in
-        logging.info("Logging in after migration...")
+        test.log.info("Logging in after migration...")
         session2 = vm.wait_for_login(timeout=timeout)
         if not session2:
             test.fail("Could not log in after migration")
-        logging.info("Logged in after migration")
+        test.log.info("Logged in after migration")
 
         # linger a while
         time.sleep(test_time)

@@ -1,4 +1,3 @@
-import logging
 import time
 
 import aexpect
@@ -117,7 +116,7 @@ def run(test, params, env):
 
         try:
             # Open shell sessions with the guest
-            logging.info("Starting load on guest...")
+            test.log.info("Starting load on guest...")
             for i in range(guest_load_instances):
                 load_session = vm.wait_for_login(timeout=timeout)
                 # Set output func to None to stop it from being called so we
@@ -126,7 +125,7 @@ def run(test, params, env):
                 load_session.set_output_func(None)
                 load_session.set_output_params(())
                 load_session.set_output_prefix("(guest load %d) " % i)
-                load_session.set_output_func(logging.debug)
+                load_session.set_output_func(test.log.debug)
                 guest_load_sessions.append(load_session)
 
             # Get time before load
@@ -145,10 +144,10 @@ def run(test, params, env):
                     load_session.sendline(guest_load_command)
 
             # Run some load on the host
-            logging.info("Starting load on host...")
+            test.log.info("Starting load on host...")
             for i in range(host_load_instances):
                 load_cmd = aexpect.run_bg(host_load_command,
-                                          output_func=logging.debug,
+                                          output_func=test.log.debug,
                                           output_prefix="(host load %d) " % i,
                                           timeout=0.5)
                 host_load_sessions.append(load_cmd)
@@ -157,7 +156,7 @@ def run(test, params, env):
                 set_cpu_affinity(pid, cpu_mask << i)
 
             # Sleep for a while (during load)
-            logging.info("Sleeping for %s seconds...", load_duration)
+            test.log.info("Sleeping for %s seconds...", load_duration)
             time.sleep(load_duration)
 
             start_time = time.time()
@@ -172,13 +171,13 @@ def run(test, params, env):
                 host_delta = ht1 - ht0
                 guest_delta = gt1 - gt0
                 drift = 100.0 * (host_delta - guest_delta) / host_delta
-                logging.info("Host duration: %.2f", host_delta)
-                logging.info("Guest duration: %.2f", guest_delta)
-                logging.info("Drift: %.2f%%", drift)
+                test.log.info("Host duration: %.2f", host_delta)
+                test.log.info("Guest duration: %.2f", guest_delta)
+                test.log.info("Drift: %.2f%%", drift)
                 time.sleep(interval_gettime)
 
         finally:
-            logging.info("Cleaning up...")
+            test.log.info("Cleaning up...")
             # Restore the VM's CPU affinity
             restore_cpu_affinity(prev_affinity)
             # Stop the guest load
@@ -191,7 +190,7 @@ def run(test, params, env):
                 load_session.close()
 
         # Sleep again (rest)
-        logging.info("Sleeping for %s seconds...", rest_duration)
+        test.log.info("Sleeping for %s seconds...", rest_duration)
         time.sleep(rest_duration)
 
         # Get time after rest
@@ -212,10 +211,10 @@ def run(test, params, env):
     host_delta_total = ht2 - ht0
     guest_delta_total = gt2 - gt0
     drift_total = 100.0 * (host_delta_total - guest_delta_total) / host_delta
-    logging.info("Total host duration including rest: %.2f", host_delta_total)
-    logging.info(
+    test.log.info("Total host duration including rest: %.2f", host_delta_total)
+    test.log.info(
         "Total guest duration including rest: %.2f", guest_delta_total)
-    logging.info("Total drift after rest: %.2f%%", drift_total)
+    test.log.info("Total drift after rest: %.2f%%", drift_total)
 
     # Fail the test if necessary
     if abs(drift) > drift_threshold:

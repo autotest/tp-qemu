@@ -1,6 +1,5 @@
 import os
 import time
-import logging
 
 from avocado.utils import process
 from virttest import utils_test
@@ -40,7 +39,7 @@ def run(test, params, env):
                 session.cmd(diskspd_end_cmd)
             session.cmd("del %s" % (dst_path + diskspd_name))
     ntp_cmd = params["ntp_cmd"]
-    error_context.context("Sync host system time with ntpserver", logging.info)
+    error_context.context("Sync host system time with ntpserver", test.log.info)
     process.system(ntp_cmd, shell=True)
 
     params["start_vm"] = "yes"
@@ -49,14 +48,14 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
 
-    error_context.context("Install diskspd tool on guest", logging.info)
+    error_context.context("Install diskspd tool on guest", test.log.info)
     diskspd_dir = params["diskspd_dir"]
     diskspd_name = params["diskspd_name"]
     dst_path = params["dst_path"]
     diskspd_src_path = os.path.join(data_dir.get_deps_dir(diskspd_dir))
     vm.copy_files_to(diskspd_src_path, dst_path)
 
-    error_context.context("Install Meinberg NTP on guest", logging.info)
+    error_context.context("Install Meinberg NTP on guest", test.log.info)
     ntp_dir = params["ntp_dir"]
     ntp_name = params["ntp_name"]
     ntp_unattend_file = params["ntp_unattend_file"]
@@ -66,16 +65,16 @@ def run(test, params, env):
     session.cmd("cd %s" % ntp_dst_path)
     session.cmd(install_ntp_cmd % (ntp_name, ntp_unattend_file))
 
-    error_context.context("Run diskspd on guest", logging.info)
+    error_context.context("Run diskspd on guest", test.log.info)
     diskspd_run_cmd = params["diskspd_run_cmd"]
     session.cmd("cd %s" % dst_path)
     session.cmd(diskspd_run_cmd)
 
-    error_context.context("Play a video on guest", logging.info)
+    error_context.context("Play a video on guest", test.log.info)
     sub_test = params["sub_test"]
     utils_test.run_virt_sub_test(test, params, env, sub_test)
 
-    error_context.context("Check offset of ntp", logging.info)
+    error_context.context("Check offset of ntp", test.log.info)
     check_offset_cmd = params["check_offset_cmd"]
     sleep_time = params["sleep_time"]
     try:

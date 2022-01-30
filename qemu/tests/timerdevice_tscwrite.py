@@ -1,5 +1,4 @@
 import os
-import logging
 
 from avocado.utils import process
 from virttest import error_context
@@ -21,13 +20,13 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     error_context.context("Check for an appropriate clocksource on host",
-                          logging.info)
+                          test.log.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
     if "tsc" not in process.getoutput(host_cmd):
         test.cancel("Host must use 'tsc' clocksource")
 
-    error_context.context("Boot the guest", logging.info)
+    error_context.context("Boot the guest", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -35,7 +34,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Download and compile the newest msr-tools",
-                          logging.info)
+                          test.log.info)
     tarball = params["tarball"]
     compile_cmd = params["compile_cmd"]
     msr_name = params["msr_name"]
@@ -45,7 +44,7 @@ def run(test, params, env):
     session.cmd("cd %s && tar -zxvf %s" % (msr_dir, os.path.basename(tarball)))
     session.cmd("cd %s && %s" % (msr_name, compile_cmd))
 
-    error_context.context("Execute cmd in guest", logging.info)
+    error_context.context("Execute cmd in guest", test.log.info)
     cmd = "dmesg -c > /dev/null"
     session.cmd(cmd)
 

@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -26,7 +25,7 @@ def run(test, params, env):
         if expected not in session.cmd(cur_clk):
             test.fail("Guest didn't use '%s' clocksource" % expected)
 
-    error_context.context("Boot a guest with kvm-clock", logging.info)
+    error_context.context("Boot a guest with kvm-clock", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -34,17 +33,17 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Check the current clocksource in guest",
-                          logging.info)
+                          test.log.info)
     cur_clk = params["cur_clk"]
     if "kvm-clock" not in session.cmd(cur_clk):
         error_context.context("Update guest kernel cli to kvm-clock",
-                              logging.info)
+                              test.log.info)
         utils_time.update_clksrc(vm, clksrc="kvm-clock")
         session = vm.wait_for_login(timeout=timeout)
         verify_guest_clock_source(session, "kvm-clock")
 
     error_context.context("Check the available clocksource in guest",
-                          logging.info)
+                          test.log.info)
     avl_clk = params["avl_clk"]
     try:
         available_clksrc_list = session.cmd(avl_clk).split()
@@ -56,14 +55,14 @@ def run(test, params, env):
             if avl_clksrc == "kvm-clock":
                 continue
             error_context.context("Update guest kernel cli to '%s'" % avl_clksrc,
-                                  logging.info)
+                                  test.log.info)
             utils_time.update_clksrc(vm, clksrc=avl_clksrc)
             session = vm.wait_for_login(timeout=timeout)
             error_context.context("Check the current clocksource in guest",
-                                  logging.info)
+                                  test.log.info)
             verify_guest_clock_source(session, avl_clksrc)
     finally:
-        error_context.context("Restore guest kernel cli", logging.info)
+        error_context.context("Restore guest kernel cli", test.log.info)
         proc_cmdline = "cat /proc/cmdline"
         check_output = str(session.cmd(proc_cmdline, timeout=60))
         clk_removed = re.search("clocksource.*", check_output).group()

@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -40,14 +39,14 @@ def run(test, params, env):
             str_time = re.findall(hwclock_time_filter_re, output)[0]
             guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
         except Exception as err:
-            logging.debug(
+            test.log.debug(
                 "(time_format, output): (%s, %s)", hwclock_time_format, output)
             raise err
         return guest_time
 
     ntp_cmd = params["ntp_cmd"]
 
-    error_context.context("Sync host system time with ntpserver", logging.info)
+    error_context.context("Sync host system time with ntpserver", test.log.info)
     process.system(ntp_cmd, shell=True)
 
     vm = env.get_vm(params["main_vm"])
@@ -57,17 +56,17 @@ def run(test, params, env):
     time_forward = params["time_forward"]
     drift_threshold = params["drift_threshold"]
 
-    error_context.context("Get output of qom_get", logging.info)
+    error_context.context("Get output of qom_get", test.log.info)
     qom_st1 = vm.monitor.qom_get("/machine", "rtc-time")
 
-    error_context.context("Get hardware time of guest", logging.info)
+    error_context.context("Get hardware time of guest", test.log.info)
     hwclock_st1 = get_hwtime(session)
-    logging.debug("hwclock: guest time=%ss", hwclock_st1)
+    test.log.debug("hwclock: guest time=%ss", hwclock_st1)
 
-    error_context.context("Adjust guest hardware time forward 1 hour", logging.info)
+    error_context.context("Adjust guest hardware time forward 1 hour", test.log.info)
     session.cmd(hwclock_forward_cmd, timeout=120)
 
-    error_context.context("Verify output of qom-get", logging.info)
+    error_context.context("Verify output of qom-get", test.log.info)
     qom_st2 = vm.monitor.qom_get("/machine", "rtc-time")
 
     qom_gap = int(qom_st2["tm_hour"]) - int(qom_st1["tm_hour"])
@@ -77,9 +76,9 @@ def run(test, params, env):
                   "qom-get result after change guest's RTC time: %s"
                   % (qom_st1, qom_st2))
 
-    error_context.context("Verify guest hardware time", logging.info)
+    error_context.context("Verify guest hardware time", test.log.info)
     hwclock_st2 = get_hwtime(session)
-    logging.debug("hwclock: guest time=%ss", hwclock_st2)
+    test.log.debug("hwclock: guest time=%ss", hwclock_st2)
     session.close()
     if (hwclock_st1 - hwclock_st2 - float(time_forward)) > float(drift_threshold):
         test.fail("Unexpected hwclock drift, "

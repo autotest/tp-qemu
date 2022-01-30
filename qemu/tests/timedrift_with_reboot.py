@@ -1,5 +1,3 @@
-import logging
-
 from virttest import utils_test
 from virttest import utils_time
 
@@ -59,8 +57,8 @@ def run(test, params, env):
             (ht0_, gt0_) = utils_test.get_time(session, time_command,
                                                time_filter_re, time_format)
             # Run current iteration
-            logging.info("Rebooting: iteration %d of %d...",
-                         (i + 1), reboot_iterations)
+            test.log.info("Rebooting: iteration %d of %d...",
+                          (i + 1), reboot_iterations)
             session = vm.reboot(session, timeout=timeout)
             # Get time after current iteration
             (ht1_, gt1_) = utils_test.get_time(session, time_command,
@@ -69,12 +67,12 @@ def run(test, params, env):
             host_delta = ht1_ - ht0_
             guest_delta = gt1_ - gt0_
             drift = abs(host_delta - guest_delta)
-            logging.info("Host duration (iteration %d): %.2f",
-                         (i + 1), host_delta)
-            logging.info("Guest duration (iteration %d): %.2f",
-                         (i + 1), guest_delta)
-            logging.info("Drift at iteration %d: %.2f seconds",
-                         (i + 1), drift)
+            test.log.info("Host duration (iteration %d): %.2f",
+                          (i + 1), host_delta)
+            test.log.info("Guest duration (iteration %d): %.2f",
+                          (i + 1), guest_delta)
+            test.log.info("Drift at iteration %d: %.2f seconds",
+                          (i + 1), drift)
             # Fail if necessary
             if drift > drift_threshold_single:
                 test.fail("Time drift too large at iteration %d: "
@@ -97,12 +95,12 @@ def run(test, params, env):
     host_delta = ht1 - ht0
     guest_delta = gt1 - gt0
     drift = abs(host_delta - guest_delta)
-    logging.info("Host duration (%d reboots): %.2f",
-                 reboot_iterations, host_delta)
-    logging.info("Guest duration (%d reboots): %.2f",
-                 reboot_iterations, guest_delta)
-    logging.info("Drift after %d reboots: %.2f seconds",
-                 reboot_iterations, drift)
+    test.log.info("Host duration (%d reboots): %.2f",
+                  reboot_iterations, host_delta)
+    test.log.info("Guest duration (%d reboots): %.2f",
+                  reboot_iterations, guest_delta)
+    test.log.info("Drift after %d reboots: %.2f seconds",
+                  reboot_iterations, drift)
 
     # Fail if necessary
     if drift > drift_threshold:

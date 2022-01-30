@@ -1,4 +1,3 @@
-import logging
 from avocado.utils import path as utils_path
 from avocado.utils import process
 
@@ -86,7 +85,7 @@ def run(test, params, env):
     params["image_name_%s" % data_tag] = disk_name
 
     error_context.context("Boot guest with disk '%s'" % disk_name,
-                          logging.info)
+                          test.log.info)
     # boot guest with scsi_debug disk
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
@@ -101,25 +100,25 @@ def run(test, params, env):
     guest_dd_command = params["guest_dd_command"]
     guest_rm_command = params["guest_rm_command"]
 
-    error_context.context("Format disk in guest.", logging.info)
+    error_context.context("Format disk in guest.", test.log.info)
     session.cmd(guest_format_command)
     count = get_blocks()
-    logging.info("The initial blocks is %d", count)
+    test.log.info("The initial blocks is %d", count)
 
-    error_context.context("Fill data disk in guest.", logging.info)
+    error_context.context("Fill data disk in guest.", test.log.info)
     session.cmd(guest_dd_command, ignore_all_errors=True)
     old_count = get_blocks()
-    error_context.context("Blocks before trim: %d" % old_count, logging.info)
+    error_context.context("Blocks before trim: %d" % old_count, test.log.info)
 
-    error_context.context("Remove data from disk in guest.", logging.info)
+    error_context.context("Remove data from disk in guest.", test.log.info)
     session.cmd(guest_rm_command)
 
     session.cmd("setenforce 0")
-    error_context.context("Execute guest-fstrim command.", logging.info)
+    error_context.context("Execute guest-fstrim command.", test.log.info)
     agent_session.fstrim()
     new_count = get_blocks()
-    error_context.context("Blocks after trim: %d" % new_count, logging.info)
+    error_context.context("Blocks after trim: %d" % new_count, test.log.info)
 
-    error_context.context("Compare blocks.", logging.info)
+    error_context.context("Compare blocks.", test.log.info)
     if new_count >= old_count:
         test.fail("Got unexpected result:%s %s" % (old_count, new_count))

@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -25,12 +24,12 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     error_context.context("Check the clock source currently used on guest",
-                          logging.info)
+                          test.log.info)
     cmd = "cat /sys/devices/system/clocksource/"
     cmd += "clocksource0/current_clocksource"
-    logging.info("%s is current clocksource.", session.cmd_output(cmd))
+    test.log.info("%s is current clocksource.", session.cmd_output(cmd))
 
-    error_context.context("Pin every vcpu to physical cpu", logging.info)
+    error_context.context("Pin every vcpu to physical cpu", test.log.info)
     host_cpu_num = cpu.total_count()
     host_cpu_list = (_ for _ in range(int(host_cpu_num)))
     if len(vm.vcpu_threads) > int(host_cpu_num):

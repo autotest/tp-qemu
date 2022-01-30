@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 
@@ -44,14 +43,14 @@ def run(test, params, env):
         """
         output = process.system_output(host_check_cmd, shell=True).decode()
         new_size = _get_size_value(str(output))
-        logging.info("Current data disk size: %sMB", new_size)
+        test.log.info("Current data disk size: %sMB", new_size)
         if new_size < ori_size:
             return new_size
         return None
 
     def query_system_events(filter_options):
         """Query the system events in filter options."""
-        logging.info("Query the system event log.")
+        test.log.info("Query the system event log.")
         cmd = params.get("query_cmd") % filter_options
         return params.get("searched_keywords") in session.cmd(cmd).strip()
 
@@ -71,11 +70,11 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=timeout)
     error_context.context("Check if the driver is installed and verified",
-                          logging.info)
+                          test.log.info)
     session = utils_test.qemu.windrv_check_running_verifier(
         session, vm, test, driver_verifier, timeout)
 
-    error_context.context("Format data disk", logging.info)
+    error_context.context("Format data disk", test.log.info)
     disk_index = utils_misc.wait_for(
         lambda: utils_disk.get_windows_disks_index(session, image_size_str),
         120)
@@ -92,7 +91,7 @@ def run(test, params, env):
     error_context.context("Check size from host before disk trimming")
     output = process.system_output(host_check_cmd, shell=True).decode()
     ori_size = _get_size_value(output)
-    logging.info("Data disk size: %sMB", ori_size)
+    test.log.info("Data disk size: %sMB", ori_size)
 
     error_context.context("Trim data disk in guest")
     status, output = session.cmd_status_output(guest_trim_cmd % drive_letter,

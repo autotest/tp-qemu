@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import env_process
@@ -19,7 +18,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     def search_keywords(patterns, string, flags=re.M, split_string=';'):
-        logging.info(string)
+        test.log.info(string)
         for pattern in patterns.split(split_string):
             if not re.search(r'%s' % pattern, string, flags):
                 test.fail('No Found pattern "%s" from "%s".' % (pattern, string))
@@ -49,7 +48,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login()
 
-    error_context.context("Check TPM info inside guest.", logging.info)
+    error_context.context("Check TPM info inside guest.", test.log.info)
     for name in params.get('check_cmd_names').split():
         if name:
             pattern = params.get('pattern_output_%s' % name)
@@ -59,7 +58,7 @@ def run(test, params, env):
     cmd_check_secure_boot_enabled = params.get('cmd_check_secure_boot_enabled')
     if cmd_check_secure_boot_enabled:
         error_context.context("Check whether secure boot enabled inside guest.",
-                              logging.info)
+                              test.log.info)
         status, output = session.cmd_status_output(cmd_check_secure_boot_enabled)
         if status:
             test.fail('Secure boot is not enabled, output: %s' % output)

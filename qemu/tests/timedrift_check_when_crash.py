@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -33,10 +32,10 @@ def run(test, params, env):
     os_type = params["os_type"]
     ntp_host_cmd = params.get("ntp_host_cmd", ntp_cmd)
 
-    error_context.context("sync host time with ntp server", logging.info)
+    error_context.context("sync host time with ntp server", test.log.info)
     process.system(ntp_host_cmd, shell=True)
 
-    error_context.context("start guest", logging.info)
+    error_context.context("start guest", test.log.info)
     params["start_vm"] = "yes"
     preprocess(test, params, env)
     vm = env.get_vm(params["main_vm"])
@@ -48,14 +47,14 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("sync time in guest", logging.info)
+    error_context.context("sync time in guest", test.log.info)
     if os_type == "windows":
         w32time_conf_cmd = params["w32time_conf_cmd"]
         session.cmd(w32time_conf_cmd)
         utils_test.start_windows_service(session, "w32time")
     session.cmd(ntp_cmd)
 
-    error_context.context("inject nmi interrupt in vm", logging.info)
+    error_context.context("inject nmi interrupt in vm", test.log.info)
     target, cmd = re.split(r"\s*:\s*", nmi_cmd)
     if target == "monitor":
         vm.monitor.send_args_cmd(cmd)
@@ -68,7 +67,7 @@ def run(test, params, env):
     else:
         test.fail("Guest OS still alive ...")
 
-    error_context.context("sleep %s seconds" % sleep_time, logging.info)
+    error_context.context("sleep %s seconds" % sleep_time, test.log.info)
     time.sleep(sleep_time)
     # Autotest parses serial output and could raise VMDeadKernelCrash
     # we generated using sysrq. Ignore one "BUG:" line
@@ -98,7 +97,7 @@ def run(test, params, env):
             else:
                 break
 
-    error_context.context("check time offset via ntp", logging.info)
+    error_context.context("check time offset via ntp", test.log.info)
     output = session.cmd_output(ntp_query_cmd)
     try:
         offset = re.findall(r"[+-]?(\d+\.\d+)", output, re.M)[-1]

@@ -346,7 +346,7 @@ def run(test, params, env):
             mtu_set(mtu_default)
         if params.get("client_physical_nic") and params.get(
                                                     "os_type_client") == "linux":
-            cmd = 'ifconfig %s 0.0.0.0 down' % params.get("client_physical_nic")
+            cmd = 'ifconfig %s 0.0.0.0' % params.get("client_physical_nic")
             netperf_base.ssh_cmd(client, cmd)
 
 

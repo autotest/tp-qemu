@@ -13,6 +13,8 @@ from virttest import versionable_class
 from virttest import data_dir
 from virttest import error_context
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def allow_iperf_firewall(machine):
     machine.cmd("iptables -I INPUT -p tcp --dport 5001 --j ACCEPT")
@@ -70,7 +72,7 @@ class InfrastructureInit(MiniSubtest):
                                           self.br0_name,
                                           self.ovs)
 
-        logging.debug(self.ovs.status())
+        LOG_JOB.debug(self.ovs.status())
         self.host = ovs_utils.Machine(src=test.workdir)
         self.mvms = [ovs_utils.Machine(vm) for vm in self.vms]
         self.machines = [self.host] + self.mvms
@@ -174,16 +176,16 @@ def run(test, params, env):
             # Test TCP bandwidth
             error_context.context("Test iperf bandwidth tcp.")
             speeds = self.test_bandwidth()
-            logging.info("TCP Bandwidth from vm->host: %s", speeds[0])
-            logging.info("TCP Bandwidth from host->vm: %s", speeds[1])
-            logging.info("TCP Bandwidth from vm->vm: %s", speeds[2])
+            test.log.info("TCP Bandwidth from vm->host: %s", speeds[0])
+            test.log.info("TCP Bandwidth from host->vm: %s", speeds[1])
+            test.log.info("TCP Bandwidth from vm->vm: %s", speeds[2])
 
             # test udp bandwidth limited to 1Gb
             error_context.context("Test iperf bandwidth udp.")
             speeds = self.test_bandwidth("-u -b 1G")
-            logging.info("UDP Bandwidth from vm->host: %s", speeds[0])
-            logging.info("UDP Bandwidth from host->vm: %s", speeds[1])
-            logging.info("UDP Bandwidth from vm->vm: %s", speeds[2])
+            test.log.info("UDP Bandwidth from vm->host: %s", speeds[0])
+            test.log.info("UDP Bandwidth from host->vm: %s", speeds[1])
+            test.log.info("UDP Bandwidth from vm->vm: %s", speeds[2])
 
         def clean(self, test, params, env):
             self.host.cmd("killall -9 iperf")

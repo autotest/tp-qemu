@@ -10,6 +10,8 @@ from virttest import utils_net
 from virttest import utils_test
 from virttest import env_process
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def create_file_in_guest(test, session, file_path, size=100,
                          os_type="linux", timeout=360):
@@ -71,7 +73,7 @@ def ping(test, os_type, match_error, dest, count, session, same_vlan):
                                          session=session)
         loss_ratio = utils_test.get_loss_ratio(output)
         ping_result_check(test, loss_ratio, same_vlan)
-        logging.debug(output)
+        LOG_JOB.debug(output)
     elif os_type == "windows":  # TODO, not supported by now
         status, output = utils_test.ping(dest, count, timeout=60,
                                          session=session)
@@ -152,7 +154,7 @@ def run(test, params, env):
     """
     txt = "Setup netperf in guest."
     image_snapshot = params.get("image_snapshot", "yes")
-    error_context.context(txt, logging.info)
+    error_context.context(txt, test.log.info)
     netperf_setup(test, params, env)
     params["image_snapshot"] = image_snapshot
 
@@ -162,13 +164,13 @@ def run(test, params, env):
     match_error = params.get("destination_unreachable", "")
 
     txt = "Stop NetworkManager service in host."
-    error_context.context(txt, logging.info)
+    error_context.context(txt, test.log.info)
     process.system(params["stop_network_manager"], timeout=120,
                    ignore_status=True)
 
     txt = "Create a new private ovs bridge, which has"
     txt += " no physical nics inside."
-    error_context.context(txt, logging.info)
+    error_context.context(txt, test.log.info)
     ovs_br_create_cmd = params["ovs_br_create_cmd"]
     ovs_br_remove_cmd = params["ovs_br_remove_cmd"]
     try:
@@ -183,7 +185,7 @@ def run(test, params, env):
         vms = params.get("vms").split()
         ips = []
         txt = "Start multi vms and add them to 2 vlans."
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         for vm_name in vms:
             vm_params = params.object_params(vm_name)
             env_process.preprocess_vm(test, vm_params, env, vm_name)
@@ -206,12 +208,12 @@ def run(test, params, env):
             session_ctl = vm.wait_for_serial_login(timeout=login_timeout)
             if os_type == "linux":
                 txt = "Stop NetworkManager service in guest %s." % vm_name
-                logging.info(txt)
+                test.log.info(txt)
                 session_ctl.cmd(params["stop_network_manager"], timeout=120)
 
             mac = vm.get_mac_address()
             txt = "Set guest %s mac %s IP to %s" % (vm_name, mac, guest_ip)
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
             utils_net.set_guest_ip_addr(session_ctl, mac, guest_ip,
                                         os_type=os_type)
             utils_net.Interface(ifname).down()
@@ -221,28 +223,28 @@ def run(test, params, env):
 
         txt = "Ping between two guests in same vlan. %s -> %s" % (vms[0],
                                                                   vms[1])
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         ping(test, os_type, match_error, ips[1], count=10,
              session=sessions[0], same_vlan=True)
 
         txt = "Ping between two guests in different "
         txt += "vlan. %s -> %s" % (vms[0], vms[2])
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         ping(test, os_type, match_error, ips[2], count=10,
              session=sessions[0], same_vlan=False)
 
         txt = "Ping between two guests in another "
         txt += "vlan. %s -> %s" % (vms[2], vms[3])
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         ping(test, os_type, match_error, ips[3], count=10,
              session=sessions[2], same_vlan=True)
 
         txt = "Netperf test between two guests in same vlan."
         txt += "%s -> %s" % (vms[0], vms[1])
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
 
         txt = "Run netserver in VM %s" % vms[0]
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         shutdown_firewall_cmd = params["shutdown_firewall"]
         sessions[0].cmd_status_output(shutdown_firewall_cmd, timeout=10)
         netserver_cmd = params.get("netserver_cmd")
@@ -255,7 +257,7 @@ def run(test, params, env):
             test.error(err)
 
         txt = "Run netperf client in VM %s" % vms[1]
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         sessions[1].cmd_status_output(shutdown_firewall_cmd, timeout=10)
         test_duration = int(params.get("netperf_test_duration", 60))
         test_protocol = params.get("test_protocol")
@@ -281,7 +283,7 @@ def run(test, params, env):
             txt = "Create %s MB file %s in %s" % (filesize,
                                                   file_path,
                                                   vms[0])
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
             create_file_in_guest(test, session=sessions[0],
                                  file_path=file_path,
                                  size=filesize, os_type=os_type,
@@ -289,7 +291,7 @@ def run(test, params, env):
 
             txt = "Transfer file %s between guests in same " % file_path
             txt += "vlan. %s -> %s" % (vms[0], vms[1])
-            error_context.context(txt, logging.info)
+            error_context.context(txt, test.log.info)
             password = params.get("password", "kvmautotest")
             username = params.get("username", "root")
             f_tmout = int(params.get("file_transfer_timeout", 1200))

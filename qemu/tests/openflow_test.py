@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -69,9 +68,9 @@ def run(test, params, env):
             err_msg += "%s " % (packet_receive and "can" or "can not")
             err_msg += "receive the packets"
             test.error(err_msg)
-        logging.info("Correct, flow %s dropped, tcpdump %s receive the packet",
-                     (drop_flow and "was" or "was not"),
-                     (packet_receive and "can" or "can not"))
+        test.log.info("Correct, flow %s dropped, tcpdump %s receive the packet",
+                      (drop_flow and "was" or "was not"),
+                      (packet_receive and "can" or "can not"))
 
     def arp_entry_clean(entry=None):
         """
@@ -119,9 +118,9 @@ def run(test, params, env):
 
         info_msg = "Correct, icmp flow %s dropped, ping '%s', "
         info_msg += "packets lost rate is: '%s'"
-        logging.info(info_msg, (drop_flow and "was" or "was not"),
-                     (ping_status and "failed" or "success"),
-                     packets_lost)
+        test.log.info(info_msg, (drop_flow and "was" or "was not"),
+                      (ping_status and "failed" or "success"),
+                      packets_lost)
 
     def run_ping_bg(vm, dst):
         """
@@ -129,7 +128,7 @@ def run(test, params, env):
         """
         ping_cmd = "ping %s" % dst
         session = vm.wait_for_login()
-        logging.info("Ping %s in background", dst)
+        test.log.info("Ping %s in background", dst)
         session.sendline(ping_cmd)
         return session
 
@@ -202,9 +201,9 @@ def run(test, params, env):
                 err_msg += " '%s'" % (nc_connect and "failed" or "success")
                 test.error(err_msg)
 
-            logging.info("Correct, '%s' flow %s dropped, and nc connect %s",
-                         nc_protocol, (drop_flow and "was" or "was not"),
-                         (nc_connect and "success" or "failed"))
+            test.log.info("Correct, '%s' flow %s dropped, and nc connect %s",
+                          nc_protocol, (drop_flow and "was" or "was not"),
+                          (nc_connect and "success" or "failed"))
         finally:
             for session in sessions:
                 session.cmd_output_safe("killall nc || killall ncat")
@@ -290,12 +289,12 @@ def run(test, params, env):
                           " ovs-ofctl: %s" % acl_rules)
 
             error_context.context("Run tcpdump in guest %s" % vms[1].name,
-                                  logging.info)
+                                  test.log.info)
             run_tcpdump_bg(vms[1], addresses, f_protocol)
 
             if drop_flow or f_protocol is not "arp":
                 error_context.context("Clean arp cache in both guest",
-                                      logging.info)
+                                      test.log.info)
                 arp_entry_clean(addresses[1])
 
             error_context.base_context(
@@ -303,38 +302,38 @@ def run(test, params, env):
                 (f_protocol, drop_flow and "drop" or "normal"))
             if drop_flow:
                 error_context.context("Ping test form %s to %s" %
-                                      (vms[0].name, vms[1].name), logging.info)
+                                      (vms[0].name, vms[1].name), test.log.info)
                 ping_test(sessions[0], addresses[1], drop_icmp)
                 if params.get("run_file_transfer") == "yes":
                     error_context.context("Transfer file form %s to %s" %
                                           (vms[0].name, vms[1].name),
-                                          logging.info)
+                                          test.log.info)
                     file_transfer(sessions, addresses, prepare_timeout)
             else:
                 error_context.context("Ping test form %s to %s in background" %
-                                      (vms[0].name, vms[1].name), logging.info)
+                                      (vms[0].name, vms[1].name), test.log.info)
                 bg_ping_session = run_ping_bg(vms[0], addresses[1])
 
             if f_protocol == 'arp' and drop_flow:
                 error_context.context("Check arp inside %s" % vms[0].name,
-                                      logging.info)
+                                      test.log.info)
                 check_arp_info(sessions[0], addresses[1], vms[0])
             elif f_protocol == 'arp' or params.get("check_arp") == "yes":
                 time.sleep(2)
-                error_context.context("Check arp inside guests.", logging.info)
+                error_context.context("Check arp inside guests.", test.log.info)
                 for index, address in enumerate(addresses):
                     sess_index = (index + 1) % 2
                     mac = vms[index].virtnet.get_mac_address(0)
                     check_arp_info(sessions[sess_index], address, vms[index],
                                    mac)
 
-            error_context.context("Run nc connect test via tcp", logging.info)
+            error_context.context("Run nc connect test via tcp", test.log.info)
             nc_connect_test(sessions, addresses, drop_tcp)
 
-            error_context.context("Run nc connect test via udp", logging.info)
+            error_context.context("Run nc connect test via udp", test.log.info)
             nc_connect_test(sessions, addresses, drop_udp, udp_model=True)
 
-            error_context.context("Check tcpdump data catch", logging.info)
+            error_context.context("Check tcpdump data catch", test.log.info)
             tcpdump_catch_packet_test(sessions[1], drop_flow)
     finally:
         openflow_rules_ori = utils_net.openflow_manager(
@@ -348,10 +347,10 @@ def run(test, params, env):
                             set(openflow_rules.splitlines()))
 
         if f_protocol == "tcp":
-            error_context.context("Run nc connect test via tcp", logging.info)
+            error_context.context("Run nc connect test via tcp", test.log.info)
             nc_connect_test(sessions, addresses)
         elif f_protocol == "udp":
-            error_context.context("Run nc connect test via udp", logging.info)
+            error_context.context("Run nc connect test via udp", test.log.info)
             nc_connect_test(sessions, addresses, udp_model=True)
 
         for session in sessions:

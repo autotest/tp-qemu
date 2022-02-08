@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import error_context
 from virttest import utils_net
@@ -31,7 +29,7 @@ def run(test, params, env):
         host_bridge.del_br(new_br_name)
     host_bridge.add_br(new_br_name)
     error_context.context("OVS bridge %s created." % new_br_name,
-                          logging.info)
+                          test.log.info)
 
     try:
         ports = host_bridge.list_ports(netdst)

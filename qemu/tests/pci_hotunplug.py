@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -60,7 +59,7 @@ def run(test, params, env):
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
     if module:
-        error_context.context("modprobe the module %s" % module, logging.info)
+        error_context.context("modprobe the module %s" % module, test.log.info)
         session.cmd("modprobe %s" % module)
 
     # Probe qemu to verify what is the supported syntax for PCI hotplug
@@ -78,7 +77,7 @@ def run(test, params, env):
     sub_type = params.get("sub_type_before_unplug")
     if sub_type:
         error_context.context(context_msg % (sub_type, "before unplug"),
-                              logging.info)
+                              test.log.info)
         utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     if devices:
@@ -86,11 +85,11 @@ def run(test, params, env):
             # (lmr) I think here is the place where pci_info should go
             pci_info = []
             error_context.context("Hot unplug device %s" % device,
-                                  logging.info)
+                                  test.log.info)
             pci_del(device)
 
     sub_type = params.get("sub_type_after_unplug")
     if sub_type:
         error_context.context(context_msg % (sub_type, "after hotunplug"),
-                              logging.info)
+                              test.log.info)
         utils_test.run_virt_sub_test(test, params, env, sub_type)

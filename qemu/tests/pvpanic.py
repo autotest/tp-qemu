@@ -8,6 +8,8 @@ from virttest import utils_test
 from virttest import utils_misc
 from avocado.utils.wait import wait_for
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def setup_test_environment(test, params, vm, session):
     """
@@ -53,12 +55,12 @@ def check_qmp_events(vm, event_names, timeout=360):
     def _do_check(vm, event_names):
         for name in event_names:
             if vm.monitor.get_event(name):
-                logging.info("Receive qmp %s event notification", name)
+                LOG_JOB.info("Receive qmp %s event notification", name)
                 vm.monitor.clear_event(name)
                 return True
         return False
 
-    logging.info("Try to get qmp events %s in %s seconds!",
+    LOG_JOB.info("Try to get qmp events %s in %s seconds!",
                  event_names, timeout)
     return wait_for(lambda: _do_check(vm, event_names), timeout, 5, 5)
 
@@ -128,13 +130,13 @@ def run(test, params, env):
     debug_type = params.get_numeric("debug_type")
     events_pvpanic = params.get_numeric("events_pvpanic")
 
-    error_context.context("Boot guest with pvpanic device", logging.info)
+    error_context.context("Boot guest with pvpanic device", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     if params.get("os_type") == "windows":
         error_context.context("Check if the driver is installed and "
-                              "verified", logging.info)
+                              "verified", test.log.info)
         driver_name = params.get("driver_name", "pvpanic")
         session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                 test,
@@ -153,20 +155,20 @@ def run(test, params, env):
             else:
                 check_empty = True
 
-        error_context.context("Setup crashdump for pvpanic events", logging.info)
+        error_context.context("Setup crashdump for pvpanic events", test.log.info)
         crashdump_cmd = params["crashdump_cmd"] % debug_type
         s, o = session.cmd_status_output(crashdump_cmd, timeout=timeout)
         if s:
             test.error("Cannot setup crashdump, output = " + o)
 
     if params["crash_method"] != "notmyfault_app":
-        error_context.context("Setup crash evironment for test", logging.info)
+        error_context.context("Setup crash evironment for test", test.log.info)
         setup_test_environment(test, params, vm, session)
 
-    error_context.context("Trigger crash", logging.info)
+    error_context.context("Trigger crash", test.log.info)
     trigger_crash(test, vm, params)
 
-    error_context.context("Check the panic event in qmp", logging.info)
+    error_context.context("Check the panic event in qmp", test.log.info)
     result = check_qmp_events(vm, event_check, timeout)
     if not check_empty and not result:
         test.fail("Did not receive panic event notification")

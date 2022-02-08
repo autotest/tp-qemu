@@ -3,7 +3,6 @@ import os
 import glob
 import shutil
 import time
-import logging
 
 from avocado.utils import process
 from avocado.utils import path as utils_path
@@ -76,8 +75,8 @@ def run(test, params, env):
         uuid = process.system_output(mirror_cmd)
         output = process.system_output("ovs-vsctl list mirror")
         if uuid not in output:
-            logging.debug("Create OVS Mirror CMD: %s ", mirror_cmd)
-            logging.debug("Ovs Info: %s ", output)
+            test.log.debug("Create OVS Mirror CMD: %s ", mirror_cmd)
+            test.log.debug("Ovs Info: %s ", output)
             test.fail("Setup mirorr port failed")
 
     def check_tcpdump(output, target_ip, host_ip, direction):
@@ -99,7 +98,7 @@ def run(test, params, env):
             rex = r".*IP %s > %s.*ICMP echo request.*" % (target_ip, host_ip)
         for idx, _ in enumerate(output.splitlines()):
             if not re.match(rex, _):
-                logging.debug("Unexpect packet in line %d: %s", idx, _)
+                test.log.debug("Unexpect packet in line %d: %s", idx, _)
                 return False
         return True
 
@@ -116,7 +115,7 @@ def run(test, params, env):
     ovs_remove_cmd = params.get("ovs_remove_cmd")
     login_timeout = int(params.get("login_timeout", "600"))
 
-    error_context.context("Create private ovs switch", logging.info)
+    error_context.context("Create private ovs switch", test.log.info)
     process.system(ovs_create_cmd, shell=True)
     params["start_vm"] = "yes"
     params["netdst"] = ovs_name
@@ -142,28 +141,28 @@ def run(test, params, env):
         refer_ip = vms_info[refer_vm][2]
         session = vms_info[mirror_vm][3]
 
-        error_context.context("Create mirror port in ovs", logging.info)
+        error_context.context("Create mirror port in ovs", test.log.info)
         create_mirror_port(mirror_ifname, target_ifname, direction, ovs_name)
         ping_cmd = "ping -c 10 %s" % host_ip
         status, output = session.cmd_status_output(ping_cmd, timeout=60)
         if status == 0:
             ifcfg = session.cmd_output_safe("ifconfig")
-            logging.debug("Guest network info: %s", ifcfg)
-            logging.debug("Ping results: %s", output)
+            test.log.debug("Guest network info: %s", ifcfg)
+            test.log.debug("Ping results: %s", output)
             test.fail("All packets from %s to host should lost" % mirror_vm)
 
         error_context.context("Start tcpdump threads in %s" % mirror_vm,
-                              logging.info)
+                              test.log.info)
         ifup_cmd = "ifconfig %s 0 up" % mirror_nic
         session.cmd(ifup_cmd, timeout=60)
         for vm, ip in [(target_vm, target_ip), (refer_vm, refer_ip)]:
             tcpdump_cmd = "tcpdump -l -n host %s and icmp >" % ip
             tcpdump_cmd += "/tmp/tcpdump-%s.txt &" % vm
-            logging.info("tcpdump command: %s", tcpdump_cmd)
+            test.log.info("tcpdump command: %s", tcpdump_cmd)
             session.sendline(tcpdump_cmd)
 
         error_context.context("Start ping threads in %s %s"
-                              % (target_vm, refer_vm), logging.info)
+                              % (target_vm, refer_vm), test.log.info)
         for vm in [target_vm, refer_vm]:
             ses = vms_info[vm][3]
             nic_name = vms_info[vm][4]
@@ -171,10 +170,10 @@ def run(test, params, env):
             ifup_cmd = "ifconfig %s %s/%s up" % (nic_name, ip, net_mask)
             ses.cmd(ifup_cmd)
             time.sleep(0.5)
-            logging.info("Ping host from %s", vm)
+            test.log.info("Ping host from %s", vm)
             ses.cmd("ping %s -c 100" % host_ip, timeout=150)
 
-        error_context.context("Check tcpdump results", logging.info)
+        error_context.context("Check tcpdump results", test.log.info)
         session.cmd_output_safe("pkill tcpdump")
         process.system("ovs-vsctl clear bridge %s mirrors" % ovs_name)
         ifup_cmd = "ifconfig %s %s/%s up" % (mirror_nic, mirror_ip, net_mask)

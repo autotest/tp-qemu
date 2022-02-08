@@ -1,5 +1,4 @@
 import re
-import logging
 import aexpect
 
 from virttest import error_context
@@ -47,7 +46,7 @@ def run(test, params, env):
 
     def pci_add(pci_add_cmd):
         error_context.context("Adding pci device with command 'pci_add'",
-                              logging.info)
+                              test.log.info)
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         pci_info.append(['', '', add_output, pci_model])
 
@@ -81,8 +80,8 @@ def run(test, params, env):
         devices_supported = [j.strip('"') for j in
                              re.findall(r'\"[a-z|0-9|\-|\_|\,|\.]*\"',
                                         probe_output, re.MULTILINE)]
-        logging.debug("QEMU reported the following supported devices for "
-                      "PCI hotplug: %s", devices_supported)
+        test.log.debug("QEMU reported the following supported devices for "
+                       "PCI hotplug: %s", devices_supported)
         return (dev in devices_supported)
 
     def verify_supported_device(dev):
@@ -136,7 +135,7 @@ def run(test, params, env):
             else:
                 controller_add_cmd = ("device_add driver=%s,id=%s" %
                                       (controller_model, controller_id))
-            error_context.context("Adding SCSI controller.", logging.info)
+            error_context.context("Adding SCSI controller.", test.log.info)
             vm.monitor.send_args_cmd(controller_add_cmd, convert=False)
 
         verify_supported_device(pci_model)
@@ -158,7 +157,7 @@ def run(test, params, env):
         env.register_vm(vm.name, vm)
 
         # add driver.
-        error_context.context("Adding driver.", logging.info)
+        error_context.context("Adding driver.", test.log.info)
         vm.monitor.send_args_cmd(driver_add_cmd, convert=False)
 
         pci_add_cmd = ("device_add id=%s,driver=%s,drive=%s" %
@@ -167,7 +166,7 @@ def run(test, params, env):
 
     def device_add(pci_num, pci_add_cmd):
         error_context.context("Adding pci device with command 'device_add'",
-                              logging.info)
+                              test.log.info)
         if vm.monitor.protocol == 'qmp':
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         else:
@@ -177,8 +176,8 @@ def run(test, params, env):
 
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][1] not in str(after_add):
-            logging.error("Could not find matched id in monitor:"
-                          " %s", pci_info[pci_num][1])
+            test.log.error("Could not find matched id in monitor:"
+                           " %s", pci_info[pci_num][1])
             test.fail("Add device failed. Monitor command is: %s"
                       ". Output: %r" % (pci_add_cmd, add_output))
         return after_add
@@ -217,7 +216,7 @@ def run(test, params, env):
                 return False
 
             error_context.context("Start checking new added device",
-                                  logging.info)
+                                  test.log.info)
             # Compare the output of 'info pci'
             if after_add == info_pci_ref:
                 test.fail("No new PCI device shown after executing "
@@ -279,7 +278,7 @@ def run(test, params, env):
                 else:
                     controller_del_cmd = "device_del id=%s" % controller_id
                 error_context.context("Deleting SCSI controller.",
-                                      logging.info)
+                                      test.log.info)
                 vm.monitor.send_args_cmd(controller_del_cmd, convert=False)
                 blk_removed.append(controller_id)
 
@@ -347,36 +346,36 @@ def run(test, params, env):
             if sub_type:
                 error_context.context(context_msg
                                       % (sub_type, "before hotplug"),
-                                      logging.info)
+                                      test.log.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
 
             error_context.context("Start hot-adding pci device, repeat %d" % j,
-                                  logging.info)
+                                  test.log.info)
             add_device(pci_num, queues)
 
             sub_type = params.get("sub_type_after_plug")
             if sub_type:
                 error_context.context(context_msg
                                       % (sub_type, "after hotplug"),
-                                      logging.info)
+                                      test.log.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
         for pci_num in range(pci_num_range):
             sub_type = params.get("sub_type_before_unplug")
             if sub_type:
                 error_context.context(context_msg
                                       % (sub_type, "before hotunplug"),
-                                      logging.info)
+                                      test.log.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
 
             error_context.context("start hot-deleting pci device, repeat %d"
-                                  % j, logging.info)
+                                  % j, test.log.info)
             pci_del(-(pci_num + 1))
 
             sub_type = params.get("sub_type_after_unplug")
             if sub_type:
                 error_context.context(context_msg
                                       % (sub_type, "after hotunplug"),
-                                      logging.info)
+                                      test.log.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     if params.get("reboot_vm", "no") == "yes":

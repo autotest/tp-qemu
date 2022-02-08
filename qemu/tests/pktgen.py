@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 import os
@@ -30,7 +29,7 @@ def run(test, params, env):
     """
 
     login_timeout = float(params.get("login_timeout", 360))
-    error_context.context("Init the VM, and try to login", logging.info)
+    error_context.context("Init the VM, and try to login", test.log.info)
     external_host = params.get("external_host")
     if not external_host:
         get_host_cmd = "ip route | awk '/default/ {print $3}'"
@@ -39,7 +38,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=login_timeout)
 
-    error_context.context("Pktgen server environment prepare", logging.info)
+    error_context.context("Pktgen server environment prepare", test.log.info)
     # pktgen server only support linux, since pktgen is a linux kernel module
     pktgen_server = params.get("pktgen_server", "localhost")
     params_server = params.object_params("pktgen_server")
@@ -85,7 +84,7 @@ def run(test, params, env):
     remote.scp_to_remote(pktgen_ip, s_shell_port, s_username, s_passwd,
                          local_path, remote_path)
 
-    error_context.context("Run pktgen test", logging.info)
+    error_context.context("Run pktgen test", test.log.info)
     run_threads = params.get("pktgen_threads", 1)
     pktgen_stress_timeout = float(params.get("pktgen_test_timeout", 600))
     exec_cmd = "%s %s %s %s %s" % (remote_path, vm.get_address(),
@@ -108,18 +107,18 @@ def run(test, params, env):
         env["pktgen_run"] = False
 
     error_context.context("Verify Host and guest kernel no error "
-                          "and call trace", logging.info)
+                          "and call trace", test.log.info)
     vm.verify_kernel_crash()
     utils_misc.verify_dmesg()
 
-    error_context.context("Ping external host after pktgen test", logging.info)
+    error_context.context("Ping external host after pktgen test", test.log.info)
     session_ping = vm.wait_for_login(timeout=login_timeout)
     status, output = utils_test.ping(dest=external_host, session=session_ping,
                                      timeout=240, count=20)
     loss_ratio = utils_test.get_loss_ratio(output)
     if (loss_ratio > int(params.get("packet_lost_ratio", 5)) or
             loss_ratio == -1):
-        logging.debug("Ping %s output: %s", external_host, output)
+        test.log.debug("Ping %s output: %s", external_host, output)
         test.fail("Guest network connction unusable, "
                   "packet lost ratio is '%d%%'" % loss_ratio)
     if server_session:

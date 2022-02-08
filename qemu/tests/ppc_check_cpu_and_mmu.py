@@ -1,5 +1,4 @@
 import re
-import logging
 
 from avocado.utils import process
 from virttest import error_context
@@ -32,14 +31,14 @@ def run(test, params, env):
     guest_session = vm.wait_for_login()
 
     error_context.base_context("Get CPU information of host and guest.",
-                               logging.info)
+                               test.log.info)
     host_cpu_model, host_mmu_mode = get_cpu_mmu()
     guest_cpu_model, guest_mmu_mode = get_cpu_mmu(guest_session)
 
     error_context.context("Assert CPU model and MMU mode of host and guest.",
-                          logging.info)
+                          test.log.info)
     assert (guest_cpu_model == host_cpu_model), ("The CPU model of the host "
                                                  "and guest do not match")
     assert (guest_mmu_mode == host_mmu_mode), ("The MMU mode of the host and "
                                                "guest do not match")
-    logging.info("CPU model and MMU mode of host and guest are matched.")
+    test.log.info("CPU model and MMU mode of host and guest are matched.")

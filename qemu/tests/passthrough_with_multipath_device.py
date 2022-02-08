@@ -1,4 +1,3 @@
-import logging
 import time
 import random
 import re
@@ -53,7 +52,7 @@ def run(test, params, env):
     out = session.cmd_output(get_tdev_cmd)
     cmd_dd = cmd_dd % out
     error_context.context('Do dd writing test on the data disk.',
-                          logging.info)
+                          test.log.info)
     session.sendline(cmd_dd)
     if not vm.monitor.verify_status("running"):
         test.fail("Guest did not run after dd")

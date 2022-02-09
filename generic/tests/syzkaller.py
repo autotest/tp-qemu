@@ -92,9 +92,7 @@ def run(test, params, env):
     # test timeout excluding current elapsed time + buffer
     testtimeout = int(params.get("test_timeout")) - (int(end_time - start_time) + 10)
     cmd = "%s/bin/syz-manager -config %s %s" % (syzkaller_path, syz_config_path, params.get("syz_cmd_params"))
-    process.run(cmd, timeout=testtimeout,
-                allow_output_check="combined",
-                ignore_status=True, shell=True)
+    process.run(cmd, timeout=testtimeout, ignore_status=True, shell=True)
     # Let's delete linux kernel folder from test-results as it would
     # consume lot of space and test log have all the information about
     # it incase to retrieve it back.

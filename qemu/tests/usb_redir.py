@@ -76,24 +76,28 @@ def run(test, params, env):
 
         if backend == 'spicevmc':
             gui_group = "Server with GUI"
-            out = process.getoutput('yum group list --installed',
-                                    allow_output_check='stdout', shell=True)
+            list_res = process.run('yum group list --installed',
+                                   shell=True, ignore_status=True)
             obj = re.search(r"(Installed Environment Groups:.*?)^\S",
-                            out, re.S | re.M)
+                            list_res.stdout_text, re.S | re.M)
             if not obj or gui_group not in obj.group(1):
                 gui_groupinstall_cmd = "yum groupinstall -y '%s'" % gui_group
-                s, o = process.getstatusoutput(gui_groupinstall_cmd, shell=True)
-                if s:
+                install_res = process.run(gui_groupinstall_cmd,
+                                          shell=True, ignore_status=True)
+                if install_res.exit_status:
                     status = False
                     err_msg = "Fail to install '%s' on host, " % gui_group
-                    err_msg += "output: %s" % o
+                    err_msg += 'output: "%s" ' % install_res.stdout_text
+                    err_msg += 'error: "%s"' % install_res.stderr_text
                     return (status, err_msg)
             virt_viewer_cmd = "rpm -q virt-viewer || yum install -y virt-viewer"
-            s, o = process.getstatusoutput(virt_viewer_cmd, shell=True)
-            if s:
+            viewer_install_res = process.run(virt_viewer_cmd,
+                                             shell=True, ignore_status=True)
+            if viewer_install_res.exit_status:
                 status = False
                 err_msg = "Fail to install 'virt-viewer' on host, "
-                err_msg += "output: %s" % o
+                err_msg += 'output: "%s" ' % install_res.stdout_text
+                err_msg += 'error: "%s"' % install_res.stderr_text
                 return (status, err_msg)
         elif backend == 'tcp_socket':
             create_repo()

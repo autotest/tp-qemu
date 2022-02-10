@@ -19,6 +19,9 @@ class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
         self.params["image_name_%s" % self.snapshot_tag] = 'images/' + self.snapshot_tag
         snapshot_format = self.params.get("snapshot_format", "qcow2")
         self.params["image_format_%s" % self.snapshot_tag] = snapshot_format
+        if self.params["image_backend"] == "iscsi_direct":
+            self.params.update({"enable_iscsi_%s" % self.snapshot_tag: "no"})
+            self.params.update({"image_raw_device_%s" % self.snapshot_tag: "no"})
         params = self.params.copy()
         params.setdefault("target_path", data_dir.get_data_dir())
         image = sp_admin.volume_define_by_params(self.snapshot_tag, params)

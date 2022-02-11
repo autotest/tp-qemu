@@ -28,8 +28,7 @@ def run(test, params, env):
         status = True
         err_msg = ''
         gui_group = "Server with GUI"
-        out = process.getoutput('yum group list --installed',
-                                allow_output_check='stdout', shell=True)
+        out = process.getoutput('yum group list --installed', shell=True)
         obj = re.search(r"(Installed Environment Groups:.*?)^\S",
                         out, re.S | re.M)
         if not obj or gui_group not in obj.group(1):

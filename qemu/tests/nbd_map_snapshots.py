@@ -1,4 +1,3 @@
-import logging
 import socket
 
 from avocado.utils import process
@@ -61,7 +60,7 @@ def run(test, params, env):
     map_cmd = params["map_cmd"]
     check_msg = params["check_msg"]
 
-    logging.info("Dump the info of '%s'", nbd_image)
+    test.log.info("Dump the info of '%s'", nbd_image)
     try:
         result = process.run(map_cmd + " " + nbd_image, ignore_status=True,
                              shell=True)

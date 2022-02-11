@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 
 from qemu.tests import numa_memdev_options
@@ -23,14 +21,14 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    error_context.context("Check host's numa node(s)!", logging.info)
+    error_context.context("Check host's numa node(s)!", test.log.info)
     valid_nodes = numa_memdev_options.get_host_numa_node()
     if len(valid_nodes) < 2:
         test.cancel("The host numa nodes that whose size is not zero should be "
                     "at least 2! But there is %d." % len(valid_nodes))
 
     if params.get('policy_mem') != 'default':
-        error_context.context("Assign host's numa node(s)!", logging.info)
+        error_context.context("Assign host's numa node(s)!", test.log.info)
         params['host-nodes_mem0'] = valid_nodes[0]
         params['host-nodes_mem1'] = valid_nodes[1]
 
@@ -38,8 +36,8 @@ def run(test, params, env):
     numa_mlock_test = MlockBasic(test, params, env)
     numa_mlock_test.start()
 
-    error_context.context("Check query-memdev!", logging.info)
+    error_context.context("Check query-memdev!", test.log.info)
     numa_memdev_options.check_query_memdev(test, params, numa_mlock_test.vm)
 
-    error_context.context("Check the memory in procfs!", logging.info)
+    error_context.context("Check the memory in procfs!", test.log.info)
     numa_memdev_options.check_memory_in_procfs(test, params, numa_mlock_test.vm)

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_package
 
@@ -17,12 +15,12 @@ def run(test, params, env):
     """
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
-    error_context.context("Install dependency packages in guest", logging.info)
+    error_context.context("Install dependency packages in guest", test.log.info)
     pkgs = params["depends_pkgs"].split()
     if not utils_package.package_install(pkgs, session):
         test.cancel("Install dependency packages failed")
     try:
-        error_context.context("Get redis in guest", logging.info)
+        error_context.context("Get redis in guest", test.log.info)
         cmds = []
         cmds.append(params["get_redis"])
         cmds.append(params["get_nvml"])
@@ -32,7 +30,7 @@ def run(test, params, env):
             s, o = session.cmd_status_output(cmd, timeout=600)
             if s:
                 test.error("Failed to run cmd '%s', output: %s" % (cmd, o))
-        error_context.context("Run redis test in guest", logging.info)
+        error_context.context("Run redis test in guest", test.log.info)
         s, o = session.cmd_status_output(params["run_test"], timeout=3600)
         if s:
             test.fail("Run redis test failed, output: %s" % o)

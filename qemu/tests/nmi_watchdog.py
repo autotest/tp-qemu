@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import error_context
 
@@ -39,22 +38,22 @@ def run(test, params, env):
 
         error_context.context("Getting guest's NMI counter")
         output = session.cmd(get_nmi_cmd)
-        logging.debug(output.strip())
+        test.log.debug(output.strip())
         nmi_counter1 = output.split()[1:]
 
-        logging.info("Waiting 60 seconds to see if guest's NMI counter "
-                     "increases")
+        test.log.info("Waiting 60 seconds to see if guest's NMI counter "
+                      "increases")
         time.sleep(60)
 
         error_context.context("Getting guest's NMI counter 2nd time")
         output = session.cmd(get_nmi_cmd)
-        logging.debug(output.strip())
+        test.log.debug(output.strip())
         nmi_counter2 = output.split()[1:]
 
         error_context.context("")
         for i in range(int(guest_cpu_num)):
-            logging.info("vcpu: %s, nmi_counter1: %s, nmi_counter2: %s",
-                         i, nmi_counter1[i], nmi_counter2[i])
+            test.log.info("vcpu: %s, nmi_counter1: %s, nmi_counter2: %s",
+                          i, nmi_counter1[i], nmi_counter2[i])
             if int(nmi_counter2[i]) <= int(nmi_counter1[i]):
                 test.fail("Guest's NMI counter did not increase "
                           "after 60 seconds")

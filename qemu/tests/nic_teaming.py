@@ -1,7 +1,6 @@
 import time
 import re
 import random
-import logging
 
 from virttest import error_context
 from virttest import utils_test
@@ -73,8 +72,8 @@ def run(test, params, env):
                       "output is %s" % (ratio, status, output))
         elif ratio > int(params["failed_ratio"]):
             test.fail("The loss raito is %s, test failed" % ratio)
-        logging.info("ping pass with loss raito:%s, that less than %s",
-                     ratio, params["failed_ratio"])
+        test.log.info("ping pass with loss raito:%s, that less than %s",
+                      ratio, params["failed_ratio"])
 
     def team_if_exist():
         """ judge if team is alive well."""
@@ -93,7 +92,7 @@ def run(test, params, env):
     # initial
 
     error_context.context("Step1: Configure the team environment",
-                          logging.info)
+                          test.log.info)
     # steps of building the teaming environment starts
     modprobe_cmd = "modprobe team"
     session_serial.cmd_output_safe(modprobe_cmd)
@@ -103,25 +102,25 @@ def run(test, params, env):
         test.fail("Interface %s is not created." % team_if)
     # check if team0 is created successfully
     ports, team_ip = team_port_add(ifnames, team_if)
-    logging.debug("The list of the ports that added to %s : %s",
-                  team_if, ports)
-    logging.debug("The ip address of %s : %s", team_if, team_ip)
+    test.log.debug("The list of the ports that added to %s : %s",
+                   team_if, ports)
+    test.log.debug("The ip address of %s : %s", team_if, team_ip)
     output = session_serial.cmd_output_safe(params["team_debug_cmd"])
-    logging.debug("team interface configuration: %s", output)
+    test.log.debug("team interface configuration: %s", output)
     route_cmd = session_serial.cmd_output_safe(params["route_cmd"])
-    logging.debug("The route table of guest: %s", route_cmd)
+    test.log.debug("The route table of guest: %s", route_cmd)
     # this is not this case checkpoint, just to check if route works fine
     # steps of building finished
 
     try:
-        error_context.context("Login in guest via ssh", logging.info)
+        error_context.context("Login in guest via ssh", test.log.info)
         # steps of testing this case starts
         session = vm.wait_for_login(timeout=timeout)
         dest = utils_net.get_ip_address_by_interface(params["netdst"])
         count = params.get("count")
         timeout = float(count) * 2
         error_context.context("Step2: Check if guest can ping out:",
-                              logging.info)
+                              test.log.info)
         status, output = utils_test.ping(dest=dest, count=10,
                                          interface=team_if,
                                          timeout=30,
@@ -129,20 +128,20 @@ def run(test, params, env):
         check_ping(status, output)
         # small ping check if the team0 works w/o failover
         error_context.context("Step3: Start failover testing until "
-                              "ping finished", logging.info)
+                              "ping finished", test.log.info)
         failover_thread = utils_misc.InterruptedThread(failover,
                                                        (ifnames, timeout))
         failover_thread.start()
         # start failover loop until ping finished
         error_context.context("Step4: Start ping host for %s counts"
-                              % count, logging.info)
+                              % count, test.log.info)
         if failover_thread.is_alive():
             status, output = utils_test.ping(dest=dest, count=count,
                                              interface=team_if,
                                              timeout=float(count) * 1.5,
                                              session=session)
             error_context.context("Step5: Check if ping succeeded",
-                                  logging.info)
+                                  test.log.info)
             check_ping(status, output)
         else:
             test.error("The failover thread is not alive")
@@ -156,7 +155,7 @@ def run(test, params, env):
         session_serial.cmd_output_safe(params["killteam_cmd"])
         if team_if_exist():
             test.fail("Remove %s failed" % team_if)
-        logging.info("%s removed", team_if)
+        test.log.info("%s removed", team_if)
         # remove the team0 and the daemon, check if succeed
     finally:
         if session:

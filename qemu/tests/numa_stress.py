@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 
 from avocado.utils import process
 
@@ -117,11 +116,11 @@ def run(test, params, env):
             test.error("Don't have enough memory to execute this "
                        "test after %s round" % test_round)
         error_context.context("Executing stress test round: %s" % test_round,
-                              logging.info)
+                              test.log.info)
         numa_node_malloc = most_used_node
         numa_dd_cmd = "numactl -m %s %s" % (numa_node_malloc, dd_cmd)
         error_context.context("Try to allocate memory in node %s"
-                              % numa_node_malloc, logging.info)
+                              % numa_node_malloc, test.log.info)
         try:
             utils_misc.mount("none", tmpfs_path, "tmpfs", perm=mount_fs_size)
             funcatexit.register(env, params.get("type"), utils_misc.umount,
@@ -134,11 +133,11 @@ def run(test, params, env):
                 test.fail("Can not allocate memory in node %s."
                           " Error message:%s" % (numa_node_malloc,
                                                  str(error_msg)))
-        error_context.context("Run memory heavy stress in guest", logging.info)
+        error_context.context("Run memory heavy stress in guest", test.log.info)
         stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
         stress_test.load_stress_tool()
         error_context.context("Get the qemu process memory use status",
-                              logging.info)
+                              test.log.info)
         node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
         if node_after == most_used_node and memory_after >= memory_used:
             test.fail("Memory still stick in node %s" % numa_node_malloc)

@@ -1,6 +1,5 @@
 import re
 import os
-import logging
 
 from avocado.utils import cpu
 
@@ -44,44 +43,44 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     error_context.context("Check if libguestfs-tools is installed.",
-                          logging.info)
+                          test.log.info)
     sm = utils_package.RemotePackageMgr(session, "libguestfs-tools")
     if not (sm.is_installed("libguestfs-tools") or sm.install()):
         test.cancel("Unable to install libguestfs-tools inside guest.")
 
     try:
         error_context.context("Execute the libguestfs-test-tool unittest "
-                              "directly launching qemu.", logging.info)
+                              "directly launching qemu.", test.log.info)
         stderr_file = "/tmp/lgf_stderr"
         lgf_cmd = ("LIBGUESTFS_BACKEND=direct libguestfs-test-tool "
                    "--timeout {} 2> {}".format(unittest_timeout,
                                                stderr_file))
         lgf_s, lgf_o = session.cmd_status_output(lgf_cmd,
                                                  timeout=unittest_timeout)
-        logging.debug("libguestfs-test-tool stdout:\n%s", lgf_o)
+        test.log.debug("libguestfs-test-tool stdout:\n%s", lgf_o)
         lgf_stderr = session.cmd_output("cat " + stderr_file)
         lgf_tcg = re.search("Back to tcg accelerator", lgf_stderr)
 
         error_context.context("Analyze the libguestfs-test-tool test result.",
-                              logging.info)
+                              test.log.info)
         fail_msg = ("the exit status is non-zero" if lgf_s else
                     "back to tcg accelerator" if lgf_tcg and is_kvm_mode else "")
         if fail_msg:
-            logging.debug("libguestfs-test-tool stderr:\n%s", lgf_stderr)
+            test.log.debug("libguestfs-test-tool stderr:\n%s", lgf_stderr)
             test.fail("libguestfs-test-tool execution failed due to: %s. "
                       % fail_msg)
 
         if cpu_arch != "s390":
-            error_context.context("Check the nested file status.", logging.info)
+            error_context.context("Check the nested file status.", test.log.info)
             file_s, file_o = session.cmd_status_output("cat " + nested_file)
             if re.match(r"[1Y]", file_o) and is_kvm_mode:
-                logging.info("Guest runs with nested flag, the nested feature has "
-                             "been enabled.")
+                test.log.info("Guest runs with nested flag, the nested feature has "
+                              "been enabled.")
             elif file_s == 1 and not is_kvm_mode:
-                logging.info("Guest runs without nested flag, so the nested file "
-                             "does not exist.")
+                test.log.info("Guest runs without nested flag, so the nested file "
+                              "does not exist.")
             else:
-                logging.error("Nested file status: %s, output: %s", file_s, file_o)
+                test.log.error("Nested file status: %s, output: %s", file_s, file_o)
                 test.fail("Getting the status of nested file has unexpected "
                           "result.")
     finally:

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import error_context
 from qemu.tests import numa_memdev_options
@@ -20,7 +18,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
     error_context.context("Modify params to boot guest with 128 numa nodes",
-                          logging.info)
+                          test.log.info)
     node_num = int(params["numa_nodes"])
     node_size = params["node_size"]
     prealloc_mem = params.get("prealloc_mem", "no")
@@ -37,21 +35,21 @@ def run(test, params, env):
     params["mem_devs"] = mem_devs
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params["main_vm"])
-    error_context.context("Get the main VM!", logging.info)
+    error_context.context("Get the main VM!", test.log.info)
     vm = env.get_vm(params["main_vm"])
 
     login_timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
 
-    error_context.context("Check memdevs from monitor", logging.info)
+    error_context.context("Check memdevs from monitor", test.log.info)
     numa_memdev_options.check_query_memdev(test, params, vm)
 
-    error_context.context("Check memory in host procfs", logging.info)
+    error_context.context("Check memory in host procfs", test.log.info)
     numa_memdev_options.check_memory_in_procfs(test, params, vm)
 
-    error_context.context("Check numa node for linux guest", logging.info)
+    error_context.context("Check numa node for linux guest", test.log.info)
     if params["os_type"] == "linux":
-        error_context.context("Check numa node in guest", logging.info)
+        error_context.context("Check numa node in guest", test.log.info)
         numa_cmd = params["numa_cmd"]
         numa_expected = params["numa_expected"]
         guest_numa = session.cmd_output(numa_cmd).strip()

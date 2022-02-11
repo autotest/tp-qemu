@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import time
 
@@ -30,14 +29,14 @@ def run(test, params, env):
     """
 
     def _on_exit(obj, msg):
-        logging.info("Receive exit msg:%s", msg)
+        test.log.info("Receive exit msg:%s", msg)
         obj.set_msg_loop(False)
         status = msg.split(":")[1]
         if status != "0":
             test.fail("Get L2 guest unexpected exit message")
 
     def _on_resize(obj, msg):
-        logging.info("Receive resize msg:%s", msg)
+        test.log.info("Receive resize msg:%s", msg)
         data_image_params = params.object_params("stg0")
         data_image_size = params.get_numeric("new_image_size_stg0")
         data_image_filename = storage.get_image_filename(data_image_params,
@@ -49,22 +48,22 @@ def run(test, params, env):
         time.sleep(2)
         vm.verify_status("running")
         guest_cmd_output = session.cmd("lsblk -dn", timeout=60).strip()
-        logging.debug("Guest cmd output: '%s'", guest_cmd_output)
+        test.log.debug("Guest cmd output: '%s'", guest_cmd_output)
         obj.send_message("status-req")
-        logging.info("Finish handle on_resize")
+        test.log.info("Finish handle on_resize")
 
     def _on_status(obj, msg):
-        logging.info("Receive status msg:%s", msg)
+        test.log.info("Receive status msg:%s", msg)
         status = msg.split(":")[1]
         # Notify L2 exit
         obj.send_message("exit")
         if status != "running":
             test.fail("Get unexpected status of L2 guest " + status)
-        logging.info("Finish handle on_status")
+        test.log.info("Finish handle on_status")
 
     # Error contexts are used to give more info on what was
     # going on when one exception happened executing test code.
-    error_context.context("Get the main VM", logging.info)
+    error_context.context("Get the main VM", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
@@ -87,20 +86,20 @@ def run(test, params, env):
     mq_listen_port = params.get_numeric("mq_listen_port", 5000)
     guest_ip_list = [vm.get_address()]
 
-    logging.info("Cloning %s", playbook_repo)
+    test.log.info("Cloning %s", playbook_repo)
     process.run("git clone {src} {dst}".format(src=playbook_repo,
                                                dst=playbook_dir),
                 verbose=False)
 
     error_context.base_context("Generate playbook related options.",
-                               logging.info)
+                               test.log.info)
     extra_vars = {"ansible_ssh_extra_args": ansible_ssh_extra_args,
                   "ansible_ssh_pass": guest_passwd,
                   "mq_port": mq_listen_port,
                   "test_harness_log_dir": test_harness_log_dir}
     extra_vars.update(json.loads(ansible_extra_vars))
 
-    error_context.context("Execute the ansible playbook.", logging.info)
+    error_context.context("Execute the ansible playbook.", test.log.info)
     playbook_executor = ansible.PlaybookExecutor(
         inventory="{},".format(",".join(guest_ip_list)),
         site_yml=toplevel_playbook,
@@ -120,7 +119,7 @@ def run(test, params, env):
 
     host = "127.0.0.1"
 
-    logging.info("host:{} port:{}".format(host, mq_port))
+    test.log.info("host:{} port:{}".format(host, mq_port))
     client = message_queuing.MQClient(host, mq_port)
     time.sleep(2)
 
@@ -130,7 +129,7 @@ def run(test, params, env):
 
     try:
         client.msg_loop(timeout=wait_response_timeout)
-        logging.debug("Finish msg_loop")
+        test.log.debug("Finish msg_loop")
     finally:
         ansible_log = "ansible_playbook.log"
         try:
@@ -142,11 +141,11 @@ def run(test, params, env):
                 test.fail(
                     "Ansible playbook execution failed, please check the "
                     "{} for details.".format(ansible_log))
-            logging.info("Ansible playbook execution passed.")
+            test.log.info("Ansible playbook execution passed.")
         finally:
             playbook_executor.store_playbook_log(test_harness_log_dir,
                                                  ansible_log)
             playbook_executor.close()
             client.close()
             mq_publisher.close()
-            logging.debug("MQ closed")
+            test.log.debug("MQ closed")

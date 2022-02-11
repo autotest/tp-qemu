@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest.utils_misc import normalize_data_size
 from virttest.utils_misc import get_mem_info
@@ -49,11 +47,11 @@ def run(test, params, env):
     vm_arch = params["vm_arch_name"]
     session = vm.wait_for_login()
 
-    error_context.context("starting numa_opts test...", logging.info)
+    error_context.context("starting numa_opts test...", test.log.info)
 
     # Get numa info from monitor
     numa_monitor = vm.monitors[0].info_numa()
-    error_context.context("numa info in monitor: %r" % numa_monitor, logging.info)
+    error_context.context("numa info in monitor: %r" % numa_monitor, test.log.info)
     monitor_expect_nodes = params.get_numeric("monitor_expect_nodes")
     if len(numa_monitor) != monitor_expect_nodes:
         test.fail("[Monitor]Wrong number of numa nodes: %d. Expected: %d" %
@@ -62,7 +60,7 @@ def run(test, params, env):
     if os_type == 'linux':
         # Get numa info in guest os, only for Linux
         numa_guest = numa_info_guest()
-        error_context.context("numa info in guest: %r" % numa_guest, logging.info)
+        error_context.context("numa info in guest: %r" % numa_guest, test.log.info)
         guest_expect_nodes = int(params.get("guest_expect_nodes",
                                             monitor_expect_nodes))
         if len(numa_guest) != guest_expect_nodes:
@@ -72,10 +70,10 @@ def run(test, params, env):
         MemTotal = get_mem_info(session, 'MemTotal')
         MemTotal = float(normalize_data_size('%s KB' % MemTotal))
         error_context.context("MemTotal in guest os is %s MB"
-                              % MemTotal, logging.info)
+                              % MemTotal, test.log.info)
         threshold = float(params.get_numeric("mem") - MemTotal) + 30
         error_context.context("The acceptable threshold is: %s"
-                              % threshold, logging.info)
+                              % threshold, test.log.info)
     else:
         numa_guest = numa_monitor
     session.close()

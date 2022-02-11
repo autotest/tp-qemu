@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -38,7 +37,7 @@ def run(test, params, env):
     main_vm_ip = vm.get_address()
     session.cmd("iptables -F", ignore_all_errors=True)
 
-    error_context.context("Test env prepare", logging.info)
+    error_context.context("Test env prepare", test.log.info)
     netperf_link = params.get("netperf_link")
     if netperf_link:
         netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
@@ -147,7 +146,7 @@ def run(test, params, env):
     throughput = []
 
     try:
-        error_context.context("Start netperf_server", logging.info)
+        error_context.context("Start netperf_server", test.log.info)
         netperf_server.start()
         # Run netperf with message size defined in range.
         msg = "Detail result of netperf test with different packet size.\n"
@@ -155,7 +154,7 @@ def run(test, params, env):
             test_protocol = params.get("test_protocol", "UDP_STREAM")
             test_option = "-t %s -- -m %s" % (test_protocol, m_size)
             txt = "Run netperf client with protocol: '%s', packet size: '%s'"
-            error_context.context(txt % (test_protocol, m_size), logging.info)
+            error_context.context(txt % (test_protocol, m_size), test.log.info)
             output = netperf_client.start(netserver_ip, test_option)
             re_str = r"[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+\s+[0-9\.]+"
             re_str += r"\s+[0-9\.]+"
@@ -170,28 +169,28 @@ def run(test, params, env):
             throughput.append(float(line_tokens[5]))
             msg += output
     finally:
-        logging.debug("Kill netperf server")
+        test.log.debug("Kill netperf server")
         netperf_server.stop()
         try:
-            logging.debug("Cleanup env on both server and client")
+            test.log.debug("Cleanup env on both server and client")
             netperf_server.cleanup()
             netperf_client.cleanup()
         except Exception as e:
-            logging.warn("Cleanup failed:\n%s\n", e)
+            test.log.warn("Cleanup failed:\n%s\n", e)
 
     with open(os.path.join(test.debugdir, "udp_results"), "w") as result_file:
         result_file.write(msg)
     failratio = float(params.get("failratio", 0.3))
-    error_context.context("Compare UDP performance.", logging.info)
+    error_context.context("Compare UDP performance.", test.log.info)
     for i in range(len(throughput) - 1):
         if abs(throughput[i] - throughput[i + 1]) > throughput[i] * failratio:
             txt = "The gap between adjacent throughput is greater than"
             txt += "%f." % failratio
             txt += "Please refer to log file for details:\n %s" % msg
             test.fail(txt)
-    logging.info("The UDP performance as measured via netperf is ok.")
-    logging.info("Throughput of netperf command: %s", throughput)
-    logging.debug("Output of netperf command:\n %s", msg)
+    test.log.info("The UDP performance as measured via netperf is ok.")
+    test.log.info("Throughput of netperf command: %s", throughput)
+    test.log.debug("Output of netperf command:\n %s", msg)
 
     try:
         if session:

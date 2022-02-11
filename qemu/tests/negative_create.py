@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import virt_vm
@@ -30,8 +29,8 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, params["main_vm"])
     except (virt_vm.VMError, utils_net.NetError) as err:
         message = str(err)
-        logging.debug("VM Failed to create. This was expected. Reason:\n%s",
-                      message)
+        test.log.debug("VM Failed to create. This was expected. Reason:\n%s",
+                       message)
 
         error_msg = params.get("error_msg")
         if error_msg and not re.search(error_msg, message, re.M | re.I):

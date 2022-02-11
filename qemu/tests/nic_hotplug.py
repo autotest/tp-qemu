@@ -1,4 +1,3 @@
-import logging
 import random
 
 from avocado.utils import process
@@ -83,9 +82,9 @@ def run(test, params, env):
             return nic_ip
         cached_ip = vm.address_cache.get(nic["mac"])
         arps = process.system_output("arp -aen").decode()
-        logging.debug("Can't get IP address:")
-        logging.debug("\tCached IP: %s", cached_ip)
-        logging.debug("\tARP table: %s", arps)
+        test.log.debug("Can't get IP address:")
+        test.log.debug("\tCached IP: %s", cached_ip)
+        test.log.debug("\tARP table: %s", arps)
         return None
 
     def ping_hotplug_nic(ip, mac, session, is_linux_guest):
@@ -96,11 +95,11 @@ def run(test, params, env):
             ifname = utils_net.get_linux_ifname(session, mac)
             add_route_cmd = "route add %s dev %s" % (ip, ifname)
             del_route_cmd = "route del %s dev %s" % (ip, ifname)
-            logging.warning("Failed to ping %s from host.")
-            logging.info("Add route and try again")
+            test.log.warning("Failed to ping %s from host.")
+            test.log.info("Add route and try again")
             session.cmd_output_safe(add_route_cmd)
             status, output = utils_test.ping(hotnic_ip, 10, timeout=30)
-            logging.info("Del the route.")
+            test.log.info("Del the route.")
             session.cmd_output_safe(del_route_cmd)
         return status, output
 
@@ -145,12 +144,12 @@ def run(test, params, env):
         shutdown_method = params.get("shutdown_method", "shell")
         shutdown_command = params.get("shutdown_command")
         if sub_type == "reboot":
-            logging.info("Running sub test '%s' %s", sub_type, plug_tag)
+            test.log.info("Running sub test '%s' %s", sub_type, plug_tag)
             if params.get("reboot_method"):
                 vm.reboot(session, params["reboot_method"], 0,
                           login_timeout, serial=True)
         elif sub_type == "shutdown":
-            logging.info("Running sub test '%s' %s", sub_type, plug_tag)
+            test.log.info("Running sub test '%s' %s", sub_type, plug_tag)
             if shutdown_method == "shell":
                 # Send a shutdown command to the guest's shell
                 session.sendline(shutdown_command)
@@ -159,7 +158,7 @@ def run(test, params, env):
 
     login_timeout = int(params.get("login_timeout", 360))
     repeat_times = int(params.get("repeat_times", 1))
-    logging.info("repeat_times: %s", repeat_times)
+    test.log.info("repeat_times: %s", repeat_times)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     primary_nic = [nic for nic in vm.virtnet]
@@ -175,7 +174,7 @@ def run(test, params, env):
 
     for iteration in range(repeat_times):
         error_context.context("Start test iteration %s" % (iteration + 1),
-                              logging.info)
+                              test.log.info)
         nic_hotplug_count = int(params.get("nic_hotplug_count", 1))
         nic_hotplugged = []
         for nic_index in range(1, nic_hotplug_count + 1):
@@ -191,7 +190,7 @@ def run(test, params, env):
 
             if used_sameid == "yes":
                 useddevice_id = primary_nic[0].netdev_id
-                logging.info("Hot-plug NIC with the netdev already in use")
+                test.log.info("Hot-plug NIC with the netdev already in use")
                 try:
                     device_add_nic(nic_model, useddevice_id, nic_name)
                 except Exception as err_msg:
@@ -205,7 +204,7 @@ def run(test, params, env):
                 else:
                     test.fail("Qemu should failed hot-plugging nic with error")
             else:
-                logging.info("Disable other link(s) of guest")
+                test.log.info("Disable other link(s) of guest")
                 disable_nic_list = primary_nic + nic_hotplugged
                 for nic in disable_nic_list:
                     if guest_is_linux:
@@ -215,14 +214,14 @@ def run(test, params, env):
                         s_session.cmd_output_safe("ipconfig /release all")
                     vm.set_link(nic.device_id, up=False)
 
-            logging.debug("Hotplug %sth '%s' nic named '%s'",
-                          nic_index, nic_model, nic_name)
+            test.log.debug("Hotplug %sth '%s' nic named '%s'",
+                           nic_index, nic_model, nic_name)
             hotplug_nic = vm.hotplug_nic(**nic_params)
-            logging.info("Check if new interface gets ip address")
+            test.log.info("Check if new interface gets ip address")
             hotnic_ip = get_hotplug_nic_ip(vm, hotplug_nic,
                                            s_session, guest_is_linux)
             if not hotnic_ip:
-                logging.info("Reboot vm after hotplug nic")
+                test.log.info("Reboot vm after hotplug nic")
                 # reboot vm via serial port since some guest can't auto up
                 # hotplug nic and next step will check is hotplug nic works.
                 s_session = vm.reboot(session=s_session, serial=True)
@@ -231,19 +230,19 @@ def run(test, params, env):
                                                s_session, guest_is_linux)
                 if not hotnic_ip:
                     test.fail("Hotplug nic still can't get ip after reboot vm")
-            logging.info("Got the ip address of new nic: %s", hotnic_ip)
-            logging.info("Ping guest's new ip from host")
+            test.log.info("Got the ip address of new nic: %s", hotnic_ip)
+            test.log.info("Ping guest's new ip from host")
             status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
                                               s_session, guest_is_linux)
             if status:
                 err_msg = "New nic failed ping test, error info: '%s'"
                 test.fail(err_msg % output)
 
-            logging.info("Pause vm")
+            test.log.info("Pause vm")
             vm.pause()
-            logging.info("Resume vm")
+            test.log.info("Resume vm")
             vm.resume()
-            logging.info("Ping guest's new ip after resume")
+            test.log.info("Ping guest's new ip after resume")
             status, output = ping_hotplug_nic(host_ip_addr, hotplug_nic["mac"],
                                               s_session, guest_is_linux)
             if status:
@@ -254,7 +253,7 @@ def run(test, params, env):
             # random hotunplug nic
             nic_hotplugged.append(hotplug_nic)
             if random.randint(0, 1) and params.get("do_random_unhotplug"):
-                logging.info("Detaching the previously attached nic from vm")
+                test.log.info("Detaching the previously attached nic from vm")
                 unplug_nic_index = random.randint(0, len(nic_hotplugged) - 1)
                 vm.hotunplug_nic(nic_hotplugged[unplug_nic_index].nic_name)
                 nic_hotplugged.pop(unplug_nic_index)
@@ -262,7 +261,7 @@ def run(test, params, env):
                 vm.verify_alive()
             s_session.close()
 
-        logging.info("Re-enabling the primary link(s)")
+        test.log.info("Re-enabling the primary link(s)")
         for nic in primary_nic:
             vm.set_link(nic.device_id, up=True)
 

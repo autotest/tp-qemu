@@ -1,5 +1,4 @@
 import os
-import logging
 import json
 
 from avocado.utils import cpu
@@ -93,10 +92,10 @@ def run(test, params, env):
         if l2_kar_options:
             kar_cmd += " %s" % l2_kar_options
 
-        logging.info("Kar cmd: %s", kar_cmd)
+        test.log.info("Kar cmd: %s", kar_cmd)
 
         results_dir = test.logdir
-        logging.info("Result_dir: %s", results_dir)
+        test.log.info("Result_dir: %s", results_dir)
 
         kar_repo = params.get("kar_repo")
         cert_url = params.get("cert_url")
@@ -142,7 +141,7 @@ def run(test, params, env):
                   "-i %s " \
                   % (playbook_file, params_file, invent_file)
 
-    logging.debug("ansible cmd: %s", ansible_cmd)
+    test.log.debug("ansible cmd: %s", ansible_cmd)
 
     timeout = float(params.get("test_timeout", 3600))
 

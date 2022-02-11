@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import utils_misc
 from virttest import utils_test
@@ -22,13 +20,13 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    error_context.context("Get host numa topological structure", logging.info)
+    error_context.context("Get host numa topological structure", test.log.info)
     timeout = float(params.get("login_timeout", 240))
     host_numa_node = utils_misc.NumaInfo()
     node_list = host_numa_node.online_nodes
     for node_id in node_list:
         error_context.base_context("Bind qemu process to numa node %s" % node_id,
-                                   logging.info)
+                                   test.log.info)
         vm = "vm_bind_to_%s" % node_id
         params['qemu_command_prefix'] = "numactl --cpunodebind=%s" % node_id
         utils_memory.drop_caches()
@@ -43,7 +41,7 @@ def run(test, params, env):
         session.close()
 
         error_context.context("Check the memory use status of qemu process",
-                              logging.info)
+                              test.log.info)
         memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
                                                            vm.get_pid())
         node_used_most = 0
@@ -52,10 +50,10 @@ def run(test, params, env):
             if memory_sz_used_most < memory_status[index]:
                 memory_sz_used_most = memory_status[index]
                 node_used_most = node_list[index]
-            logging.debug("Qemu used %s pages in node"
-                          " %s", memory_status[index], node_list[index])
+            test.log.debug("Qemu used %s pages in node"
+                           " %s", memory_status[index], node_list[index])
         if node_used_most != node_id:
             test.fail("Qemu still use memory from other node. "
                       "Expect: %s, used: %s" % (node_id, node_used_most))
-        error_context.context("Destroy guest.", logging.info)
+        error_context.context("Destroy guest.", test.log.info)
         vm.destroy()

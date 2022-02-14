@@ -2,6 +2,7 @@ import json
 import time
 
 from virttest import data_dir
+from virttest import qemu_storage
 
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.virt_storage.storage_admin import sp_admin
@@ -24,6 +25,12 @@ class BlockdevStreamCORBase(BlockDevStreamTest):
             image.hotplug(self.main_vm)
             self.trash.append(image)
 
+    def _is_same_file(self, file_params, file_opts):
+        mapping = {"gluster": "path", "iscsi": "lun",
+                   "nbd": "server.port", "rbd": "image"}
+        option = mapping.get(file_params["driver"], "filename")
+        return file_params[option] == file_opts[option]
+
     def image_in_backing_file(self, name, backing, depth):
         def _is_backing_exit(backing, depth):
             if isinstance(backing, dict) and "backing" in backing.keys():
@@ -35,11 +42,10 @@ class BlockdevStreamCORBase(BlockDevStreamTest):
         backing = _is_backing_exit(backing, depth)
         image = self.get_image_by_tag(name)
         filename = image.image_filename
-        if backing["driver"] == "copy-on-read":
-            actual_filename = backing["file"]["file"]["filename"]
-        else:
-            actual_filename = backing["file"]["filename"]
-        if filename != actual_filename:
+        is_cor = backing["driver"] == "copy-on-read"
+        opts = backing["file"]["file"] if is_cor else backing["file"]
+        file_opts = qemu_storage.filename_to_file_opts(filename)
+        if not self._is_same_file(opts, file_opts):
             self.test.fail("file %s not in backing" % filename)
 
     def check_backing_chain(self):

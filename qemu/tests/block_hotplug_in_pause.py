@@ -87,6 +87,10 @@ def run(test, params, env):
             return False
 
         for dev in device_list:
+            # QObjects don't receive a DELETED EVENT back from QMP
+            # Filter them out
+            if isinstance(dev, qdevices.QObject):
+                continue
             dev_qid = dev.get_qid()
             if not utils_misc.wait_for(
                     lambda: get_deleted_event(dev_qid), timeout, 0, 0):

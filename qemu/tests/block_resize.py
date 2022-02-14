@@ -180,8 +180,9 @@ def run(test, params, env):
                                                    utils_disk.SIZE_AVAILABLE)
         global current_size
         current_size = 0
+        steps = params.get_numeric("verify_disk_size_steps", 1)
         if not wait.wait_for(lambda: verify_disk_size(session, os_type,
-                                                      disk), 20, 0, 1,
+                                                      disk), 20, 0, steps,
                              "Block Resizing"):
             test.fail("Block size get from guest is not same as expected.\n"
                       "Reported: %s\nExpect: %s\n" % (current_size, block_size))

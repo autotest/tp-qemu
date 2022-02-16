@@ -85,6 +85,7 @@ def run(test, params, env):
 
     test.log.info("Check image %s.", c_tag)
     tgt.check_image(tgt_img_param, data_dir.get_data_dir())
+    tgt.remove()
 
     for qit in (base_qit, c_qit):
         qit.clean()

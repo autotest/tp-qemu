@@ -56,7 +56,7 @@ def run(test, params, env):
 
     host_check_cmd = params.get("host_check_cmd")
     image_dir = os.path.join(data_dir.get_data_dir(), 'images')
-    host_check_cmd %= image_dir
+    host_check_cmd = host_check_cmd % (image_dir, params["image_format"])
     image_name = params["stg_name"]
     stg_param = params.object_params(image_name)
     image_size_str = stg_param["image_size"]

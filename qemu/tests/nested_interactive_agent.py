@@ -55,7 +55,8 @@ def run(test, params, env):
         test.log.info('Already captured the "APPROVE" message.')
 
         if not stress_tool:
-            vm.reboot()
+            wait_login_timeout = params.get_numeric('wait_login_timeout', 240)
+            vm.reboot(timeout=wait_login_timeout)
     finally:
         if stress_tool:
             stress_tool.clean()

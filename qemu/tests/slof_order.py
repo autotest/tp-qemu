@@ -6,7 +6,6 @@ slof_order.py include following case:
  4. Guest boot from cdrom with the network and the first hard disk
     are both not bootable.
 """
-import logging
 
 from virttest import error_context
 from provider import slof
@@ -46,7 +45,7 @@ def run(test, params, env):
     """
     def _send_custom_key():
         """ Send custom keyword to SLOF's user interface. """
-        logging.info('Sending \"%s\" to SLOF user interface.', send_key)
+        test.log.info('Sending \"%s\" to SLOF user interface.', send_key)
         for key in send_key:
             key = 'minus' if key == '-' else key
             vm.send_key(key)
@@ -61,7 +60,7 @@ def run(test, params, env):
             if not slof.verify_boot_device(
                     content, args[0], args[1], args[2], position=index):
                 test.fail('Fail: ' + details)
-            logging.info('Pass: %s', details)
+            test.log.info('Pass: %s', details)
 
     parent_bus = params.get('parent_bus')
     child_bus = params.get('child_bus')
@@ -79,7 +78,7 @@ def run(test, params, env):
     content, next_pos = slof.wait_for_loaded(vm, test, end_str='0 >')
     _verify_boot_order(params['order_before_send_key'])
     if send_key in ('reset-all', 'boot'):
-        error_context.context("Reboot guest by sending key.", logging.info)
+        error_context.context("Reboot guest by sending key.", test.log.info)
         _send_custom_key()
         content, _ = slof.wait_for_loaded(vm, test, next_pos, end_str='0 >')
         _verify_boot_order(params['order_after_send_key'])

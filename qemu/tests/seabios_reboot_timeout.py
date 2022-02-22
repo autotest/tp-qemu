@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 from virttest import utils_misc
@@ -29,7 +28,7 @@ def run(test, params, env):
         """
         return re.search(pattern, get_output(seabios_session), re.S)
 
-    error_context.context("Start VM", logging.info)
+    error_context.context("Start VM", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -44,8 +43,8 @@ def run(test, params, env):
     rb_timeout = rb_timeout//1000
     pattern = "No bootable device.*Retrying in %d seconds" % rb_timeout
 
-    error_context.context("Check reboot-timeout option", logging.info)
+    error_context.context("Check reboot-timeout option", test.log.info)
     if not utils_misc.wait_for(reboot_timeout_check, timeout, 1):
         err = "Guest doesn't reboot in %d seconds" % rb_timeout
         test.fail(err)
-    logging.info(pattern)
+    test.log.info(pattern)

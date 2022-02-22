@@ -1,4 +1,3 @@
-import logging
 import re
 
 from avocado.utils import process
@@ -77,7 +76,7 @@ def run(test, params, env):
         params["start_vm"] = "yes"
 
         error_context.context("Boot the vm using -M option:'-M %s', smbios "
-                              "para: '%s'" % (m_type, smbios), logging.info)
+                              "para: '%s'" % (m_type, smbios), test.log.info)
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         vm1 = env.get_vm(params["main_vm"])
         session = vm1.wait_for_login(timeout=login_timeout)

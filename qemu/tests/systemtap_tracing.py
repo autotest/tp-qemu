@@ -1,4 +1,3 @@
-import logging
 import re
 import os
 import time
@@ -70,14 +69,14 @@ def run(test, params, env):
                 exec_cmds = cmd
             for cmd_exec in exec_cmds.split(";"):
                 msg = "Execute %s cmd '%s'" % (cmd_type, cmd_exec)
-                error_context.context(msg, logging.info)
+                error_context.context(msg, test.log.info)
                 if cmd_type == "monitor":
                     vm.monitor.send_args_cmd(cmd_exec)
                 elif cmd_type == "bash":
                     guest_session = vm.wait_for_login(timeout=timeout)
                     guest_session.cmd(cmd_exec)
 
-    error_context.context("Get the output of stap script", logging.info)
+    error_context.context("Get the output of stap script", test.log.info)
     stap_log_file = utils_misc.get_path(test.profdir, "systemtap.log")
 
     start_time = time.time()
@@ -90,9 +89,9 @@ def run(test, params, env):
                 fd.close()
                 continue
             elif data and re.findall(checking_pattern_re, data):
-                logging.info("Capture the data successfully")
-                logging.info("The capture data is like: %s",
-                             re.findall(checking_pattern_re, data)[-1])
+                test.log.info("Capture the data successfully")
+                test.log.info("The capture data is like: %s",
+                              re.findall(checking_pattern_re, data)[-1])
                 fd.close()
                 break
         else:

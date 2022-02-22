@@ -13,10 +13,12 @@ from virttest import utils_misc
 from virttest import ppm_utils
 from virttest import qemu_monitor
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 try:
     import PIL.Image
 except ImportError:
-    logging.warning('No python imaging library installed. PPM image '
+    LOG_JOB.warning('No python imaging library installed. PPM image '
                     'conversion to JPEG disabled. In order to enable it, '
                     'please install python-imaging or the equivalent for your '
                     'distro.')
@@ -33,7 +35,7 @@ def handle_var(vm, params, varname):
 def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
               current_step_num):
     if len(words) < 7:
-        logging.error("Bad barrier_2 command line")
+        LOG_JOB.error("Bad barrier_2 command line")
         return False
 
     # Parse barrier command line
@@ -96,19 +98,19 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
         try:
             vm.monitor.screendump(scrdump_filename, debug=False)
         except qemu_monitor.MonitorError as e:
-            logging.warn(e)
+            LOG_JOB.warn(e)
             continue
 
         # Read image file
         try:
             (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
         except IOError as e:
-            logging.warn(e)
+            LOG_JOB.warn(e)
             continue
 
         # Make sure image is valid
         if not ppm_utils.image_verify_ppm_file(scrdump_filename):
-            logging.warn("Got invalid screendump: dimensions: %dx%d, "
+            LOG_JOB.warn("Got invalid screendump: dimensions: %dx%d, "
                          "data size: %d", w, h, len(data))
             continue
 
@@ -166,7 +168,7 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
 
     # What should we do with this failure?
     if words[-1] == "optional":
-        logging.info(message)
+        LOG_JOB.info(message)
         return False
     else:
         # Collect information and put it in debug_dir
@@ -188,7 +190,7 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
                                                   data)
         # Print error messages and fail the test
         long_message = message + "\n(see analysis at %s)" % debug_dir
-        logging.error(long_message)
+        LOG_JOB.error(long_message)
         test.fail(message)
 
 
@@ -220,7 +222,7 @@ def run(test, params, env):
         line = line.strip()
         if not line:
             continue
-        logging.info(line)
+        test.log.info(line)
 
         if line.startswith("#"):
             continue
@@ -241,7 +243,7 @@ def run(test, params, env):
             vm.send_key(words[1])
         elif words[0] == "var":
             if not handle_var(vm, params, words[1]):
-                logging.error("Variable not defined: %s", words[1])
+                test.log.error("Variable not defined: %s", words[1])
         elif words[0] == "barrier_2":
             if current_screendump:
                 scrdump_filename = os.path.join(

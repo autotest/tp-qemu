@@ -8,7 +8,6 @@ On the client, certs that will be put into the smartcard will need
 to be generated.
 
 """
-import logging
 
 from virttest import utils_misc
 from virttest import utils_spice
@@ -29,12 +28,12 @@ def run(test, params, env):
     self_sign = params.get("self_sign")
     cert_trustargs = params.get("trustargs")
 
-    logging.debug("Cert List:")
+    test.log.debug("Cert List:")
     for cert in cert_list:
-        logging.debug(cert)
-        logging.debug(cert_trustargs)
-        logging.debug("CN=%s", cert)
-        logging.debug(cert_db)
+        test.log.debug(cert)
+        test.log.debug(cert_trustargs)
+        test.log.debug("CN=%s", cert)
+        test.log.debug(cert_db)
 
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
@@ -62,13 +61,13 @@ def run(test, params, env):
         cmd += "-t '" + cert_trustargs + "' -S -s " + "'CN=" + cert
         cmd += "' -n '" + cert + "' -d " + cert_db
         cmd += " -z " + "/tmp/randomtext.txt"
-        logging.debug(cmd)
+        test.log.debug(cmd)
         output = client_session.cmd(cmd)
-        logging.debug("Cert Created: %s", output)
+        test.log.debug("Cert Created: %s", output)
 
     cmd = "certutil -L -d " + cert_db
     output = client_session.cmd(cmd)
-    logging.info("Listing all certs on the client: %s", output)
+    test.log.info("Listing all certs on the client: %s", output)
 
     # Verify that all the certs have been generated on the client
     for cert in cert_list:

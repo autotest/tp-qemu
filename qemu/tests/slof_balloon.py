@@ -2,7 +2,6 @@
 slof_balloon.py include following case:
  1. virtio balloon can work with pci-bridge.
 """
-import logging
 
 from virttest import error_context
 from provider import slof
@@ -38,7 +37,7 @@ def run(test, params, env):
         """ Check virtio balloon device info. """
         error_context.context('Check virtio balloon device info.')
         balloon_size = qmp.query('balloon')['actual']
-        logging.debug('The balloon size is %s', balloon_size)
+        test.log.debug('The balloon size is %s', balloon_size)
         mem = int(params["mem"]) * 1024 ** 2
         if int(balloon_size) != mem:
             test.error(
@@ -58,26 +57,26 @@ def run(test, params, env):
                         qmp.query('balloon')['actual'])), balloon_timeout):
             test.fail('The balloon size is not changed to %s in %s sec.'
                       % (changed_ballon_size, balloon_timeout))
-        logging.debug(
+        test.log.debug(
             'The balloon size is %s after changed.', changed_ballon_size)
 
     def _ping_host():
         """ Ping host from guest. """
-        error_context.context("Try to ping external host.", logging.info)
+        error_context.context("Try to ping external host.", test.log.info)
         extra_host_ip = utils_net.get_host_ip_address(params)
         session.cmd('ping %s -c 5' % extra_host_ip)
-        logging.info("Ping host(%s) successfully.", extra_host_ip)
+        test.log.info("Ping host(%s) successfully.", extra_host_ip)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     content, _ = slof.wait_for_loaded(vm, test)
 
-    error_context.context("Check the output of SLOF.", logging.info)
+    error_context.context("Check the output of SLOF.", test.log.info)
     slof.check_error(test, content)
 
-    error_context.context("Try to log into guest '%s'." % vm.name, logging.info)
+    error_context.context("Try to log into guest '%s'." % vm.name, test.log.info)
     session = vm.wait_for_login(timeout=float(params.get("login_timeout", 240)))
-    logging.info("log into guest '%s' successfully.", vm.name)
+    test.log.info("log into guest '%s' successfully.", vm.name)
 
     qmp = _get_qmp_port()
     _check_balloon_info()

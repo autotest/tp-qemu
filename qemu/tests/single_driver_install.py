@@ -6,6 +6,8 @@ from virttest import utils_misc
 from virttest.utils_windows import virtio_win, wmic
 from virttest.utils_test.qemu import windrv_verify_running
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 QUERY_TIMEOUT = 360
 INSTALL_TIMEOUT = 360
@@ -18,9 +20,9 @@ def _chk_cert(session, cert_path):
     # it may take a while to verify cert file so lets wait a little longer
     out = session.cmd(chk_cmd, timeout=QUERY_TIMEOUT)
     if re.search("Expired certificate", out, re.I):
-        logging.warning("Certificate '%s' is expired!", cert_path)
+        LOG_JOB.warning("Certificate '%s' is expired!", cert_path)
     if re.search("Incomplete certificate chain", out, re.I):
-        logging.warning("Incomplete certificate chain! Details:\n%s", out)
+        LOG_JOB.warning("Incomplete certificate chain! Details:\n%s", out)
 
 
 def _add_cert(session, cert_path, store):
@@ -96,7 +98,7 @@ def run(test, params, env):
     inf_find_cmd = 'dir /b /s %s\\%s.inf | findstr "\\%s\\\\"'
     inf_find_cmd %= (viowin_ltr, driver_name, inf_middle_path)
     inf_path = session.cmd(inf_find_cmd, timeout=OPERATION_TIMEOUT).strip()
-    logging.info("Found inf file '%s'", inf_path)
+    test.log.info("Found inf file '%s'", inf_path)
 
     # `findstr` cannot handle unicode so calling `type` makes it work
     expected_ver = session.cmd("type %s | findstr /i /r DriverVer.*=" %
@@ -104,11 +106,11 @@ def run(test, params, env):
     expected_ver = expected_ver.strip().split(",", 1)[-1]
     if not expected_ver:
         test.error("Failed to find driver version from inf file")
-    logging.info("Target version is '%s'", expected_ver)
+    test.log.info("Target version is '%s'", expected_ver)
 
     if params.get("need_uninstall", "no") == "yes":
         error_context.context("Uninstalling previous installed driver",
-                              logging.info)
+                              test.log.info)
         for inf_name in _pnpdrv_info(session, device_name, ["InfName"]):
             uninst_store_cmd = "pnputil /f /d %s" % inf_name
             status, output = session.cmd_status_output(uninst_store_cmd,
@@ -126,7 +128,7 @@ def run(test, params, env):
 
         session = vm.reboot(session)
 
-    error_context.context("Installing certificates", logging.info)
+    error_context.context("Installing certificates", test.log.info)
     cert_files = utils_misc.set_winutils_letter(session,
                                                 params.get("cert_files", ""))
     cert_files = [cert.split("=", 1) for cert in cert_files.split()]
@@ -134,7 +136,7 @@ def run(test, params, env):
         _chk_cert(session, cert)
         _add_cert(session, cert, store)
 
-    error_context.context("Installing target driver", logging.info)
+    error_context.context("Installing target driver", test.log.info)
     installed_any = False
     for hwid in device_hwid.split():
         output = session.cmd_output("%s find %s" % (devcon_path, hwid))
@@ -151,7 +153,7 @@ def run(test, params, env):
         test.error("Failed to find target devices "
                    "by hwids: '%s'" % device_hwid)
 
-    error_context.context("Verifying target driver", logging.info)
+    error_context.context("Verifying target driver", test.log.info)
     session = vm.reboot(session)
     windrv_verify_running(session, test, driver_verifier)
 

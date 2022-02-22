@@ -3,7 +3,6 @@ slof_multi_devices.py include following case:
  1. SLOF boot successfully when adding two pci-bridge to the guest.
  2. VM boot successfully with lots of virtio-net-pci devices.
 """
-import logging
 
 from virttest import error_context
 from provider import slof
@@ -53,29 +52,29 @@ def run(test, params, env):
     vm.verify_alive()
     content, _ = slof.wait_for_loaded(vm, test)
 
-    error_context.context("Check the output of SLOF.", logging.info)
+    error_context.context("Check the output of SLOF.", test.log.info)
     slof.check_error(test, content)
 
     error_context.context("Try to log into guest '%s'." % vm.name,
-                          logging.info)
+                          test.log.info)
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
-    logging.info("log into guest '%s' successfully.", vm.name)
+    test.log.info("log into guest '%s' successfully.", vm.name)
 
-    error_context.context("Try to ping external host.", logging.info)
+    error_context.context("Try to ping external host.", test.log.info)
     extra_host_ip = utils_net.get_host_ip_address(params)
     session.cmd('ping %s -c 5' % extra_host_ip)
-    logging.info("Ping host(%s) successfully.", extra_host_ip)
+    test.log.info("Ping host(%s) successfully.", extra_host_ip)
 
     if params['device_type'] == 'virtio-net-pci':
         nic_num = int(str(session.cmd_output(params['nic_check_cmd'])))
         error_context.context('Found %d ehternet controllers inside guest.'
-                              % nic_num, logging.info)
+                              % nic_num, test.log.info)
         if (pci_num * nic_num_per_pci) != nic_num:
             test.fail(
                 "The number of ethernet controllers is not equal to %s "
                 "inside guest." % (pci_num * nic_num_per_pci))
-        logging.info(
+        test.log.info(
             'The number of ehternet controllers inside guest is equal to '
             'qemu command line(%d * %d).', pci_num, nic_num_per_pci)
 

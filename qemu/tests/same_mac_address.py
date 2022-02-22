@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -23,11 +22,11 @@ def run(test, params, env):
     """
     timeout = int(params.get_numeric("timeout", 360))
     error_context.context("Boot guest with 2 virtio-net with the same mac",
-                          logging.info)
+                          test.log.info)
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login(timeout=timeout)
     error_context.context("Check if the driver is installed and "
-                          "verified", logging.info)
+                          "verified", test.log.info)
     driver_verifier = params["driver_verifier"]
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,
@@ -35,14 +34,14 @@ def run(test, params, env):
                                                             timeout)
     # wait for getting the 169.254.xx.xx, it gets slower than valid ip.
     time.sleep(60)
-    error_context.context("Check the ip of guest", logging.info)
+    error_context.context("Check the ip of guest", test.log.info)
     mac = vm.virtnet[0].mac
     cmd = 'wmic nicconfig where macaddress="%s" get ipaddress' % mac
     status, output = session.cmd_status_output(cmd, timeout)
     if status:
         test.error("Check ip error, output=%s" % output)
     lines = [l.strip() for l in output.splitlines() if l.strip()]
-    logging.info(lines)
+    test.log.info(lines)
 
     valid_count = 0
     for l in lines[1:]:
@@ -52,7 +51,7 @@ def run(test, params, env):
     if valid_count != 1:
         test.error("%d valid ip found, should be 1" % valid_count)
 
-    error_context.context("Ping out from guest", logging.info)
+    error_context.context("Ping out from guest", test.log.info)
     host_ip = utils_net.get_host_ip_address(params)
     status, output = utils_net.ping(host_ip, count=10, timeout=60,
                                     session=session)

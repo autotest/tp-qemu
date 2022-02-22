@@ -1,4 +1,3 @@
-import logging
 import os
 import socket
 import time
@@ -43,7 +42,7 @@ def run(test, params, env):
                              data_dir.get_deps_dir("softlockup"))
 
     def _kill_guest_programs(session, kill_stress_cmd, kill_monitor_cmd):
-        logging.info("Kill stress and monitor on guest")
+        test.log.info("Kill stress and monitor on guest")
         try:
             session.cmd(kill_stress_cmd)
         except Exception:
@@ -54,12 +53,12 @@ def run(test, params, env):
             pass
 
     def _kill_host_programs(kill_stress_cmd, kill_monitor_cmd):
-        logging.info("Kill stress and monitor on host")
+        test.log.info("Kill stress and monitor on host")
         process.run(kill_stress_cmd, ignore_status=True, shell=True)
         process.run(kill_monitor_cmd, ignore_status=True, shell=True)
 
     def host():
-        logging.info("Setup monitor server on host")
+        test.log.info("Setup monitor server on host")
         # Kill previous instances of the host load programs, if any
         _kill_host_programs(kill_stress_cmd, kill_monitor_cmd)
         # Cleanup previous log instances
@@ -75,11 +74,11 @@ def run(test, params, env):
             shell=True)
 
         if stress_setup_cmd is not None:
-            logging.info("Build stress on host")
+            test.log.info("Build stress on host")
             # Uncompress and build stress on host
             process.run(stress_setup_cmd % stress_dir, shell=True)
 
-        logging.info("Run stress on host")
+        test.log.info("Run stress on host")
         # stress_threads = 2 * n_cpus
         threads_host = 2 * cpu.online_count()
         # Run stress test on host
@@ -119,7 +118,7 @@ def run(test, params, env):
                                     'heartbeat_slu.py')
         vm.copy_files_to(monitor_path, "/tmp")
 
-        logging.info("Setup monitor client on guest")
+        test.log.info("Setup monitor client on guest")
         # Start heartbeat on guest
         session.cmd(params.get("client_setup_cmd") %
                     ("/tmp", host_ip, monitor_log_file_client, monitor_port))
@@ -129,17 +128,17 @@ def run(test, params, env):
             stress_source = params.get("stress_source")
             stress_path = os.path.join(stress_dir, stress_source)
             vm.copy_files_to(stress_path, "/tmp")
-            logging.info("Build stress on guest")
+            test.log.info("Build stress on guest")
             session.cmd(stress_setup_cmd % "/tmp", timeout=200)
 
-        logging.info("Run stress on guest")
+        test.log.info("Run stress on guest")
         # stress_threads = 2 * n_vcpus
         threads_guest = 2 * int(params.get("smp", 1))
         # Run stress test on guest
         session.cmd(stress_cmd % ("/tmp", threads_guest))
 
         # Wait and report
-        logging.debug("Wait for %d s", test_length)
+        test.log.debug("Wait for %d s", test_length)
         time.sleep(test_length)
 
         # Kill instances of the load programs on both guest and host
@@ -149,7 +148,7 @@ def run(test, params, env):
         # Collect drift
         drift = process.system_output(drift_cmd % monitor_log_file_server,
                                       shell=True)
-        logging.info("Drift noticed: %s", drift)
+        test.log.info("Drift noticed: %s", drift)
 
     host()
     guest()

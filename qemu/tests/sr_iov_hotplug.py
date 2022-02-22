@@ -1,5 +1,4 @@
 import re
-import logging
 
 import aexpect
 
@@ -111,13 +110,13 @@ def run(test, params, env):
         pci_info[pci_num].append(add_output)
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][0] not in str(after_add):
-            logging.debug("Print info pci after add the block: %s", after_add)
+            test.log.debug("Print info pci after add the block: %s", after_add)
             test.fail("Add device failed. Monitor command is: %s"
                       ". Output: %r" % (pci_add_cmd, add_output))
         return after_add
 
     def clean_network_scripts():
-        logging.debug("Clean up network scripts in guest")
+        test.log.debug("Clean up network scripts in guest")
         session = vm.wait_for_serial_login(timeout=timeout)
         if "ubuntu" in vm.get_distro().lower():
             iface_script = "/etc/network/interfaces"
@@ -145,11 +144,11 @@ def run(test, params, env):
         session = vm.wait_for_serial_login(timeout=timeout)
         reference = session.cmd_output(reference_cmd)
         active_nics = get_active_network_device(session, nic_filter)
-        logging.debug("Active nics before hotplug - %s", active_nics)
+        test.log.debug("Active nics before hotplug - %s", active_nics)
 
         # Stop the VM monitor and try hot adding SRIOV dev
         if params.get("vm_stop", "no") == "yes":
-            logging.debug("stop the monitor of the VM before hotplug")
+            test.log.debug("stop the monitor of the VM before hotplug")
             vm.pause()
         try:
             # get function for adding device.
@@ -171,7 +170,7 @@ def run(test, params, env):
             # Define a helper function to make sure new nic could get ip.
             def _check_ip():
                 post_nics = get_active_network_device(session, nic_filter)
-                logging.debug("Active nics after hotplug - %s", post_nics)
+                test.log.debug("Active nics after hotplug - %s", post_nics)
                 return (len(active_nics) <= len(post_nics) and
                         active_nics != post_nics)
 
@@ -185,12 +184,12 @@ def run(test, params, env):
 
             # Resume the VM
             if params.get("vm_resume", "no") == "yes":
-                logging.debug("resuming the VM after hotplug")
+                test.log.debug("resuming the VM after hotplug")
                 vm.resume()
 
             # Reboot the VM
             if params.get("vm_reboot", "no") == "yes":
-                logging.debug("Rebooting the VM after hotplug")
+                test.log.debug("Rebooting the VM after hotplug")
                 vm.reboot()
             session = vm.wait_for_serial_login(timeout=timeout)
 
@@ -217,16 +216,16 @@ def run(test, params, env):
                 broadcast = params.get("static_broadcast", "10.10.10.255")
                 pci_id = utils_misc.get_pci_id_using_filter(vf_filter,
                                                             session)
-                logging.debug("PCIs associated with %s - %s", vf_filter,
-                              ', '.join(map(str, pci_id)))
+                test.log.debug("PCIs associated with %s - %s", vf_filter,
+                               ', '.join(map(str, pci_id)))
                 for each_pci in pci_id:
                     iface_name = utils_misc.get_interface_from_pci_id(each_pci,
                                                                       session)
-                    logging.debug("Interface associated with PCI %s - %s",
-                                  each_pci, iface_name)
+                    test.log.debug("Interface associated with PCI %s - %s",
+                                   each_pci, iface_name)
                     mac = session.cmd_output("ethtool -P %s" % iface_name)
                     mac = mac.split("Permanent address:")[-1].strip()
-                    logging.debug("mac address of %s: %s", iface_name, mac)
+                    test.log.debug("mac address of %s: %s", iface_name, mac)
                     # backup the network script for other distros
                     if "ubuntu" not in vm.get_distro().lower():
                         cmd = "service network restart"
@@ -316,7 +315,7 @@ def run(test, params, env):
     # Modprobe the module if specified in config file
     module = params.get("modprobe_module")
     if module:
-        error_context.context("modprobe the module %s" % module, logging.info)
+        error_context.context("modprobe the module %s" % module, test.log.info)
         session.cmd("modprobe %s" % module)
 
     # Probe qemu to verify what is the supported syntax for PCI hotplug
@@ -332,7 +331,7 @@ def run(test, params, env):
     local_functions = locals()
 
     if params.get("enable_set_link" "yes") == "yes":
-        error_context.context("Disable the primary link(s) of guest", logging.info)
+        error_context.context("Disable the primary link(s) of guest", test.log.info)
         for nic in vm.virtnet:
             vm.set_link(nic.device_id, up=False)
 
@@ -351,8 +350,8 @@ def run(test, params, env):
                     iface_script = "/etc/network/interfaces"
                     cmd = "cat %s" % iface_script
                     if not session.cmd_status(cmd):
-                        logging.debug("Backup network script in guest - %s",
-                                      iface_script)
+                        test.log.debug("Backup network script in guest - %s",
+                                       iface_script)
                         cmd = "cp %s %s.BACKUP" % (iface_script, iface_script)
                         status, output = session.cmd_status_output(cmd)
                         if status:
@@ -361,12 +360,12 @@ def run(test, params, env):
             for pci_num in range(pci_num_range):
                 msg = "Start hot-adding %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
-                error_context.context(msg, logging.info)
+                error_context.context(msg, test.log.info)
                 add_device(pci_num)
             sub_type = params.get("sub_type_after_plug")
             if sub_type:
                 error_context.context("Running sub test '%s' after hotplug" %
-                                      sub_type, logging.info)
+                                      sub_type, test.log.info)
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
                 if "guest_suspend" == sub_type:
                     # Hotpluged device have been released after guest suspend,
@@ -375,7 +374,7 @@ def run(test, params, env):
             for pci_num in range(pci_num_range):
                 msg = "start hot-deleting %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
-                error_context.context(msg, logging.info)
+                error_context.context(msg, test.log.info)
                 pci_del(-(pci_num + 1))
 
             # cleanup network script after hot deleting pci device
@@ -385,7 +384,7 @@ def run(test, params, env):
         clean_network_scripts()
         if params.get("enable_set_link", "yes") == "yes":
             error_context.context("Re-enabling the primary link(s) of guest",
-                                  logging.info)
+                                  test.log.info)
             for nic in vm.virtnet:
                 vm.set_link(nic.device_id, up=True)
         if session:

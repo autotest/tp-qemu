@@ -14,6 +14,8 @@ from virttest.utils_test.qemu import MemoryHotplugTest
 from virttest import utils_numeric
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def _setup_hugepage(params):
     """
@@ -26,19 +28,19 @@ def _setup_hugepage(params):
     """
     size = params['total_hugepage_size']
     huge_page = test_setup.HugePageConfig(params)
-    error_context.context('Assign %sMB hugepages in host.' % size, logging.info)
+    error_context.context('Assign %sMB hugepages in host.' % size, LOG_JOB.info)
 
     hugepage_size = huge_page.get_hugepage_size()
-    logging.debug('Hugepage size is %skB in host.', hugepage_size)
+    LOG_JOB.debug('Hugepage size is %skB in host.', hugepage_size)
 
     huge_page.target_hugepages = int((int(size) * 1024) // hugepage_size)
-    logging.debug('Set hugepages to %d pages in host.',
+    LOG_JOB.debug('Set hugepages to %d pages in host.',
                   huge_page.target_hugepages)
     huge_page.set_node_num_huge_pages(huge_page.target_hugepages,
                                       0, hugepage_size)
 
     error_context.context('mount hugepages to %s'
-                          % huge_page.hugepage_path, logging.info)
+                          % huge_page.hugepage_path, LOG_JOB.info)
     huge_page.mount_hugepage_fs()
     params["hugepage_path"] = huge_page.hugepage_path
 
@@ -50,9 +52,9 @@ def _check_mem_increase(session, params, orig_mem):
     new_mem = int(session.cmd_output(cmd=params['free_mem_cmd']))
     if (new_mem - orig_mem) == increase_mem:
         error_context.context(
-            'Get guest free memory size after hotplug pc-dimm.', logging.info)
-        logging.debug('Guest free memory size is %d bytes', new_mem)
-        logging.info("Guest memory size is increased %s.", params['size_plug'])
+            'Get guest free memory size after hotplug pc-dimm.', LOG_JOB.info)
+        LOG_JOB.debug('Guest free memory size is %d bytes', new_mem)
+        LOG_JOB.info("Guest memory size is increased %s.", params['size_plug'])
         return True
     return False
 
@@ -83,14 +85,14 @@ def run(test, params, env):
     def _wait_for_login(cur_pos=0):
         """Wait for login guest."""
         content, next_pos = slof.wait_for_loaded(vm, test, cur_pos)
-        error_context.context("Check the output of SLOF.", logging.info)
+        error_context.context("Check the output of SLOF.", test.log.info)
         slof.check_error(test, content)
 
         error_context.context("Try to log into guest '%s'." % vm.name,
-                              logging.info)
+                              test.log.info)
         timeout = float(params.get("login_timeout", 240))
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("log into guest '%s' successfully.", vm.name)
+        test.log.info("log into guest '%s' successfully.", vm.name)
         return session, next_pos
 
     _setup_hugepage(params)
@@ -103,11 +105,11 @@ def run(test, params, env):
     session, next_pos = _wait_for_login()
 
     error_context.context('Get guest free memory size before hotplug pc-dimm.',
-                          logging.info)
+                          test.log.info)
     orig_mem = int(session.cmd_output(cmd=params['free_mem_cmd']))
-    logging.debug('Guest free memory size is %d bytes', orig_mem)
+    test.log.debug('Guest free memory size is %d bytes', orig_mem)
 
-    error_context.context('Hotplug pc-dimm for guest.', logging.info)
+    error_context.context('Hotplug pc-dimm for guest.', test.log.info)
     htp_mem = MemoryHotplugTest(test, params, env)
     htp_mem.hotplug_memory(vm, params['plug_mem_name'])
 
@@ -118,15 +120,15 @@ def run(test, params, env):
         test.fail("Guest memory size is not increased %s in %s sec."
                   % (params['size_plug'], params.get('plug_timeout', 5)))
 
-    error_context.context('Reboot guest', logging.info)
+    error_context.context('Reboot guest', test.log.info)
     session.close()
     vm.reboot()
 
     session, _ = _wait_for_login(next_pos)
-    error_context.context("Try to ping external host.", logging.info)
+    error_context.context("Try to ping external host.", test.log.info)
     extra_host_ip = utils_net.get_host_ip_address(params)
     session.cmd('ping %s -c 5' % extra_host_ip)
-    logging.info("Ping host(%s) successfully.", extra_host_ip)
+    test.log.info("Ping host(%s) successfully.", extra_host_ip)
 
     session.close()
     vm.destroy(gracefully=True)

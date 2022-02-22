@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -37,7 +36,7 @@ def run(test, params, env):
     sessions = []
     vms = env.get_all_vms()
 
-    error_context.context("Run stress in both guests", logging.info)
+    error_context.context("Run stress in both guests", test.log.info)
     for vm in vms:
         session = vm.wait_for_login()
         sessions.append(session)
@@ -51,29 +50,29 @@ def run(test, params, env):
     stat_cmd = params["stat_cmd"]
 
     try:
-        error_context.context("Check steal time in guests", logging.info)
+        error_context.context("Check steal time in guests", test.log.info)
         for session in sessions:
             output = session.cmd_output(top_cmd)
             top_st = re.findall(r",\s*(\d+.?\d+)\s*st", output)[0]
             if abs(float(top_st) - 50) > 10:
                 test.fail("Guest steal time is not around 50")
 
-        error_context.context("Check two qemu process cpu usage", logging.info)
+        error_context.context("Check two qemu process cpu usage", test.log.info)
         cmd = "top -n1 -b -p %s -p %s | grep qemu-kvm | awk '{print $9}'" \
               % (vms[0].get_pid(), vms[1].get_pid())
         cpu_usage = process.getoutput(cmd, shell=True).split()
-        logging.info("QEMU cpu usage are %s", cpu_usage)
+        test.log.info("QEMU cpu usage are %s", cpu_usage)
         cpu_usage = sorted([float(x) for x in cpu_usage])
         if sum(cpu_usage) < 80 or cpu_usage[0] < 40:
             test.fail("Two qemu process didn't get equal cpu usage")
 
-        error_context.context("Check steal time in /proc/stat", logging.info)
+        error_context.context("Check steal time in /proc/stat", test.log.info)
         stat_val_pre = get_stat_val()
-        logging.info("Steal time value in /proc/stat is %s", stat_val_pre)
+        test.log.info("Steal time value in /proc/stat is %s", stat_val_pre)
         time.sleep(60)
         stat_val_post = get_stat_val()
-        logging.info("After 60s, steal time value in /proc/stat is %s",
-                     stat_val_post)
+        test.log.info("After 60s, steal time value in /proc/stat is %s",
+                      stat_val_post)
 
         delta = list(map(lambda x, y: y - x, stat_val_pre, stat_val_post))
         if abs(delta[0] - delta[1]) > sum(delta)/2*0.1:

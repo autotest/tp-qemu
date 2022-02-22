@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -47,7 +46,7 @@ def run(test, params, env):
         chardev_qid = serial_device.get_param("chardev")
         chardev_device = vm.devices.get_by_qid(chardev_qid)[0]
 
-        logging.info("The currently tested backend is %s.", backend)
+        test.log.info("The currently tested backend is %s.", backend)
         if backend == 'unix_socket':
             session = vm.wait_for_serial_login(timeout=60)
             session.cmd(create_delete_file)

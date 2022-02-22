@@ -1,4 +1,3 @@
-import logging
 import time
 import random
 
@@ -30,7 +29,7 @@ def run(test, params, env):
     params["start_vm"] = "yes"
 
     if params.get("get_boot_time") == "yes":
-        error_context.context("Check guest boot up time", logging.info)
+        error_context.context("Check guest boot up time", test.log.info)
         env_process.preprocess_vm(test, params, env, vm.name)
         vm.wait_for_login(timeout=timeout)
         bootup_time = time.time() - vm.start_time
@@ -39,14 +38,14 @@ def run(test, params, env):
             wait_time = random.randint(min_wait_time, int(bootup_time))
         vm.destroy()
 
-    error_context.context("Boot the guest", logging.info)
+    error_context.context("Boot the guest", test.log.info)
     env_process.preprocess_vm(test, params, env, vm.name)
-    logging.info("Wait for %d seconds before reset", wait_time)
+    test.log.info("Wait for %d seconds before reset", wait_time)
     time.sleep(wait_time)
 
     for i in range(1, reset_times + 1):
         error_context.context("Reset guest system for %s times" % i,
-                              logging.info)
+                              test.log.info)
 
         vm.monitor.cmd("system_reset")
 
@@ -54,9 +53,9 @@ def run(test, params, env):
         if params.get("fixed_interval", "yes") != "yes":
             interval_tmp = random.randint(0, interval * 1000) / 1000.0
 
-        logging.debug("Reset the system by monitor cmd"
-                      " after %ssecs", interval_tmp)
+        test.log.debug("Reset the system by monitor cmd"
+                       " after %ssecs", interval_tmp)
         time.sleep(interval_tmp)
 
-    error_context.context("Try to login guest after reset", logging.info)
+    error_context.context("Try to login guest after reset", test.log.info)
     vm.wait_for_login(timeout=timeout)

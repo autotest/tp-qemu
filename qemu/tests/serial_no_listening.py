@@ -1,4 +1,3 @@
-import logging
 import aexpect
 
 from avocado.utils import process
@@ -34,7 +33,7 @@ def run(test, params, env):
     port_path = get_virtio_port_property(vm,
                                          params["file_transfer_serial_port"])[1]
 
-    error_context.context("host send while no listening side", logging.info)
+    error_context.context("host send while no listening side", test.log.info)
     host_send_cmd = 'echo "hi" | nc -U %s' % port_path
     try:
         process.system(host_send_cmd, shell=True, timeout=timeout)
@@ -43,7 +42,7 @@ def run(test, params, env):
     else:
         test.fail("Host send should fail while no listening side")
 
-    error_context.context("guest send while no listening side", logging.info)
+    error_context.context("guest send while no listening side", test.log.info)
     try:
         output = session.cmd_output(guest_send_cmd)
     except aexpect.ShellTimeoutError:

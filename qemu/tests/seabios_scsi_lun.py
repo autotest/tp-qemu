@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -45,7 +44,7 @@ def run(test, params, env):
     if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
         test.fail("Could not get boot menu message.")
 
-    error_context.context("Check boot menu list", logging.info)
+    error_context.context("Check boot menu list", test.log.info)
     vm.send_key(boot_menu_key)
 
     boot_list = utils_misc.wait_for(get_list, timeout, 1)

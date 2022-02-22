@@ -3,7 +3,6 @@ slof_greater_lun_id.py include following case:
  1.SLOF could support LUN ID greater than 255.
 """
 
-import logging
 
 from virttest import error_context
 from provider import slof
@@ -38,19 +37,19 @@ def run(test, params, env):
         vm.verify_alive()
         content, next_pos = slof.wait_for_loaded(vm, test, start_pos)
 
-        error_context.context("Check the output of SLOF.", logging.info)
+        error_context.context("Check the output of SLOF.", test.log.info)
         slof.check_error(test, content)
 
         error_context.context("Try to log into guest '%s'." % vm.name,
-                              logging.info)
+                              test.log.info)
         timeout = float(params.get("login_timeout", 240))
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("log into guest '%s' successfully.", vm.name)
+        test.log.info("log into guest '%s' successfully.", vm.name)
 
-        error_context.context("Try to ping external host.", logging.info)
+        error_context.context("Try to ping external host.", test.log.info)
         extra_host_ip = utils_net.get_host_ip_address(params)
         session.cmd('ping %s -c 5' % extra_host_ip)
-        logging.info("Ping host(%s) successfully.", extra_host_ip)
+        test.log.info("Ping host(%s) successfully.", extra_host_ip)
         session.close()
         vm.destroy(gracefully=True)
         start_pos = next_pos

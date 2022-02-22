@@ -1,6 +1,5 @@
 import time
 import re
-import logging
 import random
 
 from avocado.core import exceptions
@@ -31,8 +30,8 @@ class BallooningTest(MemoryBaseTest):
                 sleep_time = 180
             else:
                 sleep_time = 90
-            logging.info("Waiting %d seconds for guest's "
-                         "applications up", sleep_time)
+            self.test.log.info("Waiting %d seconds for guest's "
+                               "applications up", sleep_time)
             time.sleep(sleep_time)
             self.params["balloon_test_setup_ready"] = True
             # ori_mem/gmem is original memory
@@ -58,11 +57,11 @@ class BallooningTest(MemoryBaseTest):
                 if self.vm.monitor.protocol == "qmp":
                     ballooned_mem = ballooned_mem / (1024 ** 2)
             else:
-                logging.info('could not get balloon_memory, cause vm.monitor '
-                             'is None')
+                self.test.log.info('could not get balloon_memory, cause '
+                                   'vm.monitor is None')
                 return 0
         except qemu_monitor.MonitorError as emsg:
-            logging.error(emsg)
+            self.test.log.error(emsg)
             return 0
         return ballooned_mem
 
@@ -78,7 +77,7 @@ class BallooningTest(MemoryBaseTest):
         :return: memory size get from monitor and guest
         :rtype: tuple
         """
-        error_context.context("Check memory status %s" % step, logging.info)
+        error_context.context("Check memory status %s" % step, self.test.log.info)
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
         gcompare_threshold = int(self.params.get("guest_compare_threshold",
@@ -121,7 +120,7 @@ class BallooningTest(MemoryBaseTest):
         """
         polling_interval = int(self.params.get("polling_interval", 2))
         sleep_time = int(self.params.get("polling_sleep_time", 20))
-        error_context.context("Enable polling", logging.info)
+        error_context.context("Enable polling", self.test.log.info)
         self.vm.monitor.qom_set(device_path, "guest-stats-polling-interval",
                                 polling_interval)
         time.sleep(sleep_time)
@@ -144,7 +143,7 @@ class BallooningTest(MemoryBaseTest):
         check_mem_ratio = float(self.params.get("check_mem_ratio", 0.1))
         check_mem_diff = float(self.params.get("check_mem_diff", 150))
         error_context.context("Get memory from guest aligned"
-                              " with %s." % keyname, logging.info)
+                              " with %s." % keyname, self.test.log.info)
         if keyname == "stat-free-memory":
             guest_mem = self.get_guest_free_mem(self.vm)
         elif keyname == "stat-total-memory":
@@ -198,7 +197,7 @@ class BallooningTest(MemoryBaseTest):
         :type new_mem: int
         """
         self.env["balloon_test"] = 0
-        error_context.context("Change VM memory to %s" % new_mem, logging.info)
+        error_context.context("Change VM memory to %s" % new_mem, self.test.log.info)
         try:
             self.vm.balloon(new_mem)
             self.env["balloon_test"] = 1
@@ -246,7 +245,7 @@ class BallooningTest(MemoryBaseTest):
                                      sub_type=test_tag)
         qemu_quit_after_test = -1
         if "shutdown" in test_tag:
-            logging.info("Guest shutdown normally after balloon")
+            self.test.log.info("Guest shutdown normally after balloon")
             qemu_quit_after_test = 1
         if params.get("session_need_update", "no") == "yes":
             self.session = self.get_session(self.vm)
@@ -273,14 +272,14 @@ class BallooningTest(MemoryBaseTest):
         """
         Wait until guest memory don't change
         """
-        logging.info("Wait until guest memory don't change")
+        self.test.log.info("Wait until guest memory don't change")
         threshold = int(self.params.get("guest_stable_threshold", 100))
         is_stable = self._mem_state(threshold)
         ret = utils_misc.wait_for(lambda: next(is_stable), timeout,
                                   step=float(self.params.get("guest_check_step",
                                                              10.0)))
         if not ret:
-            logging.warning("guest memory is not stable after %ss", timeout)
+            self.test.log.warning("guest memory is not stable after %ss", timeout)
 
     def get_memory_boundary(self, balloon_type=''):
         """
@@ -296,7 +295,7 @@ class BallooningTest(MemoryBaseTest):
         min_size = int(float(utils_misc.normalize_data_size(min_size)))
         balloon_buffer = int(self.params.get("balloon_buffer", 300))
         if self.params.get('os_type') == 'windows':
-            logging.info("Get windows miminum balloon value:")
+            self.test.log.info("Get windows miminum balloon value:")
             self.vm.balloon(1)
             balloon_timeout = self.params.get("balloon_timeout", 900)
             self.wait_for_balloon_complete(balloon_timeout)
@@ -449,13 +448,13 @@ class BallooningTestWin(BallooningTest):
         :param guest_value: memory size report from guest, this value can be
                             None
         """
-        logging.error("Memory size mismatch %s:\n", step)
+        self.test.log.error("Memory size mismatch %s:\n", step)
         error_msg = "Wanted to be changed: %s\n" % (expect_value - self.pre_mem)
         if monitor_value:
             error_msg += "Changed in monitor: %s\n" % (monitor_value
                                                        - self.pre_mem)
         error_msg += "Changed in guest: %s\n" % (guest_value - self.pre_gmem)
-        logging.error(error_msg)
+        self.test.log.error(error_msg)
 
     def get_memory_status(self):
         """
@@ -507,7 +506,7 @@ class BallooningTestWin(BallooningTest):
         :return: cmd execution output
         """
         error_context.context("%s Balloon Service in guest." % operation,
-                              logging.info)
+                              self.test.log.info)
         drive_letter = self.get_disk_vol(session)
         try:
             operate_cmd = self.params["%s_balloon_service"
@@ -531,15 +530,15 @@ class BallooningTestWin(BallooningTest):
                           uninstall/stop
         """
         error_context.context("Check Balloon Service status before install"
-                              "service", logging.info)
+                              "service", self.test.log.info)
         output = self.operate_balloon_service(session, "status")
         if re.search("running", output.lower(), re.M):
-            logging.info("Balloon service is already running !")
+            self.test.log.info("Balloon service is already running !")
         elif re.search("stop", output.lower(), re.M):
-            logging.info("Balloon service is stopped,start it now")
+            self.test.log.info("Balloon service is stopped,start it now")
             self.operate_balloon_service(session, "run")
         else:
-            logging.info("Install Balloon Service in guest.")
+            self.test.log.info("Install Balloon Service in guest.")
             self.operate_balloon_service(session, "install")
 
 
@@ -560,13 +559,13 @@ class BallooningTestLinux(BallooningTest):
         @param guest_value: memory size report from guest, this value can be
                             None
         """
-        logging.error("Memory size mismatch %s:\n", step)
+        self.test.log.error("Memory size mismatch %s:\n", step)
         error_msg = "Assigner to VM: %s\n" % expect_value
         if monitor_value:
             error_msg += "Reported by monitor: %s\n" % monitor_value
         if guest_value:
             error_msg += "Reported by guest OS: %s\n" % guest_value
-        logging.error(error_msg)
+        self.test.log.error(error_msg)
 
     def get_memory_status(self):
         """
@@ -599,7 +598,7 @@ def run(test, params, env):
         guest_ori_mem = balloon_test.get_total_mem()
 
     for tag in params.objects('test_tags'):
-        error_context.context("Running %s test" % tag, logging.info)
+        error_context.context("Running %s test" % tag, test.log.info)
         params_tag = params.object_params(tag)
         if params_tag.get('expect_memory'):
             expect_mem = int(params_tag.get('expect_memory'))
@@ -640,8 +639,8 @@ def run(test, params, env):
             res2 = float(normalize_data_size(process.getoutput(get_res_cmd)))
             time.sleep(30)
             res3 = float(normalize_data_size(process.getoutput(get_res_cmd)))
-            logging.info("The RES values are %sM, %sM, and %sM sequentially",
-                         res1, res2, res3)
+            test.log.info("The RES values are %sM, %sM, and %sM sequentially",
+                          res1, res2, res3)
             if res2 - res1 < consumed_mem * 0.5:
                 test.error("QEMU should consume more memory")
             if res3 - res1 > res1 * 0.1:

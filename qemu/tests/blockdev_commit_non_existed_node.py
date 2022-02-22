@@ -6,6 +6,8 @@ from virttest.qemu_monitor import QMPCmdError
 from provider import backup_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevCommitNonExistedNode(BlockDevCommitTest):
 
@@ -29,7 +31,7 @@ class BlockdevCommitNonExistedNode(BlockDevCommitTest):
         try:
             self.main_vm.monitor.cmd(cmd, args)
         except QMPCmdError as e:
-            logging.info("Error message is %s", e.data)
+            LOG_JOB.info("Error message is %s", e.data)
             qmp_error_msg = self.params.get("qmp_error_msg")
             if not re.search(qmp_error_msg, str(e.data)):
                 self.test.fail("Error message not as expected")

@@ -1,5 +1,4 @@
 import random
-import logging
 
 from virttest import utils_test
 from virttest import error_context
@@ -41,7 +40,7 @@ def run(test, params, env):
                        (expected_mem, vm.name, guest_mem_size))
                 test.fail(msg)
 
-    error_context.context("Boot guest with balloon device", logging.info)
+    error_context.context("Boot guest with balloon device", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
@@ -54,7 +53,7 @@ def run(test, params, env):
                                                                 test, driver_name)
         balloon_test = BallooningTestWin(test, params, env)
         error_context.context("Config balloon service in guest",
-                              logging.info)
+                              test.log.info)
         balloon_test.configure_balloon_service(session)
 
     memhp_test = MemoryHotplugTest(test, params, env)
@@ -78,6 +77,6 @@ def run(test, params, env):
     finally:
         if params['os_type'] == 'windows':
             error_context.context("Clear balloon service in guest",
-                                  logging.info)
+                                  test.log.info)
             balloon_test.operate_balloon_service(session, "uninstall")
         session.close()

@@ -1,5 +1,3 @@
-import logging
-
 from virttest.qemu_monitor import QMPCmdError
 
 from provider import backup_utils
@@ -29,7 +27,7 @@ class BlockdevCommitSpecifyNode(BlockDevCommitTest):
         try:
             self.main_vm.monitor.cmd(cmd, args)
         except QMPCmdError as e:
-            logging.info("Error message is %s", e.data)
+            self.test.log.info("Error message is %s", e.data)
             if self.params.get("error_msg") not in str(e.data):
                 self.test.fail("Error message not as expected")
         else:

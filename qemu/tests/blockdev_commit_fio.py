@@ -1,6 +1,5 @@
 import time
 import random
-import logging
 
 from virttest import utils_test
 
@@ -14,7 +13,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
     def fio_thread(self):
         fio_options = self.params.get("fio_options")
         if fio_options:
-            logging.info("Start to run fio")
+            self.test.log.info("Start to run fio")
             self.fio = generate_instance(self.params, self.main_vm, 'fio')
             fio_run_timeout = self.params.get_numeric("fio_timeout", 2400)
             try:
@@ -43,7 +42,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
         try:
             bg_test = utils_test.BackgroundTest(self.fio_thread, "")
             bg_test.start()
-            logging.info("sleep random time before commit during fio")
+            self.test.log.info("sleep random time before commit during fio")
             mint = self.params.get_numeric("sleep_min")
             maxt = self.params.get_numeric("sleep_max")
             time.sleep(random.randint(mint, maxt))

@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import funcatexit
 from virttest import utils_misc
@@ -34,14 +33,14 @@ def run(test, params, env):
         if sleep:
             time.sleep(10)
         buddy_info = utils_memory.get_buddy_info('0', session=session)['0']
-        logging.info('Checked buddy info, value is %s', buddy_info)
+        test.log.info('Checked buddy info, value is %s', buddy_info)
         return buddy_info
 
     fragement_dir = params['fragement_dir']
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
     buddy_info_bf = get_buddy_info()
-    logging.info('Making fragement on guest...')
+    test.log.info('Making fragement on guest...')
     session.cmd_output_safe(params['cmd_make_fragement'], timeout=600)
     for i in range(1, 10, 2):
         session.cmd_output_safe('rm -f %s/*%s' % (fragement_dir, i))

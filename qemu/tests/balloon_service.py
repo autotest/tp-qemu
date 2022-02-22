@@ -1,6 +1,5 @@
 import time
 import random
-import logging
 
 from virttest import utils_test
 from virttest import error_context
@@ -35,11 +34,11 @@ def run(test, params, env):
         :param max_sz: guest maximal memory size
         """
         repeat_times = int(params.get("repeat_times", 5))
-        logging.info("repeat times: %d", repeat_times)
+        test.log.info("repeat times: %d", repeat_times)
 
         while repeat_times:
             for tag in params.objects('test_tags'):
-                error_context.context("Running %s test" % tag, logging.info)
+                error_context.context("Running %s test" % tag, test.log.info)
                 params_tag = params.object_params(tag)
                 balloon_type = params_tag['balloon_type']
                 if balloon_type == 'evict':
@@ -65,7 +64,7 @@ def run(test, params, env):
     mem_check = params.get("mem_check", "yes")
     mem_stat_working = True
 
-    error_context.context("Boot guest with balloon device", logging.info)
+    error_context.context("Boot guest with balloon device", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -76,7 +75,7 @@ def run(test, params, env):
                                                                 test, driver_name)
         balloon_test = BallooningTestWin(test, params, env)
         error_context.context("Config balloon service in guest",
-                              logging.info)
+                              test.log.info)
         balloon_test.configure_balloon_service(session)
     else:
         balloon_test = BallooningTestLinux(test, params, env)
@@ -87,17 +86,17 @@ def run(test, params, env):
         blnsrv_operation = params.objects("blnsrv_operation")
         mem_stat_working = False
         for bln_oper in blnsrv_operation:
-            error_context.context("%s balloon service" % bln_oper, logging.info)
+            error_context.context("%s balloon service" % bln_oper, test.log.info)
             balloon_test.operate_balloon_service(session, bln_oper)
 
             error_context.context("Balloon vm memory after %s balloon service"
-                                  % bln_oper, logging.info)
+                                  % bln_oper, test.log.info)
             balloon_memory(vm, mem_check, min_sz, max_sz)
             mem_stat_working = True
 
     finally:
         if params['os_type'] == 'windows':
             error_context.context("Clear balloon service in guest",
-                                  logging.info)
+                                  test.log.info)
             balloon_test.operate_balloon_service(session, "uninstall")
         session.close()

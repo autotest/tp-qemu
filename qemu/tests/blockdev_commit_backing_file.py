@@ -1,5 +1,3 @@
-import logging
-
 from virttest import data_dir
 from virttest import storage
 from virttest import qemu_storage
@@ -17,7 +15,7 @@ class BlockdevCommitBackingFile(BlockDevCommitTest):
         image_obj = qemu_storage.QemuImg(device_params,
                                          data_dir.get_data_dir(), device)
         output = image_obj.info()
-        logging.info(output)
+        self.test.log.info(output)
         if self.backing_file not in output:
             self.test.fail("The backing file info of % is not correct"
                            % device)

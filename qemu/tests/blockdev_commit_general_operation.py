@@ -1,5 +1,3 @@
-import logging
-
 from provider import job_utils
 from provider import backup_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
@@ -10,7 +8,7 @@ class BlockdevCommitGeneralOperation(BlockDevCommitTest):
     def commit_op(self, cmd, args=None):
         self.main_vm.monitor.cmd(cmd, args)
         job_status = job_utils.query_block_jobs(self.main_vm)
-        logging.info("The status after operation %s is %s", cmd, job_status)
+        self.test.log.info("The status after operation %s is %s", cmd, job_status)
 
     def commit_snapshots(self):
         device = self.params.get("device_tag")

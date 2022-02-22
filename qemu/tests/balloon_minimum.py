@@ -1,5 +1,4 @@
 import time
-import logging
 
 from virttest import utils_test
 from virttest import error_context
@@ -22,7 +21,7 @@ def run(test, params, env):
     :param env:    Dictionary with test environment.
     """
 
-    error_context.context("Boot guest with balloon device", logging.info)
+    error_context.context("Boot guest with balloon device", test.log.info)
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
     driver_name = params.get("driver_name", "balloon")

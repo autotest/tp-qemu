@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import data_dir
@@ -27,8 +26,8 @@ def run(test, params, env):
     """
     def increase_block_device(dev):
         """Increase the block device."""
-        logging.info("Start to increase image '%s' to %s.",
-                     img, img_resize_size)
+        test.log.info("Start to increase image '%s' to %s.",
+                      img, img_resize_size)
         resize_size = int(float(normalize_data_size(re.search(
             r'(\d+\.?(\d+)?\w)', img_resize_size).group(1), "B")))
         args = (dev, resize_size)
@@ -40,18 +39,18 @@ def run(test, params, env):
     def get_disk_size_by_diskpart(index):
         """Get the disk size by the diskpart."""
         cmd = ' && '.join(
-                ("echo list disk > {0}", "echo exit >> {0}",
-                 "diskpart /s {0}", "del /f {0}")).format('disk_script')
+            ("echo list disk > {0}", "echo exit >> {0}",
+             "diskpart /s {0}", "del /f {0}")).format('disk_script')
         pattern = r'Disk\s+%s\s+Online\s+(\d+\s+\w+)\s+\d+\s+\w+' % index
         return re.search(pattern, session.cmd_output(cmd), re.M).group(1)
 
     def check_disk_size(index):
         """Check the disk size after increasing inside guest."""
-        logging.info('Check whether the size of disk %s is equal to %s after '
-                     'increasing inside guest.', index, img_resize_size)
+        test.log.info('Check whether the size of disk %s is equal to %s after '
+                      'increasing inside guest.', index, img_resize_size)
         v, u = re.search(r"(\d+\.?\d*)\s*(\w?)", img_resize_size).groups()
         size = get_disk_size_by_diskpart(index)
-        logging.info('The size of disk %s is %s', index, size)
+        test.log.info('The size of disk %s is %s', index, size)
         if normalize_data_size(size, u) != v:
             test.fail('The size of disk %s is not equal to %s' %
                       (index, img_resize_size))
@@ -67,7 +66,7 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = utils_test.qemu.windrv_check_running_verifier(
-            vm.wait_for_login(), vm, test, 'viostor', 300)
+        vm.wait_for_login(), vm, test, 'viostor', 300)
     indices = utils_disk.get_windows_disks_index(session, img_size)
     utils_disk.update_windows_disk_attributes(session, indices)
     index = indices[0]

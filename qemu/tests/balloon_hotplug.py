@@ -1,4 +1,3 @@
-import logging
 import random
 import re
 import time
@@ -37,7 +36,7 @@ def run(test, params, env):
         :param plug_type:balloon device plug operation,e.g.hot_plug or hot_unplug
         """
         error_context.context("Run %s test after %s balloon device"
-                              % (pm_test, plug_type), logging.info)
+                              % (pm_test, plug_type), test.log.info)
         utils_test.run_virt_sub_test(test, params, env, pm_test)
 
     def enable_balloon_service():
@@ -47,7 +46,7 @@ def run(test, params, env):
         if params['os_type'] != 'windows':
             return
         error_context.context("Install and check balloon service in windows "
-                              "guest", logging.info)
+                              "guest", test.log.info)
         session = vm.wait_for_login()
         driver_name = params.get("driver_name", "balloon")
         session = utils_test.qemu.windrv_check_running_verifier(session,
@@ -69,7 +68,7 @@ def run(test, params, env):
 
     balloon_device = params.get("balloon_device", "virtio-balloon-pci")
     error_context.context("Hotplug and unplug balloon device in a loop",
-                          logging.info)
+                          test.log.info)
     for i in range(int(params.get("balloon_repeats", 3))):
         vm.devices.set_dirty()
         new_dev = qdevices.QDevice(balloon_device,
@@ -78,7 +77,7 @@ def run(test, params, env):
                                        "balloon_bus", 'pci.0')})
 
         error_context.context("Hotplug balloon device for %d times" % (i+1),
-                              logging.info)
+                              test.log.info)
         out = vm.devices.simple_hotplug(new_dev, vm.monitor)
         if out[1] is False:
             test.fail("Failed to hotplug balloon in iteration %s, %s"
@@ -100,7 +99,7 @@ def run(test, params, env):
         enable_balloon_service()
 
         error_context.context("Check whether balloon device work after hotplug",
-                              logging.info)
+                              test.log.info)
         balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
 
         if pm_test_after_plug:
@@ -116,7 +115,7 @@ def run(test, params, env):
             time.sleep(10)
 
         error_context.context("Unplug balloon device for %d times" % (i+1),
-                              logging.info)
+                              test.log.info)
 
         out = vm.devices.simple_unplug(devs[0].get_aid(), vm.monitor,
                                        timeout=unplug_timeout)
@@ -127,7 +126,7 @@ def run(test, params, env):
 
         if params.get("migrate_after_unplug", "no") == "yes":
             error_context.context("Migrate after hotunplug balloon device",
-                                  logging.info)
+                                  test.log.info)
             # temporary workaround for migration
             del vm.params["balloon"]
             del vm.params["balloon_dev_devid"]
@@ -140,5 +139,5 @@ def run(test, params, env):
             if not vm.is_alive():
                 return
 
-    error_context.context("Verify guest alive!", logging.info)
+    error_context.context("Verify guest alive!", test.log.info)
     vm.verify_kernel_crash()

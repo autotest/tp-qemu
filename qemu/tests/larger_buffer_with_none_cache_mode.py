@@ -1,4 +1,3 @@
-import logging
 import os
 
 from provider.qemu_img_utils import strace
@@ -31,14 +30,14 @@ def run(test, params, env):
                                       "convert_with_none.log")
     src_filename = source.image_filename
     process.run("dd if=/dev/urandom of=%s bs=1M count=100" % src_filename)
-    logging.debug("Convert from %s to %s with cache mode none, strace log: "
-                  "%s.", src_filename, tgt_image, strace_output_file)
+    test.log.debug("Convert from %s to %s with cache mode none, strace log: "
+                   "%s.", src_filename, tgt_image, strace_output_file)
     with strace(source, strace_events, strace_output_file, trace_child=True):
         fail_on((process.CmdError,))(source.convert)(
             params.object_params(src_image), root_dir, cache_mode="none")
 
-    logging.debug("Check whether the max size of %s syscall is 2M in %s.",
-                  strace_event, strace_output_file)
+    test.log.debug("Check whether the max size of %s syscall is 2M in %s.",
+                   strace_event, strace_output_file)
     with open(strace_output_file) as fd:
         for line in fd.readlines():
             if int(line.split()[-1]) == 2097152:

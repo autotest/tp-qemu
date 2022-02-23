@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 import time
 
 from virttest import error_context
@@ -114,15 +113,15 @@ def run(test, params, env):
                                                        data_dir.get_data_dir())
                 snapshot_format = image_params.get("image_format")
 
-                error_context.context("Do pre snapshot operates", logging.info)
+                error_context.context("Do pre snapshot operates", test.log.info)
                 if image_params.get("pre_snapshot_cmd"):
                     do_operate(image_params, "pre_snapshot_cmd")
 
-                error_context.context("Do live snapshot ", logging.info)
+                error_context.context("Do live snapshot ", test.log.info)
                 vm.live_snapshot(base_file, snapshot_file, snapshot_format)
 
                 error_context.context("Do post snapshot operates",
-                                      logging.info)
+                                      test.log.info)
                 if image_params.get("post_snapshot_cmd"):
                     do_operate(image_params, "post_snapshot_cmd")
                 md5 = ""
@@ -148,12 +147,12 @@ def run(test, params, env):
                 files_in_guest[image] = files_check
         session.close()
 
-        error_context.context("Reboot guest", logging.info)
+        error_context.context("Reboot guest", test.log.info)
         if image_params.get("need_reboot", "no") == "yes":
             vm.monitor.cmd("system_reset")
             vm.verify_alive()
 
-        error_context.context("Do base files check", logging.info)
+        error_context.context("Do base files check", test.log.info)
         snapshot_chain_backward = snapshot_chain[:]
         snapshot_chain_backward.reverse()
 
@@ -188,7 +187,7 @@ def run(test, params, env):
                     image.check_image(image_params, data_dir.get_data_dir())
                 session.close()
 
-        error_context.context("Remove snapshot images", logging.info)
+        error_context.context("Remove snapshot images", test.log.info)
         if vm.is_alive():
             vm.destroy()
         errs = cleanup_images(snapshot_chain, params)
@@ -196,7 +195,7 @@ def run(test, params, env):
                          % "\n".join(errs))
     except Exception as details:
         error_context.context("Force-cleaning after exception: %s" % details,
-                              logging.error)
+                              test.log.error)
         if vm.is_alive():
             vm.destroy()
         cleanup_images(snapshot_chain, params)

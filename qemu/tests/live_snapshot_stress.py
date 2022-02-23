@@ -6,6 +6,8 @@ from virttest import error_context
 
 from qemu.tests import live_snapshot_basic
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
 
@@ -17,7 +19,7 @@ class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
         """
         load IO/CPU/Memory stress in guest;
         """
-        error_context.context("launch stress app in guest", logging.info)
+        error_context.context("launch stress app in guest", LOG_JOB.info)
         args = (self.test, self.params, self.env, self.params["stress_test"])
         bg_test = utils_test.BackgroundTest(utils_test.run_virt_sub_test, args)
         bg_test.start()
@@ -37,7 +39,7 @@ class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
             session.sendline(cmd)
             return not self.stress_app_running()
 
-        error_context.context("stop stress app in guest", logging.info)
+        error_context.context("stop stress app in guest", LOG_JOB.info)
         utils_misc.wait_for(_unload_stress, first=2.0,
                             text="wait stress app quit", step=1.0, timeout=120)
 

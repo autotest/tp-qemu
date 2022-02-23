@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import crypto
 from avocado.utils import process
 
@@ -42,23 +40,23 @@ def run(test, params, env):
 
     try:
         error_context.context("create file on host, copy it to guest",
-                              logging.info)
+                              test.log.info)
         cmd = params.get("dd_cmd") % src
         process.system(cmd, timeout=dd_timeout, shell=True)
         md5 = crypto.hash_file(src, algorithm="md5")
         vm.copy_files_to(src, dst, timeout=copy_timeout)
         process.system("rm -f %s" % src)
-        error_context.context("create live snapshot", logging.info)
+        error_context.context("create live snapshot", test.log.info)
         if vm.live_snapshot(base_file, snapshot_file,
                             snapshot_format) != device:
             test.fail("Fail to create snapshot")
         backing_file = vm.monitor.get_backingfile(device)
         if backing_file != base_file:
-            logging.error(
+            test.log.error(
                 "backing file: %s, base file: %s", backing_file, base_file)
             test.fail("Got incorrect backing file")
         error_context.context("copy file to host, check content not changed",
-                              logging.info)
+                              test.log.info)
         vm.copy_files_from(dst, src, timeout=copy_timeout)
         if md5 and (md5 != crypto.hash_file(src, algorithm="md5")):
             test.fail("diff md5 before/after create snapshot")

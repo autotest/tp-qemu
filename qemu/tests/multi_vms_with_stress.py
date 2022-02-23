@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 import shutil
@@ -60,7 +59,7 @@ def run(test, params, env):
         for vm_name in vms_list:
             dst_filename = os.path.join(
                 dst_dir, '%s.%s' % (vm_name, src_format))
-            logging.info('Copying %s to %s.', src_filename, dst_filename)
+            test.log.info('Copying %s to %s.', src_filename, dst_filename)
             shutil.copy(src_filename, dst_filename)
 
     def configure_images_copied():
@@ -78,7 +77,7 @@ def run(test, params, env):
     def wait_for_shutdown_all_vms(vms, sessions):
         """Wait all VMs to shutdown."""
         for vm, session in zip(vms, sessions):
-            logging.info('Shutting down %s.', vm.name)
+            test.log.info('Shutting down %s.', vm.name)
             session.sendline(params["shutdown_command"])
             if not vm.wait_for_shutdown():
                 test.fail("Failed to shutdown %s." % vm.name)

@@ -1,5 +1,4 @@
 import random
-import logging
 import ast
 
 from avocado.utils import path
@@ -49,9 +48,9 @@ def run(test, params, env):
             params.get("migrate_capabilities", "{}"))
         for i in range(repeat_times):
             if i % 2 == 0:
-                logging.info("Round %s ping...", str(i / 2))
+                test.log.info("Round %s ping...", str(i / 2))
             else:
-                logging.info("Round %s pong...", str(i / 2))
+                test.log.info("Round %s pong...", str(i / 2))
             vm.migrate(
                 mig_timeout,
                 mig_protocol,
@@ -71,7 +70,7 @@ def run(test, params, env):
             host_vsock_session = vsock_connect(tool_bin, guest_cid, port)
             connected_str = r"Connection from cid*"
             check_received_data(test, session, connected_str)
-        error_context.context('Input "Hello world" to vsock.', logging.info)
+        error_context.context('Input "Hello world" to vsock.', test.log.info)
         host_vsock_session.sendline(send_data)
         check_received_data(test, session, send_data)
         return host_vsock_session

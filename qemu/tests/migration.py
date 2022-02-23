@@ -1,4 +1,3 @@
-import logging
 import time
 import types
 import re
@@ -103,14 +102,14 @@ def run(test, params, env):
             func = session.cmd_output
             args = ("for((;;)) do dd if=/dev/zero of=/tmp/test bs=5M "
                     "count=100; rm -f /tmp/test; done",
-                    login_timeout, logging.info)
+                    login_timeout, test.log.info)
 
-        logging.info("Start %s test in guest", guest_stress_test)
+        test.log.info("Start %s test in guest", guest_stress_test)
         bg = utils_test.BackgroundTest(func, args)
         params["guest_stress_test_pid"] = bg
         bg.start()
         if timeout:
-            logging.info("sleep %ds waiting guest test start.", timeout)
+            test.log.info("sleep %ds waiting guest test start.", timeout)
             time.sleep(timeout)
         if not bg.is_alive():
             test.fail("Failed to start guest test!")
@@ -124,14 +123,14 @@ def run(test, params, env):
             bg = params.get("guest_stress_test_pid")
             action = params.get("action")
             if action == "run":
-                logging.debug("Check if guest stress is still running")
+                test.log.debug("Check if guest stress is still running")
                 guest_stress_test = params.get("guest_stress_test")
                 if bg and not bg.is_alive():
-                    logging.debug("Stress process finished, restart it")
+                    test.log.debug("Stress process finished, restart it")
                     guest_stress_start(guest_stress_test)
                     time.sleep(30)
                 else:
-                    logging.debug("Stress still on")
+                    test.log.debug("Stress still on")
             else:
                 if bg and bg.is_alive():
                     try:
@@ -140,10 +139,10 @@ def run(test, params, env):
                         vm.verify_alive()
                         session = vm.wait_for_login()
                         if stress_stop_cmd:
-                            logging.warn("Killing background stress process "
-                                         "with cmd '%s', you would see some "
-                                         "error message in client test result,"
-                                         "it's harmless.", stress_stop_cmd)
+                            test.log.warn("Killing background stress process "
+                                          "with cmd '%s', you would see some "
+                                          "error message in client test result,"
+                                          "it's harmless.", stress_stop_cmd)
                             session.cmd(stress_stop_cmd)
                         bg.join(10)
                     except Exception:
@@ -195,7 +194,7 @@ def run(test, params, env):
         try:
             check_command = params.get("migration_bg_check_command", "")
             error_context.context("Checking the background command in the "
-                                  "guest pre migration", logging.info)
+                                  "guest pre migration", test.log.info)
             if session2.cmd_status(check_command, timeout=30) != 0:
                 test.error("migration bg check command failed")
             session2.close()
@@ -224,9 +223,9 @@ def run(test, params, env):
                 for func in pre_migrate:
                     func(vm, params, test)
                 if i % 2 == 0:
-                    logging.info("Round %s ping...", str(i / 2))
+                    test.log.info("Round %s ping...", str(i / 2))
                 else:
-                    logging.info("Round %s pong...", str(i / 2))
+                    test.log.info("Round %s pong...", str(i / 2))
                 try:
                     vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                                offline, check,
@@ -249,13 +248,13 @@ def run(test, params, env):
                 func(vm, params, test)
 
             # Log into the guest again
-            logging.info("Logging into guest after migration...")
+            test.log.info("Logging into guest after migration...")
             session2 = vm.wait_for_login(timeout=30)
-            logging.info("Logged in after migration")
+            test.log.info("Logged in after migration")
 
             # Make sure the background process is still running
             error_context.context("Checking the background command in the "
-                                  "guest post migration", logging.info)
+                                  "guest post migration", test.log.info)
             session2.cmd(check_command, timeout=30)
 
             # Get the output of migration_test_command
@@ -263,13 +262,13 @@ def run(test, params, env):
 
             # Compare output to reference output
             if output != reference_output:
-                logging.info("Command output before migration differs from "
-                             "command output after migration")
-                logging.info("Command: %s", test_command)
-                logging.info("Output before: %s",
-                             utils_misc.format_str_for_message(reference_output))
-                logging.info("Output after: %s",
-                             utils_misc.format_str_for_message(output))
+                test.log.info("Command output before migration differs from "
+                              "command output after migration")
+                test.log.info("Command: %s", test_command)
+                test.log.info("Output before: %s",
+                              utils_misc.format_str_for_message(reference_output))
+                test.log.info("Output after: %s",
+                              utils_misc.format_str_for_message(output))
                 test.fail("Command '%s' produced different output "
                           "before and after migration" % test_command)
 
@@ -289,8 +288,8 @@ def run(test, params, env):
                         if not int(details.status) == int(ignore_status):
                             raise
                     except aexpect.ShellTimeoutError:
-                        logging.debug("Remote session not responsive, "
-                                      "shutting down VM %s", vm.name)
+                        test.log.debug("Remote session not responsive, "
+                                       "shutting down VM %s", vm.name)
                         vm.destroy(gracefully=True)
             if deamon_thread is not None:
                 # Set deamon thread action to stop after migrate

@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -36,12 +35,12 @@ def run(test, params, env):
 
     free_mem_before_nichotplug = utils_misc.get_free_mem(session,
                                                          os_type)
-    logging.info("Guest free memory before nic hotplug: %d",
-                 free_mem_before_nichotplug)
+    test.log.info("Guest free memory before nic hotplug: %d",
+                  free_mem_before_nichotplug)
 
     if os_type == "windows":
         error_context.context("Add network devices through monitor cmd",
-                              logging.info)
+                              test.log.info)
         pci_model = params.get("pci_model")
         netdst = params.get("netdst", "virbr0")
         nettype = params.get("nettype", "bridge")
@@ -66,8 +65,8 @@ def run(test, params, env):
 
     free_mem_after_nichotplug = utils_misc.get_free_mem(session,
                                                         os_type)
-    logging.info("Guest free memory after nic hotplug: %d",
-                 free_mem_after_nichotplug)
+    test.log.info("Guest free memory after nic hotplug: %d",
+                  free_mem_after_nichotplug)
 
     mem_reduced = free_mem_before_nichotplug - free_mem_after_nichotplug
     if (os_type == "windows" and mem_reduced > 1024) \
@@ -75,6 +74,6 @@ def run(test, params, env):
         test.error("There might be memory leak after hotplug nic. "
                    "Memory reduced %d" % mem_reduced)
     error_context.context("Memory reduced = %d" % mem_reduced,
-                          logging.info)
+                          test.log.info)
 
     session.close()

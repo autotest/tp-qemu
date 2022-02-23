@@ -1,4 +1,3 @@
-import logging
 import os
 
 from virttest import error_context
@@ -21,7 +20,7 @@ def run(test, params, env):
         :param env: Dictionary with test environment.
     """
     def ping_test():
-        #Ping from guest1 to guest2 for 30 counts
+        # Ping from guest1 to guest2 for 30 counts
         status, output = utils_net.ping(dest=addresses[1], count=30,
                                         timeout=60,
                                         session=sessions[0])
@@ -79,7 +78,7 @@ def run(test, params, env):
                               package_sizes=params.get("netperf_sizes"))
             if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
                                    "Wait netperf test start"):
-                logging.info("Netperf test start successfully.")
+                test.log.info("Netperf test start successfully.")
             else:
                 test.error("Can not start netperf client.")
             utils_misc.wait_for(

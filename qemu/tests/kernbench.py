@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -49,7 +48,7 @@ def run(test, params, env):
             process.system(cmd, timeout=100, shell=True)
 
     def install_gcc():
-        logging.info("Update gcc to request version....")
+        test.log.info("Update gcc to request version....")
         cmd = "rpm -q gcc"
         cpp_link = params.get("cpp_link")
         gcc_link = params.get("gcc_link")
@@ -70,7 +69,7 @@ def run(test, params, env):
                                                               libgcc_link, cpp_link, gcc_link)
         (s, o) = cmd_status_output(cmd)
         if s:
-            logging.debug("Fail to install gcc.output:%s", o)
+            test.log.debug("Fail to install gcc.output:%s", o)
 
     def record_result(result):
         re_result = params.get("re_result")
@@ -85,7 +84,7 @@ def run(test, params, env):
         f1.write(result_str)
         f1.close()
         open(os.path.basename(result_file), 'w').write(result)
-        logging.info("Test result got from %s:\n%s", result_file, result)
+        test.log.info("Test result got from %s:\n%s", result_file, result)
 
     test_type = params.get("test_type")
     guest_thp_cmd = params.get("guest_thp_cmd")
@@ -112,7 +111,7 @@ def run(test, params, env):
         download_if_not_exists()
 
     if "guest" in test_type:
-        logging.info("test in guest")
+        test.log.info("test in guest")
         vm.copy_files_to(tmp_dir, os.path.dirname(tmp_dir))
         if guest_thp_cmd is not None:
             session.cmd_output(guest_thp_cmd)
@@ -129,12 +128,12 @@ def run(test, params, env):
         else:
             cpu_num = cpu.online_count()
         test_cmd = params.get("test_cmd") % (int(cpu_num) * cpu_multiplier)
-        logging.info("Start making the kernel ....")
+        test.log.info("Start making the kernel ....")
         (s, o) = cmd_status_output(test_cmd, timeout=cmd_timeout)
         if s:
             test.error("Fail command:%s\n Output:%s" % (test_cmd, o))
         else:
-            logging.info("Output for command %s is:\n %s", test_cmd, o)
+            test.log.info("Output for command %s is:\n %s", test_cmd, o)
             record_result(o)
     finally:
         if params.get("post_cmd"):

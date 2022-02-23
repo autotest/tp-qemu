@@ -7,6 +7,8 @@ from virttest import data_dir
 from qemu.tests.live_snapshot_basic import LiveSnapshot
 from avocado.core import exceptions
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class LiveSnapshotNegative(LiveSnapshot):
 
@@ -19,7 +21,7 @@ class LiveSnapshotNegative(LiveSnapshot):
         Generate a non-existed path of snapshot file.
         """
         error_context.context("Generate a non-existed path of"
-                              " snapshot file", logging.info)
+                              " snapshot file", LOG_JOB.info)
         tmp_name = utils_misc.generate_random_string(5)
         dst = os.path.join(data_dir.get_tmp_dir(), tmp_name)
         path = os.path.join(dst, self.snapshot_file)
@@ -45,7 +47,7 @@ class LiveSnapshotNegative(LiveSnapshot):
             match_str = match_str % self.snapshot_file
 
         error_context.context("Create live snapshot with non-existed path.",
-                              logging.info)
+                              LOG_JOB.info)
         response = self.vm.monitor.cmd_qmp("blockdev-snapshot-sync", kwargs)
         if match_str not in str(response):
             raise exceptions.TestFail("Fail to get expected result."

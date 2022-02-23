@@ -1,4 +1,3 @@
-import logging
 import ast
 import re
 import os
@@ -75,7 +74,7 @@ def run(test, params, env):
             try:
                 self._target(*self._args)
             except Exception as e:
-                logging.error(str(e))
+                test.log.error(str(e))
                 self.exc_info = sys.exc_info()
                 self.exit_event.set()
 
@@ -133,7 +132,7 @@ def run(test, params, env):
 
     def run_iozone(timeout):
         """ Do iozone testing inside guest. """
-        logging.info("Do iozone testing on data disks.")
+        test.log.info("Do iozone testing on data disks.")
         iozone = generate_instance(params, vm, 'iozone')
         try:
             for target in format_data_disks():
@@ -143,7 +142,7 @@ def run(test, params, env):
 
     def run_stressapptest(timeout):
         """ Do stressapptest testing inside guest. """
-        logging.info("Do stressapptest testing on data disks.")
+        test.log.info("Do stressapptest testing on data disks.")
         sub_session = vm.wait_for_login(timeout=360)
         try:
             host_path = os.path.join(
@@ -165,26 +164,26 @@ def run(test, params, env):
 
     def get_cdrom_size():
         """ Get the size of cdrom device inside guest. """
-        error_context.context("Get the cdrom's size in guest.", logging.info)
+        error_context.context("Get the cdrom's size in guest.", test.log.info)
         cmd = params["check_size"]
         if not utils_misc.wait_for(
                 lambda: re.search(r'(\d+)', session.cmd(cmd), re.M), 10):
             test.fail('Failed to get the cdrom\'s size.')
         cdrom_size = re.search(r'(\d+)', session.cmd(cmd), re.M).group(1)
         cdrom_size = int(cdrom_size) * 512 if not windows else int(cdrom_size)
-        logging.info("The cdrom's size is %s in guest.", cdrom_size)
+        test.log.info("The cdrom's size is %s in guest.", cdrom_size)
         return cdrom_size
 
     def get_iso_size(iso_file):
         """ Get the size of iso on host."""
-        error_context.context("Get the iso size on host.", logging.info)
+        error_context.context("Get the iso size on host.", test.log.info)
         return int(process.system_output(
             'ls -l %s | awk \'{print $5}\'' % iso_file, shell=True).decode())
 
     def compare_cdrom_size(iso_file):
         """ Compare the cdrom's size between host and guest. """
         error_context.context(
-            "Compare the cdrom's size between host and guest.", logging.info)
+            "Compare the cdrom's size between host and guest.", test.log.info)
         ios_size = get_iso_size(iso_file)
         if not utils_misc.wait_for(lambda: get_cdrom_size() == ios_size, 30, step=3):
             test.fail('The size inside guest is not equal to iso size on host.')
@@ -194,7 +193,7 @@ def run(test, params, env):
         """ Check the cdrom device info by qmp. """
         error_context.context(
             'Check if the info \"%s\" are match with the output of query-block.' %
-            str(check_items), logging.info)
+            str(check_items), test.log.info)
         blocks = vm.monitor.info_block()
         for key, val in check_items.items():
             if blocks[device_name][key] == val:
@@ -208,7 +207,7 @@ def run(test, params, env):
 
     def eject_cdrom():
         """ Eject cdrom. """
-        error_context.context("Eject the original device.", logging.info)
+        error_context.context("Eject the original device.", test.log.info)
         with eject_check:
             vm.eject_cdrom(device_name, True)
         if check_block(orig_img_name):
@@ -216,7 +215,7 @@ def run(test, params, env):
 
     def change_cdrom():
         """ Change cdrom. """
-        error_context.context("Insert new image to device.", logging.info)
+        error_context.context("Insert new image to device.", test.log.info)
         with change_check:
             vm.change_media(device_name, new_img_name)
         if not check_block(new_img_name):
@@ -225,7 +224,7 @@ def run(test, params, env):
     def change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
-        logging.info('Sending command(%s): %s', method, command)
+        test.log.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             p_session = vm.wait_for_login(timeout=360)
             p_session.sendline(command)
@@ -249,9 +248,9 @@ def run(test, params, env):
         for i in range(repeat_times):
             set_dst_params()
             if i % 2 == 0:
-                logging.info("Round %s ping...", str(i / 2))
+                test.log.info("Round %s ping...", str(i / 2))
             else:
-                logging.info("Round %s pong...", str(i / 2))
+                test.log.info("Round %s pong...", str(i / 2))
             if do_migration_background:
                 args = (mig_timeout, mig_protocol, mig_cancel_delay)
                 kwargs = {'migrate_capabilities': capabilities,
@@ -268,7 +267,7 @@ def run(test, params, env):
                     float(params['percent_start_post_copy']))
                 vm.monitor.migrate_start_postcopy()
                 migration_thread.join()
-                logging.info('Migration thread is done.')
+                test.log.info('Migration thread is done.')
             else:
                 vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                            migrate_capabilities=capabilities,
@@ -302,7 +301,7 @@ def run(test, params, env):
 
     exit_event = threading.Event()
 
-    error_context.context('Boot guest %s on src host.' % src_desc, logging.info)
+    error_context.context('Boot guest %s on src host.' % src_desc, test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=360)
@@ -348,7 +347,7 @@ def run(test, params, env):
         if new_size == orig_size:
             test.fail('The new size inside guest is equal to the orig iso size.')
 
-    error_context.context('Boot guest %s on dst host.' % dst_desc, logging.info)
+    error_context.context('Boot guest %s on dst host.' % dst_desc, test.log.info)
     ping_pong_migration(int(params.get('repeat_ping_pong', '1')))
 
     if params.get('run_stress_after_migration', 'no') == 'yes':

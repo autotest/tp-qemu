@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import env_process
@@ -73,7 +72,7 @@ def run(test, params, env):
             txt += " smp in qemu cmd line is: %s." % int(vm.cpuinfo.smp)
             test.fail(txt)
 
-    error_context.context("Init the guest and try to login", logging.info)
+    error_context.context("Init the guest and try to login", test.log.info)
     queues_list = params["queues_list"].split()
 
     for queues in queues_list:

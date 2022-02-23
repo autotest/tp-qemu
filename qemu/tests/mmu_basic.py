@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -30,7 +29,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login()
 
-    error_context.context("Check the MMU mode.", logging.info)
+    error_context.context("Check the MMU mode.", test.log.info)
     if cpu_info_match('MMU'):
         if cpu_info_match('POWER9'):
             if cpu_info_match('Radix') is False:
@@ -44,7 +43,7 @@ def run(test, params, env):
     utils_test.update_boot_option(vm, args_added="disable_radix")
     session = vm.wait_for_login()
 
-    error_context.context("Check the MMU mode.", logging.info)
+    error_context.context("Check the MMU mode.", test.log.info)
     if cpu_info_match('MMU'):
         if cpu_info_match('Hash') is False:
             test.fail("mmu mode is not Hash, mmu mode disabled failure.")

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_misc
@@ -28,18 +26,18 @@ def run(test, params, env):
         """
         stress_path = data_dir.get_deps_dir("stress")
         stress_guest_path = params["tmp_dir"]
-        logging.info("Copy stress package to guest.")
+        test.log.info("Copy stress package to guest.")
         session.cmd_status_output("mkdir -p %s" % stress_guest_path)
         vm.copy_files_to(stress_path, stress_guest_path)
         session.cmd(params["install_cmd"])
 
-        logging.info("Install app successed")
+        test.log.info("Install app successed")
 
     def start_stress(session):
         """
         Load stress in guest.
         """
-        error_context.context("Load stress in guest", logging.info)
+        error_context.context("Load stress in guest", test.log.info)
         stress_type = params.get("stress_type", "none")
 
         if stress_type == "none":
@@ -58,7 +56,7 @@ def run(test, params, env):
             install_stress_app(session)
 
             cmd = params.get("start_cmd")
-            logging.info("Launch stress app in guest with command: '%s'", cmd)
+            test.log.info("Launch stress app in guest with command: '%s'", cmd)
             session.sendline(cmd)
 
         running = utils_misc.wait_for(lambda: stress_running(session),
@@ -66,7 +64,7 @@ def run(test, params, env):
         if not running:
             test.error("Stress isn't running")
 
-        logging.info("Stress running now")
+        test.log.info("Stress running now")
 
     def stress_running(session):
         """
@@ -98,7 +96,7 @@ def run(test, params, env):
         start_stress(session)
 
         error_context.context("Kdump Testing, force the Linux kernel to crash",
-                              logging.info)
+                              test.log.info)
         crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
         if crash_cmd == "nmi":
             kdump.crash_test(test, vm, None, crash_cmd, timeout)

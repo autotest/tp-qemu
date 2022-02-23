@@ -3,7 +3,6 @@ multi_disk_random_hotplug test for Autotest framework.
 
 :copyright: 2013 Red Hat Inc.
 """
-import logging
 import random
 import time
 import re
@@ -117,9 +116,9 @@ def run(test, params, env):
         err += disks.generate_params()
         err += disks.check_disk_params(params)
         if err:
-            logging.error("info qtree:\n%s", info_qtree)
-            logging.error("info block:\n%s", info_block)
-            logging.error(qdev.str_bus_long())
+            test.log.error("info qtree:\n%s", info_qtree)
+            test.log.error("info block:\n%s", info_block)
+            test.log.error(qdev.str_bus_long())
             test.fail("%s errors occurred while verifying"
                       " qtree vs. params" % err)
 
@@ -162,9 +161,9 @@ def run(test, params, env):
                 if i == 0:
                     test.error("Fail to add any disks, probably bad"
                                " configuration.")
-                logging.warn("Can't create desired number '%s' of disk types "
-                             "'%s'. Using '%d' no disks.", no_disks,
-                             _formats, i)
+                test.log.warn("Can't create desired number '%s' of disk types "
+                              "'%s'. Using '%d' no disks.", no_disks,
+                              _formats, i)
                 break
             name = 'stg%d' % i
             args = {'name': name, 'filename': params_matrix['stg_image_name'] % i}
@@ -193,7 +192,7 @@ def run(test, params, env):
             for key, value in params_matrix.items():
                 args[key] = random.choice(value)
             env_process.preprocess_image(
-                    test, convert_params(params, args).object_params(name), name)
+                test, convert_params(params, args).object_params(name), name)
             i += 1
 
     def _postprocess_images():
@@ -202,14 +201,14 @@ def run(test, params, env):
         for disk in params['images'].split(' '):
             if disk.startswith("stg"):
                 env_process.postprocess_image(
-                        test, params.object_params(disk), disk)
+                    test, params.object_params(disk), disk)
             else:
                 _disks.append(disk)
             params['images'] = " ".join(_disks)
 
     def verify_qtree_unsupported(params, info_qtree, info_block, qdev):
-        return logging.warn("info qtree not supported. Can't verify qtree vs. "
-                            "guest disks.")
+        return test.log.warn("info qtree not supported. Can't verify qtree vs. "
+                             "guest disks.")
 
     def enable_driver_verifier(driver, timeout=300):
         return utils_test.qemu.windrv_check_running_verifier(
@@ -224,7 +223,7 @@ def run(test, params, env):
             yield utils_disk.configure_empty_windows_disk(session, disk, size)[0]
 
     def run_stress_iozone():
-        error_context.context("Run iozone stress after hotplug", logging.info)
+        error_context.context("Run iozone stress after hotplug", test.log.info)
         iozone = generate_instance(params, vm, 'iozone')
         try:
             iozone_cmd_option = params['iozone_cmd_option']
@@ -235,7 +234,7 @@ def run(test, params, env):
             iozone.clean()
 
     def run_stress_dd():
-        error_context.context("Run dd stress after hotplug", logging.info)
+        error_context.context("Run dd stress after hotplug", test.log.info)
         output = session.cmd_output(params.get("get_dev_cmd", "ls /dev/[svh]d*"))
         system_dev = re.findall(r"/dev/[svh]d\w+(?=\d+)", output)[0]
         for dev in re.split(r"\s+", output):
@@ -289,18 +288,18 @@ def run(test, params, env):
     plug = BlockDevicesPlug(vm)
     for iteration in range(rp_times):
         error_context.context("Hotplugging/unplugging devices, iteration %d"
-                              % iteration, logging.info)
+                              % iteration, test.log.info)
         sub_type = params.get("sub_type_before_plug")
         if sub_type:
             error_context.context(context_msg % (sub_type, "before hotplug"),
-                                  logging.info)
+                                  test.log.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        error_context.context("Hotplug the devices", logging.debug)
+        error_context.context("Hotplug the devices", test.log.debug)
         getattr(plug, hotplug)(timeout=timeout)
         time.sleep(float(params.get('wait_after_hotplug', 0)))
 
-        error_context.context("Verify disks after hotplug", logging.debug)
+        error_context.context("Verify disks after hotplug", test.log.debug)
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
         vm.verify_alive()
@@ -309,16 +308,16 @@ def run(test, params, env):
         sub_type = params.get("sub_type_after_plug")
         if sub_type:
             error_context.context(context_msg % (sub_type, "after hotplug"),
-                                  logging.info)
+                                  test.log.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
         run_stress_iozone() if is_windows else run_stress_dd()
         sub_type = params.get("sub_type_before_unplug")
         if sub_type:
             error_context.context(context_msg % (sub_type, "before hotunplug"),
-                                  logging.info)
+                                  test.log.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
 
-        error_context.context("Unplug and remove the devices", logging.debug)
+        error_context.context("Unplug and remove the devices", test.log.debug)
         if stress_cmd:
             session.cmd(params["stress_stop_cmd"])
         getattr(plug, unplug)(timeout=timeout, interval=interval_time_unplug)
@@ -326,7 +325,7 @@ def run(test, params, env):
             session.cmd(params["stress_cont_cmd"])
         _postprocess_images()
 
-        error_context.context("Verify disks after unplug", logging.debug)
+        error_context.context("Verify disks after unplug", test.log.debug)
         time.sleep(float(params.get('wait_after_unplug', 0)))
         info_qtree = vm.monitor.info('qtree', False)
         info_block = vm.monitor.info_block(False)
@@ -336,16 +335,16 @@ def run(test, params, env):
         sub_type = params.get("sub_type_after_unplug")
         if sub_type:
             error_context.context(context_msg % (sub_type, "after hotunplug"),
-                                  logging.info)
+                                  test.log.info)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
         configure_images_params(params)
 
     # Check for various KVM failures
     error_context.context("Validating VM after all disk hotplug/unplugs",
-                          logging.debug)
+                          test.log.debug)
     vm.verify_alive()
     out = session.cmd_output('dmesg')
     if "I/O error" in out:
-        logging.warn(out)
+        test.log.warn(out)
         test.error("I/O error messages occured in dmesg, "
                    "check the log for details.")

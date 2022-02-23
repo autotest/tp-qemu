@@ -1,6 +1,5 @@
 import time
 import os
-import logging
 
 from avocado.utils import crypto
 from avocado.utils import process
@@ -32,7 +31,7 @@ def run(test, params, env):
     """
     def md5_check(session, orig_md5):
         msg = "Compare copied file's md5 with original file."
-        error_context.context(msg, logging.info)
+        error_context.context(msg, test.log.info)
         md5_cmd = "md5sum %s | awk '{print $1}'" % guest_path
         s, o = session.cmd_status_output(md5_cmd)
         if s:
@@ -73,17 +72,17 @@ def run(test, params, env):
                               utils_misc.generate_random_string(8))
     try:
         error_context.context("Creating %dMB file on host" % filesize,
-                              logging.info)
+                              test.log.info)
         process.run(cmd)
         orig_md5 = crypto.hash_file(host_path, algorithm="md5")
         error_context.context("Transferring file host -> VM1, timeout: %ss" %
-                              transfer_timeout, logging.info)
+                              transfer_timeout, test.log.info)
         t_begin = time.time()
         vm1.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
         t_end = time.time()
         throughput = filesize / (t_end - t_begin)
-        logging.info("File transfer host -> VM1 succeed, "
-                     "estimated throughput: %.2fMB/s", throughput)
+        test.log.info("File transfer host -> VM1 succeed, "
+                      "estimated throughput: %.2fMB/s", throughput)
         md5_check(session_vm1, orig_md5)
 
         ip_vm1 = vm1.get_address()
@@ -96,7 +95,7 @@ def run(test, params, env):
 
             msg = "Transferring file VM1 -> VM2, timeout: %ss." % transfer_timeout
             msg += " Repeat: %s/%s" % (i + 1, repeat_time)
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             t_begin = time.time()
             s = remote.scp_between_remotes(src=ip_vm1, dst=ip_vm2, port=port,
                                            s_passwd=password, d_passwd=password,
@@ -106,15 +105,15 @@ def run(test, params, env):
                                            log_filename=log_vm2)
             t_end = time.time()
             throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer VM1 -> VM2 succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
+            test.log.info("File transfer VM1 -> VM2 succeed, "
+                          "estimated throughput: %.2fMB/s", throughput)
             md5_check(session_vm2, orig_md5)
             session_vm1.cmd("rm -rf %s" % guest_path)
 
             msg = "Transferring file VM2 -> VM1, timeout: %ss." % transfer_timeout
             msg += " Repeat: %s/%s" % (i + 1, repeat_time)
 
-            error_context.context(msg, logging.info)
+            error_context.context(msg, test.log.info)
             t_begin = time.time()
             remote.scp_between_remotes(src=ip_vm2, dst=ip_vm1, port=port,
                                        s_passwd=password, d_passwd=password,
@@ -124,8 +123,8 @@ def run(test, params, env):
                                        log_filename=log_vm1)
             t_end = time.time()
             throughput = filesize / (t_end - t_begin)
-            logging.info("File transfer VM2 -> VM1 succeed, "
-                         "estimated throughput: %.2fMB/s", throughput)
+            test.log.info("File transfer VM2 -> VM1 succeed, "
+                          "estimated throughput: %.2fMB/s", throughput)
             md5_check(session_vm1, orig_md5)
             session_vm2.cmd("%s %s" % (clean_cmd, guest_path))
 

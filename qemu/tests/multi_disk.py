@@ -3,7 +3,6 @@ multi_disk test for Autotest framework.
 
 :copyright: 2011-2012 Red Hat Inc.
 """
-import logging
 import re
 import random
 
@@ -107,7 +106,7 @@ def run(test, params, env):
             session.cmd_status_output(cmd)
         session.close()
 
-    error_context.context("Parsing test configuration", logging.info)
+    error_context.context("Parsing test configuration", test.log.info)
     stg_image_num = 0
     stg_params = params.get("stg_params", "")
     # Compatibility
@@ -188,18 +187,18 @@ def run(test, params, env):
 
     if params.get("multi_disk_params_only") == 'yes':
         # Only print the test param_matrix and finish
-        logging.info('Newly added disks:\n%s',
-                     astring.tabular_output(param_table, param_table_header))
+        test.log.info('Newly added disks:\n%s',
+                      astring.tabular_output(param_table, param_table_header))
         return
 
     # Always recreate VMs and disks
-    error_context.context("Start the guest with new disks", logging.info)
+    error_context.context("Start the guest with new disks", test.log.info)
     for vm_name in params.objects("vms"):
         vm_params = params.object_params(vm_name)
         env_process.process_images(env_process.preprocess_image, test,
                                    vm_params)
 
-    error_context.context("Start the guest with those disks", logging.info)
+    error_context.context("Start the guest with those disks", test.log.info)
     vm = env.get_vm(params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))
     create_timeout = int(params.get("create_timeout", 1800))
@@ -249,7 +248,7 @@ def run(test, params, env):
         ostype = params["os_type"]
         if ostype == "windows":
             error_context.context("Get windows disk index that to "
-                                  "be formatted", logging.info)
+                                  "be formatted", test.log.info)
             disks = utils_disk.get_windows_disks_index(session, stg_image_size, 300)
             if len(disks) < stg_image_num:
                 test.fail("Fail to list all the volumes"
@@ -258,13 +257,13 @@ def run(test, params, env):
                 black_list.extend(utils_misc.get_winutils_vol(session))
                 disks = random.sample(disks, drive_letters - len(black_list))
             error_context.context("Clear readonly for all disks and online "
-                                  "them in windows guest.", logging.info)
+                                  "them in windows guest.", test.log.info)
             if not utils_disk.update_windows_disk_attributes(session, disks):
                 test.fail("Failed to update windows disk attributes.")
             dd_test = "no"
         else:
             error_context.context("Get linux disk that to be "
-                                  "formatted", logging.info)
+                                  "formatted", test.log.info)
             disks = sorted(utils_disk.get_linux_disks(session).keys())
             if len(disks) < stg_image_num:
                 test.fail("Fail to list all the volumes"
@@ -277,10 +276,10 @@ def run(test, params, env):
         random.shuffle(disks)
     try:
         for i in range(n_repeat):
-            logging.info("iterations: %s", (i + 1))
+            test.log.info("iterations: %s", (i + 1))
             for n, disk in enumerate(disks):
                 error_context.context("Format disk in guest: '%s'" % disk,
-                                      logging.info)
+                                      test.log.info)
                 # Random select one file system from file_system
                 index = random.randint(0, (len(file_system) - 1))
                 fstype = file_system[index].strip()
@@ -297,7 +296,7 @@ def run(test, params, env):
                     else:
                         partition = partition.split("/")[-1]
                     error_context.context("Copy file into / out of partition:"
-                                          " %s..." % partition, logging.info)
+                                          " %s..." % partition, test.log.info)
                     for cmd_l in cmd_list.split():
                         cmd = params.get(cmd_l)
                         if cmd:
@@ -311,7 +310,7 @@ def run(test, params, env):
                         test.fail("Files on guest os root fs and disk differ")
                     if dd_test != "no":
                         error_context.context("dd test on partition: %s..."
-                                              % partition, logging.info)
+                                              % partition, test.log.info)
                         status, output = session.cmd_status_output(
                             dd_test % (partition, partition), timeout=cmd_timeout)
                         if status != 0:
@@ -330,18 +329,18 @@ def run(test, params, env):
             need_reboot = params.get("need_reboot", "no")
             need_shutdown = params.get("need_shutdown", "no")
             if need_reboot == "yes":
-                error_context.context("Rebooting guest ...", logging.info)
+                error_context.context("Rebooting guest ...", test.log.info)
                 session = vm.reboot(session=session, timeout=login_timeout)
             if need_shutdown == "yes":
-                error_context.context("Shutting down guest ...", logging.info)
+                error_context.context("Shutting down guest ...", test.log.info)
                 vm.graceful_shutdown(timeout=login_timeout)
                 if vm.is_alive():
                     test.fail("Fail to shut down guest.")
-                error_context.context("Start the guest again.", logging.info)
+                error_context.context("Start the guest again.", test.log.info)
                 vm = env.get_vm(params["main_vm"])
                 vm.create(timeout=create_timeout, params=params)
                 session = vm.wait_for_login(timeout=login_timeout)
-            error_context.context("Delete partitions in guest.", logging.info)
+            error_context.context("Delete partitions in guest.", test.log.info)
             for disk in disks:
                 utils_disk.clean_partition(session, disk, ostype)
     finally:

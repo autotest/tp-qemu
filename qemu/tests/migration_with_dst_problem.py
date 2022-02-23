@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 import re
@@ -99,12 +98,12 @@ def run(test, params, env):
         status = utils_misc.get_guest_service_status(session, service,
                                                      service_former=init_service)
         if action == "start" and status == "active":
-            logging.debug("%s already started, no need start it again.",
-                          service)
+            test.log.debug("%s already started, no need start it again.",
+                           service)
             return
         if action == "stop" and status == "inactive":
-            logging.debug("%s already stopped, no need stop it again.",
-                          service)
+            test.log.debug("%s already stopped, no need stop it again.",
+                           service)
             return
         try:
             session.cmd("systemctl --version", timeout=timeout)
@@ -242,7 +241,7 @@ def run(test, params, env):
                                                                   disk_size))
             status, output = session.cmd_status_output("setenforce 0")
             if status not in [0, 127]:
-                logging.warn("Function setenforce fails.\n %s", output)
+                test.log.warn("Function setenforce fails.\n %s", output)
 
             config = self.config % (self.server_name, disk_path,
                                     self.user, self.passwd)
@@ -517,8 +516,8 @@ def run(test, params, env):
                         session = self.vm_guest.wait_for_login(timeout=login_timeout)
                         session.cmd("kill -9 %s" % (self.copier_pid))
                 except:
-                    logging.warn("It was impossible to stop copier. Something "
-                                 "probably happened with GUEST or NFS server.")
+                    test.log.warn("It was impossible to stop copier. Something "
+                                  "probably happened with GUEST or NFS server.")
 
             if params.get("kill_vm") == "yes":
                 if self.vm_guest.is_alive():

@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 
 from qemu.tests import live_snapshot_basic
@@ -34,7 +32,7 @@ def run(test, params, env):
             arg_list.append(args)
 
         error_context.context("Create multiple live snapshots simultaneously"
-                              " with transaction", logging.info)
+                              " with transaction", test.log.info)
         output = transaction_test.vm.monitor.transaction(arg_list)
         # return nothing on successful transaction
         if bool(output):

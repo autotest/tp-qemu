@@ -5,6 +5,8 @@ from virttest import env_process
 from virttest import error_context
 from virttest.staging.utils_memory import read_from_vmstat
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class MlockBasic(object):
     """
@@ -56,24 +58,24 @@ class MlockBasic(object):
         Start mlock basic test
         """
         error_context.context("Get nr_mlock and nr_unevictable in host"
-                              " before VM start!", logging.info)
+                              " before VM start!", LOG_JOB.info)
         self.mlock_pre = read_from_vmstat("nr_mlock")
         self.unevictable_pre = read_from_vmstat("nr_unevictable")
-        logging.info("mlock_pre is %d and unevictable_pre is %d.",
+        LOG_JOB.info("mlock_pre is %d and unevictable_pre is %d.",
                      self.mlock_pre, self.unevictable_pre)
         self.params["start_vm"] = "yes"
 
-        error_context.context("Starting VM!", logging.info)
+        error_context.context("Starting VM!", LOG_JOB.info)
         env_process.preprocess_vm(self.test, self.params,
                                   self.env, self.params["main_vm"])
         self.vm = self.env.get_vm(self.params["main_vm"])
         self.vm.verify_alive()
 
         error_context.context("Get nr_mlock and nr_unevictable in host"
-                              " after VM start!", logging.info)
+                              " after VM start!", LOG_JOB.info)
         self.mlock_post = read_from_vmstat("nr_mlock")
         self.unevictable_post = read_from_vmstat("nr_unevictable")
-        logging.info("mlock_post is %d and unevictable_post is %d.",
+        LOG_JOB.info("mlock_post is %d and unevictable_post is %d.",
                      self.mlock_post, self.unevictable_post)
 
         self._check_mlock_unevictable()
@@ -96,5 +98,5 @@ def run(test, params, env):
     mlock_test = MlockBasic(test, params, env)
     mlock_test.start()
 
-    error_context.context("Check kernel crash message!", logging.info)
+    error_context.context("Check kernel crash message!", test.log.info)
     mlock_test.vm.verify_kernel_crash()

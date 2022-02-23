@@ -1,5 +1,4 @@
 import re
-import logging
 import os
 import six
 import time
@@ -96,7 +95,7 @@ def run(test, params, env):
         :return: path to new iso image file.
         """
         error_context.context("Creating test iso image '%s'" % name,
-                              logging.info)
+                              test.log.info)
         if not os.path.isabs(name):
             cdrom_path = utils_misc.get_path(data_dir.get_data_dir(), name)
         else:
@@ -116,7 +115,7 @@ def run(test, params, env):
         return cdrom_path
 
     def check_cdrom_size(session):
-        error_context.context("Get the cdrom's size in guest.", logging.info)
+        error_context.context("Get the cdrom's size in guest.", test.log.info)
         check_cdrom_size_cmd = params["check_cdrom_size_cmd"]
         output = session.cmd(check_cdrom_size_cmd, timeout=60)
         if not output:
@@ -128,13 +127,13 @@ def run(test, params, env):
             cdrom_size = int(size)
         except ValueError:
             cdrom_size = 0
-        logging.info("Cdrom's size in guest %s", cdrom_size)
+        test.log.info("Cdrom's size in guest %s", cdrom_size)
         return cdrom_size
 
     def mount_cdrom(session, guest_cdrom, mount_point,
                     show_mount_cmd, mount_cmd):
         txt = "Mount the cdrom in guest and check its block size."
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         mounted = session.cmd(show_mount_cmd)
         if mount_point not in mounted:
             mount_cmd = params.get("mount_cdrom_cmd") % (guest_cdrom,
@@ -161,7 +160,7 @@ def run(test, params, env):
         except QMPCmdError as e:
             if excepted_qmp_err not in str(e):
                 test.error(str(e))
-            logging.warn(str(e))
+            test.log.warn(str(e))
             wait_for_tray_open(cdroms)
             with change_check:
                 vm.change_media(device, target)
@@ -181,7 +180,7 @@ def run(test, params, env):
     excepted_qmp_err = params.get('excepted_qmp_err')
     sleep_time_after_change = params.get_numeric('sleep_time_after_change', 30)
     os_type = params["os_type"]
-    error_context.context("Get the main VM", logging.info)
+    error_context.context("Get the main VM", test.log.info)
     main_vm = params["main_vm"]
     env_process.preprocess_vm(test, params, env, main_vm)
     vm = env.get_vm(params["main_vm"])
@@ -203,7 +202,7 @@ def run(test, params, env):
     change_check = QMPEventCheckCDChange(vm, cdrom_device)
 
     error_context.context("Attach a small cd iso file to the cdrom.",
-                          logging.info)
+                          test.log.info)
     change_media(cdrom_device, orig_cdrom)
     if mount_cmd:
         mount_cdrom(session, guest_cdrom, mount_point,
@@ -215,7 +214,7 @@ def run(test, params, env):
         test.fail(err)
 
     if umount_cmd:
-        error_context.context("umount cdrom in guest.", logging.info)
+        error_context.context("umount cdrom in guest.", test.log.info)
         umount_cmd = umount_cmd % mount_point
         status, output = session.cmd_status_output(umount_cmd, timeout=360)
         if status:
@@ -223,7 +222,7 @@ def run(test, params, env):
             msg += "Output: %s" % output
             test.error(msg)
 
-    error_context.context("eject the cdrom from monitor.", logging.info)
+    error_context.context("eject the cdrom from monitor.", test.log.info)
     eject_cdrom(cdrom_device)
 
     cdrom_name = params.get("final_cdrom", "images/final.iso")
@@ -231,7 +230,7 @@ def run(test, params, env):
     final_cdrom = create_iso_image(params, cdrom_name, prepare=True,
                                    file_size=file_size)
     error_context.context("Attach a bigger cd iso file to the cdrom.",
-                          logging.info)
+                          test.log.info)
     change_media(cdrom_device, final_cdrom)
     if mount_cmd:
         mount_cdrom(session, guest_cdrom, mount_point,

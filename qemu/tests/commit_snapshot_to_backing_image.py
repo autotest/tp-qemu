@@ -1,4 +1,3 @@
-import logging
 import json
 
 from avocado.utils import process
@@ -30,43 +29,43 @@ def run(test, params, env):
     base, sn = (qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
                 for tag in image_chain)
 
-    error_context.context("create snapshot %s" % sn.tag, logging.info)
+    error_context.context("create snapshot %s" % sn.tag, test.log.info)
     sn.create(sn.params)
 
-    error_context.context("boot vm from snapshot %s" % sn.tag, logging.info)
+    error_context.context("boot vm from snapshot %s" % sn.tag, test.log.info)
     vm = img_utils.boot_vm_with_images(test, params, env, (sn.tag,))
 
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
     guest_file = params["guest_tmp_filename"]
     dd_blkcnt = int(params["dd_blkcnt"])
-    error_context.context("save random file %s" % guest_file, logging.info)
+    error_context.context("save random file %s" % guest_file, test.log.info)
     img_utils.save_random_file_to_vm(vm, guest_file, dd_blkcnt, sync_bin)
     session = vm.wait_for_login()
     md5val = img_utils.check_md5sum(guest_file, md5sum_bin, session)
-    logging.debug("random file %s md5sum value: %s", guest_file, md5val)
+    test.log.debug("random file %s md5sum value: %s", guest_file, md5val)
     session.close()
     vm.destroy()
 
-    error_context.context("commit snapshot %s" % sn.tag, logging.info)
+    error_context.context("commit snapshot %s" % sn.tag, test.log.info)
     size_before_commit = json.loads(sn.info(output="json"))["actual-size"]
-    logging.debug("%s size before commit: %s", sn.tag, size_before_commit)
+    test.log.debug("%s size before commit: %s", sn.tag, size_before_commit)
     cache_mode = params.get("cache_mode")
     sn.commit(cache_mode=cache_mode)
-    logging.debug("sync host cache after commit")
+    test.log.debug("sync host cache after commit")
     process.system("sync")
 
     error_context.context("verify snapshot is emptied after commit",
-                          logging.info)
+                          test.log.info)
     size_after_commit = json.loads(sn.info(output="json"))["actual-size"]
-    logging.debug("%s size after commit: %s", sn.tag, size_after_commit)
+    test.log.debug("%s size after commit: %s", sn.tag, size_after_commit)
     guest_file_size = dd_blkcnt * 512   # tmp file size in bytes
     if size_before_commit - size_after_commit >= guest_file_size:
-        logging.debug("the snapshot file was emptied.")
+        test.log.debug("the snapshot file was emptied.")
     else:
         test.fail("snapshot was not emptied")
 
-    error_context.context("boot vm from base %s" % base.tag, logging.info)
+    error_context.context("boot vm from base %s" % base.tag, test.log.info)
     vm = img_utils.boot_vm_with_images(test, params, env, (base.tag,))
     session = vm.wait_for_login()
     img_utils.check_md5sum(guest_file, md5sum_bin, session,

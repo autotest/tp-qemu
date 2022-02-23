@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 
 from provider import cpu_utils
@@ -32,17 +30,17 @@ def run(test, params, env):
     vm.verify_alive()
 
     error_context.base_context("Hotplug vCPU devices during boot stage.",
-                               logging.info)
-    error_context.context("Verify guest is in the boot stage.", logging.info)
+                               test.log.info)
+    error_context.context("Verify guest is in the boot stage.", test.log.info)
     vm.serial_console.read_until_any_line_matches(boot_patterns)
 
     error_context.context("Hotplug vCPU devices, waiting for guest alive.",
-                          logging.info)
+                          test.log.info)
     for vcpu_device in vcpu_devices:
         vm.hotplug_vcpu_device(vcpu_device)
     vm.wait_for_login().close()
 
-    error_context.context("Check number of CPU inside guest.", logging.info)
+    error_context.context("Check number of CPU inside guest.", test.log.info)
     if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
         test.fail("Actual number of guest CPUs is not equal to expected")
 
@@ -51,22 +49,22 @@ def run(test, params, env):
         # 2) Send reboot command directly because it will close the ssh client
         # so we can not get the command status.
         error_context.base_context("Reboot guest to boot stage, hotunplug the "
-                                   "vCPU device.", logging.info)
+                                   "vCPU device.", test.log.info)
         vm.wait_for_login().sendline(params["reboot_command"])
 
         error_context.context("Verify guest is in boot stage after reboot.",
-                              logging.info)
+                              test.log.info)
         vm.serial_console.read_until_any_line_matches(reboot_patterns)
         vm.serial_console.read_until_any_line_matches(boot_patterns)
 
         error_context.context("Hotunplug vCPU devices, waiting for guest "
-                              "alive.", logging.info)
+                              "alive.", test.log.info)
         for vcpu_device in reversed(vcpu_devices):
             vm.hotunplug_vcpu_device(vcpu_device)
         vm.wait_for_login().close()
 
         error_context.context("Check number of CPU inside guest after unplug.",
-                              logging.info)
+                              test.log.info)
         if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
             test.fail("Actual number of guest CPUs is not equal to expected "
                       "after hotunplug.")

@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import utils_misc
 from virttest import error_context
@@ -67,7 +66,7 @@ def run(test, params, env):
         params["paused_after_start_vm"] = "no"
 
     error_context.base_context("Define the cpu list for each numa node",
-                               logging.info)
+                               test.log.info)
     numa_nodes = params.objects("guest_numa_nodes")
     node_ids = [params["numa_nodeid_%s" % node] for node in numa_nodes]
     node_cpus_mapping = assign_numa_cpus(node_ids, alignment)
@@ -76,7 +75,7 @@ def run(test, params, env):
             node_cpus_mapping[params["numa_nodeid_%s" % node]])
 
     error_context.context("Launch the guest with our assigned numa node",
-                          logging.info)
+                          test.log.info)
     vcpu_devices = params.objects("vcpu_devices")
     vm.create(params=params)
     if vm.is_paused():
@@ -87,7 +86,7 @@ def run(test, params, env):
         win_wora.modify_driver(params, session)
 
     error_context.context("Check the number of guest CPUs after startup",
-                          logging.info)
+                          test.log.info)
     if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
         test.error("The number of guest CPUs is not equal to the qemu command "
                    "line configuration")
@@ -98,7 +97,7 @@ def run(test, params, env):
     numa_before_plug = get_guest_numa_cpus_info()
     for vcpu_dev in vcpu_devices:
         error_context.context("hotplug vcpu device: %s" % vcpu_dev,
-                              logging.info)
+                              test.log.info)
         vm.hotplug_vcpu_device(vcpu_dev)
     if not utils_misc.wait_for(
             lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 10):
@@ -106,27 +105,27 @@ def run(test, params, env):
 
     if os_type == "linux":
         error_context.context("Check the CPU information of each numa node",
-                              logging.info)
+                              test.log.info)
         guest_numa_cpus = get_guest_numa_cpus_info()
         for node_id, node_cpus in node_cpus_mapping.items():
             try:
                 if guest_numa_cpus[node_id] != node_cpus:
-                    logging.debug("Current guest numa info:\n%s",
-                                  session.cmd_output("numactl -H"))
+                    test.log.debug("Current guest numa info:\n%s",
+                                   session.cmd_output("numactl -H"))
                     test.fail("The cpu obtained by guest is inconsistent with "
                               "we assigned.")
             except KeyError:
                 test.error("Could not find node %s in guest." % node_id)
-        logging.info("Number of each CPU in guest matches what we assign.")
+        test.log.info("Number of each CPU in guest matches what we assign.")
 
         for vcpu_dev in vcpu_devices[::-1]:
             error_context.context("hotunplug vcpu device: %s" % vcpu_dev,
-                                  logging.info)
+                                  test.log.info)
             vm.hotunplug_vcpu_device(vcpu_dev)
         if not utils_misc.wait_for(
                 lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 10):
             test.fail("Actual number of guest CPUs is not equal to expected")
         if get_guest_numa_cpus_info() != numa_before_plug:
-            logging.debug("Current guest numa info:\n%s",
-                          session.cmd_output("numactl -H"))
+            test.log.debug("Current guest numa info:\n%s",
+                           session.cmd_output("numactl -H"))
             test.fail("Numa info of guest is incorrect after vcpu hotunplug.")

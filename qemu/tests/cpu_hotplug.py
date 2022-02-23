@@ -1,5 +1,4 @@
 import os
-import logging
 import re
 
 from virttest import error_context
@@ -29,7 +28,7 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     error_context.context("boot the vm, with '-smp X,maxcpus=Y' option,"
-                          "thus allow hotplug vcpu", logging.info)
+                          "thus allow hotplug vcpu", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -43,22 +42,22 @@ def run(test, params, env):
     cpu_hotplug_cmd = params.get("cpu_hotplug_cmd", "")
 
     if n_cpus_add + current_cpus > maxcpus:
-        logging.warn("CPU quantity more than maxcpus, set it to %s", maxcpus)
+        test.log.warn("CPU quantity more than maxcpus, set it to %s", maxcpus)
         total_cpus = maxcpus
     else:
         total_cpus = current_cpus + n_cpus_add
 
     error_context.context("check if CPUs in guest matches qemu cmd "
-                          "before hot-plug", logging.info)
+                          "before hot-plug", test.log.info)
     if not cpu.check_if_vm_vcpu_match(current_cpus, vm):
         test.error("CPU quantity mismatch cmd before hotplug !")
 
     for cpuid in range(current_cpus, total_cpus):
-        error_context.context("hot-pluging vCPU %s" % cpuid, logging.info)
+        error_context.context("hot-pluging vCPU %s" % cpuid, test.log.info)
         vm.hotplug_vcpu(cpu_id=cpuid, plug_command=cpu_hotplug_cmd)
 
     output = vm.monitor.send_args_cmd("info cpus")
-    logging.debug("Output of info CPUs:\n%s", output)
+    test.log.debug("Output of info CPUs:\n%s", output)
 
     cpu_regexp = re.compile(r"CPU #(\d+)")
     total_cpus_monitor = len(cpu_regexp.findall(output))
@@ -67,14 +66,14 @@ def run(test, params, env):
                   " %s" % (total_cpus_monitor, total_cpus))
     # Windows is a little bit lazy that needs more secs to recognize.
     error_context.context("hotplugging finished, let's wait a few sec and"
-                          " check CPUs quantity in guest.", logging.info)
+                          " check CPUs quantity in guest.", test.log.info)
     if not utils_misc.wait_for(lambda: cpu.check_if_vm_vcpu_match(
                                total_cpus, vm),
                                60 + total_cpus, first=10,
                                step=5.0, text="retry later"):
         test.fail("CPU quantity mismatch cmd after hotplug !")
     error_context.context("rebooting the vm and check CPU quantity !",
-                          logging.info)
+                          test.log.info)
     session = vm.reboot()
     if not cpu.check_if_vm_vcpu_match(total_cpus, vm):
         test.fail("CPU quantity mismatch cmd after hotplug and reboot !")
@@ -89,7 +88,7 @@ def run(test, params, env):
     # Sometimes the return value include command line itself
     if "find" in online_files:
         online_files = " ".join(online_files.strip().split("\n")[1:])
-    logging.debug("CPU online files detected: %s", online_files)
+    test.log.debug("CPU online files detected: %s", online_files)
     online_files = online_files.split()
     online_files.sort()
 

@@ -1,4 +1,3 @@
-import logging
 import time
 
 from avocado.utils import process
@@ -31,8 +30,8 @@ def run(test, params, env):
         test.error("Could not get correct cpu usage value with cmd"
                    " '%s', detail: '%s'" % (cpu_get_usage_cmd, detail))
 
-    logging.info("Guest's reported CPU usage: %s", cpu_usage)
+    test.log.info("Guest's reported CPU usage: %s", cpu_usage)
     if cpu_usage >= 90:
         test.fail("Guest have unhalt vcpu.")
 
-    logging.info("Guest vcpu work normally")
+    test.log.info("Guest vcpu work normally")

@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
@@ -33,7 +31,7 @@ def run(test, params, env):
 
     def _compare_images(img1, img2, strict=False):
         """Compare two qemu images are identical or not."""
-        logging.info("Compare two images, strict mode: %s.", strict)
+        test.log.info("Compare two images, strict mode: %s.", strict)
         cmd = [img1.image_cmd, "compare", "-f", img1.image_format,
                "-F", img2.image_format,
                img1.image_filename, img2.image_filename]
@@ -55,20 +53,20 @@ def run(test, params, env):
     initial_tag = params["images"].split()[0]
     c_tag = params["convert_target"]
 
-    logging.info("Boot a guest up from initial image: %s, and create a"
-                 " file %s on the disk.", initial_tag, file)
+    test.log.info("Boot a guest up from initial image: %s, and create a"
+                  " file %s on the disk.", initial_tag, file)
     base_qit = QemuImgTest(test, params, env, initial_tag)
     base_qit.start_vm()
     md5 = base_qit.save_file(file)
-    logging.info("Got %s's md5 %s from the initial image disk.", file, md5)
+    test.log.info("Got %s's md5 %s from the initial image disk.", file, md5)
     base_qit.destroy_vm()
 
     cache_mode = params.get("cache_mode")
     if cache_mode:
-        logging.info("Convert initial image %s to %s with cache mode %s.",
-                     initial_tag, c_tag, cache_mode)
+        test.log.info("Convert initial image %s to %s with cache mode %s.",
+                      initial_tag, c_tag, cache_mode)
     else:
-        logging.info("Convert initial image %s to %s", initial_tag, c_tag)
+        test.log.info("Convert initial image %s to %s", initial_tag, c_tag)
     img, img_param = _get_img_obj_and_params(initial_tag)
     img.convert(img_param, data_dir.get_data_dir(), cache_mode)
 
@@ -85,7 +83,7 @@ def run(test, params, env):
                   " target file are different." % file)
     c_qit.destroy_vm()
 
-    logging.info("Check image %s.", c_tag)
+    test.log.info("Check image %s.", c_tag)
     tgt.check_image(tgt_img_param, data_dir.get_data_dir())
 
     for qit in (base_qit, c_qit):

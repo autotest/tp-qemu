@@ -88,7 +88,7 @@ def run(test, params, env):
                 "Some CPU models not in QEMU CPU model list: %r" % (missing))
         added = set(qemu_models) - set(cpu_models)
         if added:
-            logging.info("Extra CPU models in QEMU CPU listing: %s", added)
+            test.log.info("Extra CPU models in QEMU CPU listing: %s", added)
 
     def compare_cpuid_output(a, b):
         """
@@ -138,8 +138,8 @@ def run(test, params, env):
         vm.resume()
 
         timeout = float(params.get("login_timeout", 240))
-        logging.debug("Will wait for CPUID serial output at %r",
-                      vm.serial_console)
+        test.log.debug("Will wait for CPUID serial output at %r",
+                       vm.serial_console)
         if not utils_misc.wait_for(lambda:
                                    re.search("==END TEST==",
                                              vm.serial_console.get_output()),
@@ -147,7 +147,7 @@ def run(test, params, env):
             test.fail("Could not get test complete message.")
 
         test_output = parse_cpuid_dump(vm.serial_console.get_output())
-        logging.debug("Got CPUID serial output: %r", test_output)
+        test.log.debug("Got CPUID serial output: %r", test_output)
         if test_output is None:
             test.fail("Test output signature not found in "
                       "output:\n %s", vm.serial_console.get_output())
@@ -159,18 +159,18 @@ def run(test, params, env):
         roots = ['/machine/icc-bridge/icc', '/machine/unattached/device']
         for root in roots:
             for child in vm.monitor.cmd('qom-list', dict(path=root)):
-                logging.debug('child: %r', child)
+                test.log.debug('child: %r', child)
                 if child['type'].rstrip('>').endswith('-cpu'):
                     return root + '/' + child['name']
 
     def get_qom_cpuid(self, vm):
         assert vm.monitor.protocol == "qmp"
         cpu_path = find_cpu_obj(vm)
-        logging.debug('cpu path: %r', cpu_path)
+        test.log.debug('cpu path: %r', cpu_path)
         r = {}
         for prop in 'feature-words', 'filtered-features':
             words = vm.monitor.cmd('qom-get', dict(path=cpu_path, property=prop))
-            logging.debug('%s property: %r', prop, words)
+            test.log.debug('%s property: %r', prop, words)
             for w in words:
                 reg = w['cpuid-register'].lower()
                 key = (w['cpuid-input-eax'], w.get('cpuid-input-ecx', 0), reg)
@@ -233,7 +233,7 @@ def run(test, params, env):
         for cpu_model in cpu_models:
             out = get_guest_cpuid(self, cpu_model)
             guest_vendor = cpuid_to_vendor(out, 0x00000000)
-            logging.debug("Guest's vendor: %s", guest_vendor)
+            test.log.debug("Guest's vendor: %s", guest_vendor)
             if guest_vendor != vendor:
                 test.fail("Guest vendor [%s], doesn't match "
                           "required vendor [%s] for CPU [%s]" %
@@ -250,9 +250,9 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "vendor=" + vendor)
             guest_vendor0 = cpuid_to_vendor(out, 0x00000000)
             guest_vendor80000000 = cpuid_to_vendor(out, 0x80000000)
-            logging.debug("Guest's vendor[0]: %s", guest_vendor0)
-            logging.debug("Guest's vendor[0x80000000]: %s",
-                          guest_vendor80000000)
+            test.log.debug("Guest's vendor[0]: %s", guest_vendor0)
+            test.log.debug("Guest's vendor[0x80000000]: %s",
+                           guest_vendor80000000)
             if guest_vendor0 != vendor:
                 test.fail("Guest vendor[0] [%s], doesn't match "
                           "required vendor [%s] for CPU [%s]" %
@@ -457,8 +457,8 @@ def run(test, params, env):
                     signature = signature + c
                 else:
                     signature = "%s\\x%02x" % (signature, ord(c))
-        logging.debug("(%s.%s:%s: signature: %s", leaf, idx, str(regs),
-                      signature)
+        test.log.debug("(%s.%s:%s: signature: %s", leaf, idx, str(regs),
+                       signature)
         return signature
 
     def cpuid_signature(self):
@@ -498,7 +498,7 @@ def run(test, params, env):
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
             r = out[leaf, idx][reg]
-            logging.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
+            test.log.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
             for i in bits:
                 if (r & (1 << int(i))) == 0:
                     test.fail("CPUID(%s.%s).%s[%s] is not set" %
@@ -523,7 +523,7 @@ def run(test, params, env):
         try:
             out = get_guest_cpuid(self, cpu_model, flags)
             r = out[leaf, idx][reg]
-            logging.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
+            test.log.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
             if r != val:
                 test.fail("CPUID(%s.%s).%s is not 0x%08x" %
                           (leaf, idx, reg, val))

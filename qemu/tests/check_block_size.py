@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -22,7 +21,7 @@ def run(test, params, env):
     """
     name = params["main_vm"]
     if params.get("need_install") == "yes":
-        error_context.context("Install guest with a new image", logging.info)
+        error_context.context("Install guest with a new image", test.log.info)
         utils_test.run_virt_sub_test(test, params, env,
                                      sub_type='unattended_install')
         params["cdroms"] = ""
@@ -46,7 +45,7 @@ def run(test, params, env):
         expect_physical = int(params.get("physical_block_size_stg", 512))
         expect_logical = int(params.get("logical_block_size_stg", 512))
         error_context.context("Verify physical/Logical block size",
-                              logging.info)
+                              test.log.info)
         if params["os_type"] == "linux":
             drive_path = utils_misc.get_linux_drive_path(session, drive_serial)
             if not drive_path:
@@ -54,14 +53,14 @@ def run(test, params, env):
 
             drive_kname = drive_path.split("/")[-1]
             cmd = params.get("chk_phy_blk_cmd") % drive_kname
-            logging.debug("Physical block size get via '%s'", cmd)
+            test.log.debug("Physical block size get via '%s'", cmd)
             out_physical = int(session.cmd_output(cmd))
             cmd = params.get("chk_log_blk_cmd") % drive_kname
-            logging.debug("Logical block size get via '%s'", cmd)
+            test.log.debug("Logical block size get via '%s'", cmd)
             out_logical = int(session.cmd_output(cmd))
         else:
             cmd = params.get("chk_blks_cmd_windows")
-            logging.debug("Physical/Logical block size get via '%s'", cmd)
+            test.log.debug("Physical/Logical block size get via '%s'", cmd)
             out_bs = session.cmd_output(cmd, timeout=240).strip().split("\n\n")
             for blk_info in out_bs:
                 if blk_info.find(drive_serial) != -1:

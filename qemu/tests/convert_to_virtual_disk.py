@@ -1,5 +1,3 @@
-import logging
-
 from avocado import fail_on
 from avocado.utils import process
 
@@ -40,19 +38,19 @@ def run(test, params, env):
     middle = QemuImg(params.object_params(mid_img), root_dir, mid_img)
     mid_filename = middle.image_filename
 
-    logging.info("Create the test image files.")
+    test.log.info("Create the test image files.")
     source.create(source.params)
     middle.create(middle.params)
 
-    logging.info("Setup target loop device via 'losetup'.")
+    test.log.info("Setup target loop device via 'losetup'.")
     target = setup_loop_dev(mid_filename)
     params["image_name_target"] = target
 
-    logging.debug("Convert from %s to %s with cache mode none.",
-                  source.image_filename, mid_filename)
+    test.log.debug("Convert from %s to %s with cache mode none.",
+                   source.image_filename, mid_filename)
     try:
         fail_on((process.CmdError,))(source.convert)(
             params.object_params(src_img), root_dir, cache_mode="none")
     finally:
-        logging.info("Clean the loop device.")
+        test.log.info("Clean the loop device.")
         free_loop_dev(target)

@@ -1,5 +1,4 @@
 import aexpect
-import logging
 
 from avocado.utils import process
 
@@ -48,12 +47,12 @@ def run(test, params, env):
         if gnutls_cmd_server:
             gnutls_cmd_server = gnutls_cmd_server % port
             params["extra_params"] = params["extra_params"] % (hostname, port)
-            error_context.context("Run gnutls server ...", logging.info)
+            error_context.context("Run gnutls server ...", test.log.info)
             tls_server = aexpect.run_bg(gnutls_cmd_server)
             params['start_vm'] = 'yes'
             vm_name = params['main_vm']
             error_context.context(
-                "Launch QEMU with a serial port as TLS client", logging.info)
+                "Launch QEMU with a serial port as TLS client", test.log.info)
             env_process.preprocess_vm(test, params, env, vm_name)
             if not utils_misc.wait_for(
                     lambda: expected_msg in tls_server.get_output(),
@@ -68,10 +67,10 @@ def run(test, params, env):
             params['start_vm'] = 'yes'
             vm_name = params['main_vm']
             error_context.context(
-                "Launch QEMU with a serial port as TLS server", logging.info)
+                "Launch QEMU with a serial port as TLS server", test.log.info)
             env_process.preprocess_vm(test, params, env, vm_name)
             error_context.context(
-                "Run gnutls client to connect TLS server", logging.info)
+                "Run gnutls client to connect TLS server", test.log.info)
             tls_client = aexpect.run_bg(gnutls_cmd_client)
             if not utils_misc.wait_for(
                     lambda: expected_msg in tls_client.get_output(),
@@ -86,7 +85,7 @@ def run(test, params, env):
             params["extra_params"] = params["extra_params_%s"
                                             % vms[0]] % (hostname, port)
             error_context.context(
-                "Launch QEMU with a serial port as TLS server", logging.info)
+                "Launch QEMU with a serial port as TLS server", test.log.info)
             env_process.preprocess_vm(test, params, env, vms[0])
             vm1 = env.get_vm(vms[0])
             session_vm1 = vm1.wait_for_login()
@@ -94,7 +93,7 @@ def run(test, params, env):
             params["extra_params"] = params["extra_params_%s"
                                             % vms[1]] % (hostname, port)
             error_context.context(
-                "Launch QEMU with a serial port as TLS client", logging.info)
+                "Launch QEMU with a serial port as TLS client", test.log.info)
             env_process.preprocess_vm(test, params, env, vms[1])
             try:
                 session_vm1.read_until_output_matches(

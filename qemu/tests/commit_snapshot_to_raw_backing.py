@@ -1,4 +1,3 @@
-import logging
 import json
 
 from virttest import data_dir
@@ -42,7 +41,7 @@ def run(test, params, env):
 
     def _verify_qemu_img_info(output, b_fmt, b_name):
         """Verify qemu-img info output for this case."""
-        logging.info("Verify snapshot's backing file information.")
+        test.log.info("Verify snapshot's backing file information.")
         res = json.loads(output)
         if (res["backing-filename-format"] != b_fmt or
                 res["backing-filename"] != b_name):
@@ -60,7 +59,7 @@ def run(test, params, env):
     base_img, _ = _get_img_obj_and_params(base)
     sn_img, sn_img_params = _get_img_obj_and_params(snapshot)
 
-    logging.info("Create a snapshot %s based on %s.", snapshot, base)
+    test.log.info("Create a snapshot %s based on %s.", snapshot, base)
     # workaround to assign system disk's image_name to image_name_image1
     params["image_name_image1"] = params["image_name"]
     sn_qit = QemuImgTest(test, params, env, snapshot)
@@ -68,19 +67,19 @@ def run(test, params, env):
     _verify_qemu_img_info(sn_img.info(output="json"),
                           base_img.image_format, base_img.image_filename)
 
-    logging.info("Boot a guest up from snapshot image: %s, and create a"
-                 " file %s on the disk.", snapshot, file)
+    test.log.info("Boot a guest up from snapshot image: %s, and create a"
+                  " file %s on the disk.", snapshot, file)
     sn_qit.start_vm()
     md5 = sn_qit.save_file(file)
-    logging.info("Got %s's md5 %s from the snapshot image disk.", file, md5)
+    test.log.info("Got %s's md5 %s from the snapshot image disk.", file, md5)
     sn_qit.destroy_vm()
 
     cache_mode = params.get("cache_mode")
     if cache_mode:
-        logging.info("Commit snapshot image %s back to %s with cache mode %s.",
-                     snapshot, base, cache_mode)
+        test.log.info("Commit snapshot image %s back to %s with cache mode %s.",
+                      snapshot, base, cache_mode)
     else:
-        logging.info("Commit snapshot image %s back to %s.", snapshot, base)
+        test.log.info("Commit snapshot image %s back to %s.", snapshot, base)
 
     size_check = params.get("snapshot_size_check_after_commit") == "yes"
     if size_check:
@@ -91,11 +90,11 @@ def run(test, params, env):
         remain_size = json.loads(sn_img.info(output="json"))["actual-size"]
 
         # Verify the snapshot file whether emptied after committing
-        logging.info("Verify the snapshot file whether emptied after committing")
+        test.log.info("Verify the snapshot file whether emptied after committing")
         commit_size = org_size - remain_size
         dd_size = eval(params["dd_total_size"])
         if commit_size >= dd_size:
-            logging.info("The snapshot file was emptied!")
+            test.log.info("The snapshot file was emptied!")
         else:
             test.fail("The snapshot file was not emptied, check pls!")
 
@@ -106,7 +105,7 @@ def run(test, params, env):
                   " snapshot file are different." % file)
     base_qit.destroy_vm()
 
-    logging.info("Check image %s.", snapshot)
+    test.log.info("Check image %s.", snapshot)
     sn_img.check_image(sn_img_params, data_dir.get_data_dir())
 
     for qit in (base_qit, sn_qit):

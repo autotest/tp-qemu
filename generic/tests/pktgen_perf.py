@@ -13,6 +13,8 @@ from virttest import utils_test
 from virttest import utils_misc
 from virttest import error_context
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 _system_output = functools.partial(process.system_output, shell=True)
 
 
@@ -59,7 +61,7 @@ def run(test, params, env):
             utils_test.qemu.pin_vm_threads(vm, node)
 
     timeout = float(params.get("pktgen_test_timeout", "240"))
-    error_context.context("Init the VM, and try to login", logging.info)
+    error_context.context("Init the VM, and try to login", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session_serial = vm.wait_for_serial_login(restart_network=True)
@@ -149,7 +151,7 @@ def run(test, params, env):
                         if pkt_cate == "tx":
                             error_context.context("test guest tx pps"
                                                   " performance",
-                                                  logging.info)
+                                                  test.log.info)
                             guest_mac = vm.get_mac_address(0)
                             pktgen_interface = utils_net.get_linux_ifname(
                                                session, guest_mac)
@@ -160,7 +162,7 @@ def run(test, params, env):
                         elif pkt_cate == "rx":
                             error_context.context("test guest rx pps"
                                                   " performance",
-                                                  logging.info)
+                                                  test.log.info)
                             host_bridge = params.get("netdst", "switch")
                             host_nic = utils_net.Interface(host_bridge)
                             pktgen_ip = host_nic.get_ip()
@@ -182,7 +184,7 @@ def run(test, params, env):
                         result_file.write(("%s\n" % line))
 
     error_context.context("Verify Host and guest kernel no error\
-                           and call trace", logging.info)
+                           and call trace", test.log.info)
     vm.verify_kernel_crash()
     utils_misc.verify_dmesg()
     result_file.close()
@@ -218,7 +220,7 @@ def run_test(session_serial, runner, pktgen_script, pkt_rate, pktgen_ip,
         exec_cmd = "%s -i %s -m %s -n 0 -t %s -s %s -b %s -c 0" % (
                 pktgen_script_path, interface, dsc, threads, size, burst)
     packets = "cat /sys/class/net/%s/statistics/tx_packets" % interface
-    logging.info("Start pktgen test by cmd '%s'", exec_cmd)
+    LOG_JOB.info("Start pktgen test by cmd '%s'", exec_cmd)
     try:
         packet_b = runner(packets)
         runner(exec_cmd, timeout)

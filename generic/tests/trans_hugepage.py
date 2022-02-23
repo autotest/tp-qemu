@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -61,13 +60,13 @@ def run(test, params, env):
     funcatexit.register(env, params.get("type"), cleanup, debugfs_path,
                         session)
 
-    logging.info("Smoke test start")
+    test.log.info("Smoke test start")
     error_context.context("smoke test")
 
     nr_ah_before = int(get_mem_status('AnonHugePages', 'host'))
     if nr_ah_before <= 0:
         e_msg = 'smoke: Host is not using THP'
-        logging.error(e_msg)
+        test.log.error(e_msg)
         failures.append(e_msg)
 
     # Protect system from oom killer
@@ -86,20 +85,20 @@ def run(test, params, env):
 
     if nr_ah_after <= nr_ah_before:
         e_msg = ('smoke: Host did not use new THP during dd')
-        logging.error(e_msg)
+        test.log.error(e_msg)
         failures.append(e_msg)
 
     if debugfs_flag == 1:
         if int(open('%s/kvm/largepages' % debugfs_path, 'r').read()) <= 0:
             e_msg = 'smoke: KVM is not using THP'
-            logging.error(e_msg)
+            test.log.error(e_msg)
             failures.append(e_msg)
 
-    logging.info("Smoke test finished")
+    test.log.info("Smoke test finished")
 
     # Use parallel dd as stress for memory
     count = count / 3
-    logging.info("Stress test start")
+    test.log.info("Stress test start")
     error_context.context("stress test")
     cmd = "rm -rf %s/*; for i in `seq %s`; do dd " % (mem_path, count)
     cmd += "if=/dev/zero of=%s/$i bs=4000000 count=1& done;wait" % mem_path
@@ -107,7 +106,7 @@ def run(test, params, env):
 
     if len(re.findall("No space", output)) > count * 0.05:
         e_msg = "stress: Too many dd instances failed in guest"
-        logging.error(e_msg)
+        test.log.error(e_msg)
         failures.append(e_msg)
 
     try:
@@ -121,7 +120,7 @@ def run(test, params, env):
 
     session.cmd("umount %s" % mem_path)
 
-    logging.info("Stress test finished")
+    test.log.info("Stress test finished")
 
     error_context.context("")
     if failures:

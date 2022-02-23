@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 
@@ -61,17 +60,17 @@ def run(test, params, env):
         stress_test.load_stress_tool()
         time.sleep(int(params.get("stress_time", 120)))
         nr_ah.append(int(utils_memory.read_from_meminfo('AnonHugePages')))
-        logging.debug("The huge page using for guest is: %s", nr_ah)
+        test.log.debug("The huge page using for guest is: %s", nr_ah)
 
         if nr_ah[1] <= nr_ah[0]:
-            logging.warn(
+            test.log.warn(
                 "VM don't use transparent hugepage while memory stress")
 
         if debugfs_flag == 1:
             if int(open(hugetlbfs_path, 'r').read()) <= 0:
                 test.fail("KVM doesn't use transparenthugepage")
 
-        logging.info("memory stress test finished")
+        test.log.info("memory stress test finished")
         stress_test.unload_stress()
         stress_test.clean()
     finally:

@@ -1,4 +1,3 @@
-import logging
 import time
 import os
 import re
@@ -43,16 +42,16 @@ def run(test, params, env):
 
         :param number: Number of pages (either string or numeric).
         """
-        logging.info("Trying to setup %d hugepages on host", number)
+        test.log.info("Trying to setup %d hugepages on host", number)
         with open("/proc/sys/vm/nr_hugepages", "w+") as f:
             pre_ret = f.read()
-            logging.debug("Number of huge pages on libhugetlbfs"
-                          " (pre-write): %s", pre_ret.strip())
+            test.log.debug("Number of huge pages on libhugetlbfs"
+                           " (pre-write): %s", pre_ret.strip())
             f.write(str(number))
             f.seek(0)
             ret = f.read()
-            logging.debug("Number of huge pages on libhugetlbfs:"
-                          " (post-write): %s", ret.strip())
+            test.log.debug("Number of huge pages on libhugetlbfs:"
+                           " (post-write): %s", ret.strip())
             return int(ret)
 
     def change_feature_status(test, status, feature_path, test_config):
@@ -108,11 +107,11 @@ def run(test, params, env):
         """
         error_context.context("Fragmenting host memory")
         try:
-            logging.info("Prepare tmpfs in host")
+            test.log.info("Prepare tmpfs in host")
             if not os.path.isdir(mem_path):
                 os.makedirs(mem_path)
             process.run("mount -t tmpfs none %s" % mem_path, shell=True)
-            logging.info("Start using dd to fragment memory in guest")
+            test.log.info("Start using dd to fragment memory in guest")
             cmd = ("for i in `seq 262144`; do dd if=/dev/urandom of=%s/$i "
                    "bs=4K count=1 & done" % mem_path)
             process.run(cmd, shell=True)
@@ -120,7 +119,7 @@ def run(test, params, env):
             process.run("umount %s" % mem_path, shell=True)
 
     test_config = test_setup.TransparentHugePageConfig(test, params)
-    logging.info("Defrag test start")
+    test.log.info("Defrag test start")
     login_timeout = float(params.get("login_timeout", 360))
     mem_path = os.path.join("/tmp", "thp_space")
 
@@ -145,7 +144,7 @@ def run(test, params, env):
         change_feature_status(test, "on", "defrag", test_config)
 
         sleep_time = 10
-        logging.debug("Sleeping %s s to settle things out", sleep_time)
+        test.log.debug("Sleeping %s s to settle things out", sleep_time)
         time.sleep(sleep_time)
 
         nr_hp_after = set_libhugetlbfs(nr_full)
@@ -155,8 +154,8 @@ def run(test, params, env):
                       "%s huge pages before turning "
                       "khugepaged defrag on, %s after it" %
                       (nr_hp_before, nr_hp_after))
-        logging.info("Defrag test succeeded")
+        test.log.info("Defrag test succeeded")
         session.close()
     finally:
-        logging.debug("Cleaning up libhugetlbfs on host")
+        test.log.debug("Cleaning up libhugetlbfs on host")
         set_libhugetlbfs(0)

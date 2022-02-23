@@ -1,4 +1,3 @@
-import logging
 import os
 import glob
 import re
@@ -25,7 +24,7 @@ def _verify_vm_driver(vm, test, driver_name, timeout=360):
     """
 
     error_context.context("Check if driver is installed"
-                          " and verified for vm: %s" % vm.name, logging.info)
+                          " and verified for vm: %s" % vm.name, test.log.info)
     session = vm.wait_for_login(timeout=timeout)
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test,
@@ -63,10 +62,10 @@ def run(test, params, env):
     # verify driver
     _verify_vm_driver(vm_sender, test, driver_verifier)
 
-    logging.debug(process.system("numactl --hardware", ignore_status=True,
-                                 shell=True))
-    logging.debug(process.system("numactl --show", ignore_status=True,
-                                 shell=True))
+    test.log.debug(process.system("numactl --hardware", ignore_status=True,
+                                  shell=True))
+    test.log.debug(process.system("numactl --show", ignore_status=True,
+                                  shell=True))
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     if params.get('numa_node'):
         numa_node = int(params.get('numa_node'))
@@ -92,7 +91,7 @@ def run(test, params, env):
     @error_context.context_aware
     def install_ntttcp(session):
         """ Install ntttcp through a remote session """
-        logging.info("Installing NTttcp ...")
+        test.log.info("Installing NTttcp ...")
         try:
             # Don't install ntttcp if it's already installed
             error_context.context("NTttcp directory already exists")
@@ -105,7 +104,7 @@ def run(test, params, env):
 
     def receiver():
         """ Receive side """
-        logging.info("Starting receiver process on %s", receiver_addr)
+        test.log.info("Starting receiver process on %s", receiver_addr)
         session = vm_receiver.wait_for_login(timeout=login_timeout)
         install_ntttcp(session)
         ntttcp_receiver_cmd = params.get("ntttcp_receiver_cmd")
@@ -118,7 +117,7 @@ def run(test, params, env):
             cmd = ntttcp_receiver_cmd % (
                 session_num, receiver_addr, rbuf, buf_num)
             r = session.cmd_output(cmd, timeout=timeout,
-                                   print_func=logging.debug)
+                                   print_func=test.log.debug)
             f.write("Send buffer size: %s\n%s\n%s" % (b, cmd, r))
         f.close()
         session.close()
@@ -132,7 +131,7 @@ def run(test, params, env):
 
     def sender():
         """ Send side """
-        logging.info("Sarting sender process ...")
+        test.log.info("Sarting sender process ...")
         session = vm_sender.wait_for_login(timeout=login_timeout)
         install_ntttcp(session)
         ntttcp_sender_cmd = params.get("ntttcp_sender_cmd")
@@ -145,7 +144,7 @@ def run(test, params, env):
                 # Wait until receiver ready
                 utils_misc.wait_for(_wait, timeout)
                 r = session.cmd_output(cmd, timeout=timeout,
-                                       print_func=logging.debug)
+                                       print_func=test.log.debug)
                 _receiver_ready = False
                 f.write("Send buffer size: %s\n%s\n%s" % (b, cmd, r))
         finally:
@@ -187,7 +186,7 @@ def run(test, params, env):
         for i in glob.glob("%s.receiver" % results_path):
             f = open("%s.RHS" % results_path, "w")
             raw = "  buf(k)| throughput(Mbit/s)"
-            logging.info(raw)
+            test.log.info(raw)
             f.write("#ver# %s\n#ver# host kernel: %s\n" %
                     (process.system_output("rpm -q qemu-kvm", shell=True,
                                            verbose=False, ignore_status=True),
@@ -202,6 +201,6 @@ def run(test, params, env):
             f.write(raw + "\n")
             for j in parse_file(i):
                 raw = "%8s| %8s" % (j[0], j[1])
-                logging.info(raw)
+                test.log.info(raw)
                 f.write(raw + "\n")
             f.close()

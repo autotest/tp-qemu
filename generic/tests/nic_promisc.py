@@ -1,4 +1,3 @@
-import logging
 import os
 
 from virttest import utils_misc
@@ -28,7 +27,7 @@ def run(test, params, env):
             cmd = "c:\\set_win_promisc.py"
             session.cmd(cmd)
 
-    error.context("Boot vm and prepare test environment", logging.info)
+    error.context("Boot vm and prepare test environment", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 360))
@@ -46,11 +45,11 @@ def run(test, params, env):
         transfer_thread = utils_misc.InterruptedThread(
             utils_test.run_file_transfer, (test, params, env))
 
-        error.context("Run utils_test.file_transfer ...", logging.info)
+        error.context("Run utils_test.file_transfer ...", test.log.info)
         transfer_thread.start()
 
         error.context("Perform file transfer while turning nic promisc on/off",
-                      logging.info)
+                      test.log.info)
         while transfer_thread.is_alive():
             set_nic_promisc_onoff(session_serial)
     except Exception:

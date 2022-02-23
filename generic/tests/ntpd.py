@@ -1,4 +1,3 @@
-import logging
 import time
 
 import aexpect
@@ -60,10 +59,10 @@ class NTPTest(object):
         2.start ntpd service;
         3.restrict the host and guest
         """
-        logging.info("waiting for login server.....")
+        self.test.log.info("waiting for login server.....")
         self.server_hostname = self.server_session.\
             cmd_output('hostname').strip()
-        logging.debug("service hostname is %s", self.server_hostname)
+        self.test.log.debug("service hostname is %s", self.server_hostname)
         cmd = 'echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock'
         status = self.server_session.cmd_status(cmd)
         if status:
@@ -135,8 +134,8 @@ class NTPTest(object):
         # Test the ntpdate result
         server_date = utils_test.get_date(self.server_session)
         host_date = utils_test.get_date()
-        logging.info("server time: %s", server_date)
-        logging.info("host time: %s", host_date)
+        self.test.log.info("server time: %s", server_date)
+        self.test.log.info("host time: %s", host_date)
         if not abs(int(server_date) - int(host_date)) < 2:
             self.test.fail("timing by ntpdate on host failed!!")
 
@@ -185,8 +184,8 @@ class NTPTest(object):
         # Check the result of ntpdate
         server_date = utils_test.get_date(self.server_session)
         guest_date = utils_test.get_date(self.session)
-        logging.info("server time is : %s", server_date)
-        logging.info("guest time is : %s ", guest_date)
+        self.test.log.info("server time is : %s", server_date)
+        self.test.log.info("guest time is : %s ", guest_date)
         if not abs(int(server_date) - int(guest_date)) < 2:
             self.test.fail("timing by ntpdate on guest failed!!")
 
@@ -212,7 +211,7 @@ class NTPTest(object):
         """
         test the service ntpd after 20m: ntpq -p on host and guest
         """
-        logging.info("waiting for ntpd timing : %s s", self.ntpd_sleep)
+        self.test.log.info("waiting for ntpd timing : %s s", self.ntpd_sleep)
         time.sleep(self.ntpd_sleep)
         # Test on host
         cmd_ip = "ntpq -p | grep '^*%s'" % self.server_ip
@@ -235,12 +234,12 @@ class NTPTest(object):
         """
         test on guest ntpd after 24h
         """
-        logging.info("waiting for long time test : %s s", self.long_sleep)
+        self.test.log.info("waiting for long time test : %s s", self.long_sleep)
         time.sleep(self.long_sleep)
         server_date = utils_test.get_date(self.server_session)
         guest_date = utils_test.get_date(self.session)
-        logging.info("server time is %s", server_date)
-        logging.info("guest time is %s", guest_date)
+        self.test.log.info("server time is %s", server_date)
+        self.test.log.info("guest time is %s", guest_date)
         if not abs(int(server_date) - int(guest_date)) < 2:
             self.test.fail("timing by ntpd on guest failed")
 
@@ -271,7 +270,7 @@ def run(test, params, env):
             ntp_test.server_config()
         except (aexpect.ShellError, remote.LoginTimeoutError) as detail:
             test.fail("server config failed. %s" % detail)
-        logging.info("waiting for ntp server : %s s", ntp_test.ntpdate_sleep)
+        test.log.info("waiting for ntp server : %s s", ntp_test.ntpdate_sleep)
         # Host and Guest will use server's ntpd service to set time.
         # here wait for some seconds for server ntpd service valid
         time.sleep(ntp_test.ntpdate_sleep)

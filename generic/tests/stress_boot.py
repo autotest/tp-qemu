@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import error_context
 
@@ -19,7 +17,7 @@ def run(test, params, env):
     :param env:    Dictionary with test environment.
     """
     error_context.base_context("waiting for the first guest to be up",
-                               logging.info)
+                               test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     login_timeout = float(params.get("login_timeout", 240))
@@ -34,7 +32,7 @@ def run(test, params, env):
             while num <= int(params.get("max_vms")):
                 # Clone vm according to the first one
                 error_context.base_context("booting guest #%d" % num,
-                                           logging.info)
+                                           test.log.info)
                 vm_name = "vm%d" % num
                 vm_params = vm.params.copy()
                 curr_vm = vm.clone(vm_name, vm_params)
@@ -44,12 +42,12 @@ def run(test, params, env):
 
                 session = curr_vm.wait_for_login(timeout=login_timeout)
                 sessions.append(session)
-                logging.info("Guest #%d booted up successfully", num)
+                test.log.info("Guest #%d booted up successfully", num)
 
                 # Check whether all previous shell sessions are responsive
                 for i, se in enumerate(sessions):
                     error_context.context("checking responsiveness of guest"
-                                          " #%d" % (i + 1), logging.debug)
+                                          " #%d" % (i + 1), test.log.debug)
                     se.cmd(params.get("alive_test_cmd"))
                 num += 1
         except Exception as emsg:
@@ -59,4 +57,4 @@ def run(test, params, env):
     finally:
         for se in sessions:
             se.close()
-        logging.info("Total number booted: %d", (num - 1))
+        test.log.info("Total number booted: %d", (num - 1))

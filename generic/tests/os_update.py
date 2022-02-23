@@ -1,6 +1,3 @@
-import logging
-
-
 def run(test, params, env):
     """
     Runs yum update and yum update kernel on RHEL or apt
@@ -19,7 +16,7 @@ def run(test, params, env):
         if "ubuntu" in vm.get_distro().lower():
             cmd = "apt update && apt upgrade -y"
         session = vm.wait_for_login()
-        logging.debug("Performing %s on VM %s", cmd, vm.name)
+        test.log.debug("Performing %s on VM %s", cmd, vm.name)
         if session.cmd_status(cmd, timeout=timeout) != 0:
             test.fail("Failed to update VM %s using %s" % (vm.name, cmd))
         session.close()

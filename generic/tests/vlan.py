@@ -1,4 +1,3 @@
-import logging
 import time
 import re
 
@@ -44,7 +43,7 @@ def run(test, params, env):
         """
         vlan_if = '%s.%s' % (iface, v_id)
         txt = "Create vlan interface '%s' on %s" % (vlan_if, iface)
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         if cmd_type == "vconfig":
             cmd = "vconfig add %s %s" % (iface, v_id)
         elif cmd_type == "ip":
@@ -63,7 +62,7 @@ def run(test, params, env):
         """
         iface = "%s.%s" % (iface, v_id)
         txt = "Assign IP '%s' to vlan interface '%s'" % (vlan_ip, iface)
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         session.cmd("ifconfig %s %s" % (iface, vlan_ip))
 
     def set_arp_ignore(session):
@@ -71,7 +70,7 @@ def run(test, params, env):
         Enable arp_ignore for all ipv4 device in guest
         """
         error_context.context("Enable arp_ignore for all ipv4 device in guest",
-                              logging.info)
+                              test.log.info)
         ignore_cmd = "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore"
         session.cmd(ignore_cmd)
 
@@ -89,7 +88,7 @@ def run(test, params, env):
             err_msg += "only support 'ip' and 'vconfig' now"
             test.error(err_msg)
         error_context.context("Remove vlan interface '%s'." % v_iface,
-                              logging.info)
+                              test.log.info)
         return session.cmd_status(rem_vlan_cmd)
 
     def nc_transfer(test, src, dst):
@@ -118,10 +117,10 @@ def run(test, params, env):
         output = sessions[dst].cmd_output("md5sum receive").strip()
         digest_receive = re.findall(r'(\w+)', output)[0]
         if digest_receive == digest_origin[src]:
-            logging.info("File succeed received in vm %s", vlan_ip[dst])
+            test.log.info("File succeed received in vm %s", vlan_ip[dst])
         else:
-            logging.info("Digest_origin is  %s", digest_origin[src])
-            logging.info("Digest_receive is %s", digest_receive)
+            test.log.info("Digest_origin is  %s", digest_origin[src])
+            test.log.info("Digest_receive is %s", digest_receive)
             test.fail("File transferred differ from origin")
         sessions[dst].cmd("rm -f receive")
 
@@ -135,7 +134,7 @@ def run(test, params, env):
         txt = "Flood ping from %s interface %s to %s" % (vms[src].name,
                                                          ifname[src],
                                                          vlan_ip[dst])
-        error_context.context(txt, logging.info)
+        error_context.context(txt, test.log.info)
         session_flood = vms[src].wait_for_login(timeout=60)
         utils_test.ping(vlan_ip[dst], flood=True,
                         interface=ifname[src],
@@ -167,7 +166,7 @@ def run(test, params, env):
         find_cmd = 'dir /b /s %s\\netkvmco.dll | findstr "\\%s\\\\"'
         find_cmd %= (viowin_ltr,  middle_path)
         netkvmco_path = session.cmd(find_cmd).strip()
-        logging.info("Found netkvmco.dll file at %s", netkvmco_path)
+        test.log.info("Found netkvmco.dll file at %s", netkvmco_path)
         return netkvmco_path
 
     vms = []
@@ -211,13 +210,13 @@ def run(test, params, env):
                 session, connection_id)
             time.sleep(10)
             nicid = utils_net.get_windows_nic_attribute(
-                    session=session, key="netenabled", value=True,
-                    target="netconnectionID")
+                session=session, key="netenabled", value=True,
+                target="netconnectionID")
             ifname.append(nicid)
             vm_ip.append(utils_net.get_guest_ip_addr(session, dev_mac,
                                                      os_type="windows",
                                                      linklocal=True))
-            logging.debug("IP address is %s in %s", vm_ip, vm.name)
+            test.log.debug("IP address is %s in %s", vm_ip, vm.name)
             session_ctl.append(session)
             continue
 
@@ -227,13 +226,13 @@ def run(test, params, env):
             err_msg = "Could not log into guest %s" % vm.name
             test.error(err_msg)
         sessions.append(session)
-        logging.info("Logged in %s successful", vm.name)
+        test.log.info("Logged in %s successful", vm.name)
         session_ctl.append(vm.wait_for_login(timeout=login_timeout))
         ifname.append(utils_net.get_linux_ifname(session,
                                                  vm.get_mac_address()))
         # get guest ip
         vm_ip.append(vm.get_address())
-        logging.debug("IP address is %s in %s", vm_ip, vm.name)
+        test.log.debug("IP address is %s in %s", vm_ip, vm.name)
         # produce sized file in vm
         dd_cmd = "dd if=/dev/urandom of=file bs=1M count=%s"
         session.cmd(dd_cmd % file_size)
@@ -245,11 +244,11 @@ def run(test, params, env):
         stop_firewall_cmd = "systemctl stop firewalld||service firewalld stop"
         session.cmd_output_safe(stop_firewall_cmd)
         error_context.context("Load 8021q module in guest %s" % vm.name,
-                              logging.info)
+                              test.log.info)
         session.cmd_output_safe("modprobe 8021q")
 
         error_context.context("Setup vlan environment in guest %s" % vm.name,
-                              logging.info)
+                              test.log.info)
         for vlan_i in range(1, vlan_num + 1):
             add_vlan(test, session, vlan_i, ifname[vm_index], cmd_type)
             v_ip = "%s.%s.%s" % (subnet, vlan_i, ip_unit[vm_index])
@@ -275,8 +274,8 @@ def run(test, params, env):
 
     try:
         for vlan in range(1, vlan_num + 1):
-            error_context.base_context("Test for vlan %s" % vlan, logging.info)
-            error_context.context("Ping test between vlans", logging.info)
+            error_context.base_context("Test for vlan %s" % vlan, test.log.info)
+            error_context.context("Ping test between vlans", test.log.info)
             interface = ifname[0] + '.' + str(vlan)
             for vm_index, vm in enumerate(vms):
                 for vlan2 in range(1, vlan_num + 1):
@@ -292,14 +291,14 @@ def run(test, params, env):
                         err_msg += "error info: %s" % output
                         test.fail(err_msg)
 
-            error_context.context("Flood ping between vlans", logging.info)
+            error_context.context("Flood ping between vlans", test.log.info)
             vlan_ip[0] = ".".join((subnet, str(vlan), ip_unit[0]))
             vlan_ip[1] = ".".join((subnet, str(vlan), ip_unit[1]))
             flood_ping(0, 1)
             flood_ping(1, 0)
 
             error_context.context("Transferring data between vlans by nc",
-                                  logging.info)
+                                  test.log.info)
             nc_transfer(test, 0, 1)
             nc_transfer(test, 1, 0)
 
@@ -313,7 +312,7 @@ def run(test, params, env):
                 status = rem_vlan(test, sessions[vm_index], vlan,
                                   ifname[vm_index], cmd_type)
                 if status:
-                    logging.error("Remove vlan %s failed", vlan)
+                    test.log.error("Remove vlan %s failed", vlan)
 
     # Plumb/unplumb maximal number of vlan interfaces
     if params.get("do_maximal_test", "no") == "yes":
@@ -321,7 +320,7 @@ def run(test, params, env):
         try:
             error_context.base_context("Vlan scalability test")
             error_context.context("Testing the plumb of vlan interface",
-                                  logging.info)
+                                  test.log.info)
             for vlan_index in range(1, bound):
                 add_vlan(test, sessions[0], vlan_index, ifname[0], cmd_type)
                 vlan_added = vlan_index
@@ -330,11 +329,11 @@ def run(test, params, env):
         finally:
             for vlan_index in range(1, vlan_added + 1):
                 if rem_vlan(test, sessions[0], vlan_index, ifname[0], cmd_type):
-                    logging.error("Remove vlan %s failed", vlan_index)
+                    test.log.error("Remove vlan %s failed", vlan_index)
 
         error_context.base_context("Vlan negative test")
         error_context.context("Create vlan with ID %s in guest" % bound,
-                              logging.info)
+                              test.log.info)
         try:
             add_vlan(test, sessions[0], bound, ifname[0], cmd_type)
             test.fail("Maximal ID allow to vlan is %s" % maximal)

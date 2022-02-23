@@ -1,5 +1,4 @@
 import re
-import logging
 
 from virttest import error_context
 
@@ -18,7 +17,7 @@ class TscTest(TimeClientTest):
         (exit_status, result) = self.session.cmd_status_output(cmd)
 
         if exit_status != 0:
-            logging.error("Program checktsc exit status is %s", exit_status)
+            self.test.log.error("Program checktsc exit status is %s", exit_status)
             default_fail = ("UNKNOWN FAILURE: rc=%d from %s" % (exit_status, cmd))
 
             if exit_status == 1:

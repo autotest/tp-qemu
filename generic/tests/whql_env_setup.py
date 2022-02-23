@@ -1,7 +1,6 @@
 import time
 import os
 import re
-import logging
 
 from avocado.utils import process
 from avocado.utils import download as utils_download
@@ -31,7 +30,7 @@ def run(test, params, env):
     """
     log_path = "%s/../debug" % test.resultsdir
     # Prepare the tools iso
-    error_context.context("Prepare the tools iso", logging.info)
+    error_context.context("Prepare the tools iso", test.log.info)
     src_list = params.get("src_list")
     src_path = params.get("src_path", "%s/whql_src" % test.tmpdir)
     if not os.path.exists(src_path):
@@ -64,7 +63,7 @@ def run(test, params, env):
         "run_guest_log", "%s/whql_qemu_comman" % test.tmpdir)
 
     # Record qmmu command line in a log file
-    error_context.context("Record qemu command line", logging.info)
+    error_context.context("Record qemu command line", test.log.info)
     if os.path.isfile(run_guest_log):
         fd = open(run_guest_log, "r+")
         fd.read()
@@ -104,7 +103,7 @@ def run(test, params, env):
         symbol_cmd = ""
     wmic_prepare_cmd = "echo exit > cmd && cmd /s wmic"
 
-    error_context.context("Configure guest system", logging.info)
+    error_context.context("Configure guest system", test.log.info)
     cmd_list = [wmic_prepare_cmd, auto_restart, disable_uas, symbol_cmd,
                 vm_ma_cmd, vm_cmd, dbgview_cmd, qxl_install, disable_firewall,
                 timezone_cmd]
@@ -137,7 +136,7 @@ def run(test, params, env):
 
     # Check symbol files in guest
     if symbol_files:
-        error_context.context("Update symbol files", logging.info)
+        error_context.context("Update symbol files", test.log.info)
         install_check_tool = False
         check_tool_chk = params.get("check_tool_chk",
                                     "C:\\debuggers\\symchk.exe")

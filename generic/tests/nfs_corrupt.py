@@ -14,6 +14,8 @@ from virttest import virt_vm
 from virttest import qemu_monitor
 from virttest.qemu_storage import QemuImg
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class NFSCorruptError(Exception):
 
@@ -60,7 +62,7 @@ class NFSCorruptConfig(object):
 
         :param force_start: Whether to make NFS service start anyway.
         """
-        error_context.context("Setting up test NFS share", logging.info)
+        error_context.context("Setting up test NFS share", LOG_JOB.info)
 
         for d in [self.nfs_dir, self.mnt_dir]:
             try:
@@ -69,7 +71,7 @@ class NFSCorruptConfig(object):
                 pass
 
         error_context.context("Checking available space to export",
-                              logging.info)
+                              LOG_JOB.info)
         stat = os.statvfs(self.nfs_dir)
         free = stat.f_bsize * stat.f_bfree
         required = float(
@@ -98,7 +100,7 @@ class NFSCorruptConfig(object):
 
     @error_context.context_aware
     def cleanup(self, force_stop=False):
-        error_context.context("Cleaning up test NFS share", logging.info)
+        error_context.context("Cleaning up test NFS share", LOG_JOB.info)
         process.run("umount -l -f %s" % self.mnt_dir, shell=True)
         process.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir),
                     shell=True)
@@ -187,7 +189,7 @@ def run(test, params, env):
         else:
             return True
 
-    error_context.context("Setup NFS Server on local host", logging.info)
+    error_context.context("Setup NFS Server on local host", test.log.info)
     host_ip = utils_net.get_host_ip_address(params)
     try:
         config = NFSCorruptConfig(test, params, host_ip)
@@ -200,7 +202,7 @@ def run(test, params, env):
     stg_img = QemuImg(stg_params, image_stg_dir, "stg")
     stg_img.create(stg_params)
 
-    error_context.context("Boot vm with image on NFS server", logging.info)
+    error_context.context("Boot vm with image on NFS server", test.log.info)
     image_name = os.path.join(image_stg_dir, "nfs_corrupt")
     params["image_name_stg"] = image_name
 
@@ -215,9 +217,9 @@ def run(test, params, env):
 
     nfs_devname = get_nfs_devname(params, session)
     # Write disk on NFS server
-    error_context.context("Write disk that image on NFS", logging.info)
+    error_context.context("Write disk that image on NFS", test.log.info)
     write_disk_cmd = "dd if=/dev/zero of=%s oflag=direct" % nfs_devname
-    logging.info("dd with command: %s", write_disk_cmd)
+    test.log.info("dd with command: %s", write_disk_cmd)
     session.sendline(write_disk_cmd)
     try:
         # Read some command output, it will timeout
@@ -227,36 +229,36 @@ def run(test, params, env):
 
     try:
         error_context.context("Make sure guest is running before test",
-                              logging.info)
+                              test.log.info)
         vm.resume()
         vm.verify_status("running")
 
         try:
             error_context.context("Reject NFS connection on host",
-                                  logging.info)
+                                  test.log.info)
             process.system(config.iptables_rule_gen('A'))
 
             error_context.context("Check if VM status is 'paused'",
-                                  logging.info)
+                                  test.log.info)
             if not utils_misc.wait_for(
                 lambda: check_vm_status(vm, "paused"),
                     int(params.get('wait_paused_timeout', 240))):
                 test.error("Guest is not paused after stop NFS")
         finally:
             error_context.context("Accept NFS connection on host",
-                                  logging.info)
+                                  test.log.info)
             process.system(config.iptables_rule_gen('D'))
 
-        error_context.context("Ensure nfs is resumed", logging.info)
+        error_context.context("Ensure nfs is resumed", test.log.info)
         nfs_resume_timeout = int(params.get('nfs_resume_timeout', 240))
         if not utils_misc.wait_for(config.is_mounted_dir_acessible,
                                    nfs_resume_timeout):
             test.error("NFS connection does not resume")
 
-        error_context.context("Continue guest", logging.info)
+        error_context.context("Continue guest", test.log.info)
         vm.resume()
 
-        error_context.context("Check if VM status is 'running'", logging.info)
+        error_context.context("Check if VM status is 'running'", test.log.info)
         if not utils_misc.wait_for(lambda: check_vm_status(vm, "running"), 20):
             test.error("Guest does not restore to 'running' status")
 

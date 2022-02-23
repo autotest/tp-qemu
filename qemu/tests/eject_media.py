@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -30,7 +29,7 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
-    logging.info("Wait until device is ready")
+    test.log.info("Wait until device is ready")
     time.sleep(10)
 
     def check_block(block):
@@ -58,7 +57,7 @@ def run(test, params, env):
     change_check = QMPEventCheckCDChange(vm, device_name)
 
     # eject first time
-    error_context.context("Eject original device.", logging.info)
+    error_context.context("Eject original device.", test.log.info)
     with eject_check:
         vm.eject_cdrom(device_name, force=True)
     if check_block(orig_img_name):
@@ -66,13 +65,13 @@ def run(test, params, env):
 
     # eject second time
     error_context.context("Eject original device for second time",
-                          logging.info)
+                          test.log.info)
     with eject_check:
         vm.eject_cdrom(device_name)
 
     # change media
     new_img_name = params.get("new_img_name")
-    error_context.context("Insert new image to device.", logging.info)
+    error_context.context("Insert new image to device.", test.log.info)
     with change_check:
         vm.change_media(device_name, new_img_name)
     if not check_block(new_img_name):
@@ -80,7 +79,7 @@ def run(test, params, env):
 
     # eject after change
     error_context.context("Eject device after add new image by change command",
-                          logging.info)
+                          test.log.info)
     with eject_check:
         vm.eject_cdrom(device_name)
     if check_block(new_img_name):
@@ -89,7 +88,7 @@ def run(test, params, env):
     # change back to orig_img_name
     error_context.context("Insert %s to device %s" % (orig_img_name,
                                                       device_name),
-                          logging.info)
+                          test.log.info)
     with change_check:
         vm.change_media(device_name, orig_img_name)
     if not check_block(orig_img_name):
@@ -98,14 +97,14 @@ def run(test, params, env):
     # change again
     error_context.context("Insert %s to device %s" % (new_img_name,
                                                       device_name),
-                          logging.info)
+                          test.log.info)
     with change_check:
         vm.change_media(device_name, new_img_name)
     if not check_block(new_img_name):
         test.fail("Fail to change cdrom to %s." % new_img_name)
 
     # eject non-removable
-    error_context.context("Try to eject non-removable device", logging.info)
+    error_context.context("Try to eject non-removable device", test.log.info)
     p_dict = {"removable": False}
     device_name = vm.get_block(p_dict)
     if vm.check_capability(Flags.BLOCKDEV):
@@ -126,7 +125,7 @@ def run(test, params, env):
     except Exception as e:
         if "is not removable" not in str(e):
             test.fail(e)
-        logging.debug("Catch exception message: %s", e)
+        test.log.debug("Catch exception message: %s", e)
     if not check_block(device_name):
         test.fail("Could remove non-removable device!")
 

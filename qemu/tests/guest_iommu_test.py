@@ -9,6 +9,8 @@ from provider.storage_benchmark import generate_instance
 
 from avocado.utils import cpu
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def check_data_disks(test, params, env, vm, session):
     """
@@ -66,7 +68,7 @@ def check_data_disks(test, params, env, vm, session):
     image_list = params.objects("images")[1:]
     image_num = len(image_list)
 
-    error_context.context("Check data disks in monitor!", logging.info)
+    error_context.context("Check data disks in monitor!", LOG_JOB.info)
     monitor_info_block = vm.monitor.info_block(False)
     blocks = monitor_info_block.keys()
     for image in image_list:
@@ -74,7 +76,7 @@ def check_data_disks(test, params, env, vm, session):
         if drive not in blocks:
             test.fail("%s is missing: %s" % (drive, blocks))
 
-    error_context.context("Read and write data on data disks", logging.info)
+    error_context.context("Read and write data on data disks", LOG_JOB.info)
     iozone_test = generate_instance(params, vm, 'iozone')
     iozone_cmd = params["iozone_cmd"]
     iozone_timeout = float(params.get("iozone_timeout", 1800))
@@ -115,7 +117,7 @@ def run(test, params, env):
     check_data_disks(test, params, env, vm, session)
     session.close()
 
-    error_context.context("Ping guest!", logging.info)
+    error_context.context("Ping guest!", test.log.info)
     guest_ip = vm.get_address()
     status, output = utils_test.ping(guest_ip, count=10, timeout=20)
     if status:
@@ -124,5 +126,5 @@ def run(test, params, env):
     if ratio != 0:
         test.fail("Loss ratio is %s", ratio)
 
-    error_context.context("Check kernel crash message!", logging.info)
+    error_context.context("Check kernel crash message!", test.log.info)
     vm.verify_kernel_crash()

@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import env_process
 from virttest import error_context
@@ -28,14 +26,14 @@ def run(test, params, env):
     session = vm.wait_for_login()
     driver = params["driver_name"]
     wdbg_timeout = params.get("wdbg_timeout", 600)
-    error_context.context("Check fwcfg driver is running", logging.info)
+    error_context.context("Check fwcfg driver is running", test.log.info)
     utils_test.qemu.windrv_verify_running(session, test, driver)
     if params.get("setup_verifier", "yes") == "yes":
-        error_context.context("Enable fwcfg driver verified", logging.info)
+        error_context.context("Enable fwcfg driver verified", test.log.info)
         session = utils_test.qemu.setup_win_driver_verifier(session,
                                                             driver, vm)
 
-    error_context.context("Disable security alert", logging.info)
+    error_context.context("Disable security alert", test.log.info)
     win_dump_utils.disable_security_alert(params, session)
     disk = sorted(session.cmd('wmic diskdrive get index').split()[1:])[-1]
     utils_disk.update_windows_disk_attributes(session, disk)
@@ -44,14 +42,14 @@ def run(test, params, env):
                                                   params['image_size_stg'],
                                                   params["os_type"])[0]
 
-    error_context.context("Generate the Memory.dmp file", logging.info)
+    error_context.context("Generate the Memory.dmp file", test.log.info)
     dump_file, dump_zip_file = win_dump_utils.generate_mem_dump(test,
                                                                 params,
                                                                 vm)
 
     try:
         error_context.context("Copy the Memory.dmp.zip file "
-                              "from host to guest", logging.info)
+                              "from host to guest", test.log.info)
         vm.copy_files_to(dump_zip_file, "%s:\\Memory.dmp.zip" % disk_letter)
         unzip_cmd = params["unzip_cmd"] % (disk_letter, disk_letter)
         unzip_timeout = int(params.get("unzip_timeout", 1800))

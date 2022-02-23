@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -19,7 +18,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    error_context.context("Boot up guest.", logging.info)
+    error_context.context("Boot up guest.", test.log.info)
     timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
     parameter_value = params.get("parameter_value", "random")
@@ -42,7 +41,7 @@ def run(test, params, env):
             parameter_value = func_generate_random_string(*args)
 
         params[params_name] = parameter_prefix + parameter_value
-        logging.debug("Setup '%s' to '%s'", params_name, params[params_name])
+        test.log.debug("Setup '%s' to '%s'", params_name, params[params_name])
 
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, vm.name)
@@ -56,7 +55,7 @@ def run(test, params, env):
         parameter_value_raw = parameter_value
 
     if params.get("check_in_qtree") == "yes":
-        error_context.context("Check option in qtree", logging.info)
+        error_context.context("Check option in qtree", test.log.info)
         qtree = qemu_qtree.QtreeContainer()
         try:
             qtree.parse_info_qtree(vm.monitor.info('qtree'))
@@ -91,7 +90,7 @@ def run(test, params, env):
                     "command line: '%s' vs '%s'" % (
                         qtree_value, parameter_value_raw))
         except AttributeError:
-            logging.debug("Monitor deson't support info qtree skip this test")
+            test.log.debug("Monitor deson't support info qtree skip this test")
 
     session = vm.wait_for_login(timeout=timeout)
 
@@ -102,7 +101,7 @@ def run(test, params, env):
         cmd = utils_misc.set_winutils_letter(session, cmd)
         pattern = check_cmd_params['pattern'] % parameter_value_raw
 
-        error_context.context("Check option with command %s" % cmd, logging.info)
+        error_context.context("Check option with command %s" % cmd, test.log.info)
         _, output = session.cmd_status_output(cmd)
         if not re.findall(r'%s' % pattern, output):
             failed_log += ("Can not find option %s from guest."
@@ -111,7 +110,7 @@ def run(test, params, env):
 
         if sg_vpd_cmd:
             error_context.context("Check serial number length with command %s"
-                                  % sg_vpd_cmd, logging.info)
+                                  % sg_vpd_cmd, test.log.info)
             sg_vpd_cmd = utils_misc.set_winutils_letter(session, sg_vpd_cmd)
             output = session.cmd_output(sg_vpd_cmd)
             actual_len = sum(len(_.split()[-1]) for _ in output.splitlines()[1:3])

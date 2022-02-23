@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -46,7 +45,7 @@ def run(test, params, env):
             properties = default_value
 
         error_context.context("Boot up guest with properites: %s value as: %s"
-                              % (str(options), properties), logging.info)
+                              % (str(options), properties), test.log.info)
         vm_name = params["main_vm"]
         params["start_vm"] = 'yes'
         env_process.preprocess_vm(test, params, env, vm_name)
@@ -63,15 +62,15 @@ def run(test, params, env):
             option_regex = r"%s\s+=\s+(\w+)" % option
             option_value = re.findall(option_regex, dev_info[0], re.M)
             if not option_value:
-                logging.debug("dev info in qtree: %s", dev_info[0])
+                test.log.debug("dev info in qtree: %s", dev_info[0])
                 test.error("Can't get the property info from qtree result")
             if option_value[0] not in convert_dict[properties[index]]:
                 msg = "'%s' value get '%s', " % (option, option_value)
                 msg += "expect value '%s'" % convert_dict[properties[index]]
-                logging.debug(msg)
+                test.log.debug(msg)
                 test.fail("Properity bit for %s is wrong." % option)
 
-            logging.info("Properity bit in qtree is right for %s.", option)
+            test.log.info("Properity bit in qtree is right for %s.", option)
             if params.get("check_in_guest", "yes") == "yes":
                 if params.get('machine_type').startswith("s390"):
                     id_pattern = \
@@ -96,10 +95,10 @@ def run(test, params, env):
                 if bitstr[int(options_offset[index])] != properties[index]:
                     msg = "bit string in guest: %s" % bitstr
                     msg += "expect bit string: %s" % properties[index]
-                    logging.debug(msg)
+                    test.log.debug(msg)
                     test.fail("Properity bit for %s is wrong"
                               " inside guest." % option)
-            logging.info("Properity bit in qtree is right for %s"
-                         " in guest.", option)
+            test.log.info("Properity bit in qtree is right for %s"
+                          " in guest.", option)
         session.close()
         vm.destroy()

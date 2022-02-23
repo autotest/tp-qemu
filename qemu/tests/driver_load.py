@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 from virttest import utils_test
@@ -87,7 +86,7 @@ def run(test, params, env):
         session.cmd(cmd, ignore_all_errors=ignore_error)
         session.close()
 
-    error_context.context("Try to log into guest.", logging.info)
+    error_context.context("Try to log into guest.", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
@@ -105,25 +104,25 @@ def run(test, params, env):
     session.close()
 
     if stop_service_cmd:
-        logging.info("Stop service before driver load testing")
+        test.log.info("Stop service before driver load testing")
         service_operate(stop_service_cmd)
 
     try:
         for repeat in range(0, int(params.get("repeats", 1))):
             error_context.context("Unload and load the driver. Round %s" %
-                                  repeat, logging.info)
-            logging.info("Get driver info from guest")
+                                  repeat, test.log.info)
+            test.log.info("Get driver info from guest")
             driver_id = get_driver_id(driver_id_cmd, driver_id_pattern)
 
-            error_context.context("Unload the driver", logging.info)
+            error_context.context("Unload the driver", test.log.info)
             unload_driver(driver_unload_cmd, driver_id)
             time.sleep(5)
-            error_context.context("Load the driver", logging.info)
+            error_context.context("Load the driver", test.log.info)
             load_driver(driver_load_cmd, driver_id)
             time.sleep(5)
     finally:
         if start_service_cmd:
-            logging.info("Restart service after driver load testing")
+            test.log.info("Restart service after driver load testing")
             service_operate(start_service_cmd, ignore_error=True)
 
     test_after_load = params.get("test_after_load")

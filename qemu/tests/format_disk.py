@@ -1,4 +1,3 @@
-import logging
 import re
 
 import aexpect
@@ -28,7 +27,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Login to the guest", logging.info)
+    error_context.context("Login to the guest", test.log.info)
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     cmd_timeout = int(params.get("cmd_timeout", 360))
     os_type = params["os_type"]
@@ -61,14 +60,14 @@ def run(test, params, env):
                                                        timeout=cmd_timeout)
             for i in re.findall(r"Disk*.(\d+)\s+Offline", output):
                 error_context.context("Set disk '%s' to online status" % i,
-                                      logging.info)
+                                      test.log.info)
                 set_online_cmd = params.get("set_online_cmd") % i
                 status, output = session.cmd_status_output(set_online_cmd,
                                                            timeout=cmd_timeout)
                 if status != 0:
                     test.fail("Can not set disk online %s" % output)
 
-        error_context.context("Create partition on disk", logging.info)
+        error_context.context("Create partition on disk", test.log.info)
         status, output = session.cmd_status_output(create_partition_cmd,
                                                    timeout=cmd_timeout)
         if status != 0:
@@ -80,17 +79,17 @@ def run(test, params, env):
             show_mount_cmd = params["show_mount_cmd"].format(drive_path)
             status = session.cmd_status(show_mount_cmd)
             if not status:
-                error_context.context("Umount before format", logging.info)
+                error_context.context("Umount before format", test.log.info)
                 umount_cmd = params["umount_cmd"].format(drive_path)
                 status, output = session.cmd_status_output(umount_cmd,
                                                            timeout=cmd_timeout)
                 if status != 0:
                     test.fail("Failed to umount with error: %s" % output)
-            error_context.context("Wipe existing filesystem", logging.info)
+            error_context.context("Wipe existing filesystem", test.log.info)
             wipefs_cmd = params["wipefs_cmd"].format(drive_path)
             session.cmd(wipefs_cmd)
         error_context.context("Format the disk with cmd '%s'" % format_cmd,
-                              logging.info)
+                              test.log.info)
         status, output = session.cmd_status_output(format_cmd,
                                                    timeout=cmd_timeout)
         if status != 0:
@@ -99,20 +98,20 @@ def run(test, params, env):
     mount_cmd = params.get("mount_cmd", "").format(drive_path)
     if mount_cmd:
         error_context.context("Mount the disk with cmd '%s'" % mount_cmd,
-                              logging.info)
+                              test.log.info)
         status, output = session.cmd_status_output(mount_cmd,
                                                    timeout=cmd_timeout)
         if status != 0:
             show_dev_cmd = params.get("show_dev_cmd", "").format(drive_path)
             device_list = session.cmd_output_safe(show_dev_cmd)
-            logging.debug("The devices which will be mounted are: %s",
-                          device_list)
+            test.log.debug("The devices which will be mounted are: %s",
+                           device_list)
             test.fail("Failed to mount with error: %s" % output)
 
     testfile_name = params.get("testfile_name")
     if testfile_name:
         error_context.context("Write some random string to test file",
-                              logging.info)
+                              test.log.info)
         ranstr = utils_misc.generate_random_string(100)
 
         writefile_cmd = params["writefile_cmd"]
@@ -123,7 +122,7 @@ def run(test, params, env):
             test.fail("Write to file error: %s" % output)
 
         error_context.context("Read in the file to see whether "
-                              "content has changed", logging.info)
+                              "content has changed", test.log.info)
         md5chk_cmd = params.get("md5chk_cmd")
         if md5chk_cmd:
             status, output = session.cmd_status_output(md5chk_cmd,
@@ -151,7 +150,7 @@ def run(test, params, env):
             show_mount_cmd = params.get(
                 "show_mount_cmd", "").format(drive_path)
             mount_list = session.cmd_output_safe(show_mount_cmd)
-            logging.debug("The mounted devices are: %s", mount_list)
+            test.log.debug("The mounted devices are: %s", mount_list)
             test.fail("Failed to umount with error: %s" % output)
 
     # Clean partition on disk
@@ -179,9 +178,9 @@ def run(test, params, env):
 
     if io_error_msg:
         e_msg = "IO error found on guest's dmesg when formatting USB device"
-        logging.error(e_msg)
+        test.log.error(e_msg)
         for line in io_error_msg:
-            logging.error(line)
+            test.log.error(line)
         test.fail(e_msg)
 
     session.close()

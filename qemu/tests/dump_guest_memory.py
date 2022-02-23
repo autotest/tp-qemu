@@ -1,4 +1,3 @@
-import logging
 import operator
 import os
 
@@ -108,8 +107,8 @@ def run(test, params, env):
         :return check result
         :rtype: bool
         """
-        logging.info("Expect result is %s", expect_o)
-        logging.info("Actual result that get from qmp_cmd is %s", qmp_o)
+        test.log.info("Expect result is %s", expect_o)
+        test.log.info("Actual result that get from qmp_cmd is %s", qmp_o)
         result = None
         if result_check == "equal":
             if not operator.eq(qmp_o, expect_o):
@@ -139,15 +138,15 @@ def run(test, params, env):
         # qmp command
         try:
             # Testing command
-            logging.info("Run qmp command '%s'.", qmp_cmd)
+            test.log.info("Run qmp command '%s'.", qmp_cmd)
             qmp_o = qmp_port.send_args_cmd(qmp_cmd)
-            logging.debug("QMP command:'%s' \n Output: '%s'", qmp_cmd, [qmp_o])
+            test.log.debug("QMP command:'%s' \n Output: '%s'", qmp_cmd, [qmp_o])
         except Exception as err:
             qmp_o = err.data
-            logging.info(err)
+            test.log.info(err)
 
         if result_check:
-            logging.info("Verify qmp command '%s'.", qmp_cmd)
+            test.log.info("Verify qmp command '%s'.", qmp_cmd)
             return check_result([qmp_o], eval(expect_result))
 
     def check_dump_file():
@@ -161,7 +160,7 @@ def run(test, params, env):
         crash_cmd += dump_file
         status, output = process.getstatusoutput(crash_cmd)
         os.remove(crash_script)
-        logging.debug(output)
+        test.log.debug(output)
         if status != 0 or 'error' in output:
             test.fail("vmcore corrupt")
 

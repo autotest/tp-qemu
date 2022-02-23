@@ -14,6 +14,8 @@ from virttest import error_context
 
 from provider.storage_benchmark import generate_instance
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def format_result(result, base="12", fbase="2"):
     """
@@ -47,7 +49,7 @@ def check_disk_status(session, timeout, num):
     end_time = time.time() + timeout
     while time.time() < end_time:
         disks_str = session.cmd_output_safe(disk_status_cmd)
-        logging.info("disks_str is %s", disks_str)
+        LOG_JOB.info("disks_str is %s", disks_str)
         disks = re.findall("Disk %s.*\n" % num, disks_str)
         if not disks:
             continue
@@ -194,10 +196,10 @@ def run(test, params, env):
         fs_dest = fs_params.get("fs_dest")
         fs_source = fs_params.get("fs_source_dir")
         error_context.context("Create a destination directory %s "
-                              "inside guest." % fs_dest, logging.info)
+                              "inside guest." % fs_dest, test.log.info)
         utils_misc.make_dirs(fs_dest, session)
         error_context.context("Mount virtiofs target %s to %s inside"
-                              " guest." % (fs_target, fs_dest), logging.info)
+                              " guest." % (fs_target, fs_dest), test.log.info)
         if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
             test.fail('Mount virtiofs target failed.')
     # format disk
@@ -228,7 +230,7 @@ def run(test, params, env):
                         run_fio_options = fio_options % (
                             io_pattern, bs, io_depth, numjobs)
 
-                    logging.info("run_fio_options are: %s", run_fio_options)
+                    test.log.info("run_fio_options are: %s", run_fio_options)
                     if os_type == "linux":
                         (s, o) = session.cmd_status_output(drop_cache,
                                                            timeout=cmd_timeout)

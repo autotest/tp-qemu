@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest import env_process, utils_misc, utils_test
@@ -84,10 +82,10 @@ def run(test, params, env):
     if loop_device_backend_img_param["image_format"] != "raw":
         test.cancel("Wrong loop device backend image format in config file.")
 
-    error_context.context("Start to setup tmpfs folder", logging.info)
+    error_context.context("Start to setup tmpfs folder", test.log.info)
     prepare_tmpfs_folder(tmpfs_folder)
 
-    error_context.context("Start to create image on loop device", logging.info)
+    error_context.context("Start to create image on loop device", test.log.info)
     loop_device_backend_img = QemuImg(loop_device_backend_img_param,
                                       data_dir.get_data_dir(),
                                       loop_device_backend_img_tag)
@@ -104,7 +102,7 @@ def run(test, params, env):
         disk_serial = params["disk_serial"]
 
         env_process.preprocess_vm(test, params, env, params["main_vm"])
-        error_context.context("Get the main VM", logging.info)
+        error_context.context("Get the main VM", test.log.info)
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
 
@@ -121,7 +119,7 @@ def run(test, params, env):
             guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             disk = utils_disk.get_windows_disks_index(session, img_size)[0]
             utils_disk.update_windows_disk_attributes(session, disk)
-            logging.info("Formatting disk:%s", disk)
+            test.log.info("Formatting disk:%s", disk)
             driver = utils_disk.configure_empty_disk(session, disk, img_size,
                                                      os_type)[0]
             output_path = driver + ":\\test.dat"
@@ -132,7 +130,7 @@ def run(test, params, env):
         if not output_path:
             test.fail("Can not get output file path in guest.")
 
-        logging.debug("Get output file path %s", output_path)
+        test.log.debug("Get output file path %s", output_path)
 
         guest_cmd = guest_cmd % output_path
         wait_timeout = int(params.get("wait_timeout", 60))
@@ -147,7 +145,7 @@ def run(test, params, env):
 
             error_context.context(
                 "Update backend image size to %s" % current_size_string,
-                logging.info)
+                test.log.info)
             update_loop_device_backend_size(loop_device_backend_img,
                                             loop_device_img,
                                             current_size_string)

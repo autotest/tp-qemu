@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest import error_context
@@ -24,14 +22,14 @@ def run_drive_mirror_cancel(test, params, env):
     try:
         mirror_test.start()
         error_context.context("Block network connection with iptables",
-                              logging.info)
+                              test.log.info)
         process.run(params["start_firewall_cmd"], shell=True)
         bg = utils_misc.InterruptedThread(mirror_test.cancel)
         bg.start()
         job = mirror_test.get_status()
         if job.get("type", "0") != "mirror":
             test.fail("Job cancel immediacatly")
-        error_context.context("Cleanup rules in iptables", logging.info)
+        error_context.context("Cleanup rules in iptables", test.log.info)
         process.run(params["stop_firewall_cmd"], shell=True)
         bg.join(timeout=int(params["cancel_timeout"]))
     finally:

@@ -11,6 +11,8 @@ from virttest import nfs
 
 from qemu.tests import block_copy
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class DriveMirror(block_copy.BlockCopy):
 
@@ -101,7 +103,7 @@ class DriveMirror(block_copy.BlockCopy):
                          "buf-size": buf_size})
         if 'node_name' in params:
             args.update({"node-name": params.get("node_name")})
-        error_context.context("Start to mirror block device", logging.info)
+        error_context.context("Start to mirror block device", LOG_JOB.info)
         self.vm.block_mirror(device, target_image, full_copy,
                              **args)
         if not self.get_status():
@@ -118,7 +120,7 @@ class DriveMirror(block_copy.BlockCopy):
         params = self.parser_test_args()
         target_format = params["image_format"]
         timeout = params["reopen_timeout"]
-        error_context.context("reopen new target image", logging.info)
+        error_context.context("reopen new target image", LOG_JOB.info)
         if self.vm.monitor.protocol == "qmp":
             self.vm.monitor.clear_event("BLOCK_JOB_COMPLETED")
         self.vm.block_reopen(self.device, self.target_image, target_format)

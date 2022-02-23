@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -28,7 +27,7 @@ def run(test, params, env):
 
     def _check_output(strace_event, strace_output, match_str):
         """Check whether the value is good in the output file."""
-        logging.debug("Check the output file '%s'.", strace_output)
+        test.log.debug("Check the output file '%s'.", strace_output)
         with open(strace_output) as fd:
             m = re.findall(match_str + r', \d+, \d+', fd.read())
             if not m:
@@ -58,8 +57,8 @@ def run(test, params, env):
                                      % params["scsi_mod"], shell=True).decode()
     params["image_name_target"] = tgt_disk
 
-    logging.debug("Convert from %s to %s with cache mode none, strace log: %s.",
-                  source.image_filename, tgt_disk, strace_output_file)
+    test.log.debug("Convert from %s to %s with cache mode none, strace log: %s.",
+                   source.image_filename, tgt_disk, strace_output_file)
     with strace(source, strace_events, strace_output_file, trace_child=True):
         fail_on((process.CmdError,))(source.convert)(
             params.object_params(src_image), root_dir, cache_mode="none")

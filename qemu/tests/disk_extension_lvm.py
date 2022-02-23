@@ -1,5 +1,4 @@
 """continually disk extension on lvm backend"""
-import logging
 import threading
 import time
 
@@ -53,7 +52,7 @@ def run(test, params, env):
 
     def _extend_lvm_daemon():
         while _get_lvm_size() < disk_size:
-            logging.debug("periodical extension.")
+            test.log.debug("periodical extension.")
             _extend_lvm("128M")
             time.sleep(5)
 
@@ -88,7 +87,7 @@ def run(test, params, env):
         guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
         disk = _get_window_disk_index_by_serail(disk_serial)
         utils_disk.update_windows_disk_attributes(session, disk)
-        logging.info("Formatting disk:%s", disk)
+        test.log.info("Formatting disk:%s", disk)
         driver = utils_disk.configure_empty_disk(session, disk, img_size,
                                                  os_type)[0]
         output_path = driver + ":\\test.dat"
@@ -98,7 +97,7 @@ def run(test, params, env):
     if not output_path:
         test.fail("Can not get output file path in guest.")
 
-    logging.debug("Get output file path %s", output_path)
+    test.log.debug("Get output file path %s", output_path)
     guest_cmd = guest_cmd % output_path
     session.sendline(guest_cmd)
 
@@ -107,7 +106,7 @@ def run(test, params, env):
     thread.start()
     while _get_lvm_size() < disk_size:
         if vm.is_paused():
-            logging.debug("pause extension.")
+            test.log.debug("pause extension.")
             _extend_lvm("500M")
             vm.monitor.cmd("cont")
 
@@ -119,7 +118,7 @@ def run(test, params, env):
                     if _get_lvm_size() < disk_size:
                         raise
                     else:
-                        logging.debug("Ignore timeout.")
+                        test.log.debug("Ignore timeout.")
             else:
                 test.assertTrue(
                     vm.wait_for_status("running", wait_timeout))

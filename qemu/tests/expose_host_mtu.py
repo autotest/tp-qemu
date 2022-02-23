@@ -1,4 +1,3 @@
-import logging
 import re
 
 from avocado.utils.network.hosts import LocalHost
@@ -87,7 +86,7 @@ def run(test, params, env):
                                                   vm.get_mac_address())
         output = session.cmd_output_safe(
             params["check_linux_mtu_cmd"] % guest_ifname)
-        error_context.context(output, logging.info)
+        error_context.context(output, test.log.info)
         match_string = "mtu %s" % params["mtu_value"]
         if match_string not in output:
             test.fail("host mtu %s not exposed to guest" % params["mtu_value"])
@@ -96,7 +95,7 @@ def run(test, params, env):
             session, "macaddress", vm.get_mac_address(), "netconnectionid")
         output = session.cmd_output_safe(
             params["check_win_mtu_cmd"] % connection_id)
-        error_context.context(output, logging.info)
+        error_context.context(output, test.log.info)
         lines = output.strip().splitlines()
         lines_len = len(lines)
 
@@ -112,12 +111,12 @@ def run(test, params, env):
                 break
             index += 1
         guest_mtu_value = line_value[index]
-        logging.info("MTU is %s", guest_mtu_value)
+        test.log.info("MTU is %s", guest_mtu_value)
         if not int(guest_mtu_value) == mtu_value:
             test.fail("Host mtu %s is not exposed to "
                       "guest!" % params["mtu_value"])
 
-    logging.info("Ping from guest to host with packet size 3972")
+    test.log.info("Ping from guest to host with packet size 3972")
     status, output = utils_test.ping(host_ip, 10, packetsize=3972,
                                      timeout=30, session=session)
     ratio = utils_test.get_loss_ratio(output)

@@ -24,6 +24,9 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
             params["image_size_%s" % snapshot_tag] = self.base_image.size
             params["image_name_%s" % snapshot_tag] = snapshot_tag
             self.params["image_name_%s" % snapshot_tag] = snapshot_tag
+            if self.params["image_backend"] == "iscsi_direct":
+                self.params.update({"enable_iscsi_%s" % snapshot_tag: "no"})
+                self.params.update({"image_raw_device_%s" % snapshot_tag: "no"})
             snapshot_format = params.get("snapshot_format", "qcow2")
             params["image_format_%s" % snapshot_tag] = snapshot_format
             self.params["image_format_%s" % snapshot_tag] = snapshot_format

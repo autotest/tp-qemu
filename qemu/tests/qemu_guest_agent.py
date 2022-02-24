@@ -4190,6 +4190,38 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         bg.start()
         utils_misc.wait_for(lambda: _base_on_bg_check_resource_leak(), 500)
 
+    @error_context.context_aware
+    def gagent_check_run_qga_as_program(self, test, params, env):
+        """
+        Check whether qemu-ga can run as program successfully.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+
+        session = self._get_session(params, self.vm)
+        run_gagent_program_cmd = params["run_qga_program_cmd"]
+        kill_qga_program_cmd = params["kill_qga_program_cmd"]
+
+        error_context.context("Check qemu-ga service status and stop it, "
+                              "then run qemu-ga as a program", test.log.info)
+        if self._check_ga_service(session, params.get("gagent_status_cmd")):
+            test.log.info("qemu-ga service is running, stopping it now.")
+            self.gagent_stop(session, self.vm)
+            time.sleep(5)
+        else:
+            test.error("WARNING: qemu-ga service is not running currently."
+                       " It's better to have a check.")
+        session.cmd(run_gagent_program_cmd)
+        _osinfo = self.gagent.get_osinfo()
+        if not _osinfo:
+            test.fail("Qemu-ga.exe can't work normally.")
+
+        session.cmd(kill_qga_program_cmd)
+        self.gagent_start(session, self.vm)
+        time.sleep(5)
+
 
 def run(test, params, env):
     """

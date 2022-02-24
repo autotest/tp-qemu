@@ -27,9 +27,10 @@ def run(test, params, env):
     if vfsd_ver != qemu_ver:
         test.fail("virtiofsd version is %s which is wrong,"
                   "it should be %s" % (vfsd_ver, qemu_ver))
-    pattern_cort = r'Copyright.*\d+-(\d+)'.encode()
-    vfsd_cprt = re.findall(pattern_cort, vfsd_info)[0]
-    year_curr = process.system_output("date +%Y", shell=True).strip()
-    if int(vfsd_cprt) < int(year_curr):
-        test.fail("Copyright info is %s which is wrong,"
-                  "it should be equal or larger than %s" % (vfsd_cprt, year_curr))
+    # Remove the following checkpoint due to a product bz2038031
+    # pattern_cort = r'Copyright.*\d+-(\d+)'.encode()
+    # vfsd_cprt = re.findall(pattern_cort, vfsd_info)[0]
+    # year_curr = process.system_output("date +%Y", shell=True).strip()
+    # if int(vfsd_cprt) < int(year_curr):
+    #   test.fail("Copyright info is %s which is wrong,"
+    #             "it should be equal or larger than %s" % (vfsd_cprt, year_curr))

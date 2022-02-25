@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 from virttest import data_dir
 from virttest import error_context
@@ -33,14 +31,14 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     def _boot_vm(boot_img):
-        error_context.context("Boot vm with %s." % boot_img, logging.info)
+        error_context.context("Boot vm with %s." % boot_img, test.log.info)
         vm.params["images"] = boot_img
         vm.create()
         vm.verify_alive()
 
     def _qemu_img_info(info_img):
         error_context.context("Check qemu-img info with %s." % info_img,
-                              logging.info)
+                              test.log.info)
         img_param = params.object_params(info_img)
         img = QemuImg(img_param, data_dir.get_data_dir(), info_img)
         try:

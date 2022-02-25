@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -19,7 +18,7 @@ def run(test, params, env):
 
     def check_status_unplug(out, dev):
         if out is True:
-            logging.debug("Unplug %s successfully", dev)
+            test.log.debug("Unplug %s successfully", dev)
         else:
             test.fail("Error occurred while unpluging %s" % dev)
 
@@ -33,7 +32,7 @@ def run(test, params, env):
     params["path_char_plug"] = char_path
     dev_driver = params["dev_driver"]
     dev_id = params["dev_id"]
-    error_context.context("hotplug guest agent device", logging.info)
+    error_context.context("hotplug guest agent device", test.log.info)
     params_char_plug = params.object_params("char_plug")
     chardev = qdevices.CharDevice(params=params_char_plug)
     chardev.hotplug(vm.monitor, vm.devices.qemu_version)
@@ -43,10 +42,10 @@ def run(test, params, env):
     device.set_param("name", gagent_name)
     device.hotplug(vm.monitor, vm.devices.qemu_version)
 
-    error_context.context("install and start guest agent", logging.info)
+    error_context.context("install and start guest agent", test.log.info)
     guest_agent_run(test, params, env)
 
-    error_context.context("hot unplug guest agent device", logging.info)
+    error_context.context("hot unplug guest agent device", test.log.info)
     device.unplug(vm.monitor)
     device_status = device.verify_unplug("", vm.monitor)
     check_status_unplug(device_status, "virtserialport")

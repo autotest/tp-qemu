@@ -10,6 +10,8 @@ from virttest import utils_misc
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheckWin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
 
@@ -41,7 +43,7 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
                     % (self.host_path, file_size))
         self.orig_hash = crypto.hash_file(self.host_path)
         error_context.context("Transfer file from %s to %s" %
-                              (self.host_path, self.guest_path), logging.info)
+                              (self.host_path, self.guest_path), LOG_JOB.info)
         self.bg = utils_misc.InterruptedThread(
             self.vm.copy_files_to,
             (self.host_path, self.guest_path),
@@ -56,14 +58,14 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
         snapshot_node_name = self.params.get("snapshot_node_name")
         if self.params.get("snapshot_file") not in snapshot_info:
             self.test.fail("Snapshot doesn't exist:%s" % snapshot_info)
-        logging.info("Found snapshot in guest")
+        LOG_JOB.info("Found snapshot in guest")
         if snapshot_node_name:
             match_string = "u?'node-name': u?'%s'" % snapshot_node_name
             if not re.search(match_string, snapshot_info):
                 self.test.fail("Can not find node name %s of"
                                " snapshot in block info %s"
                                % (snapshot_node_name, snapshot_info))
-            logging.info("Match node-name if they are same with expected")
+            LOG_JOB.info("Match node-name if they are same with expected")
 
     def cleanup(self, test, params, env):
         super(QemuGuestAgentSnapshotTest, self).cleanup(test, params, env)
@@ -75,11 +77,11 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
             image_tag = self.params.get("image_name", "image1")
             image_params = self.params.object_params(image_tag)
 
-            error_context.context("Creating snapshot", logging.info)
+            error_context.context("Creating snapshot", LOG_JOB.info)
             self.snapshot_create.prepare_snapshot_file()
             self.snapshot_create.create_snapshot()
             error_context.context("Checking snapshot created successfully",
-                                  logging.info)
+                                  LOG_JOB.info)
             self.check_snapshot()
 
     @error_context.context_aware
@@ -94,14 +96,14 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
         try:
             self.host_path_returned = "%s-returned" % self.host_path
             self.vm.copy_files_from(self.guest_path, self.host_path_returned)
-            error_context.context("comparing hashes", logging.info)
+            error_context.context("comparing hashes", LOG_JOB.info)
             self.curr_hash = crypto.hash_file(self.host_path_returned)
             if self.orig_hash != self.curr_hash:
                 self.test.fail("Current file hash (%s) differs from "
                                "original one (%s)" % (self.curr_hash,
                                                       self.orig_hash))
         finally:
-            error_context.context("Delete the created files.", logging.info)
+            error_context.context("Delete the created files.", LOG_JOB.info)
             process.run("rm -rf %s %s" % (self.host_path,
                                           self.host_path_returned))
             session = self._get_session(self.params, None)

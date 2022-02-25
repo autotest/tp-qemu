@@ -1,4 +1,3 @@
-import logging
 import time
 from functools import partial
 
@@ -69,20 +68,20 @@ def run(test, params, env):
     end_time = time.time() + timeout
     qmp_monitors = vm.get_monitors_by_type("qmp")
     qmp_num = len(qmp_monitors)
-    logging.info("Try to get qmp events in %s seconds!", timeout)
+    test.log.info("Try to get qmp events in %s seconds!", timeout)
     while time.time() < end_time:
         for monitor in qmp_monitors:
             event = monitor.get_event(event_check)
             if event_check == "WATCHDOG":
                 if event and event['data']['action'] == action_check:
-                    logging.info("Receive watchdog %s event notification",
-                                 action_check)
+                    test.log.info("Receive watchdog %s event notification",
+                                  action_check)
                     qmp_num -= 1
                     qmp_monitors.remove(monitor)
             else:
                 if event:
-                    logging.info("Receive qmp %s event notification",
-                                 event_check)
+                    test.log.info("Receive qmp %s event notification",
+                                  event_check)
                     qmp_num -= 1
                     qmp_monitors.remove(monitor)
         time.sleep(5)

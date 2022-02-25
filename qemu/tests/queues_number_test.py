@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -98,43 +97,43 @@ def run(test, params, env):
         while bg_test:
             session = vm.wait_for_login()
             session_serial = vm.wait_for_serial_login(timeout=login_timeout)
-            error_context.context("Enable multi queues in guest.", logging.info)
+            error_context.context("Enable multi queues in guest.", test.log.info)
             for nic in vm.virtnet:
                 ifname = utils_net.get_linux_ifname(session_serial, nic.mac)
                 queues = int(nic.queues)
                 change_queues_number(ifname, queues)
             error_context.context("Run test %s background" % netperf_stress,
-                                  logging.info)
+                                  test.log.info)
             stress_thread = utils_misc.InterruptedThread(
                 netperf_test.netperf_stress, (test, params, vm))
             stress_thread.start()
 
             # ping test
-            error_context.context("Ping guest from host", logging.info)
+            error_context.context("Ping guest from host", test.log.info)
             args = (guest_ip, ping_time, ping_lost_ratio)
             bg_ping = utils_misc.InterruptedThread(ping_test, args)
             bg_ping.start()
 
             error_context.context("Change queues number repeatedly",
-                                  logging.info)
+                                  test.log.info)
             repeat_counts = params.get_numeric("repeat_counts")
             for nic in vm.virtnet:
                 queues = int(nic.queues)
                 if queues == 1:
-                    logging.info("Nic with single queue, skip and continue")
+                    test.log.info("Nic with single queue, skip and continue")
                     continue
                 ifname = utils_net.get_linux_ifname(session_serial, nic.mac)
                 change_list = params.get("change_list").split(",")
                 for repeat_num in range(repeat_counts):
                     error_context.context("Change queues number -- %sth"
-                                          % repeat_num, logging.info)
+                                          % repeat_num, test.log.info)
                     queues_status = get_queues_status(ifname)
                     for q_number in change_list:
                         queues_status = change_queues_number(ifname,
                                                              int(q_number),
                                                              queues_status)
 
-            logging.info("wait for background test finish")
+            test.log.info("wait for background test finish")
             try:
                 stress_thread.join()
             except Exception as err:
@@ -142,7 +141,7 @@ def run(test, params, env):
                 err_msg += "Error Info: '%s'"
                 test.error(err_msg % (netperf_stress, err))
 
-            logging.info("Wait for background ping test finish.")
+            test.log.info("Wait for background ping test finish.")
             try:
                 bg_ping.join()
             except Exception as err:
@@ -151,7 +150,7 @@ def run(test, params, env):
                 test.fail(txt)
 
             if required_reboot:
-                logging.info("Rebooting guest ...")
+                test.log.info("Rebooting guest ...")
                 vm.reboot()
                 required_reboot = False
             else:

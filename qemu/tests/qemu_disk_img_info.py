@@ -6,6 +6,8 @@ from virttest import storage
 
 from qemu.tests import qemu_disk_img
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class InfoTest(qemu_disk_img.QemuImgTest):
 
@@ -17,7 +19,7 @@ class InfoTest(qemu_disk_img.QemuImgTest):
     @error_context.context_aware
     def start_vm(self, t_params=None):
         """Start a vm and wait for its bootup."""
-        error_context.context("start vm", logging.info)
+        error_context.context("start vm", LOG_JOB.info)
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)

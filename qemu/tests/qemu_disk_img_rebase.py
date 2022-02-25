@@ -8,6 +8,8 @@ from virttest import storage
 
 from qemu.tests import qemu_disk_img
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class RebaseTest(qemu_disk_img.QemuImgTest):
 
@@ -21,7 +23,7 @@ class RebaseTest(qemu_disk_img.QemuImgTest):
         """
         Rebase snapshot, AKA changes backing file to new image;
         """
-        error_context.context("rebase snapshot to backingfile", logging.info)
+        error_context.context("rebase snapshot to backingfile", LOG_JOB.info)
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)

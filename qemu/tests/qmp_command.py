@@ -1,4 +1,3 @@
-import logging
 import operator
 import time
 import platform
@@ -104,8 +103,8 @@ def run(test, params, env):
         :param expect_o: the expect result.
         :type expect_o: list
         """
-        logging.info("Expect result is %s", expect_o)
-        logging.info("Actual result that get from qmp_cmd/post_cmd is %s", qmp_o)
+        test.log.info("Expect result is %s", expect_o)
+        test.log.info("Actual result that get from qmp_cmd/post_cmd is %s", qmp_o)
         if result_check == "equal":
             if not operator.eq(qmp_o, expect_o):
                 test.fail("QMP output does not equal to the expect result.\n "
@@ -122,7 +121,7 @@ def run(test, params, env):
                     result = check_list(qmp_o, o, check_item_in_pair=False)
 
                 if result:
-                    logging.info("QMP output contain the expect value %s", o)
+                    test.log.info("QMP output contain the expect value %s", o)
                 else:
                     test.fail("QMP output does not contain the expect value.\n"
                               "Missed expect value: '%s'\n"
@@ -153,7 +152,7 @@ def run(test, params, env):
 
     module = params.get("modprobe_module")
     if module:
-        logging.info("modprobe the module %s", module)
+        test.log.info("modprobe the module %s", module)
         session.cmd("modprobe %s" % module)
 
     qmp_ports = vm.get_monitors_by_type('qmp')
@@ -182,22 +181,22 @@ def run(test, params, env):
 
     # Pre command
     if pre_cmd is not None:
-        logging.info("Run prepare command '%s'.", pre_cmd)
+        test.log.info("Run prepare command '%s'.", pre_cmd)
         pre_o = send_cmd(pre_cmd)
-        logging.debug("Pre-command: '%s'\n Output: '%s'", pre_cmd, pre_o)
+        test.log.debug("Pre-command: '%s'\n Output: '%s'", pre_cmd, pre_o)
 
     # qmp command
     try:
         # Testing command
-        logging.info("Run qmp command '%s'.", qmp_cmd)
+        test.log.info("Run qmp command '%s'.", qmp_cmd)
         qmp_o = qmp_port.send_args_cmd(qmp_cmd)
         if not isinstance(qmp_o, list):
             qmp_o = [qmp_o]
-        logging.debug("QMP command: '%s' \n Output: '%s'", qmp_cmd, qmp_o)
+        test.log.debug("QMP command: '%s' \n Output: '%s'", qmp_cmd, qmp_o)
     except qemu_monitor.QMPCmdError as err:
         if params.get("negative_test") == 'yes':
-            logging.debug("Negative QMP command: '%s'\n output:'%s'", qmp_cmd,
-                          err)
+            test.log.debug("Negative QMP command: '%s'\n output:'%s'", qmp_cmd,
+                           err)
             if params.get("negative_check_pattern"):
                 check_pattern = params.get("negative_check_pattern")
                 if check_pattern not in str(err):
@@ -216,14 +215,14 @@ def run(test, params, env):
 
     # Post command
     if post_cmd is not None:
-        logging.info("Run post command '%s'.", post_cmd)
+        test.log.info("Run post command '%s'.", post_cmd)
         post_o = send_cmd(post_cmd)
         if not isinstance(post_o, list):
             post_o = [post_o]
-        logging.debug("Post-command: '%s'\n Output: '%s'", post_cmd, post_o)
+        test.log.debug("Post-command: '%s'\n Output: '%s'", post_cmd, post_o)
 
     if result_check == "equal" or result_check == "contain":
-        logging.info("Verify qmp command '%s' works as designed.", qmp_cmd)
+        test.log.info("Verify qmp command '%s' works as designed.", qmp_cmd)
         if qmp_cmd == "query-name":
             vm_name = params["main_vm"]
             expect_o = [{'name': vm_name}]
@@ -263,7 +262,7 @@ def run(test, params, env):
             expect_o = [{'service': str(vnc_port)}, {'enabled': True}, {'host': '0.0.0.0'}]
         check_result(qmp_o, expect_o)
     elif result_check.startswith("post_"):
-        logging.info("Verify post qmp command '%s' works as designed.", post_cmd)
+        test.log.info("Verify post qmp command '%s' works as designed.", post_cmd)
         result_check = result_check.split('_', 1)[1]
         check_result(post_o, expect_o)
     session.close()

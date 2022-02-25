@@ -1,6 +1,3 @@
-import logging
-
-
 try:
     unicode
 except NameError:
@@ -105,7 +102,7 @@ def run(test, params, env):
         :param classname: Expected error class name
         :param datadict: Expected error data dictionary
         """
-        logging.debug("resp %s", str(resp))
+        test.log.debug("resp %s", str(resp))
         check_key_is_dict(resp, "error")
         check_key_is_str(resp["error"], "class")
         if classname and resp["error"]["class"] != classname:

@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 try:
     from configparser import ConfigParser
 except ImportError:
@@ -47,7 +46,7 @@ def run(test, params, env):
     pre_snapshot = params.get("pre_snapshot", "no") == "yes"
     del_snapshot = params.get("del_snapshot", "no") == "yes"
 
-    error_context.context("Create image", logging.info)
+    error_context.context("Create image", test.log.info)
     image_io = QemuImg(
         params.object_params(image), data_dir.get_data_dir(), image)
     image_name, _ = image_io.create(params.object_params(image))
@@ -59,11 +58,11 @@ def run(test, params, env):
     for errn in errn_list:
         log_filename = utils_misc.get_path(test.outputdir,
                                            "qemu-io-log-%s" % errn)
-        error_context.context("Write the blkdebug config file", logging.info)
+        error_context.context("Write the blkdebug config file", test.log.info)
         template.set("inject-error", "event", '"%s"' % err_event)
         template.set("inject-error", "errno", '"%s"' % errn)
 
-        error_context.context("Write blkdebug config file", logging.info)
+        error_context.context("Write blkdebug config file", test.log.info)
         blkdebug = None
         try:
             blkdebug = open(blkdebug_cfg, 'w')
@@ -72,13 +71,13 @@ def run(test, params, env):
             if blkdebug is not None:
                 blkdebug.close()
 
-        error_context.context("Create image", logging.info)
+        error_context.context("Create image", test.log.info)
         image_io = QemuImg(params.object_params(
             image), data_dir.get_data_dir(), image)
         image_name = image_io.create(params.object_params(image))[0]
 
         error_context.context("Operate in qemu-io to trigger the error",
-                              logging.info)
+                              test.log.info)
         session = qemu_io.QemuIOShellSession(test, params, image_name,
                                              blkdebug_cfg=blkdebug_cfg,
                                              log_filename=log_filename)
@@ -113,7 +112,7 @@ def run(test, params, env):
                 params_sn, data_dir.get_data_dir(), image_sn)
             image_snapshot.remove()
 
-        error_context.context("Get error message", logging.info)
+        error_context.context("Get error message", test.log.info)
         try:
             std_msg = os.strerror(int(errn))
         except ValueError:
@@ -121,9 +120,9 @@ def run(test, params, env):
                        "    error code is %s" % errn)
 
         session.close()
-        error_context.context("Compare the error message", logging.info)
+        error_context.context("Compare the error message", test.log.info)
         if std_msg in output:
-            logging.info("Error message is correct in qemu-io")
+            test.log.info("Error message is correct in qemu-io")
         else:
             fail_log = "The error message is mismatch:\n"
             fail_log += "    qemu-io reports: '%s',\n" % output

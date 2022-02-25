@@ -12,6 +12,8 @@ from virttest.utils_windows import wmic
 
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheckWin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
@@ -40,12 +42,12 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
             :param cdrom_virtio: iso file
             """
-            logging.info("Change cdrom to %s", cdrom_virtio)
+            LOG_JOB.info("Change cdrom to %s", cdrom_virtio)
             virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                              cdrom_virtio)
             vm.change_media("drive_virtio", virtio_iso)
 
-            logging.info("Wait until device is ready")
+            LOG_JOB.info("Wait until device is ready")
             vol_virtio_key = "VolumeName like '%virtio-win%'"
             timeout = 10
             end_time = time.time() + timeout
@@ -79,7 +81,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
             # qemu-ga-win-7.5.0-2.el7ev
             qga_pattern = re.compile(r"%s" % params["qga_pattern"])
             qga_pre_pkg = qga_pattern.findall(tgt_line)[0]
-            logging.info("The previous qemu-ga version is %s.", qga_pre_pkg)
+            LOG_JOB.info("The previous qemu-ga version is %s.", qga_pre_pkg)
 
             # https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/
             #   archive-qemu-ga/qemu-ga-win-7.5.0-2.el7ev/
@@ -99,7 +101,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
                                                  ) % qga_pkg_path
             self.gagent_install(session, vm)
 
-        error_context.context("Boot up vm.", logging.info)
+        error_context.context("Boot up vm.", LOG_JOB.info)
         params["start_vm"] = "yes"
         latest_qga_download_cmd = params["gagent_download_cmd"]
         env_process.preprocess_vm(test, params, env, params["main_vm"])
@@ -108,7 +110,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
         if params.get("driver_uninstall", "no") == "yes":
             error_context.context("Uninstall vioser driver in guest.",
-                                  logging.info)
+                                  LOG_JOB.info)
             device_name = params["device_name"]
             driver_name = params["driver_name"]
             inf_names_get_cmd = wmic.make_query("path win32_pnpsigneddriver",
@@ -126,11 +128,11 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
                                "details:\n%s" % (driver_name, o))
 
         error_context.context("Install the previous qemu-ga in guest.",
-                              logging.info)
+                              LOG_JOB.info)
         gagent_download_url = params["gagent_download_url"]
         rpm_install = "rpm_install" in gagent_download_url
         if self._check_ga_pkg(session, params["gagent_pkg_check_cmd"]):
-            logging.info("Uninstall the one which is installed.")
+            LOG_JOB.info("Uninstall the one which is installed.")
             self.gagent_uninstall(session, vm)
 
         if self.gagent_src_type == "virtio-win" or rpm_install:
@@ -143,7 +145,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
         _qga_install()
 
         error_context.context("Update qemu-ga to the latest one.",
-                              logging.info)
+                              LOG_JOB.info)
         if self.gagent_src_type == "virtio-win" or rpm_install:
             _change_agent_media(params["cdrom_virtio"])
         else:
@@ -151,7 +153,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
         _qga_install()
 
-        error_context.context("Basic test for qemu-ga.", logging.info)
+        error_context.context("Basic test for qemu-ga.", LOG_JOB.info)
         args = [params.get("gagent_serial_type"), params.get("gagent_name")]
         self.gagent_create(params, vm, *args)
         self.gagent_verify(params, vm)

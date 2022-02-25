@@ -11,6 +11,8 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class QemuIOConfig(object):
 
@@ -41,7 +43,7 @@ class QemuIOConfig(object):
 
     @error_context.context_aware
     def setup(self):
-        error_context.context("performing setup", logging.debug)
+        error_context.context("performing setup", LOG_JOB.debug)
         utils_misc.display_attributes(self)
         # Double check if there aren't any leftovers
         self.cleanup()
@@ -68,12 +70,12 @@ class QemuIOConfig(object):
             try:
                 self.cleanup()
             except Exception as e:
-                logging.warn(e)
+                LOG_JOB.warn(e)
             raise
 
     @error_context.context_aware
     def cleanup(self):
-        error_context.context("performing qemu_io cleanup", logging.debug)
+        error_context.context("performing qemu_io cleanup", LOG_JOB.debug)
         if os.path.isfile(self.lvtest_device):
             process.run("fuser -k %s" % self.lvtest_device)
             time.sleep(2)
@@ -95,7 +97,7 @@ class QemuIOConfig(object):
                 try:
                     process.run("losetup -d %s" % l)
                 except process.CmdError as e:
-                    logging.error("Failed to liberate loopback %s, "
+                    LOG_JOB.error("Failed to liberate loopback %s, "
                                   "error msg: '%s'", l, e)
 
         for f in self.raw_files:
@@ -124,11 +126,11 @@ def run(test, params, env):
                                'scripts/qemu_iotests.sh')
     test_image = params.get("test_image",
                             os.path.join(test.tmpdir, "test.qcow2"))
-    logging.info("Run script(%s) with image(%s)",
-                 test_script, test_image)
+    test.log.info("Run script(%s) with image(%s)",
+                  test_script, test_image)
     s, test_result = aexpect.run_fg("sh %s %s" % (test_script,
                                                   test_image),
-                                    logging.debug, timeout=1800)
+                                    test.log.debug, timeout=1800)
 
     err_string = {
         "err_nums": r"\d errors were found on the image.",
@@ -151,4 +153,4 @@ def run(test, params, env):
             if qemu_io_config:
                 qemu_io_config.cleanup()
         except Exception as e:
-            logging.warn(e)
+            test.log.warn(e)

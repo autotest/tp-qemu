@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_misc
 
@@ -29,11 +27,11 @@ def run(test, params, env):
     vm.verify_alive()
     qemu_process_id = vm.get_pid()
     session = vm.wait_for_login(timeout=timeout)
-    logging.info("The guest bootup successfully.")
+    test.log.info("The guest bootup successfully.")
 
     for i in range(repeat_times):
         error_context.context("Round %s : Send monitor cmd system_powerdown."
-                              % str(i + 1), logging.info)
+                              % str(i + 1), test.log.info)
         # Send a system_powerdown monitor command
         vm.monitor.system_powerdown()
         # Wait for the session to become unresponsive and close it
@@ -48,16 +46,16 @@ def run(test, params, env):
                       "with -no-shutdown!")
         if vm.get_pid() != qemu_process_id:
             test.fail("Qemu pid changed after system_powerdown!")
-        logging.info("Round %s -> System_powerdown successfully.", str(i + 1))
+        test.log.info("Round %s -> System_powerdown successfully.", str(i + 1))
 
         # Send monitor command system_reset and cont
         error_context.context("Round %s : Send monitor command system_reset "
-                              "and cont." % str(i + 1), logging.info)
+                              "and cont." % str(i + 1), test.log.info)
         vm.monitor.cmd("system_reset")
         vm.resume()
 
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("Round %s -> Guest is up successfully.", str(i + 1))
+        test.log.info("Round %s -> Guest is up successfully.", str(i + 1))
         if vm.get_pid() != qemu_process_id:
             test.fail("Qemu pid changed after system_reset & cont!")
     if session:

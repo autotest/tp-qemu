@@ -10,6 +10,8 @@ from virttest import error_context
 
 from qemu.tests import qemu_disk_img
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class CommitTest(qemu_disk_img.QemuImgTest):
 
@@ -23,7 +25,7 @@ class CommitTest(qemu_disk_img.QemuImgTest):
         """
         commit snapshot to backing file;
         """
-        error_context.context("commit snapshot to backingfile", logging.info)
+        error_context.context("commit snapshot to backingfile", LOG_JOB.info)
         params = self.params.object_params(self.tag)
         if t_params:
             params.update(t_params)
@@ -66,16 +68,16 @@ def run(test, params, env):
     sn_img = _get_img_obj(sn_tag)
     org_size = json.loads(sn_img.info(output="json"))["actual-size"]
     commit_test.commit()
-    error_context.context("sync host data after commit", logging.info)
+    error_context.context("sync host data after commit", test.log.info)
     process.system("sync")
     remain_size = json.loads(sn_img.info(output="json"))["actual-size"]
 
     """Verify the snapshot file whether emptied after committing"""
-    logging.info("Verify the snapshot file whether emptied after committing")
+    test.log.info("Verify the snapshot file whether emptied after committing")
     commit_size = org_size - remain_size
     dd_size = eval(params["dd_total_size"])
     if commit_size >= dd_size:
-        logging.info("The snapshot file was emptied!")
+        test.log.info("The snapshot file was emptied!")
     else:
         test.fail("The snapshot file was not emptied, check pls!")
 

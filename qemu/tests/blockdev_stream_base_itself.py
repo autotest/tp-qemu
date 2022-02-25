@@ -7,6 +7,8 @@ from provider import backup_utils
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevStreamBaseitself(BlockDevStreamTest):
     """Do block-stream based on itself"""
@@ -56,7 +58,7 @@ class BlockdevStreamBaseitself(BlockDevStreamTest):
                 self.clone_vm.destroy()
             self._remove_images()
         except Exception as e:
-            logging.warning(str(e))
+            LOG_JOB.warning(str(e))
 
     def clone_vm_with_snapshot(self):
         if self.main_vm.is_alive():

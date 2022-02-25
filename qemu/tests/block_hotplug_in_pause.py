@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -168,7 +167,7 @@ def run(test, params, env):
         :param get_disk_cmd: Cmd to get disks info in guest.
         :param plug_tag: Tag for hotplug/unplug
         """
-        logging.info("Check block device in guest after %s.", plug_tag)
+        test.log.info("Check block device in guest after %s.", plug_tag)
         pause = float(params.get("virtio_block_pause", 30.0))
         status = utils_misc.wait_for(
             lambda: len(
@@ -192,7 +191,7 @@ def run(test, params, env):
         if not utils_disk.update_windows_disk_attributes(session, drive_indexs):
             test.fail("Failed to clear readonly for all disks and online "
                       "them in guest")
-        error_context.context("Format disk", logging.info)
+        error_context.context("Format disk", test.log.info)
         for item in index_sizes:
             did, size = item.split()
             drive_letter = utils_disk.configure_empty_windows_disk(session,
@@ -213,7 +212,7 @@ def run(test, params, env):
                 get_windows_drive_letters(session, plug_disks)
             plug_disks = windows_drive_letters
 
-        logging.info("Read/Writ on block device after hotplug.")
+        test.log.info("Read/Writ on block device after hotplug.")
         disk_op_timeout = int(params.get("disk_op_timeout", 360))
         for disk in plug_disks:
             if params.get("os_type") not in ["linux", "windows"]:
@@ -243,8 +242,8 @@ def run(test, params, env):
         device_list = []
         if params.get("need_plug") == "yes":
             error_context.context("Run block hotplug/unplug for iteration:"
-                                  "%d" % iteration, logging.info)
-            error_context.context("Plug device", logging.info)
+                                  "%d" % iteration, test.log.info)
+            error_context.context("Plug device", test.log.info)
             disks_before_plug = find_disk(session, get_disk_cmd)
 
             if params.get("stop_vm_before_hotplug", "no") == "yes":
@@ -278,7 +277,7 @@ def run(test, params, env):
                     if device.get_param("id") == img:
                         device_list.append(device)
 
-        error_context.context("Unplug device", logging.info)
+        error_context.context("Unplug device", test.log.info)
         if not is_vm_paused:
             disks_before_unplug = find_disk(session, get_disk_cmd)
             if params.get("stop_vm_before_unplug", "yes") == "yes":

@@ -10,6 +10,8 @@ from virttest import utils_test
 from virttest.qemu_capabilities import Flags
 from virttest.qemu_devices import qdevices
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def find_all_disks(session, windows):
     """ Find all disks in guest. """
@@ -31,7 +33,7 @@ def wait_plug_disks(session, action, disks_before_plug, excepted_num,
         disks_info_linux = 'lsblk -a'
         disks_info = session.cmd(
             disks_info_win if windows else disks_info_linux)
-        logging.debug("The details of disks:\n %s", disks_info)
+        LOG_JOB.debug("The details of disks:\n %s", disks_info)
         test.fail("Failed to {0} devices from guest, need to {0}: {1}, "
                   "actual {0}: {2}".format(action, excepted_num,
                                            len(disks_before_plug ^ all_disks)))
@@ -55,7 +57,7 @@ def run(test, params, env):
 
     def run_sub_test(test_name):
         """ Run subtest before/after hotplug/unplug device. """
-        error_context.context("Running sub test '%s'." % test_name, logging.info)
+        error_context.context("Running sub test '%s'." % test_name, test.log.info)
         utils_test.run_virt_sub_test(test, params, env, test_name)
 
     def create_block_devices(image):
@@ -74,7 +76,7 @@ def run(test, params, env):
     def plug_block_devices(action, plug_devices):
         """ Plug block devices. """
         error_context.context("%s block device (iteration %d)" %
-                              (action.capitalize(), iteration), logging.info)
+                              (action.capitalize(), iteration), test.log.info)
         session = vm.wait_for_login(timeout=timeout)
         disks_before_plug = find_all_disks(session, windows)
         plug_devices = plug_devices if action == 'hotplug' else plug_devices[::-1]
@@ -90,7 +92,7 @@ def run(test, params, env):
 
     def format_disk_win():
         """ Format disk in windows. """
-        error_context.context("Format disk %s in windows." % new_disk, logging.info)
+        error_context.context("Format disk %s in windows." % new_disk, test.log.info)
         session = vm.wait_for_login(timeout=timeout)
         if disk_index is None and disk_letter is None:
             drive_letters.append(
@@ -105,7 +107,7 @@ def run(test, params, env):
     def run_io_test():
         """ Run io test on the hot plugged disks. """
         error_context.context(
-            "Run io test on the hot plugged disks.", logging.info)
+            "Run io test on the hot plugged disks.", test.log.info)
         session = vm.wait_for_login(timeout=timeout)
         if windows:
             drive_letter = drive_letters[index]
@@ -132,7 +134,7 @@ def run(test, params, env):
             size = re.search(p % did, disk_info, re.I | re.M).groupdict()['size'].strip()
         else:
             size = utils_disk.get_linux_disks(session)[did][1].strip()
-        logging.info('The size of disk %s is %s', did, size)
+        test.log.info('The size of disk %s is %s', did, size)
         session.close()
         return size
 
@@ -145,7 +147,7 @@ def run(test, params, env):
         """
         error_context.context(
             'Check whether the size of the disk[%s] hot plugged is equal to '
-            'excepted size(%s).' % (did, excepted_size), logging.info)
+            'excepted size(%s).' % (did, excepted_size), test.log.info)
         value, unit = re.search(r"(\d+\.?\d*)\s*(\w?)", excepted_size).groups()
         if utils_numeric.normalize_data_size(get_disk_size(did), unit) != value:
             test.fail('The size of disk %s is not equal to excepted size(%s).'

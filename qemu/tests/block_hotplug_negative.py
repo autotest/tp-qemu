@@ -1,4 +1,3 @@
-import logging
 import time
 
 from virttest import error_context
@@ -27,16 +26,16 @@ def run(test, params, env):
         :param drive: instance of QRHDrive
         :param vm: Vitual Machine object
         """
-        error_context.context("unplug the drive", logging.info)
+        error_context.context("unplug the drive", test.log.info)
         drive.unplug(vm.monitor)
         time.sleep(5)
-        error_context.context("Hotplug the drive", logging.info)
+        error_context.context("Hotplug the drive", test.log.info)
         drive.hotplug(vm.monitor, vm.devices.qemu_version)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Hotplug block device", logging.info)
+    error_context.context("Hotplug block device", test.log.info)
     img_list = params.get("images").split()
     image_name = img_list[-1]
     image_params = params.object_params(image_name)
@@ -48,7 +47,7 @@ def run(test, params, env):
             ret = vm.devices.simple_hotplug(dev, vm.monitor)
         except Exception as e:
             if "QMP command 'device_add' failed" in str(e):
-                logging.info("Failed to hotplug device with invalid params")
+                test.log.info("Failed to hotplug device with invalid params")
                 try:
                     drive_unplug_plug(drive, vm)
                 except Exception as e:
@@ -56,7 +55,7 @@ def run(test, params, env):
                               "%s") % e
 
     error_context.context("Check vm is alive after drive unplug/hotplug test",
-                          logging.info)
+                          test.log.info)
     session = vm.wait_for_login()
     if not session.is_responsive():
         session.close()

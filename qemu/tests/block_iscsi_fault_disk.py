@@ -1,6 +1,5 @@
 """Test to kill vm should non-infinite """
 
-import logging
 import time
 import random
 import string
@@ -73,7 +72,7 @@ def run(test, params, env):
         status, output = session.cmd_status_output(cmd)
         if status != 0:
             test.fail("execute command fail: %s" % output)
-        logging.debug(output)
+        test.log.debug(output)
         output = "".join([s for s in output.splitlines(True) if s.strip()])
 
         info = output.split(":")
@@ -82,7 +81,7 @@ def run(test, params, env):
 
         cmd = "powershell -command \"get-disk| FL\""
         output = session.cmd_output(cmd)
-        logging.debug(output)
+        test.log.debug(output)
         test.fail("Not find expected disk:" + wwn)
 
     def _get_disk_wwn(devname):
@@ -103,9 +102,9 @@ def run(test, params, env):
     host_kill_command = params["host_kill_command"]
 
     try:
-        logging.info("Prepare fault disk.")
+        test.log.info("Prepare fault disk.")
         _prepare_fault_disk()
-        logging.info("Create iscsi disk disk.")
+        test.log.info("Create iscsi disk disk.")
         base_dir = data_dir.get_data_dir()
         iscsi = Iscsi.create_iSCSI(params, base_dir)
         iscsi.login()
@@ -114,11 +113,11 @@ def run(test, params, env):
         if not dev_name:
             test.error('Can not get the iSCSI device.')
 
-        logging.info('Create host disk %s', dev_name)
+        test.log.info('Create host disk %s', dev_name)
         disk_wwn = _get_disk_wwn(dev_name)
         params["image_name_stg0"] = dev_name
 
-        logging.info('Booting vm...')
+        test.log.info('Booting vm...')
         params['start_vm'] = 'yes'
         vm = env.get_vm(params['main_vm'])
         env_process.process(test, params, env, env_process.preprocess_image,
@@ -133,26 +132,26 @@ def run(test, params, env):
             disk_drive = get_linux_drive_path(session, disk_wwn)
 
         guest_cmd = guest_cmd % disk_drive
-        logging.debug("guest_cmd:%s", guest_cmd)
+        test.log.debug("guest_cmd:%s", guest_cmd)
 
-        logging.info("Execute io in guest...")
+        test.log.info("Execute io in guest...")
         session.sendline(guest_cmd)
         time.sleep(10)
 
-        logging.info("Ready to kill vm...")
+        test.log.info("Ready to kill vm...")
         process.system_output(host_kill_command, shell=True).decode()
 
         real_timeout = int(process.system_output(params["get_timeout_command"],
                                                  shell=True).decode())
 
         if kill_min_timeout < real_timeout < kill_max_timeout:
-            logging.info("Succeed kill timeout: %d", real_timeout)
+            test.log.info("Succeed kill timeout: %d", real_timeout)
         else:
             test.fail("Kill timeout %d not in range (%d , %d)" % (
                 real_timeout, kill_min_timeout, kill_max_timeout))
         vm = None
     finally:
-        logging.info("cleanup")
+        test.log.info("cleanup")
         if iscsi:
             iscsi.cleanup()
         _cleanup()

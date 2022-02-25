@@ -1,5 +1,4 @@
 """sg_write_same command testing for discard feature"""
-import logging
 import os
 
 from avocado.utils import process
@@ -40,7 +39,7 @@ def run(test, params, env):
             "$SHELL " + guest_file + " " + dev)
         if status != 0:
             test.fail("run sg_write_same failed:" + output)
-        logging.debug(output)
+        test.log.debug(output)
 
     def _get_scsi_debug_disk(guest_session=None):
         """"
@@ -94,21 +93,21 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Boot guest with disk '%s'" % disk_name,
-                          logging.info)
+                          test.log.info)
     guest_disk_drive = get_linux_drive_path(session, disk_serial)
     if not guest_disk_drive:
         test.fail("Can not get data disk in guest.")
 
-    error_context.context("Run sg_write_same cmd in guest", logging.info)
+    error_context.context("Run sg_write_same cmd in guest", test.log.info)
     _run_sg_write_same(guest_disk_drive)
 
-    error_context.context("Get sha1sum in guest", logging.info)
+    error_context.context("Get sha1sum in guest", test.log.info)
     guest_sha1sum = _get_sha1sum(guest_disk_drive, session)
 
-    error_context.context("Show blocks info", logging.info)
+    error_context.context("Show blocks info", test.log.info)
     _show_blocks_info(disk_name)
 
-    error_context.context("Get sha1sum on host", logging.info)
+    error_context.context("Get sha1sum on host", test.log.info)
     host_sha1sum = _get_sha1sum(disk_name)
 
     if guest_sha1sum != host_sha1sum:

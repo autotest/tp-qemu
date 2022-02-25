@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_disk
@@ -36,7 +34,7 @@ def run(test, params, env):
 
     def hotplug_path_disk(vm, path_dev):
         """Hotplug passthrough disk."""
-        error_context.context("Hotplug passthrough device", logging.info)
+        error_context.context("Hotplug passthrough device", test.log.info)
         vm.params["image_name_stg0"] = path_dev
         plug = BlockDevicesPlug(vm)
         plug.hotplug_devs_serial()
@@ -62,18 +60,18 @@ def run(test, params, env):
         dd_test = params.get('dd_test')
         if iozone_options:
             error_context.context(
-                    "Run iozone test on the plugged disk.", logging.info)
+                "Run iozone test on the plugged disk.", test.log.info)
             iozone = generate_instance(params, vm, 'iozone')
             iozone.run(iozone_options.format(partition[0]))
         if dd_test:
             error_context.context(
-                    "Do dd test on the plugged disk", logging.info)
+                "Do dd test on the plugged disk", test.log.info)
             partition = partition.split("/")[-1]
             session.cmd(dd_test.format(partition))
 
     def unplug_path_disk(vm):
         """Unplug passthrough disk."""
-        error_context.context("Unplug passthrouth device", logging.info)
+        error_context.context("Unplug passthrouth device", test.log.info)
         plug = BlockDevicesPlug(vm)
         plug.unplug_devs_serial()
 
@@ -83,7 +81,7 @@ def run(test, params, env):
 
     if params["os_type"] == "windows":
         session = utils_test.qemu.windrv_check_running_verifier(
-                session, vm, test, params["driver_name"])
+            session, vm, test, params["driver_name"])
 
     drive_index = hotplug_path_disk(vm, create_path_disk())
     run_io_test(session, format_plug_disk(session, drive_index))

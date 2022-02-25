@@ -6,6 +6,8 @@ from virttest import error_context
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
 
@@ -84,7 +86,7 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
                 snapshot_image = self.get_image_by_tag(snapshot_tag)
                 snapshot_image.remove()
         except Exception as error:
-            logging.error(str(error))
+            LOG_JOB.error(str(error))
 
 
 def run(test, params, env):

@@ -7,16 +7,18 @@ from virttest import error_context
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevSnapshotRebootTest(BlockDevSnapshotTest):
 
     @error_context.context_aware
     def create_snapshot(self):
         error_context.context("do snaoshot during guest rebooting",
-                              logging.info)
+                              LOG_JOB.info)
         bg_test = utils_test.BackgroundTest(self.vm_reset, "")
         bg_test.start()
-        logging.info("sleep random time to perform before snapshot")
+        LOG_JOB.info("sleep random time to perform before snapshot")
         time.sleep(random.randint(0, 10))
         super(BlockdevSnapshotRebootTest, self).create_snapshot()
 

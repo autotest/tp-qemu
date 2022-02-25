@@ -9,6 +9,8 @@ from virttest import data_dir
 from provider import backup_utils
 from provider.blockdev_base import BlockdevBaseTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlkdevIncXptInconBitmap(BlockdevBaseTest):
 
@@ -50,10 +52,10 @@ class BlkdevIncXptInconBitmap(BlockdevBaseTest):
         return list(map(self.generate_data_file, self.src_img_tags))
 
     def kill_vm_after_restart(self):
-        logging.info("Re-start vm again")
+        LOG_JOB.info("Re-start vm again")
         self.main_vm.create()
         session = self.main_vm.wait_for_login()
-        logging.info("Kill vm after its start")
+        LOG_JOB.info("Kill vm after its start")
         self.main_vm.monitors = []
         self.main_vm.destroy(gracefully=False)
 
@@ -70,9 +72,9 @@ class BlkdevIncXptInconBitmap(BlockdevBaseTest):
             return None
 
         if inconsistent:
-            logging.info("Check bitmap is inconsistent stored in image")
+            LOG_JOB.info("Check bitmap is inconsistent stored in image")
         else:
-            logging.info("Check persistent bitmap stored in image")
+            LOG_JOB.info("Check persistent bitmap stored in image")
         bitmap_info = _get_bitmap_info(self.bitmaps[0])
         if not bitmap_info:
             self.test.fail("Persistent bitmap not stored in image")
@@ -80,7 +82,7 @@ class BlkdevIncXptInconBitmap(BlockdevBaseTest):
             self.test.fail("Bitmap stored is not inconsistent")
 
     def expose_inconsistent_bitmap(self):
-        logging.info("Export inconsistent bitmap with qemu-nbd")
+        LOG_JOB.info("Export inconsistent bitmap with qemu-nbd")
         img_path = data_dir.get_data_dir()
         qemu_nbd_cmd = utils_misc.get_qemu_nbd_binary(self.params)
         cmd = self.params.get("export_cmd") % (qemu_nbd_cmd,

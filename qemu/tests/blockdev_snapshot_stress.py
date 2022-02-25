@@ -5,13 +5,15 @@ from virttest import error_context
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevSnapshotStressTest(BlockDevSnapshotTest):
 
     @error_context.context_aware
     def create_snapshot(self):
         error_context.context("do snaoshot during running stress in guest",
-                              logging.info)
+                              LOG_JOB.info)
         stress_test = utils_test.VMStress(self.main_vm, "stress", self.params)
         stress_test.load_stress_tool()
         super(BlockdevSnapshotStressTest, self).create_snapshot()

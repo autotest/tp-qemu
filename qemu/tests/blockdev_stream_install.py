@@ -9,6 +9,8 @@ from virttest.tests import unattended_install
 
 from provider.blockdev_stream_nowait import BlockdevStreamNowaitTest
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevStreamVMInstallTest(BlockdevStreamNowaitTest):
     """
@@ -28,12 +30,12 @@ class BlockdevStreamVMInstallTest(BlockdevStreamNowaitTest):
         self._bg = utils_test.BackgroundTest(unattended_install.run, args)
         self._bg.start()
 
-        logging.info("Wait till '%s'", self.params["tag_for_install_start"])
+        LOG_JOB.info("Wait till '%s'", self.params["tag_for_install_start"])
         if utils_misc.wait_for(
                 lambda: self._is_install_started(
                     self.params["tag_for_install_start"]),
                 int(self.params.get("timeout_for_install_start", 360)), 10, 5):
-            logging.info("Sleep some time before block-stream")
+            LOG_JOB.info("Sleep some time before block-stream")
             time.sleep(random.randint(10, 120))
         else:
             self.test.fail("Failed to start VM installation")

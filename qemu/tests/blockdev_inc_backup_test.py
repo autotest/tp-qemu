@@ -10,6 +10,8 @@ from virttest import qemu_monitor
 from provider import backup_utils
 from provider import blockdev_base
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
 
@@ -53,7 +55,7 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
         granularity = self.get_granularity()
         if granularity is not None:
             extra_options['granularity'] = granularity
-            logging.info("bitmap granularity is '%s' ", granularity)
+            LOG_JOB.info("bitmap granularity is '%s' ", granularity)
         backup_utils.blockdev_batch_backup(
             self.main_vm,
             self.source_images,

@@ -1,4 +1,3 @@
-import logging
 import re
 import os
 import time
@@ -46,7 +45,7 @@ def run(test, params, env):
         :param guest_qinq_dir: qing script dir in guest
 
         """
-        error_context.context("Copy qinq script to guest", logging.info)
+        error_context.context("Copy qinq script to guest", test.log.info)
         host_qinq_dir = os.path.join(data_dir.get_deps_dir(),
                                      params.get("copy_qinq_script"))
         vm.copy_files_to(host_qinq_dir, guest_qinq_dir)
@@ -70,7 +69,7 @@ def run(test, params, env):
         sum = 0
         for i in range(len(lines)):
             if enable_logging:
-                logging.info("line %s: %s", i, lines[i])
+                test.log.info("line %s: %s", i, lines[i])
             if not ethertype2:
                 if "ICMP echo re" in lines[i] and \
                         ethertype in lines[i-1]:
@@ -108,15 +107,15 @@ def run(test, params, env):
         :param name: file name
 
         """
-        logging.info("Comparing md5sum on guest and host")
+        test.log.info("Comparing md5sum on guest and host")
         host_result = crypto.hash_file(host_path, algorithm="md5")
         try:
             output = session.cmd_output("md5sum %s" % guest_path, 120).split()[0]
             guest_result = re.findall(r"\w+", output)[0]
         except IndexError:
-            logging.error("Could not get file md5sum in guest")
+            test.log.error("Could not get file md5sum in guest")
             return False
-        logging.debug("md5sum: guest(%s), host(%s)", guest_result, host_result)
+        test.log.debug("md5sum: guest(%s), host(%s)", guest_result, host_result)
         return guest_result == host_result
 
     if params["netdst"] not in utils_net.Bridge().list_br():
@@ -138,10 +137,10 @@ def run(test, params, env):
         host_bridges.del_bridge(brname)
 
     set_ip_cmd = params["set_ip_cmd"]
-    logging.debug("Create private bridge %s", brname)
+    test.log.debug("Create private bridge %s", brname)
     host_bridges.add_bridge(brname)
     host_bridge_iface = utils_net.Interface(brname)
-    logging.debug("Bring up %s", brname)
+    test.log.debug("Bring up %s", brname)
     process.system(set_ip_cmd % ("192.168.1.1", brname))
     host_bridge_iface.up()
 
@@ -167,7 +166,7 @@ def run(test, params, env):
         # Create vlans via script qinq.sh
         output = session.cmd_output("sh %sqinq.sh %s" % (guest_qinq_dir,
                                                          nic_name), timeout=300)
-        logging.info("%s", output)
+        test.log.info("%s", output)
 
         # Set interface v1v10 IP in guest
         L1tag_iface = params["L1tag_iface"]
@@ -176,11 +175,11 @@ def run(test, params, env):
         session.cmd("ip link set %s up" % L1tag_iface)
         output = session.cmd_output("ip addr show %s" % L1tag_iface,
                                     timeout=120)
-        logging.info(output)
+        test.log.info(output)
 
         # Start tcpdump on L1tag interface and first_nic in guest
         error_context.context("Start tcpdump in %s" % params["main_vm"],
-                              logging.info)
+                              test.log.info)
         L1tag_tcpdump_log = params.get("tcpdump_log") % L1tag_iface
         L1tag_tcpdump_cmd = params.get("tcpdump_cmd") % (L1tag_iface,
                                                          L1tag_tcpdump_log)
@@ -194,7 +193,7 @@ def run(test, params, env):
 
         # Create 802.1ad vlan via bridge in host
         error_context.context("Create 802.1ad vlan via bridge %s" % brname,
-                              logging.info)
+                              test.log.info)
         advlan_ifname = params["advlan_name"]
         add_advlan_cmd = params["add_advlan_cmd"]
         process.system_output(add_advlan_cmd)
@@ -203,11 +202,11 @@ def run(test, params, env):
         process.system(set_ip_cmd % (params["advlan_ip"], advlan_ifname))
         advlan_iface.up()
         output = process.getoutput("ip addr show %s" % advlan_ifname)
-        logging.info(output)
+        test.log.info(output)
 
         # Ping guest from host via 802.1ad vlan interface
         error_context.context("Start ping test from host to %s via %s" %
-                              (L1tag_iface_ip, advlan_ifname), logging.info)
+                              (L1tag_iface_ip, advlan_ifname), test.log.info)
         ping_count = int(params.get("ping_count"))
         status, output = utils_net.ping(L1tag_iface_ip, ping_count,
                                         interface=advlan_ifname,
@@ -233,11 +232,11 @@ def run(test, params, env):
         session.cmd("ip link set %s up" % L2tag_iface)
         output = session.cmd_output("ip addr show %s" % L2tag_iface,
                                     timeout=120)
-        logging.info(output)
+        test.log.info(output)
 
         # Start tcpdump on L1tag and L2tag interfaces and first_nic in guest
         error_context.context("Start tcpdump in %s" % params["main_vm"],
-                              logging.info)
+                              test.log.info)
         L2tag_tcpdump_log = params.get("tcpdump_log") % L2tag_iface
         L2tag_tcpdump_cmd = params.get("tcpdump_cmd") % (L2tag_iface,
                                                          L2tag_tcpdump_log)
@@ -250,7 +249,7 @@ def run(test, params, env):
 
         # Create 802.1q vlan via 802.1ad vlan in host
         error_context.context("Create 802.1q vlan via 802.1ad vlan %s" %
-                              advlan_ifname, logging.info)
+                              advlan_ifname, test.log.info)
         qvlan_ifname = params["qvlan_name"]
         add_qvlan_cmd = params["add_qvlan_cmd"]
         process.system_output(add_qvlan_cmd)
@@ -258,11 +257,11 @@ def run(test, params, env):
         process.system(set_ip_cmd % (params["qvlan_ip"], qvlan_ifname))
         qvlan_iface.up()
         output = process.getoutput("ip addr show %s" % qvlan_ifname)
-        logging.info(output)
+        test.log.info(output)
 
         # Ping guest from host via 802.1q vlan interface
         error_context.context("Start ping test from host to %s via %s" %
-                              (L2tag_iface_ip, qvlan_ifname), logging.info)
+                              (L2tag_iface_ip, qvlan_ifname), test.log.info)
         status, output = utils_net.ping(L2tag_iface_ip, ping_count,
                                         interface=qvlan_ifname,
                                         timeout=float(ping_count)*1.5)
@@ -292,10 +291,10 @@ def run(test, params, env):
         transfer_timeout = int(params.get("transfer_timeout", 1000))
         cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, file_size)
         error_context.context(
-            "Creating %dMB file on host" % file_size, logging.info)
+            "Creating %dMB file on host" % file_size, test.log.info)
         process.run(cmd)
         error_context.context("Transferring file host -> guest, "
-                              "timeout: %ss" % transfer_timeout, logging.info)
+                              "timeout: %ss" % transfer_timeout, test.log.info)
         shell_port = int(params.get("shell_port", 22))
         password = params["password"]
         username = params["username"]

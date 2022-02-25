@@ -1,4 +1,3 @@
-import logging
 import json
 import re
 
@@ -51,16 +50,16 @@ def run(test, params, env):
         accept_ratio = float(params.get("accept_ratio", 0))
         if (current_size <= block_size and
                 current_size >= block_size * (1 - accept_ratio)):
-            logging.info("Block Resizing Finished !!! \n"
-                         "Current size %s is same as the expected %s",
-                         current_size, block_size)
+            test.log.info("Block Resizing Finished !!! \n"
+                          "Current size %s is same as the expected %s",
+                          current_size, block_size)
             return True
 
     def create_md5_file(filename):
         """
         Create the file to verify md5 value.
         """
-        logging.debug("create md5 file %s", filename)
+        test.log.debug("create md5 file %s", filename)
         if os_type == 'windows':
             vm.copy_files_to(params["tmp_md5_file"], filename)
         else:
@@ -109,7 +108,7 @@ def run(test, params, env):
         else:
             disk = utils_disk.get_windows_disks_index(session, img_size)[0]
             utils_disk.update_windows_disk_attributes(session, disk)
-        error_context.context("Formatting disk", logging.info)
+        error_context.context("Formatting disk", test.log.info)
         mpoint = utils_disk.configure_empty_disk(session, disk, img_size,
                                                  os_type, fstype=fstype,
                                                  labeltype=labeltype)[0]
@@ -127,12 +126,12 @@ def run(test, params, env):
             md5_filename = mpoint + junction + md5_file
             create_md5_file(md5_filename)
             md5 = get_md5_of_file(md5_filename)
-            logging.debug("Got md5 %s ratio:%s on %s", md5, ratio, disk)
+            test.log.debug("Got md5 %s ratio:%s on %s", md5, ratio, disk)
 
         # We need shrink the disk in guest first, then in monitor
         if float(ratio) < 1.0:
             error_context.context("Shrink disk size to %s in guest"
-                                  % block_size, logging.info)
+                                  % block_size, test.log.info)
             if os_type == 'windows':
                 shr_size = utils_numeric.normalize_data_size(str(
                     utils_disk.get_disk_size(session, os_type, disk) -
@@ -145,7 +144,7 @@ def run(test, params, env):
                                                   str(block_size))
 
         error_context.context("Change disk size to %s in monitor"
-                              % block_size, logging.info)
+                              % block_size, test.log.info)
         if vm.check_capability(Flags.BLOCKDEV):
             args = (None, block_size, data_image_dev)
         else:
@@ -165,7 +164,7 @@ def run(test, params, env):
         # We need extend disk in monitor first then extend it in guest
         if float(ratio) > 1.0:
             error_context.context("Extend disk to %s in guest"
-                                  % block_size, logging.info)
+                                  % block_size, test.log.info)
             if os_type == 'windows':
                 max_block_size = int(params["max_block_size"])
                 if int(block_size) >= max_block_size:

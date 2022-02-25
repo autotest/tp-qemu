@@ -1,5 +1,3 @@
-import logging
-
 from avocado.utils import process
 
 from virttest import data_dir
@@ -48,7 +46,7 @@ def run(test, params, env):
                                           shell=True).decode()
 
         host_sg_info = fetch_sg_info(disk_path)
-        logging.info('The scsi generic info from host: %s', host_sg_info)
+        test.log.info('The scsi generic info from host: %s', host_sg_info)
 
         image_data_tag = params['image_data_tag']
         params['image_name_%s' % image_data_tag] = disk_path
@@ -64,7 +62,7 @@ def run(test, params, env):
 
         data_disk = '/dev/' + list(get_linux_disks(session).keys()).pop()
         guest_sg_info = fetch_sg_info(data_disk, session)
-        logging.info('The scsi generic info from guest: %s', guest_sg_info)
+        test.log.info('The scsi generic info from guest: %s', guest_sg_info)
 
         for info in guest_sg_info.split():
             if info not in host_sg_info:

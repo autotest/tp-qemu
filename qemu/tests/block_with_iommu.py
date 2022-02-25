@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import cpu
@@ -33,7 +32,7 @@ def run(test, params, env):
 
     def reload_kernel(session):
         """Reload kernel."""
-        error_context.context('Reload kernel.', logging.info)
+        error_context.context('Reload kernel.', test.log.info)
         vmlinuz = _get_boot_file(params.get('cmd_get_boot_vmlinuz'))
         initrd = _get_boot_file(params.get('cmd_get_boot_initramfs'))
         orig_cmdline = session.cmd_output(params.get('cmd_get_boot_cmdline'))
@@ -43,13 +42,13 @@ def run(test, params, env):
     def verify_iommu_enabled():
         """ Verify whether the iommu is enabled. """
         error_context.context(
-            'Verify whether IOMMU is enabled in the guest.', logging.info)
+            'Verify whether IOMMU is enabled in the guest.', test.log.info)
         for key_words in params['check_key_words'].split(';'):
             output = session.cmd_output("journalctl -k | grep -i \"%s\"" % key_words)
             if not output:
                 test.fail("No found the info \"%s\" "
                           "from the systemd journal log." % key_words)
-            logging.debug(output)
+            test.log.debug(output)
 
     if cpu.get_cpu_vendor(verbose=False) != 'GenuineIntel':
         test.cancel("This case only support Intel platform.")

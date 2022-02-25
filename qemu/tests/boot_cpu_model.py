@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
@@ -49,7 +47,7 @@ def run(test, params, env):
                     # log in and shutdown guest
                     utils_test.run_virt_sub_test(test, params,
                                                  env, sub_type="shutdown")
-                    logging.info("shutdown guest successfully")
+                    test.log.info("shutdown guest successfully")
             else:
                 if params.get("enable_check", "no") == "yes":
                     test.cancel("Can not test %s model on %s host, pls use "

@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -76,11 +75,11 @@ def run(test, params, env):
                 reply_num += 1
 
         if request_num != ping_count or reply_num != ping_count:
-            logging.debug("Unexpected request or reply number. "
-                          "current request number is: %d, "
-                          "current reply number is: %d, "
-                          "expected request and reply number is: %d. ",
-                          request_num, reply_num, ping_count)
+            test.log.debug("Unexpected request or reply number. "
+                           "current request number is: %d, "
+                           "current reply number is: %d, "
+                           "expected request and reply number is: %d. ",
+                           request_num, reply_num, ping_count)
             return False
         return True
 
@@ -99,7 +98,7 @@ def run(test, params, env):
     get_tcpdump_log_cmd = params.get("get_tcpdump_log_cmd")
     ping_count = int(params.get("ping_count"))
 
-    error_context.context("Create a private bridge", logging.info)
+    error_context.context("Create a private bridge", test.log.info)
     br_backend.add_bridge(brname)
     br_iface = utils_net.Interface(brname)
     br_iface.up()
@@ -138,18 +137,18 @@ def run(test, params, env):
         mirror_bridge_to_tap(tap_ifname)
 
         error_context.context("Start tcpdump in %s"
-                              % vm_mirror, logging.info)
+                              % vm_mirror, test.log.info)
         tcpdump_cmd = tcpdump_cmd % (vms_info[vm_des][2], tcpdump_log)
-        logging.info("tcpdump command: %s", tcpdump_cmd)
+        test.log.info("tcpdump command: %s", tcpdump_cmd)
         vms_info[vm_mirror][3].sendline(tcpdump_cmd)
         time.sleep(5)
 
         error_context.context("Start ping from %s to %s" %
-                              (vm_src, vm_des), logging.info)
+                              (vm_src, vm_des), test.log.info)
         ping_cmd = params.get("ping_cmd") % vms_info[vm_des][2]
         vms_info[vm_src][3].cmd(ping_cmd, timeout=150)
 
-        error_context.context("Check tcpdump results", logging.info)
+        error_context.context("Check tcpdump results", test.log.info)
         time.sleep(5)
         vms_info[vm_mirror][3].cmd_output_safe("pkill tcpdump")
         tcpdump_content = vms_info[vm_mirror][3].cmd_output(

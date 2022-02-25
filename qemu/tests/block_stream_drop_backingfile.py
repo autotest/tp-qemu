@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 
 from avocado.utils import process
 
@@ -69,42 +68,42 @@ def run(test, params, env):
     snapshots = list(map(lambda x: os.path.join(image_dir, x), ["sn1", "sn2"]))
     try:
         error_context.context("Create snapshots-chain(base->sn1->sn2)",
-                              logging.info)
+                              test.log.info)
         for index, snapshot in enumerate(snapshots):
             base_file = index and snapshots[index - 1] or image_file
             device_id = vm.live_snapshot(base_file, snapshot)
             if not device_id:
                 test.fail("Fail to create %s" % snapshot)
-        error_context.context("Check backing-file of sn2", logging.info)
+        error_context.context("Check backing-file of sn2", test.log.info)
         verify_backingfile(snapshots[0])
 
-        error_context.context("Merge sn1 to sn2", logging.info)
+        error_context.context("Merge sn1 to sn2", test.log.info)
         vm.monitor.block_stream(device_id, base=image_file, speed=speed)
         wait_job_done(wait_timeout)
-        error_context.context("Check backing-file of sn2", logging.info)
+        error_context.context("Check backing-file of sn2", test.log.info)
         verify_backingfile(image_file)
         error_context.context("Check sn1 is not opening by qemu process",
-                              logging.info)
+                              test.log.info)
         if snapshots[0] in get_openingfiles():
             test.fail("sn1 (%s) is opening by qemu" % snapshots[0])
 
-        error_context.context("Merge base to sn2", logging.info)
+        error_context.context("Merge base to sn2", test.log.info)
         vm.monitor.block_stream(device_id)
         wait_job_done(wait_timeout)
-        error_context.context("Check backing-file of sn2", logging.info)
+        error_context.context("Check backing-file of sn2", test.log.info)
         verify_backingfile(None)
         error_context.context("check sn1 and base are not opening "
-                              "by qemu process", logging.info)
+                              "by qemu process", test.log.info)
         if set([snapshots[0], image_file]).issubset(get_openingfiles()):
             test.fail("%s is opening by qemu"
                       % set([snapshots[0], image_file]))
-        error_context.context("Reboot VM to check it works fine", logging.info)
+        error_context.context("Reboot VM to check it works fine", test.log.info)
         session = vm.reboot(session=session, timeout=timeout)
         session.cmd(alive_check_cmd)
         vm.destroy()
         error_context.context(
             "Check backing-file of sn2 by qemu-img",
-            logging.info)
+            test.log.info)
         cmd = "%s info %s" % (qemu_img, snapshots[1])
         if re.search("backing file",
                      process.system_output(cmd, ignore_status=True).decode('utf-8')):

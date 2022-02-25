@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 
 from avocado.utils import process
 
@@ -27,7 +26,7 @@ def run(test, params, env):
         """
         Create 'test' cdrom with one file on it
         """
-        logging.info("creating test cdrom")
+        test.log.info("creating test cdrom")
         process.run("dd if=/dev/urandom of=test bs=10M count=1")
         process.run("mkisofs -o %s test" % cdrom_test)
         process.run("rm -f test")
@@ -36,7 +35,7 @@ def run(test, params, env):
         """
         Removes created cdrom
         """
-        logging.info("cleaning up temp cdrom images")
+        test.log.info("cleaning up temp cdrom images")
         os.remove(cdrom_test)
 
     def boot_check(info):
@@ -84,19 +83,19 @@ def run(test, params, env):
             boot_list = re.findall(r"^\d+\. (.*)\s", output, re.M)
             if not boot_list:
                 test.fail("Could not get boot entries list")
-            logging.info("Got boot menu entries: '%s'", boot_list)
+            test.log.info("Got boot menu entries: '%s'", boot_list)
 
             for i, v in enumerate(boot_list, start=1):
                 if re.search(boot_dev, v, re.I):
                     msg = "Start guest from boot entry '%s'" % boot_dev
-                    error_context.context(msg, logging.info)
+                    error_context.context(msg, test.log.info)
                     vm.send_key(str(i))
                     break
             else:
                 msg = "Could not get boot entry match pattern '%s'" % boot_dev
                 test.fail(msg)
 
-        error_context.context("Check boot result", logging.info)
+        error_context.context("Check boot result", test.log.info)
         if not utils_misc.wait_for(lambda: boot_check(boot_entry_info),
                                    timeout, 1):
             test.fail("Could not boot from '%s'" % dev_name)

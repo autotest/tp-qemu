@@ -1,5 +1,3 @@
-import logging
-
 from virttest import qemu_storage
 from virttest import error_context
 
@@ -29,7 +27,7 @@ def run(test, params, env):
         img_obj = qemu_storage.QemuImg(img_params, None,
                                        params['remote_image_tag'])
 
-        logging.info('Access image: %s', img_obj.image_filename)
+        test.log.info('Access image: %s', img_obj.image_filename)
         out = img_obj.info()
 
         if img_obj.image_filename not in out:

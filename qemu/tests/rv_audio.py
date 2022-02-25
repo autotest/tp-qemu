@@ -9,6 +9,8 @@ import logging
 
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def verify_recording(recording, params):
     """Tests whether something was actually recorded
@@ -25,7 +27,7 @@ def verify_recording(recording, params):
     config_test = params.get("config_test", None)
 
     if (len(rec) - rec.count('\0') < 50):
-        logging.info("Recording is empty")
+        LOG_JOB.info("Recording is empty")
         if disable_audio != "yes":
             return False
         else:
@@ -47,9 +49,9 @@ def verify_recording(recording, params):
                         pauses.pop()
 
         if len(pauses):
-            logging.error("%d pauses detected:", len(pauses))
+            LOG_JOB.error("%d pauses detected:", len(pauses))
             for i in pauses:
-                logging.info("start: %10fs     duration: %10fs",
+                LOG_JOB.info("start: %10fs     duration: %10fs",
                              (float(i[0]) / (2 * 2 * 44100)),
                              (float(i[1] - i[0]) / (2 * 2 * 44100)))
             # Two small hiccups are allowed when migrating
@@ -58,7 +60,7 @@ def verify_recording(recording, params):
             else:
                 return False
         else:
-            logging.info("No pauses detected")
+            LOG_JOB.info("No pauses detected")
 
     except IndexError:
         # Too long pause, overflow in index
@@ -80,8 +82,8 @@ def run(test, params, env):
         timeout=int(params.get("login_timeout", 360)))
 
     if(guest_session.cmd_status("ls %s" % params.get("audio_tgt"))):
-        logging.info(params.get("audio_src"))
-        logging.info(params.get("audio_tgt"))
+        test.log.info(params.get("audio_src"))
+        test.log.info(params.get("audio_tgt"))
         guest_vm.copy_files_to(
             params.get("audio_src"),
             params.get("audio_tgt"))
@@ -91,14 +93,14 @@ def run(test, params, env):
             params.get("audio_tgt"))
 
     if params.get("rv_record") == "yes":
-        logging.info("rv_record set; Testing recording")
+        test.log.info("rv_record set; Testing recording")
         player = client_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
         recorder_session = guest_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
         recorder_session_vm = guest_vm
     else:
-        logging.info("rv_record not set; Testing playback")
+        test.log.info("rv_record not set; Testing playback")
         player = guest_vm.wait_for_login(
             timeout=int(params.get("login_timeout", 360)))
         recorder_session = client_vm.wait_for_login(

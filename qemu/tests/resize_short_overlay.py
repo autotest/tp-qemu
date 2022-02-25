@@ -1,5 +1,3 @@
-import logging
-
 from avocado import fail_on
 from avocado.utils import process
 
@@ -24,7 +22,7 @@ def run(test, params, env):
     """
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
-        logging.info("Run qemu-io %s", img.image_filename)
+        test.log.info("Run qemu-io %s", img.image_filename)
         try:
             QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
         except process.CmdError as err:
@@ -36,7 +34,7 @@ def run(test, params, env):
     mid = QemuImg(params.object_params(images[1]), root_dir, images[1])
     top = QemuImg(params.object_params(images[-1]), root_dir, images[-1])
 
-    logging.info("Create base and snapshot files")
+    test.log.info("Create base and snapshot files")
     for image in (base, mid, top):
         image.create(image.params)
 
@@ -45,7 +43,7 @@ def run(test, params, env):
     top_cmd = params["top_cmd"]
     _qemu_io(top, top_cmd)
 
-    logging.info("Commit %s image file.", top.image_filename)
+    test.log.info("Commit %s image file.", top.image_filename)
     fail_on((process.CmdError,))(top.commit)()
 
     _qemu_io(mid, top_cmd)

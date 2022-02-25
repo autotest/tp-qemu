@@ -1,5 +1,4 @@
 import json
-import logging
 
 from avocado import fail_on
 from avocado.utils import process
@@ -39,8 +38,8 @@ def run(test, params, env):
                                    root_dir, tag) for tag in images]
 
     for image in images[1:]:
-        logging.debug("create snapshot %s based on %s",
-                      image.image_filename, image.base_image_filename)
+        test.log.debug("create snapshot %s based on %s",
+                       image.image_filename, image.base_image_filename)
         image.create(image.params)
 
     md5sum_bin = params.get("md5sum_bin", "md5sum")
@@ -49,8 +48,8 @@ def run(test, params, env):
     for image in images:
         vm = img_utils.boot_vm_with_images(test, params, env, (image.tag,))
         guest_file = params["guest_tmp_filename"] % image.tag
-        logging.debug("save tmp file %s in image %s",
-                      guest_file, image.image_filename)
+        test.log.debug("save tmp file %s in image %s",
+                       guest_file, image.image_filename)
         img_utils.save_random_file_to_vm(vm, guest_file, 2048 * 100, sync_bin)
         session = vm.wait_for_login(timeout=timeout)
         hashes[guest_file] = img_utils.check_md5sum(guest_file,
@@ -65,12 +64,12 @@ def run(test, params, env):
     rebase_target = qemu_storage.QemuImg(
         params.object_params(rebase_target), root_dir, rebase_target)
     rebase_target.create(rebase_target.params)
-    logging.debug("rebase snapshot")
+    test.log.debug("rebase snapshot")
     snapshot.base_tag = rebase_target.tag
     fail_on((process.CmdError,))(snapshot.rebase)(snapshot.params)
     fail_on((ValueError,))(verify_backing_file)(snapshot)
 
-    logging.debug("boot from snapshot %s", snapshot.image_filename)
+    test.log.debug("boot from snapshot %s", snapshot.image_filename)
     vm = img_utils.boot_vm_with_images(test, params, env, (snapshot.tag,))
     session = vm.wait_for_login(timeout=timeout)
     for guest_file, hashval in hashes.items():

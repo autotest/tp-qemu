@@ -1,5 +1,3 @@
-import logging
-
 from virttest import data_dir
 from virttest import storage
 from virttest import qemu_storage
@@ -22,7 +20,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     def _prepare():
-        logging.info("Clone system image with qemu-img")
+        test.log.info("Clone system image with qemu-img")
         result = qemu_storage.QemuImg(
             params, None, params['images'].split()[0]).dd(
                 output=storage.get_image_filename(
@@ -45,7 +43,7 @@ def run(test, params, env):
     nbd_export.export_image()
 
     session = None
-    logging.info("Start VM from the exported image")
+    test.log.info("Start VM from the exported image")
 
     try:
         # Start VM from the nbd exported image

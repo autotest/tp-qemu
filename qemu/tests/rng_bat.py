@@ -1,5 +1,4 @@
 import re
-import logging
 import aexpect
 import time
 
@@ -64,7 +63,7 @@ def run(test, params, env):
 
     if dev_file:
         error_context.context("Check '%s' used by qemu" % dev_file,
-                              logging.info)
+                              test.log.info)
         if not is_dev_used_by_qemu(dev_file, vm_pid):
             msg = "Qemu (pid=%d) not using host passthrough " % vm_pid
             msg += "device '%s'" % dev_file
@@ -79,7 +78,7 @@ def run(test, params, env):
             rng_src = utils_misc.set_winutils_letter(session, rng_src)
             session.cmd("copy %s %s /y" % (rng_src, rng_dst))
     else:
-        error_context.context("verify virtio-rng device driver", logging.info)
+        error_context.context("verify virtio-rng device driver", test.log.info)
         verify_cmd = params["driver_verifier_cmd"]
         try:
             output = session.cmd_output_safe(verify_cmd, timeout=cmd_timeout)
@@ -94,10 +93,10 @@ def run(test, params, env):
             test.fail(msg)
 
     error_context.context("Read virtio-rng device to get random number",
-                          logging.info)
+                          test.log.info)
 
     if rng_dll_register_cmd:
-        logging.info("register 'viorngum.dll' into system")
+        test.log.info("register 'viorngum.dll' into system")
         session.cmd(rng_dll_register_cmd, timeout=120)
 
     if os_type == "linux":

@@ -17,6 +17,8 @@ from virttest import utils_spice
 from virttest import remote
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def str_input(client_vm, ticket):
     """
@@ -24,7 +26,7 @@ def str_input(client_vm, ticket):
     :param client_session - vm() object
     :param ticket - use params.get("spice_password")
     """
-    logging.info("Passing ticket '%s' to the remote-viewer.", ticket)
+    LOG_JOB.info("Passing ticket '%s' to the remote-viewer.", ticket)
     char_mapping = {":": "shift-semicolon",
                     ",": "comma",
                     ".": "dot",
@@ -45,9 +47,9 @@ def print_rv_version(client_session, rv_binary):
     :param client_session - vm.wait_for_login()
     :param rv_binary - remote-viewer binary
     """
-    logging.info("remote-viewer version: %s",
+    LOG_JOB.info("remote-viewer version: %s",
                  client_session.cmd(rv_binary + " -V"))
-    logging.info("spice-gtk version: %s",
+    LOG_JOB.info("spice-gtk version: %s",
                  client_session.cmd(rv_binary + " --spice-gtk-version"))
 
 
@@ -99,7 +101,7 @@ def launch_rv(test, client_vm, guest_vm, params):
     qemu_ticket = params.get("qemu_password")
     if qemu_ticket:
         guest_vm.monitor.cmd("set_password spice %s" % qemu_ticket)
-        logging.info("Sending to qemu monitor: set_password spice %s",
+        LOG_JOB.info("Sending to qemu monitor: set_password spice %s",
                      qemu_ticket)
 
     gencerts = params.get("gencerts")
@@ -190,26 +192,26 @@ def launch_rv(test, client_vm, guest_vm, params):
 
     # Check to see if the test is using the full screen option.
     if full_screen == "yes" and not rv_parameters_from == "file":
-        logging.info("Remote Viewer Set to use Full Screen")
+        LOG_JOB.info("Remote Viewer Set to use Full Screen")
         cmd += " --full-screen"
 
     if disable_audio == "yes":
-        logging.info("Remote Viewer Set to disable audio")
+        LOG_JOB.info("Remote Viewer Set to disable audio")
         cmd += " --spice-disable-audio"
 
     # Check to see if the test is using a smartcard.
     if smartcard == "yes":
-        logging.info("remote viewer Set to use a smartcard")
+        LOG_JOB.info("remote viewer Set to use a smartcard")
         if not rv_parameters_from == "file":
             cmd += " --spice-smartcard"
 
         if certdb is not None:
-            logging.debug("Remote Viewer set to use the following certificate"
+            LOG_JOB.debug("Remote Viewer set to use the following certificate"
                           " database: %s", certdb)
             cmd += " --spice-smartcard-db " + certdb
 
         if gencerts is not None:
-            logging.debug("Remote Viewer set to use the following certs: %s",
+            LOG_JOB.debug("Remote Viewer set to use the following certs: %s",
                           gencerts)
             cmd += " --spice-smartcard-certificates " + gencerts
 
@@ -219,9 +221,9 @@ def launch_rv(test, client_vm, guest_vm, params):
             cmd = "export LD_LIBRARY_PATH=" + rv_ld_library_path + ";" + cmd
 
     if rv_parameters_from == "file":
-        logging.info("Generating file")
+        LOG_JOB.info("Generating file")
         utils_spice.gen_rv_file(params, guest_vm, host_subj, cacert)
-        logging.info("Uploading file to client")
+        LOG_JOB.info("Uploading file to client")
         client_vm.copy_files_to("rv_file.vv", "~/rv_file.vv")
 
     # Launching the actual set of commands
@@ -234,10 +236,10 @@ def launch_rv(test, client_vm, guest_vm, params):
     except (ShellStatusError, ShellProcessTerminatedError):
         # Sometimes It fails with Status error, ingore it and continue.
         # It's not that important to have printed versions in the log.
-        logging.debug("Ignoring a Status Exception that occurs from calling "
+        LOG_JOB.debug("Ignoring a Status Exception that occurs from calling "
                       "print versions of remote-viewer or spice-gtk")
 
-    logging.info("Launching %s on the client (virtual)", cmd)
+    LOG_JOB.info("Launching %s on the client (virtual)", cmd)
 
     if proxy:
         if "http" in proxy:
@@ -256,7 +258,7 @@ def launch_rv(test, client_vm, guest_vm, params):
         try:
             client_session.cmd(cmd)
         except ShellStatusError:
-            logging.debug("Ignoring a status exception, will check connection"
+            LOG_JOB.debug("Ignoring a status exception, will check connection"
                           "of remote-viewer later")
 
         # Send command line through monitor since url was not provided
@@ -289,7 +291,7 @@ def launch_rv(test, client_vm, guest_vm, params):
                                                   None))
     except utils_spice.RVConnectError:
         if test_type == "negative":
-            logging.info("remote-viewer connection failed as expected")
+            LOG_JOB.info("remote-viewer connection failed as expected")
             if ssltype in ("invalid_implicit_hs", "invalid_explicit_hs"):
                 # Check the qemu process output to verify what is expected
                 qemulog = guest_vm.process.get_output()
@@ -308,22 +310,22 @@ def launch_rv(test, client_vm, guest_vm, params):
 
     # Get spice info
     output = guest_vm.monitor.cmd("info spice")
-    logging.debug("INFO SPICE")
-    logging.debug(output)
+    LOG_JOB.debug("INFO SPICE")
+    LOG_JOB.debug(output)
 
     # Check to see if ipv6 address is reported back from qemu monitor
     if (check_spice_info == "ipv6"):
-        logging.info("Test to check if ipv6 address is reported"
+        LOG_JOB.info("Test to check if ipv6 address is reported"
                      " back from the qemu monitor")
         # Remove brackets from ipv6 host ip
         if (host_ip[1:len(host_ip) - 1] in output):
-            logging.info("Reported ipv6 address found in output from"
+            LOG_JOB.info("Reported ipv6 address found in output from"
                          " 'info spice'")
         else:
             test.fail("ipv6 address not found from qemu monitor"
                       " command: 'info spice'")
     else:
-        logging.info("Not checking the value of 'info spice'"
+        LOG_JOB.info("Not checking the value of 'info spice'"
                      " from the qemu monitor")
 
     # prevent from kill remote-viewer after test finish
@@ -365,7 +367,7 @@ def run(test, params, env):
             try:
                 session = env.get_vm(vm).wait_for_login(timeout=360)
                 output = session.cmd('cat /etc/redhat-release')
-                logging.info(output)
+                test.log.info(output)
             except ShellCmdError:
                 test.cancel("Test is only currently supported on "
                             "RHEL and Fedora operating systems")

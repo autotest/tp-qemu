@@ -4,7 +4,6 @@ rv_vmshutdown.py - shutdown the guest and verify it is a clean exit.
 Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
-import logging
 
 from aexpect import ShellCmdError
 
@@ -58,48 +57,48 @@ def run(test, params, env):
 
     # Determine if the test is to shutdown from cli or qemu monitor
     if shutdownfrom == "cmd":
-        logging.info("Shutting down guest from command line:"
-                     " %s\n", cmd_cli_shutdown)
+        test.log.info("Shutting down guest from command line:"
+                      " %s\n", cmd_cli_shutdown)
         output = guest_session.cmd(cmd_cli_shutdown)
-        logging.debug("Guest is being shutdown: %s", output)
+        test.log.debug("Guest is being shutdown: %s", output)
     elif shutdownfrom == "qemu_monitor":
-        logging.info("Shutting down guest from qemu monitor\n")
+        test.log.info("Shutting down guest from qemu monitor\n")
         output = guest_vm.monitor.cmd(cmd_qemu_shutdown)
-        logging.debug("Output of %s: %s", cmd_qemu_shutdown, output)
+        test.log.debug("Output of %s: %s", cmd_qemu_shutdown, output)
     else:
         test.fail("shutdownfrom var not set, valid values are"
                   " cmd or qemu_monitor")
 
     # wait for the guest vm to be shutoff
-    logging.info("Waiting for the guest VM to be shutoff")
+    test.log.info("Waiting for the guest VM to be shutoff")
     utils_misc.wait_for(guest_vm.is_dead, 90, 30, 1, "waiting...")
-    logging.info("Guest VM is now shutoff")
+    test.log.info("Guest VM is now shutoff")
 
     # Verify there was a clean exit by
-    #(1)Verifying the guest is down
-    #(2)Verify the spice connection to the guest is no longer established
-    #(3)Verify the remote-viewer process is not running
+    # (1)Verifying the guest is down
+    # (2)Verify the spice connection to the guest is no longer established
+    # (3)Verify the remote-viewer process is not running
     try:
         guest_vm.verify_alive()
         test.fail("Guest VM is still alive, shutdown failed.")
     except VMDeadError:
-        logging.info("Guest VM is verified to be shutdown")
+        test.log.info("Guest VM is verified to be shutdown")
 
     try:
         utils_spice.verify_established(
             client_vm, host_ip, host_port, rv_binary)
         test.fail("Remote-Viewer connection to guest is still established.")
     except utils_spice.RVConnectError:
-        logging.info("There is no remote-viewer connection as expected")
+        test.log.info("There is no remote-viewer connection as expected")
     else:
         test.fail("Unexpected error while trying to see if there"
                   " was no spice connection to the guest")
 
     # Verify the remote-viewer process is not running
-    logging.info("Checking to see if remote-viewer process is still running on"
-                 " client after VM has been shutdown")
+    test.log.info("Checking to see if remote-viewer process is still running on"
+                  " client after VM has been shutdown")
     try:
         pidoutput = str(client_session.cmd("pgrep remote-viewer"))
         test.fail("Remote-viewer is still running on the client.")
     except ShellCmdError:
-        logging.info("Remote-viewer process is not running as expected.")
+        test.log.info("Remote-viewer process is not running as expected.")

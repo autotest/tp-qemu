@@ -16,6 +16,8 @@ from aexpect import ShellCmdError
 from virttest import utils_spice
 from virttest import data_dir
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def install_pygtk(guest_session, params):
     """
@@ -30,7 +32,7 @@ def install_pygtk(guest_session, params):
         guest_session.cmd(cmd)
     except ShellCmdError:
         cmd = "yum -y install pygtk2 --nogpgcheck > /dev/null"
-        logging.info("Installing pygtk2 package to %s",
+        LOG_JOB.info("Installing pygtk2 package to %s",
                      params.get("guest_vm"))
         guest_session.cmd(cmd, timeout=60)
 
@@ -60,7 +62,7 @@ def run_test_form(guest_session, params):
     :param params
     """
 
-    logging.info("Starting test form for catching key events on guest")
+    LOG_JOB.info("Starting test form for catching key events on guest")
     cmd = "python /tmp/%s &> /dev/null &" % params.get("guest_script")
     guest_session.cmd(cmd)
     cmd = "disown -ar"
@@ -92,7 +94,7 @@ def test_type_and_func_keys(client_vm, guest_session, params):
     utils_spice.wait_timeout(3)
 
     # Send typewriter and functional keys to client machine based on scancodes
-    logging.info("Sending typewriter and functional keys to client machine")
+    LOG_JOB.info("Sending typewriter and functional keys to client machine")
     for i in range(1, 69):
         # Avoid Ctrl, RSH, LSH, PtScr, Alt, CpsLk
         if (i not in [29, 42, 54, 55, 56, 58]):
@@ -125,7 +127,7 @@ def test_leds_and_esc_keys(client_vm, guest_session, params):
     test_keys = leds + shortcuts + escaped
 
     # Send keys to client machine
-    logging.info("Sending leds and escaped keys to client machine")
+    LOG_JOB.info("Sending leds and escaped keys to client machine")
     for key in test_keys:
         client_vm.send_key(key)
         utils_spice.wait_timeout(0.3)
@@ -149,7 +151,7 @@ def test_nonus_layout(client_vm, guest_session, params):
     cmd = "setxkbmap cz"
     guest_session.cmd(cmd)
     test_keys = ['7', '8', '9', '0', 'alt_r-x', 'alt_r-c', 'alt_r-v']
-    logging.info("Sending czech keys to client machine")
+    LOG_JOB.info("Sending czech keys to client machine")
     for key in test_keys:
         client_vm.send_key(key)
         utils_spice.wait_timeout(0.3)
@@ -158,7 +160,7 @@ def test_nonus_layout(client_vm, guest_session, params):
     cmd = "setxkbmap de"
     guest_session.cmd(cmd)
     test_keys = ['minus', '0x1a', 'alt_r-q', 'alt_r-m']
-    logging.info("Sending german keys to client machine")
+    LOG_JOB.info("Sending german keys to client machine")
     for key in test_keys:
         client_vm.send_key(key)
         utils_spice.wait_timeout(0.3)
@@ -183,7 +185,7 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     grep_ver_cmd = "grep -o 'release [[:digit:]]' /etc/redhat-release"
     rhel_ver = guest_session.cmd(grep_ver_cmd).strip()
 
-    logging.info("RHEL version: #{0}#".format(rhel_ver))
+    LOG_JOB.info("RHEL version: #{0}#".format(rhel_ver))
 
     if rhel_ver == "release 6":
         client_vm.send_key('num_lock')
@@ -194,7 +196,7 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
 
     # Tested keys before migration
     test_keys = ['a', 'kp_1', 'caps_lock', 'num_lock', 'a', 'kp_1']
-    logging.info("Sending leds keys to client machine before migration")
+    LOG_JOB.info("Sending leds keys to client machine before migration")
     for key in test_keys:
         client_vm.send_key(key)
         utils_spice.wait_timeout(0.3)
@@ -204,7 +206,7 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
 
     # Tested keys after migration
     test_keys = ['a', 'kp_1', 'caps_lock', 'num_lock']
-    logging.info("Sending leds keys to client machine after migration")
+    LOG_JOB.info("Sending leds keys to client machine after migration")
     for key in test_keys:
         client_vm.send_key(key)
         utils_spice.wait_timeout(0.3)
@@ -252,7 +254,7 @@ def analyze_results(file_path, test_type):
 
     # Compare caught keycodes with expected keycodes
     test_keycodes = keycodes.split()
-    logging.info("Caught keycodes:%s", test_keycodes)
+    LOG_JOB.info("Caught keycodes:%s", test_keycodes)
     for i in range(len(correct_keycodes)):
         if not (test_keycodes[i] == correct_keycodes[i]):
             return correct_keycodes[i]

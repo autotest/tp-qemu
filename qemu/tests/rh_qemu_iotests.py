@@ -1,6 +1,5 @@
 import os
 import re
-import logging
 
 from virttest import utils_misc
 from virttest import error_context
@@ -40,7 +39,7 @@ def run(test, params, env):
                 return process.system(cmd, shell=True)
             except process.CmdError as detail:
                 msg = "Fail to execute command"
-                logging.error("%s: %s.", msg, detail)
+                test.log.error("%s: %s.", msg, detail)
         raise exceptions.TestError("%s after %s times retry: %s" %
                                    (msg, max_retry, detail))
 
@@ -52,7 +51,7 @@ def run(test, params, env):
         :return: A tuple containing directory of qemu source code
                  and qemu-kvm spec
         """
-        error_context.context("Get qemu source code", logging.info)
+        error_context.context("Get qemu source code", test.log.info)
         os.chdir(test.tmpdir)
         query_format = params["query_format"]
         download_rpm_cmd = params["download_rpm_cmd"]
@@ -78,7 +77,7 @@ def run(test, params, env):
         need_run_configure = params.get("need_run_configure", "no")
         if need_run_configure == "yes":
             make_socket_scm_helper = params.get("make_socket_scm_helper", "")
-            logging.info("Generate common.env")
+            test.log.info("Generate common.env")
             os.chdir(qemu_src_dir)
             cmd = "./configure"
             if make_socket_scm_helper:
@@ -96,7 +95,7 @@ def run(test, params, env):
         image_format = params.get("qemu_io_image_format")
         result_pattern = params.get("iotests_result_pattern")
         error_context.context("running qemu-iotests for image format %s"
-                              % image_format, logging.info)
+                              % image_format, test.log.info)
         os.environ["QEMU_PROG"] = utils_misc.get_qemu_binary(params)
         os.environ["QEMU_IMG_PROG"] = utils_misc.get_qemu_img_binary(params)
         os.environ["QEMU_IO_PROG"] = utils_misc.get_qemu_io_binary(params)
@@ -132,4 +131,4 @@ def run(test, params, env):
             os.chdir(cwd)
             process.system(rpmbuild_clean_cmd % spec, shell=True)
         except Exception:
-            logging.warn("Fail to clean test environment")
+            test.log.warn("Fail to clean test environment")

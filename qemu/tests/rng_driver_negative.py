@@ -1,4 +1,3 @@
-import logging
 import aexpect
 
 from virttest import error_context
@@ -27,23 +26,23 @@ def run(test, params, env):
     driver_unload_cmd = params["driver_unload_cmd"]
 
     error_context.context("Read virtio-rng device in background",
-                          logging.info)
+                          test.log.info)
     read_rng_cmd = params["read_rng_cmd"]
     pid = session.cmd_output(read_rng_cmd)
     pid = pid.split("\n")[1]
-    logging.info("Check if random read process exist")
+    test.log.info("Check if random read process exist")
     status = session.cmd_status("ps -p %s" % pid)
     if status != 0:
         raise exceptions.TestFail("random read is not running background")
 
     error_context.context("Unload the driver during random read",
-                          logging.info)
+                          test.log.info)
     try:
         session.cmd(driver_unload_cmd)
     except aexpect.ShellTimeoutError:
         pass
     error_context.context("Check if there is call trace in guest",
-                          logging.info)
+                          test.log.info)
     try:
         vm.verify_kernel_crash()
     finally:

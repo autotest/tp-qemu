@@ -1,6 +1,5 @@
 import re
 import time
-import logging
 
 from avocado.utils import process
 
@@ -67,7 +66,7 @@ def run(test, params, env):
         return process.system_output(cmd, timeout=QUERY_TIMEOUT).decode()
 
     def get_kernel_info():
-        error_context.context("Get latest kernel packages info", logging.info)
+        error_context.context("Get latest kernel packages info", test.log.info)
         tag = params["brew_tag"]
         build_name = params.get("kernel_build_name", "kernel")
 
@@ -76,7 +75,7 @@ def run(test, params, env):
             build = re.findall(r"%s[^\s]+" % build_name, o)[0]
         except IndexError:
             test.error("Could not get the latest kernel build name: %s" % o)
-        logging.info("The latest build for tag '%s' is '%s'", tag, build)
+        test.log.info("The latest build for tag '%s' is '%s'", tag, build)
         info_cmd = "brew --topdir='%s' buildinfo %s" % (download_root, build)
         buildinfo = process.system_output(info_cmd,
                                           timeout=QUERY_TIMEOUT).decode()
@@ -109,9 +108,9 @@ def run(test, params, env):
 
         for driver in virtio_drivers:
             if driver not in o:
-                logging.debug("%s has not been installed.", driver)
+                test.log.debug("%s has not been installed.", driver)
                 return False
-            logging.debug("%s has already been installed.", driver)
+            test.log.debug("%s has already been installed.", driver)
 
         return True
 
@@ -145,7 +144,7 @@ def run(test, params, env):
         :parm timeout: float type, timeout value when install rpm.
         """
         error_context.context("Upgrade package '%s' in guest" % pkg,
-                              logging.info)
+                              test.log.info)
         pkgs = get_guest_pkgs(session, pkg, "%{NAME}")
 
         tag = params.get("brew_tag")
@@ -155,7 +154,7 @@ def run(test, params, env):
             if "debuginfo" in url and not debuginfo:
                 continue
             upgrade = bool(list(filter(lambda x: x in url, pkgs)))
-            logging.info("Install packages from: %s", url)
+            test.log.info("Install packages from: %s", url)
             install_rpm(session, url, upgrade, nodeps, timeout)
 
     def get_guest_kernel_version(session):
@@ -194,30 +193,30 @@ def run(test, params, env):
     args_added = params.get("args_added", "").split()
 
     kernel_ver, kernel_pkgs = get_kernel_info()
-    logging.info("Kernel version   :  %s", kernel_ver)
-    logging.info("Kernel package(s):")
+    test.log.info("Kernel version   :  %s", kernel_ver)
+    test.log.info("Kernel package(s):")
     for pkg in kernel_pkgs:
-        logging.info("    %s", pkg)
+        test.log.info("    %s", pkg)
 
     updated = True
     session = vm.wait_for_login()
     cur_ver = get_guest_kernel_version(session)
-    logging.info("Guest current kernel version is '%s'", cur_ver)
+    test.log.info("Guest current kernel version is '%s'", cur_ver)
     if compare_version(cur_ver, kernel_ver) >= 0:
-        logging.info("Guest current kernel matches the requirement")
+        test.log.info("Guest current kernel matches the requirement")
         if is_virtio_driver_installed():
             install_virtio = False
         kernel_ver = cur_ver
         updated = False
     else:
-        logging.info("Guest current kernel does not match the "
-                     "requirement, processing upgrade")
+        test.log.info("Guest current kernel does not match the "
+                      "requirement, processing upgrade")
         for pkg in kernel_deps_pkgs:
             pkg_params = params.object_params(pkg)
             arch = pkg_params["pkg_arch"]
             upgrade_guest_pkgs(session, pkg, arch)
 
-        error_context.context("Install guest kernel package(s)", logging.info)
+        error_context.context("Install guest kernel package(s)", test.log.info)
         # not install kernel pkgs via rpm since need to install them atomically
         kernel_pkg_dir = "/tmp/kernel_packages"
         session.cmd("mkdir -p %s" % kernel_pkg_dir)
@@ -243,7 +242,7 @@ def run(test, params, env):
 
     kernel_path = "/boot/vmlinuz-%s" % kernel_ver
     if install_virtio:
-        error_context.context("Installing virtio driver", logging.info)
+        error_context.context("Installing virtio driver", test.log.info)
         initrd_prob_cmd = "grubby --info=%s" % kernel_path
         s, o = session.cmd_status_output(initrd_prob_cmd)
         if s != 0:
@@ -253,7 +252,7 @@ def run(test, params, env):
         except IndexError:
             test.error("Could not get initrd path from guest: %s" % o)
 
-        error_context.context("Update initrd file", logging.info)
+        error_context.context("Update initrd file", test.log.info)
         driver_list = ["--with=%s" % drv for drv in virtio_drivers]
         mkinitrd_cmd = "mkinitrd -f %s " % initrd_path
         mkinitrd_cmd += " ".join(driver_list)
@@ -265,7 +264,7 @@ def run(test, params, env):
     # make sure the newly installed kernel as default
     if updated:
         error_context.context("Make the new installed kernel as default",
-                              logging.info)
+                              test.log.info)
         make_def_cmd = "grubby --set-default=%s " % kernel_path
         s, o = session.cmd_status_output(make_def_cmd)
         if s != 0:
@@ -282,7 +281,7 @@ def run(test, params, env):
                              % (kernel_path, update_kernel_cmd))
     update_kernel_cmd = params.get("update_kernel_cmd", update_kernel_cmd)
     if update_kernel_cmd:
-        error_context.context("Update the guest kernel cmdline", logging.info)
+        error_context.context("Update the guest kernel cmdline", test.log.info)
         s, o = session.cmd_status_output(update_kernel_cmd)
         if s != 0:
             test.error("Fail to modify kernel cmdline: %s" % o)
@@ -302,10 +301,10 @@ def run(test, params, env):
         else:
             mesg = "Upgrade '%s' from '%s'  to '%s'" % (
                 pkg, ver_before, ver_after)
-        logging.info(mesg)
+        test.log.info(mesg)
 
     # reboot guest and do verify
-    error_context.context("Reboot guest after updating kernel", logging.info)
+    error_context.context("Reboot guest after updating kernel", test.log.info)
     time.sleep(int(params.get("sleep_before_reset", 10)))
     session = vm.reboot(session)
     cur_ver = get_guest_kernel_version(session)
@@ -313,12 +312,12 @@ def run(test, params, env):
         test.fail("Failed to verify the guest kernel, expected version '%s' "
                   "vs current version '%s'" % (kernel_ver, cur_ver))
     if verify_virtio:
-        error_context.context("Verifying the virtio drivers", logging.info)
+        error_context.context("Verifying the virtio drivers", test.log.info)
         if not is_virtio_driver_installed():
             test.fail("Fail to verify the installation of virtio drivers")
 
     # update image
-    error_context.context("OS updated, commit changes to disk", logging.info)
+    error_context.context("OS updated, commit changes to disk", test.log.info)
     base_dir = params.get("images_base_dir", data_dir.get_data_dir())
     image_filename = storage.get_image_filename(params, base_dir)
     block = vm.get_block({"backing_file": image_filename})

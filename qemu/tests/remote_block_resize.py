@@ -1,4 +1,3 @@
-import logging
 import json
 
 from avocado.utils import wait
@@ -33,12 +32,12 @@ def run(test, params, env):
         accept_ratio = float(params.get("accept_ratio", 0))
         if (current_size <= block_size and
                 current_size >= block_size * (1 - accept_ratio)):
-            logging.info("Block Resizing Finished !!! \n"
-                         "Current size %s is same as the expected %s",
-                         current_size, block_size)
+            test.log.info("Block Resizing Finished !!! \n"
+                          "Current size %s is same as the expected %s",
+                          current_size, block_size)
             return True
         else:
-            logging.error("Current: %s\nExpect: %s\n", current_size, block_size)
+            test.log.error("Current: %s\nExpect: %s\n", current_size, block_size)
             return False
 
     vm = env.get_vm(params["main_vm"])
@@ -74,7 +73,7 @@ def run(test, params, env):
     for ratio in params.objects("disk_change_ratio"):
         block_size = int(int(block_virtual_size) * float(ratio))
         error_context.context("Change disk size to %s in monitor"
-                              % block_size, logging.info)
+                              % block_size, test.log.info)
 
         if vm.check_capability(Flags.BLOCKDEV):
             args = (None, block_size, data_image_dev)

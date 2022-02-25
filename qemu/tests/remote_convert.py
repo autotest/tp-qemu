@@ -1,5 +1,3 @@
-import logging
-
 from virttest import data_dir
 from virttest import qemu_storage
 from virttest import storage
@@ -19,7 +17,7 @@ def run(test, params, env):
     """
 
     def _check_file(boot_image, md5_value):
-        logging.debug("Check md5sum.")
+        test.log.debug("Check md5sum.")
         vm = img_utils.boot_vm_with_images(test, params, env, (boot_image,))
         session = vm.wait_for_login()
         guest_temp_file = params["guest_temp_file"]
@@ -35,12 +33,12 @@ def run(test, params, env):
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
 
-    logging.info("Create temporary file on guest: %s", guest_temp_file)
+    test.log.info("Create temporary file on guest: %s", guest_temp_file)
     img_utils.save_random_file_to_vm(vm, guest_temp_file, 2048 * 512,
                                      sync_bin)
 
     md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
-    logging.info("Get md5 value of the temporary file: %s", md5_value)
+    test.log.info("Get md5 value of the temporary file: %s", md5_value)
 
     session.close()
     vm.destroy()
@@ -75,7 +73,7 @@ def run(test, params, env):
         # Convert source to target
         cache_mode = params.get("cache_mode")
         source_cache_mode = params.get("source_cache_mode")
-        logging.info("Convert %s to %s", source, target)
+        test.log.info("Convert %s to %s", source, target)
         fail_on((process.CmdError,))(source_image.convert)(
             params, root_dir, cache_mode=cache_mode,
             source_cache_mode=source_cache_mode,

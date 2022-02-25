@@ -1,4 +1,3 @@
-import logging
 import re
 
 from virttest import error_context
@@ -32,10 +31,10 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
 
-        logging.info("Turn off the useplatformclock attribute")
+        test.log.info("Turn off the useplatformclock attribute")
         session.cmd(close_pltclk_cmd)
 
-        logging.info("Reboot to check the useplatformclock is off")
+        test.log.info("Reboot to check the useplatformclock is off")
         session = vm.reboot(session, timeout=timeout)
         s, o = session.cmd_status_output(check_pltclk_cmd)
         if s:
@@ -46,7 +45,7 @@ def run(test, params, env):
             test.error("The useplatfromclock isn't off after reboot, "
                        "output=%s" % o)
 
-        logging.info("Copy the related files to the guest")
+        test.log.info("Copy the related files to the guest")
         for f in gettime_filenames:
             copy_file_cmd = utils_misc.set_winutils_letter(session,
                                                            copy_cmd % f)
@@ -61,7 +60,7 @@ def run(test, params, env):
         """
         o = session.cmd_output_safe(run_gettime_cmd, timeout=timeout)
         cycles = int(re.search(r'\d+', o).group(0))
-        logging.info("The cycles with out hv_time is %d", cycles)
+        test.log.info("The cycles with out hv_time is %d", cycles)
         return cycles
 
     def _boot_guest_with_cpu_flag(hv_flag):
@@ -86,10 +85,10 @@ def run(test, params, env):
         param cpu_flag: the cpu flags to set
         return: the cpu cycles returned by gettime_cycle.exe
         """
-        logging.info("Boot the guest with cpu_model_flags= %s", cpu_flag)
+        test.log.info("Boot the guest with cpu_model_flags= %s", cpu_flag)
         vm = _boot_guest_with_cpu_flag(cpu_flag)
         session = vm.wait_for_login(timeout=timeout)
-        logging.info("Run gettime_cycle.exe")
+        test.log.info("Run gettime_cycle.exe")
         cycles = _run_gettime(session)
         vm = env.get_vm(params["main_vm"])
         vm.graceful_shutdown(timeout=timeout)
@@ -122,14 +121,14 @@ def run(test, params, env):
     flags_without_hv_time = ','.join(
         [_ for _ in flags_with_hv_time.split(',') if _ not in hv_time_flags])
 
-    error_context.context("Setting up environments", logging.info)
+    error_context.context("Setting up environments", test.log.info)
     _setup_environments()
 
-    error_context.context("Get cpu cycles without hv_time flag", logging.info)
+    error_context.context("Get cpu cycles without hv_time flag", test.log.info)
     cycles_without_flag = _get_cycles_with_flags(flags_without_hv_time)
 
-    error_context.context("Get cpu cycles with hv_time flag", logging.info)
+    error_context.context("Get cpu cycles with hv_time flag", test.log.info)
     cycles_with_flag = _get_cycles_with_flags(flags_with_hv_time)
 
-    error_context.context("Check the optimize factor", logging.info)
+    error_context.context("Check the optimize factor", test.log.info)
     _check_result(cycles_without_flag, cycles_with_flag)

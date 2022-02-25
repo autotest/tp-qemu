@@ -1,5 +1,3 @@
-import logging
-
 from virttest import env_process
 from virttest import error_context
 
@@ -27,7 +25,7 @@ def run(test, params, env):
         if "(core dumped)" in str(emsg):
             test.fail("Guest core dumped with invalid parameters.")
         else:
-            logging.info("Guest quit as expect: %s", str(emsg))
+            test.log.info("Guest quit as expect: %s", str(emsg))
             return
 
     test.fail("Guest start normally, didn't quit as expect.")

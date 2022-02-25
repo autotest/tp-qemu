@@ -2,8 +2,6 @@
 Sanity check for hypervisor flag in guest.
 """
 
-import logging
-
 
 def run(test, params, env):
     """
@@ -23,6 +21,6 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     cpuinfo = session.cmd("cat /proc/cpuinfo")
-    logging.debug("Guest '/proc/cpuinfo': %s", cpuinfo)
+    test.log.debug("Guest '/proc/cpuinfo': %s", cpuinfo)
     if "hypervisor" not in cpuinfo:
         test.fail("hypervisor flag undefined in cpuinfo")

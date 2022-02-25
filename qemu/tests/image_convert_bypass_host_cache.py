@@ -1,4 +1,3 @@
-import logging
 import os
 
 from avocado import fail_on
@@ -31,8 +30,8 @@ def run(test, params, env):
     strace_output_file = os.path.join(test.debugdir,
                                       "convert_to_%s.log" % convert_target1)
     image_params["convert_target"] = convert_target1
-    logging.debug("Convert image from %s to %s, strace log: %s", image.tag,
-                  convert_target1, strace_output_file)
+    test.log.debug("Convert image from %s to %s, strace log: %s", image.tag,
+                   convert_target1, strace_output_file)
 
     with strace(image, strace_events, strace_output_file):
         fail_on((process.CmdError,))(image.convert)(image_params, root_dir)
@@ -48,9 +47,9 @@ def run(test, params, env):
     strace_output_file = os.path.join(test.debugdir,
                                       "convert_to_%s.log" % convert_target2)
     image_params["convert_target"] = convert_target2
-    logging.debug(("Convert image from %s to %s with cache mode "
-                   "'none', strace log: %s"), image.tag, convert_target2,
-                  strace_output_file)
+    test.log.debug(("Convert image from %s to %s with cache mode "
+                    "'none', strace log: %s"), image.tag, convert_target2,
+                   strace_output_file)
 
     with strace(image, strace_events, strace_output_file):
         fail_on((process.CmdError,))(image.convert)(

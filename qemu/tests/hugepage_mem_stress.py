@@ -1,5 +1,3 @@
-import logging
-
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
@@ -24,8 +22,8 @@ def run(test, params, env):
     """
     def heavyload_install():
         if session.cmd_status(test_installed_cmd) != 0:
-            logging.warning("Could not find installed heavyload in guest, will"
-                            " install it via winutils.iso ")
+            test.log.warning("Could not find installed heavyload in guest, will"
+                             " install it via winutils.iso ")
             winutil_drive = utils_misc.get_winutils_vol(session)
             if not winutil_drive:
                 test.cancel("WIN_UTILS CDROM not found.")
@@ -39,10 +37,10 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     try:
-        error_context.context("Run memory heavy stress in guest", logging.info)
+        error_context.context("Run memory heavy stress in guest", test.log.info)
         if os_type == "linux":
             stress_args = params["stress_custom_args"] % (
-                    params.get_numeric("mem") / 512)
+                params.get_numeric("mem") / 512)
             stress_test = utils_test.VMStress(vm, "stress",
                                               params, stress_args=stress_args)
             try:
@@ -56,7 +54,7 @@ def run(test, params, env):
             install_path = params["install_path"]
             test_installed_cmd = 'dir "%s" | findstr /I heavyload' % install_path
             heavyload_install()
-            error_context.context("Run heavyload inside guest.", logging.info)
+            error_context.context("Run heavyload inside guest.", test.log.info)
             heavyload_bin = r'"%s\heavyload.exe" ' % install_path
             heavyload_options = ["/MEMORY %d" % (params.get_numeric("mem") / 512),
                                  "/DURATION %d" % (stress_duration // 60),
@@ -72,7 +70,7 @@ def run(test, params, env):
 
         if params.get_boolean("non_existent_point"):
             error_context.context("Check large memory pages free on host.",
-                                  logging.info)
+                                  test.log.info)
             if utils_memory.get_num_huge_pages() != utils_memory.get_num_huge_pages_free():
                 test.fail("HugePages leaked.")
     finally:

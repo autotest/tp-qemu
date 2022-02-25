@@ -1,4 +1,3 @@
-import logging
 import functools
 import os
 
@@ -45,7 +44,7 @@ def run(test, params, env):
         """Create snapshot."""
         while True:
             snapshot = yield
-            logging.debug("create image %s", snapshot)
+            test.log.debug("create image %s", snapshot)
             snapshot_params = params.object_params(snapshot)
             snapshot = qemu_storage.QemuImg(snapshot_params, root_dir, snapshot)
             fail_on((process.CmdError,))(snapshot.create)(snapshot.params)
@@ -58,12 +57,12 @@ def run(test, params, env):
         sync_bin = params.get("sync_bin", "sync")
         while True:
             snapshot = yield
-            logging.debug("boot vm from image %s", snapshot.tag)
+            test.log.debug("boot vm from image %s", snapshot.tag)
             vm = img_utils.boot_vm_with_images(test, params, env,
                                                images=(snapshot.tag,),
                                                vm_name="VM_%s" % snapshot.tag)
             guest_file = params["guest_tmp_filename"] % snapshot.tag
-            logging.debug("create tmp file %s in %s", guest_file, snapshot.tag)
+            test.log.debug("create tmp file %s in %s", guest_file, snapshot.tag)
             img_utils.save_random_file_to_vm(vm, guest_file, 2048, sync_bin)
             vm.destroy()
 
@@ -80,7 +79,7 @@ def run(test, params, env):
 
     strace_log = os.path.join(test.debugdir, "rebase.log")
     top = snapshots[-1]
-    logging.debug("rebase snapshot %s to %s", top.tag, base.tag)
+    test.log.debug("rebase snapshot %s to %s", top.tag, base.tag)
     with img_utils.strace(top, trace_events, strace_log):
         top.base_tag = base.tag
         fail_on((process.CmdError))(top.rebase)(params)
@@ -95,8 +94,8 @@ def run(test, params, env):
 
     strace_log = os.path.join(test.debugdir, "rebase_bypass.log")
     top = snapshots[-1]
-    logging.debug("rebase snapshot %s to %s in cache mode 'none'",
-                  top.tag, base.tag)
+    test.log.debug("rebase snapshot %s to %s in cache mode 'none'",
+                   top.tag, base.tag)
     with img_utils.strace(top, trace_events, strace_log):
         top.base_tag = base.tag
         fail_on((process.CmdError))(top.rebase)(params,

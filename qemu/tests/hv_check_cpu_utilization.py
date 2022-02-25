@@ -8,6 +8,8 @@ from virttest import utils_test
 from virttest import error_context
 from avocado.utils import process
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def _check_cpu_usage(session):
     """
@@ -23,7 +25,7 @@ def _check_cpu_usage(session):
         if result:
             percent = int(result.group(1))
             if percent > 1:
-                logging.warning("Guest cpu usage :%s%%", percent)
+                LOG_JOB.warning("Guest cpu usage :%s%%", percent)
 
 
 def _check_cpu_thread_func(session, timeout):

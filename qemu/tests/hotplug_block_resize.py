@@ -1,5 +1,4 @@
 import json
-import logging
 import re
 
 from virttest import data_dir
@@ -39,7 +38,7 @@ def run(test, params, env):
     def _change_vm_power():
         """ Change the vm power. """
         method, command = params['command_opts'].split(',')
-        logging.info('Sending command(%s): %s', method, command)
+        test.log.info('Sending command(%s): %s', method, command)
         if method == 'shell':
             power_session = vm.wait_for_login(timeout=360)
             power_session.sendline(command)
@@ -63,9 +62,9 @@ def run(test, params, env):
         size = str(
             data_image_size + resize_size) if resize_op == ENLARGE else str(
             data_image_size - resize_size)
-        logging.info("Start to %s %s to %sB.", resize_op, plug[0], size)
+        test.log.info("Start to %s %s to %sB.", resize_op, plug[0], size)
         args = (None, size, dev) if vm.check_capability(
-                Flags.BLOCKDEV) else (dev, size)
+            Flags.BLOCKDEV) else (dev, size)
         vm.monitor.block_resize(*args)
         return size
 

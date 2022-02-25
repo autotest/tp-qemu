@@ -1,5 +1,4 @@
 import os
-import logging
 
 from virttest import data_dir
 from virttest import error_context
@@ -24,7 +23,7 @@ def run(test, params, env):
     virt_what_guest_dir = params["virt_what_guest_dir"]
     virt_what_install_cmd = params["virt_what_install_cmd"]
     clean_virt_what_pkg_cmd = params["clean_virt_what_pkg_cmd"]
-    error_context.context("Boot the guest with all flags", logging.info)
+    error_context.context("Boot the guest with all flags", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
@@ -36,7 +35,7 @@ def run(test, params, env):
         status = session.cmd_status(virt_what_remove_cmd)
         if status:
             test.error("Fail to uninstall existing virt-what")
-    logging.info("Copy target virt-what pkg to guest")
+    test.log.info("Copy target virt-what pkg to guest")
     virt_what_pkg = os.path.join(data_dir.get_deps_dir("virt_what"),
                                  virt_what_pkg)
     try:
@@ -45,9 +44,9 @@ def run(test, params, env):
         if status:
             test.error("Fail to install target virt-what")
         hv_type = session.cmd("virt-what")
-        logging.debug("Guest 'virt-what': %s", hv_type)
+        test.log.debug("Guest 'virt-what': %s", hv_type)
         if "kvm" not in hv_type or "hyperv" not in hv_type:
             test.fail("Hyiper-V type mismatch, should be both KVM & hyperv")
     finally:
-        logging.info("Clean virt-what pkg")
+        test.log.info("Clean virt-what pkg")
         session.cmd(clean_virt_what_pkg_cmd, ignore_all_errors=True)

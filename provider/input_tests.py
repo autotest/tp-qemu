@@ -11,6 +11,8 @@ from virttest import graphical_console
 from virttest import data_dir
 from provider import input_event_proxy
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def get_keycode_cfg(filename):
     """
@@ -40,11 +42,11 @@ def key_tap_test(test, params, console, listener, wait_time):
     keys_file = params.get("key_table_file")
     keys_dict = get_keycode_cfg(keys_file)
     for key in keys_dict.keys():
-        error_context.context("Send %s key tap event" % key, logging.info)
+        error_context.context("Send %s key tap event" % key, LOG_JOB.info)
         console.key_tap(key)
         time.sleep(wait_time)
 
-        logging.info("Check guest received %s key event is "
+        LOG_JOB.info("Check guest received %s key event is "
                      "matched with expected key event", key)
         keycode = keys_dict[key]
         exp_events = [(keycode, "KEYDOWN"), (keycode, "KEYUP")]
@@ -81,7 +83,7 @@ def mouse_btn_test(test, params, console, listener, wait_time):
                      'extra': 'BTN_EXTRA'}
     btns = params.objects("btns")
     for btn in btns:
-        error_context.context("Click mouse %s button" % btn, logging.info)
+        error_context.context("Click mouse %s button" % btn, LOG_JOB.info)
         console.btn_click(btn)
 
         keycode = mouse_btn_map[btn]
@@ -91,7 +93,7 @@ def mouse_btn_test(test, params, console, listener, wait_time):
         btn_event = list()
 
         error_context.context("Check correct button event is received",
-                              logging.info)
+                              LOG_JOB.info)
         while not events_queue.empty():
             events = events_queue.get()
             # some windows os will return pointer move event first
@@ -122,7 +124,7 @@ def mouse_scroll_test(test, params, console, listener, wait_time, count=1):
     exp_events = {'wheel-up': ("WHEELFORWARD", 0),
                   'wheel-down': ('WHEELBACKWARD', 0)}
     for scroll in scrolls:
-        error_context.context("Scroll mouse %s" % scroll, logging.info)
+        error_context.context("Scroll mouse %s" % scroll, LOG_JOB.info)
         if "up" in scroll:
             console.scroll_forward(count)
         else:
@@ -131,7 +133,7 @@ def mouse_scroll_test(test, params, console, listener, wait_time, count=1):
         events_queue = listener.events
         time.sleep(wait_time)
         error_context.context("Check correct scroll event is received",
-                              logging.info)
+                              LOG_JOB.info)
         exp_event = exp_events.get(scroll)
         samples = []
         while not events_queue.empty():
@@ -185,12 +187,12 @@ def mouse_move_test(test, params, console, listener,
         vertical = 1
 
     error_context.context("Moving pointer from %s to %s"
-                          % (start_pos, end_pos), logging.info)
+                          % (start_pos, end_pos), LOG_JOB.info)
     console.pointer_move(end_pos, motion=line, absolute=absolute)
     time.sleep(wait_time)
 
     error_context.context("Collecting all pointer move events from guest",
-                          logging.info)
+                          LOG_JOB.info)
     while not events_queue.empty():
         event = events_queue.get()
         xpos, ypos = event["xPos"], event["yPos"]
@@ -203,7 +205,7 @@ def mouse_move_test(test, params, console, listener,
     tolerance = int(params.get("tolerance"))
     error_context.context("Compare if pointer move to destination pos (%s, %s)"
                           "the missed value should in tolerance scope."
-                          % end_pos, logging.info)
+                          % end_pos, LOG_JOB.info)
     if (abs(xn - xn_guest) > tolerance) or (abs(yn - yn_guest) > tolerance):
         test.fail("pointer did not move to destination position."
                   "it move to pos (%s, %s) in guest, but exepected pos is"
@@ -211,7 +213,7 @@ def mouse_move_test(test, params, console, listener,
 
     error_context.context("Compare if pointer move trace nearby destination line,"
                           "the missed value should in tolerance scope.",
-                          logging.info)
+                          LOG_JOB.info)
 
     for i, (x, y) in enumerate(event_lst):
         if not vertical:
@@ -284,7 +286,7 @@ def mouse_test(test, params, vm, wait_time, count=1):
     mice_info = query_mice_status(vm, mice_name)
     absolute = True if mice_info["absolute"] else False
     error_context.context("Check if %s device is working" % mice_name,
-                          logging.info)
+                          LOG_JOB.info)
     if not mice_info["current"]:
         test.fail("%s does not worked currently" % mice_name)
 

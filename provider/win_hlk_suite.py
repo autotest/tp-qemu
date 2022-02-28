@@ -11,6 +11,8 @@ from virttest import data_dir
 from virttest import utils_misc
 from virttest import utils_net
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 STATE_READY = 'Ready'
 STATE_NOT_READY = 'NotReady'
 
@@ -40,10 +42,10 @@ class HLKServer(object):
         self._vm = vm_server
         self._vm.copy_files_to(src_link, "c:\\", timeout=60)
         self._session = self._vm.wait_for_login(timeout=360)
-        logging.info('Getting HLK Server hostname:')
+        LOG_JOB.info('Getting HLK Server hostname:')
         hostname = self._session.cmd('hostname').strip()
         self._session.set_prompt(r'toolsHLK@%s' % hostname)
-        logging.info('Starting to run HLK Server powershell script:')
+        LOG_JOB.info('Starting to run HLK Server powershell script:')
         self._session.cmd_output('powershell -command "c:\\hlk_studio.ps1"')
 
     def close(self):
@@ -52,9 +54,9 @@ class HLKServer(object):
 
     def get_default_pool(self):
         """Get default pool."""
-        logging.info('Getting default pool:')
+        LOG_JOB.info('Getting default pool:')
         machines = self._session.cmd_output('getdefaultpool')
-        logging.info(machines)
+        LOG_JOB.info(machines)
         return [json.loads(machine) for machine in machines.splitlines()]
 
     def create_pool(self, name):
@@ -64,7 +66,7 @@ class HLKServer(object):
         :param name: Pool name.
         :type name: str
         """
-        logging.info('Creating pool "%s":', name)
+        LOG_JOB.info('Creating pool "%s":', name)
         self._session.cmd_output('createpool %s' % name)
 
     def move_machine_from_default_pool(self, machine_name, dst_pool_name):
@@ -76,7 +78,7 @@ class HLKServer(object):
         :param dst_pool_name: Destination pool name.
         :type dst_pool_name: str
         """
-        logging.info('Moving machine "%s" from default pool to pool "%s":',
+        LOG_JOB.info('Moving machine "%s" from default pool to pool "%s":',
                      machine_name, dst_pool_name)
         cmd = 'movemachinefromdefaultpool %s %s' % (machine_name,
                                                     dst_pool_name)
@@ -95,7 +97,7 @@ class HLKServer(object):
         :param timeout: Timeout for setting in seconds.
         :type timeout: int
         """
-        logging.info('Setting machine "%s" of pool "%s" to state "%s":',
+        LOG_JOB.info('Setting machine "%s" of pool "%s" to state "%s":',
                      machine_name, pool_name, state)
         cmd = 'setmachinestate %s %s %s' % (machine_name, pool_name, state)
         self._session.cmd_output(cmd, timeout)
@@ -117,7 +119,7 @@ class HLKServer(object):
         """
         cmd = 'listmachinetargets %s %s' % (machine_name, pool_name)
         targets = self._session.cmd_output(cmd, timeout)
-        logging.info(targets)
+        LOG_JOB.info(targets)
         return [target for target in targets.splitlines()]
 
     def get_machine_target(self, target_name, machine_name, pool_name, timeout=60):
@@ -136,13 +138,13 @@ class HLKServer(object):
                  format: ["$Target0_Name", "$Target0_Key", "$Target0_Type"]
         :type: list
         """
-        logging.info('Getting target "%s" of machine "%s" of pool "%s":',
+        LOG_JOB.info('Getting target "%s" of machine "%s" of pool "%s":',
                      target_name, machine_name, pool_name)
         targets = self.list_machine_targets(machine_name, pool_name, timeout)
         for target in targets:
             if target_name in target:
                 target = target.split(',')
-                logging.info('key: %s, type: %s', target[1], target[2])
+                LOG_JOB.info('key: %s, type: %s', target[1], target[2])
                 return target
 
     def get_machine_target_key(self, target_name, machine_name, pool_name, timeout=60):
@@ -196,7 +198,7 @@ class HLKServer(object):
         """
         for project in self.list_projects():
             if project['project_name'] == name:
-                logging.info(project)
+                LOG_JOB.info(project)
                 return project
 
     def create_project(self, name):
@@ -206,7 +208,7 @@ class HLKServer(object):
         :param name: Project name.
         :type name: str
         """
-        logging.info('Creating project "%s":', name)
+        LOG_JOB.info('Creating project "%s":', name)
         self._session.cmd_output('createproject %s' % name)
 
     def create_project_target(self, target_key, project_name,
@@ -225,7 +227,7 @@ class HLKServer(object):
         :param timeout: Timeout for creating in seconds.
         :type timeout: int
         """
-        logging.info('Creating project target by target key "%s" of "%s":',
+        LOG_JOB.info('Creating project target by target key "%s" of "%s":',
                      target_key, project_name)
         cmd = 'createprojecttarget %s %s %s %s' % (target_key, project_name,
                                                    machine_name, pool_name)
@@ -317,10 +319,10 @@ class HLKServer(object):
         :return: Target test ID.
         :rtype: str
         """
-        logging.info('Getting target id of test "%s":', test_name)
+        LOG_JOB.info('Getting target id of test "%s":', test_name)
         test_id = self.get_target_test(test_name, target_key, project_name,
                                        machine_name, pool_name, timeout)['test_id']
-        logging.info(test_id)
+        LOG_JOB.info(test_id)
         return test_id
 
     def queue_test(self, test_id, target_key, project_name, machine_name, pool_name):
@@ -338,7 +340,7 @@ class HLKServer(object):
         :param pool_name: Pool name.
         :type pool_name: str
         """
-        logging.info('Queuing a test, test id "%s":', test_id)
+        LOG_JOB.info('Queuing a test, test id "%s":', test_id)
         cmd = 'queuetest %s %s %s %s %s' % (test_id, target_key, project_name,
                                             machine_name, pool_name)
         self._session.cmd_output(cmd)
@@ -366,10 +368,10 @@ class HLKServer(object):
         cmd = 'ziptestresultlogs %s %s %s %s %s %s' % (result_index, test_id,
                                                        target_key, project_name,
                                                        machine_name, pool_name)
-        logging.info('Zipping the index %s of test result logs of test id "%s":',
+        LOG_JOB.info('Zipping the index %s of test result logs of test id "%s":',
                      result_index, test_id)
         output = self._session.cmd_output(cmd)
-        logging.info(output)
+        LOG_JOB.info(output)
         return output
 
     def list_test_results(self, test_id, target_key, project_name,
@@ -414,7 +416,7 @@ class HLKServer(object):
         :rtype: str
         """
         results = ""
-        logging.info('Getting tests results:')
+        LOG_JOB.info('Getting tests results:')
         host_path = os.path.join(self._test.resultsdir, "hlk_test_result_logs")
         if not os.path.exists(host_path):
             os.makedirs(host_path)
@@ -426,12 +428,12 @@ class HLKServer(object):
                 o = self.zip_test_result_logs(result_index, test_id, target_key,
                                               project_name, machine_name, pool_name)
                 zip_path = o.splitlines()[-1]
-                logging.info('Uploading the test result from %s to %s:',
+                LOG_JOB.info('Uploading the test result from %s to %s:',
                              zip_path, host_path)
                 self._vm.copy_files_from(zip_path, host_path)
             results = results + output
 
-        logging.info(results)
+        LOG_JOB.info(results)
         return results
 
     def run_tests(self, tests_id, target_key, project_name,
@@ -556,24 +558,24 @@ def download_hlk_server_image(params, src_img_uri, timeout=1800):
         dst_img_dir = os.path.dirname(dst_img_path)
 
         if not os.path.exists(dst_img_path):
-            logging.info('Checking HLK Server URI %s:', src_img_uri)
+            LOG_JOB.info('Checking HLK Server URI %s:', src_img_uri)
             curl_check_cmd = 'curl -I -L -k -m 120 %s' % src_img_uri
             output = process.run(curl_check_cmd).stdout_text
             if 'File not found' in output:
                 raise HLKError('Invalid URI %s.' % src_img_uri)
 
-            logging.info('Downloading HLK Server from %s to %s/:',
+            LOG_JOB.info('Downloading HLK Server from %s to %s/:',
                          src_img_uri, dst_img_dir)
             curl_download_cmd = 'curl -o %s %s' % (dst_img_path, src_img_uri)
             process.run(curl_download_cmd, timeout)
         else:
-            logging.info('Found HLK Server image: %s.', dst_img_path)
+            LOG_JOB.info('Found HLK Server image: %s.', dst_img_path)
 
         if archive.is_archive(dst_img_path):
-            logging.info("Uncompressing %s :", dst_img_path)
+            LOG_JOB.info("Uncompressing %s :", dst_img_path)
             img_name = archive.uncompress(dst_img_path, dst_img_dir)
             dst_img_path = os.path.join(dst_img_dir, img_name)
-            logging.info('The uncompressed destination path: %s', dst_img_path)
+            LOG_JOB.info('The uncompressed destination path: %s', dst_img_path)
 
         qemu_binary = utils_misc.get_qemu_img_binary(params)
         info_cmd = "%s info %s --output=json" % (qemu_binary, dst_img_path)

@@ -11,6 +11,8 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest.utils_windows import virtio_win, wmic
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 QUERY_TIMEOUT = 360
 INSTALL_TIMEOUT = 360
@@ -42,7 +44,7 @@ def uninstall_driver(session, test, devcon_path, driver_name,
                                                timeout=OPERATION_TIMEOUT)
     if status:
         test.error("Not found devcon.exe, details: %s" % output)
-    logging.info("Uninstalling previous installed driver")
+    LOG_JOB.info("Uninstalling previous installed driver")
     for inf_name in _pnpdrv_info(session, device_name, ["InfName"]):
         uninst_store_cmd = "pnputil /f /d %s" % inf_name
         status, output = session.cmd_status_output(uninst_store_cmd,
@@ -90,7 +92,7 @@ def get_driver_inf_path(session, test, media_type, driver_name):
     inf_find_cmd = 'dir /b /s %s\\%s.inf | findstr "\\%s\\\\"'
     inf_find_cmd %= (viowin_ltr, driver_name, inf_middle_path)
     inf_path = session.cmd(inf_find_cmd, timeout=OPERATION_TIMEOUT).strip()
-    logging.info("Found inf file '%s'", inf_path)
+    LOG_JOB.info("Found inf file '%s'", inf_path)
     return inf_path
 
 
@@ -112,7 +114,7 @@ def install_driver_by_virtio_media(session, test, devcon_path, media_type,
                                                timeout=OPERATION_TIMEOUT)
     if status:
         test.error("Not found devcon.exe, details: %s" % output)
-    error_context.context("Installing target driver", logging.info)
+    error_context.context("Installing target driver", LOG_JOB.info)
     installed_any = False
     for hwid in device_hwid.split():
         output = session.cmd_output("%s find %s" % (devcon_path, hwid))
@@ -158,7 +160,7 @@ def copy_file_to_samepath(session, test, params):
     :param test: kvm test object
     :param params: the dict used for parameters
     """
-    logging.info("Copy autoit scripts and virtio-win-guest-tools.exe "
+    LOG_JOB.info("Copy autoit scripts and virtio-win-guest-tools.exe "
                  "to the same path.")
     dst_path = r"C:\\"
     vol_virtio_key = "VolumeName like '%virtio-win%'"

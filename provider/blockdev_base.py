@@ -15,6 +15,8 @@ from provider import backup_utils
 from provider import job_utils
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockdevBaseTest(object):
 
@@ -47,7 +49,7 @@ class BlockdevBaseTest(object):
                 map(int, params.objects("cluster_size_blacklist")))
             cluster_size = backup_utils.generate_random_cluster_size(blacklist)
             params["image_cluster_size"] = cluster_size
-            logging.info(
+            LOG_JOB.info(
                 "set target image cluster size to '%s'",
                 cluster_size)
         params.setdefault("target_path", data_dir.get_data_dir())
@@ -70,7 +72,7 @@ class BlockdevBaseTest(object):
                 cluster_size = backup_utils.generate_random_cluster_size(
                     blacklist)
                 params["image_cluster_size"] = cluster_size
-                logging.info(
+                LOG_JOB.info(
                     "set image cluster size to '%s'",
                     cluster_size)
             disk = self.source_disk_define_by_params(params, tag)
@@ -136,7 +138,7 @@ class BlockdevBaseTest(object):
             backup_utils.refresh_mounts(self.disks_info, self.params, session)
             for tag, info in self.disks_info.items():
                 if tag != 'image1':
-                    logging.debug("mount target disk in VM!")
+                    LOG_JOB.debug("mount target disk in VM!")
                     utils_disk.mount(info[0], info[1], session=session)
                 for data_file in self.files_info[tag]:
                     backup_utils.verify_file_md5(
@@ -213,7 +215,7 @@ class BlockdevBaseTest(object):
                 # A StorageVolume object
                 sp_admin.remove_volume(img)
             except Exception as e:
-                logging.warn(str(e))
+                LOG_JOB.warn(str(e))
 
     def check_block_jobs_started(self, jobid_list, tmo=10):
         """

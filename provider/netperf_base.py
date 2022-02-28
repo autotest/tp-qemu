@@ -11,6 +11,8 @@ from virttest import remote
 from virttest import data_dir
 from virttest import error_context
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def pin_vm_threads(vm, node):
     """
@@ -76,12 +78,12 @@ def tweak_tuned_profile(params, server_ctl, client, host):
     client_tuned_profile = params.get("client_tuned_profile")
     server_tuned_profile = params.get("server_tuned_profile")
     host_tuned_profile = params.get("host_tuned_profile")
-    error_context.context("Changing tune profile of guest", logging.info)
+    error_context.context("Changing tune profile of guest", LOG_JOB.info)
     if server_tuned_profile:
         ssh_cmd(server_ctl, server_tuned_profile)
 
     error_context.context("Changing tune profile of client/host",
-                          logging.info)
+                          LOG_JOB.info)
     if client_tuned_profile:
         ssh_cmd(client, client_tuned_profile)
     if host_tuned_profile:
@@ -116,7 +118,7 @@ def netperf_thread(params, numa_enable, client_s, option, fname):
         cmd += "numactl --cpunodebind=%s --membind=%s " % (n, n)
     cmd += option
     cmd += " >> %s" % fname
-    logging.info("Start netperf thread by cmd '%s'", cmd)
+    LOG_JOB.info("Start netperf thread by cmd '%s'", cmd)
     ssh_cmd(client_s, cmd)
 
 

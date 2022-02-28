@@ -10,6 +10,8 @@ from virttest import utils_misc
 
 from avocado.utils import process
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 def boot_vm_with_images(test, params, env, images=None, vm_name=None):
     """Boot VM with images specified."""
@@ -20,7 +22,7 @@ def boot_vm_with_images(test, params, env, images=None, vm_name=None):
         params["images"] = images
     params["start_vm"] = "yes"
     vm_name = vm_name or params["main_vm"]
-    logging.debug("Boot vm %s with images: %s", vm_name, params["images"])
+    LOG_JOB.debug("Boot vm %s with images: %s", vm_name, params["images"])
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
     vm.verify_alive()
@@ -58,7 +60,7 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
     if status:
         raise EnvironmentError("Fail to get md5 value of file: %s" % filepath)
     md5_value = out.split()[0]
-    logging.debug("md5sum value of %s: %s", filepath, md5_value)
+    LOG_JOB.debug("md5sum value of %s: %s", filepath, md5_value)
     if md5_value_to_check and md5_value != md5_value_to_check:
         raise ValueError("md5 values mismatch, got: %s, expected: %s" %
                          (md5_value, md5_value_to_check))
@@ -67,7 +69,7 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
 
 def find_strace():
     """Find strace path or cancel the test."""
-    logging.debug("Check if strace is available")
+    LOG_JOB.debug("Check if strace is available")
     try:
         return path.find_command("strace")
     except path.CmdNotFoundError as detail:
@@ -108,10 +110,10 @@ def check_flag(strace_log, target_file, flag):
     :param target_file: syscall-related file
     :param flag: flag to check
     """
-    logging.debug("Check strace output: %s", strace_log)
+    LOG_JOB.debug("Check strace output: %s", strace_log)
     with open(strace_log) as fd:
-        logging.debug("syscalls related to %s", target_file)
+        LOG_JOB.debug("syscalls related to %s", target_file)
         lines = [l for l in fd if target_file in l]
         for line in lines:
-            logging.debug(line.strip())
+            LOG_JOB.debug(line.strip())
         return any(flag in line for line in lines)

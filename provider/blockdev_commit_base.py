@@ -9,6 +9,8 @@ from provider import job_utils
 
 from provider.virt_storage.storage_admin import sp_admin
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class BlockDevCommitTest(object):
 
@@ -154,7 +156,7 @@ class BlockDevCommitTest(object):
             for image in self.snapshot_images:
                 image.remove()
         except Exception as error:
-            logging.error(str(error))
+            LOG_JOB.error(str(error))
 
     def run_test(self):
         self.pre_test()

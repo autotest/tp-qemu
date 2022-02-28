@@ -9,6 +9,8 @@ except ImportError:
 from virttest import data_dir
 from virttest import utils_misc
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 DEP_DIR = data_dir.get_deps_dir('input_event')
 
@@ -125,7 +127,7 @@ class _EventListener(object):
         self._agent_sh.set_output_func(None)
         self._agent_sh = None
         self._agent_state = AgentState.STOPPED
-        logging.info('Stopped listening input events on %s', self._vm.name)
+        LOG_JOB.info('Stopped listening input events on %s', self._vm.name)
 
     def is_listening(self):
         '''Return `True` if listening.'''
@@ -136,7 +138,7 @@ class _EventListener(object):
         self._launch()
         if not utils_misc.wait_for(self.is_listening, timeout=10, step=1):
             raise AssertionError('agent program is not running')
-        logging.info('Listening input events on %s', self._vm.name)
+        LOG_JOB.info('Listening input events on %s', self._vm.name)
 
     def cleanup(self):
         '''Cleanup the event listener.'''
@@ -169,7 +171,7 @@ class _EventListener(object):
         elif mtype == AgentMessageType.ERROR:
             self._report_error(content)
         else:
-            logging.error('Input event listener received unknown message')
+            LOG_JOB.error('Input event listener received unknown message')
 
     def _report_info(self, content):
         '''Report information of devices.'''

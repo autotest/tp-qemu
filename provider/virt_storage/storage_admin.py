@@ -6,6 +6,8 @@ from .backend import rbd
 from .backend import directory
 from .utils import state
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class StoragePoolAdmin(object):
     supported_storage_backend = {
@@ -81,7 +83,7 @@ class StoragePoolAdmin(object):
                     cls.list_pools()))
             return pools[0]
         except IndexError:
-            logging.warning("no storage pool with matching path '%s'", path)
+            LOG_JOB.warning("no storage pool with matching path '%s'", path)
         return None
 
     @staticmethod

@@ -9,6 +9,8 @@ from avocado.utils.wait import wait_for
 
 from virttest import utils_package
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class SyntaxCheckError(Exception):
     def __init__(self, cmd, output):
@@ -44,7 +46,7 @@ class PlaybookExecutor(Expect):
         self.callback_plugin = callback_plugin
         super(PlaybookExecutor, self).__init__(self._generate_cmd(extra_vars,
                                                                   addl_opts))
-        logging.info("Command of ansible playbook: '%s'", self.command)
+        LOG_JOB.info("Command of ansible playbook: '%s'", self.command)
 
     def _generate_cmd(self, extra_vars=None, addl_opts=None):
         """
@@ -95,7 +97,7 @@ class PlaybookExecutor(Expect):
             self.kill()
             raise ExecutorTimeoutError('ansible-playbook cannot complete all '
                                        'tasks within the expected time.')
-        logging.info('ansible-playbook execution is completed.')
+        LOG_JOB.info('ansible-playbook execution is completed.')
 
     def store_playbook_log(self, log_dir, filename):
         """
@@ -127,19 +129,19 @@ def check_ansible_playbook(params):
                 pip_bin = binary
                 break
         if not pip_bin:
-            logging.error("Failed to get available pip binary")
+            LOG_JOB.error("Failed to get available pip binary")
             return False
         install_cmd = '%s install ansible' % pip_bin
         status, output = process.getstatusoutput(install_cmd, verbose=True)
         if status != 0:
-            logging.error("Install python ansible failed as: %s", output)
+            LOG_JOB.error("Install python ansible failed as: %s", output)
             return False
         # Install 'sshpass' as it can't be installed automatically as a
         # dependency of ansible when ansible be installed with pip
         sshpass_pkg = params.get('sshpass_pkg')
         if not utils_package.package_install('sshpass'):
             if not (sshpass_pkg and utils_package.package_install(sshpass_pkg)):
-                logging.error("Failed to install sshpass.")
+                LOG_JOB.error("Failed to install sshpass.")
                 return False
         return True
 

@@ -6,6 +6,8 @@ from virttest import utils_misc
 
 from provider import win_driver_utils
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 driver_name_list = ['netkvm', 'viorng', 'vioser',
                     'balloon', 'pvpanic', 'vioinput',
                     'viofs', 'viostor', 'vioscsi']
@@ -39,7 +41,7 @@ def install_gagent(session, test, qemu_ga_pkg, gagent_install_cmd,
     :param gagent_install_cmd: guest agent install command.
     :param gagent_pkg_info_cmd: guest agent pkg info check command.
     """
-    logging.info("Install 'qemu-guest-agent' package in guest.")
+    LOG_JOB.info("Install 'qemu-guest-agent' package in guest.")
     vol_virtio_key = "VolumeName like '%virtio-win%'"
     vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
     qemu_ga_pkg_path = r"%s:\%s\%s" % (vol_virtio, "guest-agent", qemu_ga_pkg)
@@ -60,7 +62,7 @@ def uninstall_gagent(session, test, gagent_uninstall_cmd):
     :param test: kvm test object
     :param gagent_uninstall_cmd: guest agent uninstall command.
     """
-    logging.info("Try to uninstall 'qemu-guest-agent' package.")
+    LOG_JOB.info("Try to uninstall 'qemu-guest-agent' package.")
     s, o = session.cmd_status_output(gagent_uninstall_cmd)
     if s:
         test.fail("Could not uninstall qemu-guest-agent package ")
@@ -100,7 +102,7 @@ def install_test_with_screen_on_desktop(vm, session, test, run_install_cmd,
     :param copy_files_params: copy files params.
     """
     error_context.context("Install virtio-win drivers via "
-                          "virtio-win-guest-tools.exe.", logging.info)
+                          "virtio-win-guest-tools.exe.", LOG_JOB.info)
     vm.send_key('meta_l-d')
     time.sleep(30)
     if copy_files_params:
@@ -121,13 +123,13 @@ def win_installer_test(session, test, params):
     :param params: the dict used for parameters.
     """
     error_context.context("Check if virtio-win-guest-too.exe "
-                          "is signed by redhat", logging.info)
+                          "is signed by redhat", LOG_JOB.info)
     status = session.cmd_status(params["signed_check_cmd"])
     if status != 0:
         test.fail('Installer not signed by redhat.')
     if params.get("check_qemufwcfg", "no") == "yes":
         error_context.context("Check if QEMU FWCfg Device is installed.",
-                              logging.info)
+                              LOG_JOB.info)
         device_name = "QEMU FWCfg Device"
         chk_cmd = params["vio_driver_chk_cmd"] % device_name
         status = session.cmd_status(chk_cmd)
@@ -151,7 +153,7 @@ def driver_check(session, test, params):
     if params.get("check_qemufwcfg", "no") == "yes":
         driver_name_list.append('qemufwcfg')
     for driver_name, device_name in zip(driver_name_list, device_name_list):
-        error_context.context("%s Driver Check" % driver_name, logging.info)
+        error_context.context("%s Driver Check" % driver_name, LOG_JOB.info)
         inf_path = win_driver_utils.get_driver_inf_path(session, test,
                                                         media_type,
                                                         driver_name)
@@ -161,7 +163,7 @@ def driver_check(session, test, params):
         if not expected_ver:
             test.error("Failed to find driver version from inf file")
         if driver_name != "qemufwcfg":
-            logging.info("Target version is '%s'", expected_ver)
+            LOG_JOB.info("Target version is '%s'", expected_ver)
             ver_list = win_driver_utils._pnpdrv_info(session, device_name,
                                                      ["DriverVersion"])
             if expected_ver not in ver_list:
@@ -190,7 +192,7 @@ def check_gagent_version(session, test, gagent_pkg_info_cmd,
     :param expected_gagent_version: expected gagent version.
     """
     error_context.context("Check if gagent version is correct.",
-                          logging.info)
+                          LOG_JOB.info)
     actual_gagent_version = session.cmd_output(gagent_pkg_info_cmd).split()[-2]
     if actual_gagent_version != expected_gagent_version:
         test.fail("gagent version is not right, expected is %s but got %s"

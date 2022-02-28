@@ -6,6 +6,8 @@ from avocado.utils import process
 from virttest import utils_misc
 from virttest.utils_test import VMStress, StressError
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 
 class VMStressBinding(VMStress):
     """
@@ -26,7 +28,7 @@ class VMStressBinding(VMStress):
         cmd = "setsid taskset -c {} {} {} > /dev/null".format(cpu_id,
                                                               self.stress_cmds,
                                                               self.stress_args)
-        logging.info("Launch stress with command: %s", cmd)
+        LOG_JOB.info("Launch stress with command: %s", cmd)
         self.cmd_launch(cmd)
         # wait for stress to start and then check, if not raise StressError
         if not utils_misc.wait_for(self.app_running,
@@ -80,9 +82,9 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
             cores = int(cpu_info[0]["NumberOfCores"])
             threads = int(cpu_info[0]["ThreadCount"])
         except KeyError:
-            logging.warning("Attempt to get output via 'powershell' failed, "
+            LOG_JOB.warning("Attempt to get output via 'powershell' failed, "
                             "output returned by guest:\n%s", out)
-            logging.info("Try again via 'wmic'")
+            LOG_JOB.info("Try again via 'wmic'")
             cmd = 'wmic CPU get NumberOfCores,ThreadCount /Format:list'
             out = session.cmd_output_safe(cmd).strip()
             try:
@@ -92,14 +94,14 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
                 cores = int(cpu_info[0]["NumberOfCores"])
                 threads = int(cpu_info[0]["ThreadCount"])
             except KeyError:
-                logging.error("Attempt to get output via 'wmic' failed, output"
+                LOG_JOB.error("Attempt to get output via 'wmic' failed, output"
                               " returned by guest:\n%s", out)
                 return False
 
     is_matched = (cpuinfo.sockets == sockets and cpuinfo.cores == cores and
                   cpuinfo.threads == threads)
     if not is_matched:
-        logging.debug("CPU infomation of guest:\n%s", out)
+        LOG_JOB.debug("CPU infomation of guest:\n%s", out)
 
     return is_matched
 
@@ -119,7 +121,7 @@ def check_cpu_flags(params, flags, test, session=None):
     out = func(cmd).split()
     missing = [f for f in flags.split() if f not in out]
     if session:
-        logging.info("Check cpu flags inside guest")
+        LOG_JOB.info("Check cpu flags inside guest")
         if missing:
             test.fail("Flag %s not in guest" % missing)
         no_flags = params.get("no_flags")
@@ -128,7 +130,7 @@ def check_cpu_flags(params, flags, test, session=None):
             if err_flags:
                 test.fail("Flag %s should not be present in guest" % err_flags)
     else:
-        logging.info("Check cpu flags on host")
+        LOG_JOB.info("Check cpu flags on host")
         if missing:
             test.cancel("This host doesn't support flag %s" % missing)
 
@@ -147,10 +149,10 @@ def check_if_vm_vcpu_match(vcpu_desire, vm):
     if isinstance(vcpu_desire, str) and vcpu_desire.isdigit():
         vcpu_desire = int(vcpu_desire)
     if vcpu_desire != vcpu_actual:
-        logging.debug("CPU quantity mismatched !!! guest said it got %s "
+        LOG_JOB.debug("CPU quantity mismatched !!! guest said it got %s "
                       "but we assigned %s", vcpu_actual, vcpu_desire)
         return False
-    logging.info("CPU quantity matched: %s", vcpu_actual)
+    LOG_JOB.info("CPU quantity matched: %s", vcpu_actual)
     return True
 
 

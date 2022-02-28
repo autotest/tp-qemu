@@ -31,6 +31,8 @@ from virttest.qemu_devices.utils import (DeviceError, DeviceHotplugError,
                                          DeviceUnplugError)
 from virttest.qemu_monitor import MonitorLockError
 
+LOG_JOB = logging.getLogger('avocado.test')
+
 HOTPLUG, UNPLUG = ('hotplug', 'unplug')
 HOTPLUGGED_HBAS = {}
 DELETED_EVENT = 'DEVICE_DELETED'
@@ -48,7 +50,7 @@ def _verify_plugged_num(action):
     def decorator(func):
         def wrapper(self, *args, **kwargs):
             orig_disks = self._list_all_disks()
-            logging.debug('The index of disks before %s:\n %s', action, orig_disks)
+            LOG_JOB.debug('The index of disks before %s:\n %s', action, orig_disks)
             result = func(self, *args, **kwargs)
             if self._dev_type != CDROM:
                 for dev in HOTPLUGGED_HBAS.values():
@@ -62,7 +64,7 @@ def _verify_plugged_num(action):
                     _session = self.vm.wait_for_login(timeout=360)
                     disks_info = _session.cmd(
                         disks_info_win if self._iswindows else disks_info_linux)
-                    logging.debug("The details of disks:\n %s", disks_info)
+                    LOG_JOB.debug("The details of disks:\n %s", disks_info)
                     _session.close()
                     raise TestError(
                         "%s--> Actual: %s disks. Expected: %s disks." %
@@ -100,7 +102,7 @@ class _PlugThread(threading.Thread):
             method = "_hotplug_devs" if self._action == HOTPLUG else "_unplug_devs"
             getattr(self._plug_manager, method)(*args)
         except Exception as e:
-            logging.error(
+            LOG_JOB.error(
                 '%s %s failed: %s', self._action.capitalize(), self._images, str(e))
             self.exc_info = sys.exc_info()
             self.exit_event.set()
@@ -400,7 +402,7 @@ class BlockDevicesPlug(object):
         """
         Hot plug the block devices which are defined by images.
         """
-        logging.info("Start to hotplug devices \"%s\" by monitor %s.",
+        LOG_JOB.info("Start to hotplug devices \"%s\" by monitor %s.",
                      ' '.join(images), monitor.name)
         args = (images, {'aobject': 'pci.0' if bus is None else bus.aobject})
         self._create_devices(*args)
@@ -437,7 +439,7 @@ class BlockDevicesPlug(object):
                                 self._unplugged_devs[img].append(HOTPLUGGED_HBAS.pop(img))
                             break
 
-        logging.info("Start to unplug devices \"%s\" by monitor %s.",
+        LOG_JOB.info("Start to unplug devices \"%s\" by monitor %s.",
                      ' '.join(images), monitor.name)
         self._plug_devs(UNPLUG, self._unplugged_devs, monitor, interval=interval)
 
@@ -451,7 +453,7 @@ class BlockDevicesPlug(object):
         if th_mgr.exit_event.is_set():
             th_mgr.raise_threads()
         th_mgr.clean_threads()
-        logging.info("All %s threads finished.", action)
+        LOG_JOB.info("All %s threads finished.", action)
 
     @_verify_plugged_num(action=HOTPLUG)
     def hotplug_devs_serial(self, images=None, monitor=None, bus=None,

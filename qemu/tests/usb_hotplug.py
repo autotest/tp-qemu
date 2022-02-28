@@ -52,7 +52,7 @@ def run(test, params, env):
         if messages_del.find(match_del) == -1:
             test.fail("Guest didn't detect unplug")
 
-    device = params.object_params("testdev")["usb_type"]
+    device = params.object_params("testdev")["usbdev_type"]
     vendor_id = params["vendor_id"]
     product_id = params["product_id"]
 

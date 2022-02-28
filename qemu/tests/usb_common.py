@@ -16,7 +16,7 @@ def parse_usb_topology(params):
     Parse the usb devices topology to the params.
 
     :param params: Dictionary with the test parameters.
-    :return: A list of dictionary ({usb_type_d0: usb_type}) of specified
+    :return: A list of dictionary ({usbdev_type_d0: usbdev_type}) of specified
              usb topology.
     """
     params["usb_devices"] = ""
@@ -27,7 +27,7 @@ def parse_usb_topology(params):
     for key, value in usb_topology.items():
         for i in range(value):
             params["usb_devices"] += " d%s" % len(parsed_devs)
-            usb_type = '{"usb_type_d%s": "%s"}' % (len(parsed_devs), key)
+            usb_type = '{"usbdev_type_d%s": "%s"}' % (len(parsed_devs), key)
             params.update(json.loads(usb_type))
             parsed_devs.append(json.loads(usb_type))
     return parsed_devs
@@ -53,7 +53,7 @@ def collect_usb_dev(params, vm, parsed_devs, suffix):
     devs = []
     for parsed_dev in parsed_devs:
         key = list(parsed_dev.keys())[0]
-        usb_dev_id = "usb-%s" % key[9:]
+        usb_dev_id = "usb-%s" % key[12:]
         usb_dev_info = params[_change_dev_info_key(parsed_dev[key], suffix)]
         usb_dev_port = str(vm.devices.get(usb_dev_id).get_param("port"))
         devs.append([usb_dev_id, usb_dev_info, usb_dev_port])

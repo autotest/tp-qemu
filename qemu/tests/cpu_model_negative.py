@@ -6,6 +6,7 @@ from virttest import cpu
 from virttest import error_context
 from virttest import utils_qemu
 from virttest import utils_misc
+from virttest.utils_version import VersionInterval
 
 
 @error_context.context_aware
@@ -43,10 +44,19 @@ def run(test, params, env):
             'MAX_VALUE', str(max_value)).replace('MACHINE_TYPE', m_type)
         params['warning_msg'] = msg
 
+    if 'maxcpus' in params['wrong_cmd']:
+        qemu_version = utils_qemu.get_qemu_version(qemu_bin)[0]
+        if qemu_version in VersionInterval('[, 6.2.0)'):
+            params['warning_msg'] = params['old_warning_msg']
+        else:
+            params['warning_msg'] = params['new_warning_msg']
     warning_msg = params['warning_msg']
     wrong_cmd = '%s %s' % (qemu_bin, params['wrong_cmd'])
     test.log.info('Start qemu with command: %s', wrong_cmd)
-    status, output = process.getstatusoutput(wrong_cmd)
+    ret_cmd = process.run(cmd=wrong_cmd, verbose=False,
+                          ignore_status=True, shell=True)
+    output = ret_cmd.stderr_text
+    status = ret_cmd.exit_status
     test.log.info('Qemu prompt output:\n%s', output)
     if status == 0:
         test.fail('Qemu guest boots up while it should not.')

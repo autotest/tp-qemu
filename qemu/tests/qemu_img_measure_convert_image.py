@@ -78,3 +78,4 @@ def run(test, params, env):
             _verify_file_size_with_benchmark(c_tag, size, "required")
         if cvt_img_param.get("sparse_size") == "0":
             _verify_file_size_with_benchmark(c_tag, size, "fully-allocated")
+        cvt.remove()

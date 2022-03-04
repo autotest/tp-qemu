@@ -198,11 +198,14 @@ def run(test, params, env):
                 disk = new_disk
                 if params.get('md5_test') == 'yes':
                     md5_filename = mpoint + junction + md5_file
+                session.cmd("mkdir -p %s" % mpoint)
 
             if not utils_disk.is_mount(partition, dst=mpoint,
                                        fstype=fstype, session=session):
-                utils_disk.mount(partition, mpoint,
-                                 fstype=fstype, session=session)
+                res = utils_disk.mount(partition, mpoint,
+                                       fstype=fstype, session=session)
+                if not res:
+                    test.fail("Mounting data disk was failed! ")
 
         if params.get('iozone_test') == 'yes':
             iozone_timeout = float(params.get("iozone_timeout", 1800))

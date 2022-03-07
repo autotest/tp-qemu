@@ -1,6 +1,7 @@
 import math
 
 from avocado.utils import memory
+from avocado.utils import process
 
 from virttest import env_process
 from virttest import error_context
@@ -18,12 +19,15 @@ def run(test, params, env):
     1) Setup total of 4G mem hugepages for specify node.
     2) Setup total of 1G mem hugepages for idle node.
     3) Mount this hugepage to /mnt/kvm_hugepage.
-    4) Boot guest only allocate hugepage from specify node.
-    5) Check the hugepage used from every node.
+    4) Check the basic page size on arm host and guest.
+    5) Boot guest only allocate hugepage from specify node.
+    6) Check the hugepage used from every node.
     :params test: QEMU test object.
     :params params: Dictionary with the test parameters.
     :params env: Dictionary with test environment.
     """
+    get_page_size = params.get('get_page_size')
+
     memory.drop_caches()
     hugepage_size = memory.get_huge_page_size()
     mem_size = int(normalize_data_size("%sM" % params["mem"], "K"))
@@ -44,6 +48,10 @@ def run(test, params, env):
         if node_memfree < mem_size:
             node_list.remove(node_id)
 
+    if 'arm64' in params['machine_type']:
+        host_page_size = process.system_output(get_page_size).decode()
+        if host_page_size != params.get("page_size"):
+            test.fail("Host page size is %s not as expected." % host_page_size)
     if len(idle_node_list) < 2 or not node_list:
         test.cancel("Host node does not have enough nodes to run the test, "
                     "skipping test...")
@@ -71,8 +79,12 @@ def run(test, params, env):
         try:
             vm = env.get_vm(params["main_vm"])
             vm.verify_alive()
-            vm.wait_for_login()
+            session = vm.wait_for_login()
 
+            if 'arm64' in params['machine_type']:
+                guest_page_size = session.cmd(get_page_size).strip()
+                if guest_page_size != params.get("page_size"):
+                    test.fail("Guest page size is %s not as expected." % guest_page_size)
             meminfo = host_numa_node.get_all_node_meminfo()
             for index in check_list:
                 error_context.base_context("Check process HugePages Free on host "

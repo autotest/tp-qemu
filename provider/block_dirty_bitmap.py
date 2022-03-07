@@ -9,6 +9,7 @@ from avocado import fail_on
 
 from virttest import data_dir
 from virttest import storage
+from virttest import qemu_storage
 from virttest import qemu_monitor
 
 LOG_JOB = logging.getLogger('avocado.test')
@@ -22,8 +23,15 @@ def parse_params(vm, params):
         bitmap_params.setdefault("bitmap_name", bitmap)
         target_image = bitmap_params.get("target_image")
         target_image_params = params.object_params(target_image)
-        target_image_filename = storage.get_image_filename(
-            target_image_params, data_dir.get_data_dir())
+        json_backend_list = ["ceph", "iscsi_direct"]
+        if target_image_params["image_backend"] in json_backend_list:
+            get_image_name = qemu_storage.get_image_json
+            target_image_filename = get_image_name(target_image,
+                                                   target_image_params,
+                                                   data_dir.get_data_dir())
+        else:
+            target_image_filename = storage.get_image_filename(
+                target_image_params, data_dir.get_data_dir())
         target_device = vm.get_block({"file": target_image_filename})
         bitmap_params["target_device"] = target_device
         bitmaps.append(bitmap_params)

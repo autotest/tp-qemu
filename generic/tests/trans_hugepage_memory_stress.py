@@ -1,3 +1,4 @@
+import math
 import os
 import time
 
@@ -42,7 +43,7 @@ def run(test, params, env):
         mem_swap = int(utils_memory.read_from_meminfo('SwapFree')) / 1024
         hugepage_size = (int(utils_memory.read_from_meminfo('Hugepagesize')) /
                          1024)
-        nr_hugetlbfs = (mem_free + mem_swap - mem - qemu_mem) / hugepage_size
+        nr_hugetlbfs = math.ceil((mem_free + mem_swap - mem - qemu_mem) / hugepage_size)
         fd = open(hugetlbfs_path, "w")
         fd.write(str(nr_hugetlbfs))
         fd.close()

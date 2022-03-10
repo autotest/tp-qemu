@@ -33,7 +33,7 @@ def run(test, params, env):
     dd_cmd = params["dd_cmd"]
     file_trans_timeout = int(params.get("file_trans_timeout", '1200'))
     file_md5_check_timeout = int(params.get("file_md5_check_timeout", '600'))
-    link_local_ipv6_addr = params.getboolean("link_local_ipv6_addr")
+    link_local_ipv6_addr = params.get_boolean("link_local_ipv6_addr")
 
     def get_file_md5sum(file_name, session, timeout):
         """

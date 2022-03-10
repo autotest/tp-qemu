@@ -23,9 +23,10 @@ def set_vm_for_dump(test, params):
     sys_image_size = int(float(
             utils_misc.normalize_data_size(params["image_size"], "G")))
     if host_avail_disk < (host_free_mem // 1024**2) * 1.2 + sys_image_size:
-        params["mem"] = (host_avail_disk - sys_image_size) * 0.8 // 2.4 * 1024
+        avail_dump_size = host_avail_disk - sys_image_size
+        params["mem"] = str(int((avail_dump_size) * 0.8 // 2.4) * 1024)
     image_size_stg = int(float(
-            utils_misc.normalize_data_size(params["mem"] + "M", "G")) * 1.4)
+            utils_misc.normalize_data_size("%sM" % params["mem"], "G")) * 1.4)
     params["image_size_stg"] = str(image_size_stg) + "G"
 
     params["force_create_image_stg"] = "yes"

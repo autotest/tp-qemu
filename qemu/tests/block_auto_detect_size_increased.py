@@ -4,6 +4,7 @@ from virttest import data_dir
 from virttest import storage
 from virttest import utils_disk
 from virttest import utils_test
+from virttest.qemu_storage import get_image_json
 from virttest.utils_numeric import normalize_data_size
 from virttest.qemu_capabilities import Flags
 
@@ -59,8 +60,8 @@ def run(test, params, env):
     img_params = params.object_params(img)
     img_size = img_params.get("image_size")
     img_resize_size = img_params.get('image_resize_size')
-    img_filename = storage.get_image_filename(img_params,
-                                              data_dir.get_data_dir())
+    root_dir = data_dir.get_data_dir()
+    img_filename = storage.get_image_filename(img_params, root_dir)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -72,6 +73,9 @@ def run(test, params, env):
     index = indices[0]
     mpoint = utils_disk.configure_empty_windows_disk(session, index,
                                                      img_size)[0]
-    increase_block_device(vm.get_block({'file': img_filename}))
+
+    if img_params.get("image_format") == 'luks':
+        img_filename = get_image_json(img, img_params, root_dir)
+    increase_block_device(vm.get_block({"filename": img_filename}))
     vm.copy_files_to('/home/dd_file', "%s:\\dd_file" % mpoint)
     check_disk_size(index)

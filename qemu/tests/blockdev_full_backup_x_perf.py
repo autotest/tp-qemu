@@ -23,8 +23,11 @@ class BlkFullBackupXperf(BlockdevLiveBackupBaseTest):
         perf_options = json.loads(self.params["perf_ops"])
         max_workers = randrange(1, int(perf_options["max-workers"]))
         csize = self.get_image_cluster_size()
-        max_chunk = randrange(csize, int(perf_options["max-chunk"]))
-        extra_options = {"max-workers": max_workers, "max-chunk": max_chunk}
+        if csize:
+            max_chunk = randrange(csize, int(perf_options["max-chunk"]))
+            extra_options = {"max-workers": max_workers, "max-chunk": max_chunk}
+        else:
+            extra_options = {"max-workers": max_workers}
         backup_utils.blockdev_backup(self.main_vm, self._source_nodes[0],
                                      self._full_bk_nodes[0],
                                      **extra_options)

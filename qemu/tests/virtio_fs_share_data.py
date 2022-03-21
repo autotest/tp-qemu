@@ -166,6 +166,7 @@ def run(test, params, env):
             nfs_local.setup()
 
     try:
+        vm = None
         if cmd_xfstest or setup_local_nfs or setup_hugepages:
             params["start_vm"] = "yes"
             env_process.preprocess(test, params, env)
@@ -393,7 +394,7 @@ def run(test, params, env):
                     utils_misc.safe_rmdir(fs_dest, session=session)
     finally:
         if setup_local_nfs:
-            if vm.is_alive():
+            if vm and vm.is_alive():
                 vm.destroy()
             for fs in params.objects("filesystems"):
                 nfs_params = params.object_params(fs)

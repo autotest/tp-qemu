@@ -132,17 +132,17 @@ def check_ansible_playbook(params):
             LOG_JOB.error("Failed to get available pip binary")
             return False
         install_cmd = '%s install ansible' % pip_bin
+        # Install ansible depended packages that can't be installed
+        # automatically by pip when installing ansible
+        package_list = params.get_list("package_list", 'sshpass')
+        if package_list:
+            if not utils_package.package_install(package_list):
+                LOG_JOB.error("Failed to install '%s'.", package_list)
+                return False
         status, output = process.getstatusoutput(install_cmd, verbose=True)
         if status != 0:
             LOG_JOB.error("Install python ansible failed as: %s", output)
             return False
-        # Install 'sshpass' as it can't be installed automatically as a
-        # dependency of ansible when ansible be installed with pip
-        sshpass_pkg = params.get('sshpass_pkg')
-        if not utils_package.package_install('sshpass'):
-            if not (sshpass_pkg and utils_package.package_install(sshpass_pkg)):
-                LOG_JOB.error("Failed to install sshpass.")
-                return False
         return True
 
     def distro_install():

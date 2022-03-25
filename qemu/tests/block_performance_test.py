@@ -26,7 +26,7 @@ def run(test, params, env):
         """
         if os_type == "windows":
             disk_op_cmd = utils_misc.set_winutils_letter(session, disk_op_cmd)
-            test.log.info("Get windows disk index that to be formatted")
+            logger.info("Get windows disk index that to be formatted")
             disk_id = utils_disk.get_windows_disks_index(session, disk_size)
             if not utils_disk.update_windows_disk_attributes(session, disk_id):
                 test.error("Failed to enable data disk %s" % disk_id)
@@ -51,10 +51,11 @@ def run(test, params, env):
         """
         stg0_result = 0.0
         stg1_result = 0.0
-        for i in range(6):
-            stg0_output = session.cmd_output(stg0_dd_cmd, timeout=cmd_timeout)
-            time.sleep(5)
+        logger.info(stg0_dd_cmd)
+        logger.info(stg1_dd_cmd)
+        for i in range(11):
             stg1_output = session.cmd_output(stg1_dd_cmd, timeout=cmd_timeout)
+            stg0_output = session.cmd_output(stg0_dd_cmd, timeout=cmd_timeout)
             time.sleep(5)
             # Discard first test result to get a more accurate result
             if i != 0:
@@ -75,8 +76,9 @@ def run(test, params, env):
         return float(time_spend)
 
     vm = env.get_vm(params["main_vm"])
+    logger = test.log
     session = vm.wait_for_login()
-    # Wait 2 minutes then start the testing due to wait some sevices begining
+    # Wait 1 minutes then start the testing due to wait some sevices begining
     time.sleep(60)
 
     os_type = params["os_type"]
@@ -99,7 +101,9 @@ def run(test, params, env):
             test.fail("Default num-queue value(%s) not equal vcpu nums(%s)"
                       % (default_mq_nums, int(params["vcpu_maxcpus"])))
     stg0_result, stg1_result = dd_test(stg0_dd_cmd, stg1_dd_cmd)
-    if stg0_result < stg1_result:
-        test.fail("The result are not as expected.Stg0 dd test spend time is "
-                  "%s,stg1 disk dd test spend time is %s"
-                  % (stg0_result, stg1_result))
+
+    if stg1_result > stg0_result * 1.05:
+        logger.warn("Unexpected result: stg0:%s stg1:%s", stg0_result,
+                    stg1_result)
+    else:
+        logger.info("Get result: stg0:%s stg1:%s", stg0_result, stg1_result)

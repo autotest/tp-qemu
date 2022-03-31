@@ -24,7 +24,13 @@ class BlockdevMirrorHotunplugTest(BlockdevMirrorNowaitTest):
         """Wait till devices removed from output of query-block"""
         def _is_device_deleted(device):
             for item in self.main_vm.monitor.query("block"):
-                if device in item["qdev"]:
+                """
+                'qdev' item can be absent from block info
+                while the device hotunplug is in progress.
+                To handle this issue, the value of 'qdev' is set to device
+                when 'qdev' is absent.
+                """
+                if device in item.get("qdev", device):
                     return False
             return True
 

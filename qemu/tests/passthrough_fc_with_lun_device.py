@@ -71,6 +71,7 @@ def run(test, params, env):
     if not len(fc_devs):
         test.cancel("No FC device")
     fc_dev = fc_devs[0]
+    test.log.debug(fc_dev)
 
     vm = env.get_vm(params['main_vm'])
     timeout = float(params.get("timeout", 240))
@@ -82,7 +83,7 @@ def run(test, params, env):
 
     if drive_type == "scsi_block":
         params["image_name_stg0"] = fc_dev["name"]
-        if fc_dev["fstype"] == "mpath_member":
+        if fc_dev["fstype"] == "mpath_member" and "children" in fc_dev:
             params["image_name_stg0"] = fc_dev["children"][0]["name"]
     else:
         params["image_name_stg0"] = fc_dev["sg_dev"]

@@ -141,6 +141,9 @@ def run(test, params, env):
     socket_group_test = params.get("socket_group_test", "no") == "yes"
     socket_group = params.get("socket_group")
 
+    # setup_filesystem_on_host
+    setup_filesystem_on_host = params.get("setup_filesystem_on_host")
+
     # st_dev check config
     cmd_get_stdev = params.get("cmd_get_stdev")
     nfs_mount_dst_name = params.get("nfs_mount_dst_name")
@@ -165,9 +168,41 @@ def run(test, params, env):
             nfs_local = nfs.Nfs(params)
             nfs_local.setup()
 
+    if setup_filesystem_on_host:
+        # create partition on host
+        dd_of_on_host = params.get("dd_of_on_host")
+        cmd_dd_on_host = params.get("cmd_dd_on_host")
+        process.system(cmd_dd_on_host % dd_of_on_host, timeout=60)
+
+        cmd_losetup_query_on_host = params.get("cmd_losetup_query_on_host")
+        loop_device = process.run(
+                cmd_losetup_query_on_host, timeout=60).stdout.decode().strip()
+        if not loop_device:
+            test.fail("Can't find a valid loop device! ")
+        # loop device setups on host
+        cmd_losetup_on_host = params.get("cmd_losetup_on_host")
+        process.system(cmd_losetup_on_host % dd_of_on_host, timeout=60)
+        # make filesystem on host
+        fs_on_host = params.get("fs_on_host")
+        cmd_mkfs_on_host = params.get("cmd_mkfs_on_host")
+        cmd_mkfs_on_host = cmd_mkfs_on_host % str(fs_on_host)
+        cmd_mkfs_on_host = cmd_mkfs_on_host + loop_device
+        process.system(cmd_mkfs_on_host, timeout=60)
+        # mount on host
+        fs_source = params.get('fs_source_dir')
+        base_dir = params.get('fs_source_base_dir',
+                              data_dir.get_data_dir())
+        if not os.path.isabs(fs_source):
+            fs_source = os.path.join(base_dir, fs_source)
+        if not utils_misc.check_exists(fs_source):
+            utils_misc.make_dirs(fs_source)
+        if not utils_disk.mount(loop_device, fs_source):
+            test.fail("Fail to mount on host! ")
+
     try:
         vm = None
-        if cmd_xfstest or setup_local_nfs or setup_hugepages:
+        if (cmd_xfstest or setup_local_nfs
+                or setup_hugepages or setup_filesystem_on_host):
             params["start_vm"] = "yes"
             env_process.preprocess(test, params, env)
 
@@ -427,6 +462,14 @@ def run(test, params, env):
                 nfs_local = nfs.Nfs(params)
                 nfs_local.cleanup()
                 utils_misc.safe_rmdir(params["export_dir"])
+        if setup_filesystem_on_host:
+            cmd = "if losetup -l {0};then losetup -d {0};fi;".format(
+                loop_device)
+            cmd += "umount -l {0};".format(fs_source)
+            process.system_output(cmd, shell=True, timeout=60)
+            if utils_misc.check_exists(dd_of_on_host):
+                cmd_del = "rm -rf " + dd_of_on_host
+                process.run(cmd_del, timeout=60)
 
     # during all virtio fs is mounted, reboot vm
     if params.get('reboot_guest', 'no') == 'yes':

@@ -56,12 +56,13 @@ class BlockdevCommitFio(BlockDevCommitTest):
 
 def run(test, params, env):
     """
-    Block commit base Test
+    To verify the commit job can be completed after heavy IO finishes
 
     1. boot guest with system disk
     2. create snapshot
     3. run fio test in guest
-    4. commit snapshot to base during fio running
+    4. commit snapshot to base during fio running,
+       wait commit done after fio done
     5. verify file's md5 after commit
     """
 

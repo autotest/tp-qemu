@@ -32,24 +32,16 @@ class BlockdevSnapshotMultiDisksTest(BlockDevSnapshotTest):
     def configure_data_disk(self):
         os_type = self.params["os_type"]
         for snapshot_tag in self.snapshot_tag_list:
-            disk_params = self.params.object_params(snapshot_tag)
-            disk_size = disk_params["image_size"]
             session = self.main_vm.wait_for_login()
             try:
-                if os_type != "windows":
-                    disk_id = self.get_linux_disk_path(session, disk_size)
-                    assert disk_id, "Disk not found in guest!"
-                    mount_point = utils_disk.configure_empty_linux_disk(
-                        session, disk_id, disk_size)[0]
-                    self.disks_info[snapshot_tag] = [r"/dev/%s1" % disk_id,
-                                                     mount_point]
-                else:
-                    disk_id = utils_disk.get_windows_disks_index(
-                        session, disk_size)
-                    driver_letter = utils_disk.configure_empty_windows_disk(
-                        session, disk_id, disk_size)[0]
-                    mount_point = r"%s:\\" % driver_letter
-                    self.disks_info[snapshot_tag] = [disk_id, mount_point]
+                info = backup_utils.get_disk_info_by_param(snapshot_tag,
+                                                           self.params,
+                                                           session)
+                assert info, "Disk not found in guest!"
+                mount_point = utils_disk.configure_empty_linux_disk(
+                    session, info["kname"], info["size"])[0]
+                self.disks_info[snapshot_tag] = [r"/dev/%s1" % info["kname"],
+                                                 mount_point]
             finally:
                 session.close()
 

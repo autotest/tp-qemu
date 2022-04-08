@@ -70,8 +70,11 @@ class BlockdevCommitFirewall(BlockDevCommitTest):
         snapshot_tags = device_params["snapshot_tags"].split()
         self.device_node = self.get_node_name(device)
         device = self.get_node_name(snapshot_tags[-1])
+        options = ["speed"]
+        arguments = self.params.copy_from_keys(options)
+        arguments["speed"] = self.params["speed"]
         commit_cmd = backup_utils.block_commit_qmp_cmd
-        cmd, args = commit_cmd(device)
+        cmd, args = commit_cmd(device, **arguments)
         self.main_vm.monitor.cmd(cmd, args)
         self.job_id = args.get("job-id", device)
 
@@ -82,12 +85,14 @@ class BlockdevCommitFirewall(BlockDevCommitTest):
     def run_test(self):
         self.pre_test()
         try:
+            job_list = []
             self.commit_snapshots()
-            job_utils.is_block_job_running(self.main_vm, self.job_id)
+            job_list.append(self.job_id)
+            job_utils.check_block_jobs_running(self.main_vm, job_list)
             self.break_net_with_iptables()
-            job_utils.is_block_job_paused(self.main_vm, self.job_id)
+            job_utils.check_block_jobs_paused(self.main_vm, job_list)
             self.resume_net_with_iptables()
-            job_utils.is_block_job_running(self.main_vm, self.job_id)
+            job_utils.check_block_jobs_running(self.main_vm, job_list)
             job_utils.wait_until_block_job_completed(self.main_vm, self.job_id)
             self.verify_data_file()
         finally:

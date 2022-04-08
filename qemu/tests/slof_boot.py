@@ -16,6 +16,7 @@ slof_boot.py include following case:
 """
 import re
 
+from avocado.utils import process
 from virttest import error_context
 from provider import slof
 from virttest import utils_net
@@ -80,6 +81,9 @@ def run(test, params, env):
                                        child_addr, sub_child_addr):
             test.fail(fail_info)
         test.log.info(ret_info)
+
+    o = process.getoutput(params.get("check_slof_version")).strip()
+    test.log.info("Check the version of SLOF: '%s'", o)
 
     vm = env.get_vm(params['main_vm'])
     vm.verify_alive()

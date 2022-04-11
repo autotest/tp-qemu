@@ -122,7 +122,7 @@ def run(test, params, env):
                                             aobject=usbredirdev_name)
             usbredir_filter = usbredir_params.get("usbdev_option_filter")
             usbredir_bootindex = usbredir_params.get("usbdev_option_bootindex")
-            usbredir_bus = usbredir_params.get("usb_bus")
+            usbredir_bus = usbredir_params.get("usbdev_bus")
             usbredir_dev.set_param('id', 'usb-%s' % usbredirdev_name)
             usbredir_dev.set_param('chardev', chardev_id)
             usbredir_dev.set_param('filter', usbredir_filter)

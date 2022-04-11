@@ -21,6 +21,8 @@ class BlockdevSnapshotRebootTest(BlockDevSnapshotTest):
         LOG_JOB.info("sleep random time to perform before snapshot")
         time.sleep(random.randint(0, 10))
         super(BlockdevSnapshotRebootTest, self).create_snapshot()
+        if bg_test.is_alive():
+            bg_test.join()
 
     def vm_reset(self):
         self.main_vm.reboot(method="system_reset")

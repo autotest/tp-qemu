@@ -97,7 +97,8 @@ def run(test, params, env):
                 mount_lv(lv_path, session)
             utils_test.run_virt_sub_test(test, params, env, sub_type)
         elif sub_type == "lvm_clean":
-            pass
+            if not check_mount_lv(check_mount, session):
+                mount_lv(lv_path, session)
         else:
             test.error("Failed to get sub_type")
     finally:

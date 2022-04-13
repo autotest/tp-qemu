@@ -1,4 +1,24 @@
+from virttest import utils_disk
+
 from provider.blockdev_commit_base import BlockDevCommitTest
+from provider import backup_utils
+
+
+class BlockDevCommitBase(BlockDevCommitTest):
+
+    def configure_data_disk(self, tag):
+        session = self.main_vm.wait_for_login()
+        try:
+            info = backup_utils.get_disk_info_by_param(tag,
+                                                       self.params,
+                                                       session)
+            assert info, "Disk not found in guest!"
+            mount_point = utils_disk.configure_empty_linux_disk(
+                session, info["kname"], info["size"])[0]
+            self.disks_info.append([
+                   r"/dev/%s1" % info["kname"], mount_point, tag])
+        finally:
+            session.close()
 
 
 def run(test, params, env):
@@ -11,5 +31,5 @@ def run(test, params, env):
     6. verify files's md5
     """
 
-    block_test = BlockDevCommitTest(test, params, env)
+    block_test = BlockDevCommitBase(test, params, env)
     block_test.run_test()

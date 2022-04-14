@@ -16,11 +16,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
             self.test.log.info("Start to run fio")
             self.fio = generate_instance(self.params, self.main_vm, 'fio')
             fio_run_timeout = self.params.get_numeric("fio_timeout", 2400)
-            try:
-                self.fio.run(fio_options, fio_run_timeout)
-            finally:
-                self.fio.clean()
-            self.main_vm.verify_dmesg()
+            self.fio.run(fio_options, fio_run_timeout)
 
     def commit_snapshots(self):
         for device in self.params["device_tag"].split():
@@ -49,8 +45,9 @@ class BlockdevCommitFio(BlockDevCommitTest):
             self.commit_snapshots()
             self.verify_data_file()
         finally:
-            if bg_test.is_alive():
-                self.fio.clean(force=True)
+            # clean fio cause fio.run exit, then fio thread exit soon
+            self.fio.clean(force=True)
+            self.main_vm.verify_dmesg()
             self.post_test()
 
 

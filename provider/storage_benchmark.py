@@ -44,7 +44,7 @@ class StorageBenchmark(object):
     """
     cmds = {'linux': {'_symlinks': 'ln -s -f %s %s',
                       '_list_pid': 'pgrep -xl %s',
-                      '_kill_pid': 'killall %s',
+                      '_kill_pid': 'killall -s SIGKILL %s',
                       '_rm_file': 'rm -rf {}'},
             'windows': {'_symlinks': 'mklink %s %s',
                         '_list_pid': 'TASKLIST /FI "IMAGENAME eq %s',

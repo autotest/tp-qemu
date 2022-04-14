@@ -349,7 +349,7 @@ class ThrottleTester(object):
 
         # Indeed no throttle
         if expected_normal == 0:
-            LOG_JOB.warning("Skipping checking on the empty throttle")
+            LOG_JOB.info("Skipping checking on the empty throttle")
             return True
 
         sum_burst = 0

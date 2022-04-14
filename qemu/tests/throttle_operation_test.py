@@ -125,7 +125,7 @@ def run(test, params, env):
         tgm.get_throttle_group_props(group)
         images = params.get("throttle_group_member_%s" % group, "").split()
         if len(images) == 0:
-            test.log.warning("No images in group %s", group)
+            test.log.info("No images in group %s", group)
             continue
         tester = ThrottleTester(test, params, vm, session, group, images)
         error_context.context("Build test stuff for %s:%s" % (group, images),

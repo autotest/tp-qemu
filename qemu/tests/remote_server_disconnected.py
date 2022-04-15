@@ -1,5 +1,5 @@
 import os
-import netaddr
+import ipaddress
 import json
 
 from avocado.utils import process
@@ -14,11 +14,18 @@ def run(test, params, env):
        make sure the vm can be accessed.
     """
 
+    def _is_ipv6_addr(addr):
+        try:
+            ipaddress.IPv6Address(addr)
+        except ipaddress.AddressValueError:
+            return False
+        return True
+
     def _check_hosts(hosts):
         if len(hosts) < 2:
             test.cancel("2 remote servers at least are required.")
         for h in hosts:
-            if os.path.exists(h) or netaddr.valid_ipv6(h):
+            if os.path.exists(h) or _is_ipv6_addr(h):
                 test.cancel("Neither ipv6 nor unix domain"
                             " socket is supported by now.")
 

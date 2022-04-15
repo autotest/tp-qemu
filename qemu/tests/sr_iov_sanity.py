@@ -1,7 +1,7 @@
 import re
 import time
 import random
-import netaddr
+from ipaddress import ip_address
 
 from avocado.utils import process
 
@@ -189,7 +189,7 @@ def run(test, params, env):
         # below
         if static_ip:
             if 'IP_addr_VF' not in locals():
-                IP_addr_VF = netaddr.IPAddress(params.get("start_addr_VF"))
+                IP_addr_VF = ip_address(params.get("start_addr_VF"))
                 net_mask = params.get("net_mask")
             if not IP_addr_VF:
                 test.fail("No IP address found, please"

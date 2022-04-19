@@ -254,12 +254,24 @@ def run(test, params, env):
                 else:
                     test.log.info("Virtiofs service is running.")
 
-                viofs_log_file_cmd = params.get("viofs_log_file_cmd")
-                if viofs_log_file_cmd:
-                    error_context.context("Check if LOG file is created.", test.log.info)
-                    log_dir_s = session.cmd_status(viofs_log_file_cmd)
-                    if log_dir_s != 0:
-                        test.fail("Virtiofs log is not created.")
+                # enable debug log.
+                viofs_debug_enable_cmd = params.get("viofs_debug_enable_cmd")
+                viofs_log_enable_cmd = params.get("viofs_log_enable_cmd")
+                if viofs_debug_enable_cmd and viofs_log_enable_cmd:
+                    error_context.context("Check if virtiofs debug log is enabled in guest.", test.log.info)
+                    cmd = params.get("viofs_reg_query_cmd")
+                    ret = session.cmd_output(cmd)
+                    if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
+                        error_context.context("Configure virtiofs debug log.", test.log.info)
+                        for reg_cmd in (viofs_debug_enable_cmd, viofs_log_enable_cmd):
+                            error_context.context("Set %s " % reg_cmd, test.log.info)
+                            s, o = session.cmd_status_output(reg_cmd)
+                            if s:
+                                test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
+                        error_context.context("Reboot guest.", test.log.info)
+                        session = vm.reboot()
+                    else:
+                        test.log.info("Virtiofs debug log is enabled.")
 
                 # get fs dest for vm
                 virtio_fs_disk_label = fs_target
@@ -294,6 +306,13 @@ def run(test, params, env):
                                            io_timeout).stdout_text.strip().split()[0]
                     if md5_guest != md5_host:
                         test.fail('The md5 value of host is not same to guest.')
+
+                    viofs_log_file_cmd = params.get("viofs_log_file_cmd")
+                    if viofs_log_file_cmd:
+                        error_context.context("Check if LOG file is created.", test.log.info)
+                        log_dir_s = session.cmd_status(viofs_log_file_cmd)
+                        if log_dir_s != 0:
+                            test.fail("Virtiofs log is not created.")
 
                 if folder_test == 'yes':
                     error_context.context("Folder test under %s inside "

@@ -189,6 +189,24 @@ def run(test, params, env):
                 test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
         else:
             test.log.info("Virtiofs service is running.")
+        # enable debug log.
+        viofs_debug_enable_cmd = params.get("viofs_debug_enable_cmd")
+        viofs_log_enable_cmd = params.get("viofs_log_enable_cmd")
+        if viofs_debug_enable_cmd and viofs_log_enable_cmd:
+            error_context.context("Check if virtiofs debug log is enabled in guest.", test.log.info)
+            cmd = params.get("viofs_reg_query_cmd")
+            ret = session.cmd_output(cmd)
+            if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
+                error_context.context("Configure virtiofs debug log.", test.log.info)
+                for reg_cmd in (viofs_debug_enable_cmd, viofs_log_enable_cmd):
+                    error_context.context("Set %s " % reg_cmd, test.log.info)
+                    s, o = session.cmd_status_output(reg_cmd)
+                    if s:
+                        test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
+                error_context.context("Reboot guest.", test.log.info)
+                session = vm.reboot()
+            else:
+                test.log.info("Virtiofs debug log is enabled.")
 
         # get fs dest for vm
         virtio_fs_disk_label = fs_target

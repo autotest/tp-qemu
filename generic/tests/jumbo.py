@@ -61,6 +61,7 @@ def run(test, params, env):
     flood_time = params.get("flood_time", "300")
     os_type = params.get("os_type")
     os_variant = params.get("os_variant")
+    hint = params.get("hint", "do")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -174,12 +175,12 @@ def run(test, params, env):
                 test.log.info("Ping %s with size %s", guest_ip, size)
                 status, output = utils_test.ping(guest_ip, 1,
                                                  packetsize=size,
-                                                 hint="do", timeout=1)
+                                                 hint=hint, timeout=1)
                 if status != 0:
                     status, output = utils_test.ping(guest_ip, 10,
                                                      packetsize=size,
                                                      adaptive=True,
-                                                     hint="do",
+                                                     hint=hint,
                                                      timeout=20)
 
                     fail_ratio = int(params.get("fail_ratio", 50))

@@ -101,4 +101,5 @@ def run(test, params, env):
         check_core_file(arch)
         if dump_guest_core == 'on':
             crash_cmd %= host_kernel_version
+            utils_misc.wait_for(lambda: os.path.exists(vmcore_file), timeout=60)
             check_vmcore_file()

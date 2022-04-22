@@ -19,7 +19,6 @@ class BlockdevIncbkConvertWithBitmapsTest(BlockdevLiveBackupBaseTest):
             self.params, self.params['convert_target'])
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
 
     def add_persistent_bitmaps(self):

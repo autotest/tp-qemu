@@ -26,7 +26,6 @@ class BlockdevIncbkAddBitmapMaxLenName(BlockdevLiveBackupBaseTest):
         ).stdout.decode().strip()
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
 
     def add_persistent_bitmap(self):

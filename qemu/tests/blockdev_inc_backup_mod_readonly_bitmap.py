@@ -12,7 +12,6 @@ class BlockdevIncbkModRdonlyBitmapTest(BlockdevLiveBackupBaseTest):
     """Clear/Remove readonly bitmaps"""
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
         self._error_msg = '(core dumped)|{pid} Aborted'.format(
             pid=self.main_vm.get_pid())

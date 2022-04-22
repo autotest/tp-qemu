@@ -7,7 +7,6 @@ class BlockdevIncbkAddBitmapToRawImgNeg(BlockdevLiveBackupBaseTest):
     """Negative test: Add bitmaps to a raw image"""
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
 
     def add_bitmap_to_raw_image(self):

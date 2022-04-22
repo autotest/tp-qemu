@@ -9,7 +9,6 @@ from provider.blockdev_full_backup_base import BlockdevFullBackupBaseTest
 class BlockdevFullBackupNonexistTargetTest(BlockdevFullBackupBaseTest):
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
         self.prepare_data_disks()
 

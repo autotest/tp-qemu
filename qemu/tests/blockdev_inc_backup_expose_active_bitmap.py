@@ -50,7 +50,6 @@ class BlockdevIncbkExposeActiveBitmap(BlockdevLiveBackupBaseTest):
                 self.test.fail("Failed to hotplug '%s'" % dev)
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
         self.add_bitmap()
         self.prepare_data_disks()

@@ -77,7 +77,6 @@ class BlkdevIncWithIgnore(BlockdevLiveBackupBaseTest):
 
     def prepare_test(self):
         self._create_inc_dir()
-        self.preprocess_data_disks()
         self.prepare_main_vm()
         self.prepare_data_disks()
         self.add_target_data_disks()

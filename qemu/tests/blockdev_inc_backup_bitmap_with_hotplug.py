@@ -45,6 +45,11 @@ class BlockdevIncbkAddBitmapToHotplugImg(BlockdevLiveBackupBaseTest):
         if not all([len(l) == 0 for l in bitmaps.values()]):
             self.test.fail("bitmap found unexpectedly after unplug")
 
+    def prepare_test(self):
+        if self.params.get("not_preprocess") == "yes":
+            self.preprocess_data_disks()
+        super(BlockdevIncbkAddBitmapToHotplugImg, self).prepare_test()
+
     def do_test(self):
         self.do_full_backup()
         self.generate_inc_files()

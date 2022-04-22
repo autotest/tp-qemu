@@ -14,7 +14,6 @@ class BlockdevIncbkAddPersistentBitmapVMPaused(BlockdevLiveBackupBaseTest):
             self.params, self._source_images[0])
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
 
     def add_persistent_bitmap(self):

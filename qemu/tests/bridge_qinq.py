@@ -144,6 +144,11 @@ def run(test, params, env):
     process.system(set_ip_cmd % ("192.168.1.1", brname))
     host_bridge_iface.up()
 
+    file_size = int(params.get("file_size", "4096"))
+    host_path = os.path.join(test.tmpdir, "transferred_file")
+    guest_path = params.get("guest_path", "/var/tmp/transferred_file")
+    transfer_timeout = int(params.get("transfer_timeout", 1000))
+
     try:
         login_timeout = int(params.get("login_timeout", "600"))
         params['netdst'] = brname
@@ -285,10 +290,6 @@ def run(test, params, env):
                              vlan_tag2="vlan 20,")
 
         # scp file to guest with L2 vlan tag
-        file_size = int(params.get("file_size", "4096"))
-        host_path = os.path.join(test.tmpdir, "transferred_file")
-        guest_path = params.get("guest_path", "/var/tmp/transferred_file")
-        transfer_timeout = int(params.get("transfer_timeout", 1000))
         cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, file_size)
         error_context.context(
             "Creating %dMB file on host" % file_size, test.log.info)
@@ -305,6 +306,6 @@ def run(test, params, env):
     finally:
         session.cmd("rm -rf %s" % guest_path)
         session.close()
-        vm.destroy(gracefully=True)
+        vm.destroy(gracefully=False)
         host_bridge_iface.down()
         host_bridges.del_bridge(brname)

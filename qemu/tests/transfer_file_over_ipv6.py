@@ -55,7 +55,7 @@ def run(test, params, env):
         vms.append(env.get_vm(vm_name))
 
     # config ipv6 address host and guest.
-    host_ifname = params.get("netdst")
+    host_ifname = params.get("netdst") if link_local_ipv6_addr else None
     host_address = utils_net.get_host_ip_address(
         params, ip_ver="ipv6", linklocal=link_local_ipv6_addr)
 

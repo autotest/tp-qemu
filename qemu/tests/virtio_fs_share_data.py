@@ -121,6 +121,9 @@ def run(test, params, env):
     fio_options = params.get('fio_options')
     io_timeout = params.get_numeric('io_timeout')
 
+    # iozone config
+    iozone_options = params.get('iozone_options')
+
     # xfstest config
     cmd_xfstest = params.get('cmd_xfstest')
     fs_dest_fs2 = params.get('fs_dest_fs2')
@@ -383,6 +386,14 @@ def run(test, params, env):
                     finally:
                         fio.clean()
                     vm.verify_dmesg()
+
+                if iozone_options:
+                    error_context.context("Run iozone test on %s." % fs_dest, test.log.info)
+                    io_test = generate_instance(params, vm, 'iozone')
+                    try:
+                        io_test.run(iozone_options % guest_file, io_timeout)
+                    finally:
+                        io_test.clean()
 
                 if cmd_pjdfstest:
                     error_context.context("Run pjdfstest on %s." % fs_dest, test.log.info)

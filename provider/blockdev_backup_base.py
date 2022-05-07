@@ -151,7 +151,6 @@ class BlockdevBackupBaseTest(object):
             disk.hotplug(self.main_vm)
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
         self.prepare_data_disks()
         self.add_target_data_disks()

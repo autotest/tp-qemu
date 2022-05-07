@@ -14,8 +14,8 @@ class BlockdevStreamGeneralTest(BlockdevStreamNowaitTest):
             self.params.get_numeric('job_started_timeout', 30)
         )
         self.main_vm.monitor.cmd("job-pause", {'id': self._job})
-        job_utils.check_block_jobs_paused(
-            self.main_vm, [self._job],
+        job_utils.wait_until_job_status_match(
+            self.main_vm, 'paused', self._job,
             self.params.get_numeric('job_paused_interval', 30)
         )
         self.main_vm.monitor.cmd(
@@ -24,8 +24,8 @@ class BlockdevStreamGeneralTest(BlockdevStreamNowaitTest):
              'speed': self.params.get_numeric('resume_speed')}
         )
         self.main_vm.monitor.cmd("job-resume", {'id': self._job})
-        job_utils.check_block_jobs_running(
-            self.main_vm, [self._job],
+        job_utils.wait_until_job_status_match(
+            self.main_vm, 'running', self._job,
             self.params.get_numeric('job_running_timeout', 300)
         )
         self.main_vm.monitor.cmd("job-cancel", {'id': self._job})

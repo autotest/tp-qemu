@@ -114,7 +114,6 @@ class BlockdevMirrorSyncTopTest(BlockdevMirrorNowaitTest):
             img_obj.convert(convert_params, img_obj.root_dir)
 
     def prepare_test(self):
-        self.preprocess_data_disks()
         self.prepare_main_vm()
         self.prepare_data_disks()
         self.create_snapshot_images()

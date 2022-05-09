@@ -44,8 +44,22 @@ class BlockdevStreamSpeedTest(blockdev_stream_nowait.BlockdevStreamNowaitTest):
             self.main_vm.monitor.cmd(
                 "block-job-set-speed", {'device': jobid, 'speed': speed})
 
+        def _check_valid_speed(jobid, speed):
+            job = job_utils.get_block_job_by_id(self.main_vm, jobid)
+            if job.get("speed") != speed:
+                self.test.fail("Speed:%s is not set as expected:%s"
+                               % (job.get("speed"), speed))
+            ck_speed = self.params.get_numeric("check_speed")
+            uspeed = self.params.get_numeric("ulimit_speed")
+            if speed > ck_speed or speed == uspeed:
+                job_utils.check_block_jobs_running(
+                    self.main_vm, [self._job],
+                    self.params.get_numeric('job_running_timeout', 60)
+                    )
+
         for speed in self.params.objects('valid_speeds'):
             _set_valid_speed(self._job, int(speed))
+            _check_valid_speed(self._job, int(speed))
             job_utils.check_block_jobs_running(
                 self.main_vm, [self._job],
                 self.params.get_numeric('job_running_timeout', 300)

@@ -241,6 +241,7 @@ def run(test, params, env):
         error_context.context("Test ping from interface '%s' on guest "
                               "'%s' to host." %
                               (vm_vlan_if[vm_index], vm.name), test.log.info)
+        utils_net.restart_guest_network(session)
         ping_vlan(vm, dest=host_vlan_ip, vlan_if=vm_vlan_if[vm_index],
                   session=session)
         netperf_vlan(client=vm.name, server="localhost")

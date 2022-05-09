@@ -244,11 +244,14 @@ def is_block_job_running(vm, jobid, tmo=200):
         if not job:
             LOG_JOB.debug('job %s cancelled unexpectedly', jobid)
             break
-        elif job['status'] != "running":
+        elif job['status'] not in ["running", "pending", "ready"]:
             LOG_JOB.debug('job %s is not in running status', jobid)
             return False
         elif offset is None:
-            offset = job['offset']
+            if job['status'] in ["pending", "ready"]:
+                return True
+            else:
+                offset = job['offset']
         elif job['offset'] > offset:
             return True
         time.sleep(1)

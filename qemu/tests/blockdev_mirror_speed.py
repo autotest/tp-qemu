@@ -3,6 +3,7 @@ from functools import partial
 from virttest.qemu_monitor import QMPCmdError
 
 from provider.blockdev_mirror_nowait import BlockdevMirrorNowaitTest
+from provider import job_utils
 
 
 class BlockdevMirrorSpeedTest(BlockdevMirrorNowaitTest):
@@ -46,13 +47,24 @@ class BlockdevMirrorSpeedTest(BlockdevMirrorNowaitTest):
             self.main_vm.monitor.cmd(
                 "block-job-set-speed", {'device': jobid, 'speed': speed})
 
+        def _check_valid_speed(jobid, speed):
+            job = job_utils.get_block_job_by_id(self.main_vm, jobid)
+            if job.get("speed") != speed:
+                self.test.fail("Speed:%s is not set as expected:%s"
+                               % (job.get("speed"), speed))
+            ck_speed = self.params.get_numeric("check_speed")
+            uspeed = self.params.get_numeric("ulimit_speed")
+            if speed > ck_speed or speed == uspeed:
+                self.check_block_jobs_running(
+                    self._jobs,
+                    self.params.get_numeric('mirror_running_timeout', 60)
+                    )
+
         for speed in self.params.objects('valid_speeds'):
             func = partial(_set_valid_speed, speed=int(speed))
             list(map(func, self._jobs))
-            self.check_block_jobs_running(
-                self._jobs,
-                self.params.get_numeric('mirror_running_timeout', 60)
-            )
+            func_ck = partial(_set_valid_speed, speed=int(speed))
+            list(map(func_ck, self._jobs))
 
     def do_test(self):
         self.blockdev_mirror()

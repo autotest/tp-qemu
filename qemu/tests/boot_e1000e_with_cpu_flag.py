@@ -22,7 +22,7 @@ def run(test, params, env):
     session_serial = vm.wait_for_serial_login(timeout=login_timeout)
     bcdedit_debug = params["bcdedit_debug"]
     bcdedit_cmd = params["bcdedit_cmd"]
-    ext_host = params.get("ext_host")
+    ext_host = utils_net.get_default_gateway()
 
     try:
         session_serial.cmd(bcdedit_debug)

@@ -37,7 +37,7 @@ def run(test, params, env):
     error_context.context("Get host numa topological structure", test.log.info)
     timeout = float(params.get("login_timeout", 240))
     host_numa_node = utils_misc.NumaInfo()
-    node_list = host_numa_node.online_nodes
+    node_list = host_numa_node.online_nodes_withcpumem
     if len(node_list) < 2:
         test.cancel("This host only has one NUMA node, skipping test...")
     node_list.sort()

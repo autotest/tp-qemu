@@ -41,7 +41,7 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
             target_mems.append("mem%s" % i)
         vm = self.env.get_vm(self.params["main_vm"])
         session = vm.wait_for_login()
-        if self.params.get('os_type') == 'linux':
+        if self.params.get_boolean("mem_unplug_test", False):
             arg = "movable_node"
             utils_test.update_boot_option(vm, args_added=arg)
         original_mem = self.get_guest_total_mem(vm)
@@ -49,7 +49,7 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
             error_context.context("Repeat hotplug memory for %s times"
                                   % times, LOG_JOB.info)
             self.repeat_hotplug(vm, target_mems)
-            if self.params.get('os_type') == 'linux':
+            if self.params.get_boolean("mem_unplug_test", False):
                 error_context.context("Repeat unplug memory for %s times"
                                       % times, LOG_JOB.info)
                 self.repeat_unplug(vm, target_mems)
@@ -58,9 +58,10 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
                 error_context.context("Hotplug and unplug memory %s"
                                       % target_mem, LOG_JOB.info)
                 self.hotplug_memory(vm, target_mem)
-                self.unplug_memory(vm, target_mem)
+                if self.params.get_boolean("mem_unplug_test", False):
+                    self.unplug_memory(vm, target_mem)
 
-        if self.params.get('os_type') == 'linux':
+        if self.params.get_boolean("mem_unplug_test", False):
             current_mem = self.get_guest_total_mem(vm)
             if current_mem != original_mem:
                 self.test.fail("Guest memory changed about repeat"

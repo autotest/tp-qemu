@@ -17,8 +17,7 @@ class BlockdevCommitStandby(BlockDevCommitTest):
         job_id = args.get("job-id", device)
         job_utils.wait_until_job_status_match(self.main_vm, "ready", job_id, timeout=120)
         self.main_vm.monitor.cmd("job-pause", {"id": job_id})
-        if not job_utils.is_block_job_paused(self.main_vm, job_id):
-            self.test.fail("Block job is not paused")
+        job_utils.wait_until_job_status_match(self.main_vm, "standby", job_id, timeout=120)
         self.main_vm.monitor.cmd("job-complete", {"id": job_id})
         self.main_vm.monitor.cmd("job-resume", {"id": job_id})
         if not job_utils.get_event_by_condition(self.main_vm, "BLOCK_JOB_COMPLETED"):

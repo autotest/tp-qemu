@@ -62,7 +62,7 @@ def run(test, params, env):
         error_context.context("Create vlan interface '%s' on %s" %
                               (vlan_if, interface), test.log.info)
         if session:
-            session.cmd(add_cmd)
+            session.cmd_output_safe(add_cmd)
         else:
             process.system(add_cmd)
         return vlan_if
@@ -78,12 +78,12 @@ def run(test, params, env):
                               (vlan_ip, vlan_if), test.log.info)
         if session:
             disable_firewall = params.get("disable_firewall", "")
-            session.cmd(disable_firewall, ignore_all_errors=True)
+            session.cmd_output_safe(disable_firewall)
             disable_nm = params.get("disable_nm", "")
-            session.cmd(disable_nm, ignore_all_errors=True)
-            session.cmd("ifconfig %s 0.0.0.0" % vlan_if)
-            session.cmd("ifconfig %s down" % vlan_if)
-            session.cmd("ifconfig %s %s up" % (vlan_if, vlan_ip))
+            session.cmd_output_safe(disable_nm)
+            session.cmd_output_safe("ifconfig %s 0.0.0.0" % vlan_if)
+            session.cmd_output_safe("ifconfig %s down" % vlan_if)
+            session.cmd_output_safe("ifconfig %s %s up" % (vlan_if, vlan_ip))
         else:
             process.system("ifconfig %s %s up" % (vlan_if, vlan_ip))
 
@@ -97,7 +97,7 @@ def run(test, params, env):
         mac_cmd = "ip link set %s add %s up" % (vlan_if, mac_str)
         error_context.context("Give a new mac address '%s' for vlan interface "
                               "'%s'" % (mac_str, vlan_if), test.log.info)
-        session.cmd(mac_cmd)
+        session.cmd_output_safe(mac_cmd)
 
     def set_arp_ignore(session):
         """
@@ -106,7 +106,7 @@ def run(test, params, env):
         error_context.context("Enable arp_ignore for all ipv4 device in guest",
                               test.log.info)
         ignore_cmd = "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore"
-        session.cmd(ignore_cmd)
+        session.cmd_output_safe(ignore_cmd)
 
     def ping_vlan(vm, dest, vlan_if, session):
         """
@@ -138,7 +138,7 @@ def run(test, params, env):
         error_context.context("Run netperf stress test among guests and host, "
                               "server: %s, client: %s" % (server, client),
                               test.log.info)
-        session.cmd("systemctl restart NetworkManager", ignore_all_errors=True)
+        session.cmd_output_safe("systemctl restart NetworkManager")
         utils_test.run_virt_sub_test(test, params, env, sub_type)
 
     vms = []
@@ -229,7 +229,7 @@ def run(test, params, env):
     for vm_index, vm in enumerate(vms):
         session = sessions[vm_index]
         error_context.context("Add vlan interface on guest '%s'" % vm.name)
-        session.cmd("ifconfig %s 0.0.0.0" % ifname[vm_index])
+        session.cmd_output("ifconfig %s 0.0.0.0" % ifname[vm_index], safe=True)
         vlan_if = add_vlan(interface=ifname[vm_index], v_id=host_vlan_id,
                            session=session)
         vm_vlan_if.append(vlan_if)

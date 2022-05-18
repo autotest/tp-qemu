@@ -78,7 +78,7 @@ def run(test, params, env):
     def team_if_exist():
         """ judge if team is alive well."""
         team_exists_cmd = params.get("team_if_exists_cmd")
-        return session_serial.cmd_status(team_exists_cmd) == 0
+        return session_serial.cmd_status(team_exists_cmd, safe=True) == 0
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

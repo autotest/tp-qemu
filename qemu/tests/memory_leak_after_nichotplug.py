@@ -53,15 +53,15 @@ def run(test, params, env):
             vm.hotunplug_nic(nic_name)
             time.sleep(3)
     else:
-        session.cmd("swapoff -a")
+        session.cmd_output_safe("swapoff -a")
         mac = vm.get_mac_address()
         guest_nic = utils_net.get_linux_ifname(session, mac)
         for i in range(1, 300):
-            session.cmd("ip link add link %s name %s.%s type vlan id %s" %
-                        (guest_nic, guest_nic, i, i))
+            session.cmd_output_safe("ip link add link %s name %s.%s type vlan id %s" %
+                                    (guest_nic, guest_nic, i, i))
         time.sleep(3)
         for i in range(1, 300):
-            session.cmd("ip link delete %s.%s" % (guest_nic, i))
+            session.cmd_output_safe("ip link delete %s.%s" % (guest_nic, i))
 
     free_mem_after_nichotplug = utils_misc.get_free_mem(session,
                                                         os_type)

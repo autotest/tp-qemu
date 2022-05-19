@@ -101,6 +101,8 @@ def run(test, params, env):
     plug = BlockDevicesPlug(vm)
     for cdrom in cdroms:
         cdrom_params = params.object_params(cdrom)
+        if cdrom_params["cd_format"] == "ide":
+            test.cancel("Hot-plug cd_format IDE not available, skipped")
         items_checked = ast.literal_eval(cdrom_params.get('items_checked'))
         dev_id = items_checked['device']
         iso_name = cdrom_params.get('iso_name')

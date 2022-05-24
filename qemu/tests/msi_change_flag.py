@@ -58,15 +58,15 @@ def run(test, params, env):
 
     if params.get("os_type") == "linux":
         error_context.context("Check the pci msi in guest", test.log.info)
-        pci_id = session.cmd("lspci |grep Eth |awk {'print $1'}").strip()
-        status = session.cmd("lspci -vvv -s %s|grep MSI-X" % pci_id).strip()
+        pci_id = session.cmd_output_safe("lspci |grep Eth |awk {'print $1'}").strip()
+        status = session.cmd_output_safe("lspci -vvv -s %s|grep MSI-X" % pci_id).strip()
         enable_status = re.search(r'Enable\+', status, re.M | re.I)
         if enable_status.group() == "Enable+":
             error_context.context("Disable pci msi in guest", test.log.info)
             utils_test.update_boot_option(vm, args_added="pci=nomsi")
             session_msi = vm.wait_for_serial_login(timeout=login_timeout)
-            pci_id = session_msi.cmd("lspci |grep Eth |awk {'print $1'}").strip()
-            status = session_msi.cmd("lspci -vvv -s %s|grep MSI-X" % pci_id).strip()
+            pci_id = session_msi.cmd_output_safe("lspci |grep Eth |awk {'print $1'}").strip()
+            status = session_msi.cmd_output_safe("lspci -vvv -s %s|grep MSI-X" % pci_id).strip()
             session_msi.close()
             change_status = re.search(r'Enable\-', status, re.M | re.I)
             if change_status.group() != "Enable-":

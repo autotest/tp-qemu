@@ -26,6 +26,7 @@ class BlkdevIncWithIgnore(BlockdevLiveBackupBaseTest):
                            ignore_status=False, shell=True)
         except:
             self._clean_inc_dir()
+            raise
 
     def _clean_inc_dir(self):
         process.system(self.params["storage_clean_cmd"],

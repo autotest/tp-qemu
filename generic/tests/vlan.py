@@ -2,7 +2,6 @@ import time
 import re
 
 import aexpect
-from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_net
 from virttest import error_context
@@ -91,11 +90,21 @@ def run(test, params, env):
                               test.log.info)
         return session.cmd_status(rem_vlan_cmd)
 
+    def find_free_port(dst):
+        """
+        Returns a free port on the dst guest
+        """
+        check_cmd = "netstat -nultp |awk '(NR>2){print $4}' | awk -F':' '{print $NF}'"
+        used_port_names = set(sessions[dst].cmd_output(check_cmd).strip().splitlines())
+        port_range = list(range(1025, 65535))
+        free_ports = list(set(port_range).difference(set(used_port_names)))
+        return free_ports[0]
+
     def nc_transfer(test, src, dst):
         """
         Transfer file by netcat
         """
-        nc_port = utils_misc.find_free_port(1025, 5334, vm_ip[dst])
+        nc_port = find_free_port(dst)
         listen_cmd = params.get("listen_cmd")
         send_cmd = params.get("send_cmd")
 

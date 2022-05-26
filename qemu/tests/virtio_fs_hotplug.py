@@ -91,7 +91,7 @@ def run(test, params, env):
                     check_installed_cmd), 60):
                 test.error("Winfsp tool is not installed.")
 
-    def mount_guest_fs():
+    def mount_guest_fs(session):
         """
         Mount virtiofs on linux guest.
         """
@@ -146,8 +146,9 @@ def run(test, params, env):
                 time.sleep(5)
             else:
                 test.log.info("Virtiofs debug log is enabled.")
+        return session
 
-    def get_win_dst_dir():
+    def get_win_dst_dir(session):
         """
         get fs dest for windows vm.
         """
@@ -162,7 +163,7 @@ def run(test, params, env):
             test.fail("Could not get virtio-fs mounted volume letter.")
         return volume_letter, "%s:" % volume_letter
 
-    def run_io_test(volume_letter, fs_dest):
+    def run_io_test(session, volume_letter, fs_dest):
         """
         Run io test on the shared dir.
         """
@@ -189,18 +190,19 @@ def run(test, params, env):
             utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
             utils_misc.safe_rmdir(fs_dest, session=session)
 
-    def io_test_after_hotplug(fs_dest):
+    def io_test_after_hotplug(session, fs_dest):
         """
         function test after virtiofs is hotplugged
         """
         volume_letter = None
         if os_type == "windows":
             config_win_before_test(session)
-            start_vfs_service(session)
-            volume_letter, fs_dest = get_win_dst_dir()
+            session = start_vfs_service(session)
+            volume_letter, fs_dest = get_win_dst_dir(session)
         else:
-            mount_guest_fs()
-        run_io_test(volume_letter, fs_dest)
+            mount_guest_fs(session)
+        run_io_test(session, volume_letter, fs_dest)
+        return session
 
     def create_fs_devices(fs_name, fs_params):
         """
@@ -285,7 +287,7 @@ def run(test, params, env):
 
                     fs_devs = create_fs_devices(fs, fs_params)
                     plug_fs_devices('hotplug', fs_devs)
-                    io_test_after_hotplug(fs_dest)
+                    session = io_test_after_hotplug(session, fs_dest)
 
                 unplug_devs.extend(fs_devs if need_plug else
                                    get_fs_devices(fs_target))

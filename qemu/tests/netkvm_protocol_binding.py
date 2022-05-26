@@ -1,5 +1,8 @@
+from aexpect import ShellTimeoutError
+
 from virttest import error_context
 from virttest import utils_test
+from virttest import utils_misc
 from virttest import utils_net
 from virttest.utils_windows import virtio_win
 
@@ -19,6 +22,11 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+    # workaround for driver has no signature
+    def send_key(vm, key):
+        # Send key to guest
+        for i in key:
+            vm.send_key(i)
 
     timeout = params.get_numeric("timeout", 360)
     vm = env.get_vm(params["main_vm"])
@@ -58,9 +66,19 @@ def run(test, params, env):
 
     test.log.info("Will install inf file found at '%s'", inf_path)
     install_cmd = params["install_cmd"] % inf_path
-    status, output = session.cmd_status_output(install_cmd, timeout=timeout)
-    if status:
-        test.error("Install inf file failed, output=%s" % output)
+
+    # workaround for driver has no signature
+    key_to_install_driver = params.get("key_to_install_driver").split(";")
+    try:
+        session.cmd_status_output(install_cmd, timeout=30)
+    except ShellTimeoutError:
+        send_key(vm, key_to_install_driver)
+    if utils_misc.wait_for(
+            lambda: params["check_info"] in
+            session.cmd_output(params["check_installation_cmd"]), 30, 15, 5):
+        test.log.info("inf file installation successfully")
+    else:
+        test.error("inf file installation failed")
 
     error_context.context("Bind netkvm protocol to netkvm adapter")
     nic_mac = vm.get_mac_address(0)

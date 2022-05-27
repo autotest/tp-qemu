@@ -15,7 +15,7 @@ class BlockdevStreamWithIoerror(BlockDevStreamTest):
         ori_file_path = "%s/%s" % (root_dir, ori_filename)
         tar_file_path = "%s/%s" % (root_dir, tar_filename)
         dd_cmd = self.main_vm.params.get(
-            "dd_cmd", "dd if=%s of=%s bs=1M count=80 oflag=direct")
+            "dd_cmd", "dd if=%s of=%s bs=1M count=60 oflag=direct")
         mk_file_cmd = dd_cmd % (ori_file_path, tar_file_path)
         try:
             self.session.cmd(mk_file_cmd, timeout=timeout)
@@ -27,7 +27,7 @@ class BlockdevStreamWithIoerror(BlockDevStreamTest):
 
     def snapshot_test(self):
         for info in self.disks_info.values():
-            self.generate_tempfile(info[1], filename="base", size="80M")
+            self.generate_tempfile(info[1], filename="base", size="60M")
             self.dd_io_error(info[1], "base", "base_io_error")
         self.create_snapshot()
 
@@ -73,8 +73,8 @@ def run(test, params, env):
     Test VM block device stream feature
     1) Create small space
     2) Start VM with 500M  data disk created on small space
-    3) dd a 80M file base on data disk and record its md5
-    4) dd 80M base_io_eror in guest to cause vm paused with io-error
+    3) dd a 60M file base on data disk and record its md5
+    4) dd 60M base_io_eror in guest to cause vm paused with io-error
     5) Create snapshot for the data disk
     6) Do stream from data disk to snapshot file
     7) Continue vm, wait dd finished, md5sum io_error_file

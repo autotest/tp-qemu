@@ -48,13 +48,13 @@ def _setup_hugepage(params):
 def _check_mem_increase(session, params, orig_mem):
     """Check the size of memory increased."""
     increase_mem = int(
-        utils_numeric.normalize_data_size(params['size_plug'], 'B'))
+        utils_numeric.normalize_data_size(params['size_mem_plug'], 'B'))
     new_mem = int(session.cmd_output(cmd=params['free_mem_cmd']))
     if (new_mem - orig_mem) == increase_mem:
         error_context.context(
             'Get guest free memory size after hotplug pc-dimm.', LOG_JOB.info)
         LOG_JOB.debug('Guest free memory size is %d bytes', new_mem)
-        LOG_JOB.info("Guest memory size is increased %s.", params['size_plug'])
+        LOG_JOB.info("Guest memory size is increased %s.", params['size_mem_plug'])
         return True
     return False
 
@@ -118,7 +118,7 @@ def run(test, params, env):
             lambda: _check_mem_increase(session, params, orig_mem),
             plug_timeout):
         test.fail("Guest memory size is not increased %s in %s sec."
-                  % (params['size_plug'], params.get('plug_timeout', 5)))
+                  % (params['size_mem_plug'], params.get('plug_timeout', 5)))
 
     error_context.context('Reboot guest', test.log.info)
     session.close()

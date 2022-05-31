@@ -12,8 +12,8 @@ def run(test, params, env):
     and guest os match with the qemu cli
     """
 
-    def convert_cpu_topology_to_ids(socketid=None, dieid=None, coreid=None,
-                                    threadid=None):
+    def convert_cpu_topology_to_ids(socketid=None, dieid=None, clusterid=None,
+                                    coreid=None, threadid=None):
         """
         Convert the cpu topology to cpu id list
         """
@@ -39,6 +39,13 @@ def run(test, params, env):
         elif vm_arch in ('ppc64', 'ppc64le'):
             cpu_min = int(coreid)
             cpu_max = int(coreid) + vcpu_threads - 1
+        elif vm_arch == 'aarch64':
+            socket_min, socket_max = _get_boundary(socketid, vcpu_sockets, socket_weight)
+            cluster_min, cluster_max = _get_boundary(clusterid, vcpu_clusters, cluster_weight)
+            core_min, core_max = _get_boundary(coreid, vcpu_cores, core_weight)
+            thread_min, thread_max = _get_boundary(threadid, vcpu_threads, thread_weight)
+            cpu_min = socket_min + cluster_min + core_min + thread_min
+            cpu_max = socket_max + cluster_max + core_max + thread_max
         cpu_list = list(range(cpu_min, cpu_max + 1))
         return cpu_list
 
@@ -63,6 +70,9 @@ def run(test, params, env):
                                          'iasl -d srat.dat && cat srat.dsl')
             pattern = re.compile(r'Proximity Domain Low\(8\)\s+:\s+([0-9A-Fa-f]+)'
                                  r'\n.*Apic ID\s+:\s+([0-9A-Fa-f]+)')
+            if vm_arch == 'aarch64':
+                pattern = re.compile(r'Proximity Domain\s+:\s+([0-9A-Fa-f]+)'
+                                     r'\n.*Acpi Processor UID\s+:\s+([0-9A-Fa-f]+)')
             node_cpus = pattern.findall(content)
 
             tmp = {}
@@ -90,9 +100,10 @@ def run(test, params, env):
             nodeid = numa_cpu_params["numa_cpu_nodeid"]
             socket = numa_cpu_params.get("numa_cpu_socketid")
             die = numa_cpu_params.get("numa_cpu_dieid")
+            cluster = numa_cpu_params.get("numa_cpu_clusterid")
             core = numa_cpu_params.get("numa_cpu_coreid")
             thread = numa_cpu_params.get("numa_cpu_threadid")
-            cpu_list = convert_cpu_topology_to_ids(socket, die, core, thread)
+            cpu_list = convert_cpu_topology_to_ids(socket, die, cluster, core, thread)
             if nodeid in tmp.keys():
                 tmp[nodeid] += cpu_list
             else:
@@ -112,9 +123,10 @@ def run(test, params, env):
             nodeid = cpu['node_id']
             socket = cpu.get("socket_id")
             die = cpu.get("die_id")
+            cluster = cpu.get("cluster_id")
             core = cpu.get("core_id")
             thread = cpu.get("thread_id")
-            cpu_list = convert_cpu_topology_to_ids(socket, die, core, thread)
+            cpu_list = convert_cpu_topology_to_ids(socket, die, cluster, core, thread)
             if nodeid in tmp.keys():
                 tmp[nodeid] += cpu_list
             else:
@@ -139,16 +151,17 @@ def run(test, params, env):
             nodeid = vcpu_info.get("node-id")
             socket = vcpu_info.get("socket-id")
             die = vcpu_info.get("die-id")
+            cluster = vcpu_info.get("cluster-id")
             core = vcpu_info.get("core-id")
             thread = vcpu_info.get("thread-id")
             if nodeid is not None:
-                cpu_list = convert_cpu_topology_to_ids(socket, die, core, thread)
+                cpu_list = convert_cpu_topology_to_ids(socket, die, cluster, core, thread)
                 if nodeid in tmp.keys():
                     tmp[nodeid] += cpu_list
                 else:
                     tmp[nodeid] = cpu_list
             else:
-                options = {'socket_id': socket, 'die_id': die,
+                options = {'socket_id': socket, 'die_id': die, 'cluster_id': cluster,
                            'core_id': core, 'thread_id': thread}
                 for key in list(options.keys()):
                     if options[key] is None:
@@ -175,13 +188,25 @@ def run(test, params, env):
         core_weight = vcpu_threads
         thread_weight = 1
 
-    numa_cpu_cli = numa_cpu_cli()
-    specified_cpus, unspecified_cpus = get_hotpluggable_cpus()
+    if vm_arch == 'aarch64':
+        vcpu_sockets = params.get_numeric('vcpu_sockets')
+        vcpu_clusters = params.get_numeric('vcpu_clusters')
+        vcpu_cores = params.get_numeric('vcpu_cores')
 
-    if specified_cpus != numa_cpu_cli:
-        test.fail("cpu ids for each node with 'info hotpluggable-cpus' is: %s,"
-                  "but the seting in qemu cli is: %s"
-                  % (specified_cpus, numa_cpu_cli))
+        socket_weight = vcpu_clusters * vcpu_cores * vcpu_threads
+        cluster_weight = vcpu_cores * vcpu_threads
+        core_weight = vcpu_threads
+        thread_weight = 1
+
+    numa_cpu_cli = numa_cpu_cli()
+
+    if vm_arch != 'aarch64':
+        specified_cpus, unspecified_cpus = get_hotpluggable_cpus()
+
+        if specified_cpus != numa_cpu_cli:
+            test.fail("cpu ids for each node with 'info hotpluggable-cpus' is: %s,"
+                      "but the seting in qemu cli is: %s"
+                      % (specified_cpus, numa_cpu_cli))
 
     if qemu_preconfig:
         node_ids = []
@@ -210,11 +235,12 @@ def run(test, params, env):
         for item in zip(numa_cpu_cli, numa_cpu_setted):
             expected_cpus.append(sorted(item[0] + item[1]))
 
-        new_specified_cpus = get_hotpluggable_cpus()[0]
-        if new_specified_cpus != expected_cpus:
-            test.fail("cpu ids for each node with 'info hotpluggable-cpus' after"
-                      "numa_cpu_set is %s, but expected result is: %s"
-                      % (new_specified_cpus, expected_cpus))
+        if vm_arch != 'aarch64':
+            new_specified_cpus = get_hotpluggable_cpus()[0]
+            if new_specified_cpus != expected_cpus:
+                test.fail("cpu ids for each node with 'info hotpluggable-cpus' after"
+                          "numa_cpu_set is %s, but expected result is: %s"
+                          % (new_specified_cpus, expected_cpus))
 
         vm.monitor.exit_preconfig()
         vm.resume()

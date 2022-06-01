@@ -169,6 +169,8 @@ def run(test, params, env):
     os_type = params.get("os_type", "linux")
     drop_cache = params.get("drop_cache")
     num_disk = params.get("num_disk")
+    driver_verifier_query = params.get("driver_verifier_query")
+    verifier_clear_cmd = params.get("verifier_clear_cmd")
 
     result_path = utils_misc.get_path(test.resultsdir,
                                       "fio_result.RHS")
@@ -178,8 +180,17 @@ def run(test, params, env):
     get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, os_type,
                 driver_format, cmd_timeout)
 
-    # online disk
     if os_type == "windows":
+        # turn off driver verifier
+        o = session.cmd_status_output(driver_verifier_query)
+        logging.info(o)
+        if ".sys" in o:
+            output = session.cmd_status_output(verifier_clear_cmd)
+            logging.info(output)
+            if ".sys" in output:
+                msg = "% does not work correctly" % verifier_clear_cmd
+                test.error(msg)
+        # online disk
         for num in range(1, int(num_disk) + 1):
             disks = check_disk_status(session, cmd_timeout, num)
             diskstatus = re.findall(r"Disk\s+\d+\s+(\w+).*?\s+\d+", disks[0])[0]

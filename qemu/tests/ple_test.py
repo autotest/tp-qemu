@@ -4,6 +4,7 @@ from avocado.utils import cpu
 from avocado.utils import process
 from virttest import env_process
 from virttest import error_context
+from virttest import utils_package
 
 
 @error_context.context_aware
@@ -57,8 +58,11 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
-    session.cmd(params["get_unixbench"])
     try:
+        pkgs = params.objects("depends_pkgs")
+        if not utils_package.package_install(pkgs, session):
+            test.error("Install dependency packages failed")
+        session.cmd(params["get_unixbench"])
         cmd = params["run_unixbench"]
         scores_on = run_unixbench(cmd)
         test.log.info("Unixbench scores are %s when ple is on", scores_on)

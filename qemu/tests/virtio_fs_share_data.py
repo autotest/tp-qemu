@@ -90,6 +90,16 @@ def run(test, params, env):
             test.fail("Socket-group name is not correct.\nIt should be %s,but"
                       " the output is %s" % (socket_group, group_name))
 
+    def is_autoit_finished(session, process_name):
+        """
+        Check whether the target process is finished running
+        """
+        check_proc_cmd = check_proc_temp % process_name
+        status, output = session.cmd_status_output(check_proc_cmd)
+        if status:
+            return False
+        return "autoit3" not in output.lower()
+
     # data io config
     test_file = params.get('test_file')
     folder_test = params.get('folder_test')
@@ -136,6 +146,13 @@ def run(test, params, env):
     cmd_get_tmpfs = params.get('cmd_get_tmpfs')
     cmd_set_tmpfs = params.get('cmd_set_tmpfs')
     size_mem1 = params.get('size_mem1')
+
+    # git init config
+    git_init_cmd = params.get("git_init_cmd")
+    install_git_cmd = params.get("install_git_cmd")
+    check_proc_temp = params.get("check_proc_temp")
+    git_check_cmd = params.get("git_check_cmd")
+    autoit_name = params.get("autoit_name")
 
     # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
@@ -453,6 +470,27 @@ def run(test, params, env):
                                                      "file_test")
                     if get_stdev(file_in_local_guest) == get_stdev(file_in_nfs_guest):
                         test.fail("st_dev are the same on diffrent device.")
+
+                if git_init_cmd:
+                    if os_type == "windows":
+                        error_context.context("Install git", test.log.info)
+                        check_status, check_output = session.cmd_status_output(git_check_cmd)
+                        if check_status and "not recognized" in check_output:
+                            install_git_cmd = utils_misc.set_winutils_letter(
+                                session, install_git_cmd)
+                            status, output = session.cmd_status_output(install_git_cmd)
+
+                            if status:
+                                test.error("Failed to install git, status=%s, output=%s"
+                                           % (status, output))
+                            test.log.info("Wait for git installation to complete")
+                            utils_misc.wait_for(
+                                lambda: is_autoit_finished(session, autoit_name), 360, 60, 5)
+                    error_context.context("Git init test in %s" % fs_dest, test.log.info)
+                    status, output = session.cmd_status_output(git_init_cmd % fs_dest)
+
+                    if status:
+                        test.fail("Git init failed with %s" % output)
             finally:
                 if os_type == "linux":
                     utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)

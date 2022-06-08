@@ -73,7 +73,8 @@ def run(test, params, env):
             params.get("os_type"),
             ip_version="ipv6",
             linklocal=link_local_ipv6_addr)
-
+        if link_local_ipv6_addr is False and addresses[vm] is None:
+            test.cancel("Your guest can not get remote IPv6 address.")
         error_context.context("Get ipv6 address of %s: %s" % (vm.name, addresses[vm]),
                               test.log.info)
 

@@ -39,7 +39,7 @@ def run(test, params, env):
     session2.cmd(check_cmd, timeout=360)
 
     error_context.context("Sleep for a random time", test.log.info)
-    time.sleep(random.randrange(30, 100))
+    time.sleep(random.randrange(15, 30))
     session2.cmd(check_cmd, timeout=360)
 
     error_context.context("Kill the VM", test.log.info)

@@ -565,20 +565,10 @@ def refresh_mounts(mounts, params, session):
     :param params: Params object
     :param session: vm login session
     """
-    # always refresh disks info when count of data disks >= 2
-    if 'image1' in mounts:
-        forced = True if len(mounts) > 2 else False
-    else:
-        forced = True if len(mounts) > 1 else False
-
+    # always refresh disks info when count of data disks >= 1
     for tag, mount in mounts.items():
         if tag == 'image1':
             continue
-        if not forced and utils_disk.is_mount(mount[0], verbose=True,
-                                              session=session):
-            # device name changed, now the mounted device is the system device
-            forced = True
-        if forced:
-            info = get_disk_info_by_param(tag, params, session)
-            assert info, 'Failed to get the kname for device: %s' % tag
-            mount[0] = '/dev/%s1' % info['kname']
+        info = get_disk_info_by_param(tag, params, session)
+        assert info, 'Failed to get the kname for device: %s' % tag
+        mount[0] = '/dev/%s1' % info['kname']

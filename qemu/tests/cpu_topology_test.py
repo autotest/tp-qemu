@@ -46,7 +46,7 @@ def run(test, params, env):
     for vcpu_threads in vcpu_threads_list:
         vcpu_sockets = min(max(host_cpu // (vcpu_cores * vcpu_threads), 1),
                            random.randint(1, 6))
-        vcpu_sockets = 2 if (os_type == 'Windows' and
+        vcpu_sockets = 2 if (os_type == 'windows' and
                              vcpu_sockets > 2) else vcpu_sockets
         params['vcpu_sockets'] = vcpu_sockets
         params['vcpu_threads'] = vcpu_threads

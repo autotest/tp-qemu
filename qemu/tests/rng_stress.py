@@ -26,9 +26,10 @@ def run(test, params, env):
         Get attached rng devices from device dictionary
         """
         rng_list = []
+        rng_driver = params.get("rng_driver")
         for device in vm.devices:
             if isinstance(device, qdevices.QDevice):
-                if device.get_param("driver") == "virtio-rng-pci":
+                if device.get_param("driver") == rng_driver:
                     rng_list.append(device)
         return rng_list
 

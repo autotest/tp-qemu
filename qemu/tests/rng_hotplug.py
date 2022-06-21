@@ -28,9 +28,10 @@ def run(test, params, env):
 
     def get_rng_id(vm):
         device_list = []
+        rng_driver = params.get("rng_driver")
         for device in vm.devices:
             if isinstance(device, qdevices.QDevice):
-                if device.get_param("driver") == "virtio-rng-pci":
+                if device.get_param("driver") == rng_driver:
                     device_list.append(device)
         return device_list
 
@@ -108,8 +109,9 @@ def run(test, params, env):
 
         for num in range(rng_num):
             vm.devices.set_dirty()
-            new_dev = qdevices.QDevice("virtio-rng-pci",
-                                       {'id': 'virtio-rng-pci-%d' % num})
+            rng_driver = params.get("rng_driver")
+            new_dev = qdevices.QDevice(rng_driver,
+                                       {'id': '%s-%d' % (rng_driver, num)})
             hotplug_rng(vm, new_dev)
             dev_list.append(new_dev)
 

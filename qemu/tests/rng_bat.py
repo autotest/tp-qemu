@@ -78,6 +78,9 @@ def run(test, params, env):
             rng_src = utils_misc.set_winutils_letter(session, rng_src)
             session.cmd("copy %s %s /y" % (rng_src, rng_dst))
     else:
+        update_driver = params.get("update_driver")
+        if update_driver:
+            session.cmd(update_driver, timeout=cmd_timeout)
         error_context.context("verify virtio-rng device driver", test.log.info)
         verify_cmd = params["driver_verifier_cmd"]
         try:

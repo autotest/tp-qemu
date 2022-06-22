@@ -1,4 +1,5 @@
 import re
+import time
 
 from virttest import error_context
 from virttest import utils_misc
@@ -237,6 +238,7 @@ def run(test, params, env):
     vm.verify_alive()
     is_vm_paused = False
     session = vm.wait_for_login()
+    time.sleep(20)
 
     for iteration in range(repeat_times):
         device_list = []

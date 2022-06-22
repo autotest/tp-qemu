@@ -20,10 +20,10 @@ def run(test, params, env):
     source_file = params["source_file"]
     src_cpuid = os.path.join(data_dir.get_deps_dir(), source_file)
     vm.copy_files_to(src_cpuid, test_dir)
-    guest_dir = "%s/cpuid-20201006" % test_dir
+    guest_dir = "%s/cpuid-20220224" % test_dir
     try:
-        session.cmd('tar -xzf %s/%s -C %s && cd %s && make'
-                    % (test_dir, source_file, test_dir, guest_dir))
+        session.cmd('tar -xvf %s/%s -C %s'
+                    % (test_dir, source_file, test_dir))
         check_cpuid = 'cd %s && ' % guest_dir + params["check_cpuid"]
         results = session.cmd_output(check_cpuid).strip()
         if results.split()[0] != nums_cpu:

@@ -49,7 +49,7 @@ def check_mem_increase(session, params, orig_mem, increase_mem):
         error_context.context(
             'Get guest free memory size after hotplug pc-dimm.', LOG_JOB.info)
         LOG_JOB.debug('Guest free memory size is %d bytes', new_mem)
-        LOG_JOB.info("Guest memory size is increased %s.", params['size'])
+        LOG_JOB.info("Guest memory size is increased %s.", params['expected_size'])
         return True
     return False
 
@@ -104,8 +104,8 @@ def run(test, params, env):
         # For HPT reszing after hotplug memory
         orig_mem = int(session.cmd_output(cmd=params['free_mem_cmd']))
         hpt_mem = MemoryHotplugTest(test, params, env)
-        hpt_mem.hotplug_memory(vm, "hpt_mem")
-        increase_mem = int(params['size'])
+        hpt_mem.hotplug_memory(vm, params['plug_mem_name'])
+        increase_mem = int(params['expected_size'])
         test.log.debug('Guest free memory size is %d bytes', orig_mem)
         plug_timeout = float(params.get('plug_timeout', 20))
         if not utils_misc.wait_for(lambda: check_mem_increase(

@@ -30,8 +30,8 @@ def run(test, params, env):
     timeout = params.get_numeric("login_timeout", 360)
     read_rng_timeout = float(params.get("read_rng_timeout", 3600))
     read_rng_cmd = params["read_rng_cmd"]
-    max_bytes = params.get("max-bytes_virtio-rng-pci")
-    period = params.get("period_virtio-rng-pci")
+    max_bytes = params.get("max-bytes_virtio-rng")
+    period = params.get("period_virtio-rng")
 
     if not max_bytes and not period:
         test.error("Please specify the expected max-bytes and/or period.")

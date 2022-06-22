@@ -42,7 +42,7 @@ def run(test, params, env):
     # get params of bonding
     nm_stop_cmd = "service NetworkManager stop; true"
     session_serial.cmd_output_safe(nm_stop_cmd)
-    modprobe_cmd = "modprobe bonding"
+    modprobe_cmd = "modprobe -r bonding; modprobe bonding"
     bonding_params = params.get("bonding_params")
     if bonding_params:
         modprobe_cmd += " %s" % bonding_params

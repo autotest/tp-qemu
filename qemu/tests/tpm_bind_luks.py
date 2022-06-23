@@ -137,6 +137,8 @@ def run(test, params, env):
     md5_original = create_random_file()
     session.cmd(cryptsetup_close_cmd)
 
+    test.log.info("Reset TPM DA lockout counter before binding")
+    session.cmd("tpm2_dictionarylockout --clear-lockout")
     error_context.base_context("Bind %s using the TPM2 policy" % extra_disk,
                                test.log.info)
     session.cmd(clevis_bind_cmd % extra_disk)

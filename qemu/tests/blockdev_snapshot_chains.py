@@ -36,6 +36,8 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
                 self.params.update({"enable_ceph_%s" % snapshot_tag: "no"})
             elif self.params["image_backend"] == "nbd":
                 self.params.update({"enable_nbd_%s" % snapshot_tag: "no"})
+            elif self.params["image_backend"] == "iscsi":
+                self.params.update({"image_raw_device_%s" % snapshot_tag: "no"})
             image = sp_admin.volume_define_by_params(snapshot_tag, params)
             image.hotplug(self.main_vm)
 

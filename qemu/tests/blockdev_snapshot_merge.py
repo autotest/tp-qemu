@@ -28,6 +28,8 @@ class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
             self.params.update({"enable_ceph_%s" % self.snapshot_tag: "no"})
         elif self.params["image_backend"] == "nbd":
             self.params.update({"enable_nbd_%s" % self.snapshot_tag: "no"})
+        elif self.params["image_backend"] == "iscsi":
+            self.params.update({"image_raw_device_%s" % self.snapshot_tag: "no"})
         params = self.params.copy()
         params.setdefault("target_path", data_dir.get_data_dir())
         image = sp_admin.volume_define_by_params(self.snapshot_tag, params)

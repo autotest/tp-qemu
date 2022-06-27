@@ -52,7 +52,7 @@ def run(test, params, env):
     This Test is mainly used as subtests
     1) Boot up VM
     2) Uninstall driver (Optional)
-    3) Reboot vm (Based on step 2)
+    3) Reboot or Destroy vm (Based on step 2)
     4) Update / Downgrade / Install driver
     5) Reboot vm
     6) Verify installed driver
@@ -136,7 +136,13 @@ def run(test, params, env):
             test.error("Failed to uninstall driver '%s', details:\n"
                        "%s" % (driver_name, output))
 
-        session = vm.reboot(session)
+        if params.get_boolean('need_destroy'):
+            vm.destroy()
+            vm.create(params=params)
+            vm = env.get_vm(params["main_vm"])
+            session = vm.wait_for_login()
+        else:
+            session = vm.reboot(session)
 
     error_context.context("Installing certificates", test.log.info)
     cert_files = utils_misc.set_winutils_letter(session,

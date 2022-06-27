@@ -1,6 +1,8 @@
 import re
 import logging
 
+from aexpect import ShellTimeoutError
+
 from virttest import error_context
 from virttest import utils_misc
 from virttest.utils_windows import virtio_win, wmic
@@ -38,6 +40,12 @@ def _pnpdrv_info(session, name_pattern, props=None):
     return wmic.parse_list(session.cmd(cmd, timeout=QUERY_TIMEOUT))
 
 
+def send_key(vm, key):
+    # Send key to guest
+    for i in key:
+        vm.send_key(i)
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -58,6 +66,8 @@ def run(test, params, env):
     driver_verifier = params.get("driver_verifier", driver_name)
     device_name = params["device_name"]
     device_hwid = params["device_hwid"]
+    chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
+    key_to_install_driver = params.get("key_to_install_driver").split(";")
 
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
@@ -142,12 +152,17 @@ def run(test, params, env):
         output = session.cmd_output("%s find %s" % (devcon_path, hwid))
         if re.search("No matching devices found", output, re.I):
             continue
-        inst_cmd = "%s updateni %s %s" % (devcon_path, inf_path, hwid)
-        status, output = session.cmd_status_output(inst_cmd, inst_timeout)
-        # acceptable status: OK(0), REBOOT(1)
-        if status > 1:
-            test.fail("Failed to install driver '%s', "
-                      "details:\n%s" % (driver_name, output))
+        # workaround for install driver without signture
+        inst_cmd = "%s update %s %s" % (devcon_path, inf_path, hwid)
+        key_to_install_driver = params.get("key_to_install_driver").split(";")
+        try:
+            session.cmd_status_output(inst_cmd, timeout=30)
+        except ShellTimeoutError:
+            send_key(vm, key_to_install_driver)
+        if not utils_misc.wait_for(lambda: not session.cmd_status(chk_cmd),
+                                   600, 60, 10):
+            test.fail("Failed to install driver '%s'" % driver_name)
+
         installed_any |= True
     if not installed_any:
         test.error("Failed to find target devices "

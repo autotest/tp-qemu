@@ -4141,12 +4141,15 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         def execute_qga_cmds_loop():
             for i in range(repeats):
-                LOG_JOB.info("execute 'get-osinfo/devices'"
-                             " %s times", (i + 1))
-                self.gagent.get_osinfo()
-                self.gagent.get_virtio_device()
+                if os.environ["AVCADO_TP_QEMU_GUEST_AGENT_SIGNAL"] == 'True':
+                    LOG_JOB.info("execute 'get-osinfo/devices'"
+                                 " %s times", (i + 1))
+                    self.gagent.get_osinfo()
+                    self.gagent.get_virtio_device()
+                else:
+                    return
 
-        def _process_qga_resource():
+        def process_resource():
             """
             Check the handles&memory of process qemu-ga.
 
@@ -4160,6 +4163,45 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             qga_memory = int(qga_resources[-2]) / 1024
             return (int(qga_handles), int(qga_memory))
 
+        def _is_increase(_list, n, ignore_stable_end=True):
+            if n == 0:
+                return True
+            if (ignore_stable_end and n != len(_list) - 1 and
+                    _list[n] == _list[n - 1]):
+                return _is_increase(_list, n - 1)
+            return (_list[n] > _list[n - 1] and _is_increase(_list, n - 1))
+
+        def get_index(_list):
+            return (len(_list)-1) if len(_list) >= 2 else 0
+
+        def seperate_list(sum_list):
+            new_l = []
+            peak_l = []
+            trough_l = []
+            for x in range(len(sum_list) - 1):
+                if sum_list[x] != sum_list[x + 1]:
+                    new_l.append(sum_list[x])
+            new_l.append(sum_list[-1])
+            for i in range(1, len(new_l) - 1):
+                if new_l[i] > new_l[i - 1] and new_l[i] >= new_l[i + 1]:
+                    peak_l.append(new_l[i])
+                if new_l[i] < new_l[i - 1] and new_l[i] <= new_l[i + 1]:
+                    trough_l.append(new_l[i])
+            return peak_l, trough_l
+
+        def check_leak(check_list, check_type='memory'):
+            peak_l, trough_l = seperate_list(check_list)
+            idx_p, idx_t = (get_index(peak_l),
+                            get_index(trough_l))
+            idx_cl = get_index(check_list)
+            if (_is_increase(peak_l, idx_p) or
+                    _is_increase(trough_l, idx_t)):
+                if _is_increase(check_list, idx_cl,
+                                ignore_stable_end=False):
+                    test.fail("QGA commands caused resource leak "
+                              "anyway. %s is %s" % (check_type,
+                                                    check_list[-1]))
+
         def _base_on_bg_check_resource_leak():
             """
             Check whether there is resource leak situation base on background
@@ -4167,19 +4209,21 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             """
 
             if bg.is_alive():
-                qga_handles, qga_memory = _process_qga_resource()
-                # Generally the qga handles won't exceed 300, and the memory
-                # setting '3000' is an average value when the guest is not
-                # running redundant operations and apps.
-                if qga_handles > 300 or qga_memory > 3000:
-                    test.fail("QGA commands caused resource leak. handles are"
-                              " %s, memory is %s" % (qga_handles, qga_memory))
-                else:
-                    LOG_JOB.info("Current qga handles is %s, qga memory"
-                                 "is %s", qga_handles, qga_memory)
+                qga_handles, qga_memory = process_resource()
+                if qga_memory > qga_mem_threshold:
+                    memory_list = []
+                    handle_list = []
+                    start_t = time.time()
+                    while int(time.time() - start_t) < check_timeout:
+                        handle_latest, memory_latest = process_resource()
+                        memory_list.append(memory_latest)
+                        handle_list.append(handle_latest)
+                        time.sleep(5)
+                    check_leak(memory_list)
+                    if qga_handles > qga_handle_threshold:
+                        check_leak(handle_list, 'handle')
                 return False
-            else:
-                return True
+            return True
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -4187,10 +4231,16 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         error_context.context("Check whether resources leak during executing"
                               " get-osinfo/devices in a loop.", LOG_JOB.info)
         repeats = int(params.get("repeat_times", 1))
+        qga_mem_threshold = int(params.get("qga_mem_threshold", 1))
+        qga_handle_threshold = int(params.get("qga_handle_threshold", 1))
+        check_timeout = int(params.get("check_timeout", 1))
 
+        os.environ["AVCADO_TP_QEMU_GUEST_AGENT_SIGNAL"] = 'True'
         bg = utils_misc.InterruptedThread(execute_qga_cmds_loop)
         bg.start()
-        utils_misc.wait_for(lambda: _base_on_bg_check_resource_leak(), 500)
+        utils_misc.wait_for(lambda: _base_on_bg_check_resource_leak(), 600)
+        os.environ["AVCADO_TP_QEMU_GUEST_AGENT_SIGNAL"] = 'False'
+        bg.join()
 
     @error_context.context_aware
     def gagent_check_run_qga_as_program(self, test, params, env):
@@ -4203,7 +4253,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         """
 
         session = self._get_session(params, self.vm)
-        run_gagent_program_cmd = params["run_qga_program_cmd"]
+        run_gagent_program_cmd = params["run_gagent_program_cmd"]
         kill_qga_program_cmd = params["kill_qga_program_cmd"]
 
         error_context.context("Check qemu-ga service status and stop it, "

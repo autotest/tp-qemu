@@ -26,6 +26,8 @@ from virttest import storage
 from virttest import qemu_migration
 
 from virttest.utils_windows import virtio_win
+from provider.win_driver_installer_test import (uninstall_gagent,
+                                                install_test_with_screen_on_desktop)
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -4273,6 +4275,47 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         session.cmd(kill_qga_program_cmd)
         self.gagent_start(session, self.vm)
         time.sleep(5)
+
+    @error_context.context_aware
+    def gagent_check_driver_update_via_installer_tool(self, test, params, env):
+        """
+        Acceptance installer test:
+
+        1) Check the qga version that installed from iso.
+        2) Remove existed qga.
+        3) Install driver via virtio-win-guest-tools.exe.
+        4) Check the qga version after installing from installer.exe.
+        5) Verify the qemu-ga function works well.
+
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+
+        run_install_cmd = params["run_install_cmd"]
+        installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
+        gagent_uninstall_cmd = params["gagent_uninstall_cmd"]
+
+        vm = env.get_vm(params["main_vm"])
+        session = vm.wait_for_login()
+
+        qga_ver_pkg = str(self.gagent.guest_info()["version"])
+        uninstall_gagent(session, test, gagent_uninstall_cmd)
+        session = vm.reboot(session)
+        install_test_with_screen_on_desktop(vm, session, test, run_install_cmd,
+                                            installer_pkg_check_cmd,
+                                            copy_files_params=params)
+        qga_ver_installer = str(self.gagent.guest_info()["version"])
+
+        error_context.context("Check if qga version is corresponding between"
+                              "msi and installer.exe", test.log.info)
+        if not qga_ver_installer:
+            test.fail("Qemu-ga.exe can't work normally.")
+        elif str(qga_ver_installer) != str(qga_ver_pkg):
+            test.error("Qemu-ga version is not corresponding between "
+                       "installer.exe and msi package.")
+
+        session.close()
 
 
 def run(test, params, env):

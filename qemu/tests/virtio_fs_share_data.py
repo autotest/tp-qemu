@@ -1,4 +1,5 @@
 import os
+import re
 
 import aexpect
 
@@ -153,6 +154,9 @@ def run(test, params, env):
     check_proc_temp = params.get("check_proc_temp")
     git_check_cmd = params.get("git_check_cmd")
     autoit_name = params.get("autoit_name")
+
+    # create dir by winapi config
+    create_dir_winapi_cmd = params.get("create_dir_winapi_cmd")
 
     # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
@@ -491,6 +495,26 @@ def run(test, params, env):
 
                     if status:
                         test.fail("Git init failed with %s" % output)
+
+                if create_dir_winapi_cmd:
+                    error_context.context("Create new directory with WinAPI's "
+                                          "CreateDirectory.", test.log.info)
+                    s, o = session.cmd_status_output(create_dir_winapi_cmd)
+                    if s:
+                        test.fail("Create dir failed, output is %s", o)
+
+                    error_context.context("Get virtiofsd log file.", test.log.info)
+                    vfsd_dev = vm.devices.get_by_params({"source": fs_source})[0]
+                    vfd_log_name = '%s-%s.log' % (vfsd_dev.get_qid(),
+                                                  vfsd_dev.get_param('name'))
+                    vfd_logfile = utils_misc.get_log_filename(vfd_log_name)
+
+                    error_context.context("Check virtiofsd log.", test.log.info)
+                    pattern = r'Replying ERROR.*header.*OutHeader.*error.*-9'
+                    with open(vfd_logfile, 'r') as f:
+                        for line in f.readlines():
+                            if re.match(pattern, line, re.I):
+                                test.fail("CreateDirectory cause virtiofsd-rs ERROR reply.")
             finally:
                 if os_type == "linux":
                     utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)

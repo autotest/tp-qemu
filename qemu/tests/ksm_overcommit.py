@@ -578,6 +578,10 @@ def run(test, params, env):
     # As we don't know the number and memory amount of VMs in advance,
     # we need to specify and create them here
     vm_name = params["main_vm"]
+    vm_arch_name = params["vm_arch_name"]
+    if (vm_arch_name in ("ppc64", "ppc64le")):
+        if divmod(mem, 256)[1] > 0:
+            mem = 256 * (divmod(mem, 256)[0] + 1)
     params['mem'] = mem
     params['vms'] = vm_name
 

@@ -138,7 +138,7 @@ def run(test, params, env):
 
         if params.get_boolean('need_destroy'):
             vm.destroy()
-            vm.create(params=params)
+            vm.create()
             vm = env.get_vm(params["main_vm"])
             session = vm.wait_for_login()
         else:

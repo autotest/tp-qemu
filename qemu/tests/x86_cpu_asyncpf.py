@@ -12,8 +12,7 @@ def run(test, params, env):
     Enable interrupt based asynchronous page fault mechanism by default
 
     1. boot a guest with "-machine pc-q35-rhel8.5.0" or newer.
-    2. check guest's dmesg, should see Async PF enabled
-    3. check 'Hypervisor callback interrupts' inside guest,
+    2. check 'Hypervisor callback interrupts' inside guest,
        should have at least 1 for each CPU.
 
     :param test: QEMU test object.
@@ -27,7 +26,6 @@ def run(test, params, env):
         :param machine_type: Boot guest with which machine type
         """
         params['machine_type'] = machine_type
-        check_async_PF = params['check_async_PF']
         check_interrupts = params['check_interrupts']
         params['start_vm'] = 'yes'
         vm_name = params['main_vm']
@@ -36,22 +34,16 @@ def run(test, params, env):
 
         session = vm.wait_for_login()
         g_vcpus = session.cmd_output("grep processor /proc/cpuinfo -c").strip()
-        g_async_PF = session.cmd_output(check_async_PF).strip()
         output = session.cmd_output(check_interrupts).split('\n')[0]
         g_interrupts = re.findall(r'\d+', output)
         session.close()
         vm.destroy()
 
-        test.log.info("check guest's dmesg, should see Async PF enabled")
-        if int(g_async_PF) != int(g_vcpus):
-            test.fail("Async PF %s is not equal to cpu count %s"
-                      % (g_async_PF, g_vcpus))
-        else:
-            if g_interrupts.count('0') >= 1:
-                test.fail("cpu interrupt value is not right")
-            elif len(g_interrupts) != int(g_vcpus):
-                test.fail("interrupts %s is not equal to cpu count %s" %
-                          (len(g_interrupts), g_vcpus))
+        if g_interrupts.count('0') >= 1:
+            test.fail("cpu interrupt value is not right")
+        elif len(g_interrupts) != int(g_vcpus):
+            test.fail("interrupts %s is not equal to cpu count %s"
+                      % (len(g_interrupts), g_vcpus))
 
     def check_version(latest_machine):
         """

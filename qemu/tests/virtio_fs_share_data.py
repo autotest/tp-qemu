@@ -192,7 +192,7 @@ def run(test, params, env):
         # create partition on host
         dd_of_on_host = params.get("dd_of_on_host")
         cmd_dd_on_host = params.get("cmd_dd_on_host")
-        process.system(cmd_dd_on_host % dd_of_on_host, timeout=120)
+        process.system(cmd_dd_on_host % dd_of_on_host, timeout=300)
 
         cmd_losetup_query_on_host = params.get("cmd_losetup_query_on_host")
         loop_device = process.run(

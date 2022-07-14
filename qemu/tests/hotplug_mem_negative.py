@@ -1,6 +1,7 @@
 import re
 
 from avocado.utils import memory
+from avocado.utils import process
 
 from virttest import env_process
 from virttest import error_context
@@ -60,8 +61,20 @@ def run(test, params, env):
             test.fail("No valid keywords were found in the qemu prompt message")
 
     if params["size_mem"] == "<overcommit>":
+        ipa_limit_check = params.get('ipa_limit_check')
         overcommit_mem = normalize_data_size("%sK" % (memory.memtotal() * 2), "G")
         params["size_mem"] = "%sG" % round(float(overcommit_mem))
+        if ipa_limit_check:
+            system_init_mem = int(params["system_init_mem"])
+            slots_mem = int(params["slots_mem"])
+            extend_mem_region = int(params["extend_mem_region"])
+            ipa_limit = process.run(ipa_limit_check, shell=True).stdout.decode().strip() or 40
+            ipa_limit_size = 1 << int(ipa_limit)
+            ipa_limit_size = int(normalize_data_size("%sB" % ipa_limit_size, "G"))
+            limit_maxmem = (ipa_limit_size - system_init_mem - (1 * slots_mem) - extend_mem_region)
+            maxmem_mem = int(normalize_data_size("%s" % params["maxmem_mem"], "G"))
+            params["maxmem_mem"] = "%dG" % min(limit_maxmem, maxmem_mem)
+
     if params["policy_mem"] == "bind":
         params["host-nodes"] = str(max(memory.numa_nodes()) + 1)
     params["start_vm"] = "yes"

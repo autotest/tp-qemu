@@ -54,6 +54,11 @@ def run(test, params, env):
         error_context.context("Running SignTool check test in guest...",
                               test.log.info)
         file_type = [".cat", ".sys", ".inf", "Wdf"]
+        # Add a workaround for pvpanic, as there are pvpanic-pci files
+        # include in the latest prewhql version,
+        # they are for arm support and we no need to test them currently.
+        if "pvpanic" in drv_name:
+            file_type = ["%s.cat" % drv_name, ".sys", "%s.inf" % drv_name, "Wdf"]
         tested_list = []
         viowin_letter, path = get_driver_file_path(session, params)
         for ftype in file_type:

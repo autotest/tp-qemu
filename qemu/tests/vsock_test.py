@@ -1,6 +1,7 @@
 import os
 import random
 import logging
+import time
 import aexpect
 
 from avocado.utils import path
@@ -137,6 +138,7 @@ def send_data_from_guest_to_host(guest_session, tool_bin,
             tool_bin, guest_cid, port, tmp_file)
     if "nc-vsock" in tool_bin:
         cmd_receive = '%s %s %s > %s' % (tool_bin, guest_cid, port, tmp_file)
+    time.sleep(60)
     return aexpect.Expect(cmd_receive,
                           auto_close=True,
                           output_func=utils_misc.log_line,
@@ -152,7 +154,7 @@ def check_guest_vsock_conn_exit(test, session, close_session=False):
     :param close_session: close the session finally if True
     """
     try:
-        session.read_up_to_prompt(timeout=40)
+        session.read_up_to_prompt(timeout=120)
     except aexpect.ExpectTimeoutError:
         test.fail("vsock listening prcoess inside guest"
                   " does not exit after close host nc-vsock connection.")

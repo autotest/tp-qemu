@@ -20,13 +20,13 @@ def check_data_received(test, rec_session, file):
     :param file: file to receive data
     """
     if not utils_misc.wait_for(lambda: rec_session.is_alive(),
-                               timeout=3, step=0.1):
+                               timeout=20, step=1):
         test.error("Host connection failed.")
     if not utils_misc.wait_for(lambda: os.path.exists(file),
-                               timeout=3, step=0.1):
+                               timeout=20, step=1):
         test.fail("Host does not create receive file successfully.")
     elif not utils_misc.wait_for(lambda: os.path.getsize(file) > 0,
-                                 timeout=10, step=0.1):
+                                 timeout=300, step=5):
         test.fail('Host does not receive data successfully.')
 
 
@@ -93,7 +93,7 @@ def run(test, params, env):
     session = vm.wait_for_login()
     tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
     rec_session = vsock_test.send_data_from_guest_to_host(
-        session, tool_bin, guest_cid, tmp_file, file_size=10000)
+        session, tool_bin, guest_cid, tmp_file)
     try:
         check_data_received(test, rec_session, tmp_file)
         kill_host_receive_process(test, rec_session)

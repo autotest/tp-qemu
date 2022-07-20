@@ -48,12 +48,19 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     signtool_cmd = params["signtool_cmd"]
+    drv_name = params["tested_driver"].lower()
     list_files_cmd = 'dir /s /b %s | find /i "%s" | find "%s"'
+    verify_option = params["verify_option"]
 
     try:
         error_context.context("Running SignTool check test in guest...",
                               test.log.info)
         file_type = [".cat", ".sys", ".inf", "Wdf"]
+        # Add a workaround for pvpanic, as there are pvpanic-pci files
+        # include in the latest prewhql version,
+        # they are for arm support and we no need to test them currently.
+        if "pvpanic" in drv_name:
+            file_type = ["%s.cat" % drv_name, ".sys", "%s.inf" % drv_name, "Wdf"]
         tested_list = []
         viowin_letter, path = get_driver_file_path(session, params)
         for ftype in file_type:
@@ -67,7 +74,7 @@ def run(test, params, env):
         signtool_cmd = utils_misc.set_winutils_letter(session, signtool_cmd)
         check_info = "Number of files successfully Verified: (1)"
         for driver_file in tested_list[1:]:
-            test_cmd = signtool_cmd % (tested_list[0], driver_file)
+            test_cmd = signtool_cmd % (verify_option, tested_list[0], driver_file)
             status, output = session.cmd_status_output(test_cmd)
             sign_num = re.findall(check_info, output)[0]
             if (status != 0) or (int(sign_num) != 1):

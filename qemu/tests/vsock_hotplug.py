@@ -83,7 +83,7 @@ def run(test, params, env):
             tool_bin = path.find_command("ncat")
         tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
         rec_session = vsock_test.send_data_from_guest_to_host(
-            session, tool_bin, guest_cid, tmp_file, file_size=10000)
+            session, tool_bin, guest_cid, tmp_file)
         vsock_negative_test.check_data_received(test, rec_session, tmp_file)
         vm.devices.simple_unplug(dev_vsock, vm.monitor)
         vsock_negative_test.kill_host_receive_process(test, rec_session)

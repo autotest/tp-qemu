@@ -93,7 +93,7 @@ def run(test, params, env):
     vm.reboot()
     # do migration
     ping_pong_migration(1)
-    session = vm.wait_for_login()
+    session = vm.wait_for_login(timeout=360)
     if session.cmd_output("ss --vsock | grep %s" % port):
         test.fail(
             "vsock listening process inside guest does not exit after migrate")
@@ -105,14 +105,16 @@ def run(test, params, env):
     )
     utils_misc.wait_for(lambda: not rec_session.is_alive(), timeout=20)
     cmd_chksum = "md5sum %s" % tmp_file
-    md5_origin = session.cmd_output(cmd_chksum).split()[0]
-    md5_received = process.system_output(cmd_chksum).split()[0].decode()
+    md5_origin = session.cmd_output(
+        cmd_chksum, timeout=180, safe=True).split()[0]
+    md5_received = process.system_output(
+        cmd_chksum, timeout=180).split()[0].decode()
     host_vsock_session = input_character_vsock()
     ping_pong_migration(3)
     cmd_rm = "rm -rf %s" % tmp_file
     if vsock_test_tool == "nc_vsock":
         cmd_rm += "; rm -rf %s*" % tool_bin
-    session.cmd_output_safe(cmd_rm)
+    session.cmd_output_safe(cmd_rm, timeout=120)
     process.system(cmd_rm, shell=True, ignore_status=True)
     if md5_received != md5_origin:
         test.fail(

@@ -132,7 +132,7 @@ def run(test, params, env):
     def sender():
         """ Send side """
         test.log.info("Sarting sender process ...")
-        session = vm_sender.wait_for_login(timeout=login_timeout)
+        session = vm_sender.wait_for_serial_login(timeout=login_timeout)
         install_ntttcp(session)
         ntttcp_sender_cmd = params.get("ntttcp_sender_cmd")
         f = open(results_path + ".sender", 'a')

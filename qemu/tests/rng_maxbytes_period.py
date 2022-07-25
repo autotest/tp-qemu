@@ -74,7 +74,7 @@ def run(test, params, env):
         if s:
             test.error(o)
         test.log.info(o)
-        data_rate = re.search(r'\s(\d+\.\d+) kB/s', o, re.M)
+        data_rate = re.search(r'\s(\d+\.\d+)|(\d+) kB/s', o, re.M)
         expected_data_rate = float(params["expected_data_rate"])
         if float(data_rate.group(1)) > expected_data_rate * 1.1:
             test.error("Read data rate is not as expected. "

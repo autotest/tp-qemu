@@ -46,6 +46,8 @@ def run(test, params, env):
     pre_threads = get_qemu_threads(get_threads_cmd)
     mem = params.get("target_mems")
     new_params = params.object_params(mem).object_params("mem")
+    attrs = Memory.__attributes__[new_params["backend"]][:]
+    new_params = new_params.copy_from_keys(attrs)
     dev = Memory(new_params["backend"], new_params)
     dev.set_param("id", "%s-%s" % ("mem", mem))
     args = [vm.monitor, vm.devices.qemu_version]

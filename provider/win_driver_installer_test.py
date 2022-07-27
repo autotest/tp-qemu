@@ -1,10 +1,13 @@
 import logging
+import re
 import time
 
 from virttest import error_context
+from virttest import utils_disk
 from virttest import utils_misc
 
 from provider import win_driver_utils
+from provider.storage_benchmark import generate_instance
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -197,3 +200,68 @@ def check_gagent_version(session, test, gagent_pkg_info_cmd,
     if actual_gagent_version != expected_gagent_version:
         test.fail("gagent version is not right, expected is %s but got %s"
                   % (expected_gagent_version, actual_gagent_version))
+
+
+@error_context.context_aware
+def get_drive_letter(test, vm, img_size):
+    """
+    Get drive letter.
+
+    :param test: kvm test object.
+    :param vm: vm object.
+    :param img_size: image size.
+    """
+    session = vm.wait_for_login()
+    error_context.context("Format data disk", test.log.info)
+    disk_index = utils_disk.get_windows_disks_index(session, img_size)
+    if not disk_index:
+        test.error("Failed to get the disk index of size %s" % img_size)
+    if not utils_disk.update_windows_disk_attributes(session, disk_index):
+        test.error("Failed to enable data disk %s" % disk_index)
+    drive_letter_list = utils_disk.configure_empty_windows_disk(
+        session, disk_index[0], img_size)
+    if not drive_letter_list:
+        test.error("Failed to format the data disk")
+    return drive_letter_list[0]
+
+
+@error_context.context_aware
+def rng_test(test, params, vm):
+    """
+    Generate random data for windows.
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    """
+    session = vm.wait_for_login()
+    read_rng_cmd = params['read_rng_cmd']
+    read_rng_cmd = utils_misc.set_winutils_letter(session, read_rng_cmd)
+    error_context.context("Read virtio-rng device to get random number",
+                          LOG_JOB.info)
+    output = session.cmd_output(read_rng_cmd)
+    if len(re.findall(r'0x\w', output, re.M)) < 2:
+        test.fail("Unable to read random numbers "
+                  "from guest: %s" % output)
+
+
+@error_context.context_aware
+def iozone_test(test, params, vm, images):
+    """
+    Run iozone inside guest.
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    :param img_size: image size.
+    """
+    iozone = generate_instance(params, vm, 'iozone')
+
+    for img in images:
+        drive_letter = get_drive_letter(test, vm, params['image_size_%s' % img])
+        try:
+            error_context.context("Running IOzone command on guest",
+                                  LOG_JOB.info)
+            iozone.run(params['iozone_cmd_opitons'] % drive_letter)
+        finally:
+            iozone.clean()

@@ -1,12 +1,8 @@
+import ast
+
 from virttest import error_context
 
-from provider.win_driver_installer_test import (install_gagent,
-                                                uninstall_gagent,
-                                                win_uninstall_all_drivers,
-                                                win_installer_test,
-                                                check_gagent_version,
-                                                driver_check,
-                                                install_test_with_screen_on_desktop)
+from provider import win_driver_installer_test
 
 
 @error_context.context_aware
@@ -23,6 +19,7 @@ def run(test, params, env):
     7) Verify the qemu-ga version match expected version.
     8) Run driver signature check command in guest.
        Verify target driver.
+    9) Run driver function test.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -30,6 +27,9 @@ def run(test, params, env):
     """
     run_install_cmd = params["run_install_cmd"]
     installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
+    gagent_uninstall_cmd = params["gagent_uninstall_cmd"]
+    driver_test_params = params.get("driver_test_params", "{}")
+    driver_test_params = ast.literal_eval(driver_test_params)
 
     # gagent version check test config
     qemu_ga_pkg = params["qemu_ga_pkg"]
@@ -40,19 +40,25 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
 
-    expected_gagent_version = install_gagent(session, test,
-                                             qemu_ga_pkg,
-                                             gagent_install_cmd,
-                                             gagent_pkg_info_cmd)
-    uninstall_gagent(session, test, gagent_uninstall_cmd)
-    win_uninstall_all_drivers(session, test, params)
+    expected_gagent_version = win_driver_installer_test.install_gagent(
+        session, test, qemu_ga_pkg, gagent_install_cmd, gagent_pkg_info_cmd)
+    win_driver_installer_test.uninstall_gagent(
+            session, test, gagent_uninstall_cmd)
+    win_driver_installer_test.win_uninstall_all_drivers(session,
+                                                        test,
+                                                        params)
     session = vm.reboot(session)
-    install_test_with_screen_on_desktop(vm, session, test, run_install_cmd,
-                                        installer_pkg_check_cmd,
-                                        copy_files_params=params)
-    win_installer_test(session, test, params)
-    check_gagent_version(session, test, gagent_pkg_info_cmd,
-                         expected_gagent_version)
-    driver_check(session, test, params)
+    win_driver_installer_test.install_test_with_screen_on_desktop(
+            vm, session, test, run_install_cmd, installer_pkg_check_cmd,
+            copy_files_params=params)
+    win_driver_installer_test.win_installer_test(session, test, params)
+    win_driver_installer_test.check_gagent_version(
+            session, test, gagent_pkg_info_cmd, expected_gagent_version)
+    win_driver_installer_test.driver_check(session, test, params)
+
+    driver_test_names = params.objects("driver_test_names")
+    for test_name in driver_test_names:
+        test_func = "win_driver_installer_test.%s_test" % test_name
+        eval("%s(test, params, vm, **driver_test_params)" % test_func)
 
     session.close()

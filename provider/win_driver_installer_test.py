@@ -1,32 +1,37 @@
 import logging
+import re
 import time
 
 from virttest import error_context
+from virttest import utils_disk
 from virttest import utils_misc
 
 from provider import win_driver_utils
+from provider.storage_benchmark import generate_instance
 
 LOG_JOB = logging.getLogger('avocado.test')
 
-driver_name_list = ['netkvm', 'viorng', 'vioser',
-                    'balloon', 'pvpanic', 'vioinput',
-                    'viofs', 'viostor', 'vioscsi']
 
-device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&DEV_1041"',
-                    '"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
-                    '"PCI\\VEN_1AF4&DEV_1003" "PCI\\VEN_1AF4&DEV_1043"',
-                    '"PCI\\VEN_1AF4&DEV_1002" "PCI\\VEN_1AF4&DEV_1045"',
-                    '"ACPI\\QEMU0001"', '"PCI\\VEN_1AF4&DEV_1052"',
-                    '"PCI\\VEN_1AF4&DEV_105A"',
+driver_name_list = ['viorng', 'viostor', 'vioscsi',
+                    'balloon', 'viofs', 'vioser',
+                    'pvpanic', 'netkvm', 'vioinput']
+
+device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
                     '"PCI\\VEN_1AF4&DEV_1001" "PCI\\VEN_1AF4&DEV_1042"',
                     '"PCI\\VEN_1AF4&DEV_1004" "PCI\\VEN_1AF4&DEV_1048"',
+                    '"PCI\\VEN_1AF4&DEV_1002" "PCI\\VEN_1AF4&DEV_1045"',
+                    '"PCI\\VEN_1AF4&DEV_105A"',
+                    '"PCI\\VEN_1AF4&DEV_1003" "PCI\\VEN_1AF4&DEV_1043"',
+                    '"ACPI\\QEMU0001"',
+                    '"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&DEV_1041"',
+                    '"PCI\\VEN_1AF4&DEV_1052"',
                     '"ACPI\\QEMU0002"']
 
-device_name_list = ["Red Hat VirtIO Ethernet Adapter", "VirtIO RNG Device",
-                    "VirtIO Serial Driver", "VirtIO Balloon Driver",
-                    "QEMU PVPanic Device", "VirtIO Input Driver",
-                    "VirtIO FS Device", "Red Hat VirtIO SCSI controller",
+device_name_list = ["VirtIO RNG Device", "Red Hat VirtIO SCSI controller",
                     "Red Hat VirtIO SCSI pass-through controller",
+                    "VirtIO Balloon Driver", "VirtIO FS Device",
+                    "VirtIO Serial Driver", "QEMU PVPanic Device",
+                    "Red Hat VirtIO Ethernet Adapter", "VirtIO Input Driver",
                     "QEMU FWCfg Device"]
 
 
@@ -146,12 +151,16 @@ def driver_check(session, test, params):
     :param test: kvm test object
     :param params: the dict used for parameters.
     """
+    global driver_name_list, device_name_list
     chk_timeout = int(params.get("chk_timeout", 240))
     media_type = params["virtio_win_media_type"]
     wrong_ver_driver = []
     not_signed_driver = []
     if params.get("check_qemufwcfg", "no") == "yes":
         driver_name_list.append('qemufwcfg')
+    if params.get("driver_name"):
+        driver_name_list = [params["driver_name"]]
+        device_name_list = [params["device_name"]]
     for driver_name, device_name in zip(driver_name_list, device_name_list):
         error_context.context("%s Driver Check" % driver_name, LOG_JOB.info)
         inf_path = win_driver_utils.get_driver_inf_path(session, test,
@@ -197,3 +206,68 @@ def check_gagent_version(session, test, gagent_pkg_info_cmd,
     if actual_gagent_version != expected_gagent_version:
         test.fail("gagent version is not right, expected is %s but got %s"
                   % (expected_gagent_version, actual_gagent_version))
+
+
+@error_context.context_aware
+def get_drive_letter(test, vm, img_size):
+    """
+    Get drive letter.
+
+    :param test: kvm test object.
+    :param vm: vm object.
+    :param img_size: image size.
+    """
+    session = vm.wait_for_login()
+    error_context.context("Format data disk", test.log.info)
+    disk_index = utils_disk.get_windows_disks_index(session, img_size)
+    if not disk_index:
+        test.error("Failed to get the disk index of size %s" % img_size)
+    if not utils_disk.update_windows_disk_attributes(session, disk_index):
+        test.error("Failed to enable data disk %s" % disk_index)
+    drive_letter_list = utils_disk.configure_empty_windows_disk(
+        session, disk_index[0], img_size)
+    if not drive_letter_list:
+        test.error("Failed to format the data disk")
+    return drive_letter_list[0]
+
+
+@error_context.context_aware
+def rng_test(test, params, vm):
+    """
+    Generate random data for windows.
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    """
+    session = vm.wait_for_login()
+    read_rng_cmd = params['read_rng_cmd']
+    read_rng_cmd = utils_misc.set_winutils_letter(session, read_rng_cmd)
+    error_context.context("Read virtio-rng device to get random number",
+                          LOG_JOB.info)
+    output = session.cmd_output(read_rng_cmd)
+    if len(re.findall(r'0x\w', output, re.M)) < 2:
+        test.fail("Unable to read random numbers "
+                  "from guest: %s" % output)
+
+
+@error_context.context_aware
+def iozone_test(test, params, vm, images):
+    """
+    Run iozone inside guest.
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    :param img_size: image size.
+    """
+    iozone = generate_instance(params, vm, 'iozone')
+
+    for img in images.split():
+        drive_letter = get_drive_letter(test, vm, params['image_size_%s' % img])
+        try:
+            error_context.context("Running IOzone command on guest",
+                                  LOG_JOB.info)
+            iozone.run(params['iozone_cmd_opitons'] % drive_letter)
+        finally:
+            iozone.clean()

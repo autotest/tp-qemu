@@ -409,10 +409,7 @@ def run(test, params, env):
                         if os_type == "linux":
                             session.cmd("cd -")
                         else:
-                            # there is no exit status for this cmd,so when getting
-                            # the exit status, it actually get the status of last cmd.
-                            # So use sendline function here.
-                            session.sendline("C:")
+                            session.cmd("cd /d C:\\")
 
                 if cmd_symblic_file:
                     error_context.context("Symbolic test under %s inside "
@@ -425,10 +422,7 @@ def run(test, params, env):
                     if os_type == "linux":
                         session.cmd("cd -")
                     else:
-                        # there is no exit status for this cmd,so when getting
-                        # the exit status, it actually get the status of last cmd.
-                        # So use sendline function here.
-                        session.sendline("C:")
+                        session.cmd("cd /d C:\\")
 
                 if fio_options:
                     error_context.context("Run fio on %s." % fs_dest, test.log.info)

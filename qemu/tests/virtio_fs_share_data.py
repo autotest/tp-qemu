@@ -188,6 +188,7 @@ def run(test, params, env):
 
     # create dir by winapi config
     create_dir_winapi_cmd = params.get("create_dir_winapi_cmd")
+    check_winapi_dir_cmd = params.get("check_winapi_dir_cmd")
 
     # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
@@ -526,9 +527,13 @@ def run(test, params, env):
                 if create_dir_winapi_cmd:
                     error_context.context("Create new directory with WinAPI's "
                                           "CreateDirectory.", test.log.info)
-                    s, o = session.cmd_status_output(create_dir_winapi_cmd)
-                    if s:
-                        test.fail("Create dir failed, output is %s", o)
+                    session.cmd(create_dir_winapi_cmd % fs_dest)
+
+                    ret = utils_misc.wait_for(lambda: not bool(session.cmd_status(
+                        check_winapi_dir_cmd % fs_dest)), timeout=60)
+                    if not ret:
+                        test.fail("Create dir failed in 60s, output is %s" %
+                                  session.cmd_output(check_winapi_dir_cmd % fs_dest))
 
                     error_context.context("Get virtiofsd log file.", test.log.info)
                     vfsd_dev = vm.devices.get_by_params({"source": fs_source})[0]

@@ -71,7 +71,7 @@ def run(test, params, env):
 
     # Verify that all the certs have been generated on the client
     for cert in cert_list:
-        if not(cert in output):
+        if not (cert in output):
             test.fail("Certificate %s not found" % cert)
 
     client_session.close()

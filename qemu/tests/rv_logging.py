@@ -53,11 +53,11 @@ def run(test, params, env):
     guest_session.cmd("export DISPLAY=:0.0")
 
     # Logging test for the qxl driver
-    if(log_test == 'qxl'):
+    if log_test == 'qxl':
         test.log.info("Running the logging test for the qxl driver")
         guest_root_session.cmd("grep -i qxl " + qxl_logfile)
     # Logging test for spice-vdagent
-    elif(log_test == 'spice-vdagent'):
+    elif log_test == 'spice-vdagent':
 
         # Check for RHEL6 or RHEL7
         # RHEL7 uses gsettings and RHEL6 uses gconftool-2

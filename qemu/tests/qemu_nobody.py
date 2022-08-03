@@ -30,7 +30,7 @@ def run(test, params, env):
         """
         user_uid = process.getoutput("id -u %s" % username).split()
         user_gid = process.getoutput("id -g %s" % username).split()
-        return(user_uid, user_gid)
+        return user_uid, user_gid
 
     def get_ugid_from_processid(pid):
         """

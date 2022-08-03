@@ -69,13 +69,13 @@ def run(test, params, env):
 
     # Positive Test, verify the guest takes the resolution of the client
     if full_screen == "yes":
-        if(client_res == guest_res):
+        if client_res == guest_res:
             test.log.info("PASS: Guest resolution is the same as the client")
         else:
             test.fail("Guest resolution differs from the client")
     # Negative Test, verify the resolutions are not equal
     elif full_screen == "no":
-        if(client_res != guest_res):
+        if client_res != guest_res:
             test.log.info("PASS: Guest resolution differs from the client")
         else:
             test.fail("Guest resolution is the same as the client")

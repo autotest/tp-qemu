@@ -141,9 +141,9 @@ def run(test, params, env):
         else:
             params = "if=$FILE of=$FILE iflag=direct oflag=direct"
         if blocksize:
-            params += " bs=%s" % (blocksize)
+            params += " bs=%s" % blocksize
         if count:
-            params += " count=%s" % (count)
+            params += " count=%s" % count
         return ("export FILE=$(ls /dev/disk/by-id/*%s | tail -n 1); touch /tmp/cgroup_lock"
                 " ; while [ -e /tmp/cgroup_lock ]; do dd %s ; done"
                 % (RANDOM_DISK_NAME, params))
@@ -349,7 +349,7 @@ def run(test, params, env):
 
         test.log.info("Setup test")
         modules = CgroupModules()
-        if (modules.init(['blkio']) != 1):
+        if modules.init(['blkio']) != 1:
             raise exceptions.TestFail("Can't mount blkio cgroup modules")
         blkio = Cgroup('blkio', '')
         blkio.initialize(modules)
@@ -389,8 +389,8 @@ def run(test, params, env):
                 session.cmd("true")
                 session.close()
 
-            del(blkio)
-            del(modules)
+            del blkio
+            del modules
 
             for i in range(len(vms)):
                 vms[i].destroy()
@@ -509,7 +509,7 @@ def run(test, params, env):
                     output.append(['PASS', j, 'vm%d' % i, speeds[i][j],
                                    int(data / duration)])
                     # Don't measure unlimited speeds
-                    if (speeds[i][j] == 0):
+                    if speeds[i][j] == 0:
                         output[-1][0] = "INF"
                         output[-1][3] = "(inf)"
                     elif output[-1][4] > speeds[i][j]:
@@ -577,7 +577,7 @@ def run(test, params, env):
 
         test.log.info("Setup test")
         modules = CgroupModules()
-        if (modules.init(['blkio']) != 1):
+        if modules.init(['blkio']) != 1:
             raise exceptions.TestFail("Can't mount blkio cgroup modules")
         blkio = Cgroup('blkio', '')
         blkio.initialize(modules)
@@ -629,8 +629,8 @@ def run(test, params, env):
                 # stop all workers
                 sessions[i * 2 + 1].sendline(kill_cmd)
 
-            del(blkio)
-            del(modules)
+            del blkio
+            del modules
 
             for session in sessions:
                 # try whether all sessions are clean
@@ -662,7 +662,7 @@ def run(test, params, env):
         """
         test.log.info("Setup test")
         modules = CgroupModules()
-        if (modules.init(['cpu']) != 1):
+        if modules.init(['cpu']) != 1:
             raise exceptions.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)
@@ -779,8 +779,8 @@ def run(test, params, env):
 
         finally:
             test.log.info("Cleanup")
-            del(cgroup)
-            del(modules)
+            del cgroup
+            del modules
 
             for i in range(len(serials)):
                 # stop all workers
@@ -849,7 +849,7 @@ def run(test, params, env):
         sessions = []
         serials = []
         modules = CgroupModules()
-        if (modules.init(['cpu']) != 1):
+        if modules.init(['cpu']) != 1:
             raise exceptions.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)
@@ -977,7 +977,7 @@ def run(test, params, env):
 
         finally:
             test.log.info("Cleanup")
-            del(cgroup)
+            del cgroup
 
             for i in range(len(serials)):
                 # stop all workers
@@ -990,13 +990,13 @@ def run(test, params, env):
             for i in range(len(vms)):
                 vms[i].destroy()
 
-            del(modules)
+            del modules
 
         test.log.info("Results")
         if err:
             raise exceptions.TestFail(err)
         else:
-            return ("Cpu utilisation enforced successfully")
+            return "Cpu utilisation enforced successfully"
 
     @error_context.context_aware
     def cpuset_cpus():
@@ -1097,7 +1097,7 @@ def run(test, params, env):
 
         vm = env.get_all_vms()[0]
         modules = CgroupModules()
-        if (modules.init(['cpuset']) != 1):
+        if modules.init(['cpuset']) != 1:
             raise exceptions.TestFail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
@@ -1234,14 +1234,14 @@ def run(test, params, env):
         finally:
             test.log.info("Cleanup")
             serial.cmd("rm -f /tmp/cgroup-cpu-lock")
-            del(cgroup)
-            del(modules)
+            del cgroup
+            del modules
 
         test.log.info("Results")
         if err:
             raise exceptions.TestFail(err)
         else:
-            return ("All utilisations match prescriptions.")
+            return "All utilisations match prescriptions."
 
     @error_context.context_aware
     def cpuset_cpus_switching():
@@ -1259,7 +1259,7 @@ def run(test, params, env):
 
         test.log.info("Prepare")
         modules = CgroupModules()
-        if (modules.init(['cpuset']) != 1):
+        if modules.init(['cpuset']) != 1:
             raise exceptions.TestFail("Can't mount cpuset cgroup modules")
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
@@ -1320,8 +1320,8 @@ def run(test, params, env):
 
         finally:
             test.log.info("Cleanup")
-            del(cgroup)
-            del(modules)
+            del cgroup
+            del modules
 
             serial.sendline("rm -f /tmp/cgroup-cpu-lock")
 
@@ -1334,7 +1334,7 @@ def run(test, params, env):
         if err:
             raise exceptions.TestFail(err)
         else:
-            return ("VM survived %d cgroup switches" % i)
+            return "VM survived %d cgroup switches" % i
 
     @error_context.context_aware
     def cpuset_mems_switching():
@@ -1351,7 +1351,7 @@ def run(test, params, env):
 
         test.log.info("Prepare")
         modules = CgroupModules()
-        if (modules.init(['cpuset']) != 1):
+        if modules.init(['cpuset']) != 1:
             raise exceptions.TestFail("Can't mount cpuset cgroup modules")
         cgroup = Cgroup('cpuset', '')
         cgroup.initialize(modules)
@@ -1418,8 +1418,8 @@ def run(test, params, env):
                 test.log.info(out)
         finally:
             test.log.info("Cleanup")
-            del(cgroup)
-            del(modules)
+            del cgroup
+            del modules
 
             for session in sessions:
                 # try whether all sessions are clean
@@ -1430,7 +1430,7 @@ def run(test, params, env):
         if err:
             raise exceptions.TestFail(err)
         else:
-            return ("VM survived %d cgroup switches" % i)
+            return "VM survived %d cgroup switches" % i
 
     @error_context.context_aware
     def devices_access():
@@ -1552,7 +1552,7 @@ def run(test, params, env):
         test.log.debug("Using monitor type: %s", monitor_type)
 
         modules = CgroupModules()
-        if (modules.init(['devices']) != 1):
+        if modules.init(['devices']) != 1:
             raise exceptions.TestFail("Can't mount blkio cgroup modules")
         devices = Cgroup('devices', '')
         devices.initialize(modules)
@@ -1658,14 +1658,14 @@ def run(test, params, env):
             test.log.info("Cleanup")
             vm.destroy()     # "Safely" remove devices :-)
             rm_scsi_disks(1)
-            del(devices)
-            del(modules)
+            del devices
+            del modules
 
         test.log.info("Results")
         if err:
             raise exceptions.TestFail(err)
         else:
-            return("All restrictions enforced.")
+            return "All restrictions enforced."
 
     @error_context.context_aware
     def freezer():
@@ -1712,7 +1712,7 @@ def run(test, params, env):
 
         test.log.info("Prepare")
         modules = CgroupModules()
-        if (modules.init(['freezer']) != 1):
+        if modules.init(['freezer']) != 1:
             raise exceptions.TestFail("Can't mount freezer cgroup modules")
         cgroup = Cgroup('freezer', '')
         cgroup.initialize(modules)
@@ -1763,19 +1763,19 @@ def run(test, params, env):
 
         finally:
             test.log.info("Cleanup")
-            del(cgroup)
+            del cgroup
             serial.sendline("rm -f /tmp/freeze-lock")
 
             for session in sessions:
                 session.cmd("true")
                 session.close()
 
-            del(modules)
+            del modules
 
         if err:
             raise exceptions.TestFail(err)
         else:
-            return ("Freezer works fine")
+            return "Freezer works fine"
 
     def _get_rss(status):
         """
@@ -1834,7 +1834,7 @@ def run(test, params, env):
         # We want to copy slightely over "mem" limit
         mem *= 1.1
         modules = CgroupModules()
-        if (modules.init(['memory']) != 1):
+        if modules.init(['memory']) != 1:
             raise exceptions.TestFail("Can't mount memory cgroup modules")
         cgroup = Cgroup('memory', '')
         cgroup.initialize(modules)
@@ -1949,7 +1949,7 @@ def run(test, params, env):
                            % (max_rss, mem_limit))
                 elif exit_nr != '0':
                     err = ("dd command failed(%s) output: %s" % (exit_nr, out))
-                elif (max_rssswap) < mem_limit:
+                elif max_rssswap < mem_limit:
                     err = ("VM didn't consume expected amount of memory. %d:%d"
                            " Output of dd cmd: %s" % (max_rssswap, mem_limit,
                                                       out))
@@ -1966,8 +1966,8 @@ def run(test, params, env):
 
             session.close()
 
-            del(cgroup)
-            del(modules)
+            del cgroup
+            del modules
 
         test.log.info("Results")
         if err:
@@ -1999,7 +1999,7 @@ def run(test, params, env):
 
         test.log.info("Prepare")
         modules = CgroupModules()
-        if (modules.init(['memory']) != 1):
+        if modules.init(['memory']) != 1:
             raise exceptions.TestFail("Can't mount memory cgroup modules")
         cgroup = Cgroup('memory', '')
         cgroup.initialize(modules)
@@ -2066,13 +2066,13 @@ def run(test, params, env):
                 session.cmd("true")
                 session.close()
 
-            del(cgroup)
-            del(modules)
+            del cgroup
+            del modules
 
         if err:
             test.log.error(err)
         else:
-            return (out)
+            return out
 
     def cfs_bandwidth():
         """
@@ -2083,7 +2083,7 @@ def run(test, params, env):
 
         test.log.info("Setup cgroup subsystem: cpu")
         modules = CgroupModules()
-        if (modules.init(['cpu']) != 1):
+        if modules.init(['cpu']) != 1:
             test.fail("Can't mount cpu cgroup modules")
         cgroup = Cgroup('cpu', '')
         cgroup.initialize(modules)

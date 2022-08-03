@@ -64,7 +64,7 @@ def run(test, params, env):
     maximum = "2560x1600"
 
     test.log.info("Minimum: %s Current: %s Maximum: %s", minimum, current, maximum)
-    if(current != minimum):
+    if current != minimum:
         newClientResolution = minimum
     else:
         newClientResolution = maximum
@@ -87,7 +87,7 @@ def run(test, params, env):
     currentGuestRes += outputlist[current_index + 3].replace(",", "")
     test.log.info("Current Resolution of Guest: %s", currentGuestRes)
 
-    if (newClientResolution == currentGuestRes):
+    if newClientResolution == currentGuestRes:
         test.fail("Client resolution is same as guest resolution!")
 
     # Start vdagent daemon

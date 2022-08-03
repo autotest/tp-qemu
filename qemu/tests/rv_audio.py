@@ -81,13 +81,13 @@ def run(test, params, env):
     client_session = client_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)))
 
-    if(guest_session.cmd_status("ls %s" % params.get("audio_tgt"))):
+    if guest_session.cmd_status("ls %s" % params.get("audio_tgt")):
         test.log.info(params.get("audio_src"))
         test.log.info(params.get("audio_tgt"))
         guest_vm.copy_files_to(
             params.get("audio_src"),
             params.get("audio_tgt"))
-    if(client_session.cmd_status("ls %s" % params.get("audio_tgt"))):
+    if client_session.cmd_status("ls %s" % params.get("audio_tgt")):
         client_vm.copy_files_to(
             params.get("audio_src"),
             params.get("audio_tgt"))

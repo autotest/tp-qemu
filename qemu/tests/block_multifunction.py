@@ -1,4 +1,5 @@
 import logging
+import time
 
 from avocado.core import exceptions
 
@@ -109,6 +110,7 @@ def run(test, params, env):
     windows = params["os_type"] == 'windows'
     disk_op_cmd = params.get("disk_op_cmd")
     session = vm.wait_for_login()
+    time.sleep(60)
 
     q35 = params['machine_type'] == 'q35'
     dev_slot = 0 if q35 else 9

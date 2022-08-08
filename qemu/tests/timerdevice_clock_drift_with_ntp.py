@@ -101,5 +101,5 @@ def run(test, params, env):
     error_context.context("Verify the drift file content on guest",
                           test.log.info)
     output = session.cmd("cat /var/lib/chrony/drift").strip().split()[0]
-    if int(abs(float(output))) > 20:
+    if int(abs(float(output))) > 30:
         test.fail("Failed to check the chrony drift. Output: '%s'" % output)

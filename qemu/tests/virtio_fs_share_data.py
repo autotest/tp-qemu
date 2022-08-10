@@ -123,8 +123,9 @@ def run(test, params, env):
         """
         error_context.context("Try to %s VirtioFsSvc service." % action,
                               test.log.info)
-        status, ouput = session.cmd_status_output(cmd)
-        if status != 0 or expect_status not in output:
+        session.cmd(cmd)
+        output = session.cmd_output(viofs_sc_query_cmd)
+        if expect_status not in output:
             test.fail("Could not %s VirtioFsSvc service, "
                       "detail: '%s'" % (action, output))
 
@@ -318,7 +319,6 @@ def run(test, params, env):
                 error_context.context("Start virtiofs service in guest.", test.log.info)
                 viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
                 viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
-                viofs_sc_stop_cmd = params["viofs_sc_stop_cmd"]
                 viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
 
                 test.log.info("Check if virtiofs service is registered.")
@@ -409,10 +409,7 @@ def run(test, params, env):
                         if os_type == "linux":
                             session.cmd("cd -")
                         else:
-                            # there is no exit status for this cmd,so when getting
-                            # the exit status, it actually get the status of last cmd.
-                            # So use sendline function here.
-                            session.sendline("C:")
+                            session.cmd("cd /d C:\\")
 
                 if cmd_symblic_file:
                     error_context.context("Symbolic test under %s inside "
@@ -425,10 +422,7 @@ def run(test, params, env):
                     if os_type == "linux":
                         session.cmd("cd -")
                     else:
-                        # there is no exit status for this cmd,so when getting
-                        # the exit status, it actually get the status of last cmd.
-                        # So use sendline function here.
-                        session.sendline("C:")
+                        session.cmd("cd /d C:\\")
 
                 if fio_options:
                     error_context.context("Run fio on %s." % fs_dest, test.log.info)
@@ -547,6 +541,7 @@ def run(test, params, env):
                                 test.fail("CreateDirectory cause virtiofsd-rs ERROR reply.")
 
                 if params.get("stop_start_repeats") and os_type == "windows":
+                    viofs_sc_stop_cmd = params["viofs_sc_stop_cmd"]
                     repeats = int(params.get("stop_start_repeats", 1))
                     for i in range(repeats):
                         error_context.context("Repeat stop/start VirtioFsSvc:"

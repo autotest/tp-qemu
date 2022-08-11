@@ -656,6 +656,10 @@ def run(test, params, env):
                 self.session.cmd(pre_cmd, timeout=120)
                 self.session = vm.reboot()
             iso_image = self.iso_image_orig
+            if params["os_type"] != "windows" and params.get("unlock_cdrom_cmd"):
+                test.log.debug("Unlock cdrom first")
+                unlock_cdrom_cmd = params.get("unlock_cdrom_cmd") % ""
+                self.session.cmd(unlock_cdrom_cmd, timeout=120)
             error_context.context("Query cdrom devices in guest")
             cdrom_dev_list = list_guest_cdroms(self.session)
             test.log.debug("cdrom_dev_list: '%s'", cdrom_dev_list)

@@ -56,7 +56,7 @@ def run(test, params, env):
         err_msg = ''
         if option == "with_negative_config":
             out = process.getoutput("dmesg")
-            pattern = r"usb (\d-\d(?:.\d)?):.*idVendor=%s, idProduct=%s"
+            pattern = r"usb (\d-\d+(?:.\d)?):.*idVendor=%s, idProduct=%s"
             pattern = pattern % (vendorid, productid)
             obj = re.search(pattern, out, re.ASCII)
             if not obj:

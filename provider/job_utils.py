@@ -51,7 +51,11 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
         if status == "pending":
             block_job_finalize(vm, job_id)
         if status == "ready":
-            block_job_complete(vm, job_id, timeout)
+            try:
+                arguments = {"id": job_id}
+                vm.monitor.cmd("job-complete", arguments)
+            except Exception as err:
+                LOG_JOB.debug("'job-complete' hit error: %s", err.data["desc"])
         try:
             for event in vm.monitor.get_events():
                 if event.get("event") != BLOCK_JOB_COMPLETED_EVENT:

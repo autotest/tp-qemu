@@ -113,7 +113,9 @@ def run(test, params, env):
             if "not exist as an installed service" in output:
                 test.log.info("Register virtiofs service in windows guest.")
                 exe_path = get_viofs_exe(session)
-                viofs_sc_create_cmd = viofs_sc_create_cmd % exe_path
+                # copy virtiofs.exe to c: in case the virtio-win cdrom volume name
+                # is changed in other cases of a loop.
+                session.cmd(params.get("viofs_exe_copy_cmd") % exe_path)
                 sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
                 if sc_create_s != 0:
                     test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)

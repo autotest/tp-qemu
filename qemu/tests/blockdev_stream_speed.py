@@ -60,10 +60,6 @@ class BlockdevStreamSpeedTest(blockdev_stream_nowait.BlockdevStreamNowaitTest):
         for speed in self.params.objects('valid_speeds'):
             _set_valid_speed(self._job, int(speed))
             _check_valid_speed(self._job, int(speed))
-            job_utils.check_block_jobs_running(
-                self.main_vm, [self._job],
-                self.params.get_numeric('job_running_timeout', 300)
-            )
 
     def generate_tempfile(self, root_dir, filename, size='10M', timeout=360):
         """Create a large file to enlarge stream time"""

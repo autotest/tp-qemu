@@ -18,6 +18,18 @@ QUERY_TIMEOUT = 360
 INSTALL_TIMEOUT = 360
 OPERATION_TIMEOUT = 120
 
+driver_info_dict = {"netkvm": {"hwid": '"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&DEV_1041"', "device_name": "Red Hat VirtIO Ethernet Adapter"},
+                    "viorng": {"hwid": '"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"', "device_name": "VirtIO RNG Device"},
+                    "vioser": {"hwid": '"PCI\\VEN_1AF4&DEV_1003" "PCI\\VEN_1AF4&DEV_1043"', "device_name": "VirtIO Serial Driver"},
+                    "balloon": {"hwid": '"PCI\\VEN_1AF4&DEV_1002" "PCI\\VEN_1AF4&DEV_1045"', "device_name": "VirtIO Balloon Driver"},
+                    "pvpanic": {"hwid": '"ACPI\\QEMU0001"', "device_name": "QEMU PVPanic Device"},
+                    "vioinput": {"hwid": '"PCI\\VEN_1AF4&DEV_1052"', "device_name": "VirtIO Input Driver"},
+                    "viofs": {"hwid": '"PCI\\VEN_1AF4&DEV_105A"', "device_name": "VirtIO FS Device"},
+                    "viostor": {"hwid": '"PCI\\VEN_1AF4&DEV_1001" "PCI\\VEN_1AF4&DEV_1042"', "device_name": "Red Hat VirtIO SCSI controller"},
+                    "vioscsi": {"hwid": '"PCI\\VEN_1AF4&DEV_1004" "PCI\\VEN_1AF4&DEV_1048"', "device_name": "Red Hat VirtIO SCSI pass-through controller"},
+                    "fwcfg": {"hwid": '"ACPI\\VEN_QEMU&DEV_0002"', "device_name": "QEMU FWCfg Device"}
+                    }
+
 
 def _pnpdrv_info(session, name_pattern, props=None):
     """Get the driver props eg: InfName"""
@@ -180,3 +192,32 @@ def copy_file_to_samepath(session, test, params):
         if status != 0:
             test.error("Copy file error,"
                        " the detailed info:\n%s." % output)
+
+
+def memory_leak_check(vm, test, params):
+    """
+    In order to let the driver verifier to catch memory leaks, driver
+    should be unloaded after driver function.Note that if want to use
+    this function, driver verifier should be enabled before driver function.
+
+    :param vm: vm object
+    :param test: kvm test object
+    :param params: the dict used for parameters
+    """
+    driver_name = params["driver_name"]
+    devcon_path = params["devcon_path"]
+    media_type = params.get("virtio_win_media_type", "iso")
+
+    device_name = driver_info_dict[driver_name]["device_name"]
+    device_hwid = driver_info_dict[driver_name]["hwid"]
+    session = vm.wait_for_login()
+    uninstall_driver(session, test, devcon_path, driver_name,
+                     device_name, device_hwid)
+    time.sleep(10)
+    if vm.is_alive() is False:
+        test.fail("VM is not alive after uninstall driver,"
+                  "please check if it is a memory leak")
+    session = vm.reboot(session)
+    install_driver_by_virtio_media(session, test, devcon_path,
+                                   media_type, driver_name, device_hwid)
+    session.close()

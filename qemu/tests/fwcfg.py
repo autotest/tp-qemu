@@ -4,6 +4,7 @@ from virttest import error_context
 from virttest import utils_disk
 from virttest import utils_test
 from provider import win_dump_utils
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -72,3 +73,4 @@ def run(test, params, env):
         session.cmd("del %s" % params["dump_analyze_file"])
         session.cmd(params["del_path_file"])
         session.close()
+    win_driver_utils.memory_leak_check(vm, test, params)

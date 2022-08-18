@@ -109,7 +109,10 @@ def run(test, params, env):
         """
         test.log.info("Register virtiofs service in Windows guest.")
         exe_path = get_viofs_exe(session)
-        sc_create_s, sc_create_o = session.cmd_status_output(cmd % exe_path)
+        # copy virtiofs.exe to c: in case the virtio-win cdrom volume name
+        # is changed in other cases of a loop.
+        session.cmd(params.get("viofs_exe_copy_cmd") % exe_path)
+        sc_create_s, sc_create_o = session.cmd_status_output(cmd)
         if sc_create_s != 0:
             test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
 

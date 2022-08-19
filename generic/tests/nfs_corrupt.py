@@ -215,7 +215,8 @@ def run(test, params, env):
         test.error("failed to create VM")
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    nfs_devname = get_nfs_devname(params, session)
+    nfs_devname = utils_misc.get_linux_drive_path(session, stg_params[
+        "nfs_serial"])
     # Write disk on NFS server
     error_context.context("Write disk that image on NFS", test.log.info)
     write_disk_cmd = "dd if=/dev/zero of=%s oflag=direct" % nfs_devname

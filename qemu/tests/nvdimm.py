@@ -155,6 +155,9 @@ def run(test, params, env):
             time.sleep(10)
             mems += target_mems
         error_context.context("Verify nvdimm in monitor and guest", test.log.info)
+        pkgs = params.objects("depends_pks")
+        if not utils_package.package_install(pkgs, nvdimm_test.session):
+            test.cancel("Install dependency packages failed")
         nvdimm_ns_create_cmd = params.get("nvdimm_ns_create_cmd")
         if nvdimm_ns_create_cmd:
             nvdimm_test.run_guest_cmd(nvdimm_ns_create_cmd)
@@ -162,9 +165,6 @@ def run(test, params, env):
         error_context.context("Format and mount nvdimm in guest", test.log.info)
         nvdimm_test.mount_nvdimm()
         if params.get("nvml_test", "no") == "yes":
-            pkgs = params["depends_pkgs"].split()
-            if not utils_package.package_install(pkgs, nvdimm_test.session):
-                test.cancel("Install dependency packages failed")
             nvdimm_test.run_guest_cmd(params["get_nvml"])
             nvdimm_test.run_guest_cmd(params["compile_nvml"])
             nvdimm_test.run_guest_cmd(params["config_nvml"])

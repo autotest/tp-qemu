@@ -1,3 +1,4 @@
+import sys
 import time
 
 import aexpect
@@ -64,6 +65,15 @@ def run(test, params, env):
             process.system("taskset -p %s %s" % (mask, tid), verbose=False,
                            ignore_status=True)
 
+    # Taking this as a workaround to avoid getting errors during
+    # pickling with Python versions prior to 3.7.
+    global _picklable_logger
+    if sys.version_info < (3, 7):
+        def _picklable_logger(*args, **kwargs):
+            return test.log.debug(*args, **kwargs)
+    else:
+        _picklable_logger = test.log.debug
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -125,7 +135,7 @@ def run(test, params, env):
                 load_session.set_output_func(None)
                 load_session.set_output_params(())
                 load_session.set_output_prefix("(guest load %d) " % i)
-                load_session.set_output_func(test.log.debug)
+                load_session.set_output_func(_picklable_logger)
                 guest_load_sessions.append(load_session)
 
             # Get time before load
@@ -147,7 +157,7 @@ def run(test, params, env):
             test.log.info("Starting load on host...")
             for i in range(host_load_instances):
                 load_cmd = aexpect.run_bg(host_load_command,
-                                          output_func=test.log.debug,
+                                          output_func=_picklable_logger,
                                           output_prefix="(host load %d) " % i,
                                           timeout=0.5)
                 host_load_sessions.append(load_cmd)

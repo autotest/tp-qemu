@@ -29,6 +29,7 @@ def run(test, params, env):
 
     timeout = params.get_numeric("login_timeout", 360)
     read_rng_timeout = float(params.get("read_rng_timeout", 3600))
+    cmd_timeout = float(params.get("session_cmd_timeout", "360"))
     read_rng_cmd = params["read_rng_cmd"]
     max_bytes = params.get("max-bytes_virtio-rng-pci")
     period = params.get("period_virtio-rng-pci")
@@ -54,6 +55,9 @@ def run(test, params, env):
 
     error_context.context("Read virtio-rng device to get random number",
                           test.log.info)
+    update_driver = params.get("update_driver")
+    if update_driver:
+        session.cmd(update_driver, timeout=cmd_timeout)
     check_rngd_service = params.get("check_rngd_service")
     if check_rngd_service:
         if not utils_misc.wait_for(_is_rngd_running, 30, first=5):

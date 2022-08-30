@@ -128,9 +128,12 @@ def dump_windbg_check(test, params, session):
     log_file = params["dump_analyze_file"]
     chk_dump_cmd = utils_misc.set_winutils_letter(session,
                                                   chk_dump_cmd)
-    session.cmd(chk_dump_cmd)
+    status, output = session.cmd_status_output(chk_dump_cmd)
+    if status:
+        test.fail("Failed to check dump file by windbg,command out is %s"
+                  % output)
     if not utils_misc.wait_for(lambda: check_log_exist(session, log_file),
-                               timeout=240, step=5):
+                               timeout=480, step=10):
         test.error("Cannot generate dump analyze log.")
     chk_id_cmd = params["chk_id_cmd"] % log_file
     status, output = session.cmd_status_output(chk_id_cmd)

@@ -145,7 +145,7 @@ def run(test, params, env):
 
             if not utils_misc.wait_for(
                 lambda: vm.monitor.verify_status(f_param),
-                    response_timeout, 0, 1):
+                    response_timeout, 5, 1):
                 test.log.debug("Monitor status is:%s", vm.monitor.get_status())
                 txt = "It seems action '%s' took no effect" % watchdog_action
                 txt += " , Wrong monitor status!"

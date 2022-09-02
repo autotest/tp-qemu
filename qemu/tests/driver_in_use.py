@@ -6,6 +6,7 @@ from virttest import utils_test
 from virttest import env_process
 from virttest import error_context
 from provider import win_dump_utils
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -172,3 +173,4 @@ def run(test, params, env):
         utils_test.run_virt_sub_test(test, params, env, main_test)
         if vm.is_alive():
             run_bg_test_sep(bg_stress_test)
+    win_driver_utils.memory_leak_check(vm, test, params)

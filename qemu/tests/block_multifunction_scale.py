@@ -67,7 +67,8 @@ def run(test, params, env):
     windows = params["os_type"] == 'windows'
     disk_op_cmd = params.get("disk_op_cmd")
     session = vm.wait_for_login()
-    pcie = params['machine_type'] == 'q35'
+    if "q35" or "arm64-pci" in params['machine_type']:
+        pcie = True
     dev_slots = range(0, 3) if pcie else (7, 10)
 
     plug = BlockDevicesPlug(vm)

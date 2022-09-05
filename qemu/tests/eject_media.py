@@ -81,7 +81,7 @@ def run(test, params, env):
     error_context.context("Eject device after add new image by change command",
                           test.log.info)
     with eject_check:
-        vm.eject_cdrom(device_name)
+        vm.eject_cdrom(device_name, True)
     if check_block(new_img_name):
         test.fail("Fail to eject cdrom %s." % orig_img_name)
 
@@ -94,6 +94,10 @@ def run(test, params, env):
     if not check_block(orig_img_name):
         test.fail("Fail to change cdrom to %s." % orig_img_name)
 
+    error_context.context("Eject device after add org image by change command",
+                          test.log.info)
+    with eject_check:
+        vm.eject_cdrom(device_name, True)
     # change again
     error_context.context("Insert %s to device %s" % (new_img_name,
                                                       device_name),

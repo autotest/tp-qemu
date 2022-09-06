@@ -90,6 +90,7 @@ def run(test, params, env):
             if not utils_misc.wait_for(lambda: not session.cmd_status(
                     check_installed_cmd), 60):
                 test.error("Winfsp tool is not installed.")
+        return session
 
     def mount_guest_fs(session):
         """
@@ -198,7 +199,7 @@ def run(test, params, env):
         """
         volume_letter = None
         if os_type == "windows":
-            config_win_before_test(session)
+            session = config_win_before_test(session)
             session = start_vfs_service(session)
             volume_letter, fs_dest = get_win_dst_dir(session)
         else:

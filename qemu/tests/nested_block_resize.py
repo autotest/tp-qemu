@@ -28,6 +28,10 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
+    # Check if ansible-playbook program is available
+    if not ansible.check_ansible_playbook(params):
+        test.cancel("No available ansible-playbook program")
+
     def _on_exit(obj, msg):
         test.log.info("Receive exit msg:%s", msg)
         obj.set_msg_loop(False)

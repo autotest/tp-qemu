@@ -1,19 +1,11 @@
+import ast
 import time
 
 from virttest import error_context
 from virttest import utils_misc
 
 from provider import win_driver_utils
-from provider.win_driver_installer_test import (install_gagent,
-                                                uninstall_gagent,
-                                                win_uninstall_all_drivers,
-                                                win_installer_test,
-                                                check_gagent_version,
-                                                driver_check,
-                                                driver_name_list,
-                                                device_hwid_list,
-                                                device_name_list,
-                                                install_test_with_screen_on_desktop)
+from provider import win_driver_installer_test
 
 
 @error_context.context_aware
@@ -30,8 +22,10 @@ def run(test, params, env):
     7) Verify the qemu-ga version match expected version.
     8) Run driver signature check command in guest.
        Verify target driver.
-    9) Run virtio-win-guest-tools.exe repair test by uninstall driver
-       one by one.
+    9) Run virtio-win-guest-tools.exe repair test by uninstall
+       the target driver.
+    10) Run the driver function test after virtio-win-guest-tools.exe repair.
+    11) Repeat step 9 and 10 for other drivers.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -40,6 +34,7 @@ def run(test, params, env):
     devcon_path = params["devcon_path"]
     run_install_cmd = params["run_install_cmd"]
     installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
+    driver_test_names = params["driver_test_names"].split()
 
     # gagent version check test config
     qemu_ga_pkg = params["qemu_ga_pkg"]
@@ -50,30 +45,39 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
 
-    expected_gagent_version = install_gagent(session, test,
+    expected_gagent_version = win_driver_installer_test.install_gagent(
+                                             session, test,
                                              qemu_ga_pkg,
                                              gagent_install_cmd,
                                              gagent_pkg_info_cmd)
-    uninstall_gagent(session, test, gagent_uninstall_cmd)
-    win_uninstall_all_drivers(session, test, params)
+    win_driver_installer_test.uninstall_gagent(session, test,
+                                               gagent_uninstall_cmd)
+    win_driver_installer_test.win_uninstall_all_drivers(session,
+                                                        test, params)
     session = vm.reboot(session)
-    install_test_with_screen_on_desktop(vm, session, test, run_install_cmd,
+    win_driver_installer_test.install_test_with_screen_on_desktop(
+                                        vm, session, test,
+                                        run_install_cmd,
                                         installer_pkg_check_cmd,
                                         copy_files_params=params)
-    win_installer_test(session, test, params)
-    check_gagent_version(session, test, gagent_pkg_info_cmd,
-                         expected_gagent_version)
-    driver_check(session, test, params)
+    win_driver_installer_test.win_installer_test(session, test, params)
+    win_driver_installer_test.check_gagent_version(session, test,
+                                                   gagent_pkg_info_cmd,
+                                                   expected_gagent_version)
+    win_driver_installer_test.driver_check(session, test, params)
 
     if params.get("check_qemufwcfg", "no") == "yes":
-        driver_name_list.append('qemufwcfg')
+        win_driver_installer_test.driver_name_list.append('qemufwcfg')
 
     error_context.context("Run virtio-win-guest-tools.exe repair test",
                           test.log.info)
     unrepaired_driver = []
-    for driver_name, device_name, device_hwid in zip(driver_name_list,
-                                                     device_name_list,
-                                                     device_hwid_list):
+    fail_tests = []
+    for driver_name, device_name, device_hwid, test_name in zip(
+                win_driver_installer_test.driver_name_list,
+                win_driver_installer_test.device_name_list,
+                win_driver_installer_test.device_hwid_list,
+                driver_test_names):
         error_context.context("Uninstall %s driver"
                               % driver_name, test.log.info)
         win_driver_utils.uninstall_driver(session, test, devcon_path,
@@ -91,9 +95,27 @@ def run(test, params, env):
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
         status = session.cmd_status(chk_cmd)
         if status != 0:
+            test.log.info("%s driver repair failed" % driver_name)
             unrepaired_driver.append(driver_name)
-    if unrepaired_driver:
-        test.fail("The missing %s driver repair failed."
-                  % unrepaired_driver)
+        else:
+            error_context.context("Run %s driver function test after repair"
+                                  % driver_name, test.log.info)
+            test_func = "win_driver_installer_test.%s_test" % test_name
+            driver_test_params = params.get('driver_test_params_%s'
+                                            % test_name, '{}')
+            driver_test_params = ast.literal_eval(driver_test_params)
+            if driver_name == 'viostor':
+                driver_test_params['images'] = 'stg0'
+            elif driver_name == 'vioscsi':
+                driver_test_params['images'] = 'stg1'
+            try:
+                eval("%s(test, params, vm, **driver_test_params)" % test_func)
+            except Exception as e:
+                fail_tests.append('%s:\n%s' % (test_name, str(e)))
+
+    if unrepaired_driver or fail_tests:
+        test.fail("Repaired failed driver list is %s, repair success but "
+                  "function test failed list is %s"
+                  % (unrepaired_driver, fail_tests))
 
     session.close()

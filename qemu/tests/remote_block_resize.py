@@ -3,9 +3,11 @@ import json
 from avocado.utils import wait
 
 from virttest import error_context
+from virttest import utils_test
 from virttest import utils_disk
 from virttest import qemu_storage
 from virttest import data_dir
+from virttest.utils_windows import drive
 
 from virttest.qemu_capabilities import Flags
 
@@ -43,6 +45,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
+    driver_name = params.get("driver_name")
     os_type = params["os_type"]
     img_size = params.get("image_size_stg", "10G")
     data_image = params.get("images").split()[-1]
@@ -68,10 +71,22 @@ def run(test, params, env):
                                              output="json"))["virtual-size"]
 
     session = vm.wait_for_login(timeout=timeout)
-    disk = sorted(utils_disk.get_linux_disks(session).keys())[0]
+    if os_type == "windows" and driver_name:
+        session = utils_test.qemu.windrv_check_running_verifier(session,
+                                                                vm,
+                                                                test,
+                                                                driver_name,
+                                                                timeout)
+    if os_type == "linux":
+        disk = sorted(utils_disk.get_linux_disks(session).keys())[0]
+    else:
+        disk = utils_disk.get_windows_disks_index(session, img_size)[0]
 
     for ratio in params.objects("disk_change_ratio"):
         block_size = int(int(block_virtual_size) * float(ratio))
+        # The new size must be a multiple of 512 for windows
+        if os_type == "windows" and block_size % 512 != 0:
+            block_size = int(block_size / 512) * 512
         error_context.context("Change disk size to %s in monitor"
                               % block_size, test.log.info)
 
@@ -86,6 +101,8 @@ def run(test, params, env):
             session.cmd(params.get("guest_prepare_cmd"))
         if params.get("need_reboot") == "yes":
             session = vm.reboot(session=session)
+        if params.get("need_rescan") == "yes":
+            drive.rescan_disks(session)
 
         if not wait.wait_for(lambda: verify_disk_size(session, os_type,
                                                       disk), 20, 0, 1,

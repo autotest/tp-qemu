@@ -110,13 +110,16 @@ def run(test, params, env):
 
     error_context.context("Run driver function test after update",
                           test.log.info)
-    driver_test_names = params["driver_test_names"].split()
-    del driver_test_names[1]
     fail_tests = []
-    for test_name in driver_test_names:
+    test_drivers = params.get('test_drivers',
+                              win_driver_installer_test.driver_name_list)
+    if params.get('test_drivers'):
+        test_drivers = params["test_drivers"].split()
+    for driver_name in test_drivers:
+        test_name = params.get('driver_test_name_%s' % driver_name)
         test_func = "win_driver_installer_test.%s_test" % test_name
         driver_test_params = params.get('driver_test_params_%s'
-                                        % test_name, '{}')
+                                        % driver_name, '{}')
         driver_test_params = ast.literal_eval(driver_test_params)
         try:
             eval("%s(test, params, vm, **driver_test_params)" % test_func)

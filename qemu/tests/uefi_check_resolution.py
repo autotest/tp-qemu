@@ -57,6 +57,12 @@ def run(test, params, env):
     default_resolution_key = params["default_resolution_key"].split(";")
     save_change_key = params["save_change"].split(";")
     esc_boot_menu_key = params["esc_boot_menu_key"].split(";")
+    default_resolution = params.get("default_resolution")
+    if default_resolution:
+        index = change_prefered.index(default_resolution)
+        if index != 0:
+            del change_prefered[index]
+            change_prefered = [default_resolution] + change_prefered
     change_resolution_key, check_info, resolution = choose_resolution()
     if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint),
                                timeout, 1):

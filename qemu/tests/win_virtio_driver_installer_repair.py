@@ -34,7 +34,6 @@ def run(test, params, env):
     devcon_path = params["devcon_path"]
     run_install_cmd = params["run_install_cmd"]
     installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
-    driver_test_names = params["driver_test_names"].split()
 
     # gagent version check test config
     qemu_ga_pkg = params["qemu_ga_pkg"]
@@ -73,11 +72,10 @@ def run(test, params, env):
                           test.log.info)
     unrepaired_driver = []
     fail_tests = []
-    for driver_name, device_name, device_hwid, test_name in zip(
+    for driver_name, device_name, device_hwid in zip(
                 win_driver_installer_test.driver_name_list,
                 win_driver_installer_test.device_name_list,
-                win_driver_installer_test.device_hwid_list,
-                driver_test_names):
+                win_driver_installer_test.device_hwid_list):
         error_context.context("Uninstall %s driver"
                               % driver_name, test.log.info)
         win_driver_utils.uninstall_driver(session, test, devcon_path,
@@ -100,14 +98,11 @@ def run(test, params, env):
         else:
             error_context.context("Run %s driver function test after repair"
                                   % driver_name, test.log.info)
+            test_name = params.get('driver_test_name_%s' % driver_name)
             test_func = "win_driver_installer_test.%s_test" % test_name
             driver_test_params = params.get('driver_test_params_%s'
-                                            % test_name, '{}')
+                                            % driver_name, '{}')
             driver_test_params = ast.literal_eval(driver_test_params)
-            if driver_name == 'viostor':
-                driver_test_params['images'] = 'stg0'
-            elif driver_name == 'vioscsi':
-                driver_test_params['images'] = 'stg1'
             try:
                 eval("%s(test, params, vm, **driver_test_params)" % test_func)
             except Exception as e:

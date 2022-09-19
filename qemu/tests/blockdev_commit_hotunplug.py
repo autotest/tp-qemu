@@ -28,11 +28,10 @@ class BlockdevCommitHotunplug(BlockDevCommitTest):
                                        timeout=60, step=1.0)
         if not unplug_s:
             self.test.fail("Hotunplug device failed")
-        job_status = str(job_utils.query_block_jobs(self.main_vm))
-        if self.params["expect_status"] not in job_status:
-            self.test.fail("Job status not correct,job status is %s"
-                           % job_status)
         job_id = args.get("job-id", device)
+        job_status = job_utils.get_job_status(self.main_vm, job_id)
+        if job_status not in self.params["expect_status"]:
+            self.test.fail("Job status %s is not correct" % job_status)
         self.main_vm.monitor.cmd("block-job-set-speed",
                                  {'device': job_id, 'speed': 0})
         job_utils.wait_until_block_job_completed(self.main_vm, job_id)

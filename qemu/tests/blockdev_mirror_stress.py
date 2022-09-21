@@ -1,24 +1,54 @@
+import six
+import time
+import random
+
 from virttest import utils_test
 
-from provider.blockdev_mirror_parallel import BlockdevMirrorParallelTest
+from provider.storage_benchmark import generate_instance
+from provider.blockdev_mirror_wait import BlockdevMirrorWaitTest
 
 
-class BlockdevMirrorStressTest(BlockdevMirrorParallelTest):
-    """Do block-mirror and vm stress test in parallel"""
+class BlockdevMirrorStressTest(BlockdevMirrorWaitTest):
+    """Do block-mirror with fio test as background test"""
 
-    def stress_test(self):
-        """Run stress testing on vm"""
-        self.stress = utils_test.VMStress(self.main_vm, "stress", self.params)
-        self.stress.load_stress_tool()
+    def fio_thread(self):
+        fio_options = self.params.get("fio_options")
+        if fio_options:
+            self.test.log.info("Start to run fio")
+            self.fio = generate_instance(self.params, self.main_vm, 'fio')
+            fio_run_timeout = self.params.get_numeric("fio_timeout", 2400)
+            self.fio.run(fio_options, fio_run_timeout)
 
-    def check_stress_running(self):
-        """stress should be running after block-mirror"""
-        if not self.stress.app_running():
-            self.test.fail("stress stopped unexpectedly")
+    def remove_files_from_system_image(self, tmo=60):
+        """Remove testing files from system image"""
+        tag_dir_list = [(t, d[1]) for t, d in six.iteritems(self.disks_info) if d[0] == "system"]
+        if tag_dir_list:
+            tag, root_dir = tag_dir_list[0]
+            files = ["%s/%s" % (root_dir, f) for f in self.files_info[tag]]
+            files.append("%s/%s" % (self.params["mnt_on_sys_dsk"], self.params["file_fio"]))
+            rm_cmd = "rm -f %s" % " ".join(files)
+
+            # restart main vm for the original system image is offlined
+            # and the mirror image is attached after block-mirror
+            self.prepare_main_vm()
+            session = self.main_vm.wait_for_login()
+            try:
+                session.cmd(rm_cmd, timeout=tmo)
+            finally:
+                session.close()
 
     def do_test(self):
-        self.blockdev_mirror()
-        self.check_stress_running()
+        bg_test = utils_test.BackgroundTest(self.fio_thread, "")
+        bg_test.thread.daemon = True
+        bg_test.start()
+        self.test.log.info("sleep random time before mirror during fio")
+        mint = self.params.get_numeric("sleep_min")
+        maxt = self.params.get_numeric("sleep_max")
+        time.sleep(random.randint(mint, maxt))
+        try:
+            self.blockdev_mirror()
+        finally:
+            self.fio.clean(force=True)
         self.check_mirrored_block_nodes_attached()
         self.clone_vm_with_mirrored_images()
         self.verify_data_files()
@@ -27,15 +57,15 @@ class BlockdevMirrorStressTest(BlockdevMirrorParallelTest):
 
 def run(test, params, env):
     """
-    Basic block mirror test with stress -- only system disk
+    Basic block mirror test with fio -- only system disk
 
     test steps:
         1. boot VM
         2. create a file on system disk
         3. add a target disk for mirror to VM via qmp commands
-        4. do block-mirror for system disk and vm stress test in parallel
-        5. check the mirrored disk is attached
-        6. check stress is still running
+        4. start fio test on system disk
+        5. do block-mirror for system disk
+        6. check the mirrored disk is attached
         7. restart VM with the mirrored disk, check the file and md5sum
 
     :param test: test object

@@ -28,7 +28,6 @@ def run(test, params, env):
 
     def get_rng_id(vm):
         device_list = []
-        rng_driver = params.get("rng_driver")
         for device in vm.devices:
             if isinstance(device, qdevices.QDevice):
                 if device.get_param("driver") == rng_driver:
@@ -85,6 +84,7 @@ def run(test, params, env):
     rng_basic_test = params.get("rng_basic_test")
     pm_test_after_plug = params.get("pm_test_after_plug")
     pm_test_after_unplug = params.get("pm_test_after_unplug")
+    rng_driver = params["rng_driver"]
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -109,7 +109,6 @@ def run(test, params, env):
 
         for num in range(rng_num):
             vm.devices.set_dirty()
-            rng_driver = params.get("rng_driver")
             new_dev = qdevices.QDevice(rng_driver,
                                        {'id': '%s-%d' % (rng_driver, num)})
             hotplug_rng(vm, new_dev)

@@ -26,7 +26,7 @@ def run(test, params, env):
         Get attached rng devices from device dictionary
         """
         rng_list = []
-        rng_driver = params.get("rng_driver")
+        rng_driver = params["rng_driver"]
         for device in vm.devices:
             if isinstance(device, qdevices.QDevice):
                 if device.get_param("driver") == rng_driver:

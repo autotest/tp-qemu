@@ -491,6 +491,7 @@ def viofs_basic_io_test(test, params, vm):
     :param params: Dictionary with the test parameters
     :param vm: the vm object
     """
+    error_context.context("Running viofs basic io test", LOG_JOB.info)
     session = vm.wait_for_login()
     test_file = params.get('test_file', "virtio_fs_test_file")
     cmd_dd = params.get("cmd_dd", 'dd if=/dev/random of=%s bs=1M count=200')

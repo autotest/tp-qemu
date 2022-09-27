@@ -16,13 +16,16 @@ def run(test, params, env):
     1) Create shared directories on the host.
     2) Run virtiofsd daemons on the host.
     3) Boot guest with all virtio device.
-    4) Install driver from previous virtio-win.iso.
+    4) Delete the virtio fs service on guest.
+    5) Install driver from previous virtio-win.iso.
        Or virtio-win-guest-tool.
-    5) upgrade driver via virtio-win-guest-tools.exe
-    6) Verify the qemu-ga version match expected version.
-    7) Run driver signature check command in guest.
+    6) Start virtio fs service on guest.
+    7) Upgrade driver via virtio-win-guest-tools.exe
+    8) Start virtio fs service on guest.
+    9) Verify the qemu-ga version match expected version.
+    10) Run driver signature check command in guest.
        Verify target driver.
-    8) Run driver function test after virtio-win-guest-tools.exe update.
+    11) Run driver function test after virtio-win-guest-tools.exe update.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -61,6 +64,9 @@ def run(test, params, env):
     win_driver_installer_test.uninstall_gagent(session, test,
                                                gagent_uninstall_cmd)
 
+    error_context.context("Delete the viofs service at guest...")
+    win_driver_installer_test.delete_viofs_serivce(test, params, session)
+
     if params.get("check_qemufwcfg", "no") == "yes":
         win_driver_installer_test.driver_name_list.append('qemufwcfg')
 
@@ -92,6 +98,9 @@ def run(test, params, env):
                                                  gagent_install_cmd,
                                                  gagent_pkg_info_cmd)
 
+    error_context.context("Run viofs service...")
+    win_driver_installer_test.run_viofs_service(test, params, session)
+
     error_context.context("Upgrade virtio driver to original",
                           test.log.info)
     change_virtio_media(params["cdrom_virtio"])
@@ -100,6 +109,10 @@ def run(test, params, env):
                                         run_install_cmd,
                                         installer_pkg_check_cmd,
                                         copy_files_params=params)
+
+    error_context.context("Run viofs service after upgrade...")
+    win_driver_installer_test.run_viofs_service(test, params, session)
+
     if params.get("need_reboot", "no") == "yes":
         session = vm.reboot(session)
 

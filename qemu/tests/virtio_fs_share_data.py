@@ -456,7 +456,24 @@ def run(test, params, env):
                     session.cmd(cmd_make % fs_dest, io_timeout)
                     status, output = session.cmd_status_output(
                         cmd_pjdfstest % fs_dest, io_timeout)
-                    if status != 0:
+                    failed_test = output.split("-------------------")[1]\
+                                        .split("Files=")[0]
+                    # ignore the specific failed cases from pjdfstest
+                    ignore_cases = params.objects("pjdfstest_blacklist")
+                    matched_element = params.get("fs_dest", "/mnt") + r".*\.t"
+                    cases_in_output = list(re.findall(matched_element, failed_test))
+                    false_in_list = [False for _ in range(len(cases_in_output))]
+                    cases_in_output = dict(zip(cases_in_output, false_in_list))
+                    for case in cases_in_output.keys():
+                        for ig_case in ignore_cases:
+                            if ig_case in case:
+                                error_context.context("Warn: %s was failed!"
+                                                      % ig_case, test.log.debug)
+                                cases_in_output[case] = True
+
+                    unexpected_fail_case = list(cases_in_output.values()).count(False)
+
+                    if status != 0 and unexpected_fail_case > 0:
                         test.log.info(output)
                         test.fail('The pjdfstest failed.')
 

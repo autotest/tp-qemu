@@ -54,6 +54,9 @@ def run(test, params, env):
     match = re.search(r'[0-9]+\.[0-9]+\.[0-9]+(\-[0-9]+)?',
                       qemu_version)
     host_qemu = match.group(0)
+    remove_list_deprecated = params.get('remove_list_deprecated', '')
+    if host_qemu in VersionInterval('[7.0.0-8, )') and remove_list_deprecated:
+        params['remove_list'] = remove_list_deprecated
     remove_models(params.objects('remove_list'))
     if host_qemu in VersionInterval('[,4.2.0)'):
         remove_models(params.objects('cpu_model_8'))

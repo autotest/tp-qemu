@@ -22,6 +22,9 @@ qsd_image_export_stg1 = {"type":"vhost-user-blk","iothread":"iothread0"}
 qsd_image_export_nbd_stg2 = {"type":"inet","port":"9000"}
 qsd_image_export_stg2 = {"type":"nbd"}
 
+### Declare qsd image stg1 created/removed by qsd
+qsd_create_image_stg1 = yes
+qsd_remove_image_stg1 = yes
 
 # Create a QSD named qsd1
 qsd = QsdDaemonDev("qsd1", params)
@@ -240,7 +243,7 @@ class QsdDaemonDev(QDaemonDev):
                 LOG_JOB.info("QSD ready to remove image:%s", img["name"])
                 params = self.qsd_params.object_params(img["name"])
                 # Remove image except declare un-remove.
-                if params.get("remove_image", "yes") != "no":
+                if params.get("qsd_remove_image", "yes") != "no":
                     img["image_object"].remove()
 
     def _fulfil_image_props(self, name, params):
@@ -297,11 +300,12 @@ class QsdDaemonDev(QDaemonDev):
             LOG_JOB.info("QSD skip to create image %s ", name)
         else:
             # Record the images are maintained by QSD.
-            LOG_JOB.info("QSD ready to create image %s", name)
             obj = qemu_storage.QemuImg(params, data_dir.get_data_dir(), name)
-            _, result = obj.create(params)
-            if result.exit_status != 0:
-                raise QsdError("Failed create image %s " % name)
+            if params.get("qsd_create_image", "yes") == "yes":
+                LOG_JOB.info("QSD ready to create image %s", name)
+                _, result = obj.create(params)
+                if result.exit_status != 0:
+                    raise QsdError("Failed create image %s " % name)
             img["image_object"] = obj
 
         self.images.update({name: img})

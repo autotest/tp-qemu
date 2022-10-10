@@ -1,5 +1,6 @@
 import os
 import re
+import time
 
 import aexpect
 
@@ -15,6 +16,7 @@ from virttest import utils_test
 from virttest.remote import scp_to_remote
 from virttest.utils_windows import virtio_win
 from virttest.qemu_devices import qdevices
+from virttest import utils_selinux
 
 from provider.storage_benchmark import generate_instance
 
@@ -190,6 +192,14 @@ def run(test, params, env):
     create_dir_winapi_cmd = params.get("create_dir_winapi_cmd")
     check_winapi_dir_cmd = params.get("check_winapi_dir_cmd")
 
+    # selinux label test config
+    security_label_test = params.get("security_label_test")
+    getfattr_cmd = params.get("getfattr_cmd")
+    context_pattern = params.get("context_pattern")
+    selinux_xattr_name = params.get("selinux_xattr_name")
+    trust_selinux_attr_name = params.get("trust_selinux_attr_name")
+    se_mode = params.get("security_mode")
+
     # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
 
@@ -255,10 +265,22 @@ def run(test, params, env):
         if not utils_disk.mount(loop_device, fs_source):
             test.fail("Fail to mount on host! ")
 
+    if security_label_test:
+        # make sure selinux is enabled on host before sucurity label test.
+        error_context.context("Set selinux to %s status on host before"
+                              " starting virtiofsd and vm." % se_mode,
+                              test.log.info)
+        se_mode_host_before = utils_selinux.get_status()
+        if se_mode_host_before.lower() != se_mode:
+            try:
+                utils_selinux.set_status(se_mode)
+            except Exception as err_msg:
+                test.cancel("Setting selinux failed on host with"
+                            " %s." % str(err_msg))
     try:
         vm = None
-        if (cmd_xfstest or setup_local_nfs
-                or setup_hugepages or setup_filesystem_on_host):
+        if (cmd_xfstest or setup_local_nfs or setup_hugepages or
+                setup_filesystem_on_host or security_label_test):
             params["start_vm"] = "yes"
             env_process.preprocess(test, params, env)
 
@@ -270,6 +292,21 @@ def run(test, params, env):
 
         if socket_group_test:
             check_socket_group()
+
+        if security_label_test and os_type == "linux":
+            # make sure selinux is enabled on guest.
+            error_context.context("Set selinux to %s status on"
+                                  " guest." % se_mode, test.log.info)
+            se_mode_guest_before = session.cmd_output("getenforce").strip()
+            if se_mode_guest_before != se_mode:
+                test.log.info("Need to change selinux mode to %s." % se_mode)
+                if se_mode_guest_before == "disabled":
+                    cmd = "sed -i 's/^SELINUX=.*/SELINUX=%s/g'" % se_mode
+                    cmd += " /etc/selinux/config"
+                    session.cmd(cmd)
+                    session = vm.reboot(session)
+                if se_mode_guest_before == "permissive":
+                    session.cmd("setenforce %s" % se_mode)
 
         if os_type == "windows":
             cmd_timeout = params.get_numeric("cmd_timeout", 120)
@@ -565,6 +602,79 @@ def run(test, params, env):
                             if re.match(pattern, line, re.I):
                                 test.fail("CreateDirectory cause virtiofsd-rs ERROR reply.")
 
+                if getfattr_cmd:
+                    # testing security label.
+                    def check_attribute(object, xattr, get_type=True, side="guest"):
+                        """
+                        Check if attribute is set accordingly,and then
+                        get file security context type if needed.
+                        :param object: file or folder
+                        :param xattr: attribute name
+                        :param get_type: return context type or not
+                        :return: context type
+                        """
+                        format = xattr + "=" + context_pattern
+                        full_pattern = re.compile(r'%s' % format)
+                        if side == "host":
+                            xattr_content = process.system_output(getfattr_cmd %
+                                                                  (xattr, object),
+                                                                  shell=True
+                                                                  ).decode().strip()
+                            result = re.search(full_pattern, xattr_content)
+                        if side == "guest":
+                            xattr_content = session.cmd_output(getfattr_cmd %
+                                                               (xattr, object))
+                            result = re.search(full_pattern, xattr_content)
+                        if not result:
+                            test.fail("Attribute is not correct, the pattern is %s\n"
+                                      " the attribute is %s." % (full_pattern,
+                                                                 xattr_content))
+                        if get_type:
+                            return result.group(1)
+
+                    def check_security_label(file, folder, xattr_name):
+                        """
+                        Make sure file context type is the same with it's folder.
+                        only for shared folder in guest as the attribute name is
+                        remapped to others.
+                        :param file: file
+                        :param folder: folder
+                        :param xattr_name: attribute name
+                        """
+                        context_type_file = check_attribute(file, xattr_name)
+                        context_type_folder = check_attribute(folder, xattr_name)
+                        if not context_type_file == context_type_folder:
+                            test.fail("Context type isn't correct.\n"
+                                      "File context type is %s\n"
+                                      "Shared folder context type is %s"
+                                      % (context_type_file,
+                                         context_type_folder))
+
+                    test.log.info("Security.selinux xattr check with xattr mapping.")
+                    error_context.context("Create a new file inside guest.",
+                                          test.log.info)
+                    file_new_in_guest = os.path.join(fs_dest, "file_guest")
+                    file_share_in_host = os.path.join(fs_source, "file_guest")
+                    session.cmd("touch %s" % file_new_in_guest)
+                    time.sleep(1)
+
+                    error_context.context("Check new file's security label"
+                                          " on guest.", test.log.info)
+                    check_security_label(file_new_in_guest, fs_dest, selinux_xattr_name)
+
+                    error_context.context("Check new file's attribute on"
+                                          " host.", test.log.info)
+                    check_attribute(file_share_in_host, trust_selinux_attr_name,
+                                    get_type=False, side="host")
+
+                    error_context.context("Create a new file inside host.",
+                                          test.log.info)
+                    file_new_in_host = os.path.join(fs_source, "file_host")
+                    file_share_in_guest = os.path.join(fs_dest, "file_host")
+                    process.run("touch %s" % file_new_in_host, timeout=60)
+                    time.sleep(1)
+                    check_security_label(file_share_in_guest, fs_dest, selinux_xattr_name)
+
                 if params.get("stop_start_repeats") and os_type == "windows":
                     viofs_sc_stop_cmd = params["viofs_sc_stop_cmd"]
                     repeats = int(params.get("stop_start_repeats", 1))
@@ -609,6 +719,22 @@ def run(test, params, env):
             if utils_misc.check_exists(dd_of_on_host):
                 cmd_del = "rm -rf " + dd_of_on_host
                 process.run(cmd_del, timeout=60)
+        if security_label_test:
+            if se_mode_host_before != se_mode:
+                try:
+                    utils_selinux.set_status(se_mode_host_before)
+                except Exception as err_msg:
+                    test.fail("Restore selinux failed with %s on"
+                              "host." % str(err_msg))
+            if os_type == "linux" and not se_mode_guest_before == se_mode:
+                test.log.info("Need to change selinux mode back to"
+                              " %s." % se_mode_guest_before)
+                if se_mode_guest_before.lower() == "disabled":
+                    cmd = "sed -i 's/^SELINUX=.*/SELINUX=Disabled/g' /etc/selinux/config"
+                    session.cmd(cmd)
+                    session = vm.reboot(session)
+                if se_mode_guest_before.lower() == "permissive":
+                    session.cmd("setenforce Permissive")
 
     # during all virtio fs is mounted, reboot vm
     if params.get('reboot_guest', 'no') == 'yes':

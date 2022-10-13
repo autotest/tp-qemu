@@ -165,10 +165,6 @@ def run(test, params, env):
     check = params.get("vmstate_check", "no") == "yes"
     living_guest_os = params.get("migration_living_guest", "yes") == "yes"
     deamon_thread = None
-    depends_pkgs = params.objects("depends_pkgs")
-    test.log.info("Install packages: %s in host", depends_pkgs)
-    if not utils_package.package_install(depends_pkgs):
-        test.cancel("Install dependency packages failed")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

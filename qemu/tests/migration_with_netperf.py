@@ -4,7 +4,6 @@ from virttest import error_context
 from virttest import utils_netperf
 from virttest import data_dir
 from virttest import utils_net
-from virttest import utils_package
 
 
 @error_context.context_aware
@@ -27,10 +26,6 @@ def run(test, params, env):
     mig_cancel_delay = int(params.get("mig_cancel") == "yes") * 2
     netperf_timeout = int(params.get("netperf_timeout", "300"))
     client_num = int(params.get("client_num", "100"))
-    depends_pkgs = params.objects("depends_pkgs")
-    test.log.info("Install packages: %s in host", depends_pkgs)
-    if not utils_package.package_install(depends_pkgs):
-        test.cancel("Install dependency packages failed")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()

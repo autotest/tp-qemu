@@ -5,7 +5,6 @@ from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_misc
-from virttest import utils_package
 
 
 @error_context.context_aware
@@ -24,10 +23,6 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    depends_pkgs = params.objects("depends_pkgs")
-    test.log.info("Install packages: %s in host", depends_pkgs)
-    if not utils_package.package_install(depends_pkgs):
-        test.cancel("Install dependency packages failed")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))

@@ -91,6 +91,9 @@ def run(test, params, env):
         test.fail(msg)
 
     if params.get("os_type") != "windows":
+        error_context.context("lock cdrom in guest", test.log.info)
+        lock_cmd = "eject -i on /dev/cdrom"
+        session.cmd(lock_cmd)
         error_context.context("mount cdrom to make status to locked",
                               test.log.info)
         cdroms = utils_misc.wait_for(lambda: (utils_test.get_readable_cdroms(
@@ -158,5 +161,5 @@ def run(test, params, env):
         test.fail("Could remove non-removable device!")
     umount_cmd = params.get("cd_umount_cmd")
     if umount_cmd:
-        session.cmd(umount_cmd, timeout=360)
+        session.cmd(umount_cmd, timeout=360, ignore_all_errors=True)
     session.close()

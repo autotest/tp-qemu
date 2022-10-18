@@ -112,7 +112,7 @@ def run(test, params, env):
                         status, output = session.cmd_status_output(verifier_clear_cmd)
                         test.log.info(output)
                         if ".sys" in output:
-                            msg = "% does not work correctly" % verifier_clear_cmd
+                            msg = "%s does not work correctly" % verifier_clear_cmd
                             test.error(msg)
                 elif s != 0:
                     msg = "Config command %s failed. Output: %s" % (cmd, o)

@@ -16,7 +16,7 @@ class IpuLegacyTest(IpuTest):
 
     def __init__(self, test, params):
 
-        super(IpuTest, self).__init__()
+        super(IpuLegacyTest, self).__init__(test, params)
         self.session = None
         self.test = test
         self.params = params

@@ -2,6 +2,7 @@ import time
 
 from virttest import error_context
 from virttest import utils_test
+from provider import win_dump_utils
 
 
 @error_context.context_aware
@@ -30,7 +31,6 @@ def run(test, params, env):
     check_dump_cmd = params.get("check_dump_cmd")
     nmi_cmd = params.get("nmi_cmd")
     del_dump_cmd = params.get("del_dump_cmd")
-    analyze_cmd = params.get("analyze_cmd")
     driver_name = params.get("driver_name")
 
     if driver_name:
@@ -84,16 +84,15 @@ def run(test, params, env):
             if s:
                 err_msg = "Could not find dump files in guest. Output: '%s'" % o
                 test.fail(err_msg)
-        if analyze_cmd:
-            error_context.context("Analyze dump file in guest", test.log.info)
-            try:
-                vm.copy_files_from(params["dump_path"], ".", timeout=100)
-            except Exception:
-                pass
-            s, o = session.cmd_status_output(analyze_cmd, timeout=1200)
-            if s:
-                test.fail("Analysis Failed. Command: '%s'.\n\n"
-                          " Output: %s" % (analyze_cmd, o))
+
+        error_context.context("Analyze dump file with windbg", test.log.info)
+        if session.cmd_status(params["chk_sdk_ins"]):
+            win_dump_utils.install_windbg(test, params, session,
+                                          timeout=params.get("wdbg_timeout", 600))
+        error_context.context("Disable security alert", test.log.info)
+        win_dump_utils.disable_security_alert(params, session)
+        session.cmd(params["save_path_cmd"])
+        win_dump_utils.dump_windbg_check(test, params, session)
     finally:
         if session is not None and del_dump_cmd:
             try:

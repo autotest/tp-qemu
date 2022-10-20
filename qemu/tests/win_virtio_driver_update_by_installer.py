@@ -4,6 +4,8 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import data_dir
 
+from qemu.tests.balloon_check import BallooningTestWin
+
 from provider import win_driver_utils
 from provider import win_driver_installer_test
 
@@ -121,6 +123,8 @@ def run(test, params, env):
                                                    expected_gagent_version)
     win_driver_installer_test.driver_check(session, test, params)
 
+    balloon_test_win = BallooningTestWin(test, params, env)
+
     error_context.context("Run driver function test after update",
                           test.log.info)
     fail_tests = []
@@ -133,7 +137,10 @@ def run(test, params, env):
         test_func = "win_driver_installer_test.%s_test" % test_name
         driver_test_params = params.get('driver_test_params_%s'
                                         % driver_name, '{}')
-        driver_test_params = ast.literal_eval(driver_test_params)
+        if driver_name == "balloon":
+            driver_test_params = {"balloon_test_win": balloon_test_win}
+        else:
+            driver_test_params = ast.literal_eval(driver_test_params)
         try:
             eval("%s(test, params, vm, **driver_test_params)" % test_func)
         except Exception as e:

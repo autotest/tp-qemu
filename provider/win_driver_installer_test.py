@@ -1,4 +1,5 @@
 import logging
+import random
 import re
 import time
 import os
@@ -525,3 +526,40 @@ def viofs_basic_io_test(test, params, vm):
         test.fail('The md5 value of host is not same to guest.')
     else:
         test.log.info("The md5 of host is as same as md5 of guest.")
+
+
+def balloon_test(test, params, vm, balloon_test_win):
+    """
+    Balloon service test in Windows guest.
+
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param vm: The vm object
+    :param balloon_test_win: Basic functions for memory ballooning testcase
+    """
+    error_context.context("Running balloon service test...", LOG_JOB.info)
+    mem_check = params.get("mem_check", "yes")
+
+    session = vm.wait_for_login()
+    error_context.context("Config balloon service in guest", test.log.info)
+    balloon_test_win.configure_balloon_service(session)
+    min_sz, max_sz = balloon_test_win.get_memory_boundary()
+
+    tag = "envict"
+    error_context.context("Running %s test" % tag, test.log.info)
+    expect_mem = int(random.uniform(min_sz,
+                                    balloon_test_win.get_ballooned_memory()))
+    utils_misc.wait_for(lambda:
+                        balloon_test_win.run_ballooning_test(expect_mem, tag),
+                        timeout=600)
+
+    if mem_check == "yes":
+        check_list = params["mem_stat_check_list"].split()
+        for mem_check_name in check_list:
+            balloon_test_win.memory_stats_check(mem_check_name, True)
+
+    error_context.context("Reset balloon memory...", test.log.info)
+    balloon_test_win.reset_memory()
+    error_context.context("Reset balloon memory...done", test.log.info)
+    session.close()
+    error_context.context("Balloon test done.", test.log.info)

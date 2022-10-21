@@ -449,7 +449,7 @@ def install_winfsp(test, params, session):
     check_installed_cmd = params.get("check_winfsp_installed_cmd",
                                      r'dir "%s" |findstr /I winfsp')
     check_installed_cmd = check_installed_cmd % install_path
-    install_winfsp_cmd = r'msiexec /i WIN_UTILS:\winfsp-1.9.21096.msi /qn'
+    install_winfsp_cmd = r'msiexec /i WIN_UTILS:\winfsp.msi /qn'
     install_cmd = params.get("install_winfsp_cmd",
                              install_winfsp_cmd)
     # install winfsp tool

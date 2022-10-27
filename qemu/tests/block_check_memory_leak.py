@@ -66,7 +66,7 @@ def run(test, params, env):
     process.system_output(cp_cmd, shell=True)
     check_cmd = params["check_cmd"]
     out = process.system_output(check_cmd, shell=True).decode()
-    logger.info("Find leak:%s", out)
-
-    if len(out) and int(out) > 1000:
+    leak_threshold = params.get_numeric('leak_threshold')
+    logger.info("Find leak:%s,threshold: %d", out, leak_threshold)
+    if len(out) and int(out) > leak_threshold:
         test.fail("Find memory leak %s,Please check valgrind.log" % out)

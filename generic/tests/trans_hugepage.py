@@ -30,16 +30,17 @@ def run(test, params, env):
     """
     def get_mem_status(params, role):
         if role == "host":
-            info = process.system_output("cat /proc/meminfo")
+            info = process.getoutput("cat /proc/meminfo")
         else:
             info = session.cmd("cat /proc/meminfo")
         for h in re.split("\n+", info):
             if h.startswith("%s" % params):
                 output = re.split(r'\s+', h)[1]
-        return output
+        return int(output)
 
     dd_timeout = float(params.get("dd_timeout", 900))
-    mem = params['mem']
+    mem = params.get_numeric('mem')
+    largepages_files = params.objects('largepages_files')
     failures = []
 
     debugfs_flag = 1
@@ -63,25 +64,25 @@ def run(test, params, env):
     test.log.info("Smoke test start")
     error_context.context("smoke test")
 
-    nr_ah_before = int(get_mem_status('AnonHugePages', 'host'))
+    nr_ah_before = get_mem_status('AnonHugePages', 'host')
     if nr_ah_before <= 0:
         e_msg = 'smoke: Host is not using THP'
         test.log.error(e_msg)
         failures.append(e_msg)
 
     # Protect system from oom killer
-    if int(get_mem_status('MemFree', 'guest')) / 1024 < mem:
-        mem = int(get_mem_status('MemFree', 'guest')) / 1024
+    if get_mem_status('MemFree', 'guest') // 1024 < mem:
+        mem = get_mem_status('MemFree', 'guest') // 1024
 
     session.cmd("mkdir -p %s" % mem_path)
 
     session.cmd("mount -t tmpfs -o size=%sM none %s" % (str(mem), mem_path))
 
-    count = mem / 4
+    count = mem // 4
     session.cmd("dd if=/dev/zero of=%s/1 bs=4000000 count=%s" %
                 (mem_path, count), timeout=dd_timeout)
 
-    nr_ah_after = int(get_mem_status('AnonHugePages', 'host'))
+    nr_ah_after = get_mem_status('AnonHugePages', 'host')
 
     if nr_ah_after <= nr_ah_before:
         e_msg = ('smoke: Host did not use new THP during dd')
@@ -89,7 +90,13 @@ def run(test, params, env):
         failures.append(e_msg)
 
     if debugfs_flag == 1:
-        if int(open('%s/kvm/largepages' % debugfs_path, 'r').read()) <= 0:
+        largepages = 0
+        for largepages_file in largepages_files:
+            largepages_path = '%s/kvm/%s' % (debugfs_path, largepages_file)
+            if os.path.exists(largepages_path):
+                largepages += int(open(largepages_path, 'r').read())
+
+        if largepages <= 0:
             e_msg = 'smoke: KVM is not using THP'
             test.log.error(e_msg)
             failures.append(e_msg)
@@ -97,7 +104,7 @@ def run(test, params, env):
     test.log.info("Smoke test finished")
 
     # Use parallel dd as stress for memory
-    count = count / 3
+    count = count // 3
     test.log.info("Stress test start")
     error_context.context("stress test")
     cmd = "rm -rf %s/*; for i in `seq %s`; do dd " % (mem_path, count)

@@ -6,6 +6,8 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest.utils_windows import virtio_win
 
+from provider import win_driver_utils
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -200,7 +202,10 @@ def run(test, params, env):
                                       (vm, fs_target), test.log.info)
                 utils_disk.umount(fs_target, fs_dest, 'virtiofs',
                                   session=session)
-
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if os_type == "windows":
+            win_driver_utils.memory_leak_check(vm_obj, test, vm_params)
     if shared_fs_source_dir:
         error_context.context("Compare the md5 among VMs.", test.log.info)
 

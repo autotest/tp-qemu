@@ -14,6 +14,8 @@ from virttest import utils_test
 
 from virttest.utils_windows import virtio_win
 
+from provider import win_driver_utils
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -283,7 +285,10 @@ def run(test, params, env):
                                    io_timeout).stdout_text.strip().split()[0]
             if md5_guest != md5_host:
                 test.fail('The md5 value of host is not same to guest.')
-
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if is_windows:
+            win_driver_utils.memory_leak_check(vm, test, params)
     finally:
         if not is_windows:
             utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)

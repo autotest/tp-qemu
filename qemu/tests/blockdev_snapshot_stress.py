@@ -34,8 +34,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     base_image = params.get("images", "image1").split()[0]
-    params.update(
-        {"image_name_%s" % base_image: params["image_name"],
-         "image_format_%s" % base_image: params["image_format"]})
+    params.setdefault("image_name_%s" % base_image, params["image_name"])
+    params.setdefault("image_format_%s" % base_image, params["image_format"])
     snapshot_stress = BlockdevSnapshotStressTest(test, params, env)
     snapshot_stress.run_test()

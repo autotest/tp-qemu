@@ -4,6 +4,8 @@ from avocado.core import exceptions
 
 from virttest import error_context
 from virttest import utils_misc
+
+from provider import win_driver_utils
 from qemu.tests.balloon_check import BallooningTest
 
 
@@ -234,3 +236,7 @@ def run(test, params, env):
     error_context.context("Reset guest memory to original one after all the "
                           "test", test.log.info)
     balloon_test.reset_memory()
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)

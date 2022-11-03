@@ -11,6 +11,7 @@ from virttest import utils_misc
 from virttest import error_context
 from virttest.utils_numeric import normalize_data_size
 from virttest.utils_test.qemu import MemoryBaseTest
+from provider import win_driver_utils
 
 
 class BallooningTest(MemoryBaseTest):
@@ -645,5 +646,9 @@ def run(test, params, env):
                 test.error("QEMU should consume more memory")
             if res3 - res1 > res1 * 0.1:
                 test.fail("QEMU should consume same memory as before memhog ")
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if params.get("os_type") == "windows":
+            win_driver_utils.memory_leak_check(balloon_test.vm, test, params)
     finally:
         balloon_test.close_sessions()

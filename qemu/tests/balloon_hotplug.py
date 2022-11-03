@@ -7,6 +7,7 @@ from virttest import error_context
 from virttest import utils_test
 from qemu.tests.balloon_check import BallooningTestWin
 from qemu.tests.balloon_check import BallooningTestLinux
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -139,5 +140,13 @@ def run(test, params, env):
             if not vm.is_alive():
                 return
 
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        out = vm.devices.simple_hotplug(new_dev, vm.monitor)
+        if out[1] is False:
+            test.fail("Failed to hotplug balloon at last, "
+                      "output is %s" % out[0])
+        win_driver_utils.memory_leak_check(vm, test, params)
     error_context.context("Verify guest alive!", test.log.info)
     vm.verify_kernel_crash()

@@ -105,7 +105,10 @@ def run(test, params, env):
             vm1.destroy()
             vm2.destroy()
     finally:
-        gnutls_pid = process.getoutput("pgrep -f gnutls", shell=True)
-        if gnutls_pid:
-            process.run("pkill -9 gnutls")
+        gnutls_serv_pid = process.getoutput("pgrep -f gnutls-serv", shell=True)
+        if gnutls_serv_pid:
+            process.run("pkill -9 gnutls-serv")
+        gnutls_cli_pid = process.getoutput("pgrep -f gnutls-cli", shell=True)
+        if gnutls_cli_pid:
+            process.run("pkill -9 gnutls-cli")
         process.run(clean_cmd)

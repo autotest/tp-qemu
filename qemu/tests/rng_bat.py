@@ -7,6 +7,7 @@ from virttest import error_context
 from virttest import utils_test
 from virttest.utils_windows import system
 from avocado.utils import process
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -124,3 +125,7 @@ def run(test, params, env):
         if len(re.findall(rng_data_rex, output, re.M)) < 2:
             test.fail("Unable to read random numbers from guest: %s" % output)
     session.close()
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("need_memory_leak_check", "no") == "yes":
+        win_driver_utils.memory_leak_check(vm, test, params)

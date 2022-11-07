@@ -4,6 +4,7 @@ from virttest import error_context
 from virttest.qemu_devices import qdevices
 from virttest import utils_test
 from avocado.core import exceptions
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -85,6 +86,7 @@ def run(test, params, env):
     pm_test_after_plug = params.get("pm_test_after_plug")
     pm_test_after_unplug = params.get("pm_test_after_unplug")
     rng_driver = params["rng_driver"]
+    os_type = params["os_type"]
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -138,3 +140,8 @@ def run(test, params, env):
             run_subtest(pm_test_after_unplug)
             if not vm.is_alive():
                 return
+    # for windows guest, disable/uninstall driver to get memory
+    # leak based on driver verifier is enabled
+    if os_type == "windows":
+        hotplug_rng(vm, new_dev)
+        win_driver_utils.memory_leak_check(vm, test, params)

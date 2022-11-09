@@ -67,7 +67,7 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
         for tag in self.params.objects("source_images"):
             self.generate_data_file(tag)
 
-    def do_increamental_backup(self):
+    def do_incremental_backup(self):
         extra_options = {'sync': 'incremental', 'auto_disable_bitmap': False}
         if self.params.get("completion_mode") == 'grouped':
             extra_options['completion_mode'] = 'grouped'
@@ -115,7 +115,7 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
     def do_test(self):
         self.do_full_backup()
         self.generate_inc_files()
-        self.do_increamental_backup()
+        self.do_incremental_backup()
         if self.params.get("negative_test") == "yes":
             return
         self.main_vm.destroy()
@@ -133,7 +133,7 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
 
 def run(test, params, env):
     """
-    Blockdev increamental backup test
+    Blockdev incremental backup test
 
     test steps:
         1. boot VM with one or two data disks
@@ -142,8 +142,8 @@ def run(test, params, env):
         4. add target disks for backup to VM via qmp commands
         5. do full backup
         6. create new files and save it md5sum in data disks
-        7. do increamental backup
-        8. destroy VM and rebase increamental backup image
+        7. do incremental backup
+        8. destroy VM and rebase incremental backup image
         9. start VM with image in step8
         10. verify files in data disks not change
 

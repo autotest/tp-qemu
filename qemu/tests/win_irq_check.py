@@ -81,6 +81,16 @@ def run(test, params, env):
     session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                             test, driver_verifier,
                                                             timeout)
+    if params.get("check_scsi_vectors", "no") == "yes":
+        scsi_vectors = int(get_vectors_fqtree())
+        scsi_queues = int(params["num_queues"])
+        if scsi_vectors == scsi_queues + 3:
+            test.log.info("Device vectors as expected")
+            return
+        else:
+            test.fail("Device vectors does not equal to num_queues+3.\n"
+                      "Device vectors as:%s\ndevice num_queues as:%s"
+                      % (scsi_vectors, scsi_queues))
 
     error_context.context("Check %s's irq number" % device_name, test.log.info)
     devcon_folder = utils_misc.set_winutils_letter(session, params["devcon_folder"])

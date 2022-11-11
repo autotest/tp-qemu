@@ -20,7 +20,8 @@ LOG_JOB = logging.getLogger('avocado.test')
 
 driver_name_list = ['viorng', 'viostor', 'vioscsi',
                     'balloon', 'viofs', 'vioser',
-                    'pvpanic', 'netkvm', 'vioinput']
+                    'pvpanic', 'netkvm', 'vioinput',
+                    'fwcfg']
 
 device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
                     '"PCI\\VEN_1AF4&DEV_1001" "PCI\\VEN_1AF4&DEV_1042"',
@@ -31,14 +32,14 @@ device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
                     '"ACPI\\QEMU0001"',
                     '"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&DEV_1041"',
                     '"PCI\\VEN_1AF4&DEV_1052"',
-                    '"ACPI\\QEMU0002"']
+                    '"ACPI\\VEN_QEMU&DEV_0002"']
 
 device_name_list = ["VirtIO RNG Device", "Red Hat VirtIO SCSI controller",
                     "Red Hat VirtIO SCSI pass-through controller",
                     "VirtIO Balloon Driver", "VirtIO FS Device",
                     "VirtIO Serial Driver", "QEMU PVPanic Device",
                     "Red Hat VirtIO Ethernet Adapter", "VirtIO Input Driver",
-                    "QEMU FWCfg Device"]
+                    "QEMU FwCfg Device"]
 
 
 def install_gagent(session, test, qemu_ga_pkg, gagent_install_cmd,
@@ -88,8 +89,6 @@ def win_uninstall_all_drivers(session, test, params):
     :param params: the dict used for parameters.
     """
     devcon_path = params["devcon_path"]
-    if params.get("check_qemufwcfg", "no") == "yes":
-        driver_name_list.append('qemufwcfg')
     for driver_name, device_name, device_hwid in zip(driver_name_list,
                                                      device_name_list,
                                                      device_hwid_list):
@@ -138,14 +137,6 @@ def win_installer_test(session, test, params):
     status = session.cmd_status(params["signed_check_cmd"])
     if status != 0:
         test.fail('Installer not signed by redhat.')
-    if params.get("check_qemufwcfg", "no") == "yes":
-        error_context.context("Check if QEMU FWCfg Device is installed.",
-                              LOG_JOB.info)
-        device_name = "QEMU FWCfg Device"
-        chk_cmd = params["vio_driver_chk_cmd"] % device_name
-        status = session.cmd_status(chk_cmd)
-        if status != 0:
-            test.fail("QEMU FWCfg Device not installed")
 
 
 @error_context.context_aware
@@ -162,8 +153,6 @@ def driver_check(session, test, params):
     media_type = params["virtio_win_media_type"]
     wrong_ver_driver = []
     not_signed_driver = []
-    if params.get("check_qemufwcfg", "no") == "yes":
-        driver_name_list.append('qemufwcfg')
     if params.get("driver_name"):
         driver_name_list = [params["driver_name"]]
         device_name_list = [params["device_name"]]
@@ -177,12 +166,11 @@ def driver_check(session, test, params):
         expected_ver = expected_ver.strip().split(",", 1)[-1]
         if not expected_ver:
             test.error("Failed to find driver version from inf file")
-        if driver_name != "qemufwcfg":
-            LOG_JOB.info("Target version is '%s'", expected_ver)
-            ver_list = win_driver_utils._pnpdrv_info(session, device_name,
-                                                     ["DriverVersion"])
-            if expected_ver not in ver_list:
-                wrong_ver_driver.append(driver_name)
+        LOG_JOB.info("Target version is '%s'", expected_ver)
+        ver_list = win_driver_utils._pnpdrv_info(session, device_name,
+                                                 ["DriverVersion"])
+        if expected_ver not in ver_list:
+            wrong_ver_driver.append(driver_name)
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
         chk_output = session.cmd_output(chk_cmd, timeout=chk_timeout)
         if "FALSE" in chk_output:

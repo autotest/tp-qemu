@@ -22,14 +22,13 @@ def run(test, params, env):
     3) Boot guest with all virtio device.
     4) Install driver via virtio-win-guest-tools.exe.
     5) Run virtio-win-guest-tools.exe signature check command in guest.
-    6) Run QEMU FWCfg Device installed check command in guest.
-    7) Verify the qemu-ga version match expected version.
-    8) Run driver signature check command in guest.
+    6) Verify the qemu-ga version match expected version.
+    7) Run driver signature check command in guest.
        Verify target driver.
        one by one.
-    9) Run virtio-win-guest-tools.exe uninstall test.
-    10) Check all drivers are uninstalled.
-    11) Run gagent status check command in guest.
+    8) Run virtio-win-guest-tools.exe uninstall test.
+    9) Check all drivers are uninstalled.
+    10) Run gagent status check command in guest.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -83,12 +82,9 @@ def run(test, params, env):
                         'VirtIO Balloon Driver', 'QEMU PVPanic Device',
                         'VirtIO Input Driver',
                         'Red Hat VirtIO Ethernet Adapter',
-                        'VirtIO FS Device', 'QEMU FWCfg Device']
+                        'VirtIO FS Device', 'QEMU FwCfg Device']
     # viostor and vioscsi drivers can not uninstalled by installer
     for device_name in device_name_list:
-        if (device_name == "QEMU FWCfg Device" and
-                params.get("check_qemufwcfg", "no") != "yes"):
-            continue
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
         status = session.cmd_status(chk_cmd)
         if status == 0:

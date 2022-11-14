@@ -18,14 +18,13 @@ def run(test, params, env):
     3) Boot guest with all virtio device.
     4) Install driver via virtio-win-guest-tools.exe.
     5) Run virtio-win-guest-tools.exe signature check command in guest.
-    6) Run QEMU FWCfg Device installed check command in guest.
-    7) Verify the qemu-ga version match expected version.
-    8) Run driver signature check command in guest.
+    6) Verify the qemu-ga version match expected version.
+    7) Run driver signature check command in guest.
        Verify target driver.
-    9) Run virtio-win-guest-tools.exe repair test by uninstall
+    8) Run virtio-win-guest-tools.exe repair test by uninstall
        the target driver.
-    10) Run the driver function test after virtio-win-guest-tools.exe repair.
-    11) Repeat step 9 and 10 for other drivers.
+    9) Run the driver function test after virtio-win-guest-tools.exe repair.
+    10) Repeat step 9 and 10 for other drivers.
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -64,9 +63,6 @@ def run(test, params, env):
                                                    gagent_pkg_info_cmd,
                                                    expected_gagent_version)
     win_driver_installer_test.driver_check(session, test, params)
-
-    if params.get("check_qemufwcfg", "no") == "yes":
-        win_driver_installer_test.driver_name_list.append('qemufwcfg')
 
     error_context.context("Run virtio-win-guest-tools.exe repair test",
                           test.log.info)

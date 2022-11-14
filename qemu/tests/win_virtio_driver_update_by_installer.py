@@ -69,9 +69,6 @@ def run(test, params, env):
     error_context.context("Delete the viofs service at guest...")
     win_driver_installer_test.delete_viofs_serivce(test, params, session)
 
-    if params.get("check_qemufwcfg", "no") == "yes":
-        win_driver_installer_test.driver_name_list.append('qemufwcfg')
-
     win_driver_installer_test.win_uninstall_all_drivers(session,
                                                         test, params)
     change_virtio_media(params["cdrom_virtio_downgrade"])

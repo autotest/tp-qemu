@@ -12,6 +12,8 @@ from virttest import utils_test
 from virttest.utils_windows import virtio_win
 from virttest.qemu_devices import qdevices
 
+from provider import win_driver_utils
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -296,6 +298,11 @@ def run(test, params, env):
                                    get_fs_devices(fs_target))
             plug_fs_devices('unplug', unplug_devs)
             del unplug_devs[:]
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if os_type == "windows" and need_plug:
+            plug_fs_devices('hotplug', fs_devs)
+            win_driver_utils.memory_leak_check(vm, test, params)
     finally:
         if os_type == "linux":
             utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)

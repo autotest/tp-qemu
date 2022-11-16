@@ -202,6 +202,10 @@ def run(test, params, env):
     trust_selinux_attr_name = params.get("trust_selinux_attr_name")
     se_mode = params.get("security_mode")
 
+    # winfsp test config
+    winfsp_copy_cmd = params.get("winfsp_copy_cmd")
+    winfsp_test_cmd = params.get("winfsp_test_cmd")
+
     # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
 
@@ -676,6 +680,21 @@ def run(test, params, env):
                     process.run("touch %s" % file_new_in_host, timeout=60)
                     time.sleep(1)
                     check_security_label(file_share_in_guest, fs_dest, selinux_xattr_name)
+
+                if winfsp_test_cmd:
+                    # only for windows guest.
+                    error_context.context("Run winfsp-tests suit on windows"
+                                          " guest.", test.log.info)
+                    winfsp_copy_cmd = utils_misc.set_winutils_letter(session,
+                                                                     winfsp_copy_cmd)
+                    session.cmd(winfsp_copy_cmd)
+                    try:
+                        status, output = session.cmd_status_output(winfsp_test_cmd % fs_dest,
+                                                                   timeout=io_timeout)
+                        if status != 0:
+                            test.fail("Winfsp-test failed, the output is %s" % output)
+                    finally:
+                        session.cmd("cd /d C:\\")
 
                 if params.get("stop_start_repeats") and os_type == "windows":
                     viofs_sc_stop_cmd = params["viofs_sc_stop_cmd"]

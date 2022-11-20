@@ -1,6 +1,7 @@
 from virttest import error_context
 from virttest import utils_test
 from virttest import qemu_monitor
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -39,3 +40,8 @@ def run(test, params, env):
             test.fail(e.data['desc'])
     else:
         test.fail('hotplugg virtio-serial-pci device should be failed')
+
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)

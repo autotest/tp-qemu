@@ -4,6 +4,7 @@ from virttest import data_dir
 from virttest import utils_test
 
 from qemu.tests import single_driver_install
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -56,4 +57,10 @@ def run(test, params, env):
         change_virtio_media(params["cdrom_virtio"])
 
     single_driver_install.run(test, params, env)
+
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)
+
     vm.destroy()

@@ -5,6 +5,7 @@ from avocado.utils import process
 from virttest import error_context
 from virttest import utils_test
 from qemu.tests.virtio_serial_file_transfer import get_virtio_port_property
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -54,3 +55,8 @@ def run(test, params, env):
             test.fail("Guest send should fail while no listening side")
 
     vm.verify_kernel_crash()
+
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)

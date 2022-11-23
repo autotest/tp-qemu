@@ -6,6 +6,7 @@ from virttest import utils_numeric
 from virttest.utils_test.qemu import MemoryHotplugTest
 from qemu.tests.balloon_check import BallooningTestWin
 from qemu.tests.balloon_check import BallooningTestLinux
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -73,10 +74,9 @@ def run(test, params, env):
         min_sz, max_sz = balloon_test.get_memory_boundary()
         new_mem = int(random.uniform(min_sz, max_sz))
         balloon_test.balloon_memory(new_mem)
-
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if params.get("os_type") == "windows":
+            win_driver_utils.memory_leak_check(vm, test, params)
     finally:
-        if params['os_type'] == 'windows':
-            error_context.context("Clear balloon service in guest",
-                                  test.log.info)
-            balloon_test.operate_balloon_service(session, "uninstall")
         session.close()

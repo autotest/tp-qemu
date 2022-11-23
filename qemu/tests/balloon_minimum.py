@@ -4,6 +4,7 @@ from virttest import utils_test
 from virttest import error_context
 from virttest.qemu_monitor import QMPEventError
 from qemu.tests.balloon_check import BallooningTestWin
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -44,4 +45,8 @@ def run(test, params, env):
 
     ballooned_memory = expect_mem - balloon_test.pre_mem
     balloon_test.memory_check("after balloon guest memory 10 times", ballooned_memory)
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)
     session.close()

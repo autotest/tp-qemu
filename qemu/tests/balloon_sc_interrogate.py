@@ -3,6 +3,7 @@ import re
 from virttest import utils_test
 from virttest import error_context
 from qemu.tests.balloon_check import BallooningTestWin
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -50,18 +51,14 @@ def run(test, params, env):
         if not re.search("running", output.lower(), re.M):
             test.fail("Balloon service is not running after sc interrogate!"
                       "Output is: \n %s" % output)
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if params.get("os_type") == "windows":
+            win_driver_utils.memory_leak_check(vm, test, params)
     except Exception as err:
         pass
 
     finally:
-        try:
-            error_context.context("Clear balloon service in guest", test.log.info)
-            balloon_test.operate_balloon_service(session, "uninstall")
-        except Exception as uninst_err:
-            if not err:
-                err = uninst_err
-            else:
-                test.log.error(uninst_err)
         session.close()
         if err:
             raise err   # pylint: disable=E0702

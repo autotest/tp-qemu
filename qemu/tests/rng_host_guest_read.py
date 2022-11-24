@@ -1,6 +1,7 @@
 from virttest import error_context
 from virttest import utils_test
 from avocado.utils import process
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -37,6 +38,7 @@ def run(test, params, env):
 
     host_read_cmd = params.get("host_read_cmd")
     guest_rng_test = params.get("guest_rng_test")
+    os_type = params["os_type"]
     vm = env.get_vm(params["main_vm"])
     vm.wait_for_login()
 
@@ -54,3 +56,7 @@ def run(test, params, env):
     finally:
         error_context.context("Clean host read process", test.log.info)
         host_read_clean(host_read_process)
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if os_type == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)

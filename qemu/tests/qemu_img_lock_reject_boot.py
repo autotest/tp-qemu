@@ -1,5 +1,5 @@
-from avocado.utils import process
 from virttest import env_process
+from virttest.virt_vm import VMCreateError
 
 from qemu.tests.qemu_disk_img import QemuImgTest
 from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
@@ -60,11 +60,11 @@ def run(test, params, env):
         test.log.info("Boot a seconde vm from the same os image.")
 
     try:
-        vm2.devices, _ = vm2.make_create_command()
-        output = process.run(vm2.devices.cmdline(),
-                             shell=True, ignore_status=True)
-        if output.exit_status == 0:
-            test.fail("The second vm boot up, the image is not locked.")
-        _verify_write_lock_err_msg(test, output.stderr_text, img_file)
+        vm2.create(params=vm2.params)
+        vm2.verify_alive()
+    except VMCreateError as err:
+        _verify_write_lock_err_msg(test, err.output, img_file)
+    else:
+        test.fail("The second vm boot up, the image is not locked.")
     finally:
         vm1.verify_status("running")

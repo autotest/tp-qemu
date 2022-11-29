@@ -113,7 +113,7 @@ def run(test, params, env):
     time.sleep(60)
 
     pcie_port_set = False
-    if "q35" or "arm64-pci" in params['machine_type']:
+    if "q35" in params['machine_type'] or "arm64-pci" in params['machine_type']:
         pcie_port_set = True
     dev_slot = 0 if pcie_port_set else 9
     parent_bus = 'pcie_extra_root_port_0' if pcie_port_set else 'pci.0'

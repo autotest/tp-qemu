@@ -1,5 +1,6 @@
 import re
 import random
+import string
 
 from avocado.utils import process
 
@@ -207,12 +208,8 @@ def run(test, params, env):
     if params.get("catch_serial_cmd") is not None:
         length = int(params.get("length", "20"))
         id_leng = random.randint(0, length)
-        drive_serial = ""
-        convert_str = "!\"#$%&\'()*+./:;<=>?@[\\]^`{|}~"
-        drive_serial = utils_misc.generate_random_string(id_leng,
-                                                         ignore_str=",",
-                                                         convert_str=convert_str)
-
+        ignore_str = string.punctuation.replace("-", "").replace("_", "")
+        drive_serial = utils_misc.generate_random_string(id_leng, ignore_str)
         params["drive_serial"] = drive_serial
         params["start_vm"] = "yes"
 

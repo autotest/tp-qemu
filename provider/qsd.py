@@ -67,7 +67,7 @@ class QsdError(Exception):
     pass
 
 
-def add_vubp_into_boot(img_name, params, addr=15):
+def add_vubp_into_boot(img_name, params, addr=15, opts=""):
     """ Add vhost-user-blk-pci device into boot command line """
     devs = create_vubp_devices(None, img_name, params)
     cmd = ""
@@ -80,6 +80,11 @@ def add_vubp_into_boot(img_name, params, addr=15):
             bus = "-device pcie-root-port,id=%s,bus=pcie.0,addr=%d " % (
                 busid, addr)
             cmd = bus + cmd + ",bus=%s" % busid
+        elif "i440fx" in machine_type or machine_type == "pc":
+            cmd += ",bus=pci.0,addr=%d" % addr
+
+        cmd += opts
+
         params["extra_params"] = cmd
         LOG_JOB.info("Ready add %s into VM command line", cmd)
         return cmd
@@ -255,6 +260,7 @@ class QsdDaemonDev(QDaemonDev):
         img["protocol"]["filename"] = filename
         img["format"]["node-name"] = "fmt_" + name
         img["format"]["file"] = img["protocol"]["node-name"]
+        img["format"]["driver"] = params.get("image_format")
         img["filter"]["node-name"] = "flt_" + name
         img["filter"]["file"] = img["format"]["node-name"]
 

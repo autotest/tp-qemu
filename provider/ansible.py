@@ -6,6 +6,7 @@ from aexpect.client import Expect
 from avocado.utils import path
 from avocado.utils import process
 from avocado.utils.wait import wait_for
+from avocado.utils.software_manager.backends.yum import YumBackend
 
 from virttest import utils_package
 
@@ -149,7 +150,24 @@ def check_ansible_playbook(params):
         """
         Install ansible from the distro
         """
-        return utils_package.package_install('ansible')
+        # Provide custom dnf repo containing ansible
+        if params.get("ansible_repo"):
+            repo_options = {
+                "priority": "1",
+                "gpgcheck": "0",
+                "skip_if_unavailable": "1"
+            }
+            yum_backend = YumBackend()
+            if yum_backend.add_repo(params["ansible_repo"], **repo_options):
+                LOG_JOB.info(f"Ansible repo was added: {params['ansible_repo']}")
+            else:
+                LOG_JOB.error("Ansible repo was required, but failed to be added.")
+                return False
+        install_status = utils_package.package_install('ansible')
+        if not install_status:
+            LOG_JOB.error(f"Failed to install ansbile.")
+        yum_backend.remove_repo(params["ansible_repo"])
+        return install_status
 
     policy_map = {"distro_install": distro_install,
                   "python_install": python_install}

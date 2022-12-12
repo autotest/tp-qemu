@@ -47,12 +47,12 @@ def run(test, params, env):
     get_threads_cmd = params["get_threads_cmd"] % vm.get_pid()
     qemu_binary = utils_misc.get_qemu_binary(params)
     qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
+    target_mems = params.get("target_mems").split()
     if qemu_version in VersionInterval('[7.1.0,)'):
         threads_default = params.get_numeric("smp")
     else:
-        threads_default = 0
-    target_mems = params.get("target_mems")
-    for target_mem in target_mems.split():
+        target_mems.remove('plug1')
+    for target_mem in target_mems:
         test.log.info("Get qemu threads number at beginning")
         pre_threads = get_qemu_threads(get_threads_cmd)
         test.log.info("QEMU boot threads number is %s" % pre_threads)

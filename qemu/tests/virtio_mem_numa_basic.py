@@ -9,7 +9,7 @@ from provider import virtio_mem_utils
 @error_context.context_aware
 def run(test, params, env):
     """
-    Memory share and discard-data hotplug test
+    Boot a guest with two virtio-mem devices and resize them
     1) Boot guest with two virtio-mem devices
     2) Check virtio-mem devices
     3) Resize virtio-mem devices

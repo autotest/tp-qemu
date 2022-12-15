@@ -11,6 +11,7 @@ from virttest.qemu_capabilities import Flags
 from virttest.utils_numeric import normalize_data_size
 
 from provider.block_devices_plug import BlockDevicesPlug
+from provider import win_driver_utils
 
 
 ENLARGE, SHRINK = ("enlarge", "shrink")
@@ -103,4 +104,6 @@ def run(test, params, env):
     if reboot:
         _change_vm_power()
         _check_vm_status()
+    if is_windows:
+        win_driver_utils.memory_leak_check(vm, test, params)
     plug.unplug_devs_serial()

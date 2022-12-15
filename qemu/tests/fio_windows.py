@@ -3,6 +3,7 @@ import time
 
 from virttest import error_context
 from virttest import utils_misc
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -63,3 +64,4 @@ def run(test, params, env):
             test.log.warn("Log file copy failed: %s", err)
         if session:
             session.close()
+        win_driver_utils.memory_leak_check(vm, test, params)

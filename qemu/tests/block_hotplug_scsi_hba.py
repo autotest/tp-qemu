@@ -5,6 +5,7 @@ from virttest import utils_misc
 from virttest.utils_test import qemu
 
 from provider.block_devices_plug import BlockDevicesPlug
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -73,4 +74,6 @@ def run(test, params, env):
             test.fail('Found a new disk with virtio-scsi-pci.hotplug=off '
                       'before rescan scsi hba controller.')
         rescan_hba_controller(session)
+    if not is_linux:
+        win_driver_utils.memory_leak_check(vm, test, params)
     plug.unplug_devs_serial()

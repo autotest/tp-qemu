@@ -1,6 +1,9 @@
 import time
+import re
 
-from virttest import error_context
+from avocado.utils import process
+from virttest import error_context, env_process
+from virttest.utils_misc import get_linux_drive_path
 from provider import message_queuing
 
 
@@ -33,19 +36,46 @@ def run(test, params, env):
         obj.send_message("status-rsp:" + vm_status['status'])
         test.log.info("Finish handle on_status")
 
+    def _get_host_drive_path(did):
+        """
+        Get drive path in host by drive serial or wwn
+        """
+        cmd = 'for dev_path in `ls -d /sys/block/*`; do '
+        cmd += 'echo `udevadm info -q property -p $dev_path`; done'
+        status, output = process.getstatusoutput(cmd)
+        if status != 0:
+            return ""
+        p = r"DEVNAME=([^\s]+)\s.*(?:ID_SERIAL|ID_SERIAL_SHORT|ID_WWN)=%s" % did
+        dev = re.search(p, output, re.M)
+        if dev:
+            return dev.groups()[0]
+        return ""
+
     # Error contexts are used to give more info on what was
     # going on when one exception happened executing test code.
-    error_context.context("Get the main VM", test.log.info)
+
+    pass_path = _get_host_drive_path(params["serial_data_disk"])
+    if not pass_path:
+        test.fail("Can not find expected disk")
+    params["image_name_stg"] = pass_path
+
+    params["start_vm"] = 'yes'
+    test.log.info(pass_path)
+
+    error_context.context("Boot the main VM", test.log.info)
+    env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
+    guest_path = get_linux_drive_path(session, params["serial_data_disk"])
+    test.log.info(guest_path)
 
     host = params.get("mq_publisher")
     mq_port = params.get("mq_port", 5000)
     test.log.info("host:{} port:{}".format(host, mq_port))
     client = message_queuing.MQClient(host, mq_port)
     time.sleep(2)
-    cmd_dd = params["cmd_dd"]
+    cmd_dd = params["cmd_dd"] % guest_path
     error_context.context('Do dd writing test on the data disk.',
                           test.log.info)
     session.sendline(cmd_dd)

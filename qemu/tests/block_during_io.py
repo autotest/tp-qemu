@@ -6,6 +6,7 @@ from virttest import utils_misc
 from virttest import utils_disk
 from virttest import error_context
 from provider.storage_benchmark import generate_instance
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -164,3 +165,8 @@ def run(test, params, env):
             # XXX: The data disk letters will be changed after system reset in windows.
             mount_points = get_win_drive_letters_after_reboot()
         run_stress(stress_name, mount_points)
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if windows:
+        if params.get("memory_leak_check", "no") == "yes":
+            win_driver_utils.memory_leak_check(vm, test, params)

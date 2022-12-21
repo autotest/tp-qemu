@@ -173,5 +173,6 @@ def run(test, params, env):
         utils_test.run_virt_sub_test(test, params, env, main_test)
         if vm.is_alive():
             run_bg_test_sep(bg_stress_test)
-    if params.get("memory_leak_check", "no") == "yes":
-        win_driver_utils.memory_leak_check(vm, test, params)
+    if params.get("os_type") == "windows":
+        if params.get("memory_leak_check", "no") == "yes":
+            win_driver_utils.memory_leak_check(vm, test, params)

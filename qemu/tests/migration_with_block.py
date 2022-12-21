@@ -16,6 +16,7 @@ from avocado.utils import process
 
 from provider.storage_benchmark import generate_instance
 from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -371,3 +372,8 @@ def run(test, params, env):
     if shutdown_vm or reboot:
         change_vm_power()
         check_vm_status()
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if windows:
+        if params.get("memory_leak_check", "no") == "yes":
+            win_driver_utils.memory_leak_check(vm, test, params)

@@ -168,7 +168,7 @@ def run(test, params, env):
         qemu_binary = utils_misc.get_qemu_binary(params)
 
         watchdog_type_check = params.get(
-            "watchdog_type_check", " -watchdog '?'")
+            "watchdog_type_check", " -device '?'")
         qemu_cmd = qemu_binary + watchdog_type_check
 
         # check the host support watchdog types.

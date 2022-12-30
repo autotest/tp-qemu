@@ -65,6 +65,7 @@ def run(test, params, env):
     event_id = params.get("event_id")
 
     timeout = float(params.get("timeout", 360))
+    defrag_timeout = params.get_numeric("defrag_timeout", 600, float)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -95,7 +96,7 @@ def run(test, params, env):
 
     error_context.context("Trim data disk in guest")
     status, output = session.cmd_status_output(guest_trim_cmd % drive_letter,
-                                               timeout=timeout)
+                                               timeout=defrag_timeout)
     if status:
         test.error("Error when trim the volume, status=%s, output=%s" %
                    (status, output))
@@ -106,9 +107,10 @@ def run(test, params, env):
             test.fail("Disk corruption after trim for %s"
                       % params.get("block_size"))
 
-    error_context.context("Check size from host after disk trimming")
-    new_size = utils_misc.wait_for(
-        lambda: _disk_size_smaller(ori_size), 20, 10, 1)
+    if params["retrim_size_check"] == "yes":
+        error_context.context("Check size from host after disk trimming")
+        new_size = utils_misc.wait_for(
+            lambda: _disk_size_smaller(ori_size), 20, 10, 1)
 
-    if new_size is None:
-        test.error("Data disk size is not smaller than: %sMB" % ori_size)
+        if new_size is None:
+            test.error("Data disk size is not smaller than: %sMB" % ori_size)

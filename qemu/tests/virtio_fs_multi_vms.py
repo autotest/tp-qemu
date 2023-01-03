@@ -82,7 +82,7 @@ def run(test, params, env):
     mapping = {}
     for vm, vm_obj, session in zip(params.objects('vms'), vms, sessions):
         vm_params = params.object_params(vm)
-        mapping[vm] = {'session': session, 'filesystems': []}
+        mapping[vm] = {'session': session, 'vm_obj': vm_obj, 'filesystems': []}
 
         # check driver verifier in windows vm
         # install winfsp tool and start virtiofs exe in windows vm
@@ -146,7 +146,9 @@ def run(test, params, env):
                         if s:
                             test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
                     error_context.context("Reboot guest.", test.log.info)
-                    session = vm.reboot()
+                    session = vm_obj.reboot()
+                    # session is updated in reboot steps, so it should be updated.
+                    mapping[vm]['session'] = session
                 else:
                     test.log.info("Virtiofs debug log is enabled.")
 
@@ -202,13 +204,8 @@ def run(test, params, env):
                                       (vm, fs_target), test.log.info)
                 utils_disk.umount(fs_target, fs_dest, 'virtiofs',
                                   session=session)
-        # for windows guest, disable/uninstall driver to get memory leak based on
-        # driver verifier is enabled
-        if os_type == "windows":
-            win_driver_utils.memory_leak_check(vm_obj, test, vm_params)
     if shared_fs_source_dir:
         error_context.context("Compare the md5 among VMs.", test.log.info)
-
         md5_set = set()
         for vm, info in mapping.items():
             session = info['session']
@@ -234,3 +231,11 @@ def run(test, params, env):
                                       'virtiofs', session=session)
         if len(md5_set) != 1:
             test.fail('The md5 values are different among VMs.')
+
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if os_type == "windows":
+        for vm, info in mapping.items():
+            vm_obj = info['vm_obj']
+            vm_params = params.object_params(vm)
+            win_driver_utils.memory_leak_check(vm_obj, test, vm_params)

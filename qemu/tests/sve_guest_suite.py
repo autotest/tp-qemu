@@ -20,14 +20,17 @@ def run(test, params, env):
         return sve_list
 
     def compile_test_suite():
-        error_context.context('Compose the test suite......', test.log.info)
-        git_cmd = 'git clone --depth=1 {} {} 2>/dev/null'.format(git_repo,
-                                                                 dst_dir)
-        session.cmd(git_cmd, timeout=180)
-        session.cmd(compile_cmd, timeout=180)
+        session.cmd(get_suite_cmd, timeout=180)
+        if suite_type == 'sve_stress':
+            session.cmd(params['uncompress_cmd'].format(tmp_dir, linux_name))
+        error_context.context('Compile the test suite......', test.log.info)
+        s, o = session.cmd_status_output(compile_cmd, timeout=180)
+        if s:
+            test.log.error('Compile output: %s', o)
+            test.error('Failed to compile the test suite.')
 
     def sve_stress():
-        s, o = session.cmd_status_output('./sve-probe-vls')
+        s, o = session.cmd_status_output(f'{suite_dir}/sve-probe-vls')
         test_lengths = re.findall(r'# (\d+)$', o, re.M)
         if s or not test_lengths:
             test.error('Could not get supported SVE lengths by "sve-probe-vls"')
@@ -53,13 +56,15 @@ def run(test, params, env):
     sve_lengths = get_sve_supports_lengths()
     vm.destroy()
 
-    dst_dir = params['dst_dir']
-    git_repo = params['git_repo']
-    suite_type = params['suite_type']
     compile_cmd = params['compile_cmd']
-    suite_timeout = params.get_numeric('suite_timeout')
-    required_pkgs = params.objects('required_pkgs')
+    dst_dir = params['dst_dir']
     execute_suite_cmd = params['execute_suite_cmd']
+    get_suite_cmd = params['get_suite_cmd']
+    suite_dir = params['suite_dir']
+    suite_timeout = params.get_numeric('suite_timeout')
+    suite_type = params['suite_type']
+    required_pkgs = params.objects('required_pkgs')
+    tmp_dir = params['tmp_dir']
 
     error_context.context('Launch a guest with sve=on', test.log.info)
     sve_opts = ('{}={}'.format(sve, 'on') for sve in sve_lengths)
@@ -68,6 +73,12 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login()
     cpu_utils.check_cpu_flags(params, 'sve', test, session)
+
+    kernel_version = session.cmd_output('uname -r').rsplit('.', 1)[0]
+    srpm = f"kernel-{kernel_version}.src.rpm"
+    linux_name = f"linux-{kernel_version}"
+    get_suite_cmd = get_suite_cmd.format(tmp_dir, srpm)
+    session.cmd(f'mkdir {dst_dir}')
 
     if not utils_package.package_install(required_pkgs, session):
         test.error("Failed to install required packages in guest")

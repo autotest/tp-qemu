@@ -551,3 +551,29 @@ def balloon_test(test, params, vm, balloon_test_win):
     error_context.context("Reset balloon memory...done", test.log.info)
     session.close()
     error_context.context("Balloon test done.", test.log.info)
+
+
+def pvpanic_test(test, params, vm):
+    """
+    pvpanic driver function test.
+
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param vm: The vm object
+    """
+    session = vm.wait_for_login()
+    # modify the register for windows
+    set_panic_cmd = params.get("set_panic_cmd")
+    status, output = session.cmd_status_output(set_panic_cmd)
+    if status:
+        test.error("Command '%s' failed, status: %s, output: %s" %
+                   (set_panic_cmd, status, output))
+    session = vm.reboot(session)
+
+    # triger a crash in guest
+    vm.monitor.nmi()
+
+    # check qmp event
+    expect_event = params.get("expect_event")
+    if not utils_misc.wait_for(lambda: vm.monitor.get_event(expect_event), 60):
+        test.fail("Not found expect event: %s" % expect_event)

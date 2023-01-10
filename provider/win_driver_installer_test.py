@@ -14,6 +14,7 @@ from virttest.utils_windows import virtio_win
 
 from provider import win_driver_utils
 from provider.storage_benchmark import generate_instance
+from qemu.tests.virtio_serial_file_transfer import transfer_data
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -577,3 +578,20 @@ def pvpanic_test(test, params, vm):
     expect_event = params.get("expect_event")
     if not utils_misc.wait_for(lambda: vm.monitor.get_event(expect_event), 60):
         test.fail("Not found expect event: %s" % expect_event)
+
+
+@error_context.context_aware
+def vioser_test(test, params, vm):
+    """
+    Transfer data file between guest and host, and check result via output;
+    Generate random file first if not provided
+
+    :param test: kvm test object
+    :param params: dictionary with the test parameters
+    :param vm: vm object
+    """
+
+    error_context.context("Transfer data between host and guest", test.log.info)
+    result = transfer_data(params, vm, sender='both')
+    if result is not True:
+        test.fail("Test failed. %s" % result[1])

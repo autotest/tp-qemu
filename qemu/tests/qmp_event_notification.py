@@ -57,7 +57,7 @@ def run(test, params, env):
         "dict({0})".format(params.get("post_event_cmd_options", "")))
     event_check = params.get("event_check")
     timeout = int(params.get("check_timeout", 360))
-    action_check = params.get("action_check")
+    watchdog_action = params.get("watchdog_action")
 
     if pre_event_cmd:
         send_cmd(pre_event_cmd, pre_event_cmd_type,
@@ -73,9 +73,9 @@ def run(test, params, env):
         for monitor in qmp_monitors:
             event = monitor.get_event(event_check)
             if event_check == "WATCHDOG":
-                if event and event['data']['action'] == action_check:
+                if event and event['data']['action'] == watchdog_action:
                     test.log.info("Receive watchdog %s event notification",
-                                  action_check)
+                                  watchdog_action)
                     qmp_num -= 1
                     qmp_monitors.remove(monitor)
             else:

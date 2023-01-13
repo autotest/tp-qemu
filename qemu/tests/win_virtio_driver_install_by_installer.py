@@ -67,6 +67,8 @@ def run(test, params, env):
     win_driver_installer_test.driver_check(session, test, params)
 
     driver_test_names = params.objects("driver_test_names")
+    if "viofs_basic_io" in driver_test_names:
+        win_driver_installer_test.run_viofs_service(test, params, session)
     for test_name in driver_test_names:
         test_func = "win_driver_installer_test.%s_test" % test_name
         eval("%s(test, params, vm, **driver_test_params)" % test_func)

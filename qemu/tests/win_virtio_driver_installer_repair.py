@@ -99,6 +99,11 @@ def run(test, params, env):
             driver_test_params = params.get('driver_test_params_%s'
                                             % driver_name, '{}')
             driver_test_params = ast.literal_eval(driver_test_params)
+            if driver_name == "viofs":
+                win_driver_installer_test.run_viofs_service(test, params,
+                                                            session)
+            if driver_name != "balloon":
+                driver_test_params = ast.literal_eval(driver_test_params)
             try:
                 eval("%s(test, params, vm, **driver_test_params)" % test_func)
             except Exception as e:

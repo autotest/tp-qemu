@@ -128,6 +128,10 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
     md5_guest = "2"
 
     def check_output(sender, output):
+        if output == '':
+            err = "The script output is empty, not receive"
+            err += " proper content from serial device"
+            return False, err
         if sender == "both":
             if "Md5MissMatch" in output:
                 err = "Data lost during file transfer. Md5 miss match."

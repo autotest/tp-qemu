@@ -305,26 +305,49 @@ def get_viofs_exe_path(test, params, session):
     return exe_path
 
 
-def create_viofs_service(test, params, session):
+def create_viofs_service(test, params, session, service="VirtioFsSvc"):
     """
     Only for windows guest, to create a virtiofs service
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
     :param session: the session of guest
     """
-    viofs_sc_create_cmd_default = 'sc create VirtioFsSvc binpath="%s" ' \
-                                  'start=auto  ' \
-                                  'depend="WinFsp.Launcher/VirtioFsDrv" ' \
-                                  'DisplayName="Virtio FS Service"'
-    viofs_sc_create_cmd = params.get("viofs_sc_create_cmd",
-                                     viofs_sc_create_cmd_default)
-    test.log.info("Create virtiofs service in Windows guest.")
+    install_winfsp(test, params, session)
     exe_path = get_viofs_exe_path(test, params, session)
-    sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd
-                                                         % exe_path)
-    if sc_create_s != 0:
-        test.fail(
-            "Failed to create virtiofs service, output is %s" % sc_create_o)
+    viofs_exe_copy_cmd_default = 'xcopy %s C:\\ /Y'
+    viofs_exe_copy_cmd = params.get("viofs_exe_copy_cmd",
+                                    viofs_exe_copy_cmd_default)
+    if service == "VirtioFsSvc":
+        error_context.context("Create virtiofs own service in"
+                              " Windows guest.",
+                              test.log.info)
+        output = query_viofs_service(test, params, session)
+        if "not exist as an installed service" in output:
+            session.cmd(viofs_exe_copy_cmd % exe_path)
+            viofs_sc_create_cmd_default = 'sc create VirtioFsSvc ' \
+                                          'binpath="c:\\virtiofs.exe" ' \
+                                          'start=auto  ' \
+                                          'depend="WinFsp.Launcher/VirtioFsDrv" ' \
+                                          'DisplayName="Virtio FS Service"'
+            viofs_sc_create_cmd = params.get("viofs_sc_create_cmd",
+                                             viofs_sc_create_cmd_default)
+            sc_create_s, sc_create_o = session.cmd_status_output(
+                viofs_sc_create_cmd)
+            if sc_create_s != 0:
+                test.fail("Failed to create virtiofs service, "
+                          "output is %s" % sc_create_o)
+    if service == "WinFSP.Launcher":
+        error_context.context("Delete virtiofs own service, "
+                              "using WinFsp.Launcher service instead.",
+                              test.log.info)
+        delete_viofs_serivce(test, params, session)
+        session.cmd(viofs_exe_copy_cmd % exe_path)
+        error_context.context("Config WinFsp.Launcher for multifs.",
+                              test.log.info)
+        output = session.cmd_output(params["viofs_sc_create_cmd"])
+        if "completed successfully" not in output.lower():
+            test.fail("MultiFS: Config WinFsp.Launcher failed, "
+                      "the output is %s." % output)
 
 
 @error_context.context_aware
@@ -361,11 +384,16 @@ def start_viofs_service(test, params, session):
     viofs_sc_start_cmd = params.get("viofs_sc_start_cmd",
                                     "sc start VirtioFsSvc")
     error_context.context("Start the viofs service...", test.log.info)
-    status = session.cmd_status(viofs_sc_start_cmd)
-    if status == 0:
-        test.log.info("Done to start the viofs service.")
+    test.log.info("Check if virtiofs service is started.")
+    output = query_viofs_service(test, params, session)
+    if "RUNNING" not in output:
+        status = session.cmd_status(viofs_sc_start_cmd)
+        if status == 0:
+            test.log.info("Done to start the viofs service.")
+        else:
+            test.error("Failed to start the viofs service...")
     else:
-        test.error("Failed to start the viofs service...")
+        test.log.info("Virtiofs service is running.")
 
 
 @error_context.context_aware
@@ -392,19 +420,8 @@ def run_viofs_service(test, params, session):
     :param params: Dictionary with the test parameters
     :param session: the session of guest
     """
-    install_winfsp(test, params, session)
-    output = query_viofs_service(test, params, session)
-    if "not exist as an installed service" in output:
-        test.log.info("The virtiofs service is NOT created.")
-        test.log.info("Create virtiofs service")
-        create_viofs_service(test, params, session)
-
-    test.log.info("Check if virtiofs service is started.")
-    output = query_viofs_service(test, params, session)
-    if "RUNNING" not in output:
-        start_viofs_service(test, params, session)
-    else:
-        test.log.info("Virtiofs service is running.")
+    create_viofs_service(test, params, session)
+    start_viofs_service(test, params, session)
 
 
 @error_context.context_aware

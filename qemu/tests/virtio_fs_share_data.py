@@ -19,7 +19,7 @@ from virttest.qemu_devices import qdevices
 from virttest import utils_selinux
 
 from provider.storage_benchmark import generate_instance
-
+from provider import win_driver_installer_test
 from provider import win_driver_utils
 
 
@@ -135,6 +135,48 @@ def run(test, params, env):
         if expect_status not in output:
             test.fail("Could not %s VirtioFsSvc service, "
                       "detail: '%s'" % (action, output))
+
+    def enable_debug_log(session):
+        """
+        Only for windows guest, enable debug log in guest.
+        :param session: vm session
+        :return: session
+        """
+        viofs_debug_enable_cmd = params.get("viofs_debug_enable_cmd")
+        viofs_log_enable_cmd = params.get("viofs_log_enable_cmd")
+        if viofs_debug_enable_cmd and viofs_log_enable_cmd:
+            error_context.context("Check if virtiofs debug log is enabled in guest.",
+                                  test.log.info)
+            cmd = params.get("viofs_reg_query_cmd")
+            ret = session.cmd_output(cmd)
+            if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
+                error_context.context("Configure virtiofs debug log.", test.log.info)
+                for reg_cmd in (viofs_debug_enable_cmd, viofs_log_enable_cmd):
+                    error_context.context("Set %s " % reg_cmd, test.log.info)
+                    s, o = session.cmd_status_output(reg_cmd)
+                    if s:
+                        test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
+                error_context.context("Reboot guest.", test.log.info)
+                session = vm.reboot()
+            else:
+                test.log.info("Virtiofs debug log is enabled.")
+        return session
+
+    def start_multifs_instance():
+        """
+        Only for windows and only for multiple shared directory.
+        """
+        error_context.context("MultiFS-%s: Start virtiofs instance with"
+                              " tag %s to %s."
+                              % (fs, fs_target, fs_volume_label),
+                              test.log.info)
+        instance_start_cmd = params["instance_start_cmd"]
+        output = session.cmd_output(instance_start_cmd % (fs_target,
+                                                          fs_target,
+                                                          fs_volume_label))
+        if re.search('KO.*error', output, re.I):
+            test.fail("MultiFS-%s: Start virtiofs instance failed, "
+                      "output is %s." % (fs, output))
 
     # data io config
     test_file = params.get('test_file')
@@ -317,32 +359,21 @@ def run(test, params, env):
         if os_type == "windows":
             cmd_timeout = params.get_numeric("cmd_timeout", 120)
             driver_name = params["driver_name"]
-            install_path = params["install_path"]
-            check_installed_cmd = params["check_installed_cmd"] % install_path
-
             # Check whether windows driver is running,and enable driver verifier
             session = utils_test.qemu.windrv_check_running_verifier(session,
                                                                     vm, test,
                                                                     driver_name)
-            # install winfsp tool
-            error_context.context("Install winfsp for windows guest.",
-                                  test.log.info)
-            installed = session.cmd_status(check_installed_cmd) == 0
-            if installed:
-                test.log.info("Winfsp tool is already installed.")
-            else:
-                install_cmd = utils_misc.set_winutils_letter(session,
-                                                             params["install_cmd"])
-                session.cmd(install_cmd, cmd_timeout)
-                if not utils_misc.wait_for(lambda: not session.cmd_status(
-                        check_installed_cmd), 60):
-                    test.error("Winfsp tool is not installed.")
-
+            # create virtiofs service
+            viofs_svc_name = params["viofs_svc_name"]
+            viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
+            win_driver_installer_test.create_viofs_service(test, params,
+                                                           session,
+                                                           service=viofs_svc_name)
         for fs in params.objects("filesystems"):
             fs_params = params.object_params(fs)
             fs_target = fs_params.get("fs_target")
             fs_dest = fs_params.get("fs_dest")
-
+            fs_volume_label = fs_params.get("volume_label")
             fs_source = fs_params.get("fs_source_dir")
             base_dir = fs_params.get("fs_source_base_dir",
                                      data_dir.get_data_dir())
@@ -361,44 +392,16 @@ def run(test, params, env):
                                           test.log.info)
                     if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
                         test.fail('Mount virtiofs target failed.')
-
             else:
-                error_context.context("Start virtiofs service in guest.", test.log.info)
-                viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
-                viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
-                viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
-
-                test.log.info("Check if virtiofs service is registered.")
-                status, output = session.cmd_status_output(viofs_sc_query_cmd)
-                if "not exist as an installed service" in output:
-                    viofs_svc_create(viofs_sc_create_cmd)
-
-                test.log.info("Check if virtiofs service is started.")
-                status, output = session.cmd_status_output(viofs_sc_query_cmd)
-                if "RUNNING" not in output:
-                    test.log.info("Start virtiofs service.")
-                    viofs_svc_stop_start("start", viofs_sc_start_cmd, "RUNNING")
+                if params.get("viofs_svc_name") == "VirtioFsSvc":
+                    error_context.context("Start virtiofs service in guest.",
+                                          test.log.info)
+                    win_driver_installer_test.start_viofs_service(test, params, session)
+                    session = enable_debug_log(session)
                 else:
-                    test.log.info("Virtiofs service is running.")
-
-                # enable debug log.
-                viofs_debug_enable_cmd = params.get("viofs_debug_enable_cmd")
-                viofs_log_enable_cmd = params.get("viofs_log_enable_cmd")
-                if viofs_debug_enable_cmd and viofs_log_enable_cmd:
-                    error_context.context("Check if virtiofs debug log is enabled in guest.", test.log.info)
-                    cmd = params.get("viofs_reg_query_cmd")
-                    ret = session.cmd_output(cmd)
-                    if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
-                        error_context.context("Configure virtiofs debug log.", test.log.info)
-                        for reg_cmd in (viofs_debug_enable_cmd, viofs_log_enable_cmd):
-                            error_context.context("Set %s " % reg_cmd, test.log.info)
-                            s, o = session.cmd_status_output(reg_cmd)
-                            if s:
-                                test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
-                        error_context.context("Reboot guest.", test.log.info)
-                        session = vm.reboot()
-                    else:
-                        test.log.info("Virtiofs debug log is enabled.")
+                    error_context.context("Start winfsp.launcher"
+                                          " instance in guest.", test.log.info)
+                    start_multifs_instance()
 
                 # get fs dest for vm
                 virtio_fs_disk_label = fs_target
@@ -697,6 +700,8 @@ def run(test, params, env):
                         session.cmd("cd /d C:\\")
 
                 if params.get("stop_start_repeats") and os_type == "windows":
+                    viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
+                    viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
                     viofs_sc_stop_cmd = params["viofs_sc_stop_cmd"]
                     repeats = int(params.get("stop_start_repeats", 1))
                     for i in range(repeats):
@@ -716,6 +721,14 @@ def run(test, params, env):
                 if os_type == "linux":
                     utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
                     utils_misc.safe_rmdir(fs_dest, session=session)
+        # for multi fs test in windows guest, stop winfsp.launcher instance is needed.
+        if params.get("viofs_svc_name") == "WinFSP.Launcher":
+            error_context.context("Unmount fs with WinFsp.Launcher.z", test.log.info)
+            instance_stop_cmd = params["instance_stop_cmd"]
+            for fs in params.objects("filesystems"):
+                fs_params = params.object_params(fs)
+                fs_target = fs_params.get("fs_target")
+                session.cmd(instance_stop_cmd % fs_target)
         # for windows guest, disable/uninstall driver to get memory leak based on
         # driver verifier is enabled
         if os_type == "windows":

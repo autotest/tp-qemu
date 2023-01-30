@@ -57,13 +57,15 @@ def uninstall_driver(session, test, devcon_path, driver_name,
     if status:
         test.error("Not found devcon.exe, details: %s" % output)
     LOG_JOB.info("Uninstalling previous installed driver")
-    for inf_name in _pnpdrv_info(session, device_name, ["InfName"]):
-        uninst_store_cmd = "pnputil /f /d %s" % inf_name
-        status, output = session.cmd_status_output(uninst_store_cmd,
-                                                   INSTALL_TIMEOUT)
-        if status:
-            test.error("Failed to uninstall driver '%s' from store, "
-                       "details:\n%s" % (driver_name, output))
+    # find the inf name and remove the repeated one
+    inf_list_all = _pnpdrv_info(session, device_name, ["InfName"])
+    inf_list = list(set(inf_list_all))
+    uninst_store_cmd = "pnputil /f /d %s" % inf_list[0]
+    status, output = session.cmd_status_output(uninst_store_cmd,
+                                               INSTALL_TIMEOUT)
+    if status:
+        test.error("Failed to uninstall driver '%s' from store, "
+                   "details:\n%s" % (driver_name, output))
     uninst_cmd = "%s remove %s" % (devcon_path, device_hwid)
     status, output = session.cmd_status_output(uninst_cmd, INSTALL_TIMEOUT)
     # acceptable status: OK(0), REBOOT(1)

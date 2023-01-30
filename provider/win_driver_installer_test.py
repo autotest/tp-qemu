@@ -6,6 +6,7 @@ import os
 
 from avocado.utils import process
 
+from virttest import utils_net
 from virttest import data_dir
 from virttest import error_context
 from virttest import utils_disk
@@ -595,3 +596,19 @@ def vioser_test(test, params, vm):
     result = transfer_data(params, vm, sender='both')
     if result is not True:
         test.fail("Test failed. %s" % result[1])
+
+
+def netkvm_test(test, params, vm):
+    """
+    nic driver basic test
+
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param vm: The vm object
+    """
+    get_host_ip_cmd = params["get_host_ip_cmd"]
+    session = vm.wait_for_login()
+
+    host_ip = process.system_output(get_host_ip_cmd, shell=True).decode()
+    test.log.info("Ping host from guest.")
+    utils_net.ping(host_ip, session=session, timeout=20)

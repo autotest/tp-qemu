@@ -109,11 +109,12 @@ def run(test, params, env):
                                         installer_pkg_check_cmd,
                                         copy_files_params=params)
 
-    error_context.context("Run viofs service after upgrade...")
-    win_driver_installer_test.run_viofs_service(test, params, session)
-
+    # for some guests, need to reboot guest after drivers are updated
     if params.get("need_reboot", "no") == "yes":
         session = vm.reboot(session)
+
+    error_context.context("Run viofs service after upgrade...")
+    win_driver_installer_test.run_viofs_service(test, params, session)
 
     win_driver_installer_test.check_gagent_version(session, test,
                                                    gagent_pkg_info_cmd,

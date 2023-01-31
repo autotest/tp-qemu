@@ -27,6 +27,11 @@ class IpuLegacyTest(IpuTest):
 
         """
         try:
+            # Leapp and grubby's version
+            le = self.session.cmd_output("rpm -qa|grep ^leapp")
+            test.log.info("leapp version: %s", str(le))
+            gr = self.session.cmd_output("rpm -qa|grep ^grubby")
+            test.log.info("grubby version: %s", str(gr))
             # Possible problems with remote login using root account
             self.session.cmd(self.params.get("fix_permit"))
             # Answer file missing will be fixed

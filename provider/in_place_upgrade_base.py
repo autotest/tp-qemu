@@ -109,6 +109,11 @@ class IpuTest(object):
         Fix known issues after executing pre-upgrade
         """
         try:
+            # Leapp and grubby's version
+            le = self.session.cmd_output("rpm -qa|grep ^leapp")
+            test.log.info("leapp version: %s", str(le))
+            gr = self.session.cmd_output("rpm -qa|grep grubby")
+            test.log.info("grubby version: %s", str(gr))
             # Firewalld Configuration AllowZoneDrifting Is Unsupported
             self.session.cmd(self.params.get("fix_firewalld"))
             # Possible problems with remote login using root account

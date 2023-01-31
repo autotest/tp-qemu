@@ -47,11 +47,12 @@ def run(test, params, env):
         # create an assistant user
         upgrade_test.create_ipuser(test)
         # prepare ipu test env and execute leapp tool
-        upgrade_test.run_guest_cmd(params.get("repo_leapp"))
-        upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
-        upgrade_test.run_guest_cmd(params.get("prepare_env"))
-        upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
-        upgrade_test.run_guest_cmd(params.get("get_answer_files"))
+        if not params.get_boolean("com_install"):
+            upgrade_test.run_guest_cmd(params.get("repo_leapp"))
+            upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
+            upgrade_test.run_guest_cmd(params.get("prepare_env"))
+            upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
+            upgrade_test.run_guest_cmd(params.get("get_answer_files"))
         vm_arch = params.get("vm_arch_name")
         enable_content = params.get("enable_content")
         params["enable_content"] = enable_content.format(vm_arch, vm_arch)
@@ -62,6 +63,11 @@ def run(test, params, env):
             # by which you can upgrade old system to the newer version
             # before you really do in place upgade
             old_custom_repo = params.get("old_custom_internal_repo")
+            if params.get_boolean("com_install"):
+                upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
+                upgrade_test.run_guest_cmd(params.get("prepare_env"))
+                upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
+                upgrade_test.run_guest_cmd(params.get("get_answer_files"))
             upgrade_test.yum_update_no_rhsm(test, old_custom_repo)
             upgrade_test.session = vm.reboot(upgrade_test.session)
             # please specify the new_internal_repo in the cfg in advance
@@ -73,6 +79,11 @@ def run(test, params, env):
             upgrade_test.upgrade_process(params.get("process_upgrade_no_rhsm"))
         elif params.get("rhsm_type") == "rhsm":
             upgrade_test.rhsm(test)
+            if params.get("com_install") == "yes":
+                upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
+                upgrade_test.run_guest_cmd(params.get("prepare_env"))
+                upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
+                upgrade_test.run_guest_cmd(params.get("get_answer_files"))
             upgrade_test.session = vm.reboot(upgrade_test.session)
             upgrade_test.pre_upgrade_whitelist(test)
             upgrade_test.run_guest_cmd(params.get("pre_upgrade_rhsm"))

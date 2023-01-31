@@ -98,8 +98,9 @@ def run(test, params, env):
         upgrade_test.session = vm.reboot(upgrade_test.session)
         # repo_leapp_7 it's leapp tool's repo
         # repo_leppp_7_seed and ins_leapp_cmd, install leapp tool command
-        upgrade_test.run_guest_cmd(params.get("repo_leapp_7"))
-        upgrade_test.run_guest_cmd(params.get("repo_leppp_7_seed"))
+        if not params.get_boolean("com_install"):
+            upgrade_test.run_guest_cmd(params.get("repo_leapp_7"))
+            upgrade_test.run_guest_cmd(params.get("repo_leppp_7_seed"))
         upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd_7"))
         if params.get("rhsm_type") == "rhsm":
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))

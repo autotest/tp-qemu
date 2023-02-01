@@ -194,7 +194,111 @@ def copy_file_to_samepath(session, test, params):
                        " the detailed info:\n%s." % output)
 
 
-def memory_leak_check(vm, test, params):
+def enable_driver(session, test, cmd):
+    """
+    Enable driver.
+
+    :param session: The guest session object
+    :param test: kvm test object
+    :param cmd: Driver enable cmd
+    """
+    cmd = utils_misc.set_winutils_letter(session, cmd)
+    status, output = session.cmd_status_output(cmd)
+    if status != 0:
+        test.fail("failed to enable driver, %s" % output)
+
+
+def disable_driver(session, vm, test, cmd):
+    """
+    Disable driver.
+
+    :param session: The guest session object
+    :param vm: vm object
+    :param test: kvm test object
+    :param cmd: Driver disable command
+    """
+    cmd = utils_misc.set_winutils_letter(session, cmd)
+    status, output = session.cmd_status_output(cmd)
+    if status != 0:
+        if "reboot" in output:
+            vm.reboot()
+        else:
+            test.fail("failed to disable driver, %s" % output)
+
+
+def get_device_id(session, test, driver_name):
+    """
+    Get device id from guest.
+
+    :param session: The guest session object
+    :param test: kvm test object
+    :param driver_name: Driver name
+    """
+    device_name = driver_info_dict[driver_name]["device_name"]
+    device_hwid = driver_info_dict[driver_name]["hwid"]
+
+    output = _pnpdrv_info(session, device_name, ["DeviceID"])
+    # workaround for viostor/vioscsi to get data device id
+    device_id = output[0]
+    device_id = '&'.join(device_id.split('&amp;'))
+    find_devices = False
+    for hwid in device_hwid.split():
+        hwid = hwid.split('"')[1]
+        if hwid in device_id:
+            find_devices = True
+    if not find_devices:
+        test.fail("Didn't find driver info from guest %s" % output)
+    return device_id
+
+
+def load_driver(session, test, params, load_method='enable'):
+    """
+    Load driver.
+
+    :param session: The guest session object
+    :param test: kvm test object
+    :param params: the dict used for parameters
+    :param load_method: Load driver method
+    """
+    driver_name = params["driver_name"]
+    devcon_path = params["devcon_path"]
+    if load_method != 'enable':
+        media_type = params.get("virtio_win_media_type", "iso")
+
+        device_hwid = driver_info_dict[driver_name]["hwid"]
+        return install_driver_by_virtio_media(session, test, devcon_path,
+                                              media_type, driver_name,
+                                              device_hwid)
+    else:
+        device_id = get_device_id(session, test, driver_name)
+        cmd = '%s enable "@%s"' % (devcon_path, device_id)
+        return enable_driver(session, test, cmd)
+
+
+def unload_driver(session, vm, test, params, load_method='enable'):
+    """
+    Unload driver.
+
+    :param session: The guest session object
+    :param vm: vm object
+    :param test: kvm test object
+    :param params: the dict used for parameters
+    :param load_method: Load driver method
+    """
+    driver_name = params["driver_name"]
+    devcon_path = params["devcon_path"]
+    if load_method != 'enable':
+        device_name = driver_info_dict[driver_name]["device_name"]
+        device_hwid = driver_info_dict[driver_name]["hwid"]
+        return uninstall_driver(session, test, devcon_path, driver_name,
+                                device_name, device_hwid)
+    else:
+        device_id = get_device_id(session, test, driver_name)
+        cmd = '%s disable "@%s"' % (devcon_path, device_id)
+        return disable_driver(session, vm, test, cmd)
+
+
+def memory_leak_check(vm, test, params, load_method='enable'):
     """
     In order to let the driver verifier to catch memory leaks, driver
     should be unloaded after driver function.Note that if want to use
@@ -203,21 +307,15 @@ def memory_leak_check(vm, test, params):
     :param vm: vm object
     :param test: kvm test object
     :param params: the dict used for parameters
+    :param load_method: Load driver method
     """
-    driver_name = params["driver_name"]
-    devcon_path = params["devcon_path"]
-    media_type = params.get("virtio_win_media_type", "iso")
-
-    device_name = driver_info_dict[driver_name]["device_name"]
-    device_hwid = driver_info_dict[driver_name]["hwid"]
     session = vm.wait_for_login()
-    uninstall_driver(session, test, devcon_path, driver_name,
-                     device_name, device_hwid)
+    unload_driver(session, vm, test, params, load_method)
     time.sleep(10)
     if vm.is_alive() is False:
         test.fail("VM is not alive after uninstall driver,"
                   "please check if it is a memory leak")
-    session = vm.reboot(session)
-    install_driver_by_virtio_media(session, test, devcon_path,
-                                   media_type, driver_name, device_hwid)
+    if load_method != 'enable':
+        session = vm.reboot(session)
+    load_driver(session, test, params, load_method)
     session.close()

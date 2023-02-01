@@ -7,6 +7,7 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_disk
 from virttest import error_context
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -141,6 +142,8 @@ def run(test, params, env):
     if params.get('run_iozone_parallel', 'no') == 'yes':
         disk_letters.append('C')
         run_iozone_parallel(int(params['stress_timeout']))
+        if params.get("need_memory_leak_check", "no") == "yes":
+            win_driver_utils.memory_leak_check(vm, test, params)
         return
 
     status, results = session.cmd_status_output(cmd=iozone_cmd,
@@ -155,3 +158,7 @@ def run(test, params, env):
     if params.get("post_result", "no") == "yes":
         error_context.context("Generate graph of test result", test.log.info)
         post_result(results_path, analysisdir)
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("need_memory_leak_check", "no") == "yes":
+        win_driver_utils.memory_leak_check(vm, test, params)

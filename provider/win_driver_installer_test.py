@@ -533,15 +533,12 @@ def balloon_test(test, params, vm, balloon_test_win):
     session = vm.wait_for_login()
     error_context.context("Config balloon service in guest", test.log.info)
     balloon_test_win.configure_balloon_service(session)
-    min_sz, max_sz = balloon_test_win.get_memory_boundary()
 
-    tag = "envict"
+    tag = "evict"
+    min_sz, max_sz = balloon_test_win.get_memory_boundary(tag)
     error_context.context("Running %s test" % tag, test.log.info)
-    expect_mem = int(random.uniform(min_sz,
-                                    balloon_test_win.get_ballooned_memory()))
-    utils_misc.wait_for(lambda:
-                        balloon_test_win.run_ballooning_test(expect_mem, tag),
-                        timeout=600)
+    expect_mem = int(random.uniform(min_sz, max_sz))
+    balloon_test_win.run_ballooning_test(expect_mem, tag)
 
     if mem_check == "yes":
         check_list = params["mem_stat_check_list"].split()

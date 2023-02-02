@@ -612,3 +612,29 @@ def netkvm_test(test, params, vm):
     host_ip = process.system_output(get_host_ip_cmd, shell=True).decode()
     test.log.info("Ping host from guest.")
     utils_net.ping(host_ip, session=session, timeout=20)
+
+
+@error_context.context_aware
+def fwcfg_test(test, params, vm):
+    """
+    Check if the Memory.dmp file can be saved.
+
+    :param test: kvm test object
+    :param params: the dict used for parameters.
+    :param vm: VM object.
+    """
+    tmp_dir = params["tmp_dir"]
+    if not os.path.isdir(tmp_dir):
+        process.system("mkdir %s" % tmp_dir)
+    dump_name = utils_misc.generate_random_string(4) + "Memory.dmp"
+    dump_file = tmp_dir + "/" + dump_name
+
+    output = vm.monitor.human_monitor_cmd('dump-guest-memory -w %s'
+                                          % dump_file)
+    if output:
+        test.fail("Save dump file failed as: %s" % output)
+    else:
+        cmd = "ls -l %s | awk '{print $5}'" % dump_file
+        dump_size = int(process.getoutput(cmd))
+        if dump_size == 0:
+            test.fail("The dump file is empty")

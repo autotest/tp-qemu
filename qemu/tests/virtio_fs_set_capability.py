@@ -14,6 +14,7 @@ from virttest import utils_test
 
 from virttest.utils_windows import virtio_win
 
+from provider import win_driver_installer_test
 from provider import win_driver_utils
 
 
@@ -156,142 +157,144 @@ def run(test, params, env):
     fs_target = fs_params.get("fs_target")
     fs_dest = fs_params.get("fs_dest")
     host_data = os.path.join(fs_source, 'fs_test')
-
-    if not is_windows:
-        error_context.context("Create a destination directory %s "
-                              "inside guest." % fs_dest, test.log.info)
-        utils_misc.make_dirs(fs_dest, session)
-        error_context.context("Mount virtiofs target %s to %s inside"
-                              " guest." % (fs_target, fs_dest),
-                              test.log.info)
-        if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
-            test.fail('Mount virtiofs target failed.')
-    else:
-        error_context.context("Start virtiofs service in guest.", test.log.info)
-        viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
-        viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
-        viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
-
-        test.log.info("Check if virtiofs service is registered.")
-        status, output = session.cmd_status_output(viofs_sc_query_cmd)
-        if "not exist as an installed service" in output:
-            test.log.info("Register virtiofs service in windows guest.")
-            exe_path = get_viofs_exe(session)
-            # copy virtiofs.exe to c: in case the virtio-win cdrom volume name
-            # is changed in other cases of a loop.
-            session.cmd(params.get("viofs_exe_copy_cmd") % exe_path)
-            sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
-            if sc_create_s != 0:
-                test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
-
-        test.log.info("Check if virtiofs service is started.")
-        status, output = session.cmd_status_output(viofs_sc_query_cmd)
-        if "RUNNING" not in output:
-            test.log.info("Start virtiofs service.")
-            sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
-            if sc_start_s != 0:
-                test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
-        else:
-            test.log.info("Virtiofs service is running.")
-        # enable debug log.
-        viofs_debug_enable_cmd = params.get("viofs_debug_enable_cmd")
-        viofs_log_enable_cmd = params.get("viofs_log_enable_cmd")
-        if viofs_debug_enable_cmd and viofs_log_enable_cmd:
-            error_context.context("Check if virtiofs debug log is enabled in guest.", test.log.info)
-            cmd = params.get("viofs_reg_query_cmd")
-            ret = session.cmd_output(cmd)
-            if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
-                error_context.context("Configure virtiofs debug log.", test.log.info)
-                for reg_cmd in (viofs_debug_enable_cmd, viofs_log_enable_cmd):
-                    error_context.context("Set %s " % reg_cmd, test.log.info)
-                    s, o = session.cmd_status_output(reg_cmd)
-                    if s:
-                        test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
-                error_context.context("Reboot guest.", test.log.info)
-                session = vm.reboot()
-            else:
-                test.log.info("Virtiofs debug log is enabled.")
-
-        # get fs dest for vm
-        virtio_fs_disk_label = fs_target
-        error_context.context("Get Volume letter of virtio fs target, the disk"
-                              "lable is %s." % virtio_fs_disk_label,
-                              test.log.info)
-        vol_con = "VolumeName='%s'" % virtio_fs_disk_label
-        vol_func = utils_misc.get_win_disk_vol(session, condition=vol_con)
-        volume_letter = utils_misc.wait_for(lambda: vol_func, 120)
-        if volume_letter is None:
-            test.fail("Could not get virtio-fs mounted volume letter.")
-        fs_dest = "%s:" % volume_letter
-
-    guest_file = os.path.join(fs_dest, 'fs_test')
-    test.log.info("The guest file in shared dir is %s.", guest_file)
-
     try:
-        # No extended attributes (file steams) in virtio-fs for windows
         if not is_windows:
-            if cmd_set_trusted:
-                error_context.context("Trusted attribute test without "
-                                      "%s for linux guest" % capability, test.log.info)
-                host_attributes = params["host_attributes"]
-                guest_trusted = params["guest_trusted"]
-                file_capability = params["file_capability"]
-                test.log.info("Set a trusted on guest.")
-                session.cmd(cmd_yum_attr)
-                session.cmd(cmd_set_trusted)
-                output = session.cmd_output(cmd_get_trusted)
-                test.log.info("Failed to check the trusted attribute from "
-                              "guest, the output is %s.", output)
-                if guest_trusted not in output:
-                    test.fail("It's failed to check the trusted info from the guest.")
+            error_context.context("Create a destination directory %s "
+                                  "inside guest." % fs_dest, test.log.info)
+            utils_misc.make_dirs(fs_dest, session)
+            error_context.context("Mount virtiofs target %s to %s inside"
+                                  " guest." % (fs_target, fs_dest),
+                                  test.log.info)
+            if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
+                test.fail('Mount virtiofs target failed.')
+        else:
+            error_context.context("Start virtiofs service in guest.", test.log.info)
+            viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
+            viofs_sc_start_cmd = params["viofs_sc_start_cmd"]
+            viofs_sc_query_cmd = params["viofs_sc_query_cmd"]
 
-                process.run(cmd_yum_attr)
-                output = str(process.run('getfattr %s' % fs_source).stdout.strip())
-                test.log.info("The host file trusted is %s.", output)
-                if host_attributes not in output:
-                    test.fail("Failed to check the trusted attribute from "
-                              "host, the output is %s." % output)
+            test.log.info("Check if virtiofs service is registered.")
+            status, output = session.cmd_status_output(viofs_sc_query_cmd)
+            if "not exist as an installed service" in output:
+                test.log.info("Register virtiofs service in windows guest.")
+                exe_path = get_viofs_exe(session)
+                # copy virtiofs.exe to c: in case the virtio-win cdrom volume name
+                # is changed in other cases of a loop.
+                session.cmd(params.get("viofs_exe_copy_cmd") % exe_path)
+                sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
+                if sc_create_s != 0:
+                    test.fail("Failed to register virtiofs service, output is %s" % sc_create_o)
 
-                session.cmd(cmd_create_file)
-                error_context.context("Privileged capabilities test without "
-                                      "%s for linux guest" % capability, test.log.info)
-                session.cmd(cmd_set_capability)
-                output = session.cmd_output(cmd_get_capability)
-                test.log.info("The guest file capability is %s.", output)
-                if file_capability not in output:
-                    test.fail("Failed to check the trusted attribute from "
-                              "guest, the output is %s." % output)
-                test.log.info("Modify file content and check the file capability.")
-                session.cmd(cmd_echo_file)
-                output = session.cmd_output(cmd_get_capability)
-                test.log.info("The guest change file capability is %s.", output)
-                if file_capability in output:
-                    test.fail("Still can get capability after file content is changed.")
-
-        if cmd_dd:
-            error_context.context("Creating file under %s inside guest." %
-                                  fs_dest, test.log.info)
-            session.cmd(cmd_dd % guest_file, io_timeout)
-
-            if not is_windows:
-                cmd_md5_vm = cmd_md5 % guest_file
+            test.log.info("Check if virtiofs service is started.")
+            status, output = session.cmd_status_output(viofs_sc_query_cmd)
+            if "RUNNING" not in output:
+                test.log.info("Start virtiofs service.")
+                sc_start_s, sc_start_o = session.cmd_status_output(viofs_sc_start_cmd)
+                if sc_start_s != 0:
+                    test.fail("Failed to start virtiofs service, output is %s" % sc_start_o)
             else:
-                guest_file_win = guest_file.replace("/", "\\")
-                cmd_md5_vm = cmd_md5 % (volume_letter, guest_file_win)
-            md5_guest = session.cmd_output(cmd_md5_vm, io_timeout).strip().split()[0]
+                test.log.info("Virtiofs service is running.")
+            # enable debug log.
+            viofs_debug_enable_cmd = params.get("viofs_debug_enable_cmd")
+            viofs_log_enable_cmd = params.get("viofs_log_enable_cmd")
+            if viofs_debug_enable_cmd and viofs_log_enable_cmd:
+                error_context.context("Check if virtiofs debug log is enabled in guest.", test.log.info)
+                cmd = params.get("viofs_reg_query_cmd")
+                ret = session.cmd_output(cmd)
+                if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
+                    error_context.context("Configure virtiofs debug log.", test.log.info)
+                    for reg_cmd in (viofs_debug_enable_cmd, viofs_log_enable_cmd):
+                        error_context.context("Set %s " % reg_cmd, test.log.info)
+                        s, o = session.cmd_status_output(reg_cmd)
+                        if s:
+                            test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
+                    error_context.context("Reboot guest.", test.log.info)
+                    session = vm.reboot()
+                else:
+                    test.log.info("Virtiofs debug log is enabled.")
 
-            test.log.info(md5_guest)
-            md5_host = process.run("md5sum %s" % host_data,
-                                   io_timeout).stdout_text.strip().split()[0]
-            if md5_guest != md5_host:
-                test.fail('The md5 value of host is not same to guest.')
-        # for windows guest, disable/uninstall driver to get memory leak based on
-        # driver verifier is enabled
-        if is_windows:
-            win_driver_utils.memory_leak_check(vm, test, params)
+            # get fs dest for vm
+            virtio_fs_disk_label = fs_target
+            error_context.context("Get Volume letter of virtio fs target, the disk"
+                                  "lable is %s." % virtio_fs_disk_label,
+                                  test.log.info)
+            vol_con = "VolumeName='%s'" % virtio_fs_disk_label
+            vol_func = utils_misc.get_win_disk_vol(session, condition=vol_con)
+            volume_letter = utils_misc.wait_for(lambda: vol_func, 120)
+            if volume_letter is None:
+                test.fail("Could not get virtio-fs mounted volume letter.")
+            fs_dest = "%s:" % volume_letter
+
+        guest_file = os.path.join(fs_dest, 'fs_test')
+        test.log.info("The guest file in shared dir is %s.", guest_file)
+
+        try:
+            # No extended attributes (file steams) in virtio-fs for windows
+            if not is_windows:
+                if cmd_set_trusted:
+                    error_context.context("Trusted attribute test without "
+                                          "%s for linux guest" % capability, test.log.info)
+                    host_attributes = params["host_attributes"]
+                    guest_trusted = params["guest_trusted"]
+                    file_capability = params["file_capability"]
+                    test.log.info("Set a trusted on guest.")
+                    session.cmd(cmd_yum_attr)
+                    session.cmd(cmd_set_trusted)
+                    output = session.cmd_output(cmd_get_trusted)
+                    test.log.info("Failed to check the trusted attribute from "
+                                  "guest, the output is %s.", output)
+                    if guest_trusted not in output:
+                        test.fail("It's failed to check the trusted info from the guest.")
+
+                    process.run(cmd_yum_attr)
+                    output = str(process.run('getfattr %s' % fs_source).stdout.strip())
+                    test.log.info("The host file trusted is %s.", output)
+                    if host_attributes not in output:
+                        test.fail("Failed to check the trusted attribute from "
+                                  "host, the output is %s." % output)
+
+                    session.cmd(cmd_create_file)
+                    error_context.context("Privileged capabilities test without "
+                                          "%s for linux guest" % capability, test.log.info)
+                    session.cmd(cmd_set_capability)
+                    output = session.cmd_output(cmd_get_capability)
+                    test.log.info("The guest file capability is %s.", output)
+                    if file_capability not in output:
+                        test.fail("Failed to check the trusted attribute from "
+                                  "guest, the output is %s." % output)
+                    test.log.info("Modify file content and check the file capability.")
+                    session.cmd(cmd_echo_file)
+                    output = session.cmd_output(cmd_get_capability)
+                    test.log.info("The guest change file capability is %s.", output)
+                    if file_capability in output:
+                        test.fail("Still can get capability after file content is changed.")
+
+            if cmd_dd:
+                error_context.context("Creating file under %s inside guest." %
+                                      fs_dest, test.log.info)
+                session.cmd(cmd_dd % guest_file, io_timeout)
+
+                if not is_windows:
+                    cmd_md5_vm = cmd_md5 % guest_file
+                else:
+                    guest_file_win = guest_file.replace("/", "\\")
+                    cmd_md5_vm = cmd_md5 % (volume_letter, guest_file_win)
+                md5_guest = session.cmd_output(cmd_md5_vm, io_timeout).strip().split()[0]
+
+                test.log.info(md5_guest)
+                md5_host = process.run("md5sum %s" % host_data,
+                                       io_timeout).stdout_text.strip().split()[0]
+                if md5_guest != md5_host:
+                    test.fail('The md5 value of host is not same to guest.')
+            # for windows guest, disable/uninstall driver to get memory leak based on
+            # driver verifier is enabled
+            if is_windows:
+                win_driver_utils.memory_leak_check(vm, test, params)
+        finally:
+            if not is_windows:
+                utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
+                utils_misc.safe_rmdir(fs_dest, session=session)
     finally:
-        if not is_windows:
-            utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
-            utils_misc.safe_rmdir(fs_dest, session=session)
-        session.close()
-        vm.destroy()
+        if is_windows:
+            win_driver_installer_test.delete_viofs_serivce(
+                test, params, session)

@@ -379,9 +379,9 @@ def run(test, params, env):
                                                                     driver_name)
             # create virtiofs service
             viofs_svc_name = params["viofs_svc_name"]
-            viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
             virtio_fs_utils.create_viofs_service(test, params, session,
                                                  service=viofs_svc_name)
+            viofs_svc_name = params.get("viofs_svc_name", "VirtioFsSvc")
         for fs in params.objects("filesystems"):
             fs_params = params.object_params(fs)
             fs_target = fs_params.get("fs_target")
@@ -406,7 +406,7 @@ def run(test, params, env):
                     if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
                         test.fail('Mount virtiofs target failed.')
             else:
-                if params.get("viofs_svc_name") == "VirtioFsSvc":
+                if params.get("viofs_svc_name", "VirtioFsSvc") == "VirtioFsSvc":
                     error_context.context("Start virtiofs service in guest.",
                                           test.log.info)
                     virtio_fs_utils.start_viofs_service(test, params, session)
@@ -810,6 +810,11 @@ def run(test, params, env):
         if os_type == "windows":
             win_driver_utils.memory_leak_check(vm, test, params)
     finally:
+        if os_type == 'windows' and vm and vm.is_alive():
+            win_driver_installer_test.delete_viofs_serivce(
+                test, params, session)
+            if params.get("reboot_after_delete_service", "no") == "yes":
+                session = vm.reboot(session)
         if setup_local_nfs:
             if vm and vm.is_alive():
                 vm.destroy()

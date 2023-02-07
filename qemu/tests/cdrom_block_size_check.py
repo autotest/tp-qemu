@@ -16,6 +16,9 @@ from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
 
 
 # This decorator makes the test function aware of context strings
+from virttest.utils_version import VersionInterval
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -156,7 +159,11 @@ def run(test, params, env):
     def change_media(device, target):
         try:
             with change_check:
-                vm.change_media(device, target)
+                if vm.devices.qemu_version in VersionInterval(
+                        force_parameter_version):
+                    vm.change_media(device, target, True)
+                else:
+                    vm.change_media(device, target)
         except QMPCmdError as e:
             if excepted_qmp_err not in str(e):
                 test.error(str(e))
@@ -174,6 +181,7 @@ def run(test, params, env):
     cdroms = params["test_cdroms"]
     params["cdroms"] = cdroms
     params["start_vm"] = "yes"
+    force_parameter_version = params["force_parameter_version"]
     show_mount_cmd = params.get("show_mount_cmd")
     mount_cmd = params.get("mount_cdrom_cmd")
     umount_cmd = params.get("umount_cdrom_cmd")

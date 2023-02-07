@@ -1,6 +1,7 @@
 from virttest import error_context
 from virttest import utils_test
 from provider.vioinput_basic import key_tap_test
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -33,3 +34,6 @@ def run(test, params, env):
 
     error_context.context("Run keyboard testing", test.log.info)
     key_tap_test(test, params, vm)
+    if params.get("memory_leak_check", "no") == "yes":
+        test.log.info("Do memory leak checking")
+        win_driver_utils.memory_leak_check(vm, test, params)

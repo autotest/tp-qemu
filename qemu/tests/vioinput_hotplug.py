@@ -2,6 +2,7 @@ import time
 
 from virttest import error_context
 from provider import input_tests
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -64,3 +65,6 @@ def run(test, params, env):
     unplug_input_dev(vm, new_dev)
     session = vm.reboot(session)
     session.close()
+    if params.get("memory_leak_check", "no") == "yes":
+        test.log.info("Do memory leak checking")
+        win_driver_utils.memory_leak_check(vm, test, params)

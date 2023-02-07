@@ -6,6 +6,7 @@ from virttest import error_context
 from virttest import utils_test
 from provider import input_event_proxy
 from virttest import graphical_console
+from provider import win_driver_utils
 
 
 def query_mice_status(vm, mice_name):
@@ -251,3 +252,6 @@ def run(test, params, env):
     listener.clear_events()
     listener.cleanup()
     session.close()
+    if params.get("memory_leak_check", "no") == "yes":
+        test.log.info("Do memory leak checking")
+        win_driver_utils.memory_leak_check(vm, test, params)

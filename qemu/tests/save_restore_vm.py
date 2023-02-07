@@ -41,6 +41,7 @@ def run(test, params, env):
         time.sleep(10)
         utils_memory.drop_caches()
         vm.restore_from_file(save_file)
+        vm.resume()
         session = vm.wait_for_login(timeout=timeout)
         restore_time = utils_misc.monotonic_time() - vm.start_monotonic_time
         test.write_test_keyval({'result': "%ss" % restore_time})

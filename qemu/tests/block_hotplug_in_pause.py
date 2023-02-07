@@ -7,6 +7,7 @@ from virttest import utils_disk
 from virttest.qemu_devices import qdevices
 from virttest.qemu_capabilities import Flags
 from virttest.qemu_devices.utils import (DeviceError, DeviceUnplugError)
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -304,5 +305,11 @@ def run(test, params, env):
 
         block_check_in_guest(session, disks_before_unplug,
                              blk_num, get_disk_cmd, plug_tag="unplug")
+
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        if params.get("memory_leak_check", "no") == "yes":
+            win_driver_utils.memory_leak_check(vm, test, params)
 
     session.close()

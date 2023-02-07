@@ -7,6 +7,7 @@ from virttest import error_context
 from virttest import data_dir
 from virttest import utils_disk
 from virttest import utils_misc
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -114,3 +115,8 @@ def run(test, params, env):
 
         if new_size is None:
             test.error("Data disk size is not smaller than: %sMB" % ori_size)
+
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("memory_leak_check", "no") == "yes":
+        win_driver_utils.memory_leak_check(vm, test, params)

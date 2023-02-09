@@ -53,7 +53,11 @@ def run(test, params, env):
         """
         Return the file's MD5
         """
-        return session.cmd_output("md5sum " + dd_file).split()[0]
+        status, md5 = session.cmd_status_output(
+            "md5sum " + dd_file, print_func=test.log.info)
+        if status:
+            test.error("Failed to get file's MD5")
+        return md5.split()[0]
 
     @mount_disk
     def create_random_file():
@@ -82,11 +86,13 @@ def run(test, params, env):
         """
         Steps to configure automatic unlocking at late boot stage
         """
-        session.cmd('echo "%s %s - _netdev" >> /etc/crypttab' % (mapper_name,
-                                                                 extra_disk))
-        session.cmd(
-            'echo "%s %s xfs _netdev 0 0" >> /etc/fstab' %
-            (mapper_dev, mount_path))
+        disk_uuid = session.cmd_output(
+            "blkid -s UUID -o value %s" % extra_disk).strip()
+        session.cmd('echo "%s UUID=%s none tpm2-device=auto" >> /etc/crypttab'
+                    % (mapper_name, disk_uuid))
+        session.cmd('echo "%s %s xfs defaults 0 0" >> /etc/fstab' %
+                    (mapper_dev, mount_path))
+        session.cmd('restorecon -Rv ' + mount_path)
         s, o = session.cmd_status_output("mount -av")
         if s != 0:
             test.fail("Mount format is incorrect:\n%s" % o)

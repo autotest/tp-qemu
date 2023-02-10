@@ -7,6 +7,8 @@ from virttest import utils_misc
 from provider import win_driver_utils
 from provider import win_driver_installer_test
 
+from qemu.tests.balloon_check import BallooningTestWin
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -98,7 +100,14 @@ def run(test, params, env):
             test_func = "win_driver_installer_test.%s_test" % test_name
             driver_test_params = params.get('driver_test_params_%s'
                                             % driver_name, '{}')
-            driver_test_params = ast.literal_eval(driver_test_params)
+            if driver_name == "viofs":
+                win_driver_installer_test.run_viofs_service(test, params,
+                                                            session)
+            if driver_name != "balloon":
+                driver_test_params = ast.literal_eval(driver_test_params)
+            else:
+                balloon_test_win = BallooningTestWin(test, params, env)
+                driver_test_params = {"balloon_test_win": balloon_test_win}
             try:
                 eval("%s(test, params, vm, **driver_test_params)" % test_func)
             except Exception as e:

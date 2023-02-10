@@ -1,8 +1,9 @@
 from virttest import env_process
-from virttest.virt_vm import VMCreateError
 
 from qemu.tests.qemu_disk_img import QemuImgTest
 from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
+
+from avocado.utils import process
 
 
 def run(test, params, env):
@@ -27,10 +28,15 @@ def run(test, params, env):
         _, snapshot = next(gen)
         QemuImgTest(test, params, env, snapshot).create_snapshot()
 
-    def _verify_write_lock_err_msg(test, output, img_file=None):
+    def _verify_write_lock_err_msg(test, img_file=None):
         test.log.info("Verify qemu-img write lock err msg.",)
         msgs = ['"write" lock',
                 'Is another process using the image']
+        # Check expected error messages directly in the test log
+        output = process.run(
+            r"cat " + test.logfile + r"| grep '\[qemu output\]' | grep -v 'warning'",
+            shell=True
+        ).stdout_text.strip()
         if img_file:
             msgs.append(img_file)
         if not all(msg in output for msg in msgs):
@@ -62,8 +68,8 @@ def run(test, params, env):
     try:
         vm2.create(params=vm2.params)
         vm2.verify_alive()
-    except VMCreateError as err:
-        _verify_write_lock_err_msg(test, err.output, img_file)
+    except:
+        _verify_write_lock_err_msg(test, img_file)
     else:
         test.fail("The second vm boot up, the image is not locked.")
     finally:

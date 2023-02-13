@@ -47,7 +47,7 @@ def copy_compile_testsuite(test, vm, session):
 @error_context.context_aware
 def run(test, params, env):
     """
-    Vsock seqpacket test
+    Vsock_test suite
 
     1. Boot guest with vhost-vsock-pci device
     2. Disable firewall in guest
@@ -86,6 +86,7 @@ def run(test, params, env):
             client_cmd, timeout=30, shell=True)
         if status != 0:
             test.fail("Test fail %s %s" % (status, output))
+        test.log.info("command output: %s" % output)
 
         try:
             session.read_up_to_prompt(timeout=10)
@@ -106,6 +107,7 @@ def run(test, params, env):
         status, output = session.cmd_status_output(client_cmd)
         if status != 0:
             test.fail("Test fail %s %s" % (status, output))
+        test.log.info("command output: %s" % output)
     finally:
         rm_cmd = "rm -rf /home/vsock*"
         process.system(rm_cmd, shell=True, timeout=10, ignore_status=True)

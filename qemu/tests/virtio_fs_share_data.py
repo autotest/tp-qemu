@@ -206,6 +206,16 @@ def run(test, params, env):
     winfsp_copy_cmd = params.get("winfsp_copy_cmd")
     winfsp_test_cmd = params.get("winfsp_test_cmd")
 
+    #selinux-testsuits config
+    cmd_download_selinux_suits = params.get("cmd_download_selinux_suits")
+    cmd_yum_install_se = params.get("cmd_yum_install_se")
+    jfsutils_pkg = params.get("jfsutils_pkg")
+    cmd_install_jfsutils = params.get("cmd_install_jfsutils")
+    cmd_make_sesuit = params.get("cmd_make_sesuit")
+    timeout_make_sesuit = params.get_numeric("timeout_make_sesuit")
+    make_blacklist = params.get("make_blacklist")
+    cmd_run_sesuit = params.get("cmd_run_sesuit")
+
     # nfs config
     setup_local_nfs = params.get('setup_local_nfs')
 
@@ -711,6 +721,26 @@ def run(test, params, env):
                     s, o = session.cmd_status_output(cmd_dd % guest_file, io_timeout)
                     if s:
                         test.fail("IO test failed, the output is %s" % o)
+
+                if cmd_run_sesuit:
+                    error_context.context("Run selinux_testsuits based on selinux label"
+                                          "is enabled.", test.log.info)
+                    host_path = os.path.join(data_dir.get_deps_dir('jfsutils'), jfsutils_pkg)
+                    scp_to_remote(host_addr, port, username, password, host_path, '/tmp')
+                    session.cmd(cmd_download_selinux_suits)
+                    session.cmd(cmd_yum_install_se)
+                    session.cmd(cmd_install_jfsutils)
+                    status, output = session.cmd_status_output(cmd_make_sesuit,
+                                                               timeout=timeout_make_sesuit)
+                    failed_make = output.split("Test Summary Report")[1]
+                    # ignore the specific failed make files
+                    ignore_make = re.findall(make_blacklist, failed_make).strip()
+                    if ignore_make != make_blacklist:
+                        test.fail("Make selinux testsuits failed, output is %s" % ignore_make)
+                    status, output = session.cmd_status_output(cmd_run_sesuit)
+                    if status:
+                        test.fail("Selinux-testsuits failed on virtiofs,"
+                                  " the output is %s" % output)
 
             finally:
                 if os_type == "linux":

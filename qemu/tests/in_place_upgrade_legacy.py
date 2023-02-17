@@ -3,6 +3,9 @@ import logging
 
 
 from virttest import error_context
+from virttest import data_dir
+from virttest import storage
+from avocado.utils import process
 from provider.in_place_upgrade_base import IpuTest
 
 LOG_JOB = logging.getLogger('avocado.test')
@@ -78,6 +81,8 @@ def run(test, params, env):
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
     upgrade_test.session = vm.wait_for_login(timeout=login_timeout)
+    check_rhel_ver = params.get("check_rhel_ver")
+    pre_rhel_ver = upgrade_test.run_guest_cmd(check_rhel_ver)
     try:
         # set post_release
         pre_release = params.get("pre_release")
@@ -141,8 +146,17 @@ def run(test, params, env):
         # post checking
         upgrade_test.session = vm.wait_for_login(timeout=6000)
         upgrade_test.post_upgrade_check(test, post_release)
+        post_rhel_ver = upgrade_test.run_guest_cmd(check_rhel_ver)
         vm.verify_kernel_crash()
     finally:
-        if upgrade_test.session:
-            upgrade_test.session.close()
-        vm.destroy()
+        vm.graceful_shutdown(timeout=300)
+        try:
+            image_name = params.objects("images")[0]
+            image_params = params.object_params(image_name)
+            image_path = params.get("images_base_dir", data_dir.get_data_dir())
+            old_name = storage.get_image_filename(image_params, image_path)
+            upgraded_name = old_name.replace(pre_rhel_ver, post_rhel_ver + "0")
+            process.run(params.get("image_clone_command") %
+                        (old_name, upgraded_name))
+        except Exception as error:
+            test.log.warning("Failed to rename upgraded image:%s" % str(error))

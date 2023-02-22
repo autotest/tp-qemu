@@ -1,5 +1,3 @@
-import re
-
 from virttest import error_context
 from virttest import virt_vm
 
@@ -27,5 +25,5 @@ def run(test, params, env):
 
     error_context.context("Check the expected error message: %s"
                           % error_msg, test.log.info)
-    if not re.search(error_msg, output):
+    if error_msg not in output:
         test.fail("Can not get expected error message: %s" % error_msg)

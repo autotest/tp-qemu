@@ -4,6 +4,7 @@ from virttest import error_context
 
 from provider import win_driver_installer_test
 from provider import win_driver_utils
+from provider import virtio_fs_utils
 
 from qemu.tests.balloon_check import BallooningTestWin
 
@@ -70,7 +71,7 @@ def run(test, params, env):
 
     driver_test_names = params.objects("driver_test_names")
     if "viofs_basic_io" in driver_test_names:
-        win_driver_installer_test.run_viofs_service(test, params, session)
+        virtio_fs_utils.run_viofs_service(test, params, session)
     elif "balloon" in driver_test_names:
         balloon_test_win = BallooningTestWin(test, params, env)
         driver_test_params = {"balloon_test_win": balloon_test_win}

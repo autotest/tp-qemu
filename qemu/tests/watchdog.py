@@ -454,7 +454,10 @@ def run(test, params, env):
 
     if (test_type in locals()):
         test_running = locals()[test_type]
-        test_running()
+        try:
+            test_running()
+        finally:
+            vm.destroy()
     else:
         test.error("Oops test %s doesn't exist, have a check please."
                    % test_type)

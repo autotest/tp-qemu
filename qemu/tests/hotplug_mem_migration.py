@@ -1,10 +1,12 @@
 import logging
 import re
 import time
+import math
 
 from decimal import Decimal
 
 from virttest import utils_test
+from virttest.utils_misc import NumaInfo
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 LOG_JOB = logging.getLogger('avocado.test')
@@ -42,12 +44,12 @@ def run(test, params, env):
     numa_test = params.get('numa_test')
     mem_plug_size = params.get("size_mem")
     target_mems = params["target_mems"]
-    guest_numa_nodes = params["guest_numa_nodes"]
 
     vm = env.get_vm(params["main_vm"])
-    session = vm.wait_for_login()
     utils_test.update_boot_option(vm, args_added="movable_node")
+    session = vm.wait_for_login()
 
+    numa_info = NumaInfo(session=session)
     mem_plug_size = Decimal(re.search(r'\d+', mem_plug_size).group())
     expect_mem_size = _check_online_mem(session)
     hotplug_test = MemoryHotplugTest(test, params, env)
@@ -58,10 +60,11 @@ def run(test, params, env):
 
     online_mem = _check_online_mem(session)
     _compare_mem_size(online_mem, expect_mem_size)
-    for node in guest_numa_nodes.split():
+    for node in numa_info.get_online_nodes():
         LOG_JOB.info("Use the hotplug memory by numa %s.", node)
         session.cmd(cmd_new_folder)
-        session.cmd(numa_test % re.search(r'\d+', node).group())
+        free_size = float(numa_info.read_from_node_meminfo(node, 'MemFree'))
+        session.cmd(numa_test % (node, math.floor(free_size * 0.9)), timeout=600)
     try:
         stress_args = params.get("stress_args")
         stress_test = utils_test.VMStress(vm, "stress", params,

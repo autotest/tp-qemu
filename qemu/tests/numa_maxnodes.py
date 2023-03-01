@@ -56,5 +56,6 @@ def run(test, params, env):
         if guest_numa != numa_expected:
             test.fail("Guest numa node is %s while expected numa node is %s"
                       % (guest_numa, numa_expected))
-
+    error_context.context("Check if error and calltrace in guest", test.log.info)
+    vm.verify_kernel_crash()
     session.close()

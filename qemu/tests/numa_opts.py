@@ -1,4 +1,5 @@
 from virttest import error_context
+
 from virttest.utils_misc import normalize_data_size
 from virttest.utils_misc import get_mem_info
 from virttest.utils_misc import NumaInfo
@@ -76,6 +77,8 @@ def run(test, params, env):
                               % threshold, test.log.info)
     else:
         numa_guest = numa_monitor
+    error_context.context("Check if error and calltrace in guest", test.log.info)
+    vm.verify_kernel_crash()
     session.close()
 
     for nodenr, node in enumerate(numa_guest):

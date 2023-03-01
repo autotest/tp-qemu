@@ -248,7 +248,7 @@ def run(test, params, env):
     winfsp_copy_cmd = params.get("winfsp_copy_cmd")
     winfsp_test_cmd = params.get("winfsp_test_cmd")
 
-    #selinux-testsuits config
+    # selinux-testsuits config
     cmd_download_selinux_suits = params.get("cmd_download_selinux_suits")
     cmd_yum_install_se = params.get("cmd_yum_install_se")
     jfsutils_pkg = params.get("jfsutils_pkg")
@@ -267,6 +267,10 @@ def run(test, params, env):
 
     # setup_filesystem_on_host
     setup_filesystem_on_host = params.get("setup_filesystem_on_host")
+
+    # case insensitive test
+    case_insensitive_test = params.get("case_insensitive_test")
+    viofs_case_insense_enable_cmd = params.get("viofs_case_insense_enable_cmd")
 
     # st_dev check config
     cmd_get_stdev = params.get("cmd_get_stdev")
@@ -470,6 +474,49 @@ def run(test, params, env):
                             session.cmd("cd -")
                         else:
                             session.cmd("cd /d C:\\")
+
+                if case_insensitive_test:
+                    # only for windows guest, testing case insensitive
+                    def file_check(guest_file_win):
+                        cmd_check_file = "dir %s" % guest_file_win
+                        s, o = session.cmd_status_output(cmd_check_file, io_timeout)
+                        if s:
+                            test.fail("Case insensitive failed,"
+                                      " the output is %s" % o)
+
+                    error_context.context("Check if case insensitive is set in registry.",
+                                          test.log.info)
+                    cmd = params.get("viofs_reg_query_cmd")
+                    ret = session.cmd_output(cmd)
+                    if "caseinsensitive" not in ret.lower():
+                        s, o = session.cmd_status_output(viofs_case_insense_enable_cmd)
+                        if s:
+                            test.fail("Fail to set virtiofs case insensitive,"
+                                      " output is %s" % o)
+                        else:
+                            error_context.context("Reboot guest.", test.log.info)
+                            session = vm.reboot()
+
+                    error_context.context("Creating file and file name contain "
+                                          "uppercase letter in guest.", test.log.info)
+                    test_file_guest = test_file + "_Guest"
+                    guest_file = os.path.join(fs_dest, test_file_guest)
+                    session.cmd("echo hello > %s" % guest_file, io_timeout)
+
+                    error_context.context("check the file with"
+                                          " uppercase letter name.", test.log.info)
+                    guest_file = os.path.join(fs_dest, test_file_guest.upper())
+                    guest_file_win = guest_file.replace("/", "\\")
+                    file_check(guest_file_win)
+
+                    error_context.context("Create file on host.", test.log.info)
+                    test_file_host = test_file + "_Host"
+                    host_data = os.path.join(fs_source, test_file_host)
+                    process.system('touch %s' % host_data, io_timeout)
+                    error_context.context("check the file with"
+                                          " lowercase letter name.", test.log.info)
+                    guest_file_win = os.path.join(fs_dest, test_file_host.lower()).replace("/", "\\")
+                    file_check(guest_file_win)
 
                 if cmd_symblic_file:
                     error_context.context("Symbolic test under %s inside "

@@ -40,8 +40,6 @@ def basic_io_test(test, params, session):
     """
     error_context.context("Running viofs basic io test", LOG_JOB.info)
     test_file = params.get('virtio_fs_test_file', "virtio_fs_test_file")
-    cmd_dd = params.get("virtio_fs_cmd_dd", 'dd if=/dev/urandom of=%s bs=1M '
-                                            'count=100 iflag=fullblock')
     windows = params.get("os_type", "windows") == "windows"
     io_timeout = params.get_numeric("fs_io_timeout", 120)
     fs_source = params.get("fs_source_dir", "virtio_fs_test/")
@@ -53,9 +51,14 @@ def basic_io_test(test, params, session):
     host_data = os.path.join(fs_source, test_file)
     try:
         if windows:
+            cmd_dd = params.get("virtio_fs_cmd_dd",
+                                'dd if=/dev/random of=%s bs=1M count=100')
             driver_letter = get_virtiofs_driver_letter(test, fs_target, session)
             fs_dest = "%s:" % driver_letter
         else:
+            cmd_dd = params.get("virtio_fs_cmd_dd",
+                                'dd if=/dev/urandom of=%s bs=1M '
+                                'count=100 iflag=fullblock')
             fs_dest = params.get("fs_dest", "/mnt/" + fs_target)
         guest_file = os.path.join(fs_dest, test_file)
         error_context.context("The guest file in shared dir is %s" %

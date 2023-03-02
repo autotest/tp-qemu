@@ -67,6 +67,9 @@ def run(test, params, env):
         if not windbg_installed:
             win_dump_utils.install_windbg(test, params, session,
                                           timeout=wdbg_timeout)
+        # TODO: A temporary workaround to clear up unexpected pop-up in guest
+        if params.get("need_reboot", "no") == "yes":
+            session = vm.reboot()
         win_dump_utils.dump_windbg_check(test, params, session)
     finally:
         process.system("rm %s %s" % (dump_file, dump_zip_file), shell=True)

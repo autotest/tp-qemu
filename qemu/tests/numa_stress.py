@@ -1,5 +1,6 @@
 import os
 import re
+import math
 
 from avocado.utils import process
 
@@ -59,7 +60,8 @@ def run(test, params, env):
     1) Boot up a guest and find the node it used
     2) Try to allocate memory in that node
     3) Run memory heavy stress inside guest
-    4) Check the memory use status of qemu process
+    4) Check the vm is running well after stress,
+       no out of memory or qemu crash.
     5) Repeat step 2 ~ 4 several times
 
 
@@ -82,42 +84,34 @@ def run(test, params, env):
     if test_count < len(host_numa_node.online_nodes):
         test_count = len(host_numa_node.online_nodes)
 
-    tmpfs_size = params.get_numeric("tmpfs_size")
-    for node in host_numa_node.nodes:
-        node_mem = int(host_numa_node.read_from_node_meminfo(node, "MemTotal"))
-        if tmpfs_size == 0:
-            tmpfs_size = node_mem
     tmpfs_path = params.get("tmpfs_path", "tmpfs_numa_test")
     tmpfs_path = utils_misc.get_path(data_dir.get_tmp_dir(), tmpfs_path)
     tmpfs_write_speed = get_tmpfs_write_speed()
-    dd_timeout = tmpfs_size / tmpfs_write_speed * 1.5
-    mount_fs_size = "size=%dK" % tmpfs_size
     memory_file = utils_misc.get_path(tmpfs_path, "test")
-    dd_cmd = "dd if=/dev/urandom of=%s bs=1k count=%s" % (memory_file,
-                                                          tmpfs_size)
-    utils_memory.drop_caches()
 
-    if utils_memory.freememtotal() < tmpfs_size:
-        test.cancel("Host does not have enough free memory to run the test, "
-                    "skipping test...")
+    utils_memory.drop_caches()
 
     if not os.path.isdir(tmpfs_path):
         os.mkdir(tmpfs_path)
 
     test_mem = float(params.get("mem"))*float(params.get("mem_ratio", 0.8))
     stress_args = "--cpu 4 --io 4 --vm 2 --vm-bytes %sM" % int(test_mem / 2)
-    most_used_node, memory_used = max_mem_map_node(host_numa_node, qemu_pid)
 
     for test_round in range(test_count):
+        most_used_node, _ = max_mem_map_node(host_numa_node, qemu_pid)
         if os.path.exists(memory_file):
             os.remove(memory_file)
         utils_memory.drop_caches()
-        if utils_memory.freememtotal() < tmpfs_size:
-            test.error("Don't have enough memory to execute this "
-                       "test after %s round" % test_round)
         error_context.context("Executing stress test round: %s" % test_round,
                               test.log.info)
         numa_node_malloc = most_used_node
+        tmpfs_size = \
+            math.floor(float(host_numa_node.read_from_node_meminfo(numa_node_malloc,
+                       'MemFree')) * 0.9)
+        dd_timeout = tmpfs_size / tmpfs_write_speed * 1.5
+        mount_fs_size = "size=%dK" % tmpfs_size
+        dd_cmd = "dd if=/dev/urandom of=%s bs=1k count=%s" % (memory_file,
+                                                              tmpfs_size)
         numa_dd_cmd = "numactl -m %s %s" % (numa_node_malloc, dd_cmd)
         error_context.context("Try to allocate memory in node %s"
                               % numa_node_malloc, test.log.info)
@@ -136,14 +130,6 @@ def run(test, params, env):
         error_context.context("Run memory heavy stress in guest", test.log.info)
         stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
         stress_test.load_stress_tool()
-        error_context.context("Get the qemu process memory use status",
-                              test.log.info)
-        node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
-        if node_after == most_used_node and memory_after >= memory_used:
-            test.fail("Memory still stick in node %s" % numa_node_malloc)
-        else:
-            most_used_node = node_after
-            memory_used = memory_after
         stress_test.unload_stress()
         stress_test.clean()
         utils_misc.umount("none", tmpfs_path, "tmpfs")

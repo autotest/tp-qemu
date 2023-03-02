@@ -31,6 +31,9 @@ def run(test, params, env):
         params['machine_type'] = machine_type
         params['start_vm'] = 'yes'
         vm_name = params['main_vm']
+        if max(params.get_numeric('smp'),
+               params.get_numeric('vcpu_maxcpus')) > 128:
+            params['smp'] = params['vcpu_maxcpus'] = '128'
         L3_existence = 'present' if check_L3 else 'not present'
         test.log.info('Boot guest with machine type %s and expect L3 cache %s'
                       ' inside guest', machine_type, L3_existence)

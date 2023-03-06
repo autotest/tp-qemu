@@ -308,10 +308,10 @@ def create_viofs_service(test, params, session, service="VirtioFsSvc"):
                 test.fail("Failed to create virtiofs service, "
                           "output is %s" % sc_create_o)
     if service == "WinFSP.Launcher":
-        error_context.context("Delete virtiofs own service, "
+        error_context.context("Stop virtiofs own service, "
                               "using WinFsp.Launcher service instead.",
                               test.log.info)
-        delete_viofs_serivce(test, params, session)
+        stop_viofs_service(test, params, session)
         session.cmd(viofs_exe_copy_cmd % exe_path)
         error_context.context("Config WinFsp.Launcher for multifs.",
                               test.log.info)
@@ -399,14 +399,12 @@ def stop_viofs_service(test, params, session):
     :param session: the session of guest
     """
     viofs_sc_stop_cmd = params.get("viofs_sc_stop_cmd", "sc stop VirtioFsSvc")
-    session.cmd(viofs_sc_stop_cmd)
-
-    test.log.info("Query status of the virtiofs service...")
+    test.log.info("Check if virtiofs service status.")
     output = query_viofs_service(test, params, session)
     if "RUNNING" in output:
-        test.error("Virtiofs service is still running.")
+        session.cmd(viofs_sc_stop_cmd)
     else:
-        test.log.info("Virtiofs service is stopped.")
+        test.log.info("Virtiofs service isn't running.")
 
 
 def install_winfsp(test, params, session):

@@ -14,7 +14,7 @@ from virttest import utils_test
 
 from virttest.utils_windows import virtio_win
 
-from provider import win_driver_installer_test
+from provider import virtio_fs_utils
 from provider import win_driver_utils
 
 
@@ -296,5 +296,4 @@ def run(test, params, env):
                 utils_misc.safe_rmdir(fs_dest, session=session)
     finally:
         if is_windows:
-            win_driver_installer_test.delete_viofs_serivce(
-                test, params, session)
+            virtio_fs_utils.delete_viofs_serivce(test, params, session)

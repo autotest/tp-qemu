@@ -811,8 +811,7 @@ def run(test, params, env):
             win_driver_utils.memory_leak_check(vm, test, params)
     finally:
         if os_type == 'windows' and vm and vm.is_alive():
-            win_driver_installer_test.delete_viofs_serivce(
-                test, params, session)
+            virtio_fs_utils.delete_viofs_serivce(test, params, session)
             if params.get("reboot_after_delete_service", "no") == "yes":
                 session = vm.reboot(session)
         if setup_local_nfs:

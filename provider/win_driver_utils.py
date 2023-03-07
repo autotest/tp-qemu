@@ -27,7 +27,7 @@ driver_info_dict = {"netkvm": {"hwid": '"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&
                     "viofs": {"hwid": '"PCI\\VEN_1AF4&DEV_105A"', "device_name": "VirtIO FS Device"},
                     "viostor": {"hwid": '"PCI\\VEN_1AF4&DEV_1001" "PCI\\VEN_1AF4&DEV_1042"', "device_name": "Red Hat VirtIO SCSI controller"},
                     "vioscsi": {"hwid": '"PCI\\VEN_1AF4&DEV_1004" "PCI\\VEN_1AF4&DEV_1048"', "device_name": "Red Hat VirtIO SCSI pass-through controller"},
-                    "fwcfg": {"hwid": '"ACPI\\VEN_QEMU&DEV_0002"', "device_name": "QEMU FWCfg Device"}
+                    "fwcfg": {"hwid": '"ACPI\\VEN_QEMU&DEV_0002" "ACPI\\QEMU0002"', "device_name": "QEMU FWCfg Device"}
                     }
 
 

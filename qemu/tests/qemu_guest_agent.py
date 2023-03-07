@@ -1414,6 +1414,43 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         _prepared_n_restore_env(False)
 
     @error_context.context_aware
+    def gagent_check_get_cpustats(self, test, params, env):
+        """
+        Execute "guest-get-cpustats" command to guest agent.
+
+        Steps:
+        1) Check cpu stats info
+        2) Check number of cpus.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        error_context.context("Check cpustats info of guest and "
+                              "number of cpus.", LOG_JOB.info)
+        cs_info_qga = self.gagent.get_cpustats()
+        cpu_num_guest = int(session.cmd_output(params["cpu_num_guest"]))
+        cpu_num_qga = 0
+        os_type = self.params["os_type"]
+        improper_list = []
+        for cs in cs_info_qga:
+            if cs['type'] != os_type:
+                test.fail("Cpustats info 'type' doesn't match.")
+            for key in cs.keys():
+                if (key != "type" and key != "cpu" and
+                        key not in list(params["cpustats_info_list"].split(","))):
+                    improper_list.append({("cpu%s" % cpu_num_qga): key})
+            cpu_num_qga += 1
+        if improper_list:
+            test.fail("Cpustats info is not totally correct: %s" % improper_list)
+        if cpu_num_qga != int(cpu_num_guest-1):
+            test.fail("Number of cpus is not correct, cpu_num_qga is: %d"
+                      "cpu_num_guest is %d" % (cpu_num_qga, int(cpu_num_guest-1)))
+
+    @error_context.context_aware
     def gagent_check_get_interfaces(self, test, params, env):
         """
         Execute "guest-network-get-interfaces" command to guest agent

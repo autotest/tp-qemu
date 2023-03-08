@@ -1219,8 +1219,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Execute "guest-get-disks" command to guest agent
         1) Check the disk name
         2) Check the dependencies
-        3) Check the partition
-        4) Check the alias(lvm only)
+        3) Check the bus-type
+        4) Check the partition
+        5) Check the alias(lvm only)
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
@@ -1255,6 +1256,18 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                                                  disk_info_guest['pkname'])):
                             test.fail("Disk %s dependencies is different "
                                       "between guest and qga." % diskname)
+
+                    error_context.context("Check bus-type of disk %s"
+                                          % diskname, LOG_JOB.info)
+                    if 'address' in disk_info_qga.keys():
+                        bt_qga = disk_info_qga['address']['bus-type']
+                        cmd_bt_guest = (params["cmd_bustype_guest"] %
+                                        disk_info_qga['name'].replace("/dev/", ""))
+                        bt_guest = session.cmd_output(cmd_bt_guest).strip()
+                        if bt_guest != bt_qga:
+                            test.fail("Disk %s bus-type is different between"
+                                      " guest and qga; bt_guest is %s; bt_qga"
+                                      " is %s" % (diskname, bt_guest, bt_qga))
 
                     error_context.context("Check partition of disk %s"
                                           % diskname, LOG_JOB.info)
@@ -2968,9 +2981,34 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         LOG_JOB.info("File system '%s' usages are within the safe "
                                      "floating range.", mount_point)
 
+        def format_mount_usb_fs():
+            if params["os_type"] == "windows":
+                cmd_get_usb_index = params["cmd_get_usb_index"]
+                usb_index = session.cmd_output(cmd_get_usb_index).split(" ")[0]
+                values = list(params["diskpart_txt_value"].split(","))
+            else:
+                get_usb_disk = session.cmd_output(params["cmd_get_usb_disk"] %
+                                                  params["image_size_stg"])
+                get_usb_disk = get_usb_disk.replace('\n', '')
+                values = list(params["fdisk_txt_value"].split(","))
+                create_mountpoint = session.cmd("mkdir /root/usbmountpoint")
+            for value in values:
+                if params["os_type"] == "windows":
+                    if 'select' in value:
+                        value = value % usb_index
+                    session.cmd("echo %s >> C:\\diskpart.txt" % value)
+                else:
+                    session.cmd("echo %s >> /root/fdisk.txt" % value)
+            if params["os_type"] == "windows":
+                session.cmd_status_output(params["cmd_diskpart"])
+            else:
+                session.cmd_status_output(params["cmd_fdisk"] % get_usb_disk)
+                session.cmd_output(params["cmd_format_disk"] % (get_usb_disk, 1))
+                session.cmd(params["cmd_mount_fs"] % (get_usb_disk, 1))
+
         session = self._get_session(params, None)
         self._open_session_list.append(session)
-        serial_num = params["blk_extra_params_image1"].split("=")[1]
+        format_mount_usb_fs()
 
         error_context.context("Check all file system info in a loop.",
                               LOG_JOB.info)
@@ -3028,12 +3066,23 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 LOG_JOB.info("Only check block disk's serial info, no cdrom.")
                 continue
             serial_qga = fs["disk"][0]["serial"]
-            if not re.findall(serial_num, serial_qga):
+            if fs["disk"][0]["bus-type"] == 'usb':
+                cmd_get_usb_serial = (params["cmd_get_usb_serial"] %
+                                      fs["disk"][0]["dev"].replace("\\", r"\\"))
+                serial_num = session.cmd_output(cmd_get_usb_serial).strip()
+            else:
+                serial_num = params["blk_extra_params_image1"].split("=")[1]
+            if (not re.findall(serial_num, serial_qga) or
+                    serial_num != serial_qga):
                 test.fail("Serial name is not correct via qga.\n"
                           "from guest-agent is %s.\n"
-                          "but it should include %s." % (serial_qga, serial_num))
+                          "from guest is  %s." % (serial_qga, serial_num))
             else:
                 LOG_JOB.info("Serial number is %s which is expected.", serial_qga)
+        if params["os_type"] == "linux":
+            session.cmd("rm -rf /root/fdisk.txt root/usbmountpoint")
+        else:
+            session.cmd("del C:\\diskpart.txt")
 
     @error_context.context_aware
     def gagent_check_nonexistent_cmd(self, test, params, env):
@@ -3934,6 +3983,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         """
         Execute "guest-get-disks" command to guest agent
         1) Check the disk name
+        2) Check the bus type
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
@@ -3957,6 +4007,16 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             if diskname.upper() != disk_info_guest[0].replace("\\", r"\\"):
                 test.fail("Disk %s name is different "
                           "between guest and qga." % diskname)
+
+            error_context.context("Check disk bus type", LOG_JOB.info)
+            bt_guest = session.cmd_output(params['cmd_bustype_guest']
+                                          % diskname).strip().split()[0]
+            bt_qga = disk_info['address']['bus-type']
+            if bt_qga.upper() != bt_guest:
+                if bt_qga != "sas" and bt_guest != "SCSI":
+                    test.fail("Disk %s bus-type is different between guest "
+                              "and qga; bt_guest is: %s; bt_qga "
+                              "is %s" % (diskname, bt_guest, bt_qga))
 
     @error_context.context_aware
     def gagent_check_fsfreeze_vss_test(self, test, params, env):

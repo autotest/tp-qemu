@@ -19,8 +19,8 @@ from virttest.qemu_devices import qdevices
 from virttest import utils_selinux
 
 from provider.storage_benchmark import generate_instance
-from provider import win_driver_installer_test
 from provider import win_driver_utils
+from provider import virtio_fs_utils
 
 
 @error_context.context_aware
@@ -380,9 +380,8 @@ def run(test, params, env):
             # create virtiofs service
             viofs_svc_name = params["viofs_svc_name"]
             viofs_sc_create_cmd = params["viofs_sc_create_cmd"]
-            win_driver_installer_test.create_viofs_service(test, params,
-                                                           session,
-                                                           service=viofs_svc_name)
+            virtio_fs_utils.create_viofs_service(test, params, session,
+                                                 service=viofs_svc_name)
         for fs in params.objects("filesystems"):
             fs_params = params.object_params(fs)
             fs_target = fs_params.get("fs_target")
@@ -410,7 +409,7 @@ def run(test, params, env):
                 if params.get("viofs_svc_name") == "VirtioFsSvc":
                     error_context.context("Start virtiofs service in guest.",
                                           test.log.info)
-                    win_driver_installer_test.start_viofs_service(test, params, session)
+                    virtio_fs_utils.start_viofs_service(test, params, session)
                     session = enable_debug_log(session)
                 else:
                     error_context.context("Start winfsp.launcher"

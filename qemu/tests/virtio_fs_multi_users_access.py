@@ -1,6 +1,6 @@
 from virttest import error_context, utils_test, utils_disk, utils_misc
 
-from provider import win_driver_installer_test, virtio_fs_utils
+from provider import virtio_fs_utils
 
 
 @error_context.context_aware
@@ -114,7 +114,7 @@ def run(test, params, env):
         if os_type == "windows":
             session = utils_test.qemu. \
                 windrv_check_running_verifier(session, vm, test, driver_name)
-            win_driver_installer_test.run_viofs_service(test, params, session)
+            virtio_fs_utils.run_viofs_service(test, params, session)
             vm.reboot(session)
         else:
             error_context.context("Create a destination directory %s "

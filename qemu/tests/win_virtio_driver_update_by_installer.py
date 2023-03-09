@@ -8,6 +8,7 @@ from qemu.tests.balloon_check import BallooningTestWin
 
 from provider import win_driver_utils
 from provider import win_driver_installer_test
+from provider import virtio_fs_utils
 
 
 @error_context.context_aware
@@ -67,7 +68,7 @@ def run(test, params, env):
                                                gagent_uninstall_cmd)
 
     error_context.context("Delete the viofs service at guest...")
-    win_driver_installer_test.delete_viofs_serivce(test, params, session)
+    virtio_fs_utils.delete_viofs_serivce(test, params, session)
 
     win_driver_installer_test.win_uninstall_all_drivers(session,
                                                         test, params)
@@ -98,7 +99,7 @@ def run(test, params, env):
                                                  gagent_pkg_info_cmd)
 
     error_context.context("Run viofs service...")
-    win_driver_installer_test.run_viofs_service(test, params, session)
+    virtio_fs_utils.run_viofs_service(test, params, session)
 
     error_context.context("Upgrade virtio driver to original",
                           test.log.info)
@@ -114,7 +115,7 @@ def run(test, params, env):
         session = vm.reboot(session)
 
     error_context.context("Run viofs service after upgrade...")
-    win_driver_installer_test.run_viofs_service(test, params, session)
+    virtio_fs_utils.run_viofs_service(test, params, session)
 
     win_driver_installer_test.check_gagent_version(session, test,
                                                    gagent_pkg_info_cmd,

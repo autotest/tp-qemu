@@ -1,3 +1,6 @@
+from virttest import utils_misc
+
+
 try:
     unicode
 except NameError:
@@ -332,7 +335,10 @@ def run(test, params, env):
 
         # value argument must be a json-number
         for arg in ({}, [], True, "foo"):
-            resp = monitor.cmd_qmp("migrate_set_speed", {"value": arg})
+            if utils_misc.compare_qemu_version(5, 1, 0, is_rhev=False) is True:
+                resp = monitor.cmd_qmp("migrate-set-parameters", {"downtime-limit": arg})
+            else:
+                resp = monitor.cmd_qmp("migrate_set_downtime", {"value": arg})
             check_error_resp(resp, "GenericError",
                              {"name": "value", "expected": "number"})
 

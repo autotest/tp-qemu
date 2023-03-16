@@ -6,6 +6,7 @@ from qemu.tests.virtio_console import add_chardev
 from qemu.tests.virtio_console import add_virtserial_device
 from qemu.tests.virtio_console import add_virtio_ports_to_vm
 from qemu.tests.virtio_serial_file_transfer import transfer_data
+from provider import win_driver_utils
 from qemu.tests.vioser_in_use import shutdown_guest  # pylint: disable=W0611
 from qemu.tests.vioser_in_use import reboot_guest  # pylint: disable=W0611
 from qemu.tests.vioser_in_use import live_migration_guest  # pylint: disable=W0611
@@ -144,3 +145,11 @@ def run(test, params, env):
                 test.log.info("Run %s after hot-unplug",
                               interrupt_test_after_unplug)
                 run_interrupt_test(interrupt_test_after_unplug)
+
+    if params.get("memory_leak_check", "no") == "yes":
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if params.get("os_type") == "windows":
+            vm.devices.simple_hotplug(buses[0], vm.monitor)
+            vm.devices.simple_hotplug(serial_devices[0], vm.monitor)
+            win_driver_utils.memory_leak_check(vm, test, params)

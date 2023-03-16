@@ -5,6 +5,7 @@ from virttest import utils_test
 from virttest import utils_misc
 from virttest.utils_virtio_port import VirtioPortTest
 from qemu.tests.virtio_driver_sign_check import get_driver_file_path
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -86,3 +87,8 @@ def run(test, params, env):
 
     error_context.context("Tranfer data from guest to host", test.log.info)
     transfer_from_guest_to_host(port)
+
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)

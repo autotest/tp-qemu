@@ -2,6 +2,7 @@ from virttest import error_context
 from virttest import utils_test
 from virttest import env_process
 from qemu.tests.virtio_serial_file_transfer import transfer_data
+from provider import win_driver_utils
 
 
 @error_context.context_aware
@@ -48,3 +49,7 @@ def run(test, params, env):
         transfer_data(params, vm, sender='both')
     vm.verify_alive()
     vm.verify_kernel_crash()
+    # for windows guest, disable/uninstall driver to get memory leak based on
+    # driver verifier is enabled
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)

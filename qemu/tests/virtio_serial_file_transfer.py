@@ -9,6 +9,7 @@ from virttest import data_dir
 from virttest import error_context
 from virttest import utils_misc
 from virttest import qemu_virtio_port
+from provider import win_driver_utils
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -256,6 +257,11 @@ def run(test, params, env):
     vm.verify_alive()
     test.log.info('Transfer data from %s', sender)
     result = transfer_data(params, vm, sender=sender)
+    if params.get("memory_leak_check", "no") == "yes":
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if params.get("os_type") == "windows":
+            win_driver_utils.memory_leak_check(vm, test, params)
     vm.destroy()
     if result is not True:
         test.fail("Test failed. %s" % result[1])

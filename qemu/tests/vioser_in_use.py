@@ -9,6 +9,7 @@ from virttest import utils_misc
 from virttest import utils_test
 from virttest import error_context
 from virttest import qemu_migration
+from provider import win_driver_utils
 
 from qemu.tests import virtio_serial_file_transfer
 from qemu.tests.timedrift_no_net import subw_guest_pause_resume  # pylint: disable=W0611
@@ -63,6 +64,8 @@ def vcpu_hotplug_guest(test, params, vm, session):
         vm.hotplug_vcpu_device(vcpu_id=vcpu_device)
         # make the cpu hotplug has slot during data transfer
         time.sleep(2)
+    if params.get("os_type") == "windows":
+        win_driver_utils.memory_leak_check(vm, test, params)
 
 
 @error_context.context_aware
@@ -156,3 +159,9 @@ def run(test, params, env):
         if (virtio_serial_file_transfer.transfer_data(
                 params, vm, sender=sender) is not True):
             test.fail("Serial data transfter test failed.")
+
+    if params.get("memory_leak_check", "no") == "yes":
+        # for windows guest, disable/uninstall driver to get memory leak based on
+        # driver verifier is enabled
+        if params.get("os_type") == "windows":
+            win_driver_utils.memory_leak_check(vm, test, params)

@@ -36,7 +36,7 @@ def run(test, params, env):
         except virt_vm.VMError as err:
             if int(vectors) < 0:
                 txt = "Parameter 'vectors' expects uint32_t"
-                if re.findall(txt, str(err)):
+                if re.findall(txt, err.output):
                     return
         if int(vectors) < 0:
             msg = "Qemu did not raise correct error"

@@ -33,7 +33,8 @@ def run(test, params, env):
     os_type = params["os_type"]
 
     if os_type == 'linux':
-        session.cmd("dmesg -C")
+        dmesg_cmd = params.get("dmesg_cmd", "dmesg -C")
+        session.cmd(dmesg_cmd)
 
     drive_path = ""
     if os_type == 'linux':

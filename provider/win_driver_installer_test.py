@@ -15,6 +15,7 @@ from provider import win_driver_utils
 from provider import virtio_fs_utils
 from provider.storage_benchmark import generate_instance
 from qemu.tests.virtio_serial_file_transfer import transfer_data
+from provider.vioinput_basic import key_tap_test as vioinput_test  # pylint: disable=W0611
 
 LOG_JOB = logging.getLogger('avocado.test')
 

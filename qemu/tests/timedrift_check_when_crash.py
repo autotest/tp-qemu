@@ -3,7 +3,7 @@ import re
 
 from avocado.utils import process
 from virttest.env_process import preprocess
-from virttest.virt_vm import VMDeadKernelCrashError
+from virttest.virt_vm import VMKernelCrashError
 from virttest import error_context
 from virttest import utils_test
 from virttest import utils_time
@@ -74,7 +74,7 @@ def run(test, params, env):
     vm.resume()
     try:
         session = vm.reboot(method="system_reset")
-    except VMDeadKernelCrashError as details:
+    except VMKernelCrashError as details:
         details = str(details)
         if (re.findall(r"Trigger a crash\s.*BUG:", details, re.M) and
                 details.count("BUG:") != 1):
@@ -86,7 +86,7 @@ def run(test, params, env):
         while time.time() < end_time:
             try:
                 session = vm.wait_for_login(timeout=timeout)
-            except VMDeadKernelCrashError as details:
+            except VMKernelCrashError as details:
                 details = str(details)
                 if (re.findall(r"Trigger a crash\s.*BUG:", details,
                                re.M) and details.count("BUG:") != 1):

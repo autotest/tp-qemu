@@ -95,7 +95,7 @@ def run(test, params, env):
                     vm.verify_alive()
                 except qemu_vm.QemuSegFaultError as err:
                     test.fail("Qemu crash, error info: %s" % err)
-                except virt_vm.VMDeadKernelCrashError as err:
+                except virt_vm.VMKernelCrashError as err:
                     test.fail("Guest kernel crash, info: %s" % err)
                 else:
                     test.log.warn("Guest is not alive during test")

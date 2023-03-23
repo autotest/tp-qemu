@@ -44,6 +44,7 @@ def run(test, params, env):
 
     error_context.context("Kill the VM", test.log.info)
     utils_misc.kill_process_tree(vm.process.get_pid(), timeout=60)
+    time.sleep(3)
     error_context.context("Check img after kill VM", test.log.info)
     base_dir = data_dir.get_data_dir()
     image_name = params.get("image_name")

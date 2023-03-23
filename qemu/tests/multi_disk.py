@@ -5,6 +5,7 @@ multi_disk test for Autotest framework.
 """
 import re
 import random
+import string
 
 from avocado.utils import astring
 
@@ -105,6 +106,63 @@ def run(test, params, env):
         if cmd:
             session.cmd_status_output(cmd)
         session.close()
+
+    def _get_windows_disks_index(image_size):
+        cmd_file = "disk_" + ''.join(
+            random.sample(string.ascii_letters + string.digits, 4))
+        disk_indexs = []
+        list_disk_cmd = "echo list disk > " + cmd_file
+        list_disk_cmd += " && echo exit >> " + cmd_file
+        list_disk_cmd += " && diskpart /s " + cmd_file
+        list_disk_cmd += " && del /f " + cmd_file
+        all_disks = session.cmd_output(list_disk_cmd, 180)
+        size_type = image_size[-1] + "B"
+        if size_type == "MB":
+            disk_size = image_size[:-1] + " MB"
+        elif size_type == "GB" and int(image_size[:-1]) < 8:
+            disk_size = str(int(image_size[:-1]) * 1024) + " MB"
+        else:
+            disk_size = image_size[:-1] + " GB"
+
+        regex_str = r'Disk (\d+).*?%s' % disk_size
+
+        for cmd_file in all_disks.splitlines():
+            if cmd_file.startswith("  Disk"):
+                o = re.findall(regex_str, cmd_file, re.I | re.M)
+                if o:
+                    disk_indexs.append(o[0])
+        return disk_indexs
+
+    def _get_data_disks():
+        if ostype == "windows":
+            error_context.context("Get windows disk index that to "
+                                  "be formatted", test.log.info)
+            data_disks = _get_windows_disks_index(stg_image_size)
+            if len(data_disks) < stg_image_num:
+                test.fail("Fail to list all the volumes"
+                          ", %s" % err_msg % len(data_disks))
+            if len(data_disks) > drive_letters:
+                black_list.extend(utils_misc.get_winutils_vol(session))
+                data_disks = random.sample(data_disks,
+                                           drive_letters - len(black_list))
+            error_context.context("Clear readonly for all disks and online "
+                                  "them in windows guest.", test.log.info)
+            if not utils_disk.update_windows_disk_attributes(session,
+                                                             data_disks):
+                test.fail("Failed to update windows disk attributes.")
+            dd_test = "no"
+        else:
+            error_context.context("Get linux disk that to be "
+                                  "formatted", test.log.info)
+            data_disks = []
+            all_disks = utils_disk.get_linux_disks(session, True)
+            for kname, attr in all_disks.items():
+                if attr[1] == stg_image_size and attr[2] == "disk":
+                    data_disks.append(kname)
+            if len(data_disks) < stg_image_num:
+                test.fail("Fail to list all the volumes"
+                          ", %s" % err_msg % len(data_disks))
+        return sorted(data_disks)
 
     error_context.context("Parsing test configuration", test.log.info)
     stg_image_num = 0
@@ -246,28 +304,7 @@ def run(test, params, env):
         err_msg = "Set disks num: %d" % stg_image_num
         err_msg += ", Get disks num in guest: %d"
         ostype = params["os_type"]
-        if ostype == "windows":
-            error_context.context("Get windows disk index that to "
-                                  "be formatted", test.log.info)
-            disks = utils_disk.get_windows_disks_index(session, stg_image_size, 300)
-            if len(disks) < stg_image_num:
-                test.fail("Fail to list all the volumes"
-                          ", %s" % err_msg % len(disks))
-            if len(disks) > drive_letters:
-                black_list.extend(utils_misc.get_winutils_vol(session))
-                disks = random.sample(disks, drive_letters - len(black_list))
-            error_context.context("Clear readonly for all disks and online "
-                                  "them in windows guest.", test.log.info)
-            if not utils_disk.update_windows_disk_attributes(session, disks):
-                test.fail("Failed to update windows disk attributes.")
-            dd_test = "no"
-        else:
-            error_context.context("Get linux disk that to be "
-                                  "formatted", test.log.info)
-            disks = sorted(utils_disk.get_linux_disks(session).keys())
-            if len(disks) < stg_image_num:
-                test.fail("Fail to list all the volumes"
-                          ", %s" % err_msg % len(disks))
+        disks = _get_data_disks()
     except Exception:
         _do_post_cmd(session)
         raise
@@ -277,6 +314,7 @@ def run(test, params, env):
     try:
         for i in range(n_repeat):
             test.log.info("iterations: %s", (i + 1))
+            test.log.info("Get disks:" + " ".join(disks))
             for n, disk in enumerate(disks):
                 error_context.context("Format disk in guest: '%s'" % disk,
                                       test.log.info)
@@ -340,6 +378,9 @@ def run(test, params, env):
                 vm = env.get_vm(params["main_vm"])
                 vm.create(timeout=create_timeout, params=params)
                 session = vm.wait_for_login(timeout=login_timeout)
+
+            disks = _get_data_disks()
+            test.log.info("Get disks again:" + " ".join(disks))
             error_context.context("Delete partitions in guest.", test.log.info)
             for disk in disks:
                 utils_disk.clean_partition(session, disk, ostype)

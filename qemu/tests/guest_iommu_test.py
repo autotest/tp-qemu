@@ -87,6 +87,18 @@ def check_data_disks(test, params, env, vm, session):
         iozone_test.clean()
 
 
+def verify_eim_status(test, params, session):
+    error_context.context('verify eim status.', test.log.info)
+    variant_name = params.get("diff_parameter")
+    if variant_name == "eim_off" or variant_name == "eim_on":
+        for key_words in params['check_key_words'].split(';'):
+            output = session.cmd_output("journalctl -k | grep -i \"%s\"" % key_words)
+        if not output:
+            test.fail('journalctl -k | grep -i "%s"'
+                      "from the systemd journal log." % key_words)
+        test.log.debug(output)
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -115,6 +127,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=login_timeout)
 
     check_data_disks(test, params, env, vm, session)
+    verify_eim_status(test, params, session)
     session.close()
 
     error_context.context("Ping guest!", test.log.info)

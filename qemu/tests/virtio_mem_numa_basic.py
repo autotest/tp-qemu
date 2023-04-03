@@ -24,11 +24,10 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
 
-    timeout = int(params.get("login_timeout", 240))
     threshold = params.get_numeric("threshold", target_type=float)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=timeout)
+    vm.wait_for_login()
     virtio_mem_model = 'virtio-mem-pci'
     if '-mmio:' in params.get("machine_type"):
         virtio_mem_model = 'virtio-mem-device'
@@ -43,6 +42,12 @@ def run(test, params, env):
             virtio_mem_utils.check_memory_devices(device_id, requested_size, threshold, vm, test)
             virtio_mem_utils.check_numa_plugged_mem(node_id, requested_size, threshold, vm, test)
 
-    session.close()
-    error_context.context("Shutdown guest...", test.log.debug)
-    vm.destroy()
+    operation_type = params.get("operation")
+    if operation_type == "with_reboot":
+        vm.reboot()
+        error_context.context("Verify virtio-mem device after reboot",
+                              test.log.info)
+        virtio_mem_utils.check_memory_devices(device_id, requested_size,
+                                              threshold, vm, test)
+        virtio_mem_utils.check_numa_plugged_mem(node_id, requested_size,
+                                                threshold, vm, test)

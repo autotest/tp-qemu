@@ -740,6 +740,14 @@ def run(test, params, env):
                     time.sleep(1)
                     check_security_label(file_share_in_guest, fs_dest, selinux_xattr_name)
 
+                    error_context.context("The list of xattr for the file is empty "
+                                          "in guest, let's check it.", test.log.info)
+                    getfattr_list_cmd = params.get("getfattr_list_cmd")
+                    s, o = session.cmd_status_output(getfattr_list_cmd % file_new_in_guest)
+                    if s:
+                        test.fail("Getting the empty list of xattr failed"
+                                  " on virtiofs fs, the output is %s" % o)
+
                 if winfsp_test_cmd:
                     # only for windows guest.
                     error_context.context("Run winfsp-tests suit on windows"

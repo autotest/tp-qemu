@@ -13,12 +13,12 @@ from virttest import data_dir as virttest_data_dir
 def run(test, params, env):
     """
     1) Boot the vm with multiple data disks.
-    2) Run some operation in guest if request.
+    2) Run some operation in guest if requested.
     3) Execute device_del for data disks.
     4) Sleep some time.
     5) Execute device_add for data disks.
     6) Sleep some time.
-    7) repeat step 3-6 if request.
+    7) repeat step 3-6 if requested.
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -34,6 +34,15 @@ def run(test, params, env):
         vm.copy_files_to(host_file, guest_dir)
         session.sendline("$SHELL " + guest_file)
 
+    def _simple_io_test():
+        file_name = "guest_sg_luns.sh"
+        guest_dir = "/tmp/"
+        deps_dir = virttest_data_dir.get_deps_dir()
+        host_file = os.path.join(deps_dir, file_name)
+        guest_file = guest_dir + file_name
+        vm.copy_files_to(host_file, guest_dir)
+        session.sendline("$SHELL " + guest_file)
+
     def _configure_images_params():
         for i in range(image_num):
             name = "stg%d" % i
@@ -41,8 +50,8 @@ def run(test, params, env):
             params['image_size_%s' % name] = stg_image_size
             params["images"] = params["images"] + " " + name
             if params["drive_format"] == "scsi-hd":
-                params["drive_bus_%s" % name] = 1
-                params["blk_extra_params_%s" % name] = "lun=%d" % i
+                params["drive_bus_%s" % name] = 0 if share_bus == "yes" else 1
+                params["blk_extra_params_%s" % name] = "lun=%d" % (i+1)
             image_params = params.object_params(name)
             env_process.preprocess_image(test, image_params, name)
 
@@ -73,6 +82,8 @@ def run(test, params, env):
     repeat_num = params.get_numeric("repeat_num", 1)
     unplug_time = params.get_numeric("unplug_time", 5)
     plug_time = params.get_numeric("plug_time", 5)
+    wait_time = params.get_numeric("wait_time", 0)
+    share_bus = params.get("share_bus", "no")
     images_params = {}
     error_context.context("Create images %d" % image_num, test.log.info)
     _configure_images_params()
@@ -101,9 +112,11 @@ def run(test, params, env):
         _hotplug_images()
         time.sleep(plug_time)
 
+    error_context.context("Waiting for %d seconds" % wait_time, test.log.info)
+    time.sleep(wait_time)
     error_context.context("Check disks in guest.", test.log.info)
     # re-login in case previous session is expired
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    session = vm.wait_for_login(timeout=int(params.get("relogin_timeout", 60)))
     new_disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=300))
     test.log.info("There are total %d disks after hotplug", new_disks_num)
     if new_disks_num != disks_num:

@@ -5,6 +5,7 @@ from avocado.utils import download
 from avocado.utils import process
 from virttest import data_dir
 
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -23,7 +24,7 @@ def run(test, params, env):
         image_dir = params.get("image_dir")
         md5value = params.get("md5value")
         vhdx_dest = params.get("vhdx_dest")
-        test.log.info("Parameters: %s %s %s %s" %(download_url, image_dir, md5value, vhdx_dest))
+        test.log.info("Parameters: %s %s %s %s" % (download_url, image_dir, md5value, vhdx_dest))
         image_name = os.path.basename(download_url)
         image_path = os.path.join(image_dir, image_name)
         vhdx_name = image_name.replace('qcow2', 'vhdx')
@@ -36,8 +37,7 @@ def run(test, params, env):
 
         status, output = process.getstatusoutput(cmd_covert, timeout)
         if status != 0:
-            test.error("qemu-img convert failed, status: %s, output: %s" %
-                    (status, output))
+            test.error("qemu-img convert failed, status: %s, output: %s" % (status, output))
         vm.copy_files_to(vhdx_path, vhdx_dest, timeout=300)
 
     vm = env.get_vm(params["main_vm"])
@@ -48,18 +48,18 @@ def run(test, params, env):
     test.log.info("Prepare vhdx file")
     get_vhdx()
 
-    need_reboot=0
+    need_reboot = 0
     status, output = session.cmd_status_output("powershell Get-VM -ErrorAction SilentlyContinue")
 
     if status:
-        need_reboot=1
+        need_reboot = 1
         test.log.info("Hyper-V powershell module does not install")
     else:
         test.log.info("Hyper-V powershell module has been installed")
 
     nested_dest = params.get("nested_dest")
-    path_cmd=r"powershell Remove-Item %s -recurse -force -ErrorAction SilentlyContinue" %nested_dest
- 
+    path_cmd = r"powershell Remove-Item %s -recurse -force -ErrorAction SilentlyContinue" % nested_dest
+
     try:
         session.cmd(path_cmd)
     except:
@@ -75,8 +75,8 @@ def run(test, params, env):
     # set ExecutionPolicy mainly for winows 11
     session.cmd("powershell Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force")
     # powershell C:\nested-hyperv-on-kvm\hyperv_env.ps1
-    status, output = session.cmd_status_output(r"powershell %s\hyperv_env.ps1" %nested_dest, timeout=1200)
-    if status !=0:
+    status, output = session.cmd_status_output(r"powershell %s\hyperv_env.ps1" % nested_dest, timeout=1200)
+    if status != 0:
         test.error("Setup Hyper-v enviroment error: %s", output)
     else:
         test.log.info("Setup Hyper-v enviroment pass: %s", output)
@@ -87,7 +87,7 @@ def run(test, params, env):
 
     time.sleep(5)
     # powershell C:\nested-hyperv-on-kvm\hyperv_run.ps1
-    status, output = session.cmd_status_output(r"powershell %s\hyperv_run.ps1" %nested_dest, timeout=1800)
+    status, output = session.cmd_status_output(r"powershell %s\hyperv_run.ps1" % nested_dest, timeout=1800)
     if status != 0:
         test.fail("Test failed, script output is: %s", output)
     else:

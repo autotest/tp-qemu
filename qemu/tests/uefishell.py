@@ -199,6 +199,42 @@ def run(test, params, env):
                       "The range of 'RT_Code' should be covered by just one"
                       " entry. The command output is %s" % output[0])
 
+    def handle_smbiosview(output):
+        """
+        check the following 3 values from output
+        smbios version: if smbios-entry-point-type=32, the version is 2.*
+                        e.g. 2.8
+                        if smbios-entry-point-type=64, the version is 3.*
+                        e.g. 3.0
+        bios version: show the build version
+                      e.g. edk2-20221207gitfff6d81270b5-1.el9
+        bios release date: show the release date, e.g. 12/07/2022
+                           it should be equal to the date string in
+                           bios version
+        """
+        smbios_version = re.findall(params["smbios_version"], output[0], re.S)
+        if not smbios_version:
+            test.fail("Failed to find smbios version. "
+                      "The command output is %s" % output[0])
+        bios_version = re.findall(params["bios_version"], output[0], re.S)
+        if not bios_version:
+            test.fail("Failed to find bios version. "
+                      "The command output is %s" % output[0])
+        bios_release_date = re.search(params["bios_release_date"], output[0], re.S)
+        if not bios_release_date:
+            test.fail("Failed to find bios_release_date. "
+                      "The command output is %s" % output[0])
+        date_year = bios_version[0][:4]
+        date_month = bios_version[0][4:6]
+        date_day = bios_version[0][6:]
+        if date_year != bios_release_date.group("year") or date_month != \
+                bios_release_date.group("month") or date_day != \
+                bios_release_date.group("day"):
+            test.fail("The bios release dates are not equal between "
+                      "bios_version and bios_release_date. The date from "
+                      "bios_version is %s, the date from bios_release_date "
+                      "is %s." % (bios_version[0], bios_release_date[0]))
+
     uefishell_test = UEFIShellTest(test, params, env)
     time_interval = float(params["time_interval"])
     under_fs0 = params.get("under_fs0", "yes")

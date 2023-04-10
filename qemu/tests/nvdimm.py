@@ -154,8 +154,9 @@ def run(test, params, env):
                 hotplug_test.hotplug_memory(vm, mem)
             time.sleep(10)
             mems += target_mems
+        nvdimm_test.run_guest_cmd(params["repo_install_cmd"])
         error_context.context("Verify nvdimm in monitor and guest", test.log.info)
-        pkgs = params.objects("depends_pks")
+        pkgs = params.objects("depends_pkgs")
         if not utils_package.package_install(pkgs, nvdimm_test.session):
             test.cancel("Install dependency packages failed")
         nvdimm_ns_create_cmd = params.get("nvdimm_ns_create_cmd")

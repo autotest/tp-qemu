@@ -5,7 +5,7 @@
 #  - The required Hyper-V vSwitche is created, e.g. Internal switch.
 #######################################################################
 
-Write-Host "Start to build up enviroment for Hyper-V"
+Write-Host "Info: Start to build up enviroment for Hyper-V"
 
 $internalSwitchName = "Internal"
 $externalSwitchName = "External"
@@ -13,11 +13,12 @@ $externalSwitchName = "External"
 function TestCommandExists ([String]$command){
     try {
         if(Get-Command $command -ErrorAction SilentlyContinue){
+            Write-Host “Info: $command exists”; 
             return $true
         }
     }
     Catch {
-        Write-Host “$command does not exist”; 
+        Write-Host “Info: $command does not exist”; 
         return $false
     }
 }
@@ -30,6 +31,9 @@ function InstallHyperVPowershell(){
             Install-windowsFeature -Name Hyper-v-powershell
             if (-not $?){
                 Throw "Error: Unable to install Hyper-v module"
+            }
+            else{
+                Write-Host “Info: Have executed Install-windowsfeature successfully”; 
             }
         }
     }
@@ -120,16 +124,21 @@ function InstallRolesAndFeatures(){
             $feature = Install-WindowsFeature -Name "Hyper-V" -IncludeAllSubfeature -IncludeManagementTools
             if (-not $feature.Success){
                 Throw "Error: Unable to install the Hyper-V roles }"
+            }else{
+                Write-Host "Info:  Have executed Install-WindowsFeature successfully"
             }
         }
     }
     else{
-        # For windows 11
+        # For windows 10 and 11
         $hypervFeature = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All
         if (-not $hypervFeature.Enalbed){
-            $feature=Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All
+            $feature=Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -NoRestart
             if (-not $feature.Online){
                 Throw "Error: Unable to enable the Hyper-V roles }"
+            }
+            else{
+                Write-Host "Info: Have executed Enable-WindowsOptionalFeature successfully"
             }
         }
     }
@@ -143,7 +152,10 @@ function InstallRolesAndFeatures(){
 
 try {
     # Install any roles and features
+    Write-Host "Info: Start to install for Hyper-V Powershell"
     InstallHyperVPowershell
+
+    Write-Host "Info: Start to install Hyper-V role"
     InstallRolesAndFeatures
     #CreateExternalSwitch
     #CreateInternalSwitch

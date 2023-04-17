@@ -82,7 +82,10 @@ class IpuTest(object):
             self.session.cmd(ena_content, timeout=3000)
             self.session.cmd(self.params.get("stop_yum_update"))
             self.session.cmd(self.params.get("check_repo_list"), timeout=300)
-            self.session.cmd(self.params.get("set_release"), timeout=300)
+            o = self.session.cmd_output(self.params.get("check_rhel_ver"), timeout=60)
+            set_ver = o[:1] + "." + o[1:]
+            set_ver_com = self.params.get("set_release") + set_ver
+            self.session.cmd(set_ver_com, timeout=300)
             update_vm = self.params.get("yum_update")
             self.session.cmd(update_vm, timeout=6000)
         except Exception as error:

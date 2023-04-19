@@ -11,7 +11,7 @@ function CreatePrivateSwitches(){
     Write-Host "Info : Checking for Private vSwitch named '${PrivateSwitchName}'"
     $privateSwitch = Get-VMSwitch -Name "${privateSwitchName}" -ErrorAction SilentlyContinue
     if (-not $privateSwitch){
-        $s = New-VMSwitch -Name "${privateSwitchName}" -SwitchType Private
+        New-VMSwitch -Name "${privateSwitchName}" -SwitchType Private
         if (-not $?){
             Throw "Error: Unable to create Private switch"
         }
@@ -25,7 +25,6 @@ function CreatePrivateSwitches(){
 # Create internal switch if does not exist
 CreatePrivateSwitches
 
-$vhdx_name_complete=[System.IO.Path]::GetFileName($vhdx_path)
 $vhdx_name=[System.IO.Path]::GetFileNameWithoutExtension($vhdx_path)
 $vhdx_folder=[System.IO.Path]::GetDirectoryName($vhdx_path)
 

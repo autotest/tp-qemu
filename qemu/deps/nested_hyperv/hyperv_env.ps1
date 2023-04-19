@@ -13,12 +13,12 @@ $externalSwitchName = "External"
 function TestCommandExists ([String]$command){
     try {
         if(Get-Command $command -ErrorAction SilentlyContinue){
-            Write-Host “Info: $command exists”; 
+            Write-Host “Info: $command exists”;
             return $true
         }
     }
     Catch {
-        Write-Host “Info: $command does not exist”; 
+        Write-Host “Info: $command does not exist”;
         return $false
     }
 }
@@ -33,7 +33,7 @@ function InstallHyperVPowershell(){
                 Throw "Error: Unable to install Hyper-v module"
             }
             else{
-                Write-Host “Info: Have executed Install-windowsfeature successfully”; 
+                Write-Host “Info: Have executed Install-windowsfeature successfully”;
             }
         }
     }
@@ -64,7 +64,7 @@ function CreateExternalSwitch()
     foreach ($nic in $adapters){
         # Make sure NIC is connected (MediaConnectState = 1)
         # and the NIC is up (InterfaceOperationalStatus = 1)
-       
+
         if ($nic.InterfaceOperationalStatus -eq 1 -and $nic.MediaConnectState -eq 1){
             $numPotentialNICs += 1
             $potentialNIC = $nic.InterfaceDescription
@@ -87,7 +87,7 @@ function CreateExternalSwitch()
     #
     # Create an External NIC using the one potential physical NIC
     #
-    $s = New-VMSwitch -Name "${externalSwitchName}" -NetAdapterInterfaceDescription "${potentialNIC}"
+    New-VMSwitch -Name "${externalSwitchName}" -NetAdapterInterfaceDescription "${potentialNIC}"
     if (-not $?){
         Write-Host "Error: Unable to create external vSwitch using NIC '${potentialNIC}'"
         exit 1
@@ -104,7 +104,7 @@ function CreateInternalSwitch(){
     Write-Host "Info: Checking for Internal vSwitch named '${internalSwitchName}'"
     $internalSwitch = Get-VMSwitch -Name "${internalSwitchName}" -ErrorAction SilentlyContinue
     if (-not $internalSwitch){
-        $s = New-VMSwitch -Name "${internalSwitchName}"  -SwitchType Internal
+        New-VMSwitch -Name "${internalSwitchName}"  -SwitchType Internal
         if (-not $?){
             Throw "Error: Unable to create Internal switch"
         }

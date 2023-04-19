@@ -54,16 +54,15 @@ function VMRemove([String]$vmName){
         # Get latest snapshot
         Get-VMSnapshot -VMName $vmName | Remove-VMSnapshot
         start-sleep -s 2
-        
         $vhdpath = (get-vm -vmName $vmName | Select-Object vmid | get-vhd ).ParentPath
         if ( -not $vhdpath ) {
             $vhdpath = (get-vm -vmName $vmName | Select-Object vmid | get-vhd ).Path
         }
-        
+
         Remove-VM -Name $vmName  -Confirm:$false -Force
         start-sleep -s 2
         remove-item -Path $vhdpath -force
-        
+
         if ($?){
             write-output "Info: Remove VM succussfully"
         }
@@ -192,7 +191,6 @@ function NewVMFromVHDX([String]$vmPath, [Switch]$gen2, [String]$switchName, [Str
     }
     else {
         New-VM -Name "$vmName" -BootDevice "IDE" -MemoryStartupBytes $memory -VHDPath $vmPath -SwitchName $switchName | Out-Null
-       
     }
 
     if (-not $?){
@@ -215,13 +213,12 @@ function NewVMFromVHDX([String]$vmPath, [Switch]$gen2, [String]$switchName, [Str
         write-host "Error: fail to set the firmware and processor for VM $vmName"
         return $false
     }
-   
     return $true
 }
 
 function VMStart([String]$vmPath, [String]$vmName, [Bool]$gen2, [String]$switchName, [Int64]$cpuCount, [Int64]$mem){
     write-host "Info: vmName is $vmName"
-   
+
     # Create vm based on new vhdx file
     if ($gen2){
         NewVMFromVHDX -vmPath "${vmPath}\${vmName}.vhdx" -gen2 $true -switchName $switchName -vmName $vmName -cpuCount $cpuCount -mem $mem
@@ -232,7 +229,6 @@ function VMStart([String]$vmPath, [String]$vmName, [Bool]$gen2, [String]$switchN
     # Now Start the VM
     write-host "Info: Starting VM $vmName."
     Start-VM -Name $vmName
-    
     start-sleep -seconds 60
 
     $timeout = 0
@@ -243,7 +239,7 @@ function VMStart([String]$vmPath, [String]$vmName, [Bool]$gen2, [String]$switchN
     if ($($hb.Enabled) -eq "True" -and $($vm.Heartbeat) -eq "OkApplicationsUnknown") {
         write-host "Heartbeat detected"
         return $true
-    } 
+    }
     else {
         start-sleep -seconds 10
         $timeout = $timeout + 10
@@ -257,7 +253,7 @@ function VMStart([String]$vmPath, [String]$vmName, [Bool]$gen2, [String]$switchN
 
 function VMPowerOn([String]$vmName){
     write-host "Info: vmName is $vmName"
-   
+
     # Now Start the VM
     write-host "Info: Starting VM $vmName."
     $timeout = 300
@@ -305,7 +301,7 @@ function VMPowerOn([String]$vmName){
 function VMInstall([String]$vmPath, [String]$vmName, [Bool]$gen2, [String]$switchName, [Int64]$cpuCount, [Int64]$mem, [String]$isopath, [String]$isoKsPath){
     write-host "Info: Prepare to install vm, vmName is $vmName"
     $startDTM = (Get-Date)
-   
+
     # Create vm based on new vhdx file by installing iso
     if ($gen2){
         NewVMFromISO -vmPath "${vmPath}\${vmName}.vhdx" -gen2 -switchName $switchName -vmName $vmName -cpuCount $cpuCount -mem $mem -isoPath $isopath -isoKsPath $isoKsPath
@@ -315,7 +311,7 @@ function VMInstall([String]$vmPath, [String]$vmName, [Bool]$gen2, [String]$switc
     }
     # Now Start the VM
     write-host "Info: Installing VM $vmName is started "
-   
+
     $timeout = 6000
     Start-VM -Name $vmName
     WaitForVMToStartKVP -vmName $vmName -timeout $timeout
@@ -349,13 +345,13 @@ function NewVMFromISO([String]$vmPath, [switch]$gen2, [String]$switchName, [Stri
     # gen2 need specify -Generation
     if ($gen2){
         write-host "Info: New-VM -Name $vmName -MemoryStartupBytes $memory -Generation 2 -NewVHDSizeBytes 30GB -SwitchName $switchName -NewVHDPath $vmPath"
-  
+
         New-VM -Name $vmName -MemoryStartupBytes $memory -Generation 2 -NewVHDSizeBytes 30GB -SwitchName $switchName -NewVHDPath $vmPath
     }
     else
     {
         write-host "Info: New-VM -Name $vmName -MemoryStartupBytes $memory -NewVHDSizeBytes 30GB -SwitchName $switchName -NewVHDPath $vmPath -BootDevice IDE"
-  
+
         New-VM -Name $vmName -MemoryStartupBytes $memory -NewVHDSizeBytes 30GB -SwitchName $switchName -NewVHDPath $vmPath -BootDevice "IDE"
     }
 
@@ -404,7 +400,7 @@ function NewVMFromISO([String]$vmPath, [switch]$gen2, [String]$switchName, [Stri
 # Test command
 #.\hyperv_set.ps1 -action install -vm_name test_install -vhd_path .\vhdpath\
 #  -isopath C:\test.iso -isokspath C:\Temp\ks.iso
-#.\hyperv_set.ps1 -action clone -vm_name testvm -vhd_path C:\ -gen2 
+#.\hyperv_set.ps1 -action clone -vm_name testvm -vhd_path C:\ -gen2
 # note: -vhd_path is folder path
 
 $DebugPreference = "Continue"
@@ -433,8 +429,8 @@ switch ($action){
         return $ret
     }
     "poweron"{
-        # poweron 
+        # poweron
         $ret = VMPowerOn $vm_name
         return "$($ret[-1])".trim()
-    }   
+    }
 }

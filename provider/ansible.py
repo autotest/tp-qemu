@@ -117,21 +117,23 @@ def check_ansible_playbook(params):
     check if ansible-playbook exists or not.
 
     :param params: Dictionary with the test parameters.
-    :return: True if ansible-playbook exists or be installed success, else False.
+    :return: True if full ansible version is installed, else False.
     """
+
+    def _pip_binary():
+        """
+        Define pip binary
+        """
+        for binary in ['pip', 'pip3', 'pip2']:
+            if process.system("which %s" % binary, ignore_status=True) == 0:
+                return binary
+        LOG_JOB.error("Failed to get available pip binary")
+        return False
 
     def python_install():
         """
         Install python ansible.
         """
-        pip_bin = ''
-        for binary in ['pip', 'pip3', 'pip2']:
-            if process.system("which %s" % binary, ignore_status=True) == 0:
-                pip_bin = binary
-                break
-        if not pip_bin:
-            LOG_JOB.error("Failed to get available pip binary")
-            return False
         install_cmd = '%s install ansible' % pip_bin
         status, output = process.getstatusoutput(install_cmd, verbose=True)
         if status != 0:
@@ -167,16 +169,32 @@ def check_ansible_playbook(params):
     policy_map = {"distro_install": distro_install,
                   "python_install": python_install}
 
+    ansible_install_policy = params.get('ansible_install_policy')
+    if ansible_install_policy:
+        if ansible_install_policy not in policy_map:
+            LOG_JOB.error(f"No valid install policy: {ansible_install_policy}.")
+            return False
     package_list = params.get_list("package_list", 'sshpass')
     try:
-        path.find_command('ansible-playbook')
-    except path.CmdNotFoundError:
-        ansible_install_policy = params['ansible_install_policy']
-        if ansible_install_policy == 'distro_install':
+        check_cmd = params.get("ansible_check_cmd")
+        if ansible_install_policy == 'python_install':
+            global pip_bin
+            pip_bin = _pip_binary()
+            check_cmd = rf"{pip_bin} freeze | grep -v ansible-core | grep -q ansible="
+        elif ansible_install_policy == 'distro_install':
             package_list.insert(0, 'ansible')
+        if check_cmd:
+            LOG_JOB.debug(f"Is full ansible version installed: '{check_cmd}'")
+            process.run(check_cmd, verbose=False, shell=True)
         else:
-            if not policy_map[ansible_install_policy]():
-                return False
+            path.find_command('ansible-playbook')
+    except (path.CmdNotFoundError, process.CmdError):
+        # If except block is reached and no ansible install policy
+        # is defined it is not possible to install ansible at all
+        if not ansible_install_policy:
+            return False
+        if not policy_map[ansible_install_policy]():
+            return False
     # Install ansible depended packages that can't be installed
     # by pip (or are not a dependency) when installing ansible
     if not policy_map['distro_install'](package_list):

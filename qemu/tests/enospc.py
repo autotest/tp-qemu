@@ -96,7 +96,7 @@ class EnospcConfig(object):
         # Now, if we can, let's remove the physical volume from lvm list
         if self.loopback:
             p_result = process.run("pvdisplay")
-            if self.loopback in p_result.stdout:
+            if self.loopback in p_result.stdout.decode():
                 process.run("pvremove -f %s" % self.loopback)
         l_result = process.run('losetup -a')
         if self.loopback and (self.loopback in l_result.stdout.decode()):

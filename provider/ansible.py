@@ -133,20 +133,13 @@ def check_ansible_playbook(params):
             LOG_JOB.error("Failed to get available pip binary")
             return False
         install_cmd = '%s install ansible' % pip_bin
-        # Install ansible depended packages that can't be installed
-        # automatically by pip when installing ansible
-        package_list = params.get_list("package_list", 'sshpass')
-        if package_list:
-            if not utils_package.package_install(package_list):
-                LOG_JOB.error("Failed to install '%s'.", package_list)
-                return False
         status, output = process.getstatusoutput(install_cmd, verbose=True)
         if status != 0:
             LOG_JOB.error("Install python ansible failed as: %s", output)
             return False
         return True
 
-    def distro_install():
+    def distro_install(packages="ansible"):
         """
         Install ansible from the distro
         """
@@ -163,19 +156,30 @@ def check_ansible_playbook(params):
             else:
                 LOG_JOB.error("Ansible repo was required, but failed to be added.")
                 return False
-        install_status = utils_package.package_install('ansible')
+        install_status = utils_package.package_install(packages)
         if not install_status:
-            LOG_JOB.error(f"Failed to install ansbile.")
-        yum_backend.remove_repo(params["ansible_repo"])
+            LOG_JOB.error(f"Failed to install {packages}.")
+        # Remove custom dnf repo when it is no longer used
+        if params.get("ansible_repo"):
+            yum_backend.remove_repo(params["ansible_repo"])
         return install_status
 
     policy_map = {"distro_install": distro_install,
                   "python_install": python_install}
 
+    package_list = params.get_list("package_list", 'sshpass')
     try:
         path.find_command('ansible-playbook')
     except path.CmdNotFoundError:
         ansible_install_policy = params['ansible_install_policy']
-        return policy_map[ansible_install_policy]()
-    else:
-        return True
+        if ansible_install_policy == 'distro_install':
+            package_list.insert(0, 'ansible')
+        else:
+            if not policy_map[ansible_install_policy]():
+                return False
+    # Install ansible depended packages that can't be installed
+    # by pip (or are not a dependency) when installing ansible
+    if not policy_map['distro_install'](package_list):
+        return False
+    # If ansible and dependents packages are installed correctly
+    return True

@@ -77,6 +77,13 @@ def run(test, params, env):
                       " host's system time. Host time: '%s', guest time:"
                       " '%s'" % (time_type, host_time, guest_time))
 
+    def disable_local_rtc(session=None):
+        cmd_func = session.cmd_output if session else process.getoutput
+        if "RTC in local TZ: yes" in cmd_func("timedatectl status"):
+            cmd_func("timedatectl set-local-rtc 0")
+            if session and "NTP service: active" in cmd_func("timedatectl"):
+                vm.reboot()
+
     error_context.context("sync host time with NTP server",
                           test.log.info)
     clock_sync_command = params["clock_sync_command"]
@@ -93,6 +100,11 @@ def run(test, params, env):
     utils_time.sync_timezone_linux(vm, timeout)
 
     session = vm.wait_for_login(timeout=timeout)
+
+    error_context.context("Ensure host/guest is configured to maintain the RTC"
+                          " in universal time", test.log.info)
+    disable_local_rtc()
+    disable_local_rtc(session)
 
     error_context.context("check timedrift between guest and host.",
                           test.log.info)

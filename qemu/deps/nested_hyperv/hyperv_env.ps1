@@ -13,12 +13,12 @@ $externalSwitchName = "External"
 function TestCommandExists ([String]$command){
     try {
         if(Get-Command $command -ErrorAction SilentlyContinue){
-            Write-Host “Info: $command exists”;
+            Write-Host "Info: $command exists";
             return $true
         }
     }
     Catch {
-        Write-Host “Info: $command does not exist”;
+        Write-Host "Info: $command does not exist";
         return $false
     }
 }
@@ -33,7 +33,7 @@ function InstallHyperVPowershell(){
                 Throw "Error: Unable to install Hyper-v module"
             }
             else{
-                Write-Host “Info: Have executed Install-windowsfeature successfully”;
+                Write-Host "Info: Have executed Install-windowsfeature successfully";
             }
         }
     }
@@ -123,9 +123,9 @@ function InstallRolesAndFeatures(){
         if (-not $hypervFeature.Installed){
             $feature = Install-WindowsFeature -Name "Hyper-V" -IncludeAllSubfeature -IncludeManagementTools
             if (-not $feature.Success){
-                Throw "Error: Unable to install the Hyper-V roles }"
+                Throw "Error: Unable to install the Hyper-V roles" }
             }else{
-                Write-Host "Info:  Have executed Install-WindowsFeature successfully"
+                Write-Host "Info: Have executed Install-WindowsFeature successfully"
             }
         }
     }

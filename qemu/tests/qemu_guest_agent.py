@@ -1450,6 +1450,73 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("Number of cpus is not correct, cpu_num_qga is: %d"
                       "cpu_num_guest is %d" % (cpu_num_qga, int(cpu_num_guest-1)))
 
+    def gagent_check_get_diskstats(self, test, params, env):
+        """
+        Execute "guest-get-diskstats" command to guest agent.
+
+        Steps:
+        1) Check numbers of disk argumentss info
+        2) Check disk stats info.
+        3) Check disk numbers.
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        ds_info_qga = self.gagent.get_diskstats()
+
+        error_context.context("Check diskstats argument numbers.", LOG_JOB.info)
+        # check the number of arguments whether is correct
+        # with official document
+        num_arg_guest = int(session.cmd_output(params['count_num_arg']))
+        key_list = params["diskstats_info_list"].split(",")
+        num_arg_def = len(list(key_list))
+        if num_arg_guest != num_arg_def:
+            test.error("Diskstats argument numbers may change, "
+                       "please take a look.")
+
+        disk_num_qga = 0
+        improper_list = []
+        for ds in ds_info_qga:
+            ds_name = ds['name']
+            error_context.context("Check %s 'major' and 'minor' value." % ds_name,
+                                  LOG_JOB.info)
+            ds_major_qga = int(ds['major'])
+            ds_minor_qga = int(ds['minor'])
+            ds_major_guest = int(session.cmd_output(params["cmd_ds_major"] % ds_name))
+            ds_minor_guest = int(session.cmd_output(params["cmd_ds_minor"] % ds_name))
+
+            if ds_major_qga != ds_major_guest or ds_minor_qga != ds_minor_guest:
+                test.fail("Major's or minor's value is not correct, "
+                          "major&minor in guest are: %d, %d"
+                          "by qga are: %d, %d. Since the following checkpoints "
+                          "are not detected, print all cfg file contents here: %s" %
+                          (ds_major_guest, ds_minor_guest, ds_major_qga,
+                           ds_minor_qga, params["diskstats_info_list"]))
+            for Key in ds.keys():
+                if Key == "stats":
+                    for key in ds['stats'].keys():
+                        if key not in params["diskstats_info_list"]:
+                            improper_list.append({ds["name"]: key})
+                elif Key not in params["diskstats_info_list"]:
+                    improper_list.append({ds["name"]: key})
+            disk_num_qga += 1
+
+        error_context.context("Check diskstats arguments whether are "
+                              "corresponding.", LOG_JOB.info)
+        if improper_list:
+            test.fail("Diskstats info is not totally correct: %s"
+                      % improper_list)
+
+        error_context.context("Check disks numbers.", LOG_JOB.info)
+        disk_num_guest = session.cmd_output(params["disk_num_guest"])
+        if disk_num_qga != int(disk_num_guest):
+            test.fail("Number of disks is not correct, disk_num_qga is %s;"
+                      "disk_num_guest is %s" % (disk_num_qga, disk_num_guest))
+
     @error_context.context_aware
     def gagent_check_get_interfaces(self, test, params, env):
         """

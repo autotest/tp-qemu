@@ -148,8 +148,11 @@ class SGXChecker(object):
         host_sgx_info = self._monitor.query_sgx_capabilities()
         self.verify_sgx_flags(host_sgx_info, sgx_flags)
 
-        host_qmp_section_size = host_sgx_info['section-size']
-        if host_epc_size != int(host_qmp_section_size):
+        host_qmp_sections = host_sgx_info['sections']
+        host_qmp_section_size = 0
+        for section in host_qmp_sections:
+            host_qmp_section_size += int(section['size'])
+        if host_epc_size != host_qmp_section_size:
             self._test.fail("Host epc size %s is not equal to query sgx"
                             "capabilities section size %s"
                             % (host_epc_size, host_qmp_section_size))
@@ -170,9 +173,12 @@ class SGXChecker(object):
             self._test.fail("Guest epc sized on each numa mis-matched, "
                             "qmp check failed.")
 
-        sgx_section_size = guest_sgx_info['section-size']
+        sgx_sections = guest_sgx_info['sections']
+        sgx_section_size = 0
+        for section in sgx_sections:
+            sgx_section_size += int(section['size'])
         config_epc_size = self.get_config_total_epc_size()
-        if config_epc_size != int(sgx_section_size):
+        if config_epc_size != sgx_section_size:
             self._test.fail("Guest epc size %s is not equal to query_sgx"
                             " section size %s" % (config_epc_size,
                                                   sgx_section_size))

@@ -88,6 +88,7 @@ def check_memory_in_procfs(test, params, vm):
         if mem_path and (mem_path not in numa_maps):
             test.fail("memdev = %s: mem-path '%s' is not in numa_maps '%s'!"
                       % (mem_dev, mem_path, numa_maps))
+        numa_maps = re.sub(r'\s+\(many\)', '', numa_maps)
         policy_numa = numa_maps.split()[1].split(':')
         if policy != policy_numa[0]:
             test.fail("memdev = %s:"

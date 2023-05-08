@@ -117,7 +117,7 @@ def run(test, params, env):
         if clksrc in avail_clksrc:
             clksrc_cmd = "echo %s > /sys/devices/system/clocksource/" % clksrc
             clksrc_cmd += "clocksource0/current_clocksource"
-            status, output = session.cmd_status_output(clksrc_cmd)
+            status, output = session.cmd_status_output(clksrc_cmd, safe=True)
             if status:
                 test.fail("fail to update guest's clocksource to %s,"
                           "details: %s" % clksrc, output)

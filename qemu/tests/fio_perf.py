@@ -57,9 +57,10 @@ def check_disk_status(session, timeout, num):
 
 
 def get_version(session, result_file, kvm_ver_chk_cmd,
-                guest_ver_cmd, type, driver_format, timeout):
+                guest_ver_cmd, type, driver_format, vfsd_ver_chk_cmd, timeout):
     """
-    collect qemu, kernel and driver version info and write them info results file
+    collect qemu, kernel, virtiofsd version if needed and driver version info
+    and write them info results file
 
     :param session: VM session
     :param results_file: save fio results, host info and other info
@@ -69,7 +70,7 @@ def get_version(session, result_file, kvm_ver_chk_cmd,
     :param timeout: Timeout in seconds
     """
 
-    kvm_ver = process.system_output(kvm_ver_chk_cmd, shell=True)
+    kvm_ver = process.system_output(kvm_ver_chk_cmd, shell=True).decode()
     host_ver = os.uname()[2]
 
     result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
@@ -88,6 +89,12 @@ def get_version(session, result_file, kvm_ver_chk_cmd,
     else:
         result_file.write("### guest-kernel-ver : Microsoft Windows "
                           "[Version ide driver format]\n")
+
+    if vfsd_ver_chk_cmd:
+        LOG_JOB.info("Check virtiofsd version on host.")
+        virtiofsd_ver = process.system_output(vfsd_ver_chk_cmd,
+                                              shell=True).decode()
+        result_file.write("### virtiofsd_version : %s\n" % virtiofsd_ver)
 
 
 @error_context.context_aware
@@ -171,6 +178,7 @@ def run(test, params, env):
     num_disk = params.get("num_disk")
     driver_verifier_query = params.get("driver_verifier_query")
     verifier_clear_cmd = params.get("verifier_clear_cmd")
+    vfsd_ver_chk_cmd = params.get("vfsd_ver_chk_cmd")
 
     result_path = utils_misc.get_path(test.resultsdir,
                                       "fio_result.RHS")
@@ -178,7 +186,7 @@ def run(test, params, env):
 
     # scratch host and windows guest version info
     get_version(session, result_file, kvm_ver_chk_cmd, guest_ver_cmd, os_type,
-                driver_format, cmd_timeout)
+                driver_format, vfsd_ver_chk_cmd, cmd_timeout)
 
     if os_type == "windows":
         # turn off driver verifier

@@ -1450,6 +1450,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             test.fail("Number of cpus is not correct, cpu_num_qga is: %d"
                       "cpu_num_guest is %d" % (cpu_num_qga, int(cpu_num_guest-1)))
 
+    @error_context.context_aware
     def gagent_check_get_diskstats(self, test, params, env):
         """
         Execute "guest-get-diskstats" command to guest agent.

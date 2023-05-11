@@ -152,7 +152,7 @@ def run(test, params, env):
         formats = _formats[:]
         usb_port_occupied = 0
         usb_max_port = params.get('usb_max_port', 6)
-        set_drive_bus = params.get('set_drive_bus', 'yes') == 'yes'
+        set_drive_bus = params.get('set_drive_bus', 'no') == 'yes'
         no_disks = int(params['stg_image_num'])
         i = 0
         while i < no_disks:

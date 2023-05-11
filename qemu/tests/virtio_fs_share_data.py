@@ -627,7 +627,8 @@ def run(test, params, env):
                     if os_type == "windows":
                         error_context.context("Install git", test.log.info)
                         check_status, check_output = session.cmd_status_output(git_check_cmd)
-                        if check_status and "not recognized" in check_output:
+                        if check_status and "not recognized" in check_output \
+                                or "cannot find the path" in check_output:
                             install_git_cmd = utils_misc.set_winutils_letter(
                                 session, install_git_cmd)
                             status, output = session.cmd_status_output(install_git_cmd)

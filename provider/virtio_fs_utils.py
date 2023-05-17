@@ -65,7 +65,10 @@ def basic_io_test(test, params, session):
                               guest_file, LOG_JOB.info)
         error_context.context("Creating file under %s inside guest." % fs_dest,
                               LOG_JOB.info)
-        session.cmd(cmd_dd % guest_file, io_timeout)
+        status, output = session.cmd_status_output(cmd_dd % guest_file,
+                                                   io_timeout)
+        if status != 0:
+            test.fail("Failed to dd a file, error: %s" % output)
 
         if windows:
             guest_file_win = guest_file.replace("/", "\\")
@@ -78,6 +81,8 @@ def basic_io_test(test, params, session):
                                        io_timeout).strip().split()[0]
         error_context.context("md5 of the guest file: %s" % md5_guest,
                               LOG_JOB.info)
+        if not os.path.isfile(host_data):
+            test.fail("The file %s does NOT exist!" % host_data)
         md5_host = process.run("md5sum %s" % host_data,
                                io_timeout).stdout_text.strip().split()[0]
         error_context.context("md5 of the host file: %s" % md5_host,

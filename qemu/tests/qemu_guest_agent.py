@@ -118,13 +118,13 @@ class QemuGuestAgentTest(BaseVirtTest):
 
     @error_context.context_aware
     def _check_ga_pkg(self, session, cmd_check_pkg):
-        '''
+        """
         Check if the package is installed, for rhel8 need to check
         if the specific pkg.
 
         :param session: use for sending cmd
         :param cmd_check_pkg: cmd to check if ga pkg is installed
-        '''
+        """
         error_context.context("Check whether qemu-ga is installed.",
                               LOG_JOB.info)
         s, o = session.cmd_status_output(cmd_check_pkg)
@@ -157,11 +157,11 @@ class QemuGuestAgentTest(BaseVirtTest):
 
     @error_context.context_aware
     def _check_ga_service(self, session, cmd_check_status):
-        '''
+        """
         Check if the service is started.
         :param session: use for sending cmd
         :param cmd_check_status: cmd to check if ga service is started
-        '''
+        """
         error_context.context("Check whether qemu-ga service is started.",
                               LOG_JOB.info)
         s, o = session.cmd_status_output(cmd_check_status)
@@ -291,7 +291,7 @@ class QemuGuestAgentTest(BaseVirtTest):
 
     @error_context.context_aware
     def gagent_setsebool_value(self, value, params, vm):
-        '''
+        """
         Set selinux boolean 'virt_qemu_ga_read_nonsecurity_files'
         as 'on' or 'off' for linux guest can access filesystem
         successfully and restore guest original env when test is over.
@@ -299,7 +299,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         :param value: value of selinux boolean.
         :param params: Dictionary with the test parameters
         :param vm: Virtual machine object.
-        '''
+        """
         session = self._get_session(params, vm)
         self._open_session_list.append(session)
         error_context.context("Turn %s virt_qemu_ga_read_nonsecurity_files." %
@@ -1591,6 +1591,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                              guest_ip_ipv4, ip_addr_qga_ipv6,
                              guest_ip_ipv6))
 
+        session = self.vm.wait_for_login()
         session_serial = self.vm.wait_for_serial_login()
         mac_addr = self.vm.get_mac_address()
         os_type = self.params["os_type"]
@@ -1617,7 +1618,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                       "the expected is: %s" % (if_name, if_name_guest))
 
         error_context.context("Check ip address via qga.", LOG_JOB.info)
-        ip_addr_check(session_serial, mac_addr, ret, if_index, if_name)
+        ip_addr_check(session, mac_addr, ret, if_index, if_name)
 
         # create a bridge interface for linux guest and check it
         #  from guest agent
@@ -1627,7 +1628,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             error_context.context("Create a new bridge in guest and check the"
                                   "result from qga.", LOG_JOB.info)
             add_brige_cmd = "ip link add name br0 type bridge"
-            session_serial.cmd(add_brige_cmd)
+            session.cmd(add_brige_cmd)
             interfaces_after_add = self.gagent.get_network_interface()
             for interface in interfaces_after_add:
                 if interface["name"] == "br0":
@@ -1636,11 +1637,11 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 test.fail("The new bridge is not checked from guest agent.")
             error_context.context("Delete the added bridge.", LOG_JOB.info)
             del_brige_cmd = "ip link del br0"
-            session_serial.cmd(del_brige_cmd)
+            session.cmd(del_brige_cmd)
         else:
             error_context.context("Set down the interface in windows guest.",
                                   LOG_JOB.info)
-            utils_net.disable_windows_guest_network(session_serial, if_name)
+            utils_net.disable_windows_guest_network(session, if_name)
             ret_after_down = self.gagent.get_network_interface()
             if_name_down = get_interface(ret_after_down, mac_addr)[0]
             if if_name_down:
@@ -1649,7 +1650,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                           % ret_after_down)
             error_context.context("Set up the interface in guest.",
                                   LOG_JOB.info)
-            utils_net.enable_windows_guest_network(session_serial, if_name)
+            utils_net.enable_windows_guest_network(session, if_name)
 
         error_context.context("Change ipv4 address and check the result "
                               "from qga.", LOG_JOB.info)
@@ -1670,6 +1671,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         ip_addr_check(session_serial, mac_addr, ret_ip_change,
                       if_index_ip_change, if_name_ip_change)
 
+        if session:
+            session.close()
         if session_serial:
             session_serial.close()
 
@@ -3791,7 +3794,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
     @error_context.context_aware
     def _check_serial_driver(self, test, params, env):
-        '''
+        """
         Check whether serial device is installed or not, if not install it.
         Test steps:
         1) Check whether serial driver is running.
@@ -3802,7 +3805,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         :param test: QEMU test object
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment
-        '''
+        """
 
         def _chk_cert(session, cert_path):
             chk_cmd = "certutil -verify %s"

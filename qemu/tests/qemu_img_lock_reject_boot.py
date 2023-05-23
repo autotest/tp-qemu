@@ -1,3 +1,5 @@
+import time
+
 from virttest import env_process
 
 from qemu.tests.qemu_disk_img import QemuImgTest
@@ -32,6 +34,9 @@ def run(test, params, env):
         test.log.info("Verify qemu-img write lock err msg.",)
         msgs = ['"write" lock',
                 'Is another process using the image']
+        # Avoid timing issues between writing to log and the check itself
+        check_lock_timeout = params.get_numeric('check_lock_timeout', 5)
+        time.sleep(check_lock_timeout)
         # Check expected error messages directly in the test log
         output = process.run(
             r"cat " + test.logfile + r"| grep '\[qemu output\]' | grep -v 'warning'",

@@ -1,5 +1,6 @@
 import json
 import re
+import time
 
 from avocado.utils import wait
 
@@ -143,6 +144,7 @@ def run(test, params, env):
                 utils_disk.resize_partition_linux(session, partition,
                                                   str(block_size))
 
+        time.sleep(10)
         error_context.context("Change disk size to %s in monitor"
                               % block_size, test.log.info)
         if vm.check_capability(Flags.BLOCKDEV):

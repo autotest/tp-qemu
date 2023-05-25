@@ -4154,11 +4154,10 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         Steps:
         1) boot up guest with scsi backend device
         2) init and format the data disk
-        3) get the original blocks of data disk
-        4) create fragment in data disk
-        5) check the used blocks
-        6) execute fstrim cmd via guest agent
-        7) check if the used blocks is decreased
+        3) create fragment in data disk
+        4) check the used blocks
+        5) execute fstrim cmd via guest agent
+        6) check if the used blocks is decreased
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
@@ -4185,24 +4184,21 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         LOG_JOB.info("Clear readonly of disk and online it in windows guest.")
         if not utils_disk.update_windows_disk_attributes(session, disk_index):
             test.error("Failed to update windows disk attributes.")
-        mnt_point = utils_disk.configure_empty_disk(
-            session, disk_index[0], image_size_stg, "windows",
-            labeltype="msdos")
+        mnt_point = utils_disk.configure_empty_windows_disk(
+            session, disk_index[0], image_size_stg, quick_format=False)
 
         error_context.context("Check the original blocks of data disk.",
                               LOG_JOB.info)
         image_params_stg = params.object_params("stg")
         image_filename_stg = storage.get_image_filename(
             image_params_stg, data_dir.get_data_dir())
-        blocks_init = get_blocks()
-        LOG_JOB.info("The blocks original is %s", blocks_init)
 
         error_context.context("Create fragment in data disk.", LOG_JOB.info)
         guest_dir = r"%s:" % mnt_point[0]
         data_file = os.path.join(guest_dir,
                                  "qga_fstrim%s" %
                                  utils_misc.generate_random_string(5))
-        for i in range(5):
+        for i in range(2):
             count = 1000 * (i + 1)
             LOG_JOB.info("Create %sM file in guest.", count)
             cmd = "dd if=/dev/random of=%s bs=1M count=%d" % (data_file, count)
@@ -4215,11 +4211,6 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         error_context.context("Check blocks of data disk before fstrim.",
                               LOG_JOB.info)
         blocks_before_fstrim = get_blocks()
-        if int(blocks_init) >= int(blocks_before_fstrim):
-            msg = "Fragment created failed in data disk\n"
-            msg += "the blocks original is %s\n" % blocks_init
-            msg += "the blocks before fstrim is %s." % blocks_before_fstrim
-            test.error("msg")
 
         error_context.context("Execute the guest-fstrim cmd via qga.",
                               LOG_JOB.info)

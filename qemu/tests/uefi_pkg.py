@@ -26,6 +26,8 @@ def run(test, params, env):
     4) Check the JSON files internally.
        check that the "filename" elements in both files point to valid files.
        for amdsev and inteltdx json files, check that the 'mode' is 'stateless'
+       for other json files, if it has 'mode' element, check its value is
+       'split'
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -43,14 +45,17 @@ def run(test, params, env):
         err_str += "invalid file. The invalid file is '%s'" % filename
         test.assertIn(filename, file_list, err_str)
 
-    def check_element_mode(mode):
+    def check_element_mode(mode, expected_mode):
         """
-        check 'mode' element, its value is stateless for amdsev and inteltdx
+        check 'mode' element, its value is stateless for amdsev and inteltdx.
+        And because explicitly set mode = split from rhel9.3, the value of
+        mode is split or stateless.
 
         :param mode: 'mode' element
+        :param expected_mode: the expected value of 'mode' element
         """
-        err_str = "The mode of amdsev or inteltdx is not 'stateless'. It's '%s'"
-        test.assertTrue(mode == "stateless", err_str)
+        err_str = "The expected mode is '%s' instead of '%s'."
+        test.assertTrue(mode == expected_mode, err_str % (expected_mode, mode))
 
     query_package = params["query_package"]
     error_context.context("Check edk2-ovmf package has been "
@@ -87,9 +92,14 @@ def run(test, params, env):
         # for amdsev and inteltdx json files, check the 'mode' element
         # and because they don't have 'nvram-template' element,
         # skip the 'nvram-template' element checking
-        if "mode" in content["mapping"]:
+        # for other json files, if it has 'mode' element,
+        # check its value is 'split'
+        if "amdsev" in filename or "inteltdx" in filename:
             mode = content["mapping"]["mode"]
-            check_element_mode(mode)
+            check_element_mode(mode, "stateless")
             continue
+        elif "mode" in content["mapping"]:
+            mode = content["mapping"]["mode"]
+            check_element_mode(mode, "split")
         filename = content["mapping"]["nvram-template"]["filename"]
         check_element_filename(filename, output)

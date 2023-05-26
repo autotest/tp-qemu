@@ -27,6 +27,7 @@ driver_name_list = [
     "vioinput",
     "fwcfg",
     "viomem",
+    "viosock",
 ]
 
 device_hwid_list = [
@@ -41,6 +42,7 @@ device_hwid_list = [
     '"PCI\\VEN_1AF4&DEV_1052"',
     '"ACPI\\VEN_QEMU&DEV_0002"',
     r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"',
+    r'"PCI\VEN_1AF4&DEV_1053" "PCI\VEN_1AF4&DEV_1012"',
 ]
 
 device_name_list = [
@@ -55,6 +57,7 @@ device_name_list = [
     "VirtIO Input Driver",
     "QEMU FwCfg Device",
     "VirtIO Viomem Driver",
+    "VirtIO Socket Driver",
 ]
 
 
@@ -183,7 +186,7 @@ def driver_check(session, test, params):
                 continue
         error_context.context("%s Driver Check" % driver_name, LOG_JOB.info)
         inf_path = win_driver_utils.get_driver_inf_path(
-            session, test, media_type, driver_name
+            session, test, media_type, driver_name, params
         )
         expected_ver = session.cmd(
             "type %s | findstr /i /r DriverVer.*=" % inf_path, timeout=360
@@ -221,6 +224,16 @@ def check_gagent_version(session, test, gagent_pkg_info_cmd, expected_gagent_ver
     """
     error_context.context("Check if gagent version is correct.", LOG_JOB.info)
     actual_gagent_version = session.cmd_output(gagent_pkg_info_cmd).split()[-2]
+
+    exe_ver_cmd = r'"c:\program files\qemu-ga\qemu-ga.exe" --version'
+    gagent_exe_version = session.cmd_output(exe_ver_cmd)
+
+    test.log.info("actual_gagent_version version is %s,"
+                  "qga vertion by installer is %s,"
+                  "gagent exe version is %s" % (actual_gagent_version,
+                                                expected_gagent_version,
+                                                gagent_exe_version)
+                  )
     if actual_gagent_version != expected_gagent_version:
         test.fail(
             "gagent version is not right, expected is %s but got %s"

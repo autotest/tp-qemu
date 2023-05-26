@@ -96,6 +96,11 @@ def uninstall_driver(session, test, devcon_path, driver_name, device_name, devic
     inf_list_all = _pnpdrv_info(session, device_name, ["InfName"])
     inf_list = list(set(inf_list_all))
 
+    # Check if any drivers were found
+    if not inf_list:
+        LOG_JOB.warning("No driver found for device '%s'. 
+                        Driver may not installed.", device_name)
+
     # pnputil flags available starting in Windows 10,
     #  version 1607, build 14393 later
     build_ver = system.version(session).split(".")[2]
@@ -120,7 +125,7 @@ def uninstall_driver(session, test, devcon_path, driver_name, device_name, devic
         )
 
 
-def get_driver_inf_path(session, test, media_type, driver_name):
+def get_driver_inf_path(session, test, media_type, driver_name, params):
     """
     Get driver inf path from virtio win iso,such as E:\viofs\2k19\amd64.
 
@@ -128,6 +133,7 @@ def get_driver_inf_path(session, test, media_type, driver_name):
     :param test: kvm test object.
     :param media_type: media type.
     :param driver_name: driver name.
+    :param params: the dict used for parameters
     """
     try:
         get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
@@ -144,20 +150,27 @@ def get_driver_inf_path(session, test, media_type, driver_name):
     guest_arch = get_arch_dirname(session)
     if not guest_arch:
         test.error("Could not get architecture dirname of the vm")
-
+    # for formal virtio-win iso
     inf_middle_path = (
         "{name}\\{arch}" if media_type == "iso" else "{arch}\\{name}"
     ).format(name=guest_name, arch=guest_arch)
-    inf_find_cmd = 'dir /b /s %s\\%s.inf | findstr "\\%s\\\\"'
-    inf_find_cmd %= (viowin_ltr, driver_name, inf_middle_path)
-    inf_path = session.cmd(inf_find_cmd, timeout=OPERATION_TIMEOUT).strip()
+    formal_inf_find_cmd = 'dir /b /s VIOWIN_LTR\\DRIVER_NAME.inf |'
+    formal_inf_find_cmd += ' findstr "\\INF_MID_PATH\\\\'
+    inf_find_cmd = params.get("inf_find_cmd", formal_inf_find_cmd)
+
+    inf_find_cmd_new = inf_find_cmd.replace(
+        'VIOWIN_LTR', viowin_ltr).replace(
+        'DRIVER_NAME', driver_name).replace(
+        'INF_MID_PATH', inf_middle_path)
+
+    inf_path = session.cmd(inf_find_cmd_new, timeout=OPERATION_TIMEOUT).strip()
     LOG_JOB.info("Found inf file '%s'", inf_path)
     return inf_path
 
 
 @error_context.context_aware
 def install_driver_by_virtio_media(
-    session, test, devcon_path, media_type, driver_name, device_hwid
+    session, test, devcon_path, media_type, driver_name, device_hwid, params
 ):
     """
     Install driver by virtio media.
@@ -168,6 +181,7 @@ def install_driver_by_virtio_media(
     :param media_type: media type.
     :param driver_name: driver name.
     :param device_hwid: device hardware id.
+    :param params: the dict used for parameters
     """
     devcon_path = utils_misc.set_winutils_letter(session, devcon_path)
     status, output = session.cmd_status_output(
@@ -181,7 +195,8 @@ def install_driver_by_virtio_media(
         output = session.cmd_output("%s find %s" % (devcon_path, hwid))
         if re.search("No matching devices found", output, re.I):
             continue
-        inf_path = get_driver_inf_path(session, test, media_type, driver_name)
+        inf_path = get_driver_inf_path(session, test, media_type,
+                                       driver_name, params)
         inst_cmd = "%s updateni %s %s" % (devcon_path, inf_path, hwid)
         status, output = session.cmd_status_output(inst_cmd, INSTALL_TIMEOUT)
         # acceptable status: OK(0), REBOOT(1)
@@ -232,15 +247,6 @@ def run_installer(vm, session, test, params, run_installer_cmd):
     :param run_installer_cmd: install/uninstall/repair cmd.
     :return session: a new session after restart of installer
     """
-    cdrom_virtio = params["cdrom_virtio"]
-    installer_restart_version = params.get(
-        "installer_restart_version", "[1.9.37.0, 1.9.40.0]"
-    )
-    cdrom_virtio_path = os.path.basename(
-        utils_misc.get_path(data_dir.get_data_dir(), cdrom_virtio)
-    )
-    match = re.search(r"virtio-win-(\d+\.\d+(?:\.\d+)?-\d+)", cdrom_virtio_path)
-    cdrom_virtio_version = re.sub("-", ".", match.group(1))
     # run installer cmd
     run_installer_cmd = utils_misc.set_winutils_letter(session, run_installer_cmd)
     session.cmd(run_installer_cmd)
@@ -249,18 +255,14 @@ def run_installer(vm, session, test, params, run_installer_cmd):
         lambda: not autoit_installer_check(params, session), 240, 2, 2
     ):
         test.fail("Autoit exe stop there for 240s, please have a check.")
-    restart_con_ver = cdrom_virtio_version in VersionInterval(installer_restart_version)
     restart_con_repair = "repair" in run_installer_cmd
-    if restart_con_ver or restart_con_repair:
-        # Wait for vm re-start by installer itself
+    if restart_con_repair:
+        # Wait for vm re-start by installer itself, only repair has self-restart
         if not utils_misc.wait_for(lambda: not session.is_responsive(), 120, 5, 5):
             test.fail(
                 "The previous session still exists,seems that the vm doesn't restart."
             )
         session = vm.wait_for_login(timeout=360)
-    # for the early virtio-win instller, rebooting is needed.
-    if cdrom_virtio_version in VersionInterval("(,1.9.37.0)"):
-        session = vm.reboot(session)
     return session
 
 

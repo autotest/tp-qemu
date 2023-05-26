@@ -139,7 +139,8 @@ def win_installer_test(session, test, params):
     """
     error_context.context("Check if virtio-win-guest-too.exe "
                           "is signed by redhat", LOG_JOB.info)
-    status = session.cmd_status(params["signed_check_cmd"])
+    status, output = session.cmd_status_output(params["signed_check_cmd"])
+    test.log.info("Installer product info is %s" % output)
     if status != 0:
         test.fail('Installer not signed by redhat.')
 
@@ -165,7 +166,8 @@ def driver_check(session, test, params):
         error_context.context("%s Driver Check" % driver_name, LOG_JOB.info)
         inf_path = win_driver_utils.get_driver_inf_path(session, test,
                                                         media_type,
-                                                        driver_name)
+                                                        driver_name,
+                                                        params)
         expected_ver = session.cmd("type %s | findstr /i /r DriverVer.*=" %
                                    inf_path, timeout=360)
         expected_ver = expected_ver.strip().split(",", 1)[-1]
@@ -202,6 +204,16 @@ def check_gagent_version(session, test, gagent_pkg_info_cmd,
     error_context.context("Check if gagent version is correct.",
                           LOG_JOB.info)
     actual_gagent_version = session.cmd_output(gagent_pkg_info_cmd).split()[-2]
+
+    exe_ver_cmd = r'"c:\program files\qemu-ga\qemu-ga.exe" --version'
+    gagent_exe_version = session.cmd_output(exe_ver_cmd)
+
+    test.log.info("actual_gagent_version version is %s,"
+                  "qga vertion by installer is %s,"
+                  "gagent exe version is %s" % (actual_gagent_version,
+                                                expected_gagent_version,
+                                                gagent_exe_version)
+                  )
     if actual_gagent_version != expected_gagent_version:
         test.fail("gagent version is not right, expected is %s but got %s"
                   % (expected_gagent_version, actual_gagent_version))

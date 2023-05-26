@@ -162,7 +162,8 @@ def driver_check(session, test, params):
         error_context.context("%s Driver Check" % driver_name, LOG_JOB.info)
         inf_path = win_driver_utils.get_driver_inf_path(session, test,
                                                         media_type,
-                                                        driver_name)
+                                                        driver_name,
+                                                        params)
         expected_ver = session.cmd("type %s | findstr /i /r DriverVer.*=" %
                                    inf_path, timeout=360)
         expected_ver = expected_ver.strip().split(",", 1)[-1]

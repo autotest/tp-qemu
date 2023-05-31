@@ -83,6 +83,7 @@ def run(test, params, env):
     guest_ver_cmd = params["guest_ver_cmd"]
     base = params.get("format_base", "12")
     fbase = params.get("format_fbase", "2")
+    disable_iptables_rules_cmd = params.get("disable_iptables_rules_cmd")
 
     # get qemu, guest kernel and kvm version info and write them into result
     result_path = utils_misc.get_path(test.resultsdir, "pktgen_perf.RHS")
@@ -98,6 +99,10 @@ def run(test, params, env):
     record_line = ""
     for record in record_list.split():
         record_line += "%s|" % format_result(record, base, fbase)
+
+    if disable_iptables_rules_cmd:
+        error_context.context("disable iptables rules on host")
+        process.system(disable_iptables_rules_cmd, shell=True)
 
     def install_package(ver, session=None):
         """ check module pktgen, install kernel-modules-internal package """

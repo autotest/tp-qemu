@@ -179,6 +179,7 @@ def run(test, params, env):
     driver_verifier_query = params.get("driver_verifier_query")
     verifier_clear_cmd = params.get("verifier_clear_cmd")
     vfsd_ver_chk_cmd = params.get("vfsd_ver_chk_cmd")
+    delete_test_file = params.get("delete_test_file", "no")
 
     result_path = utils_misc.get_path(test.resultsdir,
                                       "fio_result.RHS")
@@ -241,6 +242,7 @@ def run(test, params, env):
                     line += "%s|" % format_result(bs[:-1])
                     line += "%s|" % format_result(io_depth)
                     line += "%s|" % format_result(numjobs)
+                    file_name = None
                     if format == "True" or params.objects("filesystems"):
                         file_name = io_pattern + "_" + bs + "_" + io_depth
                         run_fio_options = fio_options % (
@@ -263,6 +265,9 @@ def run(test, params, env):
                     process.system_output("mpstat 1 60 > %s" % cpu_file,
                                           shell=True)
                     fio_t.join()
+                    if file_name and delete_test_file == "yes":
+                        test.log.info("Ready delete: %s", file_name)
+                        session.cmd("rm -rf /mnt/%s" % file_name)
 
                     io_exits_a = int(process.system_output(
                         "cat /sys/kernel/debug/kvm/exits"))

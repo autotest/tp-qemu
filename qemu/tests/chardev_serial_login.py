@@ -63,7 +63,7 @@ def run(test, params, env):
             os.close(fd_pty)
         elif backend == 'file':
             filename = chardev_device.params['path']
-            f = open(filename)
+            f = open(filename, errors='ignore')
             if 'Linux' not in f.read():
                 f.close()
                 test.fail("Guest boot fail with file backend.")

@@ -80,7 +80,6 @@ def run(test, params, env):
                 vm_key = vm0_key.clone(vm0, params)
                 env.register_vm(vm_name, vm_key)
                 env_process.preprocess_vm(test, params, env, vm_name)
-                vm_key.create()
                 session = vm_key.wait_for_login(timeout=login_timeout)
             else:
                 session = vm.wait_for_login(timeout=login_timeout)
@@ -92,7 +91,7 @@ def run(test, params, env):
 
             error_context.context("making guest to swap memory", test.log.debug)
             free = mem_info["MemFree"]
-            count = int(free / hugepage_size)
+            count = free // hugepage_size
             cmd = ("dd if=/dev/zero of=%s/zero bs=%sM count=%s" %
                    (mem_path, hugepage_size, count))
             process.run(cmd, shell=True)

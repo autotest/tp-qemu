@@ -82,7 +82,7 @@ def run(test, params, env):
         # stress_threads = 2 * n_cpus
         threads_host = 2 * cpu.online_count()
         # Run stress test on host
-        process.run(stress_cmd % (stress_dir, threads_host), shell=True)
+        process.run(stress_cmd % (stress_dir, threads_host), ignore_bg_processes=True, shell=True)
 
     def guest():
         try:

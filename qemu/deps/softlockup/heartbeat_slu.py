@@ -24,10 +24,10 @@ def daemonize(output_file):
     sys.stderr.flush()
 
     if output_file:
-        output_handle = open(output_file, 'a+', 0)
+        output_handle = open(output_file, 'a+')
         # autoflush stdout/stderr
-        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0)
-        sys.stderr = os.fdopen(sys.stderr.fileno(), 'w', 0)
+        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w')
+        sys.stderr = os.fdopen(sys.stderr.fileno(), 'w')
     else:
         output_handle = open('/dev/null', 'a+')
 
@@ -40,7 +40,7 @@ def daemonize(output_file):
 def recv_all(sock):
     total_data = []
     while True:
-        data = sock.recv(1024)
+        data = sock.recv(1024).decode()
         if not data:
             break
         total_data.append(data)
@@ -82,7 +82,7 @@ def run_client(host, port, daemon, path, interval):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
             heartbeat = get_heartbeat(seq)
-            sock.sendall(heartbeat)
+            sock.sendall(heartbeat.encode())
             sock.close()
             if verbose:
                 print(heartbeat)

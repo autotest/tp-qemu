@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Heartbeat server/client to detect soft lockups
 """

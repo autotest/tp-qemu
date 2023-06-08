@@ -65,7 +65,7 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
         if self.main_vm.is_alive():
             self.main_vm.destroy()
         base_tag = self.base_tag
-        base_format = self.params.get("image_format", "qcow2")
+        base_format = self.base_image.get_format()
         self.params["image_format_%s" % base_tag] = base_format
         for snapshot_tag in self.snapshot_chains:
             snapshot_image = self.get_image_by_tag(snapshot_tag)

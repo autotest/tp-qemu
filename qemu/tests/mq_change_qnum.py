@@ -32,7 +32,7 @@ def run(test, params, env):
             queues_status = get_queues_status(session, ifname)
 
         mq_set_cmd = "ethtool -L %s combined %d" % (ifname, q_number)
-        status, output = session.cmd_status_output(mq_set_cmd, safe=True)
+        status, output = session.cmd_status_output(mq_set_cmd)
         cur_queues_status = get_queues_status(session, ifname)
 
         err_msg = ""
@@ -64,8 +64,7 @@ def run(test, params, env):
         Get queues status
         """
         mq_get_cmd = "ethtool -l %s" % ifname
-        nic_mq_info = session.cmd_output(mq_get_cmd, timeout=timeout,
-                                         safe=True)
+        nic_mq_info = session.cmd_output(mq_get_cmd, timeout=timeout)
         queues_reg = re.compile(r"Combined:\s+(\d)", re.I)
         queues_info = queues_reg.findall(" ".join(nic_mq_info.splitlines()))
         if len(queues_info) != 2:
@@ -77,7 +76,7 @@ def run(test, params, env):
         return [int(x) for x in queues_info]
 
     def enable_multi_queues(vm):
-        sess = vm.wait_for_serial_login(timeout=login_timeout)
+        sess = vm.wait_for_login(timeout=login_timeout)
         error_context.context("Enable multi queues in guest.", test.log.info)
         for nic_index, nic in enumerate(vm.virtnet):
             ifname = utils_net.get_linux_ifname(sess, nic.mac)
@@ -166,7 +165,7 @@ def run(test, params, env):
                                                              queues_status)
                 except aexpect.ShellProcessTerminatedError:
                     vm = env.get_vm(params["main_vm"])
-                    session = vm.wait_for_serial_login(timeout=login_timeout)
+                    session = vm.wait_for_login(timeout=login_timeout)
                     queues_status = get_queues_status(session, ifname)
                     for q_number in change_list:
                         queues_status = change_queues_number(session,

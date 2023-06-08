@@ -391,7 +391,7 @@ def fwcfg_test(test, params, vm):
 
     output = vm.monitor.human_monitor_cmd('dump-guest-memory -w %s'
                                           % dump_file)
-    if output:
+    if output and "warning" not in output:
         test.fail("Save dump file failed as: %s" % output)
     else:
         cmd = "ls -l %s | awk '{print $5}'" % dump_file

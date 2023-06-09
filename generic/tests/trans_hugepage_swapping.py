@@ -52,10 +52,8 @@ def run(test, params, env):
 
         # If swap is enough fill all memory with dd
         if swap_free_initial > (total - free):
-            count = int(total / hugepage_size)
             tmpfs_size = total
         else:
-            count = int(free / hugepage_size)
             tmpfs_size = free
 
         if swap_size <= 0:
@@ -82,7 +80,6 @@ def run(test, params, env):
                 vm_key = vm0_key.clone(vm0, params)
                 env.register_vm(vm_name, vm_key)
                 env_process.preprocess_vm(test, params, env, vm_name)
-                vm_key.create()
                 session = vm_key.wait_for_login(timeout=login_timeout)
             else:
                 session = vm.wait_for_login(timeout=login_timeout)
@@ -92,13 +89,16 @@ def run(test, params, env):
             if s != 0:
                 test.error("Disable swap in guest failed as %s" % o)
 
-            error_context.context("making guest to swap memory")
+            error_context.context("making guest to swap memory", test.log.debug)
+            free = mem_info["MemFree"]
+            count = free // hugepage_size
             cmd = ("dd if=/dev/zero of=%s/zero bs=%sM count=%s" %
                    (mem_path, hugepage_size, count))
             process.run(cmd, shell=True)
 
             mem_info = get_mem_info(mem_check_list)
             swap_free_after = mem_info["SwapFree"]
+            error_context.context("Swap after filling memory: %d" % swap_free_after, test.log.debug)
 
             if swap_free_after - swap_free_initial >= 0:
                 test.fail("No data was swapped to memory")

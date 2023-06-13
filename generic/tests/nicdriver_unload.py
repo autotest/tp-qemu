@@ -143,7 +143,9 @@ def run(test, params, env):
             session_serial.cmd_output_safe("modprobe %s" % driver)
             error_context.context("Activate NIC driver.", test.log.info)
             session_serial.cmd_output_safe("ifconfig %s up" % ethname)
-            session_serial.cmd_output_safe("sleep %s" % random.randint(10, 60))
+            sleep_time = random.randint(10, 60)
+            session_serial.cmd_output_safe("sleep %s" % sleep_time,
+                                           timeout=sleep_time + 5)
 
         # files md5sums check
         error_context.context("File transfer finished, checking files md5sums",

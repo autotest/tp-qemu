@@ -122,22 +122,18 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
     md5_host = "1"
     md5_guest = "2"
 
-    def check_output(sender, output):
-        if sender == "both":
-            if "Md5MissMatch" in output:
-                err = "Data lost during file transfer. Md5 miss match."
-                err += " Script output:\n%s" % output
-                return False, err
-            return True, 0
-        else:
-            md5_re = "md5_sum = (\\w{32})"
-            try:
-                md5 = re.findall(md5_re, output)[0]
-            except Exception:
-                err = "Fail to get md5, script may fail."
-                err += " Script output:\n%s" % output
-                return False, err
-            return True, md5
+    def check_output(output):
+        if not output:
+            err = "The script output is empty, not terminate as expected"
+            return False, err
+        md5_re = "md5_sum = (\\w{32})"
+        try:
+            md5 = re.findall(md5_re, output)[0]
+        except Exception:
+            err = "Fail to get md5, script may fail."
+            err += " Script output:\n%s" % output
+            return False, err
+        return True, md5
 
     try:
         kwargs = {"cmd": host_cmd, "shell": True, "timeout": timeout}
@@ -145,9 +141,9 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
         host_thread = utils_misc.InterruptedThread(process.getoutput, kwargs=kwargs)
         host_thread.daemon = True
         host_thread.start()
-        time.sleep(3)
+        time.sleep(1)
         g_output = session.cmd_output(guest_cmd, timeout=timeout)
-        result = check_output(sender, g_output)
+        result = check_output(g_output)
         if result[0] is False:
             return result
         else:
@@ -155,12 +151,12 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
     finally:
         if host_thread:
             output = host_thread.join(10)
-            result = check_output(sender, output)
+            result = check_output(output)
             if result[0] is False:
                 return result
             else:
                 md5_host = result[1]
-        if sender != "both" and md5_host != md5_guest:
+        if md5_host != md5_guest:
             err = "Data lost during file transfer. Md5 miss match."
             err += " Guest script output:\n %s" % g_output
             err += " Host script output:\n%s" % output
@@ -189,6 +185,61 @@ def transfer_data(
     :param clean_file: Whether clean the data file transferred
     :return: True if pass, False and error message if check fail
     """
+
+    file_size = int(params.get("filesize", 10))
+    host_dir = data_dir.get_tmp_dir()
+    guest_dir = params.get("tmp_dir", "/var/tmp/")
+    if not host_file_name:
+        host_file_name = generate_data_file(host_dir, file_size)
+    if not guest_file_name:
+        session = vm.wait_for_login()
+        guest_file_name = generate_data_file(guest_dir, file_size, session)
+        session.close()
+    if sender != "both":
+        return transfer_data_exec(
+            params, vm, host_file_name, guest_file_name, file_size, sender, clean_file
+        )
+    else:
+        host_res = transfer_data_exec(
+            params,
+            vm,
+            host_file_name,
+            guest_file_name,
+            file_size,
+            "host",
+            clean_file=False,
+        )
+        if not host_res:
+            return host_res
+        guest_res = transfer_data_exec(
+            params, vm, host_file_name, guest_file_name, file_size, "guest", clean_file
+        )
+        return guest_res
+
+
+@error_context.context_aware
+def transfer_data_exec(
+    params,
+    vm,
+    host_file_name=None,
+    guest_file_name=None,
+    file_size=0,
+    sender="host",
+    clean_file=True,
+):
+    """
+    Transfer data file from guest to host or vise versa, and return result;
+
+    :param params: Params Object
+    :param vm: VM Object
+    :param host_file_name: Host file name to be transferred
+    :param guest_file_name: Guest file name to be transferred
+    :param file_size: the file_size to be created if files do not exist
+    :param sender: Who send the data file
+    :param clean_file: Whether clean the data file transferred
+    :return: True if pass, False and error message if check fail
+
+    """
     session = vm.wait_for_login()
     os_type = params["os_type"]
     try:
@@ -199,7 +250,6 @@ def transfer_data(
         copy_scripts(guest_scripts, guest_path, vm)
         port_name = params["file_transfer_serial_port"]
         port_type, port_path = get_virtio_port_property(vm, port_name)
-        file_size = int(params.get("filesize", 10))
         transfer_timeout = int(params.get("transfer_timeout", 720))
         host_dir = data_dir.get_tmp_dir()
         guest_dir = params.get("tmp_dir", "/var/tmp/")

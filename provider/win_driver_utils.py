@@ -223,9 +223,10 @@ def disable_driver(session, vm, test, cmd):
     status, output = session.cmd_status_output(cmd)
     if status != 0:
         if "reboot" in output:
-            vm.reboot()
+            session = vm.reboot(session)
         else:
             test.fail("failed to disable driver, %s" % output)
+    return session
 
 
 def get_device_id(session, test, driver_name):
@@ -292,12 +293,13 @@ def unload_driver(session, vm, test, params, load_method='enable'):
     if load_method != 'enable':
         device_name = driver_info_dict[driver_name]["device_name"]
         device_hwid = driver_info_dict[driver_name]["hwid"]
-        return uninstall_driver(session, test, devcon_path, driver_name,
-                                device_name, device_hwid)
+        uninstall_driver(session, test, devcon_path, driver_name,
+                         device_name, device_hwid)
     else:
         device_id = get_device_id(session, test, driver_name)
         cmd = '%s disable "@%s"' % (devcon_path, device_id)
-        return disable_driver(session, vm, test, cmd)
+        session = disable_driver(session, vm, test, cmd)
+    return session
 
 
 def memory_leak_check(vm, test, params, load_method='enable'):
@@ -312,7 +314,7 @@ def memory_leak_check(vm, test, params, load_method='enable'):
     :param load_method: Load driver method
     """
     session = vm.wait_for_login()
-    unload_driver(session, vm, test, params, load_method)
+    session = unload_driver(session, vm, test, params, load_method)
     time.sleep(10)
     if vm.is_alive() is False:
         test.fail("VM is not alive after uninstall driver,"

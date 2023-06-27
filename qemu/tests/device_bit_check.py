@@ -83,7 +83,7 @@ def run(test, params, env):
                         test.error("Can't get the ccw id for device")
                     cmd = "cat /sys/bus/ccw/devices/%s/" % ccw_n[0]
                 else:
-                    pci_info = session.cmd_output("lspci")
+                    pci_info = session.cmd_output("lspci -n")
                     pci_n = re.findall(pci_id_pattern, pci_info)
                     if not pci_n:
                         test.error("Can't get the pci id for device")

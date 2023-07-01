@@ -63,6 +63,27 @@ def run(test, params, env):
             test.error("Can not find serial of device")
         return out
 
+    def start_wuauserv_service(session):
+        """
+        Start wuauserv service.
+
+        :param session: The guest session object.
+        """
+        wuauserv_status_cmd = params["wuauserv_status_cmd"]
+        status = session.cmd_status(wuauserv_status_cmd)
+        if status != 0:
+            wuauserv_service_cfg_cmd = params["wuauserv_service_cfg_cmd"]
+            status = session.cmd_status(wuauserv_service_cfg_cmd)
+            if status != 0:
+                test.error("Change wuauserv service config not success")
+            wuauserv_start_cmd = params["wuauserv_start_cmd"]
+            status = session.cmd_status(wuauserv_start_cmd)
+            if status != 0:
+                test.error("Fail to start wuauserv service")
+            if not utils_misc.wait_for(lambda: not session.cmd_status(wuauserv_status_cmd),
+                                       60, 0, 2):
+                test.error("wuauserv service not running")
+
     vm = None
     iscsi = None
     logger = test.log
@@ -71,6 +92,7 @@ def run(test, params, env):
     clean_cmd = params["clean_cmd"]
     backend_image_name = params['image_name_stg1']
     guest_cmd = params["guest_cmd"]
+    NetFx3_install_cmd = params.get("NetFx3_install_cmd")
     try:
         logger.info("Create iscsi disk.")
         base_dir = data_dir.get_data_dir()
@@ -101,6 +123,19 @@ def run(test, params, env):
         os_type = params["os_type"]
         fstype = params.get("fstype")
         labeltype = params.get("labeltype", "msdos")
+        # workaround for win10(22h2) x86_64 to install
+        # Net Framework feature
+        if NetFx3_install_cmd:
+            NetFx3_install_cmd = utils_misc.set_winutils_letter(
+                    session,
+                    NetFx3_install_cmd)
+            logger.info("Start wuauserv service")
+            start_wuauserv_service(session)
+            logger.info("Install Net Framework feature")
+            status, output = session.cmd_status_output(NetFx3_install_cmd,
+                                                       timeout=360)
+            if status:
+                test.error("Install NetFx3 feature hit error: %s" % output)
 
         guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
         disk = _get_window_disk_index_by_wwn(serial)

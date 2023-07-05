@@ -150,6 +150,7 @@ def run(test, params, env):
         # for windows guest, disable/uninstall driver to get memory leak based on
         # driver verifier is enabled
         if params.get("os_type") == "windows":
-            vm.devices.simple_hotplug(buses[0], vm.monitor)
-            vm.devices.simple_hotplug(serial_devices[0], vm.monitor)
+            if params.get("unplug_pci") == "yes":
+                vm.devices.simple_hotplug(buses[0], vm.monitor)
+                vm.devices.simple_hotplug(serial_devices[0], vm.monitor)
             win_driver_utils.memory_leak_check(vm, test, params)

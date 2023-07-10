@@ -57,7 +57,6 @@ def run(test, params, env):
             upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
             upgrade_test.run_guest_cmd(params.get("prepare_env"))
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
-            upgrade_test.run_guest_cmd(params.get("get_answer_files"))
         vm_arch = params.get("vm_arch_name")
         enable_content = params.get("enable_content")
         params["enable_content"] = enable_content.format(vm_arch, vm_arch)
@@ -72,7 +71,6 @@ def run(test, params, env):
                 upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
                 upgrade_test.run_guest_cmd(params.get("prepare_env"))
                 upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
-                upgrade_test.run_guest_cmd(params.get("get_answer_files"))
             upgrade_test.yum_update_no_rhsm(test, old_custom_repo)
             upgrade_test.session = vm.reboot(upgrade_test.session)
             # please specify the new_internal_repo in the cfg in advance

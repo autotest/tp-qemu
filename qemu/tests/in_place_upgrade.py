@@ -81,12 +81,11 @@ def run(test, params, env):
             # process upgrade
             upgrade_test.upgrade_process(params.get("process_upgrade_no_rhsm"))
         elif params.get("rhsm_type") == "rhsm":
-            upgrade_test.rhsm(test)
             if params.get("com_install") == "yes":
                 upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
                 upgrade_test.run_guest_cmd(params.get("prepare_env"))
                 upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
-                upgrade_test.run_guest_cmd(params.get("get_answer_files"))
+            upgrade_test.rhsm(test)
             upgrade_test.session = vm.reboot(upgrade_test.session)
             upgrade_test.pre_upgrade_whitelist(test)
             upgrade_test.run_guest_cmd(params.get("pre_upgrade_rhsm"))

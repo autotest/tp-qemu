@@ -77,6 +77,8 @@ class IpuTest(object):
             get_poolid = self.params.get("get_pool_id")
             s, output = self.session.cmd_status_output(get_poolid, timeout=600)
             attach_pool = self.params.get("attach_pool") + output
+            if output == "":
+                test.cancel("No pool is found, please check the server")
             self.session.cmd(attach_pool, timeout=600)
             ena_content = self.params.get("enable_content")
             self.session.cmd(ena_content, timeout=3000)

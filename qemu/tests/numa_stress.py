@@ -1,12 +1,10 @@
 import os
-import re
 import math
 
 from avocado.utils import process
 
 from virttest import error_context
 from virttest import utils_misc
-from virttest import funcatexit
 from virttest import utils_test
 from virttest import data_dir
 from virttest.staging import utils_memory
@@ -34,25 +32,6 @@ def max_mem_map_node(host_numa_node, qemu_pid):
     return (node_map_most, memory_sz_map_most)
 
 
-def get_tmpfs_write_speed():
-    """
-    Get the tmpfs write speed of the host
-    return: The write speed of tmpfs, the unit is kb/s.
-    """
-    process.run("mkdir -p /tmp/test_speed && "
-                "mount -t tmpfs none /tmp/test_speed", shell=True)
-    output = process.run("dd if=/dev/urandom of=/tmp/test_speed/test "
-                         "bs=1k count=1024")
-    try:
-        speed = re.search(r"\s([\w\s\.]+)/s", output.stderr, re.I).group(1)
-        return float(utils_misc.normalize_data_size(speed, 'K', 1024))
-    except Exception:
-        return 3072
-    finally:
-        process.run("umount /tmp/test_speed")
-        os.removedirs("/tmp/test_speed")
-
-
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -60,8 +39,7 @@ def run(test, params, env):
     1) Boot up a guest and find the node it used
     2) Try to allocate memory in that node
     3) Run memory heavy stress inside guest
-    4) Check the vm is running well after stress,
-       no out of memory or qemu crash.
+    4) Check the memory use status of qemu process
     5) Repeat step 2 ~ 4 several times
 
 
@@ -73,69 +51,70 @@ def run(test, params, env):
     if len(host_numa_node.online_nodes) < 2:
         test.cancel("Host only has one NUMA node, skipping test...")
 
-    timeout = float(params.get("login_timeout", 240))
-    test_count = int(params.get("test_count", 4))
+    mem_map_tool = params.get("mem_map_tool")
+    cmd_cp_mmap_tool = params.get("cmd_cp_mmap_tool")
+    cmd_mmap_cleanup = params.get("cmd_mmap_cleanup")
+    cmd_mmap_stop = params.get("cmd_mmap_stop")
+    cmd_migrate_pages = params.get("cmd_migrate_pages")
+    mem_ratio = params.get_numeric("mem_ratio", 0.6, float)
+    timeout = params.get_numeric("login_timeout", 240, float)
+    test_count = params.get_numeric("test_count", 2, int)
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
-
     qemu_pid = vm.get_pid()
-
-    if test_count < len(host_numa_node.online_nodes):
-        test_count = len(host_numa_node.online_nodes)
-
-    tmpfs_path = params.get("tmpfs_path", "tmpfs_numa_test")
-    tmpfs_path = utils_misc.get_path(data_dir.get_tmp_dir(), tmpfs_path)
-    tmpfs_write_speed = get_tmpfs_write_speed()
-    memory_file = utils_misc.get_path(tmpfs_path, "test")
-
-    utils_memory.drop_caches()
-
-    if not os.path.isdir(tmpfs_path):
-        os.mkdir(tmpfs_path)
-
-    test_mem = float(params.get("mem"))*float(params.get("mem_ratio", 0.8))
-    stress_args = "--cpu 4 --io 4 --vm 2 --vm-bytes %sM" % int(test_mem / 2)
-
-    for test_round in range(test_count):
-        most_used_node, _ = max_mem_map_node(host_numa_node, qemu_pid)
-        if os.path.exists(memory_file):
-            os.remove(memory_file)
+    node_list = host_numa_node.online_nodes
+    node_meminfo = host_numa_node.read_from_node_meminfo
+    if test_count < len(node_list):
+        test_count = len(node_list)
+    try:
+        test_mem = float(params.get("mem")) * mem_ratio
+        guest_stress_args = "-a -p -l %sM" % int(test_mem)
+        stress_path = os.path.join(data_dir.get_deps_dir('mem_mapping'), mem_map_tool)
+        test.log.info("Compile the mem_mapping tool")
+        cmd_cp_mmap_tool = cmd_cp_mmap_tool % stress_path
+        process.run(cmd_cp_mmap_tool, shell=True)
         utils_memory.drop_caches()
-        error_context.context("Executing stress test round: %s" % test_round,
-                              test.log.info)
-        numa_node_malloc = most_used_node
-        tmpfs_size = \
-            math.floor(float(host_numa_node.read_from_node_meminfo(numa_node_malloc,
-                       'MemFree')) * 0.9)
-        dd_timeout = tmpfs_size / tmpfs_write_speed * 1.5
-        mount_fs_size = "size=%dK" % tmpfs_size
-        dd_cmd = "dd if=/dev/urandom of=%s bs=1k count=%s" % (memory_file,
-                                                              tmpfs_size)
-        numa_dd_cmd = "numactl -m %s %s" % (numa_node_malloc, dd_cmd)
-        error_context.context("Try to allocate memory in node %s"
-                              % numa_node_malloc, test.log.info)
-        try:
-            utils_misc.mount("none", tmpfs_path, "tmpfs", perm=mount_fs_size)
-            funcatexit.register(env, params.get("type"), utils_misc.umount,
-                                "none", tmpfs_path, "tmpfs")
-            process.system(numa_dd_cmd, timeout=dd_timeout, shell=True)
-        except Exception as error_msg:
-            if "No space" in str(error_msg):
-                pass
-            else:
-                test.fail("Can not allocate memory in node %s."
-                          " Error message:%s" % (numa_node_malloc,
-                                                 str(error_msg)))
-        error_context.context("Run memory heavy stress in guest", test.log.info)
-        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
-        stress_test.load_stress_tool()
-        stress_test.unload_stress()
-        stress_test.clean()
-        utils_misc.umount("none", tmpfs_path, "tmpfs")
-        funcatexit.unregister(env, params.get("type"), utils_misc.umount,
-                              "none", tmpfs_path, "tmpfs")
-        session.cmd("sync; echo 3 > /proc/sys/vm/drop_caches")
-        utils_memory.drop_caches()
-
-    session.close()
+        for test_round in range(test_count):
+            cmd_mmap = params.get("cmd_mmap")
+            error_context.context("Executing stress test round: %s" % test_round, test.log.info)
+            try:
+                error_context.context("Get the qemu process memory use status", test.log.info)
+                most_used_node, memory_used = max_mem_map_node(host_numa_node, qemu_pid)
+                numa_node_malloc = most_used_node
+                mmap_size = math.floor(float(node_meminfo(numa_node_malloc, 'MemTotal')) * mem_ratio)
+                cmd_mmap = cmd_mmap % (numa_node_malloc, mmap_size)
+                error_context.context("Run mem_mapping on host node "
+                                      "%s." % numa_node_malloc, test.log.info)
+                process.system(cmd_mmap, shell=True, ignore_bg_processes=True)
+                error_context.context("Run memory heavy stress in guest", test.log.info)
+                try:
+                    guest_stress = utils_test.VMStress(vm, "mem_mapping", params,
+                                                       download_url=stress_path,
+                                                       stress_args=guest_stress_args)
+                    guest_stress.load_stress_tool()
+                except utils_test.StressError as guest_info:
+                    test.error(guest_info)
+                error_context.context("Get the qemu process memory use status", test.log.info)
+                node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
+                if node_after == most_used_node and memory_after >= memory_used:
+                    idle_nodes = node_list.copy()
+                    idle_nodes.remove(numa_node_malloc)
+                    error_context.context("Run migratepages on host from node "
+                                          "%s to node %s." % (numa_node_malloc,
+                                                              idle_nodes[0]), test.log.info)
+                    migrate_pages = cmd_migrate_pages % (qemu_pid, numa_node_malloc, idle_nodes[0])
+                    process.system_output(migrate_pages, shell=True)
+                    error_context.context("Get the qemu process memory use status again", test.log.info)
+                    node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
+                    if node_after == most_used_node and memory_after >= memory_used:
+                        test.fail("Memory still stick in node %s" % numa_node_malloc)
+            finally:
+                guest_stress.unload_stress()
+                guest_stress.clean()
+                process.system(cmd_mmap_stop, shell=True, ignore_status=True)
+                utils_memory.drop_caches()
+    finally:
+        process.run(cmd_mmap_cleanup, shell=True)
+        session.close()

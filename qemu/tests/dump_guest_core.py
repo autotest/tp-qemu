@@ -83,6 +83,7 @@ def run(test, params, env):
     crash_script = params["crash_script"]
     crash_cmd = params["crash_cmd"]
     vmcore_file = params["vmcore_file"]
+    check_vmcore_file = params["check_vmcore_file"]
     arch = params["vm_arch_name"]
     host_kernel_version = process.getoutput("uname -r").strip()
     vm = env.get_vm(params["main_vm"])
@@ -99,7 +100,7 @@ def run(test, params, env):
     utils_misc.wait_for(lambda: os.path.exists(core_file), timeout=60)
     if params.get('check_core_file', 'yes') == 'yes':
         check_core_file(arch)
-        if dump_guest_core == 'on':
+        if dump_guest_core == 'on' and check_vmcore_file == 'yes':
             crash_cmd %= host_kernel_version
             utils_misc.wait_for(lambda: os.path.exists(vmcore_file), timeout=60)
             check_vmcore_file()

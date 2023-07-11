@@ -114,11 +114,9 @@ def run(test, params, env):
         upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd_7"))
         if params.get("rhsm_type") == "rhsm":
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
-            upgrade_test.run_guest_cmd(params.get("get_answer_files"))
         elif params.get("rhsm_type") == "no_rhsm":
             upgrade_test.run_guest_cmd(params.get("prepare_env"))
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
-            upgrade_test.run_guest_cmd(params.get("get_answer_files"))
             # get_custom_7 and export_type_7, set env for no_rhsm test
             upgrade_test.run_guest_cmd(params.get("get_custom_7"))
             upgrade_test.run_guest_cmd(params.get("export_type_7"))

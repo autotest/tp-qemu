@@ -43,6 +43,7 @@ class BlockdevIncbkConvertWithBitmapsTest(BlockdevLiveBackupBaseTest):
             t=self._target_image.image_filename
         )
         process.system(cmd, ignore_status=False, shell=True)
+        self.trash.append(self._target_image)
 
     def check_image_bitmaps_existed(self):
         check_list = ['name: %s' % b for b in self._bitmaps]

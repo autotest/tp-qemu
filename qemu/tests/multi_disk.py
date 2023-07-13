@@ -8,6 +8,7 @@ import random
 import string
 
 from avocado.utils import astring
+from avocado.utils import process
 
 from virttest import env_process
 from virttest import error_context
@@ -248,6 +249,18 @@ def run(test, params, env):
         test.log.info('Newly added disks:\n%s',
                       astring.tabular_output(param_table, param_table_header))
         return
+
+    disk_check_cmd = params.get('disk_check_cmd')
+    indirect_image_blacklist = params.get('indirect_image_blacklist').split()
+
+    if disk_check_cmd:
+        image_stg_blacklist = params.get('image_stg_blacklist').split()
+        matching_images = process.run(disk_check_cmd, ignore_status=True,
+                                      shell=True).stdout_text
+        for disk in image_stg_blacklist:
+            if not re.search(disk, matching_images):
+                indirect_image_blacklist.remove(disk)
+        params["indirect_image_blacklist"] = " ".join(indirect_image_blacklist)
 
     # Always recreate VMs and disks
     error_context.context("Start the guest with new disks", test.log.info)

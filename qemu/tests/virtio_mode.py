@@ -96,7 +96,7 @@ def run(test, params, env):
 
         :param session: shell Object
         """
-        pci_info = session.cmd_output("lspci")
+        pci_info = session.cmd_output("lspci -n")
         pci_id_pattern = params["pci_id_pattern"]
         pci_n = re.findall(pci_id_pattern, pci_info)[0]
         if not pci_n:

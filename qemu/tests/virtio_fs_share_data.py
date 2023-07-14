@@ -284,6 +284,7 @@ def run(test, params, env):
         params["pre_command"] = cmd_set_tmpfs % size_mem1
 
     if setup_local_nfs:
+        nfs_local_dic = {}
         for fs in params.objects("filesystems"):
             nfs_params = params.object_params(fs)
 
@@ -295,6 +296,7 @@ def run(test, params, env):
                 params["nfs_mount_dir"] = os.path.join(fs_source_dir, nfs_mount_dst_name)
             nfs_local = nfs.Nfs(params)
             nfs_local.setup()
+            nfs_local_dic[fs] = nfs_local
 
     if setup_filesystem_on_host:
         # create partition on host
@@ -827,17 +829,8 @@ def run(test, params, env):
             if vm and vm.is_alive():
                 vm.destroy()
             for fs in params.objects("filesystems"):
-                nfs_params = params.object_params(fs)
-                params["export_dir"] = nfs_params.get("export_dir")
-                params["nfs_mount_dir"] = nfs_params.get("fs_source_dir")
-                params["rm_export_dir"] = nfs_params.get("export_dir")
-                params["rm_mount_dir"] = nfs_params.get("fs_source_dir")
-                if cmd_get_stdev:
-                    fs_source_dir = nfs_params.get("fs_source_dir")
-                    params["nfs_mount_dir"] = os.path.join(fs_source_dir, nfs_mount_dst_name)
-                nfs_local = nfs.Nfs(params)
+                nfs_local = nfs_local_dic[fs]
                 nfs_local.cleanup()
-                utils_misc.safe_rmdir(params["export_dir"])
         if setup_filesystem_on_host:
             cmd = "if losetup -l {0};then losetup -d {0};fi;".format(
                 loop_device)

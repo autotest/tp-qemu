@@ -70,8 +70,8 @@ class MonotonicTime(TimeClientTest):
     def test_Gtod(self):
         self._test(test_type='gtod', threshold=0)
 
-    def test_Tsc(self):
-        self._test(test_type='tsc', threshold=0)
+    def test_Tsc_lfence(self):
+        self._test(test_type='tsc_lfence', threshold=0)
 
     def test_Clock(self):
         self._test(test_type='clock', threshold=0)

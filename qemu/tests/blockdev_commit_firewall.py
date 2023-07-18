@@ -58,6 +58,10 @@ class BlockdevCommitFirewall(BlockDevCommitTest):
         # stop nbd image export
         self._nbd_export.stop_export()
 
+        # remove nbd image after test
+        nbd_image = self.get_image_by_tag(self.params["local_image_tag"])
+        nbd_image.remove()
+
     def generate_tempfile(self, root_dir, filename="data",
                           size="1000M", timeout=360):
         backup_utils.generate_tempfile(

@@ -1293,7 +1293,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
         """
 
-        def ssh_key_test(operation, *keys, **kwargs):
+        def ssh_key_test(operation, guest_name, *keys, **kwargs):
             """
             Do ssh_key generation and ssh_login test to confirm
             whether the ssh_key api work well or not.
@@ -1303,12 +1303,15 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             :param kwargs: optional keyword arguments
             """
 
-            guest_user = params['guest_user']
             op_func = getattr(self.gagent, 'ssh_%s_authorized_keys' %
                               operation)
-            op_func(guest_user, *keys, **kwargs)
-            keys_ga = self.gagent.ssh_get_authorized_keys(guest_user)
-            session.cmd(params["add_line_at_end"])
+            op_func(guest_name, *keys, **kwargs)
+            keys_ga = self.gagent.ssh_get_authorized_keys(guest_name)
+
+            add_line_at_end = params["add_line_at_end"]
+            cmd_guest_keys = params["cmd_get_guestkey"]
+
+            session.cmd(add_line_at_end)
             keys_guest = session.cmd_output(cmd_guest_keys).strip()
             _value_compared_ga_guest(keys_ga, keys_guest, operation)
             return keys_ga, keys_guest
@@ -1321,11 +1324,16 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
 
             if prepare:
-                session.cmd(params["cmd_add_user_set_passwd"])
-                session.cmd(params["set_setenforce"] % 0)
+                output = session.cmd_output("getenforce")
+                if str(output) == "Permissive":
+                    session.cmd("setenforce 1")
+                session.cmd(params["set_sebool"])
+                if guest_user != "root":
+                    session.cmd(params["cmd_add_user_set_passwd"])
             else:
                 session.cmd(params["cmd_del_key_file"])
-                session.cmd(params["cmd_remove_user"])
+                if guest_user != "root":
+                    session.cmd(params["cmd_remove_user"])
 
         def _generate_host_keys():
             """
@@ -1349,12 +1357,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
 
             cmd_login_guest = params["test_login_guest"] % guest_ip
-            login_user = process.system_output(cmd_login_guest, shell=True)
-            login_user = login_user.strip().decode(encoding="utf-8",
-                                                   errors="strict")
-            if params["guest_user"] not in login_user:
-                test.error("Can not login guest without interaction, "
-                           "basic function test is fail.")
+            output = process.system_output(cmd_login_guest, shell=True)
+            output = output.strip().decode(encoding="utf-8",
+                                           errors="strict")
+            if output_check_str not in output:
+                test.error("Can not login guest without interaction,"
+                           " basic function test is fail.")
 
         def _value_compared_ga_guest(return_value_ga,
                                      return_value_guest, status):
@@ -1375,30 +1383,30 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
-        _prepared_n_restore_env()
-        cmd_guest_keys = params["cmd_get_guestkey"]
         mac_addr = self.vm.get_mac_address()
         os_type = self.params["os_type"]
+        guest_user = self.params['guest_user']
+        output_check_str = self.params["output_check_str"]
         guest_ip_ipv4 = utils_net.get_guest_ip_addr(session, mac_addr,
                                                     os_type)
+        _prepared_n_restore_env()
 
         error_context.context("Check the basic function ",
                               LOG_JOB.info)
         host_key1 = _generate_host_keys()
-        ssh_key_test("add", host_key1, reset=False)
+        ssh_key_test("add", guest_user, host_key1, reset=False)
         _login_guest_test(guest_ip_ipv4)
 
         error_context.context("Check whether can add existed key.",
                               LOG_JOB.info)
         host_key2 = _generate_host_keys()
-        ssh_key_test("add", host_key1, host_key2, reset=False)
+        ssh_key_test("add", guest_user, host_key1, host_key2, reset=False)
         _login_guest_test(guest_ip_ipv4)
 
         error_context.context("Check whether can remove keys",
                               LOG_JOB.info)
         host_key3 = "ssh-rsa ANotExistKey"
-        keys_qga, keys_guest = ssh_key_test("remove", host_key1,
-                                            host_key3)
+        keys_qga, keys_guest = ssh_key_test("remove", guest_user, host_key1, host_key3)
         for key in [host_key1, host_key3]:
             if key in keys_guest.replace("\n", ","):
                 test.fail("Key %s is still in guest,"
@@ -1408,7 +1416,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Check whether can reset keys",
                               LOG_JOB.info)
         host_key4 = _generate_host_keys()
-        ssh_key_test("add", host_key4, reset=True)
+        ssh_key_test("add", guest_user, host_key4, reset=True)
         _login_guest_test(guest_ip_ipv4)
 
         _prepared_n_restore_env(False)

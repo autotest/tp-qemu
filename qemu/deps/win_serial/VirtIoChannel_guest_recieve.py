@@ -67,9 +67,9 @@ class VirtIoChannel:
         return cmd
 
     def write(self, message, arg=''):
-        if type(message) != int:
+        if not isinstance(message, int):
             raise TypeError("1nd arg must be a known message type.")
-        if type(arg) != str:
+        if not isinstance(arg, str):
             raise TypeError("2nd arg must be a string.")
         stream = self._pack_message(message, arg)
         if self.is_windows:

@@ -49,7 +49,8 @@ def run(test, params, env):
                           test.log.info)
     if params.get('machine_type').startswith("s390"):
         vm.monitor.cmd("cont")
-    vm.verify_status(params.get("expected_status", "running"))
+    if not vm.wait_for_status(params.get("expected_status", "running"), 30):
+        test.fail("VM is not in expected status")
 
     error_context.context("Quit guest and check the process quit normally",
                           test.log.info)

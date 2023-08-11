@@ -52,9 +52,9 @@ def run(test, params, env):
     error_context.context("check bitmap existence", test.log.info)
     check_bitmap_existence_as_expected(bitmaps, "existence")
 
-    error_context.context("system powerdown", test.log.info)
-    vm.monitor.system_powerdown()
-    if not vm.wait_for_shutdown(int(params.get("shutdown_timeout", 360))):
+    error_context.context("Shutting down the guest", test.log.info)
+    vm.graceful_shutdown(params.get_numeric("shutdown_timeout", 360))
+    if not vm.wait_for_shutdown():
         test.fail("guest refuses to go down")
 
     error_context.context("start vm", test.log.info)

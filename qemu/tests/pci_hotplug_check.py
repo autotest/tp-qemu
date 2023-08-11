@@ -237,7 +237,7 @@ def run(test, params, env):
                 ref = [line.strip() for line in reference.splitlines()]
                 output = [_ for _ in output if _ not in ref]
                 output = "\n".join(output)
-                if re.search(params.get("match_string"), output, re.I):
+                if re.search(params.get("pci_id_pattern"), output, re.I):
                     return True
                 return False
 

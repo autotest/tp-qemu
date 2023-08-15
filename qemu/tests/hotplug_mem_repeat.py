@@ -2,6 +2,7 @@ import logging
 
 from virttest import error_context
 from virttest import utils_test
+
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 LOG_JOB = logging.getLogger('avocado.test')
@@ -35,12 +36,17 @@ class MemoryHotplugRepeat(MemoryHotplugTest):
         memory 256 times, then unplug 256 times. Otherwise, repeat hotplug
         and unplug in turn for 256 times. This is test entry.
         """
-        times = int(self.params["repeat_times"])
+        times = self.params.get_numeric("repeat_times", int)
         target_mems = []
         for i in range(times):
             target_mems.append("mem%s" % i)
         vm = self.env.get_vm(self.params["main_vm"])
         session = vm.wait_for_login()
+        if self.params.get("vm_arch_name", "") == "aarch64":
+            self.test.log.info("Check basic page size on guest.")
+            get_basic_page = self.params.get("get_basic_page")
+            if session.cmd(get_basic_page).strip() == '65536':
+                self.params['size_mem'] = self.params.get("size_mem_64k")
         if self.params.get_boolean("mem_unplug_test", False):
             arg = "movable_node"
             utils_test.update_boot_option(vm, args_added=arg)

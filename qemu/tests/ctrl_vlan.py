@@ -90,7 +90,8 @@ def run(test, params, env):
                 ifname = utils_net.get_linux_ifname(
                             session, vm.virtnet[0].mac)
                 vlan_set_cmd = vlan_set_cmd % (ifname, ifname, ifname, ifname)
-                status, output = session.cmd_status_output(vlan_set_cmd)
+                status, output = session.cmd_status_output(vlan_set_cmd,
+                                                           safe=True)
                 if status:
                     test.error("Error occured when set vlan tag for network interface: %s, "
                                "err info: %s " % (ifname, output))

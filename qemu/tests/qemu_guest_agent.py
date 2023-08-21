@@ -3150,13 +3150,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
             error_context.context("Check %s cmd in agent log." % qga_cmd,
                                   LOG_JOB.info)
-            log_str = session.cmd_output(get_log_cmd).strip().split('\n')[-1]
-            pattern = r"%s" % qga_cmd
-            if not re.findall(pattern, log_str, re.M | re.I):
+            get_log_cmd = params["get_log_cmd"] % qga_cmd
+            status, log_str = session.cmd_status_output(get_log_cmd).strip().split('\n')[-1]
+            if status or not log_str:
                 test.fail("The %s command is not recorded in agent"
                           " log." % qga_cmd)
 
-        get_log_cmd = params["get_log_cmd"]
         session = self._get_session(self.params, self.vm)
         self._open_session_list.append(session)
         self._change_bl(session)

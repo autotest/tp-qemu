@@ -9,6 +9,7 @@ import time
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_test
 from virttest.utils_windows import virtio_win, wmic
 
 LOG_JOB = logging.getLogger('avocado.test')
@@ -269,13 +270,13 @@ def load_driver(session, test, params, load_method='enable'):
         media_type = params.get("virtio_win_media_type", "iso")
 
         device_hwid = driver_info_dict[driver_name]["hwid"]
-        return install_driver_by_virtio_media(session, test, devcon_path,
-                                              media_type, driver_name,
-                                              device_hwid)
+        install_driver_by_virtio_media(session, test, devcon_path,
+                                       device_hwid)
     else:
         device_id = get_device_id(session, test, driver_name)
         cmd = '%s enable "@%s"' % (devcon_path, device_id)
-        return enable_driver(session, test, cmd)
+        enable_driver(session, test, cmd)
+    utils_test.qemu.windrv_verify_running(session, test, driver_name)
 
 
 def unload_driver(session, vm, test, params, load_method='enable'):

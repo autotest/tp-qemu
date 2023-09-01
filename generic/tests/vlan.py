@@ -192,8 +192,7 @@ def run(test, params, env):
     file_size = params.get("file_size", 4096)
     cmd_type = params.get("cmd_type", "ip")
     login_timeout = int(params.get("login_timeout", 360))
-    prepare_netkvmco_cmd = params.get("prepare_netkvmco_cmd")
-    set_vlan_cmd = params.get("set_vlan_cmd")
+    set_vlan_cmd = params["set_vlan_cmd"]
     driver_verifier = params.get("driver_verifier")
 
     vms.append(env.get_vm(params["main_vm"]))
@@ -207,14 +206,11 @@ def run(test, params, env):
             session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                     test,
                                                                     driver_verifier)
-            netkvmco_path = get_netkvmco_path(session)
-            session.cmd(prepare_netkvmco_cmd % netkvmco_path, timeout=240)
-            session.close()
             session = vm.wait_for_serial_login(timeout=login_timeout)
-            session.cmd(set_vlan_cmd)
             dev_mac = vm.virtnet[0].mac
             connection_id = utils_net.get_windows_nic_attribute(
                 session, "macaddress", dev_mac, "netconnectionid")
+            session.cmd(set_vlan_cmd % connection_id)
             utils_net.restart_windows_guest_network(
                 session, connection_id)
             time.sleep(10)

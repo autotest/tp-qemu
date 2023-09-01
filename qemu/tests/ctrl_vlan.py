@@ -106,12 +106,8 @@ def run(test, params, env):
                 ifname = utils_net.get_windows_nic_attribute(
                             session=session, key="netenabled", value=True,
                             target="netconnectionID")
-                netkvmco_path = get_netkvmco_path(session)
-                prepare_netkvmco_cmd = params.get("prepare_netkvmco_cmd")
-                session.cmd(prepare_netkvmco_cmd % netkvmco_path, timeout=240)
-                session.close()
                 session = vm.wait_for_serial_login(timeout=login_timeout)
-                status, output = session.cmd_status_output(vlan_set_cmd)
+                status, output = session.cmd_status_output(vlan_set_cmd % ifname)
                 if status:
                     test.error("Error occured when set vlan tag for "
                                "network interface: %s, err info: %s "

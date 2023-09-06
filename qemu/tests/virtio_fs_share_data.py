@@ -478,9 +478,8 @@ def run(test, params, env):
 
                 if case_insensitive_test:
                     # only for windows guest, testing case insensitive
-                    def file_check(guest_file_win):
-                        cmd_check_file = "dir %s" % guest_file_win
-                        s, o = session.cmd_status_output(cmd_check_file, io_timeout)
+                    def file_check(cmd):
+                        s, o = session.cmd_status_output(cmd, io_timeout)
                         if s:
                             test.fail("Case insensitive failed,"
                                       " the output is %s" % o)
@@ -506,18 +505,24 @@ def run(test, params, env):
 
                     error_context.context("check the file with"
                                           " uppercase letter name.", test.log.info)
-                    guest_file = os.path.join(fs_dest, test_file_guest.upper())
-                    guest_file_win = guest_file.replace("/", "\\")
-                    file_check(guest_file_win)
+                    guest_file_full_path = volume_letter + ":\\" + test_file_guest.upper()
+                    cmd_check_file = "dir %s" % guest_file_full_path
+                    file_check(cmd_check_file)
+                    cmd_check_md5sum = cmd_md5 % (volume_letter, test_file_guest.upper())
+                    file_check(cmd_check_md5sum)
 
                     error_context.context("Create file on host.", test.log.info)
                     test_file_host = test_file + "_Host"
                     host_data = os.path.join(fs_source, test_file_host)
                     process.system('touch %s' % host_data, io_timeout)
+                    time.sleep(2)
                     error_context.context("check the file with"
                                           " lowercase letter name.", test.log.info)
-                    guest_file_win = os.path.join(fs_dest, test_file_host.lower()).replace("/", "\\")
-                    file_check(guest_file_win)
+                    guest_file_full_path = volume_letter + ":\\" + test_file_host.lower()
+                    cmd_check_file = "dir %s" % guest_file_full_path
+                    file_check(cmd_check_file)
+                    cmd_check_md5sum = cmd_md5 % (volume_letter, test_file_host.lower())
+                    file_check(cmd_check_md5sum)
 
                 if cmd_symblic_file:
                     error_context.context("Symbolic test under %s inside "

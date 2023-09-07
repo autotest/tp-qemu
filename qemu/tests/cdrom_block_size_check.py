@@ -13,6 +13,7 @@ from virttest.qemu_capabilities import Flags
 from virttest.qemu_monitor import QMPCmdError
 
 from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
+from provider import job_utils
 
 
 # This decorator makes the test function aware of context strings
@@ -168,9 +169,12 @@ def run(test, params, env):
             if excepted_qmp_err not in str(e):
                 test.error(str(e))
             test.log.warn(str(e))
-            wait_for_tray_open(cdroms)
-            with change_check:
-                vm.change_media(device, target)
+            cond = {'tray-open': True, 'id': cdroms}
+            if job_utils.get_event_by_condition(vm, 'DEVICE_TRAY_MOVED', 10, **cond):
+                with change_check:
+                    vm.change_media(device, target)
+            else:
+                test.error("The cdrom's tray did not open.")
         # FIXME: sleep to wait to sync the status of CD-ROM to VM.
         time.sleep(sleep_time_after_change)
 

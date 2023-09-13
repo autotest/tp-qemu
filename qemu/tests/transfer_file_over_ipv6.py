@@ -1,5 +1,7 @@
 import os
 import re
+import random
+
 
 from avocado.utils import crypto, process
 from virttest import remote
@@ -34,6 +36,7 @@ def run(test, params, env):
     file_trans_timeout = int(params.get("file_trans_timeout", '1200'))
     file_md5_check_timeout = int(params.get("file_md5_check_timeout", '600'))
     link_local_ipv6_addr = params.get_boolean("link_local_ipv6_addr")
+    netid = params.get("netid", "2620:2023:09:12")
 
     def get_file_md5sum(file_name, session, timeout):
         """
@@ -55,7 +58,14 @@ def run(test, params, env):
         vms.append(env.get_vm(vm_name))
 
     # config ipv6 address host and guest.
-    host_ifname = params.get("netdst") if link_local_ipv6_addr else None
+    nettype = params.get("nettype", "vdpa")
+    if nettype == "vdpa":
+        host_ifname = params.get("netdst")
+        hostid = random.randint(31, 50)
+        process.run("ip addr add %s::%s/64 dev %s" % (netid, hostid, host_ifname),
+                    ignore_status=True)
+    else:
+        host_ifname = params.get("netdst") if link_local_ipv6_addr else None
     host_address = utils_net.get_host_ip_address(
         params, ip_ver="ipv6", linklocal=link_local_ipv6_addr)
 
@@ -67,16 +77,27 @@ def run(test, params, env):
         if params.get("os_type") == "linux":
             inet_name[vm] = utils_net.get_linux_ifname(sessions[vm],
                                                        vm.get_mac_address())
-        addresses[vm] = utils_net.get_guest_ip_addr(
-            sessions[vm],
-            vm.get_mac_address(),
-            params.get("os_type"),
-            ip_version="ipv6",
-            linklocal=link_local_ipv6_addr)
-        if link_local_ipv6_addr is False and addresses[vm] is None:
-            test.cancel("Your guest can not get remote IPv6 address.")
-        error_context.context("Get ipv6 address of %s: %s" % (vm.name, addresses[vm]),
-                              test.log.info)
+        if nettype == "vdpa":
+            guestid = random.randint(1, 30)
+            sessions[vm].cmd("ip addr add %s::%s/64 dev %s" % (netid, guestid,
+                                                               inet_name[vm]),
+                             timeout=timeout, ignore_all_errors=True)
+            addresses[vm] = utils_net.get_guest_ip_addr(sessions[vm],
+                                                        vm.get_mac_address(),
+                                                        params.get("os_type"),
+                                                        ip_version="ipv6",
+                                                        linklocal=link_local_ipv6_addr)
+        else:
+            addresses[vm] = utils_net.get_guest_ip_addr(
+                sessions[vm],
+                vm.get_mac_address(),
+                params.get("os_type"),
+                ip_version="ipv6",
+                linklocal=link_local_ipv6_addr)
+            if link_local_ipv6_addr is False and addresses[vm] is None:
+                test.cancel("Your guest can not get remote IPv6 address.")
+            error_context.context("Get ipv6 address of %s: %s" % (vm.name, addresses[vm]),
+                                  test.log.info)
 
     # prepare test data
     guest_path = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
@@ -150,6 +171,8 @@ def run(test, params, env):
     finally:
         process.system("rm -rf %s" % host_path, timeout=timeout,
                        ignore_status=True)
+        if nettype == "vdpa":
+            process.run("ip addr del %s/64 dev %s" % (host_address, host_ifname))
         for vm in vms:
             if params.get("os_type") == "linux":
                 sessions[vm].cmd("rm -rf %s %s || true" % (guest_path, dest_path),

@@ -192,7 +192,7 @@ def run(test, params, env):
     file_size = params.get("file_size", 4096)
     cmd_type = params.get("cmd_type", "ip")
     login_timeout = int(params.get("login_timeout", 360))
-    set_vlan_cmd = params["set_vlan_cmd"]
+    set_vlan_cmd = params.get("set_vlan_cmd")
     driver_verifier = params.get("driver_verifier")
 
     vms.append(env.get_vm(params["main_vm"]))

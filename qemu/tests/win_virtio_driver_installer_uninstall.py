@@ -1,4 +1,5 @@
 import time
+import re
 
 from virttest import error_context
 from virttest import utils_misc
@@ -86,8 +87,9 @@ def run(test, params, env):
     # viostor and vioscsi drivers can not uninstalled by installer
     for device_name in device_name_list:
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
-        status = session.cmd_status(chk_cmd)
-        if status == 0:
+        output = session.cmd_output(chk_cmd).strip()
+        inf_name = re.findall(r"\.inf", output, re.I)
+        if inf_name:
             uninstalled_device.append(device_name)
     if uninstalled_device:
         test.fail("%s uninstall failed" % uninstalled_device)

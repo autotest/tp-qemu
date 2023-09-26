@@ -518,12 +518,8 @@ def run(test, params, env):
                 if not is_tray_opened(vm, qemu_cdrom_device):
                     test.fail("Monitor reports tray closed"
                               " when ejecting (round %s)" % i)
-                if params["os_type"] != "windows":
-                    cmd = "dd if=%s of=/dev/null count=1" % guest_cdrom_device
-                else:
-                    # windows guest does not support auto close door when reading
-                    # cdrom, so close it by eject command;
-                    cmd = params["close_cdrom_cmd"] % guest_cdrom_device
+
+                cmd = params["close_cdrom_cmd"] % guest_cdrom_device
                 session.cmd(cmd)
                 if is_tray_opened(vm, qemu_cdrom_device):
                     test.fail("Monitor reports tray opened when close"

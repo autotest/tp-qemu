@@ -51,9 +51,10 @@ def run(test, params, env):
     if len(host_numa_node.online_nodes) < 2:
         test.cancel("Host only has one NUMA node, skipping test...")
 
+    tmp_directory = "/var/tmp"
     mem_map_tool = params.get("mem_map_tool")
     cmd_cp_mmap_tool = params.get("cmd_cp_mmap_tool")
-    cmd_mmap_cleanup = params.get("cmd_mmap_cleanup")
+    cmd_mmap_cleanup = params.get("cmd_mmap_cleanup") % tmp_directory
     cmd_mmap_stop = params.get("cmd_mmap_stop")
     cmd_migrate_pages = params.get("cmd_migrate_pages")
     mem_ratio = params.get_numeric("mem_ratio", 0.6, float)
@@ -73,7 +74,7 @@ def run(test, params, env):
         guest_stress_args = "-a -p -l %sM" % int(test_mem)
         stress_path = os.path.join(data_dir.get_deps_dir('mem_mapping'), mem_map_tool)
         test.log.info("Compile the mem_mapping tool")
-        cmd_cp_mmap_tool = cmd_cp_mmap_tool % stress_path
+        cmd_cp_mmap_tool = cmd_cp_mmap_tool % (stress_path, tmp_directory, tmp_directory)
         process.run(cmd_cp_mmap_tool, shell=True)
         utils_memory.drop_caches()
         for test_round in range(test_count):
@@ -84,7 +85,7 @@ def run(test, params, env):
                 most_used_node, memory_used = max_mem_map_node(host_numa_node, qemu_pid)
                 numa_node_malloc = most_used_node
                 mmap_size = math.floor(float(node_meminfo(numa_node_malloc, 'MemTotal')) * mem_ratio)
-                cmd_mmap = cmd_mmap % (numa_node_malloc, mmap_size)
+                cmd_mmap = cmd_mmap % (tmp_directory, numa_node_malloc, mmap_size)
                 error_context.context("Run mem_mapping on host node "
                                       "%s." % numa_node_malloc, test.log.info)
                 process.system(cmd_mmap, shell=True, ignore_bg_processes=True)

@@ -4424,6 +4424,34 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         session.close()
 
+    @error_context.context_aware
+    def gagent_check_debugview_VSS_DLL(self, test, params, env):
+        """
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+
+        vm = env.get_vm(params["main_vm"])
+        session = vm.wait_for_login()
+        gagent = self.gagent
+
+        cmd_run_debugview = utils_misc.set_winutils_letter(session,
+                                                           params["cmd_run_debugview"])
+        cmd_check_string_VSS = params["cmd_check_string_VSS"]
+
+        error_context.context("Check if debugview can capture log info", test.log.info)
+        s, o = session.cmd_status_output(cmd_run_debugview)
+        if s:
+            test.error("Debugviewconsole.exe run failed, "
+                       "Please check the output is: %s" % o)
+        gagent.fsfreeze()
+        gagent.fsthaw()
+        s, o = session.cmd_status_output(cmd_check_string_VSS)
+        if s:
+            test.fail("debugview can't capture expected log info,  "
+                      "the actual output is %s" % o)
+
 
 def run(test, params, env):
     """

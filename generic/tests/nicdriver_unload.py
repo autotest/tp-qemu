@@ -136,16 +136,13 @@ def run(test, params, env):
         while not all_threads_done(threads):
             error_context.context("Shutdown the driver for NIC interface.",
                                   test.log.info)
-            session_serial.cmd_output_safe("ifconfig %s down" % ethname)
+            sleep_time = random.randint(1, 5)
             error_context.context("Unload  NIC driver.", test.log.info)
             session_serial.cmd_output_safe("modprobe -r %s" % driver)
+            time.sleep(sleep_time)
             error_context.context("Load NIC driver.", test.log.info)
             session_serial.cmd_output_safe("modprobe %s" % driver)
-            error_context.context("Activate NIC driver.", test.log.info)
-            session_serial.cmd_output_safe("ifconfig %s up" % ethname)
-            sleep_time = random.randint(10, 60)
-            session_serial.cmd_output_safe("sleep %s" % sleep_time,
-                                           timeout=sleep_time + 5)
+            time.sleep(sleep_time)
 
         # files md5sums check
         error_context.context("File transfer finished, checking files md5sums",

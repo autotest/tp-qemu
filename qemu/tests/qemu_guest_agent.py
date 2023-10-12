@@ -1641,7 +1641,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         else:
             error_context.context("Set down the interface in windows guest.",
                                   LOG_JOB.info)
-            utils_net.disable_windows_guest_network(session, if_name)
+            session_serial.cmd(self.params["cmd_disable_network"] % if_name)
             ret_after_down = self.gagent.get_network_interface()
             if_name_down = get_interface(ret_after_down, mac_addr)[0]
             if if_name_down:
@@ -1650,7 +1650,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                           % ret_after_down)
             error_context.context("Set up the interface in guest.",
                                   LOG_JOB.info)
-            utils_net.enable_windows_guest_network(session, if_name)
+            session_serial.cmd(self.params["cmd_enable_network"] % if_name)
 
         error_context.context("Change ipv4 address and check the result "
                               "from qga.", LOG_JOB.info)

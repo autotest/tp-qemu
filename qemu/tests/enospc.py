@@ -1,6 +1,5 @@
 import logging
 import time
-import re
 import os
 
 from virttest import virt_vm
@@ -10,6 +9,8 @@ from virttest import data_dir
 from virttest import error_context
 
 from avocado.utils import process
+
+from virttest.utils_misc import get_linux_drive_path
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -140,9 +141,8 @@ def run(test, params, env):
     lvtest_name = params["lvtest_name"]
     logical_volume = "/dev/%s/%s" % (vgtest_name, lvtest_name)
 
-    drive_format = params["drive_format"]
-    output = session_serial.cmd_output("dir /dev")
-    devname = "/dev/" + re.findall(r"([shv]db)\s", output)[0]
+    disk_serial = params["disk_serial"]
+    devname = get_linux_drive_path(session_serial, disk_serial)
     cmd = params["background_cmd"]
     cmd %= devname
 

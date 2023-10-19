@@ -52,7 +52,8 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    login_timeout = params.get_numeric("login_timeout")
+    session = vm.wait_for_login(timeout=login_timeout)
 
     test.log.info("[ %s ] NICs card specified in config file", nics_num)
 
@@ -81,7 +82,7 @@ def run(test, params, env):
                 test.error(err_msg % (eth_config_path, o))
 
         # Reboot and check the configurations.
-        session = vm.reboot(session)
+        session = vm.reboot(session, timeout=login_timeout)
         s, msg = check_nics_num(nics_num, session)
         if not s:
             test.fail(msg)

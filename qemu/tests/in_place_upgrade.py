@@ -54,7 +54,7 @@ def run(test, params, env):
         # prepare ipu test env and execute leapp tool
         if not params.get_boolean("com_install"):
             upgrade_test.run_guest_cmd(params.get("repo_leapp"))
-            upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
+            upgrade_test.run_guest_cmd(params.get("com_ins_leapp"))
             upgrade_test.run_guest_cmd(params.get("prepare_env"))
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
         vm_arch = params.get("vm_arch_name")
@@ -68,7 +68,7 @@ def run(test, params, env):
             # before you really do in place upgade
             old_custom_repo = params.get("old_custom_internal_repo")
             if params.get_boolean("com_install"):
-                upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
+                upgrade_test.run_guest_cmd(params.get("com_ins_leapp"))
                 upgrade_test.run_guest_cmd(params.get("prepare_env"))
                 upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
             upgrade_test.yum_update_no_rhsm(test, old_custom_repo)
@@ -82,7 +82,7 @@ def run(test, params, env):
             upgrade_test.upgrade_process(params.get("process_upgrade_no_rhsm"))
         elif params.get("rhsm_type") == "rhsm":
             if params.get("com_install") == "yes":
-                upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd"))
+                upgrade_test.run_guest_cmd(params.get("com_ins_leapp"))
                 upgrade_test.run_guest_cmd(params.get("prepare_env"))
                 upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
             upgrade_test.rhsm(test)

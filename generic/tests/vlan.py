@@ -172,8 +172,8 @@ def run(test, params, env):
             test.error(err)
 
         middle_path = "%s\\%s" % (guest_name, guest_arch)
-        find_cmd = 'dir /b /s %s\\netkvmco.dll | findstr "\\%s\\\\"'
-        find_cmd %= (viowin_ltr,  middle_path)
+        find_cmd = 'dir /b /s "%s\\" | findstr "%s" | findstr "%s"'
+        find_cmd %= (viowin_ltr,  middle_path, "netkvmco.exe")
         netkvmco_path = session.cmd(find_cmd).strip()
         test.log.info("Found netkvmco.dll file at %s", netkvmco_path)
         return netkvmco_path
@@ -192,7 +192,7 @@ def run(test, params, env):
     file_size = params.get("file_size", 4096)
     cmd_type = params.get("cmd_type", "ip")
     login_timeout = int(params.get("login_timeout", 360))
-    set_vlan_cmd = params["set_vlan_cmd"]
+    set_vlan_cmd = params.get("set_vlan_cmd")
     driver_verifier = params.get("driver_verifier")
 
     vms.append(env.get_vm(params["main_vm"]))
@@ -206,11 +206,14 @@ def run(test, params, env):
             session = utils_test.qemu.windrv_check_running_verifier(session, vm,
                                                                     test,
                                                                     driver_verifier)
+            netkvmco_path = get_netkvmco_path(session)
+            params["set_vlan_cmd"] = set_vlan_cmd % (netkvmco_path,)
+            session.cmd(params["set_vlan_cmd"], timeout=240)
+            session.close()
             session = vm.wait_for_serial_login(timeout=login_timeout)
             dev_mac = vm.virtnet[0].mac
             connection_id = utils_net.get_windows_nic_attribute(
                 session, "macaddress", dev_mac, "netconnectionid")
-            session.cmd(set_vlan_cmd % connection_id)
             utils_net.restart_windows_guest_network(
                 session, connection_id)
             time.sleep(10)

@@ -2,6 +2,7 @@ import ast
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_net
 from virttest import data_dir
 
 from qemu.tests.balloon_check import BallooningTestWin
@@ -58,6 +59,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
 
+    virtio_nic_mac = vm.virtnet[1].mac
+
     expected_gagent_version = win_driver_installer_test.install_gagent(
                                              session, test,
                                              qemu_ga_pkg,
@@ -84,6 +87,16 @@ def run(test, params, env):
                                             run_install_cmd,
                                             installer_pkg_check_cmd,
                                             copy_files_params=params)
+        session_serial = vm.wait_for_serial_login()
+        if vm.virtnet[1].nic_model == "virtio-net-pci":
+            ifname = utils_net.get_windows_nic_attribute(session_serial, "macaddress", virtio_nic_mac,
+                                                         "netconnectionid")
+            setup_ip_cmd = params["setup_ip_cmd"] % ifname
+            session_serial.cmd_status(setup_ip_cmd)
+            static_ip_address = utils_net.get_guest_ip_addr(session_serial, virtio_nic_mac, os_type='windows')
+            if static_ip_address != params["static_ip"]:
+                test.fail("Failed to setup static ip,current ip is %s" % static_ip_address)
+        session_serial.close()
     else:
         for driver_name, device_name, device_hwid in zip(
                     win_driver_installer_test.driver_name_list,
@@ -109,6 +122,13 @@ def run(test, params, env):
                                         run_install_cmd,
                                         installer_pkg_check_cmd,
                                         copy_files_params=params)
+
+    if params.get("update_from_previous_installer", "no") == "yes":
+        session_serial = vm.wait_for_serial_login()
+        static_ip_address = utils_net.get_guest_ip_addr(session_serial, virtio_nic_mac, os_type='windows')
+        if static_ip_address != params["static_ip"]:
+            test.fail("Static ip is lost after upgrade driver,current ip is %s" % static_ip_address)
+        session_serial.close()
 
     # for some guests, need to reboot guest after drivers are updated
     if params.get("need_reboot", "no") == "yes":

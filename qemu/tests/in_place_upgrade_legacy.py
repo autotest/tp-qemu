@@ -111,7 +111,9 @@ def run(test, params, env):
         if not params.get_boolean("com_install"):
             upgrade_test.run_guest_cmd(params.get("repo_leapp_7"))
             upgrade_test.run_guest_cmd(params.get("repo_leppp_7_seed"))
-        upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd_7"))
+            upgrade_test.run_guest_cmd(params.get("ins_leapp_cmd_7"))
+        else:
+            upgrade_test.run_guest_cmd(params.get("com_ins_leapp"))
         if params.get("rhsm_type") == "rhsm":
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
         elif params.get("rhsm_type") == "no_rhsm":

@@ -235,7 +235,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         :param vm: Virtual machine object.
         """
         error_context.context("Try to start qemu-ga service.", LOG_JOB.info)
-        s, o = session.cmd_status_output(self.params["gagent_start_cmd"])
+        s, o = session.cmd_status_output(self.params["gagent_start_cmd"], safe=True)
         # if start a running service, for rhel guest return code is zero,
         # for windows guest,return code is not zero
         if s and "already been started" not in o:

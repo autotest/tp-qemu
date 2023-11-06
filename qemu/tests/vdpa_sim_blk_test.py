@@ -3,7 +3,7 @@
 from avocado.utils import process
 
 from provider.block_devices_plug import BlockDevicesPlug
-from provider.vdpa_sim_blk_utils import VDPABlkSimulatorTest
+from provider.vdpa_sim_blk_utils import VirtioVdpaSimulatorTest
 from virttest import env_process, utils_disk, utils_misc
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
@@ -108,7 +108,7 @@ def run(test, params, env):
         test_vm = params.get("test_vm", "no")
 
         logger.debug("Deploy VDPA blk env on host...")
-        vdpa_blk_test = VDPABlkSimulatorTest()
+        vdpa_blk_test = VirtioVdpaSimulatorTest()
         vdpa_blk_test.setup()
 
         logger.debug("Add VDPA blk disk on host...")

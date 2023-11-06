@@ -148,6 +148,11 @@ def run(test, params, env):
         upgrade_test.post_upgrade_check(test, post_release)
         post_rhel_ver = upgrade_test.run_guest_cmd(check_rhel_ver)
         vm.verify_kernel_crash()
+        if params.get("device_cio_free_check_cmd"):
+            cio_status = str(upgrade_test.session.cmd_status_output(
+                params.get("device_cio_free_check_cmd")))
+            if 'inactive' in cio_status:
+                test.fail("device_cio_free is not enabled after upgrading")
     finally:
         vm.graceful_shutdown(timeout=300)
         try:

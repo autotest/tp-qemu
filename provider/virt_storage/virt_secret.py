@@ -30,7 +30,8 @@ class StorageSecret(object):
     @property
     def data_file(self):
         if self._data_file is None:
-            self._data_file = tempfile.mktemp()
+            fd, self._data_file = tempfile.mkstemp()
+            os.close(fd)
             genio.write_one_line(self._data_file, self.data)
         return self._data_file
 

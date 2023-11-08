@@ -809,6 +809,48 @@ def run(test, params, env):
                         test.fail("Selinux-testsuits failed on virtiofs,"
                                   " the output is %s" % output)
 
+                # during all virtio fs is mounted, reboot vm
+                if params.get('reboot_guest', 'no') == 'yes':
+                    def get_vfsd_num():
+                        """
+                        Get virtiofsd daemon number during vm boot up.
+                        :return: virtiofsd daemon count.
+                        """
+                        cmd_ps_virtiofsd = params.get('cmd_ps_virtiofsd')
+                        vfsd_num = 0
+                        for device in vm.devices:
+                            if isinstance(device, qdevices.QVirtioFSDev):
+                                sock_path = device.get_param('sock_path')
+                                cmd_ps_virtiofsd = cmd_ps_virtiofsd % sock_path
+                                vfsd_ps = process.system_output(cmd_ps_virtiofsd, shell=True)
+                                vfsd_num += len(vfsd_ps.strip().splitlines())
+                        return vfsd_num
+
+                    error_context.context("Check virtiofs daemon before reboot vm.",
+                                          test.log.info)
+                    vfsd_num_bf = get_vfsd_num()
+                    error_context.context("Reboot guest and check virtiofs daemon.",
+                                          test.log.info)
+                    session = vm.reboot(session)
+                    if not vm.is_alive():
+                        test.fail("After rebooting vm quit unexpectedly.")
+                    vfsd_num_af = get_vfsd_num()
+                    if vfsd_num_bf != vfsd_num_af:
+                        test.fail("Virtiofs daemon is different before and after reboot.\n"
+                                  "Before reboot: %s\n"
+                                  "After reboot: %s\n", (vfsd_num_bf, vfsd_num_af))
+                    error_context.context("Start IO test on virtiofs after reboot vm.",
+                                          test.log.info)
+                    if os_type == 'windows':
+                        virtio_fs_utils.start_viofs_service(test, params, session)
+                    else:
+                        error_context.context("Mount virtiofs target %s to %s inside"
+                                              "guest." % (fs_target, fs_dest),
+                                              test.log.info)
+                        if not utils_disk.mount(fs_target, fs_dest, 'virtiofs',
+                                                session=session):
+                            test.fail('Mount virtiofs target failed.')
+                    virtio_fs_utils.basic_io_test(test, params, session)
             finally:
                 if os_type == "linux":
                     utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
@@ -860,36 +902,3 @@ def run(test, params, env):
                     session = vm.reboot(session)
                 if se_mode_guest_before.lower() == "permissive":
                     session.cmd("setenforce Permissive")
-
-    # during all virtio fs is mounted, reboot vm
-    if params.get('reboot_guest', 'no') == 'yes':
-        def get_vfsd_num():
-            """
-            Get virtiofsd daemon number during vm boot up.
-            :return: virtiofsd daemon count.
-            """
-            cmd_ps_virtiofsd = params.get('cmd_ps_virtiofsd')
-            vfsd_num = 0
-            for device in vm.devices:
-                if isinstance(device, qdevices.QVirtioFSDev):
-                    sock_path = device.get_param('sock_path')
-                    cmd_ps_virtiofsd = cmd_ps_virtiofsd % sock_path
-                    vfsd_ps = process.system_output(cmd_ps_virtiofsd, shell=True)
-                    vfsd_num += len(vfsd_ps.strip().splitlines())
-            return vfsd_num
-
-        error_context.context("Check virtiofs daemon before reboot vm.",
-                              test.log.info)
-
-        vfsd_num_bf = get_vfsd_num()
-        error_context.context("Reboot guest and check virtiofs daemon.",
-                              test.log.info)
-        vm.reboot()
-        if not vm.is_alive():
-            test.fail("After rebooting vm quit unexpectedly.")
-        vfsd_num_af = get_vfsd_num()
-
-        if vfsd_num_bf != vfsd_num_af:
-            test.fail("Virtiofs daemon is different before and after reboot.\n"
-                      "Before reboot: %s\n"
-                      "After reboot: %s\n", (vfsd_num_bf, vfsd_num_af))

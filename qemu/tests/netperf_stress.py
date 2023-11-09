@@ -6,6 +6,7 @@ from virttest import utils_net
 from virttest import utils_netperf
 from virttest import utils_misc
 from virttest import data_dir
+from virttest import env_process
 
 
 @error_context.context_aware
@@ -67,6 +68,11 @@ def run(test, params, env):
     for server in netperf_server:
         s_info = {}
         if server in vms:
+            if params.get("os_type") == "windows":
+                if params.get_numeric("smp") > 32 or params.get_numeric("vcpu_maxcpus") > 32:
+                    params["smp"] = params["vcpu_maxcpus"] = 32
+                params["start_vm"] = "yes"
+                env_process.preprocess_vm(test, params, env, server)
             server_vm = env.get_vm(server)
             server_vm.verify_alive()
             session = server_vm.wait_for_login(timeout=login_timeout)

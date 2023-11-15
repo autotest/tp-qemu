@@ -258,7 +258,8 @@ def run(test, params, env):
         matching_images = process.run(disk_check_cmd, ignore_status=True,
                                       shell=True).stdout_text
         for disk in image_stg_blacklist:
-            if not re.search(disk, matching_images):
+            if not re.search(disk, matching_images) and disk in \
+                    indirect_image_blacklist:
                 indirect_image_blacklist.remove(disk)
         params["indirect_image_blacklist"] = " ".join(indirect_image_blacklist)
 

@@ -40,11 +40,13 @@ def run(test, params, env):
         Check the watchdog device have been found and init successfully. if not
         will raise error.
         """
-        # when using ib700 or diag288, need modprobe it's driver manually.
+        # when using ib700 or diag288 or itco, need modprobe it's driver manually.
         if watchdog_device == "ib700":
             session.cmd("modprobe ib700wdt")
         if watchdog_device == "diag288":
             session.cmd("modprobe diag288_wdt")
+        if watchdog_device == "itco":
+            session.cmd("modprobe iTCO_wdt")
 
         # when wDT is 6300esb need check pci info
         if watchdog_device == "i6300esb":
@@ -436,7 +438,11 @@ def run(test, params, env):
 
     # main procedure
     test_type = params.get("test_type")
-    check_watchdog_support()
+    watchdog_device_type = params.get("watchdog_device_type")
+    if watchdog_device_type == "itco":
+        pass
+    else:
+        check_watchdog_support()
 
     error_context.context("'%s' test starting ... " % test_type, test.log.info)
     error_context.context("Boot VM with WDT(Device:'%s', Action:'%s'),"

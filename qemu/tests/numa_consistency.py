@@ -1,125 +1,96 @@
-import resource
+import os
 
-from avocado.utils import process
-
-from virttest import cpu
+from virttest import data_dir
 from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
-from virttest import arch
 from virttest.staging import utils_memory
+
+
+def get_node_used_memory(qemu_pid, node):
+    """
+    Return the memory used by the NUMA node
+
+    :param qemu_pid: the process id of qemu-kvm
+    :param node: the NUMA node
+    """
+    qemu_memory_status = utils_memory.read_from_numa_maps(qemu_pid,
+                                                          "N%d" % node)
+    used_memory = sum([int(_) for _ in list(qemu_memory_status.values())])
+    return used_memory
 
 
 @error_context.context_aware
 def run(test, params, env):
     """
-    Qemu numa consistency test:
+    QEMU numa consistency test:
     1) Get host numa topological structure
-    2) Start a guest with the same node as the host, each node has one cpu
-    3) Get the vcpu thread used cpu id in host and the cpu belongs which node
-    4) Allocate memory inside guest and bind the allocate process to one of
-       its vcpu.
-    5) The memory used in host should increase in the same node if the vcpu
-       thread is not switch to other node.
-    6) Repeat step 3~5 for each vcpu thread of the guest.
+    2) Start a guest binded to one host NUMA node
+    3) Allocate memory inside the guest
+    4) The memory used in host should increase for the corresponding
+    node
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    def get_vcpu_used_node(numa_node_info, vcpu_thread):
-        cpu_used_host = cpu.get_thread_cpu(vcpu_thread)[0]
-        node_used_host = ([_ for _ in node_list if cpu_used_host
-                           in numa_node_info.nodes[_].cpus][0])
-        return node_used_host
 
-    error_context.context("Get host numa topological structure", test.log.info)
-    timeout = float(params.get("login_timeout", 240))
     host_numa_node = utils_misc.NumaInfo()
     node_list = host_numa_node.online_nodes_withcpumem
     if len(node_list) < 2:
-        test.cancel("This host only has one NUMA node, skipping test...")
-    node_list.sort()
-    params['smp'] = len(node_list)
-    params['vcpu_cores'] = 1
-    params['vcpu_threads'] = 1
-    params['vcpu_sockets'] = params['smp']
-    params['vcpu_maxcpus'] = params['smp']
-    params['guest_numa_nodes'] = ""
-    params['mem_devs'] = ""
-    params['backend_mem'] = "memory-backend-ram"
-    params['use_mem'] = "no"
-    params['size_mem'] = "1024M"
-    if arch.ARCH in ('ppc64', 'ppc64le'):
-        params['size_mem'] = "4096M"
-    params['mem'] = int(params['size_mem'].strip('M')) * len(node_list)
-    for node_id in range(len(node_list)):
-        params['guest_numa_nodes'] += " node%d" % node_id
-        params['mem_devs'] += "mem%d " % node_id
-        params['numa_memdev_node%d' % node_id] = "mem-mem%d" % node_id
-    params['start_vm'] = 'yes'
+        test.cancel("Host only has one NUMA node, skipping test...")
 
-    utils_memory.drop_caches()
-    vm = params['main_vm']
-    env_process.preprocess_vm(test, params, env, vm)
-    vm = env.get_vm(vm)
+    node_alloc = node_list[0]
+    node_mem_alloc = int(host_numa_node.read_from_node_meminfo(node_alloc,
+                                                               'MemFree'))
+    # Get the node with more free memory
+    for node in node_list[1:]:
+        node_mem_free = int(host_numa_node.read_from_node_meminfo(node,
+                                                                  'MemFree'))
+        if node_mem_free > node_mem_alloc:
+            node_mem_alloc = node_mem_free
+            node_alloc = node
+
+    mem_map_tool = params.get("mem_map_tool")
+    mem_ratio = params.get_numeric("mem_ratio", 0.3, float)
+    timeout = params.get_numeric("login_timeout", 240, float)
+    params["vm_mem_host_nodes"] = str(node_alloc)
+    params["qemu_command_prefix"] = "numactl -m %d " % node_alloc
+    params["start_vm"] = "yes"
+
+    vm_name = params['main_vm']
+    env_process.preprocess_vm(test, params, env, vm_name)
+    vm = env.get_vm(vm_name)
     vm.verify_alive()
-    vcpu_threads = vm.vcpu_threads
     session = vm.wait_for_login(timeout=timeout)
-    threshold = params.get_numeric("threshold", target_type=float)
-
-    dd_size = 256
-    if dd_size * len(vcpu_threads) > int(params['mem']):
-        dd_size = int(int(params['mem']) / 2 / len(vcpu_threads))
-
-    mount_size = dd_size * len(vcpu_threads)
-
-    mount_cmd = "mount -o size=%dM -t tmpfs none /tmp" % mount_size
-
     qemu_pid = vm.get_pid()
-    drop = 0
-    for cpuid in range(len(vcpu_threads)):
-        error_context.context("Get vcpu %s used numa node." % cpuid,
-                              test.log.info)
-        memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
-                                                           qemu_pid)
-        node_used_host = get_vcpu_used_node(host_numa_node,
-                                            vcpu_threads[cpuid])
-        node_used_host_index = node_list.index(node_used_host)
-        memory_used_before = memory_status[node_used_host_index]
-        error_context.context("Allocate memory in guest", test.log.info)
-        session.cmd(mount_cmd)
-        binded_dd_cmd = "taskset %s" % str(2 ** int(cpuid))
-        binded_dd_cmd += " dd if=/dev/urandom of=/tmp/%s" % cpuid
-        binded_dd_cmd += " bs=1M count=%s" % dd_size
-        session.cmd(binded_dd_cmd)
-        error_context.context("Check qemu process memory use status",
-                              test.log.info)
-        node_after = get_vcpu_used_node(host_numa_node, vcpu_threads[cpuid])
-        if node_after != node_used_host:
-            test.log.warn("Node used by vcpu thread changed. So drop the"
-                          " results in this round.")
-            drop += 1
-            continue
-        memory_status, _ = utils_test.qemu.get_numa_status(host_numa_node,
-                                                           qemu_pid)
-        memory_used_after = memory_status[node_used_host_index]
-        page_size = resource.getpagesize() / 1024
-        memory_allocated = (memory_used_after -
-                            memory_used_before) * page_size / 1024
-        if 1 - float(memory_allocated) / float(dd_size) > threshold:
-            numa_hardware_cmd = params.get("numa_hardware_cmd")
-            if numa_hardware_cmd:
-                numa_info = process.system_output(numa_hardware_cmd,
-                                                  ignore_status=True,
-                                                  shell=True)
-            msg = "Expect malloc %sM memory in node %s," % (dd_size,
-                                                            node_used_host)
-            msg += "but only malloc %sM \n" % memory_allocated
-            msg += "Please check more details of the numa node: %s" % numa_info
-            test.fail(msg)
-    session.close()
-
-    if drop == len(vcpu_threads):
-        test.error("All test rounds are dropped. Please test it again.")
+    try:
+        test_mem = float(params.get("mem")) * mem_ratio
+        guest_stress_args = params.get("guest_stress_args", "-a -p -l %sM")
+        guest_stress_args = guest_stress_args % int(test_mem)
+        stress_path = os.path.join(data_dir.get_deps_dir('mem_mapping'),
+                                   mem_map_tool)
+        utils_memory.drop_caches()
+        error_context.base_context("Get the qemu memory use for node: %d before stress"
+                                   % node_alloc, test.log.info)
+        memory_before = get_node_used_memory(qemu_pid, node_alloc)
+        try:
+            guest_stress = utils_test.VMStress(vm, "mem_mapping", params,
+                                               download_url=stress_path,
+                                               stress_args=guest_stress_args)
+            guest_stress.load_stress_tool()
+        except utils_test.StressError as guest_info:
+            test.error(guest_info)
+        guest_stress.unload_stress()
+        guest_stress.clean()
+        utils_memory.drop_caches()
+        error_context.context("Get the qemu memory used in node: %d after stress"
+                              % node_alloc, test.log.debug)
+        memory_after = get_node_used_memory(qemu_pid, node_alloc)
+        test.log.debug("memory_before %d, memory_after: %d"
+                       % (memory_before, memory_after))
+        if memory_after <= memory_before:
+            test.error("Memory usage has not increased after the allocation!")
+    finally:
+        session.close()

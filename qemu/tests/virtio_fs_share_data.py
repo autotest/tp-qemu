@@ -192,6 +192,8 @@ def run(test, params, env):
     # soft link config
     cmd_symblic_file = params.get('cmd_symblic_file')
     cmd_symblic_folder = params.get('cmd_symblic_folder')
+    file_link = params.get('file_link')
+    folder_link = params.get('folder_link')
 
     # pjdfs test config
     cmd_pjdfstest = params.get('cmd_pjdfstest')
@@ -533,6 +535,24 @@ def run(test, params, env):
                     if session.cmd_status(cmd_symblic_folder):
                         test.fail("Creat symbolic folders failed.")
                     if os_type == "linux":
+                        error_context.context("Compare symbolic link info in "
+                                              "the host and guest", test.log.info)
+
+                        def __file_check(file, guest=None):
+                            if guest:
+                                o = session.cmd_output("ls -l %s" % file)
+                            else:
+                                o = process.run("ls -l %s" % file).stdout_text
+                            return o.strip().split()[-1]
+
+                        if (__file_check(file_link, 'guest') !=
+                                __file_check(os.path.join(fs_source, file_link))):
+                            test.fail("Symbolic file configured in host "
+                                      "and guest are inconsistent")
+                        if (__file_check(folder_link, 'guest') !=
+                                __file_check(os.path.join(fs_source, folder_link))):
+                            test.fail("Symbolic folder configured in "
+                                      "host and guest are inconsistent")
                         session.cmd("cd -")
                     else:
                         session.cmd("cd /d C:\\")

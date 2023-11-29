@@ -29,6 +29,7 @@ def get_virtiofs_driver_letter(test, fs_target, session):
     return driver_letter
 
 
+@error_context.context_aware
 def basic_io_test(test, params, session):
     """
     Virtio_fs basic io test. Create file on guest and then compare two md5

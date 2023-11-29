@@ -72,17 +72,29 @@ def run(test, params, env):
         ex_args = (mpoint, filename) if os_type == 'windows' else filename
         return session.cmd(md5_cmd % ex_args).split()[0]
 
-    def check_shrink_completion_event(session, vol_id):
+    def check_shrink_completion(vol_id, size):
         """
         Check the disk extend or shrink finished in windows guest.
-
-        :param session: Session object.
         :param vol_id: Drive letter.
+        :param size: shrink size.
         """
-        cmd = params.get("check_258_event")
-        status, output = session.cmd_status_output(cmd)
-        msg = params.get("event_msg") % vol_id
-        return status == 0 and msg in output
+        def _check_event_cmd(cmd):
+            status, output = session.cmd_status_output(cmd)
+            test.log.debug("Get event: %s" % output)
+            test.log.debug("Expect contain msg: %s" % msg)
+            return status == 0 and regexp.search(output)
+
+        drive.shrink_volume(session, mpoint, size)
+        check_event = params.get("check_258_event")
+        if check_event:
+            msg = params.get("event_msg") % vol_id
+            regexp = re.compile(msg)
+            defrag_event_received = utils_misc.wait_for(
+                lambda: _check_event_cmd(check_event), 180)
+
+            if not defrag_event_received:
+                test.fail("Did not receive the defrag finished event, "
+                          "disk shrink failed in guest.")
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -148,13 +160,7 @@ def run(test, params, env):
                 shr_size = utils_numeric.normalize_data_size(str(
                     utils_disk.get_disk_size(session, os_type, disk) -
                     block_size), 'M').split(".")[0]
-                drive.shrink_volume(session, mpoint, shr_size)
-                defrag_event_received = utils_misc.wait_for(
-                    lambda: check_shrink_completion_event(session, mpoint), 600)
-
-                if not defrag_event_received:
-                    test.fail("Did not receive the defrag finished event, "
-                              "disk shrink failed in guest.")
+                check_shrink_completion(mpoint, shr_size)
             else:
                 utils_disk.resize_filesystem_linux(session, partition,
                                                    str(block_size))

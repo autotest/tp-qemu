@@ -252,14 +252,14 @@ def run(test, params, env):
 
     disk_check_cmd = params.get('disk_check_cmd')
     indirect_image_blacklist = params.get('indirect_image_blacklist').split()
+    get_new_disks_cmd = params.get("get_new_disks_cmd")
 
     if disk_check_cmd:
-        image_stg_blacklist = params.get('image_stg_blacklist').split()
-        matching_images = process.run(disk_check_cmd, ignore_status=True,
-                                      shell=True).stdout_text
-        for disk in image_stg_blacklist:
-            if not re.search(disk, matching_images):
-                indirect_image_blacklist.remove(disk)
+        new_images = process.run(get_new_disks_cmd, ignore_status=True,
+                                 shell=True).stdout_text
+        for black_disk in indirect_image_blacklist[:]:
+            if re.search(black_disk, new_images):
+                indirect_image_blacklist.remove(black_disk)
         params["indirect_image_blacklist"] = " ".join(indirect_image_blacklist)
 
     # Always recreate VMs and disks

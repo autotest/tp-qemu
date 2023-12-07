@@ -134,6 +134,10 @@ def run(test, params, env):
                         error_context.context("Transferring data from %s to %s" %
                                               (vm_src.name, vm_dst.name),
                                               test.log.info)
+                        if params.get_boolean("using_guest_interface"):
+                            dst_interface = inet_name[vm_src]
+                        else:
+                            dst_interface = host_ifname
                         remote.scp_between_remotes(addresses[vm_src],
                                                    addresses[vm_dst],
                                                    port, password, password,
@@ -141,7 +145,7 @@ def run(test, params, env):
                                                    guest_path, dest_path,
                                                    timeout=file_trans_timeout,
                                                    src_inter=host_ifname,
-                                                   dst_inter=inet_name[vm_src])
+                                                   dst_inter=dst_interface)
                         dst_md5 = get_file_md5sum(dest_path, sessions[vm_dst],
                                                   timeout=file_md5_check_timeout)
                         error_context.context("md5 value of data in %s: %s" % (vm.name, dst_md5),

@@ -5,6 +5,7 @@ from avocado.utils import process
 
 from virttest import utils_misc
 from virttest.utils_test import VMStress, StressError
+from virttest.utils_version import VersionInterval
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -56,13 +57,15 @@ def get_guest_cpu_ids(session, os_type):
                                    output, re.M)))
 
 
-def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
+def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo, test, devices=None):
     """
     check the cpu topology of the guest.
 
     :param session: session Object
     :param os_type: guest os type, windows or linux
     :param cpuinfo: virt_vm.CpuInfo Object
+    :param test: QEMU test object
+    :param devices: qcontainer.DevContainer Object
     :return: True if guest topology is same as we expected
     """
     if os_type == "linux":
@@ -71,6 +74,7 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
         sockets = int(cpu_info["Socket(s)"])
         cores = int(cpu_info["Core(s) per socket"])
         threads = int(cpu_info["Thread(s) per core"])
+        threads_matched = cpuinfo.threads == threads
     else:
         cmd = ('powershell "Get-WmiObject Win32_processor | Format-List '
                'NumberOfCores,ThreadCount"')
@@ -97,9 +101,22 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo):
                 LOG_JOB.error("Attempt to get output via 'wmic' failed, output"
                               " returned by guest:\n%s", out)
                 return False
+        if devices:
+            # Until QEMU 8.1 there was a different behaviour for thread count in case
+            # of Windows guests. It represented number of threads per single core, not
+            # the total number of threads available for all cores in socket. Therefore
+            # we disable check for older QEMU versions and adjust for newer versions.
+            if devices.qemu_version in VersionInterval("[, 8.1.0)"):
+                LOG_JOB.warning("ThreadCount is disabled for Windows guests")
+                threads_matched = True
+            else:
+                threads_matched = threads//cores == cpuinfo.threads
+        else:
+            test.fail("Variable 'devices' must be defined for Windows guest.")
 
     is_matched = (cpuinfo.sockets == sockets and cpuinfo.cores == cores and
-                  cpuinfo.threads == threads)
+                  threads_matched)
+
     if not is_matched:
         LOG_JOB.debug("CPU infomation of guest:\n%s", out)
 

@@ -71,7 +71,8 @@ def run(test, params, env):
                 raise
         vm = env.get_vm(vm_name)
         session = vm.wait_for_login()
-        if not check_if_vm_vcpu_topology_match(session, os_type, vm.cpuinfo):
+        if not check_if_vm_vcpu_topology_match(session, os_type, vm.cpuinfo,
+                                               test, vm.devices):
             test.fail('CPU topology of guest is incorrect.')
         if params.get('check_siblings_cmd'):
             check('sibling', vcpu_threads * vcpu_cores, params['check_siblings_cmd'])

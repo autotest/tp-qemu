@@ -561,7 +561,8 @@ def run(test, params, env):
                     error_context.context("Run fio on %s." % fs_dest, test.log.info)
                     fio = generate_instance(params, vm, 'fio')
                     try:
-                        fio.run(fio_options % guest_file, io_timeout)
+                        for bs in params.get_list("stress_bs"):
+                            fio.run(fio_options % (guest_file, bs), io_timeout)
                     finally:
                         fio.clean()
                     vm.verify_dmesg()
@@ -570,7 +571,8 @@ def run(test, params, env):
                     error_context.context("Run iozone test on %s." % fs_dest, test.log.info)
                     io_test = generate_instance(params, vm, 'iozone')
                     try:
-                        io_test.run(iozone_options % guest_file, io_timeout)
+                        for bs in params.get_list("stress_bs"):
+                            io_test.run(iozone_options % (bs, guest_file), io_timeout)
                     finally:
                         io_test.clean()
 

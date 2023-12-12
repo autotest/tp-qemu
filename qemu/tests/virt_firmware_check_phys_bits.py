@@ -3,6 +3,7 @@ from avocado.utils import process
 from virttest import virt_vm
 from virttest import env_process
 from virttest import error_context
+from virttest import utils_package
 
 
 @error_context.context_aware
@@ -82,8 +83,16 @@ def run(test, params, env):
             if output in params["enabled_status"]:
                 sev_es_status = True
         if sev_status or sev_es_status:
-            host_phys_bits = int(host_phys_bits) + \
-                    int(params["host_memory_encryption_bits"])
+            install_status = utils_package.package_install('sevctl')
+            if not install_status:
+                test.error("Failed to install sevctl.")
+            encryption_bits_grep_cmd = params["encryption_bits_grep_cmd"]
+            host_memory_encryption_bits = process.getoutput(
+                    encryption_bits_grep_cmd, shell=True).strip()
+            if not host_memory_encryption_bits.isdigit():
+                test.error("Failed to get host memory encryption bits, the "
+                           "actual output is '%s'" % host_memory_encryption_bits)
+            host_phys_bits = int(host_phys_bits) + int(host_memory_encryption_bits)
         expected_phys_bits = min(int(host_phys_bits), int(host_phys_bits_limit))
         session.close()
         err_str = "The phys-bits in guest, it dosen't equal to expected value."

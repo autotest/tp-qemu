@@ -5,9 +5,11 @@ from avocado.utils import process
 
 from virttest import env_process
 from virttest import error_context
+from virttest import utils_misc
 
 from virttest.qemu_devices import qdevices
 from virttest.utils_numeric import normalize_data_size
+from virttest.utils_version import VersionInterval
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 
@@ -59,6 +61,15 @@ def run(test, params, env):
     def check_msg(keywords, msg):
         if not re.search(r"%s" % keywords, msg):
             test.fail("No valid keywords were found in the qemu prompt message")
+
+    qemu_path = utils_misc.get_qemu_binary(params)
+    qemu_version = env_process._get_qemu_version(qemu_path)
+    version_pattern = r'(\d+\.\d+\.\d-\d+)'
+    host_qemu = re.findall(version_pattern, qemu_version)[0]
+
+    if host_qemu in VersionInterval('[8.2.0-1,8.2.0-4]'):
+        test.cancel("QEMU version %s not supported for the current test case"
+                    % host_qemu)
 
     if params["size_mem"] == "<overcommit>":
         ipa_limit_check = params.get('ipa_limit_check')

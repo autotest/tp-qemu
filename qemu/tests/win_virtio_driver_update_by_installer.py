@@ -142,8 +142,6 @@ def run(test, params, env):
                                                    expected_gagent_version)
     win_driver_installer_test.driver_check(session, test, params)
 
-    balloon_test_win = BallooningTestWin(test, params, env)
-
     error_context.context("Run driver function test after update",
                           test.log.info)
     fail_tests = []
@@ -157,6 +155,7 @@ def run(test, params, env):
         driver_test_params = params.get('driver_test_params_%s'
                                         % driver_name, '{}')
         if driver_name == "balloon":
+            balloon_test_win = BallooningTestWin(test, params, env)
             driver_test_params = {"balloon_test_win": balloon_test_win}
         else:
             driver_test_params = ast.literal_eval(driver_test_params)

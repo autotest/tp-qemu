@@ -529,32 +529,67 @@ def run(test, params, env):
                 if cmd_symblic_file:
                     error_context.context("Symbolic test under %s inside "
                                           "guest." % fs_dest, test.log.info)
+                    cmd_create_file = params["cmd_create_file"]
                     session.cmd(cmd_new_folder % fs_dest)
+                    session.cmd(cmd_create_file)
+                    session.cmd(cmd_copy_file)
                     if session.cmd_status(cmd_symblic_file):
                         test.fail("Creat symbolic files failed.")
                     if session.cmd_status(cmd_symblic_folder):
                         test.fail("Creat symbolic folders failed.")
+
+                    error_context.context("Compare symbolic link info in "
+                                          "the host and guest", test.log.info)
+
+                    def __file_check(file, os_type):
+                        cmd_map = {'win_host': 'cat %s',
+                                   'win_guest': 'type %s',
+                                   'linux_host': 'ls -l %s',
+                                   'linux_guest': 'ls -l %s'}
+                        if 'guest' in os_type:
+                            o = session.cmd_output(cmd_map[os_type] % file)
+                        else:
+                            o = process.run(cmd_map[os_type] % file).stdout_text
+                        return o.strip().split()[-1]
+
                     if os_type == "linux":
-                        error_context.context("Compare symbolic link info in "
-                                              "the host and guest", test.log.info)
-
-                        def __file_check(file, guest=None):
-                            if guest:
-                                o = session.cmd_output("ls -l %s" % file)
-                            else:
-                                o = process.run("ls -l %s" % file).stdout_text
-                            return o.strip().split()[-1]
-
-                        if (__file_check(file_link, 'guest') !=
-                                __file_check(os.path.join(fs_source, file_link))):
+                        file_link_host = os.path.join(fs_source, file_link)
+                        if (__file_check(file_link, 'linux_guest') !=
+                                __file_check(file_link_host, 'linux_host')):
                             test.fail("Symbolic file configured in host "
                                       "and guest are inconsistent")
-                        if (__file_check(folder_link, 'guest') !=
-                                __file_check(os.path.join(fs_source, folder_link))):
+                        folder_link_host = os.path.join(fs_source,
+                                                        folder_link)
+                        if (__file_check(folder_link, 'linux_guest') !=
+                                __file_check(folder_link_host, 'linux_host')):
                             test.fail("Symbolic folder configured in "
                                       "host and guest are inconsistent")
                         session.cmd("cd -")
                     else:
+                        content = session.cmd_output("type %s" %
+                                                     test_file).strip()
+                        link_guest = __file_check(file_link, 'win_guest')
+                        file_link_host = os.path.join(fs_source, file_link)
+                        link_host = __file_check(file_link_host, 'win_host')
+                        if link_guest != content or link_host != content:
+                            test.fail("Symbolic file check failed,"
+                                      " the real content is %s\n"
+                                      "the link file content in guest is %s\n"
+                                      "the link file content in host is %s." %
+                                      (content, link_guest, link_host))
+                        # check the file in folder link
+                        folder_link = folder_link + "\\" + test_file
+                        link_guest = __file_check(folder_link, 'win_guest')
+                        folder_link_host = os.path.join(fs_source,
+                                                        folder_link,
+                                                        test_file)
+                        link_host = __file_check(folder_link_host, 'win_host')
+                        if link_guest != content or link_host != content:
+                            test.fail("Symbolic folder check failed,"
+                                      " the real content is %s\n"
+                                      "the link file content in guest is %s\n"
+                                      "the link file content in host is %s." %
+                                      (content, link_guest, link_host))
                         session.cmd("cd /d C:\\")
 
                 if fio_options:

@@ -1,10 +1,10 @@
 """VDPA blk vhost vdpa test"""
-
+from avocado.core import exceptions
 from avocado.utils import process
 
 from provider.block_devices_plug import BlockDevicesPlug
 from provider.vdpa_sim_blk_utils import VhostVdpaSimulatorTest
-from virttest import env_process, utils_disk, utils_misc
+from virttest import env_process, utils_disk, utils_misc, virt_vm
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
 
@@ -29,6 +29,10 @@ def run(test, params, env):
         6) Destroy VM
         7) Destroy vhost-vdpa devices on host
         8) Destroy VDPA simulator ENV
+    Blockdev other options test
+        The test steps are same as Multi-disks test
+        Discard test: Test discard off/unmap
+        Cache test: Test cache.direct=off/on
     """
 
     def _setup_vdpa_disks():
@@ -97,6 +101,8 @@ def run(test, params, env):
         host_operation = params.get("host_operation")
         guest_operation = params.get("guest_operation")
         test_vm = params.get("test_vm", "no")
+        expect_to_fail = params.get("expect_to_fail", "no")
+        err_msg = params.get("err_msg", "unknown error")
 
         logger.debug("Deploy VDPA blk env on host...")
         vdpa_blk_test = VhostVdpaSimulatorTest()
@@ -126,7 +132,12 @@ def run(test, params, env):
         session.close()
         vm.destroy()
         vm = None
-
+    except virt_vm.VMCreateError as e:
+        logger.debug("Find exception %s" % e)
+        if expect_to_fail == "yes" and err_msg in e.output:
+            logger.info("%s is expected " % err_msg)
+        else:
+            raise exceptions.TestFail(e)
     finally:
         if vm:
             vm.destroy()

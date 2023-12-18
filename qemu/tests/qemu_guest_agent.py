@@ -701,14 +701,21 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("the vcpu number:%d" % vcpus_num, LOG_JOB.info)
         if vcpus_num < 2:
             test.error("the vpus number of guest should be more than 1")
-        vcpus_info[vcpus_num - 1]["online"] = False
-        del vcpus_info[vcpus_num - 1]["can-offline"]
-        action = {'vcpus': [vcpus_info[vcpus_num - 1]]}
-        self.gagent.set_vcpus(action)
-        # Check if the result is as expected
-        vcpus_info = self.gagent.get_vcpus()
-        if vcpus_info[vcpus_num - 1]["online"] is not False:
-            test.fail("the vcpu status is not changed as expected")
+        for index in range(0, vcpus_num - 1):
+            if (vcpus_info[index]["online"] is True and
+                    vcpus_info[index]["can-offline"] is True and
+                    vcpus_info[index]['logical-id'] != 0):
+                vcpus_info[index]["online"] = False
+                del vcpus_info[index]["can-offline"]
+                action = {'vcpus': [vcpus_info[index]]}
+                self.gagent.set_vcpus(action)
+                # Check if the result is as expected
+                vcpus_info = self.gagent.get_vcpus()
+                if vcpus_info[index]["online"] is not False:
+                    test.fail("the vcpu status is not changed as expected")
+                break
+        else:
+            test.error("There is no vcpu that matching test condition.")
 
     @error_context.context_aware
     def gagent_check_set_mem_blocks(self, test, params, env):

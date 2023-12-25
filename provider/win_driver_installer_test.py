@@ -20,15 +20,15 @@ from provider.vioinput_basic import key_tap_test as vioinput_test  # pylint: dis
 LOG_JOB = logging.getLogger('avocado.test')
 
 
-driver_name_list = ['viorng', 'viostor', 'vioscsi',
-                    'balloon', 'viofs', 'vioser',
+driver_name_list = ['balloon', 'viostor', 'vioscsi',
+                    'viorng', 'viofs', 'vioser',
                     'pvpanic', 'netkvm', 'vioinput',
                     'fwcfg']
 
-device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
+device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1002" "PCI\\VEN_1AF4&DEV_1045"',
                     '"PCI\\VEN_1AF4&DEV_1001" "PCI\\VEN_1AF4&DEV_1042"',
                     '"PCI\\VEN_1AF4&DEV_1004" "PCI\\VEN_1AF4&DEV_1048"',
-                    '"PCI\\VEN_1AF4&DEV_1002" "PCI\\VEN_1AF4&DEV_1045"',
+                    '"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
                     '"PCI\\VEN_1AF4&DEV_105A"',
                     '"PCI\\VEN_1AF4&DEV_1003" "PCI\\VEN_1AF4&DEV_1043"',
                     '"ACPI\\QEMU0001"',
@@ -36,9 +36,9 @@ device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
                     '"PCI\\VEN_1AF4&DEV_1052"',
                     '"ACPI\\VEN_QEMU&DEV_0002"']
 
-device_name_list = ["VirtIO RNG Device", "Red Hat VirtIO SCSI controller",
+device_name_list = ["VirtIO Balloon Driver", "Red Hat VirtIO SCSI controller",
                     "Red Hat VirtIO SCSI pass-through controller",
-                    "VirtIO Balloon Driver", "VirtIO FS Device",
+                    "VirtIO RNG Device", "VirtIO FS Device",
                     "VirtIO Serial Driver", "QEMU PVPanic Device",
                     "Red Hat VirtIO Ethernet Adapter", "VirtIO Input Driver",
                     "QEMU FwCfg Device"]

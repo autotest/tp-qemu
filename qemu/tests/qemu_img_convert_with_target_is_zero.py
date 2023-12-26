@@ -50,6 +50,8 @@ def run(test, params, env):
     fail_on((process.CmdError,))(source.convert)(
         source_params, root_dir, cache_mode,
         source_cache_mode, skip_target_creation)
+    test.log.debug("sync host data after convert")
+    process.system("sync")
 
     vm = img_utils.boot_vm_with_images(test, params, env, (convert_target,))
     session = vm.wait_for_login()

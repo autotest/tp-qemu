@@ -33,7 +33,8 @@ def copy_compile_testsuite(test, vm, session):
         vsock_test_base_dir, "vsock_test.tar.xz")
     process.system(uncompress_cmd, shell=True, ignore_status=True)
     session.cmd(uncompress_cmd)
-    compile_cmd = "cd %s && make" % os.path.join(vsock_test_base_dir, "vsock/")
+    compile_cmd = "cd %s && make vsock_test" % os.path.join(
+        vsock_test_base_dir, "vsock/")
     host_status = process.system(compile_cmd, shell=True)
     guest_status = session.cmd_status(compile_cmd)
     if (host_status or guest_status) != 0:

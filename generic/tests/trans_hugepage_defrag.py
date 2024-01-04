@@ -5,6 +5,7 @@ import re
 from avocado.utils import process
 from virttest import test_setup
 from virttest import error_context
+from virttest import kernel_interface
 
 
 @error_context.context_aware
@@ -43,16 +44,15 @@ def run(test, params, env):
         :param number: Number of pages (either string or numeric).
         """
         test.log.info("Trying to setup %d hugepages on host", number)
-        with open("/proc/sys/vm/nr_hugepages", "w+") as f:
-            pre_ret = f.read()
-            test.log.debug("Number of huge pages on libhugetlbfs"
-                           " (pre-write): %s", pre_ret.strip())
-            f.write(str(number))
-            f.seek(0)
-            ret = f.read()
-            test.log.debug("Number of huge pages on libhugetlbfs:"
-                           " (post-write): %s", ret.strip())
-            return int(ret)
+        nr_hugepages = kernel_interface.ProcFS('/proc/sys/vm/nr_hugepages', session=None)
+        pre_ret = nr_hugepages.proc_fs_value
+        test.log.debug("Number of huge pages on libhugetlbfs"
+                       " (pre-write): %s", pre_ret)
+        nr_hugepages.proc_fs_value = int(number)
+        ret = nr_hugepages.proc_fs_value
+        test.log.debug("Number of huge pages on libhugetlbfs:"
+                       " (post-write): %s", ret)
+        return int(ret)
 
     def change_feature_status(test, status, feature_path, test_config):
         """
@@ -64,11 +64,9 @@ def run(test, params, env):
 
         :raise: error.TestFail, if can't change feature status
         """
-        feature_path = os.path.join(test_config.thp_path, feature_path)
-        feature_file = open(feature_path, 'r')
-        feature_file_contents = feature_file.read()
-        feature_file.close()
-        possible_values = test_config.value_listed(feature_file_contents)
+
+        thp = kernel_interface.SysFS(os.path.join(test_config.thp_path, feature_path), session=None)
+        possible_values = [each.strip("[]") for each in thp.fs_value.split()]
 
         if 'yes' in possible_values:
             on_action = 'yes'
@@ -88,12 +86,7 @@ def run(test, params, env):
         elif status == 'off':
             action = off_action
 
-        try:
-            feature_file = open(feature_path, 'w')
-            feature_file.write(action)
-            feature_file.close()
-        except IOError as e:
-            test.fail("Error writing %s to %s: %s" % (action, feature_path, e))
+        thp.sys_fs_value = action
         time.sleep(1)
 
     def fragment_host_memory(mem_path):
@@ -118,7 +111,7 @@ def run(test, params, env):
         finally:
             process.run("umount %s" % mem_path, shell=True)
 
-    test_config = test_setup.TransparentHugePageConfig(test, params)
+    test_config = test_setup.TransparentHugePageConfig(test, params, env)
     test.log.info("Defrag test start")
     login_timeout = float(params.get("login_timeout", 360))
     mem_path = os.path.join("/tmp", "thp_space")

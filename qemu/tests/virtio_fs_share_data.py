@@ -578,8 +578,8 @@ def run(test, params, env):
                                       "the link file content in host is %s." %
                                       (content, link_guest, link_host))
                         # check the file in folder link
-                        folder_link = folder_link + "\\" + test_file
-                        link_guest = __file_check(folder_link, 'win_guest')
+                        folder_link_guest = folder_link + "\\" + test_file
+                        link_guest = __file_check(folder_link_guest, 'win_guest')
                         folder_link_host = os.path.join(fs_source,
                                                         folder_link,
                                                         test_file)

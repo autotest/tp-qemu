@@ -24,7 +24,10 @@ def run(test, params, env):
     5) Install driver from previous virtio-win.iso.
        Or virtio-win-guest-tool.
     6) Start virtio fs service on guest.
-    7) Upgrade driver via virtio-win-guest-tools.exe
+    7) Check for ip and dns loss before and after upgrade driver
+    7.1) Set ip and dns
+    7.2) Upgrade driver via virtio-win-guest-tools.exe
+    7.3) Check ip and dns loss
     8) Start virtio fs service on guest.
     9) Verify the qemu-ga version match expected version.
     10) Run driver signature check command in guest.
@@ -37,13 +40,40 @@ def run(test, params, env):
     """
     def change_virtio_media(cdrom_virtio):
         """
-        change iso for virtio-win
+        change iso for virtio-win.
+
         :param cdrom_virtio: iso file
         """
         virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
                                          cdrom_virtio)
         test.log.info("Changing virtio iso image to '%s'", virtio_iso)
         vm.change_media("drive_virtio", virtio_iso)
+
+    def check_network_config(session_serial):
+        """
+        check ip and dns loss.
+
+        :param session_serial: session_serial
+        """
+        static_ip_address = utils_net.get_guest_ip_addr(
+                session_serial, virtio_nic_mac, os_type="windows"
+           )
+        if static_ip_address != params["static_ip"]:
+            test.fail(
+                "Failed to setup static ip,current ip is %s"
+                % static_ip_address
+            )
+        static_dns_address = utils_net.get_windows_nic_attribute(
+                session_serial, global_switch="nicconfig",
+                key="MACAddress", value=f"{virtio_nic_mac}",
+                target="DNSServerSearchOrder"
+            )
+        static_dns_address = static_dns_address.strip('{}').strip('"')
+        if static_dns_address != params["static_dns"]:
+            test.fail(
+                "Static dns is lost after upgrade driver, current dns "
+                "is %s" % static_dns_address
+            )
 
     devcon_path = params["devcon_path"]
     installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
@@ -89,13 +119,15 @@ def run(test, params, env):
                                             copy_files_params=params)
         session_serial = vm.wait_for_serial_login()
         if vm.virtnet[1].nic_model == "virtio-net-pci":
-            ifname = utils_net.get_windows_nic_attribute(session_serial, "macaddress", virtio_nic_mac,
-                                                         "netconnectionid")
+            ifname = utils_net.get_windows_nic_attribute(
+                    session_serial, "macaddress", virtio_nic_mac,
+                    "netconnectionid"
+                )
             setup_ip_cmd = params["setup_ip_cmd"] % ifname
+            setup_dns_cmd = params["setup_dns_cmd"] % ifname
             session_serial.cmd_status(setup_ip_cmd)
-            static_ip_address = utils_net.get_guest_ip_addr(session_serial, virtio_nic_mac, os_type='windows')
-            if static_ip_address != params["static_ip"]:
-                test.fail("Failed to setup static ip,current ip is %s" % static_ip_address)
+            session_serial.cmd_status(setup_dns_cmd)
+            check_network_config(session_serial)
         session_serial.close()
     else:
         for driver_name, device_name, device_hwid in zip(
@@ -125,9 +157,7 @@ def run(test, params, env):
 
     if params.get("update_from_previous_installer", "no") == "yes":
         session_serial = vm.wait_for_serial_login()
-        static_ip_address = utils_net.get_guest_ip_addr(session_serial, virtio_nic_mac, os_type='windows')
-        if static_ip_address != params["static_ip"]:
-            test.fail("Static ip is lost after upgrade driver,current ip is %s" % static_ip_address)
+        check_network_config(session_serial)
         session_serial.close()
 
     # for some guests, need to reboot guest after drivers are updated

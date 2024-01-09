@@ -136,12 +136,11 @@ def run(test, params, env):
         error_context.context("Add some load on host", test.log.info)
         host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
         host_cpu_cnt = int(process.system_output(host_cpu_cnt_cmd, shell=True).strip())
+        timerdevice_host_load_cmd = timerdevice_host_load_cmd % int(host_cpu_cnt/2)
         if params["os_type"] == "linux":
-            timerdevice_host_load_cmd = timerdevice_host_load_cmd % host_cpu_cnt
             process.system(timerdevice_host_load_cmd, shell=True,
                            ignore_bg_processes=True)
         else:
-            timerdevice_host_load_cmd = timerdevice_host_load_cmd % int(host_cpu_cnt/2)
             stress_bg = utils_test.HostStress("stress", params,
                                               stress_args=timerdevice_host_load_cmd)
             stress_bg.load_stress_tool()

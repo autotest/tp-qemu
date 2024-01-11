@@ -51,8 +51,17 @@ def run(test, params, env):
 
     try:
         for _username in username:
-            cmd = add_user_cmd % _username
-            process.run(cmd)
+            if process.system("id %s" % _username, shell=True,
+                              ignore_status=True) == 0:
+                s, o = process.getstatusoutput(del_user_cmd % _username)
+                if s:
+                    if "is currently used by process" in o:
+                        test.error("The common user is used by other process,"
+                                   " pls check on your host.")
+                    else:
+                        test.fail("Unknown error when deleting the "
+                                  "user: %s" % o)
+            process.run(add_user_cmd % _username)
         user_one, user_two = username[0], username[-1]
         # create the folder before daemon running
         shared_dir = os.path.join("/home/" + user_one, fs_source)

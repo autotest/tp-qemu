@@ -1,4 +1,5 @@
 from virttest import error_context
+from avocado.utils import cpu
 
 
 @error_context.context_aware
@@ -19,11 +20,11 @@ def run(test, params, env):
         """
         Run command in the guest
 
-        :params vm: vm object
-        :params cmd: a command needs to be ran
-        :params session: the vm's session
-        :params status: cmd status
-        :params output: cmd output
+        :param vm: vm object
+        :param cmd: a command needs to be ran
+        :param session: the vm's session
+        :param status: cmd status
+        :param output: cmd output
         """
         status, output = session.cmd_status_output(cmd, timeout=60)
         test.log.info("The command of '%s' output: %s", cmd, output)
@@ -40,8 +41,12 @@ def run(test, params, env):
     secure_params_cmd = params.get('secure_params_cmd')
     run_cmd_in_guest(session, secure_params_cmd, test)
 
-    # download HKD
-    download_hkd = params.get('download_hkd')
+    # check LPAR type(Z15/Z16) and download HKD
+    cpu_family = cpu.get_family()
+    if cpu_family:
+        download_hkd = params.get('download_hkd_%s' % cpu_family)
+    else:
+        test.fail("Failed to retrieve CPU family.")
     run_cmd_in_guest(session, download_hkd, test)
 
     # Create the boot image file

@@ -7,6 +7,7 @@ from avocado.utils import process
 from virttest import data_dir as virttest_data_dir
 from virttest import error_context
 from virttest.utils_misc import get_linux_drive_path
+from virttest import arch
 
 
 @error_context.context_aware
@@ -50,6 +51,12 @@ def run(test, params, env):
 
     timeout = params.get_numeric('login_timeout', 360)
     session = vm.wait_for_login(timeout=timeout)
+    if arch.ARCH in ('ppc64', 'ppc64le'):
+        cmd_output = vm.monitor.info("pic", False)
+        out = session.cmd_output("cat /proc/interrupts")
+        if "irqchip: in-kernel" in cmd_output and "XIVE" in out:
+            test.cancel("Skip test for xive kvm interrupt guest due to"
+                        " known host crash issue.")
     time.sleep(60)
     logger.info("Start to IO in guest")
     _execute_io_in_guest()

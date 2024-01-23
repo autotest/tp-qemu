@@ -1,11 +1,10 @@
-import os
-
-from virttest import data_dir
 from virttest import env_process
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
+
 from virttest.staging import utils_memory
+from provider.memory_benchmark import generate_instance
 
 
 def get_node_used_memory(qemu_pid, node):
@@ -52,7 +51,6 @@ def run(test, params, env):
             node_mem_alloc = node_mem_free
             node_alloc = node
 
-    mem_map_tool = params.get("mem_map_tool")
     mem_ratio = params.get_numeric("mem_ratio", 0.3, float)
     timeout = params.get_numeric("login_timeout", 240, float)
     params["vm_mem_host_nodes"] = str(node_alloc)
@@ -69,21 +67,16 @@ def run(test, params, env):
         test_mem = float(params.get("mem")) * mem_ratio
         guest_stress_args = params.get("guest_stress_args", "-a -p -l %sM")
         guest_stress_args = guest_stress_args % int(test_mem)
-        stress_path = os.path.join(data_dir.get_deps_dir('mem_mapping'),
-                                   mem_map_tool)
         utils_memory.drop_caches()
         error_context.base_context("Get the qemu memory use for node: %d before stress"
                                    % node_alloc, test.log.info)
         memory_before = get_node_used_memory(qemu_pid, node_alloc)
         try:
-            guest_stress = utils_test.VMStress(vm, "mem_mapping", params,
-                                               download_url=stress_path,
-                                               stress_args=guest_stress_args)
-            guest_stress.load_stress_tool()
+            mmap = generate_instance(params, vm, 'mmap')
+            mmap.run(guest_stress_args, session, 20)
         except utils_test.StressError as guest_info:
             test.error(guest_info)
-        guest_stress.unload_stress()
-        guest_stress.clean()
+        mmap.clean(timeout=10, force=True)
         utils_memory.drop_caches()
         error_context.context("Get the qemu memory used in node: %d after stress"
                               % node_alloc, test.log.debug)

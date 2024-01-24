@@ -84,9 +84,9 @@ def run(test, params, env):
         try:
             while transfer_thread.is_alive():
                 for ifname in ifnames:
-                    session_serial.cmd(link_set_cmd % (ifname, "down"))
+                    session_serial.cmd_output_safe(link_set_cmd % (ifname, "down"))
                     time.sleep(random.randint(1, 30))
-                    session_serial.cmd(link_set_cmd % (ifname, "up"))
+                    session_serial.cmd_output_safe(link_set_cmd % (ifname, "up"))
                     time.sleep(random.randint(1, 30))
         except aexpect.ShellProcessTerminatedError:
             transfer_thread.join(suppress_exception=True)
@@ -106,10 +106,10 @@ def run(test, params, env):
             while transfer_thread.is_alive():
                 nic_indexes = list(range(nic_num))
                 up_index = up_index % nic_num
-                session_serial.cmd(link_set_cmd % (ifnames[up_index], "up"))
+                session_serial.cmd_output_safe(link_set_cmd % (ifnames[up_index], "up"))
                 nic_indexes.remove(up_index)
                 for num in nic_indexes:
-                    session_serial.cmd(link_set_cmd % (ifnames[num], "down"))
+                    session_serial.cmd_output_safe(link_set_cmd % (ifnames[num], "down"))
                 time.sleep(random.randint(3, 5))
                 up_index += 1
         except aexpect.ShellProcessTerminatedError:

@@ -65,7 +65,7 @@ def run(test, params, env):
             args = (iozone_cmd.format(disk_letter), iozone_timeout)
             thread_maps[disk_letter] = (iozone_session.cmd, args)
             iozone_thread = utils_misc.InterruptedThread(iozone_session.cmd, args)
-            iozone_thread.setName(disk_letter)
+            iozone_thread.name = disk_letter
             iozone_threads.append(iozone_thread)
             iozone_thread.start()
 
@@ -75,12 +75,12 @@ def run(test, params, env):
                 if iozone_thread.is_alive():
                     continue
                 else:
-                    thread_name = iozone_thread.getName()
+                    thread_name = iozone_thread.name
                     iozone_threads.remove(iozone_thread)
                     iozone_threads.append(
                         utils_misc.InterruptedThread(thread_maps[thread_name][0],
                                                      thread_maps[thread_name][1]))
-                    iozone_threads[-1].setName(thread_name)
+                    iozone_threads[-1].name = thread_name
                     iozone_threads[-1].start()
 
         for iozone_thread in iozone_threads:

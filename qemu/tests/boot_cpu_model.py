@@ -1,6 +1,6 @@
 from virttest import env_process
 from virttest import error_context
-from virttest import utils_misc
+from virttest import cpu
 from virttest import utils_test
 
 
@@ -16,8 +16,8 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
 
     """
-    cpu_vendor = utils_misc.get_cpu_vendor()
-    host_model = utils_misc.get_host_cpu_models()
+    cpu_vendor = cpu.get_cpu_vendor()
+    host_model = cpu.get_host_cpu_models()
 
     model_list = params.get("cpu_model")
     if not model_list:

@@ -1,12 +1,13 @@
 """VDPA blk vhost vdpa test"""
-
+from avocado.core import exceptions
 from avocado.utils import process
 
 from provider.block_devices_plug import BlockDevicesPlug
 from provider.vdpa_sim_blk_utils import VhostVdpaSimulatorTest
-from virttest import env_process, utils_disk, utils_misc
+from virttest import env_process, utils_disk, utils_misc, virt_vm
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
+from aexpect import ShellCmdError
 
 
 def run(test, params, env):
@@ -29,6 +30,12 @@ def run(test, params, env):
         6) Destroy VM
         7) Destroy vhost-vdpa devices on host
         8) Destroy VDPA simulator ENV
+    Blockdev other options test
+        The test steps are same as Multi-disks test
+        Discard test: Test discard off/unmap
+        Cache test: Test cache.direct off/on
+        Detect-zeroes test: Test detect_zeroes off/on/unmap
+        Read-only test: Test read-only on
     """
 
     def _setup_vdpa_disks():
@@ -90,6 +97,8 @@ def run(test, params, env):
     vdpa_blk_info = {}
     vm = None
     session = None
+    expect_to_fail = params.get("expect_to_fail", "no")
+    err_msg = params.get("err_msg", "unknown error")
     try:
         vdpa_blk_images = params["vdpa_sim_blk_images"].split()
         host_cmd = params.get("host_cmd")
@@ -126,7 +135,14 @@ def run(test, params, env):
         session.close()
         vm.destroy()
         vm = None
-
+    except (virt_vm.VMCreateError, ShellCmdError) as e:
+        logger.debug("Find exception %s" % e)
+        if expect_to_fail == "yes" and err_msg in e.output:
+            logger.info("%s is expected " % err_msg)
+            # reset expect_to_fail
+            expect_to_fail = "no"
+        else:
+            raise exceptions.TestFail(e)
     finally:
         if vm:
             vm.destroy()
@@ -135,3 +151,6 @@ def run(test, params, env):
 
         if vdpa_blk_test:
             vdpa_blk_test.cleanup()
+
+        if expect_to_fail != "no":
+            raise exceptions.TestFail("Expected '%s' not happened" % err_msg)

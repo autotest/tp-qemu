@@ -172,6 +172,8 @@ def run(test, params, env):
             test.fail(err)
         test.log.info("dd test succeeded.")
     finally:
+        #login again in case the previous session expired
+        session = vm.wait_for_login(timeout=timeout)
         for dev_id in dev_partitioned:
             utils_disk.clean_partition_linux(session, dev_id)
         session.close()

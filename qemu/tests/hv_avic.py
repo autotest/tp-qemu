@@ -1,3 +1,4 @@
+import time
 from virttest import error_context
 
 
@@ -13,6 +14,27 @@ def run(test, params, env):
     param params: the test params
     param env: the test env object
     """
+
+    def _get_rhel_major_ver():
+        """
+        Get host main version.
+        """
+        cmd = "awk '/PRETTY_NAME/ {print}' /etc/os-release | awk '{print $5}' | awk -F '.' '{print $1}'"
+        rhel_major_ver = session.cmd_output(cmd)
+        return rhel_major_ver.strip()
+
+    def install_epel_repo():
+        """
+        Install required packages based on RHEL version.
+        """
+        repo_install_cmd = params.get("repo_install_cmd")
+        if not repo_install_cmd:
+            return
+        rhel_major_ver = _get_rhel_major_ver()
+        repo_install_cmd = repo_install_cmd % rhel_major_ver
+        session.cmd_output_safe(repo_install_cmd)
+        time.sleep(5)
+
     timeout = params.get_numeric("timeout", 360)
     cpuid_chk_cmd = params["cpuid_chk_cmd"]
     cpuid_pkg = params["cpuid_pkg"]
@@ -23,6 +45,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     status = session.cmd_status(cpuid_chk_cmd)
     if status:
+        install_epel_repo()
         status = session.cmd_status("yum -y install %s" % cpuid_pkg)
         if status:
             test.error("Fail to install target cpuid")

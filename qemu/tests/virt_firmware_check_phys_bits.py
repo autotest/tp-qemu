@@ -3,6 +3,7 @@ from avocado.utils import process
 from virttest import virt_vm
 from virttest import env_process
 from virttest import error_context
+from virttest import utils_package
 
 
 @error_context.context_aware
@@ -26,9 +27,13 @@ def run(test, params, env):
     2) boot a guest with valid phys-bits, check the phys-bits in guest
        make sure it equals to the set value or equals to the maximum
        number which host supporting
-    3) if phys-bits number is greater than 46, check the limitation
-       message in virt firmware log
+    3) check the phys-bits in virt firmware log, it also equals to the
+       set value or equals to the maximum number which host supporting
+    4) for ovmf, if phys-bits number is greater than 46, check the
+       limitation message in virt firmware log
        limitation message: limit PhysBits to 46 (avoid 5-level paging)
+       seabios limit to 46 phys-bits too. It doesn't print a limitation
+       message about it, so for seabios, don't check it
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -82,18 +87,33 @@ def run(test, params, env):
             if output in params["enabled_status"]:
                 sev_es_status = True
         if sev_status or sev_es_status:
-            host_phys_bits = int(host_phys_bits) + \
-                    int(params["host_memory_encryption_bits"])
+            install_status = utils_package.package_install('sevctl')
+            if not install_status:
+                test.error("Failed to install sevctl.")
+            encryption_bits_grep_cmd = params["encryption_bits_grep_cmd"]
+            host_memory_encryption_bits = process.getoutput(
+                    encryption_bits_grep_cmd, shell=True).strip()
+            if not host_memory_encryption_bits.isdigit():
+                test.error("Failed to get host memory encryption bits, the "
+                           "actual output is '%s'" % host_memory_encryption_bits)
+            host_phys_bits = int(host_phys_bits) + int(host_memory_encryption_bits)
         expected_phys_bits = min(int(host_phys_bits), int(host_phys_bits_limit))
         session.close()
         err_str = "The phys-bits in guest, it dosen't equal to expected value."
         err_str += "The expected value is %s, but the actual value is %s."
         err_str %= (expected_phys_bits, guest_phys_bits)
         test.assertEqual(guest_phys_bits, expected_phys_bits, err_str)
-        if expected_phys_bits > int(params["limitation_from_ovmf"]):
+        phys_bits_msg = params["phys_bits_msg"] % expected_phys_bits
+        logs = vm.logsessions['seabios'].get_output()
+        error_context.context("Check the phys-bits message in "
+                              "virt firmware log.", test.log.info)
+        if not re.search(phys_bits_msg, logs, re.S | re.I):
+            test.fail("Not found phys-bits message '%s' in "
+                      "virt firmware log." % phys_bits_msg)
+        limitation = params.get_numeric("limitation_from_ovmf")
+        if limitation and expected_phys_bits > limitation:
             error_context.context("Check the limitation message in virt "
                                   "firmware log.", test.log.info)
-            logs = vm.logsessions['seabios'].get_output()
             if not re.search(params["limitation_msg"], logs, re.S | re.I):
                 test.fail("Not found the limitation "
                           "message in virt firmware log.")

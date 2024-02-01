@@ -701,14 +701,21 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("the vcpu number:%d" % vcpus_num, LOG_JOB.info)
         if vcpus_num < 2:
             test.error("the vpus number of guest should be more than 1")
-        vcpus_info[vcpus_num - 1]["online"] = False
-        del vcpus_info[vcpus_num - 1]["can-offline"]
-        action = {'vcpus': [vcpus_info[vcpus_num - 1]]}
-        self.gagent.set_vcpus(action)
-        # Check if the result is as expected
-        vcpus_info = self.gagent.get_vcpus()
-        if vcpus_info[vcpus_num - 1]["online"] is not False:
-            test.fail("the vcpu status is not changed as expected")
+        for index in range(0, vcpus_num - 1):
+            if (vcpus_info[index]["online"] is True and
+                    vcpus_info[index]["can-offline"] is True and
+                    vcpus_info[index]['logical-id'] != 0):
+                vcpus_info[index]["online"] = False
+                del vcpus_info[index]["can-offline"]
+                action = {'vcpus': [vcpus_info[index]]}
+                self.gagent.set_vcpus(action)
+                # Check if the result is as expected
+                vcpus_info = self.gagent.get_vcpus()
+                if vcpus_info[index]["online"] is not False:
+                    test.fail("the vcpu status is not changed as expected")
+                break
+        else:
+            test.error("There is no vcpu that matching test condition.")
 
     @error_context.context_aware
     def gagent_check_set_mem_blocks(self, test, params, env):
@@ -4423,6 +4430,34 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                        "installer.exe and msi package.")
 
         session.close()
+
+    @error_context.context_aware
+    def gagent_check_debugview_VSS_DLL(self, test, params, env):
+        """
+        :param test: QEMU test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment
+        """
+
+        vm = env.get_vm(params["main_vm"])
+        session = vm.wait_for_login()
+        gagent = self.gagent
+
+        cmd_run_debugview = utils_misc.set_winutils_letter(session,
+                                                           params["cmd_run_debugview"])
+        cmd_check_string_VSS = params["cmd_check_string_VSS"]
+
+        error_context.context("Check if debugview can capture log info", test.log.info)
+        s, o = session.cmd_status_output(cmd_run_debugview)
+        if s:
+            test.error("Debugviewconsole.exe run failed, "
+                       "Please check the output is: %s" % o)
+        gagent.fsfreeze()
+        gagent.fsthaw()
+        s, o = session.cmd_status_output(cmd_check_string_VSS)
+        if s:
+            test.fail("debugview can't capture expected log info,  "
+                      "the actual output is %s" % o)
 
 
 def run(test, params, env):

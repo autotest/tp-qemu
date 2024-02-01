@@ -11,6 +11,8 @@ from virttest import data_dir
 from virttest import utils_test
 from virttest import remote
 
+from virttest.utils_version import VersionInterval
+
 
 @error_context.context_aware
 def run(test, params, env):
@@ -288,6 +290,11 @@ def run(test, params, env):
                              ethertype2="ethertype 802.1Q",
                              vlan_tag="vlan 10,",
                              vlan_tag2="vlan 20,")
+
+        # configure the outer VLAN MTU to 1504 on qemu-8.1
+        if vm.devices.qemu_version in VersionInterval('[8.1.0,)') and \
+                params.get("nic_model") == "e1000e":
+            session.cmd("ip link set %s mtu 1504" % nic_name)
 
         # scp file to guest with L2 vlan tag
         cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, file_size)

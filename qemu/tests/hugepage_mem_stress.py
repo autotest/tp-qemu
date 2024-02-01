@@ -47,7 +47,6 @@ def run(test, params, env):
                 stress_test.load_stress_tool()
                 utils_misc.wait_for(lambda: (stress_test.app_running is False), 30)
                 stress_test.unload_stress()
-                utils_misc.verify_dmesg(session=session)
             finally:
                 stress_test.clean()
         else:

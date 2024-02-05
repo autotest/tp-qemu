@@ -3,7 +3,7 @@
 from avocado.utils import process
 
 from provider.block_devices_plug import BlockDevicesPlug
-from provider.vdpa_sim_blk_utils import VirtioVdpaSimulatorTest
+from provider.vdpa_sim_utils import VirtioVdpaBlkSimulatorTest
 from virttest import env_process, utils_disk, utils_misc
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
@@ -41,7 +41,7 @@ def run(test, params, env):
 
     def _setup_vdpa_disks():
         for img in vdpa_blk_images:
-            dev = vdpa_blk_test.add_vdpa_blk_dev(img)
+            dev = vdpa_blk_test.add_dev(img)
             vdpa_blk_info[img] = "/dev/%s" % dev
             params["image_name_%s" % img] = vdpa_blk_info[img]
             cmd = host_cmd.format(dev)
@@ -49,7 +49,7 @@ def run(test, params, env):
 
     def _cleanup_vdpa_disks():
         for img in vdpa_blk_images:
-            vdpa_blk_test.remove_vdpa_blk_dev(img)
+            vdpa_blk_test.remove_dev(img)
 
     def _get_window_disk_index_by_serial(serial):
         idx_info = get_disk_props_by_serial_number(session, serial, ["Index"])
@@ -108,7 +108,7 @@ def run(test, params, env):
         test_vm = params.get("test_vm", "no")
 
         logger.debug("Deploy VDPA blk env on host...")
-        vdpa_blk_test = VirtioVdpaSimulatorTest()
+        vdpa_blk_test = VirtioVdpaBlkSimulatorTest()
         vdpa_blk_test.setup()
 
         logger.debug("Add VDPA blk disk on host...")

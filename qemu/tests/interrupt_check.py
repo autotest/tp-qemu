@@ -50,7 +50,7 @@ def run(test, params, env):
             test.error("No additional disks found")
 
         error_context.context("Execute dd write test", test.log.info)
-        session.cmd(params["dd_write"] % extra_disk)
+        session.cmd(params["dd_write"] % extra_disk, timeout=120)
         irq_info_after_dd_write = get_irq_info()
         analyze_interrupts(irq_info_before_test, irq_info_after_dd_write)
 

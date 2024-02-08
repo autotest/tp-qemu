@@ -137,7 +137,7 @@ def run(test, params, env):
 
         def _copy_until_end(self, end_event):
             # Copy until migration not end.
-            while not end_event.isSet():
+            while not end_event.is_set():
                 logging.info("Copy file to guest %s.", self.vm_addr)
                 remote.copy_files_to(self.vm_addr, "scp", guest_root,
                                      guest_pass, 22, host_path,

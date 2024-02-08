@@ -1368,7 +1368,7 @@ def run(test, params, env):
                 i += 1
                 time.sleep(2)
             if not threads[0].is_alive():
-                if EXIT_EVENT.isSet():
+                if EXIT_EVENT.is_set():
                     test.fail("Exit event emitted, check the log "
                               "for send/recv thread failure.")
                 else:

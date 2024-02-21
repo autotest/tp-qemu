@@ -2,6 +2,7 @@ import time
 
 from virttest import error_context
 
+from virttest.qemu_monitor import QMPCmdError
 from virttest.utils_misc import normalize_data_size
 from virttest.utils_test.qemu import MemoryHotplugTest
 from provider import virtio_mem_utils
@@ -24,6 +25,7 @@ def run(test, params, env):
 
     timeout = params.get_numeric("login_timeout", 240)
     threshold = params.get_numeric("threshold", target_type=float)
+    error_msg = params.get("error_msg")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
@@ -53,4 +55,18 @@ def run(test, params, env):
                                               threshold, vm, test)
         virtio_mem_utils.check_numa_plugged_mem(node_id, requested_size,
                                                 threshold, vm, test)
+    try:
+        hotplug_test.unplug_memory(vm, target_mem)
+    except QMPCmdError as e:
+        if error_msg not in str(e.data):
+            test.fail("Unexpected error message: %s" % str(e.data))
+        test.log.info(error_msg)
+    else:
+        test.fail("%s shouldn't have been unplugged! 'size' is greater than 0"
+                  % target_mem)
+
+    vm.monitor.qom_set(device_id, "requested-size", 0)
+    time.sleep(10)
+    hotplug_test.unplug_memory(vm, target_mem)
+
     session.close()

@@ -30,6 +30,9 @@ def run(test, params, env):
     check_kexec_cmd = params["check_kexec_cmd"]
     expect_event = params["expect_event"]
     trigger_crash_cmd = params["trigger_crash_cmd"]
+    check_ISA_cmd = params["check_ISA_cmd"]
+    device_cmd = params["device_cmd"]
+    machine_type = params["machine_type"]
 
     error_context.context("Setup crash_kexec_post_notifiers=1 in guest",
                           test.log.info)
@@ -52,6 +55,18 @@ def run(test, params, env):
             "Kdump service did not reach %s status "
             "within the timeout period" % kdump_expect_status
         )
+
+    error_context.context("Check ISA Bridge in the guest", test.log.info)
+    o = session.cmd_output(check_ISA_cmd)
+    device_id = o.split()[0]
+    device_cmd = device_cmd % device_id
+    o = session.cmd_output(device_cmd)
+    if o.strip() == "1" and "i440fx" in machine_type or machine_type == "pc":
+        test.log.info("Got 1 under i440fx machine-type")
+    elif o.strip() == "3" and machine_type.startswith("q35"):
+        test.log.info("Got 3 under q35 machine-type")
+    else:
+        test.error("Please check the abnormal values")
 
     error_context.context("Trigger a crash in guest and check qmp event",
                           test.log.info)

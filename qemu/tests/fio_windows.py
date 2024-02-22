@@ -25,7 +25,7 @@ def run(test, params, env):
     fio_cmd = params.get("fio_cmd")
     timeout = float(params.get("login_timeout", 360))
     cmd_timeout = int(params.get("cmd_timeout", "360"))
-    check_installed_cmd = 'dir "%s"|findstr /I fio' % install_path
+    check_installed_cmd = 'dir "%s/fio"|findstr /I fio.exe' % install_path
     check_installed_cmd = params.get("check_installed_cmd",
                                      check_installed_cmd)
 

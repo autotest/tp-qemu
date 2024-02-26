@@ -492,7 +492,7 @@ class EventListenerWin(_EventListener):
 
     agent_source = os.path.join(DEP_DIR, 'input_event_win.py')
     agent_target = r'%TEMP%\input_event.py'
-    python_bin = 'python2'
+    python_bin = 'python'
 
     def _uninstall(self):
         cmd = ' '.join(('del', self.agent_target))

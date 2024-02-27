@@ -3933,13 +3933,19 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         if self.gagent_src_type == "url":
             gagent_host_path = params["gagent_host_path"]
             gagent_download_url = params["gagent_download_url"]
+            mqgaw_ver = re.search(r'(?:\d+\.){2}\d+', gagent_download_url)
+            mqgaw_ver_list = list(map(int, mqgaw_ver.group(0).split('.')))
+            mqgaw_name = (params["qga_bin"] if mqgaw_ver_list >= [105, 0, 1]
+                          else params["qga_bin_legacy"])
+            src_qgarpm_path = params["src_qgarpm_path"] % mqgaw_name
+            cmd_get_qgamsi_path = params["get_qgamsi_path"] % mqgaw_name
             qga_msi = params['qemu_ga_pkg']
             rpm_install = "rpm_install" in gagent_download_url
             if rpm_install:
                 gagent_download_url = gagent_download_url.split("rpm_install:")[-1]
                 gagent_download_cmd = 'wget -qP %s %s' % (gagent_host_path,
                                                           gagent_download_url)
-                gagent_host_path += params["src_qgarpm_path"]
+                gagent_host_path += src_qgarpm_path
             else:
                 gagent_host_path += qga_msi
                 gagent_download_cmd = 'wget %s %s' % (gagent_host_path,
@@ -3959,7 +3965,6 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             if rpm_install:
                 get_qga_msi = params["installrpm_getmsi"] % gagent_host_path
                 process.system(get_qga_msi, shell=True, timeout=10)
-                cmd_get_qgamsi_path = params["get_qgamsi_path"]
                 qgamsi_path = process.system_output(cmd_get_qgamsi_path,
                                                     shell=True)
                 qgamsi_path = qgamsi_path.decode(encoding="utf-8",

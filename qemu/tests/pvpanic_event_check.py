@@ -1,6 +1,7 @@
 import aexpect
 
 from virttest import error_context
+from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -35,13 +36,22 @@ def run(test, params, env):
     session.cmd(setup_guest_cmd)
     session = vm.reboot(session)
     s, o = session.cmd_status_output(check_kexec_cmd)
-    if s or o is '':
-        test.error("Failed to setup crash_kexec_post_notifiers in guest")
+    if s or o == "":
+        test.error(
+            "Failed to setup crash_kexec_post_notifiers in guest"
+        )
 
-    error_context.context("Check kdump server status in guest", test.log.info)
-    o = session.cmd_output(check_kdump_service)
-    if kdump_expect_status not in o:
-        test.error("Kdump service status is not %s" % kdump_expect_status)
+    error_context.context("Check kdump server status in guest",
+                          test.log.info)
+    if not utils_misc.wait_for(
+        lambda: session.cmd_output(check_kdump_service).startswith(
+            kdump_expect_status
+        ), timeout=20, first=0.0, step=5.0
+    ):
+        test.fail(
+            "Kdump service did not reach %s status "
+            "within the timeout period" % kdump_expect_status
+        )
 
     error_context.context("Trigger a crash in guest and check qmp event",
                           test.log.info)

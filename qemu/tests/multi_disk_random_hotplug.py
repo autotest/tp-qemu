@@ -7,6 +7,8 @@ import random
 import time
 import re
 
+from avocado.utils import process
+
 from virttest import error_context
 from virttest import funcatexit
 from virttest import data_dir
@@ -256,95 +258,109 @@ def run(test, params, env):
     vm = env.get_vm(params['main_vm'])
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     is_windows = params['os_type'] == 'windows'
-    if is_windows:
-        session = enable_driver_verifier(params['driver_name'])
-    out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
-    if "unknown command" in str(out):
-        verify_qtree = verify_qtree_unsupported
 
-    # Modprobe the module if specified in config file
-    module = params.get("modprobe_module")
-    if module:
-        session.cmd("modprobe %s" % module)
+    try:
+        if is_windows:
+            session = enable_driver_verifier(params['driver_name'])
+        out = vm.monitor.human_monitor_cmd("info qtree", debug=False)
+        if "unknown command" in str(out):
+            verify_qtree = verify_qtree_unsupported
 
-    stress_cmd = params.get('stress_cmd')
-    if stress_cmd:
-        funcatexit.register(env, params.get('type'), stop_stresser, vm,
-                            params.get('stress_kill_cmd'))
-        stress_session = vm.wait_for_login(timeout=10)
-        for _ in range(int(params.get('no_stress_cmds', 1))):
-            stress_session.sendline(stress_cmd)
+        # Modprobe the module if specified in config file
+        module = params.get("modprobe_module")
+        if module:
+            session.cmd("modprobe %s" % module)
 
-    rp_times = int(params.get("repeat_times", 1))
-    queues = params.get("multi_disk_type") == "parallel"
-    timeout = params.get_numeric('plug_timeout', 300)
-    interval_time_unplug = params.get_numeric('interval_time_unplug', 0)
-    if queues:  # parallel
-        hotplug, unplug = 'hotplug_devs_threaded', 'unplug_devs_threaded'
-    else:   # serial
-        hotplug, unplug = 'hotplug_devs_serial', 'unplug_devs_serial'
-
-    context_msg = "Running sub test '%s' %s"
-    plug = BlockDevicesPlug(vm)
-    for iteration in range(rp_times):
-        error_context.context("Hotplugging/unplugging devices, iteration %d"
-                              % iteration, test.log.info)
-        sub_type = params.get("sub_type_before_plug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "before hotplug"),
-                                  test.log.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
-
-        error_context.context("Hotplug the devices", test.log.debug)
-        getattr(plug, hotplug)(timeout=timeout)
-        time.sleep(float(params.get('wait_after_hotplug', 0)))
-
-        error_context.context("Verify disks after hotplug", test.log.debug)
-        info_qtree = vm.monitor.info('qtree', False)
-        info_block = vm.monitor.info_block(False)
-        vm.verify_alive()
-        verify_qtree(params, info_qtree, info_block, vm.devices)
-
-        sub_type = params.get("sub_type_after_plug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "after hotplug"),
-                                  test.log.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
-        run_stress_iozone() if is_windows else run_stress_dd()
-        sub_type = params.get("sub_type_before_unplug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "before hotunplug"),
-                                  test.log.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
-
-        error_context.context("Unplug and remove the devices", test.log.debug)
+        stress_cmd = params.get('stress_cmd')
         if stress_cmd:
-            session.cmd(params["stress_stop_cmd"])
-        getattr(plug, unplug)(timeout=timeout, interval=interval_time_unplug)
-        if stress_cmd:
-            session.cmd(params["stress_cont_cmd"])
-        _postprocess_images()
+            funcatexit.register(env, params.get('type'), stop_stresser, vm,
+                                params.get('stress_kill_cmd'))
+            stress_session = vm.wait_for_login(timeout=10)
+            for _ in range(int(params.get('no_stress_cmds', 1))):
+                stress_session.sendline(stress_cmd)
 
-        error_context.context("Verify disks after unplug", test.log.debug)
-        time.sleep(float(params.get('wait_after_unplug', 0)))
-        info_qtree = vm.monitor.info('qtree', False)
-        info_block = vm.monitor.info_block(False)
+        rp_times = int(params.get("repeat_times", 1))
+        queues = params.get("multi_disk_type") == "parallel"
+        timeout = params.get_numeric('plug_timeout', 300)
+        interval_time_unplug = params.get_numeric('interval_time_unplug', 0)
+        if queues:  # parallel
+            hotplug, unplug = 'hotplug_devs_threaded', 'unplug_devs_threaded'
+        else:   # serial
+            hotplug, unplug = 'hotplug_devs_serial', 'unplug_devs_serial'
+
+        context_msg = "Running sub test '%s' %s"
+        plug = BlockDevicesPlug(vm)
+        for iteration in range(rp_times):
+            error_context.context("Hotplugging/unplugging devices, iteration %d"
+                                  % iteration, test.log.info)
+            sub_type = params.get("sub_type_before_plug")
+            if sub_type:
+                error_context.context(context_msg % (sub_type, "before hotplug"),
+                                      test.log.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
+
+            error_context.context("Hotplug the devices", test.log.debug)
+            getattr(plug, hotplug)(timeout=timeout)
+            time.sleep(float(params.get('wait_after_hotplug', 0)))
+
+            error_context.context("Verify disks after hotplug", test.log.debug)
+            info_qtree = vm.monitor.info('qtree', False)
+            info_block = vm.monitor.info_block(False)
+            vm.verify_alive()
+            verify_qtree(params, info_qtree, info_block, vm.devices)
+
+            sub_type = params.get("sub_type_after_plug")
+            if sub_type:
+                error_context.context(context_msg % (sub_type, "after hotplug"),
+                                      test.log.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
+            run_stress_iozone() if is_windows else run_stress_dd()
+            sub_type = params.get("sub_type_before_unplug")
+            if sub_type:
+                error_context.context(context_msg % (sub_type, "before hotunplug"),
+                                      test.log.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
+
+            error_context.context("Unplug and remove the devices", test.log.debug)
+            if stress_cmd:
+                session.cmd(params["stress_stop_cmd"])
+            getattr(plug, unplug)(timeout=timeout, interval=interval_time_unplug)
+            if stress_cmd:
+                session.cmd(params["stress_cont_cmd"])
+            _postprocess_images()
+
+            error_context.context("Verify disks after unplug", test.log.debug)
+            time.sleep(params.get_numeric('wait_after_unplug', 0, float))
+            info_qtree = vm.monitor.info('qtree', False)
+            info_block = vm.monitor.info_block(False)
+            vm.verify_alive()
+            verify_qtree(params, info_qtree, info_block, vm.devices)
+
+            sub_type = params.get("sub_type_after_unplug")
+            if sub_type:
+                error_context.context(context_msg % (sub_type, "after hotunplug"),
+                                      test.log.info)
+                utils_test.run_virt_sub_test(test, params, env, sub_type)
+            configure_images_params(params)
+
+        # Check for various KVM failures
+        error_context.context("Validating VM after all disk hotplug/unplugs",
+                              test.log.debug)
         vm.verify_alive()
-        verify_qtree(params, info_qtree, info_block, vm.devices)
-
-        sub_type = params.get("sub_type_after_unplug")
-        if sub_type:
-            error_context.context(context_msg % (sub_type, "after hotunplug"),
-                                  test.log.info)
-            utils_test.run_virt_sub_test(test, params, env, sub_type)
-        configure_images_params(params)
-
-    # Check for various KVM failures
-    error_context.context("Validating VM after all disk hotplug/unplugs",
-                          test.log.debug)
-    vm.verify_alive()
-    out = session.cmd_output('dmesg')
-    if "I/O error" in out:
-        test.log.warn(out)
-        test.error("I/O error messages occured in dmesg, "
-                   "check the log for details.")
+        out = session.cmd_output('dmesg')
+        if "I/O error" in out:
+            test.log.warn(out)
+            test.error("I/O error messages occured in dmesg, "
+                       "check the log for details.")
+    except Exception as e:
+        pid = vm.get_pid()
+        test.log.debug("Find %s Exception:'%s'.", pid, str(e))
+        if pid:
+            logdir = test.logdir
+            process.getoutput("gstack %s > %s/gstack.log" % (pid, logdir))
+            process.getoutput(
+                "timeout 20 strace -tt -T -v -f -s 32 -p %s -o %s/strace.log" % (
+                    pid, logdir))
+        else:
+            test.log.debug("VM dead...")
+        raise e

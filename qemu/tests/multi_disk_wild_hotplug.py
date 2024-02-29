@@ -3,6 +3,8 @@ import copy
 import time
 import os
 
+from avocado.utils import process
+
 from virttest.qemu_monitor import QMPCmdError
 from virttest import error_context, env_process
 from virttest import data_dir as virttest_data_dir
@@ -90,35 +92,50 @@ def run(test, params, env):
     params['start_vm'] = 'yes'
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params['main_vm'])
-    session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
+    try:
+        session = vm.wait_for_login(
+            timeout=params.get_numeric("login_timeout", 360))
 
-    error_context.context("Get images params", test.log.info)
-    _get_images_params()
+        error_context.context("Get images params", test.log.info)
+        _get_images_params()
 
-    disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=60))
-    test.log.info("There are total %d disks", disks_num)
+        disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=60))
+        test.log.info("There are total %d disks", disks_num)
 
-    guest_operation = params.get("guest_operation")
-    if guest_operation:
-        test.log.info("Run %s in guest ", guest_operation)
-        locals_var = locals()
-        locals_var[guest_operation]()
+        guest_operation = params.get("guest_operation")
+        if guest_operation:
+            test.log.info("Run %s in guest ", guest_operation)
+            locals_var = locals()
+            locals_var[guest_operation]()
 
-    for n in range(repeat_num):
-        error_context.context("Start unplug loop:%d" % n, test.log.info)
-        _hotunplug_images()
-        time.sleep(unplug_time)
-        error_context.context("Start plug loop:%d" % n, test.log.info)
-        _hotplug_images()
-        time.sleep(plug_time)
+        for n in range(repeat_num):
+            error_context.context("Start unplug loop:%d" % n, test.log.info)
+            _hotunplug_images()
+            time.sleep(unplug_time)
+            error_context.context("Start plug loop:%d" % n, test.log.info)
+            _hotplug_images()
+            time.sleep(plug_time)
 
-    error_context.context("Waiting for %d seconds" % wait_time, test.log.info)
-    time.sleep(wait_time)
-    error_context.context("Check disks in guest.", test.log.info)
-    # re-login in case previous session is expired
-    session = vm.wait_for_login(timeout=int(params.get("relogin_timeout", 60)))
-    new_disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=300))
-    test.log.info("There are total %d disks after hotplug", new_disks_num)
-    if new_disks_num != disks_num:
-        test.log.warning("Find unmatched disk numbers %d %d", disks_num,
-                         new_disks_num)
+        error_context.context("Waiting for %d seconds" % wait_time, test.log.info)
+        time.sleep(wait_time)
+        error_context.context("Check disks in guest.", test.log.info)
+        # re-login in case previous session is expired
+        session = vm.wait_for_login(
+            timeout=params.get_numeric("relogin_timeout", 60))
+        new_disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=300))
+        test.log.info("There are total %d disks after hotplug", new_disks_num)
+        if new_disks_num != disks_num:
+            test.log.warning("Find unmatched disk numbers %d %d", disks_num,
+                             new_disks_num)
+    except Exception as e:
+        pid = vm.get_pid()
+        test.log.debug("Find %s Exception:'%s'.", pid, str(e))
+        if pid:
+            logdir = test.logdir
+            process.getoutput("gstack %s > %s/gstack.log" % (pid, logdir))
+            process.getoutput(
+                "timeout 20 strace -tt -T -v -f -s 32 -p %s -o %s/strace.log" % (
+                    pid, logdir))
+        else:
+            test.log.debug("VM dead...")
+        raise e

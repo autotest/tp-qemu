@@ -71,7 +71,10 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo, test, devices=Non
     if os_type == "linux":
         out = session.cmd_output_safe("lscpu")
         cpu_info = dict(re.findall(r"([A-Z].+):\s+(.+)", out, re.M))
-        sockets = int(cpu_info["Socket(s)"])
+        if str(cpu_info["Architecture"]) == 's390x':
+            sockets = int(cpu_info["Socket(s) per book"])
+        else:
+            sockets = int(cpu_info["Socket(s)"])
         cores = int(cpu_info["Core(s) per socket"])
         threads = int(cpu_info["Thread(s) per core"])
         threads_matched = cpuinfo.threads == threads

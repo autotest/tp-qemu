@@ -90,13 +90,13 @@ def run(test, params, env):
         test.log.info('Run the command "netkvm-wmi.cmd rss" to collect statistics')
         rss_test_cmd = utils_misc.set_winutils_letter(
             guest_session, params["rss_test_cmd"])
-        output = guest_session.cmd_output(rss_test_cmd)
-        rss_statistics = output.splitlines()[1].split()
-        rxerrors = int(rss_statistics[-4])
-        rxmissed = int(rss_statistics[-2])
-        if not (rxerrors == 0 and rxmissed == 0):
+        rss_statistics = guest_session.cmd_output(rss_test_cmd)
+        patterns = r'^((?:Errors)|(?:Misses))=0'
+        result = re.findall(patterns, rss_statistics, re.M)
+        if len(result) == 2:
+            test.log.info("Rss support for virtio-net driver is works well")
+        else:
             test.fail("Rss support for virtio-net driver is bad")
-        test.log.info("Rss support for virtio-net driver is works well")
 
     os_type = params["os_type"]
     login_timeout = int(params.get("login_timeout", 360))

@@ -25,7 +25,7 @@ def run(test, params, env):
     invalid_type = params.get('sve_invalid')
 
     vm = env.get_vm(params["main_vm"])
-    sve_flag = cpu.cpu_has_flags(('sve'))
+    sve_flag = cpu.cpu_has_flags('sve')
     if invalid_type != 'non_sve_host':
         if not sve_flag:
             test.cancel("The host doesn't support SVE feature")
@@ -33,7 +33,7 @@ def run(test, params, env):
             active_length = params.get_boolean('active_length')
             sve_lengths = get_sve_lengths(active_length)
             if active_length:
-                if sve_lengths == 1:
+                if len(sve_lengths) == 1:
                     test.cancel("The host only supports one sve length")
                 disabled_length = sve_lengths[-2]
                 flags = ('{}={}'.format(

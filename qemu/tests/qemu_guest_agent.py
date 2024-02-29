@@ -2312,7 +2312,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
     def _action_before_fsfreeze(self, *args):
         session = self._get_session(self.params, None)
         if self.params.get("os_type") == "linux":
-            session.cmd("restorecon -Rv /", timeout=180)
+            session.cmd("restorecon -Rv /mnt", timeout=180)
         self._open_session_list.append(session)
 
     @error_context.context_aware

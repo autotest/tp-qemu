@@ -1,6 +1,5 @@
 import re
 import os
-import time
 
 from shutil import copyfile
 
@@ -83,9 +82,10 @@ def run(test, params, env):
                                    stress_timeout, 10, 10):
             test.error("QEMU used memory doesn't reach %s of guest mem %sM in "
                        "%ss" % (mem_thres, mem // 1024, stress_timeout))
-        time.sleep(30)
+        cmd = params['cmd_check_ksm_status']
         free_mem_host = utils_memory.freememtotal()
-        ksm_status = process.getoutput(params['cmd_check_ksm_status'])
+        ksm_status = utils_misc.wait_for(lambda: '1' == process.getoutput(cmd),
+                                         40, first=20.0)
         vm.destroy()
         test.log.info("The ksm threshold is %sM, QEMU used memory is %sM, "
                       "and the total free memory on host is %sM",
@@ -93,13 +93,13 @@ def run(test, params, env):
         if threshold_reached:
             if free_mem_host > ksm_thres:
                 test.error("Host memory is not consumed as much as expected")
-            if ksm_status == '0':
+            if not ksm_status:
                 test.fail("KSM should be running")
         else:
             if free_mem_host < ksm_thres:
                 test.error("Host memory is consumed too much more than "
                            "expected")
-            if ksm_status != '0':
+            if ksm_status:
                 test.fail("KSM should not be running")
 
     total_mem_host = utils_memory.memtotal()

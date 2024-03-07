@@ -47,20 +47,20 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     expected_gagent_version = win_driver_installer_test.install_gagent(
-                                             session, test,
-                                             qemu_ga_pkg,
-                                             gagent_install_cmd,
-                                             gagent_pkg_info_cmd)
+        session, test,
+        qemu_ga_pkg,
+        gagent_install_cmd,
+        gagent_pkg_info_cmd)
     win_driver_installer_test.uninstall_gagent(session, test,
                                                gagent_uninstall_cmd)
     win_driver_installer_test.win_uninstall_all_drivers(session,
                                                         test, params)
     session = vm.reboot(session)
     win_driver_installer_test.install_test_with_screen_on_desktop(
-                                        vm, session, test,
-                                        run_install_cmd,
-                                        installer_pkg_check_cmd,
-                                        copy_files_params=params)
+        vm, session, test,
+        run_install_cmd,
+        installer_pkg_check_cmd,
+        copy_files_params=params)
     win_driver_installer_test.win_installer_test(session, test, params)
     win_driver_installer_test.check_gagent_version(session, test,
                                                    gagent_pkg_info_cmd,
@@ -72,9 +72,9 @@ def run(test, params, env):
     unrepaired_driver = []
     fail_tests = []
     for driver_name, device_name, device_hwid in zip(
-                win_driver_installer_test.driver_name_list,
-                win_driver_installer_test.device_name_list,
-                win_driver_installer_test.device_hwid_list):
+            win_driver_installer_test.driver_name_list,
+            win_driver_installer_test.device_name_list,
+            win_driver_installer_test.device_hwid_list):
         error_context.context("Uninstall %s driver"
                               % driver_name, test.log.info)
         win_driver_utils.uninstall_driver(session, test, devcon_path,
@@ -85,8 +85,11 @@ def run(test, params, env):
         time.sleep(30)
         run_repair_cmd = utils_misc.set_winutils_letter(
             session, params["run_repair_cmd"])
-        session.cmd(run_repair_cmd)
-        time.sleep(30)
+        session = win_driver_installer_test.run_installer_with_interaction(
+            vm, session, test, params,
+            run_repair_cmd,
+            copy_files_params=params)
+
         error_context.context("Check if %s driver is repaired"
                               % driver_name, test.log.info)
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]

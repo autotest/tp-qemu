@@ -76,7 +76,6 @@ def run(test, params, env):
             )
 
     devcon_path = params["devcon_path"]
-    installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
     run_install_cmd = params["run_install_cmd"]
     media_type = params["virtio_win_media_type"]
 
@@ -112,11 +111,11 @@ def run(test, params, env):
     if params.get("update_from_previous_installer", "no") == "yes":
         error_context.context("install drivers from previous installer",
                               test.log.info)
-        win_driver_installer_test.install_test_with_screen_on_desktop(
-                                            vm, session, test,
-                                            run_install_cmd,
-                                            installer_pkg_check_cmd,
-                                            copy_files_params=params)
+        session = win_driver_installer_test.run_installer_with_interaction(
+            vm, session, test, params,
+            run_install_cmd,
+            copy_files_params=params)
+
         session_serial = vm.wait_for_serial_login()
         if vm.virtnet[1].nic_model == "virtio-net-pci":
             ifname = utils_net.get_windows_nic_attribute(
@@ -149,20 +148,15 @@ def run(test, params, env):
     error_context.context("Upgrade virtio driver to original",
                           test.log.info)
     change_virtio_media(params["cdrom_virtio"])
-    win_driver_installer_test.install_test_with_screen_on_desktop(
-                                        vm, session, test,
-                                        run_install_cmd,
-                                        installer_pkg_check_cmd,
-                                        copy_files_params=params)
+    session = win_driver_installer_test.run_installer_with_interaction(
+        vm, session, test, params,
+        run_install_cmd,
+        copy_files_params=params)
 
     if params.get("update_from_previous_installer", "no") == "yes":
         session_serial = vm.wait_for_serial_login()
         check_network_config(session_serial)
         session_serial.close()
-
-    # for some guests, need to reboot guest after drivers are updated
-    if params.get("need_reboot", "no") == "yes":
-        session = vm.reboot(session)
 
     error_context.context("Run viofs service after upgrade...")
     virtio_fs_utils.run_viofs_service(test, params, session)

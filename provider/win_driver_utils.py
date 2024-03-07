@@ -5,12 +5,16 @@ windows driver utility functions.
 """
 import logging
 import re
+import os
 import time
+import aexpect
 
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
+from virttest import data_dir
 from virttest.utils_windows import virtio_win, wmic
+from virttest.utils_version import VersionInterval
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -148,23 +152,67 @@ def install_driver_by_virtio_media(session, test, devcon_path, media_type,
                    "by hwids: '%s'" % device_hwid)
 
 
-def install_driver_by_installer(session, test, run_install_cmd,
-                                installer_pkg_check_cmd):
+def autoit_installer_check(params, session):
     """
-    Install driver by installer.
+    Check if AUTOIT3.EXE is running.
+    :param params: the dict used for parameters
+    :param session: The guest session object.
+    :return: True if it is running.
+    """
+    autoit_check_cmd = params.get("autoit_check_cmd",
+                                  "tasklist |findstr /i autoit3_.*exe")
+    try:
+        return session.cmd_status(autoit_check_cmd) == 0
+    except (aexpect.ShellTimeoutError,
+            aexpect.ShellProcessTerminatedError,
+            aexpect.ShellStatusError):
+        LOG_JOB.info("VM is rebooting...")
+        return False
 
+
+def run_installer(vm, session, test, params, run_installer_cmd):
+    """
+    Install/uninstall/repair virtio-win drivers and qxl,spice and
+    qemu-ga-win by installer.
+    If installer(virtio-win) version is bigger than 1.9.37,
+    then installer itself will restart vm,
+    otherwise it's needed to reboot vm to make sure all are
+    installed successfully.
+
+    :param vm: vm object.
     :param session: The guest session object.
     :param test: kvm test object
-    :param run_install_cmd: install cmd.
-    :param installer_pkg_check_cmd: installer pkg check cmd.
+    :param params: the dict used for parameters
+    :param run_installer_cmd: install/uninstall/repair cmd.
+    :return session: a new session after restart of installer
     """
-    run_install_cmd = utils_misc.set_winutils_letter(
-                                session, run_install_cmd)
-    session.cmd(run_install_cmd)
-    if not utils_misc.wait_for(lambda: not session.cmd_status(
-                                installer_pkg_check_cmd), 360):
-        test.fail("Virtio-win-guest-tools is not installed.")
-    time.sleep(60)
+    cdrom_virtio = params["cdrom_virtio"]
+    installer_restart_version = params.get("installer_restart_version",
+                                           "[1.9.37.0,)")
+    cdrom_virtio_path = os.path.basename(utils_misc.get_path(
+        data_dir.get_data_dir(), cdrom_virtio))
+    match = re.search(r"virtio-win-(\d+\.\d+(?:\.\d+)?-\d+)",
+                      cdrom_virtio_path)
+    cdrom_virtio_version = re.sub('-', '.', match.group(1))
+    # run installer cmd
+    run_installer_cmd = utils_misc.set_winutils_letter(
+        session, run_installer_cmd)
+    session.cmd(run_installer_cmd)
+
+    if not utils_misc.wait_for(lambda: not autoit_installer_check(
+            params, session), 240, 2, 2):
+        test.fail("Autoit exe stop there for 240s,"
+                  " please have a check.")
+
+    if cdrom_virtio_version in VersionInterval(installer_restart_version):
+        if not utils_misc.wait_for(lambda: not session.is_responsive(),
+                                   120, 5, 5):
+            test.fail("The previous session still exists,"
+                      "seems that the vm doesn't restart.")
+        session = vm.wait_for_login(timeout=360)
+    else:
+        session = vm.reboot(session)
+    return session
 
 
 def copy_file_to_samepath(session, test, params):

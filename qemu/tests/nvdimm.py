@@ -166,6 +166,7 @@ def run(test, params, env):
         error_context.context("Format and mount nvdimm in guest", test.log.info)
         nvdimm_test.mount_nvdimm()
         if params.get("nvml_test", "no") == "yes":
+            nvdimm_test.run_guest_cmd(params["export_pmem_conf"])
             nvdimm_test.run_guest_cmd(params["get_nvml"])
             nvdimm_test.run_guest_cmd(params["compile_nvml"])
             nvdimm_test.run_guest_cmd(params["config_nvml"])

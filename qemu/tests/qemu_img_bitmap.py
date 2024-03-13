@@ -4,8 +4,12 @@ import socket
 from avocado.utils import process
 
 from virttest import data_dir
+from virttest import utils_misc
 from virttest.qemu_storage import QemuImg
 from virttest.qemu_io import QemuIOSystem
+from virttest import utils_qemu
+
+from virttest.utils_version import VersionInterval
 
 from provider.nbd_image_export import QemuNBDExportImage
 
@@ -69,6 +73,9 @@ def run(test, params, env):
     bitmap_img = QemuImg(params.object_params(bitmap), root_dir, bitmap)
     bitmap_name = params["bitmap_name"]
 
+    qemu_binary = utils_misc.get_qemu_binary(params)
+    qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
+
     # --add command
     test.log.info("Add bitmap to the test image.")
     bitmap_img.bitmap_add(bitmap_name)
@@ -108,6 +115,8 @@ def run(test, params, env):
         res = _map_nbd_bitmap(nbd_server, nbd_port, nbd_export_bitmap)
         match_info = {"start": 0, "length": 1048576, "depth": 0,
                       "present": False, "zero": False, "data": False}
+        if qemu_version in VersionInterval('[8.2.0,)'):
+            match_info["compressed"] = False
         if match_info not in res:
             test.fail(
                 "The dumped info is not correct, and the info is %s" % res)
@@ -144,6 +153,8 @@ def run(test, params, env):
         res = _map_nbd_bitmap(nbd_server, nbd_port, nbd_export_bitmap)
         match_info = {"start": 0, "length": 1048576, "depth": 0,
                       "present": False, "zero": False, "data": False}
+        if qemu_version in VersionInterval('[8.2.0,)'):
+            match_info["compressed"] = False
         if match_info not in res:
             test.fail(
                 "Add the bitmap data to base image failed, and the dumped "
@@ -160,6 +171,8 @@ def run(test, params, env):
         res = _map_nbd_bitmap(nbd_server, nbd_port, nbd_export_bitmap)
         match_info = {"start": 0, "length": 2097152, "depth": 0,
                       "present": False, "zero": False, "data": False}
+        if qemu_version in VersionInterval('[8.2.0,)'):
+            match_info["compressed"] = False
         if match_info not in res:
             test.fail(
                 "Add the bitmap data to base image failed, and the dumped "

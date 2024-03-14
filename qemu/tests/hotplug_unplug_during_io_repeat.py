@@ -1,5 +1,7 @@
 import time
 
+from avocado.utils import process
+
 from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_disk
@@ -66,6 +68,18 @@ def run(test, params, env):
             _check_iozone_status()
             plug.unplug_devs_serial()
             iozone_thread.join(suppress_exception=True)
+    except Exception as e:
+        pid = vm.get_pid()
+        test.log.debug("Find %s Exception:'%s'.", pid, str(e))
+        if pid:
+            logdir = test.logdir
+            process.getoutput("gstack %s > %s/gstack.log" % (pid, logdir))
+            process.getoutput(
+                "timeout 20 strace -tt -T -v -f -s 32 -p %s -o %s/strace.log" % (
+                    pid, logdir))
+        else:
+            test.log.debug("VM dead...")
+        raise e
     finally:
         iozone.clean(force=True)
         session.close()

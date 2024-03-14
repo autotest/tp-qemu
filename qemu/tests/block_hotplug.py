@@ -1,6 +1,8 @@
 import logging
 import re
 
+from avocado.utils import process
+
 from virttest import error_context
 from virttest import utils_disk
 from virttest import utils_misc
@@ -177,32 +179,46 @@ def run(test, params, env):
     vm.verify_alive()
 
     for iteration in range(int(params.get("repeat_times", 3))):
-        for index, img in enumerate(data_imgs):
-            data_devs = create_block_devices(img)
-            if need_plug:
-                new_disk = plug_block_devices('hotplug', data_devs).pop()
+        try:
+            for index, img in enumerate(data_imgs):
+                data_devs = create_block_devices(img)
+                if need_plug:
+                    new_disk = plug_block_devices('hotplug', data_devs).pop()
 
-                if windows:
-                    if iteration == 0:
-                        format_disk_win()
-                if need_check_disk_size:
-                    check_disk_size(new_disk if windows else new_disk[5:],
-                                    params['image_size_%s' % img])
+                    if windows:
+                        if iteration == 0:
+                            format_disk_win()
+                    if need_check_disk_size:
+                        check_disk_size(new_disk if windows else new_disk[5:],
+                                        params['image_size_%s' % img])
 
-                if disk_op_cmd:
-                    run_io_test()
-            unplug_devs.extend(get_block_devices(
-                data_devs) if need_plug else get_block_devices(img))
-        if sub_test_after_plug:
-            run_sub_test(sub_test_after_plug)
-        if shutdown_after_plug:
-            return
+                    if disk_op_cmd:
+                        run_io_test()
+                unplug_devs.extend(get_block_devices(
+                    data_devs) if need_plug else get_block_devices(img))
 
-        if sub_test_before_unplug:
-            run_sub_test(sub_test_before_unplug)
+            if sub_test_after_plug:
+                run_sub_test(sub_test_after_plug)
+            if shutdown_after_plug:
+                return
 
-        plug_block_devices('unplug', unplug_devs)
-        del unplug_devs[:]
+            if sub_test_before_unplug:
+                run_sub_test(sub_test_before_unplug)
 
-        if sub_test_after_unplug:
-            run_sub_test(sub_test_after_unplug)
+            plug_block_devices('unplug', unplug_devs)
+            del unplug_devs[:]
+
+            if sub_test_after_unplug:
+                run_sub_test(sub_test_after_unplug)
+        except Exception as e:
+            pid = vm.get_pid()
+            test.log.debug("Find %s Exception:'%s'.", pid, str(e))
+            if pid:
+                logdir = test.logdir
+                process.getoutput("gstack %s > %s/gstack.log" % (pid, logdir))
+                process.getoutput(
+                    "timeout 20 strace -tt -T -v -f -s 32 -p %s -o "
+                    "%s/strace.log" % (pid, logdir))
+            else:
+                test.log.debug("VM dead...")
+            raise e

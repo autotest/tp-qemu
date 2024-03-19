@@ -201,7 +201,7 @@ class StorageBenchmark(object):
             """
             Find the path of the given executable file in windows.
             """
-            cmd_dir = r'CD %s && DIR /S /B %s.exe' % (dst, self.name)
+            cmd_dir = r'DIR /S /B "%s" | find "%s.exe"' % (dst, self.name)
             s, o = self.session.cmd_status_output(cmd_dir, timeout=timeout)
             if not s:
                 return '"{}"'.format(o.splitlines()[0])

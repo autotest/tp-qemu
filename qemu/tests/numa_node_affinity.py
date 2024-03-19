@@ -26,12 +26,14 @@ def run(test, params, env):
     if len(node_list) < 2:
         test.cancel("Host only has one NUMA node, skipping test...")
 
-    error_msg = params.get("error_msg",
-                           "Property 'thread-context.node-affinity' is not readable")
+    error_msg = params.get(
+        "error_msg", "Property 'thread-context.node-affinity' is not readable"
+    )
     node_affinity = node_list[0]
     node = utils_misc.NumaNode(node_affinity)
-    params["vm_thread_context_node-affinity"] = str(node_affinity)
-    vm_name = params['main_vm']
+    tc_options = "node-affinity=%d" % node_affinity
+    params["vm_thread_context_options_tc1"] = tc_options
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
     vm.verify_alive()
@@ -49,14 +51,14 @@ def run(test, params, env):
         test.fail("The cpu-affinity does not match with the node topology!")
 
     try:
-        error_context.base_context("Trying to read node-affinity",
-                                   test.log.info)
-        node_affinity = vm.monitor.qom_get(thread_context_device_id,
-                                           "node-affinity")
+        error_context.base_context("Trying to read node-affinity", test.log.info)
+        node_affinity = vm.monitor.qom_get(thread_context_device_id, "node-affinity")
     except QMPCmdError as e:
         if not re.search(error_msg, str(e.data)):
             test.fail("Cannot get expected error message: %s" % error_msg)
         test.log.debug("Get the expected error message: %s" % error_msg)
     else:
-        test.fail("Got the node-affinity: %s however it is expected to be a non-readable property"
-                  % str(node_affinity))
+        test.fail(
+            "Got the node-affinity: %s however it is expected to be a non-readable property"
+            % str(node_affinity)
+        )

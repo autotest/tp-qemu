@@ -5,6 +5,7 @@ from avocado.utils import process
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import utils_net
+from virttest import utils_sriov
 from virttest import error_context
 from virttest import env_process
 
@@ -201,6 +202,27 @@ def run(test, params, env):
         # Functional Test
         error_context.context("Checking whether MTU change is ok",
                               test.log.info)
+        if params.get("emulate_vf") == "yes":
+            error_context.context("Create emulate VFs devices", test.log.info)
+            pci_id = params.get("get_pci_id")
+            nic_pci = session.cmd_output(pci_id).strip()
+            check_vf_num = params.get("get_vf_num")
+            sriov_numvfs = int(session.cmd_output(check_vf_num % nic_pci))
+            utils_sriov.set_vf(f'/sys/bus/pci/devices/{nic_pci}', vf_no=sriov_numvfs, session=session)
+            ifnames = utils_net.get_linux_ifname(session)
+            for i in range(1, len(ifnames)):
+                set_vf_mtu_cmd = params.get('set_vf_mtu')
+                status, output = session.cmd_status_output(set_vf_mtu_cmd % (ifnames[i], mtu))
+                if status != 0:
+                    test.log.info("Setup vf device's mtu failed with: %s" % output)
+            ifname = ifnames[1]
+            vf_mac = utils_net.get_linux_mac(session, ifname)
+            session.cmd_output_safe("ip link set dev %s up" % ifname)
+            session.cmd_output_safe("dhclient -r")
+            session.cmd_output_safe("dhclient %s" % ifname)
+            guest_ip = utils_net.get_guest_ip_addr(session, vf_mac)
+            if guest_ip is None:
+                test.error("VF can no got ip address")
         verify_mtu()
         large_frame_ping()
         size_increase_ping()
@@ -213,6 +235,9 @@ def run(test, params, env):
         # Environment clean
         if session:
             session.close()
+        if params.get("emulate_vf") == "yes":
+            ifname = vm.get_ifname(0)
+            guest_ip = vm.get_address(0)
         grep_cmd = "grep '%s.*%s' /proc/net/arp" % (guest_ip, ifname)
         if process.system(grep_cmd, shell=True) == '0':
             process.run("arp -d %s -i %s" % (guest_ip, ifname),

@@ -8,9 +8,32 @@ function tests_failed() {
 
 echo "Deploy ..."
 yum install -y git meson rust cargo python3-docutils rustfmt || tests_failed "Deployment"
-rm -rf /home/libblkio
-git clone https://gitlab.com/libblkio/libblkio.git /home/libblkio || tests_failed "Git clone"
-cd /home/libblkio/
+
+echo "Clean"
+mkdir -p /home/libblkio
+cd /home/libblkio ;rm * -rf
+
+echo "Search source link ..."
+repo_url=`yum repoinfo  --repo system-upgrade-appstream   |grep Repo-baseurl|grep -o http.*`
+[ "${repo_url}" == "" ] && tests_failed "Get repo url failed"
+
+source_url="${repo_url}../../source/tree/Packages/"
+wget -O index.html ${source_url}  || tests_failed "Get source page ${source_url} failed"
+
+libblkio_package=`cat index.html |grep -m 1 -oP "libblkio-.*?.src.rpm"|head -1`
+[ "${libblkio_package}" == "" ] && tests_failed "Search libblkio package failed"
+
+libblkio_url="${source_url}${libblkio_package}"
+wget ${libblkio_url} || tests_failed "Download libblkio package failed"
+
+echo "Install source rpm"
+rpm -ivh ${libblkio_package} || tests_failed "Install source rpm failed"
+
+
+mkdir source;cd source
+tar xvf ~/rpmbuild/SOURCES/libblkio-v[0-9]*.bz2 || tests_failed "Untar source rpm failed"
+cd `ls -d libblkio*` ||  tests_failed "Can not find  source folder"
+
 
 echo "Compile ..."
 meson setup build || tests_failed "Test suite setup"

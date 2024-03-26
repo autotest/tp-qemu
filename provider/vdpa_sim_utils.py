@@ -3,10 +3,12 @@ Module for VDPA block/net device interfaces.
 """
 import logging
 import time
+import glob
+import os
 
+from aexpect.utils import wait
 from avocado.utils import process
 from virttest.vdpa_blk import get_image_filename
-
 from virttest.utils_kernel_module import KernelModuleHandler
 
 LOG = logging.getLogger('avocado.test')
@@ -147,7 +149,7 @@ class VhostVdpaNetSimulatorTest(VDPABlkNetSimulatorTest):
         :return : host device name ,eg. /dev/vhost-vdpa-X
         """
 
-        cmd = "vdpa dev add %s mgmtdev vdpasim_net name mac %s" % (name, mac)
+        cmd = "vdpa dev add name %s mgmtdev vdpasim_net mac %s" % (name, mac)
         process.run(cmd, shell=True)
         cmd = "vdpa dev list -jp %s" % name
         process.run(cmd, shell=True)
@@ -159,3 +161,28 @@ class VhostVdpaNetSimulatorTest(VDPABlkNetSimulatorTest):
             raise VDPABlkNetSimulatorError(
                 "vdpa dev add %s failed:%s" % (name, str(e)))
         return dev
+
+
+class VirtioVdpaNetSimulatorTest(VDPABlkNetSimulatorTest):
+    def __init__(self):
+        super(VirtioVdpaNetSimulatorTest, self).__init__()
+        self._modules = ['vdpa', 'virtio-vdpa', 'vdpa_sim', 'vdpa-sim-net']
+
+    def add_dev(self, name, mac):
+        """
+        Add vDPA net device
+        :param name: device name
+        :param mac: MAC address
+        :return : host device name ,eg. eth0
+        """
+
+        cmd = "vdpa dev add name %s mgmtdev vdpasim_net mac %s" % (name, mac)
+        process.run(cmd, shell=True)
+        cmd = "vdpa dev list -jp %s" % name
+        process.run(cmd, shell=True)
+        virtio_dir = "/sys/bus/vdpa/devices/{}/virtio*/net".format(name)
+        virtio_path = wait.wait_for(lambda: glob.glob(virtio_dir), 2)
+        if virtio_path:
+            return os.path.basename(virtio_path[0])
+        else:
+            raise VDPABlkNetSimulatorError("vdpa dev add %s failed:%s" % name)

@@ -168,7 +168,8 @@ def run(test, params, env):
             for driver_name in driver_name.split():
                 inf_path = win_driver_utils.get_driver_inf_path(session, test,
                                                                 media_type,
-                                                                driver_name)
+                                                                driver_name,
+                                                                params)
                 if driver_name == "netkvm":
                     device_name = params.get("device_name")
                     device_hwid = params.get("device_hwid")

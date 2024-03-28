@@ -75,7 +75,7 @@ def uninstall_driver(session, test, devcon_path, driver_name,
                    "%s" % (driver_name, output))
 
 
-def get_driver_inf_path(session, test, media_type, driver_name):
+def get_driver_inf_path(session, test, media_type, driver_name, params):
     """
     Get driver inf path from virtio win iso,such as E:\viofs\2k19\amd64.
 
@@ -83,6 +83,7 @@ def get_driver_inf_path(session, test, media_type, driver_name):
     :param test: kvm test object.
     :param media_type: media type.
     :param driver_name: driver name.
+    :param params: the dict used for parameters
     """
     try:
         get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
@@ -104,16 +105,24 @@ def get_driver_inf_path(session, test, media_type, driver_name):
     inf_middle_path = ("{name}\\{arch}" if media_type == "iso"
                        else "{arch}\\{name}").format(name=guest_name,
                                                      arch=guest_arch)
-    inf_find_cmd = 'dir /b /s %s\\%s.inf | findstr "\\%s\\\\"'
-    inf_find_cmd %= (viowin_ltr, driver_name, inf_middle_path)
-    inf_path = session.cmd(inf_find_cmd, timeout=OPERATION_TIMEOUT).strip()
+
+    common_inf_find_cmd = 'dir /b /s VIOWIN_LTR\\DRIVER_NAME.inf |'
+    common_inf_find_cmd += ' findstr "\\INF_MID_PATH\\\\'
+    inf_find_cmd = params.get("inf_find_cmd", common_inf_find_cmd)
+
+    inf_find_cmd_new = inf_find_cmd.replace(
+        'VIOWIN_LTR', viowin_ltr).replace(
+        'DRIVER_NAME', driver_name).replace(
+        'INF_MID_PATH', inf_middle_path)
+
+    inf_path = session.cmd(inf_find_cmd_new, timeout=OPERATION_TIMEOUT).strip()
     LOG_JOB.info("Found inf file '%s'", inf_path)
     return inf_path
 
 
 @error_context.context_aware
 def install_driver_by_virtio_media(session, test, devcon_path, media_type,
-                                   driver_name,  device_hwid):
+                                   driver_name,  device_hwid, params):
     """
     Install driver by virtio media.
 
@@ -123,6 +132,7 @@ def install_driver_by_virtio_media(session, test, devcon_path, media_type,
     :param media_type: media type.
     :param driver_name: driver name.
     :param device_hwid: device hardware id.
+    :param params: the dict used for parameters
     """
     devcon_path = utils_misc.set_winutils_letter(session, devcon_path)
     status, output = session.cmd_status_output("dir %s" % devcon_path,
@@ -135,7 +145,8 @@ def install_driver_by_virtio_media(session, test, devcon_path, media_type,
         output = session.cmd_output("%s find %s" % (devcon_path, hwid))
         if re.search("No matching devices found", output, re.I):
             continue
-        inf_path = get_driver_inf_path(session, test, media_type, driver_name)
+        inf_path = get_driver_inf_path(session, test, media_type,
+                                       driver_name, params)
         inst_cmd = "%s updateni %s %s" % (devcon_path, inf_path, hwid)
         status, output = session.cmd_status_output(inst_cmd, INSTALL_TIMEOUT)
         # acceptable status: OK(0), REBOOT(1)

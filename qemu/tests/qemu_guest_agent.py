@@ -9,6 +9,7 @@ import json
 
 import aexpect
 
+from packaging import version
 from avocado.utils import genio
 from avocado.utils import path as avo_path
 from avocado.utils import process
@@ -167,18 +168,24 @@ class QemuGuestAgentTest(BaseVirtTest):
         s, o = session.cmd_status_output(cmd_check_status)
         return s == 0
 
-    def _get_main_qga_version(self, session, vm):
+    def _get_qga_version(self, session, vm, main_ver=True):
         """
-        Get qemu-guest-agent version in guest
+        Get qemu-guest-agent version or
+        main version in guest
         :param session: use for sending cmd
         :param vm: guest object.
         :return: main qga version
         """
         LOG_JOB.info("Get guest agent's main version for linux guest.")
         qga_ver = session.cmd_output(self.params["gagent_pkg_check_cmd"])
-        pattern = r"guest-agent-(\d+).\d+.\d+-\d+"
-        ver_main = int(re.findall(pattern, qga_ver)[0])
-        return ver_main
+        if main_ver:
+            pattern = r"guest-agent-(\d+).\d+.\d+-\d+"
+            ver_main = int(re.findall(pattern, qga_ver)[0])
+            return ver_main
+        else:
+            match = re.search(r'qemu-guest(-(agent))?-(\d+\.\d+\.\d+-\d+)', qga_ver)
+            full_ver = match.group(3)
+            return full_ver
 
     def gagent_install(self, session, vm):
         """
@@ -1729,16 +1736,25 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Now only linux guest has this behavior,but still leave interface
         for windows guest.
         """
+
         if self.params.get("os_type") == "linux":
-            cmd_black_list = self.params["black_list"]
-            cmd_blacklist_backup = self.params["black_list_backup"]
+            cmd_blacklist_backup = self.params["black_file_backup"]
             session.cmd(cmd_blacklist_backup)
+            full_qga_ver = self._get_qga_version(session, self.vm, main_ver=False)
+            full_qga_ver = version.parse(full_qga_ver)
+            value_full_qga_ver = (full_qga_ver >= version.parse("8.1.0-5"))
+            cmd_black_list = self.params.get("black_list_new" if value_full_qga_ver else "black_list")
             for black_cmd in cmd_black_list.split():
                 bl_check_cmd = self.params["black_list_check_cmd"] % black_cmd
-                bl_change_cmd = self.params["black_list_change_cmd"] % black_cmd
+                if (self.params["gagent_check_type"] == "blacklist" and
+                        full_qga_ver >= version.parse("7.2.0-4")):
+                    bl_change_cmd = self.params["black_list_change_cmd"]
+                else:
+                    bl_change_cmd = self.params["black_list_change_cmd"] % black_cmd
                 session.cmd(bl_change_cmd)
                 output = session.cmd_output(bl_check_cmd)
-                if not output == "":
+                if (output == "" and value_full_qga_ver or
+                        (not output == "" and not value_full_qga_ver)):
                     self.test.fail("Failed to change the cmd to "
                                    "white list, the output is %s" % output)
 
@@ -1957,7 +1973,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         error_context.context("Read the big file with an invalid count number",
                               LOG_JOB.info)
         if params.get("os_type") == "linux":
-            main_qga_ver = self._get_main_qga_version(session, self.vm)
+            main_qga_ver = self._get_qga_version(session, self.vm)
         if params.get("os_type") == "linux" and main_qga_ver <= 2:
             # if resource is sufficient can read file,
             # else file handle will not be found.

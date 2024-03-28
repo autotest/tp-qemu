@@ -100,29 +100,32 @@ def win_uninstall_all_drivers(session, test, params):
 
 
 @error_context.context_aware
-def install_test_with_screen_on_desktop(vm, session, test, run_install_cmd,
-                                        installer_pkg_check_cmd,
-                                        copy_files_params=None):
+def run_installer_with_interaction(vm, session, test, params,
+                                   run_installer_cmd,
+                                   copy_files_params=None):
     """
-    Install test when guest screen on desktop.
+    Install/uninstall/repair virtio-win drivers and qxl,spice and
+    qemu-ga-win by installer.
 
     :param vm: vm object
     :param session: The guest session object.
     :param test: kvm test object.
-    :param run_install_cmd: install cmd.
-    :param installer_pkg_check_cmd: installer pkg check cmd.
+    :param params: the dict used for parameters
+    :param run_installer_cmd: install/uninstall/repair cmd cmd.
     :param copy_files_params: copy files params.
+    :return session: a new session after restart of installer
     """
-    error_context.context("Install virtio-win drivers via "
-                          "virtio-win-guest-tools.exe.", LOG_JOB.info)
+    error_context.context("Run virtio-win-guest-tools.exe by %s."
+                          % run_installer_cmd, LOG_JOB.info)
     vm.send_key('meta_l-d')
     time.sleep(30)
     if copy_files_params:
         win_driver_utils.copy_file_to_samepath(session, test,
                                                copy_files_params)
-    win_driver_utils.install_driver_by_installer(session, test,
-                                                 run_install_cmd,
-                                                 installer_pkg_check_cmd)
+    session = win_driver_utils.run_installer(vm, session,
+                                             test, params,
+                                             run_installer_cmd)
+    return session
 
 
 @error_context.context_aware

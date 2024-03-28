@@ -27,7 +27,7 @@ from virttest import qemu_migration
 
 from virttest.utils_windows import virtio_win
 from provider.win_driver_installer_test import (uninstall_gagent,
-                                                install_test_with_screen_on_desktop)
+                                                run_installer_with_interaction)
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -4412,7 +4412,6 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         """
 
         run_install_cmd = params["run_install_cmd"]
-        installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
         gagent_uninstall_cmd = params["gagent_uninstall_cmd"]
 
         vm = env.get_vm(params["main_vm"])
@@ -4421,9 +4420,9 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         qga_ver_pkg = str(self.gagent.guest_info()["version"])
         uninstall_gagent(session, test, gagent_uninstall_cmd)
         session = vm.reboot(session)
-        install_test_with_screen_on_desktop(vm, session, test, run_install_cmd,
-                                            installer_pkg_check_cmd,
-                                            copy_files_params=params)
+        session = run_installer_with_interaction(vm, session, test, params,
+                                                 run_install_cmd,
+                                                 copy_files_params=params)
         qga_ver_installer = str(self.gagent.guest_info()["version"])
 
         error_context.context("Check if qga version is corresponding between"

@@ -37,7 +37,10 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
             elif self.params["image_backend"] == "nbd":
                 self.params.update({"enable_nbd_%s" % snapshot_tag: "no"})
             image = sp_admin.volume_define_by_params(snapshot_tag, params)
-            image.hotplug(self.main_vm)
+            if self.qsd:
+                image.hotplug(self.qsd)
+            else:
+                image.hotplug(self.main_vm)
 
     @error_context.context_aware
     def create_snapshot(self):
@@ -47,7 +50,10 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
         for snapshot_tag in self.snapshot_chains:
             overlay = "drive_%s" % snapshot_tag
             arguments.update({"overlay": overlay})
-            self.main_vm.monitor.cmd(cmd, dict(arguments))
+            if self.qsd:
+                self.qsd.monitor.cmd(cmd, dict(arguments))
+            else:
+                self.main_vm.monitor.cmd(cmd, dict(arguments))
             arguments["node"] = arguments["overlay"]
 
     def prepare_clone_vm(self):
@@ -64,6 +70,8 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
     def verify_snapshot(self):
         if self.main_vm.is_alive():
             self.main_vm.destroy()
+        if self.qsd:
+            self.qsd.stop_daemon()
         base_tag = self.base_tag
         base_format = self.base_image.get_format()
         self.params["image_format_%s" % base_tag] = base_format
@@ -77,6 +85,15 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
             snapshot_image.rebase(snapshot_image.params)
             base_tag = snapshot_tag
         self.clone_vm = self.prepare_clone_vm()
+        if self.qsd:
+            self.params.update({"qsd_images_qsd1": self.snapshot_chains[-1]})
+            self.params["qsd_create_image_%s" % self.snapshot_chains[-1]] = "no"
+            if "vhost-user-blk" in self.params["qsd_image_export"]:
+                self.params["drive_format_%s" % self.snapshot_chains[-1]] = self.params["qsd_drive_format"]
+                self.params["image_vubp_props_%s" % self.snapshot_chains[-1]] = self.params["image_vubp_props"]
+            self.qsd = self.get_qsd_demon()
+            self.qsd.start_daemon()
+            self.update_vm_params(self.clone_vm, self.snapshot_chains[-1])
         self.clone_vm.create()
         self.clone_vm.verify_alive()
         if self.base_tag != "image1":
@@ -86,6 +103,8 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
     def post_test(self):
         try:
             self.clone_vm.destroy()
+            if self.qsd:
+                self.qsd.stop_daemon()
             for snapshot_tag in self.snapshot_chains:
                 snapshot_image = self.get_image_by_tag(snapshot_tag)
                 snapshot_image.remove()

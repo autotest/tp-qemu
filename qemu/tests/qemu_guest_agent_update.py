@@ -121,7 +121,9 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
             inf_names = wmic.parse_list(session.cmd(inf_names_get_cmd,
                                                     timeout=360))
             for inf_name in inf_names:
-                uninst_store_cmd = "pnputil /f /d %s" % inf_name
+                pnp_cmd = "pnputil /delete-driver %s /uninstall /force"
+                uninst_store_cmd = params.get("uninst_store_cmd",
+                                              pnp_cmd) % inf_name
                 s, o = session.cmd_status_output(uninst_store_cmd, 360)
                 if s:
                     test.error("Failed to uninstall driver '%s' from store, "

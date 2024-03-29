@@ -190,7 +190,7 @@ def run(test, params, env):
                                   "than 50% for size %s" % size)
 
         test.log.info("Waiting for the MTU to be OK")
-        wait_mtu_ok = 10
+        wait_mtu_ok = 20
         if not utils_misc.wait_for(is_mtu_ok, wait_mtu_ok, 0, 1):
             test.log.debug(process.getoutput("ifconfig -a",
                                              verbose=False,

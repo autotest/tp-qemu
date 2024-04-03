@@ -30,19 +30,19 @@ def run(test, params, env):
     check_kexec_cmd = params["check_kexec_cmd"]
     expect_event = params["expect_event"]
     trigger_crash_cmd = params["trigger_crash_cmd"]
+    check_ISA_cmd = params["check_ISA_cmd"]
+    device_cmd = params["device_cmd"]
 
-    error_context.context("Setup crash_kexec_post_notifiers=1 in guest",
-                          test.log.info)
+    error_context.context(
+        "Setup crash_kexec_post_notifiers=1 in guest", test.log.info
+    )
     session.cmd(setup_guest_cmd)
     session = vm.reboot(session)
     s, o = session.cmd_status_output(check_kexec_cmd)
     if s or o == "":
-        test.error(
-            "Failed to setup crash_kexec_post_notifiers in guest"
-        )
+        test.error("Failed to setup crash_kexec_post_notifiers in guest")
 
-    error_context.context("Check kdump server status in guest",
-                          test.log.info)
+    error_context.context("Check kdump server status in guest", test.log.info)
     if not utils_misc.wait_for(
         lambda: session.cmd_output(check_kdump_service).startswith(
             kdump_expect_status
@@ -53,8 +53,20 @@ def run(test, params, env):
             "within the timeout period" % kdump_expect_status
         )
 
-    error_context.context("Trigger a crash in guest and check qmp event",
-                          test.log.info)
+    error_context.context("Check ISA Bridge in the guest", test.log.info)
+    o = session.cmd_output(check_ISA_cmd)
+    device_id = o.split()[0]
+    device_cmd = device_cmd % device_id
+    o = session.cmd_output(device_cmd)
+    if o.strip() != params["expected_cap"]:
+        test.fail(
+            "The capability value of the Pvpanic device is %s, " % o +
+            "while %s is expected" % params["expected_cap"]
+        )
+
+    error_context.context(
+        "Trigger a crash in guest and check qmp event", test.log.info
+    )
     try:
         session.cmd(trigger_crash_cmd, timeout=5)
     except aexpect.ShellTimeoutError:

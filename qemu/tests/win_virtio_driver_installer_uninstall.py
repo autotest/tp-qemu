@@ -10,7 +10,7 @@ from provider.win_driver_installer_test import (install_gagent,
                                                 win_installer_test,
                                                 check_gagent_version,
                                                 driver_check,
-                                                install_test_with_screen_on_desktop)
+                                                run_installer_with_interaction)
 
 
 @error_context.context_aware
@@ -52,11 +52,14 @@ def run(test, params, env):
                                              gagent_install_cmd,
                                              gagent_pkg_info_cmd)
     uninstall_gagent(session, test, gagent_uninstall_cmd)
+
     win_uninstall_all_drivers(session, test, params)
     session = vm.reboot(session)
-    install_test_with_screen_on_desktop(vm, session, test, run_install_cmd,
-                                        installer_pkg_check_cmd,
-                                        copy_files_params=params)
+
+    session = run_installer_with_interaction(vm, session, test, params,
+                                             run_install_cmd,
+                                             copy_files_params=params)
+
     win_installer_test(session, test, params)
     check_gagent_version(session, test, gagent_pkg_info_cmd,
                          expected_gagent_version)
@@ -69,8 +72,10 @@ def run(test, params, env):
     time.sleep(30)
     run_uninstall_cmd = utils_misc.set_winutils_letter(session,
                                                        params["run_uninstall_cmd"])
-    session.cmd(run_uninstall_cmd)
-    time.sleep(30)
+
+    session = run_installer_with_interaction(vm, session, test, params,
+                                             run_uninstall_cmd)
+
     if uninstall_method == "msi":
         check_warning_file = params["check_warning_file"]
         output = session.cmd_output(check_warning_file)
@@ -81,7 +86,6 @@ def run(test, params, env):
         if s_check == 0:
             test.fail("Could not uninstall Virtio-win-guest-tools package "
                       "in guest', detail: '%s'" % o_check)
-        session = vm.reboot(session)
 
         error_context.context("Check if all drivers are uninstalled.",
                               test.log.info)

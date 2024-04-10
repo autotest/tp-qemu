@@ -38,7 +38,6 @@ def run(test, params, env):
     gagent_uninstall_cmd = params["gagent_uninstall_cmd"]
 
     run_install_cmd = params["run_install_cmd"]
-    installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
     driver_test_params = params.get("driver_test_params", "{}")
     driver_test_params = ast.literal_eval(driver_test_params)
 
@@ -58,11 +57,12 @@ def run(test, params, env):
                                       driver_name,
                                       device_name,
                                       device_hwid)
-
     session = vm.reboot(session)
-    win_driver_installer_test.install_test_with_screen_on_desktop(
-            vm, session, test, run_install_cmd, installer_pkg_check_cmd,
-            copy_files_params=params)
+
+    session = win_driver_installer_test.run_installer_with_interaction(
+        vm, session, test, params,
+        run_install_cmd,
+        copy_files_params=params)
     win_driver_installer_test.win_installer_test(session, test, params)
     win_driver_installer_test.check_gagent_version(session, test,
                                                    gagent_pkg_info_cmd,

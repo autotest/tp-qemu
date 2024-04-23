@@ -99,6 +99,20 @@ def verify_eim_status(test, params, session):
         test.log.debug(output)
 
 
+def verify_x2apic_status(test, params, session):
+    error_context.context('verify x2apic status.', test.log.info)
+    variant_name = params.get("diff_parameter")
+    if variant_name == "x2apic":
+        for key_words in params['check_key_words'].split(';'):
+            output = session.cmd_output(
+                "journalctl -k | grep -i \"%s\"" % key_words
+            )
+        if not output:
+            test.fail('journalctl -k | grep -i "%s"'
+                      "from the systemd journal log." % key_words)
+        test.log.debug(output)
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -128,6 +142,7 @@ def run(test, params, env):
 
     check_data_disks(test, params, env, vm, session)
     verify_eim_status(test, params, session)
+    verify_x2apic_status(test, params, session)
     session.close()
 
     error_context.context("Ping guest!", test.log.info)

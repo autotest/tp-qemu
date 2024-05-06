@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 
+from avocado.utils import cpu
 from avocado.utils import process
 
 from virttest import data_dir
@@ -94,6 +95,14 @@ def run(test, params, env):
     install_stress_pkg()
     run_stress_background()
     is_stress_alive()
+
+    if params.get_boolean('set_maxcpus'):
+        num_vms = int(len(params.objects('vms')))
+        online_cpu = cpu.online_count() * 2 // num_vms
+        if (online_cpu % 2) != 0:
+            online_cpu += 1
+        params['smp'] = online_cpu
+        params['vcpu_maxcpus'] = params['smp']
 
     params['start_vm'] = 'yes'
     env_process.process(test, params, env,

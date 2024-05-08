@@ -434,3 +434,44 @@ def install_winfsp(test, params, session):
         if not utils_misc.wait_for(lambda: not session.cmd_status(
                 check_installed_cmd), 60):
             test.error("Winfsp tool is not installed.")
+
+
+def operate_debug_log(test, params, session, vm, operation):
+    """
+    Only for windows guest, enable or disable debug log in guest.
+
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param session: the session of guest
+    :param vm: the vm object
+    :param operation: enable or disable
+    :return: session
+    """
+    error_context.context("%s virtiofs debug log in guest." % operation,
+                          test.log.info)
+    query_cmd = params.get('viofs_reg_query_cmd',
+                           r'reg query HKLM\Software\VirtIO-FS')
+    ret = session.cmd_output(query_cmd)
+
+    run_reg_cmd = []
+    if operation == "enable":
+        viofs_debug_enable_cmd = params["viofs_debug_enable_cmd"]
+        viofs_log_enable_cmd = params["viofs_log_enable_cmd"]
+        if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
+            run_reg_cmd = [viofs_debug_enable_cmd, viofs_log_enable_cmd]
+    elif operation == "disable":
+        viofs_debug_delete_cmd = params["viofs_debug_delete_cmd"]
+        viofs_log_delete_cmd = params["viofs_log_delete_cmd"]
+        if "debugflags" in ret.lower() or "debuglogfile" in ret.lower():
+            run_reg_cmd = [viofs_debug_delete_cmd, viofs_log_delete_cmd]
+    else:
+        test.error("Please give a right operation.")
+
+    for reg_cmd in run_reg_cmd:
+        test.log.info("Set %s " % reg_cmd)
+        s, o = session.cmd_status_output(reg_cmd)
+        if s:
+            test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
+    if run_reg_cmd:
+        session = vm.reboot()
+    return session

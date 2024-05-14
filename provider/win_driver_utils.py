@@ -215,6 +215,27 @@ def run_installer(vm, session, test, params, run_installer_cmd):
     return session
 
 
+def remove_driver_by_msi(session, vm, params):
+    """
+    Remove virtio_win drivers by msi.
+
+    :param session: The guest session object
+    :param vm:
+    :param params: the dict used for parameters
+    :return: a new session after restart os
+    """
+    media_type = params.get("virtio_win_media_type", "iso")
+    get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
+    drive_letter = get_drive_letter(session)
+    msi_path = drive_letter + "\\" + params["msi_name"]
+    msi_uninstall_cmd = params["msi_uninstall_cmd"] % msi_path
+    vm.send_key('meta_l-d')
+    # msi uninstall cmd will restart os.
+    session.cmd(msi_uninstall_cmd)
+    time.sleep(15)
+    return vm.wait_for_login(timeout=360)
+
+
 def copy_file_to_samepath(session, test, params):
     """
     Copy autoit scripts and installer tool to the same path.

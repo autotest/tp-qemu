@@ -246,6 +246,8 @@ def analyze_results(file_path, test_type):
     elif test_type == "leds_migration":
         correct_keycodes = ['97', '65457', '65509', '65407', '65', '65436',
                             '65', '65436', '65509', '65407']
+    else:
+        raise ValueError(f"unexpected test type: {test_type}")
 
     # Read caught keycodes on guest machine
     fileobj = open(file_path, "r")

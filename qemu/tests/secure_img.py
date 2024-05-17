@@ -47,7 +47,7 @@ def run(test, params, env):
         download_hkd = params.get('download_hkd_%s' % cpu_family)
     else:
         test.fail("Failed to retrieve CPU family.")
-    run_cmd_in_guest(session, download_hkd, test)
+    run_cmd_in_guest(session, download_hkd, test)   # pylint: disable=E0606
 
     # Create the boot image file
     kernel_version = run_cmd_in_guest(session, 'uname -r', test)

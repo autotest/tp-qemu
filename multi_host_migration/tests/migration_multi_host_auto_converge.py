@@ -184,7 +184,7 @@ def run(test, params, env):
             vm = self.env.get_vm(self.params["main_vm"])
             session = vm.wait_for_login(timeout=self.login_timeout)
             while vm.is_alive():
-                s, o = session.cmd_status_output(get_sar_output_cmd)
+                s, o = session.cmd_status_output(get_sar_output_cmd)    # pylint: disable=E0606
                 if s != 0:
                     raise error.TestFail("Failed to get sar output in guest."
                                          "The detail is: %s" % o)

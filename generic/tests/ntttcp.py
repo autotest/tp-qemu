@@ -75,8 +75,8 @@ def run(test, params, env):
     vm_receiver = env.get_vm("vm2")
     vm_receiver.verify_alive()
     _verify_vm_driver(vm_receiver, test, driver_verifier)
+    sess = None
     try:
-        sess = None
         sess = vm_receiver.wait_for_login(timeout=login_timeout)
         receiver_addr = vm_receiver.get_address()
         if not receiver_addr:
@@ -158,6 +158,7 @@ def run(test, params, env):
         found = False
         for line in fileobj.readlines():
             o = re.findall(r"Send buffer size: (\d+)", line)
+            bfr = ""
             if o:
                 bfr = o[0]
             if "Total Throughput(Mbit/s)" in line:

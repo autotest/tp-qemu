@@ -53,6 +53,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session_serial = vm.wait_for_serial_login(timeout=timeout)
     # This session will be used to assess whether the IP change worked
+    session = None
     if params.get("nettype") != "macvtap":
         session = vm.wait_for_login(timeout=timeout)
     old_mac = vm.get_mac_address(0)
@@ -83,7 +84,7 @@ def run(test, params, env):
                                                         "netconnectionid",
                                                         connection_id,
                                                         "index")
-        if os_variant == "winxp":
+        if os_variant == "winxp" and session is not None:
             pnpdevice_id = utils_net.get_windows_nic_attribute(session,
                                                                "netconnectionid",
                                                                connection_id,

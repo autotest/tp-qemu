@@ -131,7 +131,7 @@ def run(test, params, env):
         error_context.context("Try to %s VirtioFsSvc service." % action,
                               test.log.info)
         session.cmd(cmd)
-        output = session.cmd_output(viofs_sc_query_cmd)
+        output = session.cmd_output(viofs_sc_query_cmd)  # pylint: disable=E0606
         if expect_status not in output:
             test.fail("Could not %s VirtioFsSvc service, "
                       "detail: '%s'" % (action, output))
@@ -427,7 +427,7 @@ def run(test, params, env):
                                       test.log.info)
                 vol_con = "VolumeName='%s'" % virtio_fs_disk_label
                 volume_letter = utils_misc.wait_for(
-                    lambda: utils_misc.get_win_disk_vol(session, condition=vol_con), cmd_timeout)
+                    lambda: utils_misc.get_win_disk_vol(session, condition=vol_con), cmd_timeout)  # pylint: disable=E0606
                 if volume_letter is None:
                     test.fail("Could not get virtio-fs mounted volume letter.")
                 fs_dest = "%s:" % volume_letter
@@ -755,7 +755,7 @@ def run(test, params, env):
                             xattr_content = session.cmd_output(getfattr_cmd %
                                                                (xattr, object))
                             result = re.search(full_pattern, xattr_content)
-                        if not result:
+                        if not result:  # pylint: disable=E0606
                             test.fail("Attribute is not correct, the pattern is %s\n"
                                       " the attribute is %s." % (full_pattern,
                                                                  xattr_content))

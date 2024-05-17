@@ -36,7 +36,7 @@ def run(test, params, env):
     def _run_iozone_background():
         test.log.info("Start iozone under background.")
         thread = utils_misc.InterruptedThread(
-            iozone.run, (params['iozone_options'].format(mount_point),
+            iozone.run, (params['iozone_options'].format(mount_point),  # pylint: disable=E0606
                          float(params['iozone_timeout'])))
         thread.start()
         _check_iozone_status()

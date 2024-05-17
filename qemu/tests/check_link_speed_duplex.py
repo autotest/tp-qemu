@@ -98,7 +98,7 @@ def run(test, params, env):
             speed, duplex = get_speed_duplex_powershell(session)
         else:
             test.error("Method %s not supported", method)
-        if speed != tar_speed or duplex != tar_duplex:
+        if speed != tar_speed or duplex != tar_duplex:  # pylint: disable=E0606
             test.fail("The speed and duplex is incorrect in %s, "
                       "with speed=%s, duplex=%s" % (method, speed, duplex))
 

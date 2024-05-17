@@ -61,7 +61,7 @@ def run(test, params, env):
                     migration_exec_cmd_src = params.get("migration_exec_cmd_src")
                     migration_exec_cmd_dst = params.get("migration_exec_cmd_dst")
                     if mig_protocol == "exec" and migration_exec_cmd_src:
-                        migration_exec_cmd_src %= mig_file
+                        migration_exec_cmd_src %= mig_file  # pylint: disable=E0606
                         migration_exec_cmd_dst %= mig_file
                     vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
                                env=env,

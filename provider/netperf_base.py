@@ -136,6 +136,8 @@ def format_result(result, base="17", fbase="2"):
         value = "%" + base + "d"
     elif isinstance(result, float):
         value = "%" + base + "." + fbase + "f"
+    else:
+        raise TypeError(f"unexpected result type: {type(result).__name__}")
     return value % result
 
 

@@ -56,11 +56,15 @@ def vsock_listen(tool_bin, port, session):
     :return: the shell session with opened vsock listening process
     """
 
+    lstn_cmd = None
     if "ncat" in tool_bin:
         lstn_cmd = "%s --vsock -l %s" % (tool_bin, port)
 
     if "nc-vsock" in tool_bin:
         lstn_cmd = "%s -l %s" % (tool_bin, port)
+
+    if lstn_cmd is None:
+        raise ValueError(f"unexpected test tool: {tool_bin}")
 
     session.read_nonblocking(0, timeout=10)
     LOG_JOB.info("Listening to the vsock port from guest: %s", lstn_cmd)
@@ -96,10 +100,13 @@ def vsock_connect(tool_bin, guest_cid, port):
     :return: The vsock session from host side, being waiting for input
     """
 
+    conn_cmd = None
     if "ncat" in tool_bin:
         conn_cmd = "%s --vsock %s %s" % (tool_bin, guest_cid, port)
     if "nc-vsock" in tool_bin:
         conn_cmd = "%s %s %s" % (tool_bin, guest_cid, port)
+    if conn_cmd is None:
+        raise ValueError(f"unexpected test tool: {tool_bin}")
     LOG_JOB.info("Connect to the vsock port on host: %s", conn_cmd)
 
     return aexpect.Expect(
@@ -125,19 +132,25 @@ def send_data_from_guest_to_host(guest_session, tool_bin,
         tmp_file, file_size)
     guest_session.cmd_status(cmd_generate, timeout=600)
     port = random.randrange(1, 6000)
+    cmd_transfer = None
     if "ncat" in tool_bin:
         cmd_transfer = '%s --vsock --send-only -l %s < %s' % (
             tool_bin, port, tmp_file)
     if "nc-vsock" in tool_bin:
         cmd_transfer = '%s -l %s < %s' % (tool_bin, port, tmp_file)
+    if cmd_transfer is None:
+        raise ValueError(f"unexpected test tool: {tool_bin}")
     error_context.context('Transfer file from guest via command: %s'
                           % cmd_transfer, LOG_JOB.info)
     guest_session.sendline(cmd_transfer)
+    cmd_receive = None
     if "ncat" in tool_bin:
         cmd_receive = '%s --vsock %s %s > %s' % (
             tool_bin, guest_cid, port, tmp_file)
     if "nc-vsock" in tool_bin:
         cmd_receive = '%s %s %s > %s' % (tool_bin, guest_cid, port, tmp_file)
+    if cmd_receive is None:
+        raise ValueError(f"unexpected test tool: {tool_bin}")
     time.sleep(60)
     return aexpect.Expect(cmd_receive,
                           auto_close=True,
@@ -199,6 +212,7 @@ def run(test, params, env):
     port = random.randrange(1, 6000)
     vsock_test_tool = params["vsock_test_tool"]
 
+    host_vsock_session = None
     if vsock_test_tool == "ncat":
         tool_bin = path.find_command("ncat")
         vsock_listen(tool_bin, port, session)
@@ -210,6 +224,9 @@ def run(test, params, env):
         host_vsock_session = vsock_connect(tool_bin, guest_cid, port)
         connected_str = r"Connection from cid*"
         check_received_data(test, session, connected_str)
+
+    if host_vsock_session is None:
+        raise ValueError(f"unexpected test tool: {tool_bin}")
 
     send_data = "Hello world"
     error_context.context('Input "Hello world" to vsock.', test.log.info)

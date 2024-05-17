@@ -30,6 +30,8 @@ def format_result(result, base="12", fbase="2"):
         value = "%" + base + "d"
     elif isinstance(result, float):
         value = "%" + base + "." + fbase + "f"
+    else:
+        raise TypeError(f"unexpected result type: {type(result).__name__}")
     return value % result
 
 
@@ -293,7 +295,7 @@ def run(test, params, env):
             mac = vm.get_mac_address(2)
 
         status = launch_test(session, generator1, generator2,
-                             mac, port, exec_file,
+                             mac, port, exec_file,  # pylint: disable=E0606
                              nic1_driver, nic2_driver,
                              whitelist_option,
                              nic_pci_1, nic_pci_2,

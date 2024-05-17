@@ -155,6 +155,8 @@ def format_result(result, base, fbase):
         value = "%" + base + "d"
     elif isinstance(result, float):
         value = "%" + base + "." + fbase + "f"
+    else:
+        raise TypeError(f"unexpected result type: {type(result).__name__}")
     return value % result
 
 
@@ -209,7 +211,7 @@ def run_tests_for_category(params, result_file, test_vm, vm=None, session_serial
                                 exec_cmd = pktgen_config.generate_pktgen_cmd(
                                     script, pkt_cate, pktgen_config.interface, pktgen_config.dsc,
                                     threads, size, burst)
-                            elif test_vm:
+                            else:
                                 pktgen_config = pktgen_config.configure_pktgen(
                                     params, script, pkt_cate, test_vm, vm, session_serial)
                                 exec_cmd = pktgen_config.generate_pktgen_cmd(

@@ -188,6 +188,7 @@ def run(test, params, env):
         # interfaces inside guest. Added option for static IP configuration
         # below
         if static_ip:
+            IP_addr_VF = None
             if 'IP_addr_VF' not in locals():
                 IP_addr_VF = ip_address(params.get("start_addr_VF"))
                 net_mask = params.get("net_mask")

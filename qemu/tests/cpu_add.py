@@ -131,6 +131,8 @@ def run(test, params, env):
             human_check_info = params.get("human_error_recheck", None)
         else:
             human_check_info = None
+    else:
+        raise ValueError(f"unexpected monitor protocol type {vm.monitor.protocol}")
 
     vcpu_been_pluged = 0
     for i in range(vcpu_need_hotplug):

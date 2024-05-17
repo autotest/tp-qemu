@@ -56,7 +56,7 @@ def run(test, params, env):
         """ Get the drive letters after reboot in windows. """
         new_mount_points = utils_misc.get_windows_drive_letters(
             vm.wait_for_login(timeout=362))
-        for mount_point in fixed_mount_points:
+        for mount_point in fixed_mount_points:  # pylint: disable=E0606
             new_mount_points.remove(mount_point)
         diff_num = len(orig_mount_points) - len(new_mount_points)
         if diff_num != 0:
@@ -156,8 +156,8 @@ def run(test, params, env):
 
     if shutdown_vm or reboot:
         bg_test_target = run_power_management_test
-    bg_test_thread = run_bg_test(bg_test_target)
-    bg_test_thread.join(bg_test_thread_timeout)
+        bg_test_thread = run_bg_test(bg_test_target)
+        bg_test_thread.join(bg_test_thread_timeout)
 
     if not shutdown_vm:
         stress_thread.join(stress_thread_timeout, True)

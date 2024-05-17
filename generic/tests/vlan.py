@@ -43,6 +43,7 @@ def run(test, params, env):
         vlan_if = '%s.%s' % (iface, v_id)
         txt = "Create vlan interface '%s' on %s" % (vlan_if, iface)
         error_context.context(txt, test.log.info)
+        cmd = ""
         if cmd_type == "vconfig":
             cmd = "vconfig add %s %s" % (iface, v_id)
         elif cmd_type == "ip":
@@ -78,6 +79,7 @@ def run(test, params, env):
         Removes the named vlan interface(iface+v_id)
         """
         v_iface = '%s.%s' % (iface, v_id)
+        rem_vlan_cmd = ""
         if cmd_type == "vconfig":
             rem_vlan_cmd = "vconfig rem %s" % v_iface
         elif cmd_type == "ip":

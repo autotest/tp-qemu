@@ -69,7 +69,7 @@ def run(test, params, env):
         if mem_params.get("prealloc-threads_mem"):
             threads_num = mem_params.get_numeric("prealloc-threads_mem")
         else:
-            threads_num = threads_default
+            threads_num = threads_default   # pylint: disable=E0606
         test.log.info("Get qemu threads number again")
         post_threads = get_qemu_threads(get_threads_cmd)
         if post_threads - pre_threads != threads_num:

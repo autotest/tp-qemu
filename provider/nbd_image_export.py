@@ -82,6 +82,7 @@ class NBDExportImage(object):
         self._image_params = self._params.object_params(self._tag)
 
     def create_image(self):
+        result = None
         if self._image_params.get('create_image_cmd'):
             result = process.run(self._image_params['create_image_cmd'],
                                  ignore_status=True, shell=True)
@@ -92,7 +93,7 @@ class NBDExportImage(object):
                 self._tag
             ).create(self._image_params)
 
-        if result.exit_status != 0:
+        if result and result.exit_status != 0:
             raise exceptions.TestFail('Failed to create image, error: %s'
                                       % result.stderr.decode())
 

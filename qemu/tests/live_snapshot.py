@@ -59,7 +59,7 @@ def run(test, params, env):
             file_create = params.get("file_create")
             clean_cmd += " %s" % file_create
             test.log.info("Clean file before creation")
-            session.cmd(clean_cmd)
+            session.cmd(clean_cmd)  # pylint: disable=E0606
 
             test.log.info("Creating big file...")
             create_cmd = params.get("create_cmd") % file_create

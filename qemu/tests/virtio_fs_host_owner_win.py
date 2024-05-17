@@ -160,6 +160,7 @@ def run(test, params, env):
 
     error_context.context("Change the shared dir's owner and group"
                           " to 'test' on host.", test.log.info)
+    shared_dir = None
     for device in vm.devices:
         if isinstance(device, qdevices.QVirtioFSDev):
             shared_dir = device.get_param('source')

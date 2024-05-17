@@ -56,11 +56,10 @@ def run(test, params, env):
             )
 
         if status == "on":
-            action = on_action
+            thp.sys_fs_value = on_action
         elif status == "off":
-            action = off_action
+            thp.sys_fs_value = off_action
 
-        thp.sys_fs_value = action
         time.sleep(1)
 
     thp_fragment_tool.clean()

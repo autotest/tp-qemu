@@ -29,6 +29,8 @@ def format_result(result, base, fbase):
         value = "%" + base + "d"
     elif isinstance(result, float):
         value = "%" + base + "." + fbase + "f"
+    else:
+        raise TypeError(f"unexpected result type: {type(result).__name__}")
     return value % result
 
 
@@ -91,7 +93,7 @@ def run(test, params, env):
             mac = "0," + nic.mac
             ethname = utils_net.get_linux_ifname(session, nic.mac)
             pci_id = utils_sriov.get_pci_from_iface(ethname, session).strip()
-    dpdk_utils.bind_pci_device_to_vfio(session, pci_id)
+    dpdk_utils.bind_pci_device_to_vfio(session, pci_id)  # pylint: disable=E0606
 
     guest = {"host": vm.get_address(),
              "username": params.get("username"),
@@ -125,7 +127,7 @@ def run(test, params, env):
                 LOG_JOB.info(
                             'Processing dpdk test with forward mode: %s, pkts: %s, queue: %s',
                             forward, pkts, queue)
-                pps = run_test(forward, guest, host if forward == "rxonly" else None, dpdk_tool_path, queue, pkts, mac if forward == "rxonly" else None)
+                pps = run_test(forward, guest, host if forward == "rxonly" else None, dpdk_tool_path, queue, pkts, mac if forward == "rxonly" else None)    # pylint: disable=E0606
                 time.sleep(2)
                 mpps = "%.2f" % (float(pps) / (10**6))
                 line = "%s|" % format_result(pkts, base, fbase)

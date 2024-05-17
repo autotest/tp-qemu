@@ -105,7 +105,7 @@ def run(test, params, env):
                     login_timeout, test.log.info)
 
         test.log.info("Start %s test in guest", guest_stress_test)
-        bg = utils_test.BackgroundTest(func, args)
+        bg = utils_test.BackgroundTest(func, args)  # pylint: disable=E0606
         params["guest_stress_test_pid"] = bg
         bg.start()
         if timeout:

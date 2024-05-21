@@ -1,6 +1,6 @@
 from virttest import env_process
 from virttest import error_context
-
+from avocado.utils import process
 
 @error_context.context_aware
 def run(test, params, env):
@@ -18,6 +18,18 @@ def run(test, params, env):
     """
     error_context.base_context("waiting for the first guest to be up",
                                test.log.info)
+
+    host_cpu_cnt_cmd = params.get("host_cpu_cnt_cmd")
+    host_cpu_num = int(process.getoutput(host_cpu_cnt_cmd).strip())
+    vm_cpu_num = host_cpu_num // int(params.get("max_vms"))
+
+    host_mem_size_cmd = params.get("host_mem_size_cmd")
+    host_mem_size = int(process.getoutput(host_mem_size_cmd).strip())
+    vm_mem_size = host_mem_size // int(params.get("max_vms"))
+
+    params['smp'] = params['vcpu_sockets'] = vm_cpu_num
+    params['mem'] = vm_mem_size
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     login_timeout = float(params.get("login_timeout", 240))

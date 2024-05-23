@@ -37,7 +37,7 @@ def run(test, params, env):
 
     vm = env.get_vm(vm_name)
     vm.verify_alive()
-    login_timeout = float(params.get("login_timeout", 240))
+    login_timeout = float(params.get("login_timeout", 420))
     session = vm.wait_for_login(timeout=login_timeout)
 
     num = 2

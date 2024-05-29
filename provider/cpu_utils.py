@@ -82,6 +82,7 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo, test, devices=Non
         cmd = ('powershell "Get-WmiObject Win32_processor | Format-List '
                'NumberOfCores,ThreadCount"')
         out = session.cmd_output_safe(cmd).strip()
+        threads_matched = None
         try:
             cpu_info = [dict(re.findall(r"(\w+)\s+:\s(\d+)", cpu_out, re.M))
                         for cpu_out in out.split("\n\n")]

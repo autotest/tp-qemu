@@ -9,7 +9,6 @@ import json
 
 import aexpect
 
-from packaging import version
 from avocado.utils import genio
 from avocado.utils import path as avo_path
 from avocado.utils import process
@@ -25,6 +24,7 @@ from virttest import utils_net
 from virttest import data_dir
 from virttest import storage
 from virttest import qemu_migration
+from virttest.utils_version import VersionInterval
 
 from virttest.utils_windows import virtio_win
 from provider.win_driver_installer_test import (uninstall_gagent,
@@ -1741,16 +1741,15 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             cmd_blacklist_backup = self.params["black_file_backup"]
             session.cmd(cmd_blacklist_backup)
             full_qga_ver = self._get_qga_version(session, self.vm, main_ver=False)
-            full_qga_ver = version.parse(full_qga_ver)
-            value_full_qga_ver = (full_qga_ver >= version.parse("8.1.0-5"))
+            value_full_qga_ver = (full_qga_ver in VersionInterval('[8.1.0-5,)'))
             black_list_spec = self.params["black_list_spec"]
             cmd_black_list = self.params["black_list"]
             black_list_change_cmd = self.params["black_list_change_cmd"]
-            if full_qga_ver >= version.parse("8.1.0-5"):
+            if value_full_qga_ver:
                 black_list_spec = "allow-rpcs"
                 cmd_black_list = self.params["black_list_new"]
                 black_list_change_cmd = "sed -i 's/allow-rpcs.*/allow-rpcs=%s\"/g' /etc/sysconfig/qemu-ga"
-            elif full_qga_ver >= version.parse("7.2.0-4"):
+            elif full_qga_ver in VersionInterval('[7.2.0-4,)'):
                 black_list_spec = "BLOCK_RPCS"
             for black_cmd in cmd_black_list.split():
                 bl_check_cmd = self.params["black_list_check_cmd"] % (black_list_spec, black_cmd)
@@ -3440,11 +3439,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               " agent service.", LOG_JOB.info)
         session.cmd("cp /etc/sysconfig/qemu-ga /etc/sysconfig/qemu-ga-bk")
         full_qga_ver = self._get_qga_version(session, self.vm, main_ver=False)
-        full_qga_ver = version.parse(full_qga_ver)
         black_list_spec = "BLACKLIST_RPC"
-        if full_qga_ver >= version.parse("8.1.0-5"):
+        if full_qga_ver in VersionInterval('[8.1.0-5,)'):
             black_list_spec, black_list_spec_replace = "allow-rpcs", "block-rpcs"
-        elif full_qga_ver >= version.parse("7.2.0-4"):
+        elif full_qga_ver in VersionInterval('[7.2.0-4,)'):
             black_list_spec = "BLOCK_RPCS"
         if black_list_spec == "allow-rpcs":
             black_list_change_cmd = "sed -i 's/%s.*/%s=guest-info\"/g' /etc/sysconfig/qemu-ga" % (black_list_spec, black_list_spec_replace)

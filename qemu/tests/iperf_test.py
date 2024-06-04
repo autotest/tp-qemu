@@ -86,17 +86,33 @@ def run(test, params, env):
                                     ignore_status=True, verbose=False)
         return status == 0
 
-    def rss_test():
-        test.log.info('Run the command "netkvm-wmi.cmd rss" to collect statistics')
-        rss_test_cmd = utils_misc.set_winutils_letter(
-            guest_session, params["rss_test_cmd"])
-        rss_statistics = guest_session.cmd_output(rss_test_cmd)
-        patterns = r'^((?:Errors)|(?:Misses))=0'
-        result = re.findall(patterns, rss_statistics, re.M)
-        if len(result) == 2:
-            test.log.info("Rss support for virtio-net driver is works well")
+    def rss_check():
+        if os_type == 'linux':
+            ifname = utils_net.get_linux_ifname(guest_session, vm.get_mac_address())
+            check_rss_state_cmd = params.get("check_rss_state")
+            output = guest_session.cmd_output(check_rss_state_cmd % ifname)
+            error_messages = "Operation not supported"
+            if error_messages in output:
+                test.fail("Rss support for virtio-net driver is bad")
+            else:
+                test.log.info("Rss support for virtio-net driver is works well")
+            test.log.info('enable rxhash to check network if can works well')
+            enable_rxhash_cmd = params.get("enable_rxhash_cmd")
+            status, output = guest_session.cmd_status_output(enable_rxhash_cmd % ifname)
+            if status != 0:
+                test.fail("Can not enable rxhash: %s" % output)
         else:
-            test.fail("Rss support for virtio-net driver is bad")
+
+            test.log.info('Run the command "netkvm-wmi.cmd rss" to collect statistics')
+            rss_test_cmd = utils_misc.set_winutils_letter(
+                guest_session, params["rss_test_cmd"])
+            rss_statistics = guest_session.cmd_output(rss_test_cmd)
+            patterns = r'^((?:Errors)|(?:Misses))=0'
+            result = re.findall(patterns, rss_statistics, re.M)
+            if len(result) == 2:
+                test.log.info("Rss support for virtio-net driver is works well")
+            else:
+                test.fail("Rss support for virtio-net driver is bad")
 
     os_type = params["os_type"]
     login_timeout = int(params.get("login_timeout", 360))
@@ -155,6 +171,9 @@ def run(test, params, env):
     c_info.extend([c_options, None])
 
     try:
+        if params.get_boolean("rss_test"):
+            rss_check()
+
         s_start_args = tuple(s_info[-4:])
         c_start_args = tuple(c_info[-4:])
         bg_server = utils_misc.InterruptedThread(iperf_start, s_start_args)
@@ -175,9 +194,6 @@ def run(test, params, env):
                             "Waiting for iperf test to finish.")
         bg_server.join(timeout=60)
         bg_client.join(timeout=60)
-
-        if params.get_boolean("rss_test"):
-            rss_test()
 
     finally:
         test.log.info("Cleanup host environment...")

@@ -32,7 +32,7 @@ def run(test, params, env):
             disks[drive_path[5:]] = data_image
         return disks
 
-    def _get_mounted_points():
+    def _get_mounted_points(did, disks, mount_info):
         """ Get the mounted points. """
         points = []
         for id in re.finditer(r'(%s\d+)' % did, ' '.join(disks)):
@@ -69,7 +69,7 @@ def run(test, params, env):
             for did, image_name in dids.items():
                 size = params.get('image_size_%s' % image_name)
                 start = params.get('image_start_%s' % image_name, "0M")
-                mounted_points = _get_mounted_points()
+                mounted_points = _get_mounted_points(did, disks, mount_info)
                 if not mounted_points:
                     mounted_points = utils_disk.configure_empty_linux_disk(
                         session, did, size, start, n_partitions, fstype, labeltype)

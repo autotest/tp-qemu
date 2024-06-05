@@ -6,6 +6,8 @@ import logging
 import argparse
 import subprocess
 
+logger = logging.getLogger(f"avocado.test.{__name__}")
+
 
 def cmd_output(cmd):
     """
@@ -16,10 +18,9 @@ def cmd_output(cmd):
     logger.debug("Sending command: %s", cmd)
     try:
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except Exception:
-        stderror = p.stderr.readlines()
-        error_msg = ("Failed to execute cmd %s!\n"
-                     "Details refers: %s" % (cmd, stderror))
+    except Exception as err:
+        error_msg = (f"Failed to execute cmd {cmd}!\n"
+                     f"Details refers: {err}")
         logger.error(error_msg)
         sys.exit(1)
     stdoutput = p.stdout.readlines()

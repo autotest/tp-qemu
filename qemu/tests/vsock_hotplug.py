@@ -79,8 +79,10 @@ def run(test, params, env):
     try:
         if vsock_test_tool == "nc_vsock":
             tool_bin = vsock_test.compile_nc_vsock(test, vm, session)
-        if vsock_test_tool == "ncat":
+        elif vsock_test_tool == "ncat":
             tool_bin = path.find_command("ncat")
+        else:
+            raise ValueError(f"unsupported test tool: {vsock_test_tool}")
         tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
         rec_session = vsock_test.send_data_from_guest_to_host(
             session, tool_bin, guest_cid, tmp_file)

@@ -244,6 +244,7 @@ def run(test, params, env):
         error_context.context("Get irq number assigned to attached "
                               "VF/PF in guest", test.log.info)
         irq_nums_dict = get_guest_irq_info(test, session, devname, cpu_count)
+        irqs = []
         if irq_nums_dict:
             irqs = irq_nums_dict.keys()
 

@@ -134,7 +134,7 @@ def check_ansible_playbook(params):
         """
         Install python ansible.
         """
-        install_cmd = '%s install ansible' % pip_bin
+        install_cmd = '%s install ansible' % pip_bin    # pylint: disable=E0606
         status, output = process.getstatusoutput(install_cmd, verbose=True)
         if status != 0:
             LOG_JOB.error("Install python ansible failed as: %s", output)

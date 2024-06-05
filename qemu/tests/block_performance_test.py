@@ -73,6 +73,8 @@ def run(test, params, env):
         elif os_type == "windows":
             output = output.split("\n")[4]
             time_spend = output.split(" ")[2]
+        else:
+            raise ValueError(f"unsupported os type: {os_type}")
         return float(time_spend)
 
     vm = env.get_vm(params["main_vm"])

@@ -31,6 +31,8 @@ def format_result(result, base="12", fbase="2"):
         value = "%" + base + "d"
     elif isinstance(result, float):
         value = "%" + base + "." + fbase + "f"
+    else:
+        raise TypeError(f"unexpected result type: {type(result).__name__}")
     return value % result
 
 
@@ -317,7 +319,7 @@ def run(test, params, env):
                     if os_type == "linux":
                         if not params.objects("filesystems"):
                             line += "%s|" % format_result(io_exits)
-                            line += "%s" % format_result(util)
+                            line += "%s" % format_result(util)  # pylint: disable=E0606
                         else:
                             line += "%s" % format_result(io_exits)
                     result_file.write("%s\n" % line)

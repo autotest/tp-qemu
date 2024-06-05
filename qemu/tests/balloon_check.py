@@ -151,6 +151,8 @@ class BallooningTest(MemoryBaseTest):
             guest_mem = self.get_vm_mem(self.vm)
         elif keyname == "stat-disk-caches":
             guest_mem = self.get_guest_cache_mem(self.vm)
+        else:
+            raise ValueError(f"unexpected keyname: {keyname}")
 
         memory_stat_qmp = "%sB" % memory_stat_qmp
         memory_stat_qmp = int(float(utils_misc.normalize_data_size(
@@ -332,7 +334,7 @@ class BallooningTest(MemoryBaseTest):
         """
         def _memory_check_after_sub_test():
             try:
-                output = self.memory_check("after subtest", ballooned_mem)
+                output = self.memory_check("after subtest", ballooned_mem)  # pylint: disable=E0606
             except exceptions.TestFail:
                 return None
             return output
@@ -607,9 +609,8 @@ def run(test, params, env):
             expect_mem = int(balloon_test.ori_mem *
                              float(params_tag.get('expect_memory_ratio')))
         # set evict illegal value to "0" for both linux and windows
-        elif params_tag.get('illegal_value_check', 'no') == 'yes':
-            if tag == 'enlarge':
-                expect_mem = int(balloon_test.ori_mem + random.uniform(1, 1000))
+        elif params_tag.get('illegal_value_check', 'no') == 'yes' and tag == 'enlarge':
+            expect_mem = int(balloon_test.ori_mem + random.uniform(1, 1000))
         else:
             balloon_type = params_tag['balloon_type']
             min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)

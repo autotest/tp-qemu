@@ -59,6 +59,8 @@ def run(test, params, env):
         g_server_link = netperf_server_link
         g_server_path = server_path_win
         g_client_path = client_path_win
+    else:
+        raise ValueError(f"unsupported os type: {params.get('os_type')}")
 
     netperf_client_g = None
     netperf_client_h = None

@@ -74,11 +74,11 @@ def run(test, params, env):
                                                           "device_add")
     for j in range(rp_times):
         if cmd_type == "pci_add":
-            pci_add_cmd = make_pci_add_cmd(pa_pci_ids[0], pci_invaild_addr)
+            pci_add_cmd = make_pci_add_cmd(pa_pci_ids[0], pci_invaild_addr)  # pylint: disable=E0606
         elif cmd_type == "device_add":
             pci_add_cmd = make_device_add_cmd(pa_pci_ids[0], pci_invaild_addr)
         try:
-            msg = "Adding pci device with command '%s'" % pci_add_cmd
+            msg = "Adding pci device with command '%s'" % pci_add_cmd   # pylint: disable=E0606
             error_context.context(msg, test.log.info)
             case_fail = False
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)

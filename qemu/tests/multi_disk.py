@@ -356,7 +356,8 @@ def run(test, params, env):
                     key_word = params["check_result_key_word"]
                     output = session.cmd_output(cmd)
                     if iozone_options and n < iozone_target_num:
-                        iozone.run(iozone_options.format(orig_partition), iozone_timeout)
+                        iozone.run(iozone_options.format(orig_partition),   # pylint: disable=E0606
+                                   iozone_timeout)
                     if key_word not in output:
                         test.fail("Files on guest os root fs and disk differ")
                     if dd_test != "no":

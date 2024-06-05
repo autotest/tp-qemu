@@ -264,7 +264,7 @@ def launch_rv(test, client_vm, guest_vm, params):
         # Send command line through monitor since url was not provided
         if rv_parameters_from == "menu":
             utils_spice.wait_timeout(1)
-            str_input(client_vm, line)
+            str_input(client_vm, line)  # pylint: disable=E0606
 
         # client waits for user entry (authentication) if spice_password is set
         # use qemu monitor password if set, else, if set, try normal password.

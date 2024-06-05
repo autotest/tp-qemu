@@ -139,11 +139,10 @@ def run(test, params, env):
             vm.monitor.send_args_cmd(controller_add_cmd, convert=False)
 
         verify_supported_device(pci_model)
-        if drive_cmd_type == "drive_add":
-            driver_add_cmd = ("%s auto file=%s,if=none,format=%s,id=%s,serial=%s" %
-                              (drive_cmd_type, image_filename, image_format,
-                               pci_info[pci_num][0], serial_id))
-        elif drive_cmd_type == "__com.redhat_drive_add":
+        driver_add_cmd = ("%s auto file=%s,if=none,format=%s,id=%s,serial=%s" %
+                          (drive_cmd_type, image_filename, image_format,
+                           pci_info[pci_num][0], serial_id))
+        if drive_cmd_type == "__com.redhat_drive_add":
             driver_add_cmd = ("%s file=%s,format=%s,id=%s,serial=%s" %
                               (drive_cmd_type, image_filename, image_format,
                                pci_info[pci_num][0], serial_id))

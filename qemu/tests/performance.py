@@ -137,7 +137,7 @@ def run(test, params, env):
         new_file = re.findall("(.*)\n", o)[-1]
     else:
         test.error("Can not decompress test file in guest")
-    session.cmd("mv /tmp/src_tmp/%s /tmp/src" % new_file)
+    session.cmd("mv /tmp/src_tmp/%s /tmp/src" % new_file)   # pylint: disable=E0606
 
     if test_patch:
         test_patch_path = os.path.join(data_dir.get_deps_dir(), 'performance',
@@ -258,6 +258,8 @@ def format_result(result, base="20", fbase="2"):
         value = "%" + base + "d"
     elif isinstance(result, float):
         value = "%" + base + "." + fbase + "f"
+    else:
+        raise TypeError(f"unexpected result type: {type(result).__name__}")
     return value % result
 
 
@@ -390,7 +392,7 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
                     no_table_results[mark_tag] = utils_misc.aton(data)
                     perf_value = no_table_results[mark_tag]
                 else:
-                    tmp_dic[mark_tag] = utils_misc.aton(data)
+                    tmp_dic[mark_tag] = utils_misc.aton(data)   # pylint: disable=E0606
                     perf_value = tmp_dic[mark_tag]
             else:
                 test.error("Can not get the right data from result."
@@ -398,7 +400,7 @@ def result_sum(topdir, params, guest_ver, resultsdir, test):
             if mark_tag not in no_table_list and mark_tag not in order_list:
                 order_list.append(mark_tag)
             test.write_perf_keyval({'%s-%s' % (prefix_perf, mark_tag):
-                                    perf_value})
+                                    perf_value})    # pylint: disable=E0606
         # start analyze the mpstat results
         if params.get('mpstat') == "yes":
             guest_cpu_infos = mpstat_ana(results_files[prefix][1])

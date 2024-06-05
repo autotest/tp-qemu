@@ -790,7 +790,7 @@ def run(test, params, env):
             """
             Suspend to mem (S3) and resume the VM.
             """
-            session.sendline(set_s3_cmd)
+            session.sendline(set_s3_cmd)    # pylint: disable=E0606
             time.sleep(intr_time)
             if not vm.monitor.verify_status('suspended'):
                 test.log.debug('VM not yet suspended, periodic check started.')

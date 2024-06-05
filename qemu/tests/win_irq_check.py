@@ -58,7 +58,7 @@ def run(test, params, env):
             for irq_symbol in (ctypes.c_int32(int(irq)).value for irq in irq_list):
                 if (irq_nums == 1 and irq_symbol < 0) or (irq_nums > 1 and irq_symbol >= 0):
                     test.fail("%s's irq is not correct." % device_name)
-                elif irq_nums > 1 and (irq_nums != vectors):
+                elif irq_nums > 1 and (irq_nums != vectors):    # pylint: disable=E0606
                     test.fail("%s's irq nums not equal to vectors." % device_name)
 
     def set_msi_fguest(enable=True):

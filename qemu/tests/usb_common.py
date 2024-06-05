@@ -124,7 +124,7 @@ def verify_usb_device_in_guest(params, session, devs):
         # each dev must in the output
         for dev in devs:
             if "Hub" in dev[1] and os_type == "linux":
-                o = hub_output
+                o = hub_output  # pylint: disable=E0606
             else:
                 o = output
             if dev[1] not in o:

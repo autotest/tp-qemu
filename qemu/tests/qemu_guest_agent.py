@@ -1604,8 +1604,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 else:
                     test.fail("The ip address type is %s, but it should be"
                               " ipv4 or ipv6." % ip["ip-address-type"])
-            if guest_ip_ipv4 != ip_addr_qga_ipv4 \
-                    or guest_ip_ipv6 != ip_addr_qga_ipv6:
+            if (guest_ip_ipv4 != ip_addr_qga_ipv4   # pylint: disable=E0606
+                    or guest_ip_ipv6 != ip_addr_qga_ipv6):  # pylint: disable=E0601
                 test.fail("Get the wrong ip address for %s interface:\n"
                           "ipv4 address from qga is %s, the expected is %s;\n"
                           "ipv6 address from qga is %s, the expected is %s."
@@ -1977,7 +1977,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               LOG_JOB.info)
         if params.get("os_type") == "linux":
             main_qga_ver = self._get_qga_version(session, self.vm)
-        if params.get("os_type") == "linux" and main_qga_ver <= 2:
+        if params.get("os_type") == "linux" and main_qga_ver <= 2:  # pylint: disable=E0606
             # if resource is sufficient can read file,
             # else file handle will not be found.
             self.gagent.guest_file_read(ret_handle, count=10000000000)
@@ -2501,6 +2501,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         error_context.context("Format the new data disk and mount it.",
                               LOG_JOB.info)
+        mount_points = []
         if params.get("os_type") == "linux":
             self.gagent_setsebool_value('on', params, self.vm)
             disk_data = list(utils_disk.get_linux_disks(session).keys())
@@ -2672,6 +2673,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             disk_write_cmd = params["disk_write_cmd"]
             pause = float(params.get("virtio_block_pause", 10.0))
             error_context.context("Format and write disk", LOG_JOB.info)
+            mnt_point = None
             if params.get("os_type") == "linux":
                 new_disks = utils_misc.wait_for(
                     lambda: get_new_disk(
@@ -3445,7 +3447,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         elif full_qga_ver in VersionInterval('[7.2.0-4,)'):
             black_list_spec = "BLOCK_RPCS"
         if black_list_spec == "allow-rpcs":
-            black_list_change_cmd = "sed -i 's/%s.*/%s=guest-info\"/g' /etc/sysconfig/qemu-ga" % (black_list_spec, black_list_spec_replace)
+            black_list_change_cmd = "sed -i 's/%s.*/%s=guest-info\"/g' /etc/sysconfig/qemu-ga" % (black_list_spec, black_list_spec_replace)  # pylint: disable=E0606
         else:
             black_list_change_cmd = "sed -i 's/%s.*/%s=guest-info/g' /etc/sysconfig/qemu-ga" % (black_list_spec, black_list_spec)
         try:
@@ -3959,6 +3961,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         """
         error_context.context("Get %s path where it locates." % qemu_ga_pkg,
                               LOG_JOB.info)
+        qemu_ga_pkg_path = ""
         if self.gagent_src_type == "url":
             gagent_host_path = params["gagent_host_path"]
             gagent_download_url = params["gagent_download_url"]

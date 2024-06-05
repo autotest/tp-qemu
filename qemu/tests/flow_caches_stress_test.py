@@ -90,10 +90,10 @@ def run(test, params, env):
         try:
             cmd = "ethtool -L %s combined %s" % (ifname, params.get("queues"))
             status, out = session.cmd_status_output(cmd)
-        except Exception:
+        except Exception as err:
             get_if_queues(ifname)
             msg = "Fail to enable multi queues support in guest."
-            msg += "Command %s fail output: %s" % (cmd, out)
+            msg += f"Got error: {err}"
             test.error(msg)
         test.log.info("Command %s set queues succeed", cmd)
 
@@ -102,6 +102,8 @@ def run(test, params, env):
         session.cmd(disable_firewall, ignore_all_errors=True)
         g_client_link = netperf_link
         g_client_path = params.get("client_path", "/var/tmp/")
+    else:
+        raise ValueError("unsupported os type")
     netperf_client_ip = vm.get_address()
     username = params.get("username", "root")
     password = params.get("password", "123456")

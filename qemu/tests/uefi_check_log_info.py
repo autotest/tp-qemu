@@ -57,7 +57,7 @@ def run(test, params, env):
             splash_time_pattern = params.get("splash_time_pattern")
             expect_result = (splash_time_pattern %
                              (int(boot_splash_time) // 1000))
-        if not utils_misc.wait_for(lambda: info_check(expect_result), timeout):
+        if not utils_misc.wait_for(lambda: info_check(expect_result), timeout):  # pylint: disable=E0606
             test.fail("Does not get expected result from bios log: %s"
                       % expect_result)
     finally:

@@ -40,6 +40,7 @@ def run(test, params, env):
         process.system(dd_cmd, shell=True)
         md5_origin = process.system_output("md5sum %s" % tmp_file).split()[0]
 
+        cmd_transfer = None
         if vsock_test_tool == "ncat":
             tool_bin = path.find_command("ncat")
             cmd_transfer = '%s --vsock --send-only -l %s < %s &' % (
@@ -47,6 +48,8 @@ def run(test, params, env):
         if vsock_test_tool == "nc_vsock":
             tool_bin = vsock_test.compile_nc_vsock(test, vm, session)
             cmd_transfer = '%s -l %s < %s &' % (tool_bin, vsock_port, tmp_file)
+        if cmd_transfer is None:
+            raise ValueError(f"unsupported test tool: {vsock_test_tool}")
 
         test.log.info("cmd_transfer: %s" % cmd_transfer)
         process.run(cmd_transfer, ignore_bg_processes=True, shell=True)

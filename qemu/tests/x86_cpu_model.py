@@ -58,7 +58,7 @@ def run(test, params, env):
     else:
         test.cancel("This host doesn't support cpu model %s" % model)
 
-    params["cpu_model"] = cpu_model
+    params["cpu_model"] = cpu_model  # pylint: disable=E0606
     params["start_vm"] = "yes"
     vm_name = params['main_vm']
     env_process.preprocess_vm(test, params, env, vm_name)
@@ -70,7 +70,7 @@ def run(test, params, env):
     error_context.context("Check cpu model inside guest", test.log.info)
     cmd = params["get_model_cmd"]
     out = session.cmd_output(cmd)
-    if not re.search(guest_model, out):
+    if not re.search(guest_model, out):  # pylint: disable=E0606
         test.fail("Guest cpu model is not right")
 
     if params["os_type"] == "linux":

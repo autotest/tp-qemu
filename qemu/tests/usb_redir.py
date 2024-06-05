@@ -29,10 +29,10 @@ def run(test, params, env):
     :param params: Dictionary with test parameters
     :param env: Dictionary with test environment.
     """
-    def _start_usbredir_server():
+    def _start_usbredir_server(port):
         process.getoutput("killall usbredirserver")
         usbredir_server = utils_misc.get_binary('usbredirserver', params)
-        usbredirserver_args = usbredir_server + " -p %s " % free_port
+        usbredirserver_args = usbredir_server + " -p %s " % port
         usbredirserver_args += " %s:%s" % (vendorid, productid)
         usbredirserver_args += " > /dev/null 2>&1"
         rv_thread = utils_misc.InterruptedThread(os.system,
@@ -114,7 +114,7 @@ def run(test, params, env):
                 chardev_params['name'] = usbredir_params.get('chardev_name')
             else:
                 chardev_params['host'] = usbredir_params['chardev_host']
-                chardev_params['port'] = free_port
+                chardev_params['port'] = free_port  # pylint: disable=E0606
                 chardev_params['server'] = usbredir_params.get('chardev_server')
                 chardev_params['wait'] = usbredir_params.get('chardev_wait')
             chardev = qdevices.CharDevice(chardev_params, chardev_id)
@@ -215,7 +215,7 @@ def run(test, params, env):
         testfile = os.path.join(mount_point, 'testfile')
         iozone_cmd = params.get("iozone_cmd",
                                 " -a -I -r 64k -s 1m -i 0 -i 1 -f %s")
-        iozone_test.run(iozone_cmd % testfile)
+        iozone_test.run(iozone_cmd % testfile)  # pylint: disable=E0606
 
     usbredirdev_name = params["usbredirdev_name"]
     usbredir_params = params.object_params(usbredirdev_name)
@@ -241,7 +241,7 @@ def run(test, params, env):
 
     if backend == 'tcp_socket':
         free_port = utils_misc.find_free_port()
-        _start_usbredir_server()
+        _start_usbredir_server(free_port)
 
     error_context.context("Preprocess VM", test.log.info)
     _usbredir_preprocess()

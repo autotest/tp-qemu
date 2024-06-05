@@ -73,10 +73,13 @@ def run(test, params, env):
     port = random.randrange(1, 6000)
     vsock_dev = params["vsocks"].split()[0]
     guest_cid = vm.devices.get(vsock_dev).get_param("guest-cid")
+    conn_cmd = None
     if vsock_test_tool == "nc_vsock":
         conn_cmd = "%s %s %s" % (tool_bin, guest_cid, port)
     if vsock_test_tool == "ncat":
         conn_cmd = "%s --vsock %s %s" % (tool_bin, guest_cid, port)
+    if conn_cmd is None:
+        raise ValueError(f"unexpected test tool: {vsock_test_tool}")
     connected_str = "Connection reset by peer"
     error_context.context("Connect vsock from host without"
                           " listening on guest.", test.log.info)

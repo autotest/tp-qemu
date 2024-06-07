@@ -180,7 +180,7 @@ class VirtioVdpaNetSimulatorTest(VDPABlkNetSimulatorTest):
         process.run(cmd, shell=True)
         cmd = "vdpa dev list -jp %s" % name
         process.run(cmd, shell=True)
-        virtio_dir = "/sys/bus/vdpa/devices/{}/virtio*/net".format(name)
+        virtio_dir = "/sys/bus/vdpa/devices/{}/virtio*/net/*".format(name)
         virtio_path = wait.wait_for(lambda: glob.glob(virtio_dir), 2)
         if virtio_path:
             return os.path.basename(virtio_path[0])

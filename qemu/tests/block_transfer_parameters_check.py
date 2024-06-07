@@ -68,12 +68,12 @@ def run(test, params, env):
         cmd = params["get_tran_length_cmd"] % dev
         output = _run_cmd(cmd, conn)
         logger.debug(output)
-        info["tran_length"] = int(output)
+        info["tran_length"] = int(output, 0)
         cmd = params["get_tran_params_cmd"] % dev
         output = _run_cmd(cmd, conn).split()
         logger.debug(output)
-        info["sectors_kb"] = int(output[0])
-        info["segments"] = int(output[1])
+        info["sectors_kb"] = int(output[0], 0)
+        info["segments"] = int(output[1], 0)
         return info
 
     vm = None

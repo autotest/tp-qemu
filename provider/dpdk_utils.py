@@ -113,6 +113,8 @@ class TestPMD:
             pps = re.search(r"Tx-pps:\s+(\d+)", output).group(1)
         elif forward_mode == "rxonly":
             pps = re.search(r"Rx-pps:\s+(\d+)", output).group(1)
+        else:
+            raise ValueError(f"unexpected forward mode: {forward_mode}")
         return int(pps)
 
     def login(self):

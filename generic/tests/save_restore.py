@@ -74,6 +74,7 @@ def run(test, params, env):
     save_file = get_save_filename(path, file_pfx)
 
     save_restore_bg_command = params.get("save_restore_bg_command")
+    bg_command_pid = None
     if save_restore_bg_command:
         session.cmd(save_restore_bg_command + ' &')
         try:
@@ -82,7 +83,6 @@ def run(test, params, env):
         except ValueError:
             test.log.warning(
                 "Background guest command 'job -rp' output not PID")
-            bg_command_pid = None
     del session  # don't leave stray ssh session lying around over save/restore
 
     start_time = time.time()

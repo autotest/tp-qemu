@@ -42,7 +42,7 @@ class PktgenConfig:
             else:
                 self.dsc = vm.get_mac_address(0)
             self.interface = vm.get_ifname(0)
-            self.runner = process.getoutput
+            self.runner = process.system_output
         elif pkt_cate == "loopback":
             if test_vm:
                 LOG_JOB.info("test guest loopback pps performance")
@@ -56,7 +56,7 @@ class PktgenConfig:
                 process.run("cp -r %s %s" % (local_path, remote_path))
                 self.interface = interface
                 self.dsc = params.get("mac")
-                self.runner = process.getoutput
+                self.runner = process.system_output
         return self
 
     def generate_pktgen_cmd(self, script, pkt_cate, interface, dsc,
@@ -124,7 +124,7 @@ class PktgenRunner:
         kernel_ver = "kernel-modules-internal-%s" % ver
         cmd_download = "cd /tmp && brew download-build %s --rpm" % kernel_ver
         cmd_install = "cd /tmp && rpm -ivh  %s.rpm --force --nodeps" % kernel_ver
-        output_cmd(cmd_download).decode()
+        output_cmd(cmd_download)
         cmd_clean = "rm -rf /tmp/%s.rpm" % kernel_ver
         if session_serial:
             output_cmd = session_serial.cmd_output
@@ -155,6 +155,8 @@ def format_result(result, base, fbase):
         value = "%" + base + "d"
     elif isinstance(result, float):
         value = "%" + base + "." + fbase + "f"
+    else:
+        raise TypeError(f"unexpected result type: {type(result).__name__}")
     return value % result
 
 
@@ -209,7 +211,7 @@ def run_tests_for_category(params, result_file, test_vm, vm=None, session_serial
                                 exec_cmd = pktgen_config.generate_pktgen_cmd(
                                     script, pkt_cate, pktgen_config.interface, pktgen_config.dsc,
                                     threads, size, burst)
-                            elif test_vm:
+                            else:
                                 pktgen_config = pktgen_config.configure_pktgen(
                                     params, script, pkt_cate, test_vm, vm, session_serial)
                                 exec_cmd = pktgen_config.generate_pktgen_cmd(

@@ -125,7 +125,9 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
                 uninst_store_cmd = params.get("uninst_store_cmd",
                                               pnp_cmd) % inf_name
                 s, o = session.cmd_status_output(uninst_store_cmd, 360)
-                if s:
+                if s not in (0, 3010):
+                    # for vioser, they need system reboot
+                    # acceptable status: OK(0), REBOOT(3010)
                     test.error("Failed to uninstall driver '%s' from store, "
                                "details:\n%s" % (driver_name, o))
 

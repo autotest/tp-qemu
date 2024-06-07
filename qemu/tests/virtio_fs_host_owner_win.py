@@ -105,10 +105,23 @@ def run(test, params, env):
     if params.get("privileged", ""):
         # start virtiofsd with user config
         user_name = params["new_user"]
+        add_user_cmd = params["add_user_cmd"]
+        del_user_cmd = params["del_user_cmd"]
         if process.system("id %s" % user_name, shell=True,
                           ignore_status=True) == 0:
-            process.run(params["del_user_cmd"])
-        process.run(params["add_user_cmd"])
+            s, o = process.getstatusoutput(del_user_cmd)
+            if s:
+                if "is currently used by process" in o:
+                    test.error("The common user is used by other process,"
+                               " pls check on your host.")
+                else:
+                    test.fail("Unknown error when deleting the "
+                              "user: %s" % o)
+        if process.system("grep %s /etc/group" % user_name, shell=True,
+                          ignore_status=True) == 0:
+            add_user_cmd = "useradd -g %s %s" % (user_name, user_name)
+        process.run(add_user_cmd)
+
         # config socket
         sock_path = os.path.join("/home/" + user_name,
                                  '-'.join(('avocado-vt-vm1', 'viofs',
@@ -147,6 +160,7 @@ def run(test, params, env):
 
     error_context.context("Change the shared dir's owner and group"
                           " to 'test' on host.", test.log.info)
+    shared_dir = None
     for device in vm.devices:
         if isinstance(device, qdevices.QVirtioFSDev):
             shared_dir = device.get_param('source')

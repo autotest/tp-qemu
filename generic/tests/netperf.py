@@ -71,6 +71,7 @@ def run(test, params, env):
         netdst = params.get("netdst", "switch")
         host_bridges = utils_net.Bridge()
         br_in_use = host_bridges.list_br()
+        target_ifaces = []
         if netdst in br_in_use:
             ifaces_in_use = host_bridges.list_iface()
             target_ifaces = list(ifaces_in_use + br_in_use)
@@ -433,6 +434,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
 
     for protocol in protocols.split():
         error_context.context("Testing %s protocol" % protocol, test.log.info)
+        protocol_log = ""
         if protocol in ("TCP_RR", "TCP_CRR"):
             sessions_test = sessions_rr.split()
             sizes_test = sizes_rr.split()
@@ -480,6 +482,7 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                                                     header=record_header,
                                                     base=base,
                                                     fbase=fbase)
+                    category = ""
                     if record_header:
                         record_header = False
                         category = row.split('\n')[0]
@@ -590,9 +593,12 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         return intr
 
     def get_state():
+        ifname = None
         for i in netperf_base.ssh_cmd(server_ctl, "ifconfig").split("\n\n"):
             if server in i:
                 ifname = re.findall(r"(\w+\d+)[:\s]", i)[0]
+        if ifname is None:
+            raise RuntimeError(f"no available iface associated with {server}")
 
         path = "find /sys/devices|grep net/%s/statistics" % ifname
         cmd = "%s/rx_packets|xargs cat;%s/tx_packets|xargs cat;" \

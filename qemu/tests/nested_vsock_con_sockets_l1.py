@@ -92,6 +92,7 @@ def run(test, params, env):
     client = message_queuing.MQClient(host, mq_port)
     time.sleep(5)
 
+    cmd_receive = None
     if vsock_test_tool == "ncat":
         tool_bin = path.find_command("ncat")
         cmd_receive = '%s --vsock %s %s > %s &' % (
@@ -101,6 +102,9 @@ def run(test, params, env):
         tool_bin = compile_nc_vsock_guest(test, vm, session)
         cmd_receive = '%s %s %s > %s &' % (
             tool_bin, host_cid, vsock_port, tmp_file)
+
+    if cmd_receive is None:
+        raise ValueError(f"unexpected test tool: {vsock_test_tool}")
 
     try:
         client.send_message("L1_up")

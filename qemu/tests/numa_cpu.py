@@ -46,7 +46,7 @@ def run(test, params, env):
             thread_min, thread_max = _get_boundary(threadid, vcpu_threads, thread_weight)
             cpu_min = socket_min + cluster_min + core_min + thread_min
             cpu_max = socket_max + cluster_max + core_max + thread_max
-        cpu_list = list(range(cpu_min, cpu_max + 1))
+        cpu_list = list(range(cpu_min, cpu_max + 1))    # pylint: disable=E0606
         return cpu_list
 
     def numa_cpu_guest():
@@ -56,7 +56,7 @@ def run(test, params, env):
         error_context.context("Get cpus in guest os", test.log.info)
         numa_cpu_guest = []
         if vm_arch in ('ppc64', 'ppc64le'):
-            numa_info_guest = NumaInfo(session=session)
+            numa_info_guest = NumaInfo(session=session)  # pylint: disable=E0606
             nodes_guest = numa_info_guest.online_nodes
             for node in nodes_guest:
                 numa_cpus = numa_info_guest.online_nodes_cpus[node]
@@ -217,7 +217,7 @@ def run(test, params, env):
 
         # Set unspecified cpus from node 0 to max, and set the left cpus to node 0
         set_numa_node_options = []
-        for index, cpu_option in enumerate(unspecified_cpus):
+        for index, cpu_option in enumerate(unspecified_cpus):   # pylint: disable=E0606
             try:
                 cpu_option.update({'node_id': node_ids[index]})
             except IndexError:

@@ -356,7 +356,7 @@ def run(test, params, env):
     elif deny_target == "localhost":
         deny_vm_ip = host_ip
     if "NW_DST" in acl_extra_options:
-        acl_extra_options = re.sub("NW_DST", deny_vm_ip, acl_extra_options)
+        acl_extra_options = re.sub("NW_DST", deny_vm_ip, acl_extra_options)  # pylint: disable=E0606
     acl_extra_options = re.sub("TARGET_PORT", target_port, acl_extra_options)
 
     access_sys = {}

@@ -30,6 +30,8 @@ def run(test, params, env):
             qtree.parse_info_qtree(vm.monitor.info('qtree'))
         except AttributeError:
             test.cancel("Monitor deson't supoort qtree, skip this test")
+        disable_modern = None
+        disable_legacy = None
         for node in qtree.get_nodes():
             if (isinstance(node, qemu_qtree.QtreeDev) and
                     node.qtree['type'] == device_type):

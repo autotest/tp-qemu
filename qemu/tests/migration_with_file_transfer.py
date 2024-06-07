@@ -38,6 +38,9 @@ def run(test, params, env):
     file_size = params.get("file_size", "500")
     transfer_timeout = int(params.get("transfer_timeout", "240"))
     migrate_between_vhost_novhost = params.get("migrate_between_vhost_novhost")
+    if mig_protocol == "exec":
+        mig_file = os.path.join(test.tmpdir, "tmp-%s" %
+                                utils_misc.generate_random_string(8))
 
     try:
         process.run("dd if=/dev/urandom of=%s bs=1M count=%s"
@@ -55,8 +58,15 @@ def run(test, params, env):
                             vm.params["vhost"] = "vhost=off"
                         elif vhost_status == "vhost=off":
                             vm.params["vhost"] = "vhost=on"
+                    migration_exec_cmd_src = params.get("migration_exec_cmd_src")
+                    migration_exec_cmd_dst = params.get("migration_exec_cmd_dst")
+                    if mig_protocol == "exec" and migration_exec_cmd_src:
+                        migration_exec_cmd_src %= mig_file  # pylint: disable=E0606
+                        migration_exec_cmd_dst %= mig_file
                     vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                               env=env)
+                               env=env,
+                               migration_exec_cmd_src=migration_exec_cmd_src,
+                               migration_exec_cmd_dst=migration_exec_cmd_dst)
             except Exception:
                 # If something bad happened in the main thread, ignore
                 # exceptions raised in the background thread
@@ -96,3 +106,5 @@ def run(test, params, env):
             os.remove(host_path)
         if os.path.isfile(host_path_returned):
             os.remove(host_path_returned)
+        if mig_protocol == "exec":
+            process.run("rm -rf %s" % mig_file)

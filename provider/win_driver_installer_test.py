@@ -399,5 +399,6 @@ def fwcfg_test(test, params, vm):
     else:
         cmd = "ls -l %s | awk '{print $5}'" % dump_file
         dump_size = int(process.getoutput(cmd))
+        process.system("rm -rf %s" % dump_file, shell=True)
         if dump_size == 0:
             test.fail("The dump file is empty")

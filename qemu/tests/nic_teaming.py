@@ -80,6 +80,9 @@ def run(test, params, env):
         team_exists_cmd = params.get("team_if_exists_cmd")
         return session_serial.cmd_status(team_exists_cmd, safe=True) == 0
 
+    if params["netdst"] not in utils_net.Bridge().list_br():
+        test.cancel("Host does not use Linux Bridge")
+
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     timeout = int(params.get("login_timeout", 1200))

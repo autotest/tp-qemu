@@ -84,6 +84,16 @@ def run(test, params, env):
         image_filename = storage.get_image_filename(image_params,
                                                     data_dir.get_data_dir())
         image_dev = vm.get_block({'file': image_filename})
+        if not image_dev:
+            blocks_info = vm.monitor.human_monitor_cmd("info block")
+            logger.debug(blocks_info)
+            for block in blocks_info.splitlines():
+                if image_filename in block:
+                    image_dev = block.split(":")[0]
+                    logger.debug("Find %s node:%s", image_filename, image_dev)
+                    break
+        if not image_dev:
+            test.fail("Can not find dev by %s" % image_filename)
         args = (None, image_size, image_dev)
 
         vm.monitor.block_resize(*args)

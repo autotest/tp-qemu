@@ -61,6 +61,7 @@ def run(test, params, env):
             )
 
     def input_character_vsock():
+        host_vsock_session = None
         if vsock_test_tool == "ncat":
             vsock_listen(tool_bin, port, session)
             host_vsock_session = vsock_connect(tool_bin, guest_cid, port)
@@ -70,6 +71,8 @@ def run(test, params, env):
             host_vsock_session = vsock_connect(tool_bin, guest_cid, port)
             connected_str = r"Connection from cid*"
             check_received_data(test, session, connected_str)
+        if host_vsock_session is None:
+            raise ValueError(f"unexpected test tool: {vsock_test_tool}")
         error_context.context('Input "Hello world" to vsock.', test.log.info)
         host_vsock_session.sendline(send_data)
         check_received_data(test, session, send_data)

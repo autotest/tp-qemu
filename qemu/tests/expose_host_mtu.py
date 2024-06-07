@@ -70,6 +70,8 @@ def run(test, params, env):
         host_hw_iface = NetworkInterface(host_hw_interface, localhost)
     elif utils_net.ovs_br_exists(netdst) is True:
         host_hw_iface = NetworkInterface(' '.join(host_hw_interface), localhost)
+    else:
+        raise OSError(f"invalid host iface {netdst}")
     host_mtu_origin = host_hw_iface.get_mtu()
 
     NetworkInterface(vm_iface, localhost).set_mtu(mtu_value)

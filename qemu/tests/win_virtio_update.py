@@ -203,7 +203,7 @@ def run(test, params, env):
                     session.cmd('taskkill /PID %s' % i)
         if install_cmds:
             cmd = re.sub("WIN_UTILS", vol_utils, install_cmds[driver])
-            cmd = re.sub("WIN_VIRTIO", vol_virtio, cmd)
+            cmd = re.sub("WIN_VIRTIO", vol_virtio, cmd)  # pylint: disable=E0606
             session.cmd(cmd, timeout=driver_install_timeout)
             session = reboot(vm, session)
 

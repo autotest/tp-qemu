@@ -44,7 +44,7 @@ def run(test, params, env):
             test.cancel("Unsupported OS type '%s'" % params.get("os_type"))
 
         output = session.cmd_output_safe(cmd)
-        disks = re.findall(pattern, output, re.M)
+        disks = re.findall(pattern, output, re.M)   # pylint: disable=E0606
         return disks
 
     def get_plug_unplug_disks(disk1, disk2):

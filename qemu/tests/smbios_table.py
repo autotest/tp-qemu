@@ -34,7 +34,7 @@ def run(test, params, env):
                 smbios_type_number = 0
             elif sm_type == "System":
                 smbios_type_number = 1
-            smbios += " -smbios type=%s" % smbios_type_number
+            smbios += " -smbios type=%s" % smbios_type_number   # pylint: disable=E0606
             dmidecode_key = params.object_params(sm_type).get("dmikeyword")
             dmidecode_key = dmidecode_key.split()
             for key in dmidecode_key:
@@ -104,10 +104,10 @@ def run(test, params, env):
                     if (rhel_system_version or sm_type != 'System' or
                             key != 'Version'):
                         key_index = support_machine_types.index(m_type)
-                        smbios_set_para = expect_system_versions[key_index]
-                    elif re_pc_lt_2.match(m_type):
+                        smbios_set_para = expect_system_versions[key_index]  # pylint: disable=E0606
+                    elif re_pc_lt_2.match(m_type):  # pylint: disable=E0606
                         # pc<2.0 inherits host system-version
-                        smbios_set_para = host_dmidecode_system_version
+                        smbios_set_para = host_dmidecode_system_version  # pylint: disable=E0606
                     else:
                         # Newer use machine-type
                         smbios_set_para = m_type

@@ -36,7 +36,7 @@ def run(test, params, env):
         :ksmtuned_enabled: ksmtuned threshold is reached or not
         """
         def heavyload_install():
-            if session.cmd_status(test_install_cmd) != 0:
+            if session.cmd_status(test_install_cmd) != 0:   # pylint: disable=E0606
                 test.log.warning("Could not find installed heavyload in guest, "
                                  "will install it via winutils.iso ")
                 winutil_drive = utils_misc.get_winutils_vol(session)

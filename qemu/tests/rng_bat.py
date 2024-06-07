@@ -41,7 +41,7 @@ def run(test, params, env):
         """
         Check whether rngd is running
         """
-        output = session.cmd_output(check_rngd_service)
+        output = session.cmd_output(check_rngd_service)  # pylint: disable=E0606
         if 'running' not in output:
             return False
         return True

@@ -36,6 +36,8 @@ def convert_affinity(affinity):
             output = str(affinity[0])
         else:
             output = "%s-%s" % (affinity[0], affinity[-1])
+    else:
+        raise TypeError(f"unexpected affinity type: {type(affinity).__name__}")
     return output
 
 

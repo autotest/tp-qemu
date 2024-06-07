@@ -137,6 +137,7 @@ def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
     """
     pattern = re.compile(r'^0x0?')
     addr = pattern.sub('', child_addr)
+    sub_addr = ""
     if sub_child_addr:
         sub_addr = pattern.sub('', sub_child_addr)
 

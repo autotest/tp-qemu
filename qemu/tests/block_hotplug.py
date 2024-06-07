@@ -94,7 +94,7 @@ def run(test, params, env):
 
     def format_disk_win():
         """ Format disk in windows. """
-        error_context.context("Format disk %s in windows." % new_disk, test.log.info)
+        error_context.context("Format disk %s in windows." % new_disk, test.log.info)   # pylint: disable=E0606
         session = vm.wait_for_login(timeout=timeout)
         if disk_index is None and disk_letter is None:
             drive_letters.append(

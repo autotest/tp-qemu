@@ -35,7 +35,7 @@ def run(test, params, env):
     bus = {'aobject': 'pci.0'}
     if 's390' in machine_type:  # For s390x platform
         model = 'virtio-balloon-ccw'
-        bus = {'type': 'virtio-bus'}
+        bus = {'type': 'virtual-css'}
     else:
         model = 'virtio-balloon-pci'
     num_hotplug_devices = int(params.get('num_hotplug_devices', 0))

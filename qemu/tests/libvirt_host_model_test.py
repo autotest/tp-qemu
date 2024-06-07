@@ -101,6 +101,7 @@ def compare_cpu_info(test, params):
         qemu_cpu_flags = extend_flags_patterns(qemu_cpu_flags)
         exclude_map = eval(params.get('exclude_map', '{}'))
         check_exclude = False
+        exclude_map_flags = []
         if cpu_model_qemu in exclude_map.keys():
             exclude_map_flags = exclude_map[cpu_model_qemu]
             check_exclude = True

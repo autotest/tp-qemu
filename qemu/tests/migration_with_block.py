@@ -197,7 +197,7 @@ def run(test, params, env):
             str(check_items), test.log.info)
         blocks = vm.monitor.info_block()
         for key, val in check_items.items():
-            if blocks[device_name][key] == val:
+            if blocks[device_name][key] == val:  # pylint: disable=E0606
                 continue
             test.fail(
                 'No such \"%s: %s\" in the output of query-block.' % (key, val))
@@ -209,16 +209,16 @@ def run(test, params, env):
     def eject_cdrom():
         """ Eject cdrom. """
         error_context.context("Eject the original device.", test.log.info)
-        with eject_check:
+        with eject_check:   # pylint: disable=E0606
             vm.eject_cdrom(device_name, True)
-        if check_block(orig_img_name):
+        if check_block(orig_img_name):  # pylint: disable=E0606
             test.fail("Failed to eject cdrom %s. " % orig_img_name)
 
     def change_cdrom():
         """ Change cdrom. """
         error_context.context("Insert new image to device.", test.log.info)
-        with change_check:
-            vm.change_media(device_name, new_img_name)
+        with change_check:  # pylint: disable=E0606
+            vm.change_media(device_name, new_img_name)  # pylint: disable=E0606
         if not check_block(new_img_name):
             test.fail("Fail to change cdrom to %s." % new_img_name)
 

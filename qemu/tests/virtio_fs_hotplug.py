@@ -240,7 +240,13 @@ def run(test, params, env):
             if isinstance(dev, qdevices.CharDevice):
                 dev.set_param("server", "off")
             if isinstance(dev, qdevices.QDevice) and action == "hotplug":
-                parent_bus = 'pcie_extra_root_port_%s' % index if params['machine_type'] == 'q35' else 'pci.0'
+                if "q35" in params['machine_type'] or "arm64-pci" in params[
+                        'machine_type']:
+                    parent_bus = 'pcie_extra_root_port_%s' % index
+                elif 's390' in params['machine_type']:
+                    parent_bus = 'virtual-css'
+                else:
+                    parent_bus = 'pci.0'
                 parent_bus_obj = vm.devices.get_buses({'aobject': parent_bus})[0]
                 ret = getattr(vm.devices, 'simple_%s' % action)(dev, vm.monitor, bus=parent_bus_obj)
                 if not ret[1]:

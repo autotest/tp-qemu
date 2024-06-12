@@ -74,7 +74,7 @@ def run(test, params, env):
     key += save_change_key
     key += esc_boot_menu_key
     list(map(vm.send_key, key))
-    vm.reboot()
+    vm.reboot(timeout=timeout)
 
     if not boot_check(check_info):
         test.fail("Change to resolution {'%s'} fail" % resolution)

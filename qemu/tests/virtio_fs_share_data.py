@@ -136,32 +136,6 @@ def run(test, params, env):
             test.fail("Could not %s VirtioFsSvc service, "
                       "detail: '%s'" % (action, output))
 
-    def enable_debug_log(session):
-        """
-        Only for windows guest, enable debug log in guest.
-        :param session: vm session
-        :return: session
-        """
-        viofs_debug_enable_cmd = params.get("viofs_debug_enable_cmd")
-        viofs_log_enable_cmd = params.get("viofs_log_enable_cmd")
-        if viofs_debug_enable_cmd and viofs_log_enable_cmd:
-            error_context.context("Check if virtiofs debug log is enabled in guest.",
-                                  test.log.info)
-            cmd = params.get("viofs_reg_query_cmd")
-            ret = session.cmd_output(cmd)
-            if "debugflags" not in ret.lower() or "debuglogfile" not in ret.lower():
-                error_context.context("Configure virtiofs debug log.", test.log.info)
-                for reg_cmd in (viofs_debug_enable_cmd, viofs_log_enable_cmd):
-                    error_context.context("Set %s " % reg_cmd, test.log.info)
-                    s, o = session.cmd_status_output(reg_cmd)
-                    if s:
-                        test.fail("Fail command: %s. Output: %s" % (reg_cmd, o))
-                error_context.context("Reboot guest.", test.log.info)
-                session = vm.reboot()
-            else:
-                test.log.info("Virtiofs debug log is enabled.")
-        return session
-
     def start_multifs_instance():
         """
         Only for windows and only for multiple shared directory.
@@ -413,8 +387,12 @@ def run(test, params, env):
                 if params.get("viofs_svc_name", "VirtioFsSvc") == "VirtioFsSvc":
                     error_context.context("Start virtiofs service in guest.",
                                           test.log.info)
+                    debug_log_operation = params.get("debug_log_operation")
+                    if debug_log_operation:
+                        session = virtio_fs_utils.operate_debug_log(
+                            test, params, session, vm, debug_log_operation
+                        )
                     virtio_fs_utils.start_viofs_service(test, params, session)
-                    session = enable_debug_log(session)
                 else:
                     error_context.context("Start winfsp.launcher"
                                           " instance in guest.", test.log.info)

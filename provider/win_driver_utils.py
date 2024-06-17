@@ -13,7 +13,7 @@ from virttest import error_context
 from virttest import utils_misc
 from virttest import utils_test
 from virttest import data_dir
-from virttest.utils_windows import virtio_win, wmic
+from virttest.utils_windows import virtio_win, wmic, system
 from virttest.utils_version import VersionInterval
 
 LOG_JOB = logging.getLogger('avocado.test')
@@ -65,7 +65,15 @@ def uninstall_driver(session, test, devcon_path, driver_name,
     # find the inf name and remove the repeated one
     inf_list_all = _pnpdrv_info(session, device_name, ["InfName"])
     inf_list = list(set(inf_list_all))
-    uninst_store_cmd = "pnputil /f /d %s" % inf_list[0]
+
+    # pnputil flags available starting in Windows 10,
+    #  version 1607, build 14393 later
+    build_ver = system.version(session).split('.')[2]
+    if int(build_ver) > 14393:
+        uninst_store_cmd = ("pnputil /delete-driver %s /uninstall /force"
+                            % inf_list[0])
+    else:
+        uninst_store_cmd = "pnputil /f /d %s" % inf_list[0]
     status, output = session.cmd_status_output(uninst_store_cmd,
                                                INSTALL_TIMEOUT)
     if status:

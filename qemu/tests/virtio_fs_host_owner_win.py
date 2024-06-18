@@ -65,7 +65,7 @@ def run(test, params, env):
         virtio_fs_utils.start_viofs_service(test, params, session)
         time.sleep(1)
 
-    def check_file_uid_gid(volume_letter, expect_id):
+    def check_file_uid_gid(volume_letter, shared_dir, expect_id):
         """
         Check file UID and GID on host.
         """
@@ -102,7 +102,7 @@ def run(test, params, env):
     create_file_cmd = params.get("create_file_cmd")
     io_timeout = params.get_numeric("cmd_timeout", 120)
 
-    if params.get("privileged", ""):
+    if params.get("privileged", "") == "no":
         # start virtiofsd with user config
         user_name = params["new_user"]
         add_user_cmd = params["add_user_cmd"]
@@ -160,10 +160,12 @@ def run(test, params, env):
 
     error_context.context("Change the shared dir's owner and group"
                           " to 'test' on host.", test.log.info)
-    shared_dir = None
-    for device in vm.devices:
-        if isinstance(device, qdevices.QVirtioFSDev):
-            shared_dir = device.get_param('source')
+    if params.get("privileged", "") == "yes":
+        # get shared dir by qdevices.
+        shared_dir = None
+        for device in vm.devices:
+            if isinstance(device, qdevices.QVirtioFSDev):
+                shared_dir = device.get_param('source')
 
     change_source_owner = params["change_source_owner"] % shared_dir
     process.run(change_source_owner)
@@ -183,7 +185,7 @@ def run(test, params, env):
                                                                fs_target,
                                                                session)
     # set matching table for test uid:gid and expected uid:gid.
-    if not params.get("privileged", ""):
+    if params.get("privileged", "") == "yes":
         uid_gid_test_user = get_user_uid_gid("test")
         dict_ids = {"null": uid_gid_test_user,
                     "0:0": "0:0",
@@ -206,4 +208,4 @@ def run(test, params, env):
             time.sleep(1)
         if test_value != "null":
             enable_uid_gid(test_value)
-        check_file_uid_gid(volume_letter, expect_value)
+        check_file_uid_gid(volume_letter, shared_dir, expect_value)

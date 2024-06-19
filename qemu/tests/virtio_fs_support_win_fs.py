@@ -30,60 +30,66 @@ def run(test, params, env):
     reg_add_pwd = params.get("reg_add_pwd")
     driver = params["driver_name"]
     driver_verifier = params.get("driver_verifier", driver)
-    driver_running = params.get('driver_running', driver_verifier)
+    driver_running = params.get("driver_running", driver_verifier)
 
     vm = env.get_vm(params.get("main_vm"))
     vm.verify_alive()
     session = vm.wait_for_login()
 
-    utils_test.qemu.windrv_verify_running(session, test,
-                                          driver_running)
-    session = utils_test.qemu.setup_win_driver_verifier(session,
-                                                        driver_verifier,
-                                                        vm)
+    utils_test.qemu.windrv_verify_running(session, test, driver_running)
+    session = utils_test.qemu.setup_win_driver_verifier(session, driver_verifier, vm)
     error_context.context("Create the viofs service.", test.log.info)
     virtio_fs_utils.create_viofs_service(test, params, session)
     error_context.context("Add NTFS filesystem to virtiofs.", test.log.info)
     reg_add_cmd = params.get("reg_add_cmd")
     session.cmd(reg_add_cmd)
-    error_context.context("restart virtiofs service to make the registry "
-                          "change work.", test.log.info)
+    error_context.context(
+        "restart virtiofs service to make the registry change work.", test.log.info
+    )
     virtio_fs_utils.stop_viofs_service(test, params, session)
     virtio_fs_utils.start_viofs_service(test, params, session)
 
     winutils_driver_letter = utils_misc.get_winutils_vol(session)
-    shared_driver_letter = virtio_fs_utils.get_virtiofs_driver_letter(test,
-                                                                      fs_target,
-                                                                      session)
+    shared_driver_letter = virtio_fs_utils.get_virtiofs_driver_letter(
+        test, fs_target, session
+    )
     winutils_pack_path = winutils_driver_letter + winutils_pack_path
     autoIt_path = winutils_driver_letter + autoIt_path
     script_path = winutils_driver_letter + script_path
     copy_cmd = "xcopy %s %s:\\ /Y" % (winutils_pack_path, shared_driver_letter)
-    error_context.context("Copy the executable to shared dir.",
-                          test.log.info)
+    error_context.context("Copy the executable to shared dir.", test.log.info)
     session.cmd(copy_cmd)
 
     error_context.context("Create the new user", test.log.info)
     session.cmd(params.get("add_user_cmd"))
-    error_context.context("Replace the default username and password with the "
-                          "new user.", test.log.info)
+    error_context.context(
+        "Replace the default username and password with the new user.", test.log.info
+    )
     session.cmd(reg_add_username)
     session.cmd(reg_add_pwd)
     error_context.context("Reboot the guest.", test.log.info)
     session = vm.reboot(session)
-    result_on_shared = "%s:\\result.txt" % shared_driver_letter
-    error_context.context("Run autoit script to install executable in "
-                          "explorer.", test.log.info)
-    session.cmd("start /w " + autoIt_path + " " + script_path + " " +
-                result_on_shared + " " + shared_driver_letter + ":")
-    output = session.cmd_output("type " + result_on_shared)
-    test.log.info("The title and text of the window are: %s", output)
+    error_context.context(
+        "Run autoit script to install executable in explorer.", test.log.info
+    )
+    session.cmd(
+        "start /w "
+        + autoIt_path
+        + " "
+        + script_path
+    )
+    exe_name = winutils_pack_path.encode("unicode_escape").decode()[4:]
+    output = session.cmd_output("tasklist -v | findstr %s" % exe_name)
+    test.log.info("The process found: %s", output)
     output_lower = output.lower()
-    if ("7-zip" in output_lower and "setup" in output_lower
-            and "install" in output_lower):
-        test.log.info("Entry the installation windows of the package with "
-                      "Admin privilege successfully.")
+    if "7-zip" in output_lower and "setup" in output_lower:
+        test.log.info(
+            "Entry the installation windows of the package with "
+            "Admin privilege successfully."
+        )
     else:
-        test.fail("Error detected while installing the "
-                  "executable package on the shared directory!\n "
-                  "Detail: %s" % output)
+        test.fail(
+            "No process detected while installing the "
+            "executable package on the shared directory!\n "
+            "Related process: %s" % output
+        )

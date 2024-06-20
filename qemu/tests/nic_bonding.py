@@ -50,19 +50,8 @@ def run(test, params, env):
     session_serial.cmd_output_safe("ip link set dev bond0 addr %s up" % mac)
     setup_cmd = "ifenslave bond0 " + " ".join(ifnames)
     session_serial.cmd_output_safe(setup_cmd)
-    # do a pgrep to check if dhclient has already been running
-    pgrep_cmd = "pgrep dhclient"
-    try:
-        session_serial.cmd_output_safe(pgrep_cmd)
-    # if dhclient is there, killl it
-    except aexpect.ShellCmdError:
-        test.log.info("it's safe to run dhclient now")
-    else:
-        test.log.info("dhclient is already running, kill it")
-        session_serial.cmd_output_safe("killall -9 dhclient")
-        time.sleep(1)
-
-    session_serial.cmd_output_safe("dhclient bond0")
+    dhcp_cmd = params.get("dhcp_cmd")
+    session_serial.cmd_output_safe(dhcp_cmd, timeout=240)
     # prepare test data
     guest_path = os.path.join(tmp_dir + "dst-%s" %
                               utils_misc.generate_random_string(8))

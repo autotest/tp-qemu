@@ -66,7 +66,7 @@ def run(test, params, env):
         :param enable_logging: whether to dump tcpdump results during test
         """
         get_tcpdump_log_cmd = params["get_tcpdump_log_cmd"] % iface_name
-        tcpdump_content = session.cmd_output(get_tcpdump_log_cmd, timeout=300).strip()
+        tcpdump_content = session.cmd_output(get_tcpdump_log_cmd, timeout=300, safe=True).strip()
         lines = tcpdump_content.splitlines()
         sum = 0
         for i in range(len(lines)):

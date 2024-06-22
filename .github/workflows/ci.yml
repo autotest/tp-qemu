@@ -52,7 +52,7 @@ jobs:
       - name: Lint commit messages
         uses: wagoid/commitlint-github-action@v6
         with:
-          configFile: ./.ci/commitlint.config.ts
+          configFile: ./.ci/commitlint.config.mjs
           helpURL: https://avocado-framework.readthedocs.io/en/latest/guides/contributor/chapters/styleguides.html#commit-style-guide
 
   pr-check:
@@ -73,7 +73,8 @@ jobs:
     name: Cfg lint
     runs-on: ubuntu-20.04
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      cfg_changed: ${{ steps.cfg-files.outputs.any_changed }}
+      changed_files: ${{ steps.cfg-files.outputs.all_changed_files }}
 
     steps:
       - name: Check out repository code
@@ -84,25 +85,23 @@ jobs:
         id: cfg-files
         uses: tj-actions/changed-files@v44
         with:
+          matrix: true
           files: |
             */tests/cfg/*.cfg
-      - name: Set matrix
-        id: set-matrix
-        run: echo matrix=$(python3 -c 'print("${{ steps.cfg-files.outputs.all_changed_files }}".split())') >> $GITHUB_OUTPUT
       - name: Check cfg files lint
         if: steps.cfg-files.outputs.any_changed == 'true'
         run: |
-          ./.ci/cfg-lint-check.py ${{ steps.cfg-files.outputs.all_changed_files }}
+          ./.ci/cfg-lint-check.py ${{ join(fromJSON(steps.cfg-files.outputs.all_changed_files), ' ') }}
 
   cartesian-syntax-check:
 
     name: Cartesian syntax
     runs-on: ubuntu-20.04
     needs: cfg-lint-check
-    if: ${{ needs.cfg-lint-check.outputs.matrix != '[]' }}
+    if: ${{ needs.cfg-lint-check.outputs.cfg_changed == 'true' }}
     strategy:
       matrix:
-        file: ${{ fromJson(needs.cfg-lint-check.outputs.matrix) }}
+        file: ${{ fromJSON(needs.cfg-lint-check.outputs.changed_files) }}
       fail-fast: false
 
     steps:

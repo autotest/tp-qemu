@@ -36,6 +36,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
     run_install_cmd = params["run_install_cmd"]
+    run_uninstall_cmd = params["run_uninstall_cmd"]
     installer_pkg_check_cmd = params["installer_pkg_check_cmd"]
 
     # gagent version check test config
@@ -70,18 +71,21 @@ def run(test, params, env):
                           test.log.info)
     vm.send_key('meta_l-d')
     time.sleep(30)
-    run_uninstall_cmd = utils_misc.set_winutils_letter(session,
-                                                       params["run_uninstall_cmd"])
-
-    session = run_installer_with_interaction(vm, session, test, params,
-                                             run_uninstall_cmd)
 
     if uninstall_method == "msi":
+        run_uninstall_cmd = utils_misc.set_winutils_letter(
+            session, run_uninstall_cmd
+        )
+        session.cmd(run_uninstall_cmd)
+        time.sleep(30)
         check_warning_file = params["check_warning_file"]
         output = session.cmd_output(check_warning_file)
         if params["warning_message"] not in output:
             test.fail("Not found expected warning message, the output is %s" % output)
     else:
+        session = run_installer_with_interaction(vm, session,
+                                                 test, params,
+                                                 run_uninstall_cmd)
         s_check, o_check = session.cmd_status_output(installer_pkg_check_cmd)
         if s_check == 0:
             test.fail("Could not uninstall Virtio-win-guest-tools package "

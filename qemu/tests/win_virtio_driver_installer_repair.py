@@ -70,11 +70,12 @@ def run(test, params, env):
         test_func = "win_driver_installer_test.%s_test" % test_name
         driver_test_params = params.get('driver_test_params_%s'
                                         % driver_name, '{}')
+        if driver_name == "viofs":
+            virtio_fs_utils.run_viofs_service(test, params, session)
+
         if driver_name == "balloon":
             balloon_test_win = BallooningTestWin(test, params, env)
             driver_test_params = {"balloon_test_win": balloon_test_win}
-        elif driver_name == "viofs":
-            virtio_fs_utils.run_viofs_service(test, params, session)
         else:
             driver_test_params = ast.literal_eval(driver_test_params)
 

@@ -25,6 +25,13 @@ def run(test, params, env):
         2) Configure pktgen on guest or host
         3) Run tx/rx test on the VM
         4) Finish when timeout
+    vp_vdpa_test_vm test steps:
+        Run Pktgen test between host/guest with vp_vdpa module
+        1) Boot the main vm, or just grab it if it's already booted.
+        2) Unbind virtio pci device
+        3) Bind the pci device  to vp_vdpa module
+        3) Run tx/rx test on the VM
+        4) Finish when timeout
     vhost_sim_test_vm test steps:
         1) Setup vdpa simulator ENV and create vhost-vdpa devices.
         2) Boot vm and run pktgen test on VM
@@ -73,6 +80,7 @@ def run(test, params, env):
     disable_iptables_rules_cmd = params.get("disable_iptables_rules_cmd")
     test_vm = params.get_boolean("test_vm")
     vdpa_test = params.get_boolean("vdpa_test")
+    vp_vdpa = params.get_boolean("vp_vdpa")
 
     # get qemu, kvm version info and write them into result
     result_path = utils_misc.get_path(test.resultsdir, "pktgen_perf.RHS")
@@ -99,7 +107,7 @@ def run(test, params, env):
             interface = vdpa_net_test.add_dev(params.get("netdst"), params.get("mac"))
             LOG_JOB.info("The virtio_vdpa device name is: '%s'", interface)
             LOG_JOB.info("Test virtio_vdpa with the simulator on the host")
-            pktgen_utils.run_tests_for_category(params, result_file,  test_vm, interface=interface)
+            pktgen_utils.run_tests_for_category(params, result_file, interface=interface)
         elif vdpa_test and test_vm:
             vdpa_net_test = VhostVdpaNetSimulatorTest()
             vdpa_net_test.setup()
@@ -110,7 +118,10 @@ def run(test, params, env):
             pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial)
         elif not vdpa_test:
             vm, session_serial = init_vm_and_login(test, params, env, result_file, pktgen_runner)
-            pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial)
+            if vp_vdpa:
+                pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial, vp_vdpa)
+            else:
+                pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial)
     finally:
         if test_vm:
             vm.verify_kernel_crash()

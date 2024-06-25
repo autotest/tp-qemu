@@ -3,11 +3,13 @@ import os
 import re
 import six
 import aexpect
+import time
 
 from avocado.utils import process
 
 from virttest import data_dir
 from virttest import utils_net
+from virttest import utils_misc
 
 LOG_JOB = logging.getLogger('avocado.test')
 
@@ -17,6 +19,38 @@ class PktgenConfig:
         self.interface = interface
         self.dsc = dsc
         self.runner = runner
+
+    def vp_vdpa_bind(self, session_serial):
+        try:
+            LOG_JOB.info("Starting the binding process for Virtio 1.0 network devices.")
+            pci_list = utils_misc.get_pci_id_using_filter("Virtio 1.0 network",
+                                                          session_serial)
+            if not pci_list:
+                raise ValueError("No PCI devices found matching 'Virtio 1.0 network'.")
+
+            pci_id = utils_misc.get_full_pci_id(pci_list[0], session_serial)
+
+            utils_misc.unbind_device_driver(pci_id, session_serial)
+            LOG_JOB.debug("Device %s unbound from its current driver", pci_id)
+            session_serial.cmd("modprobe vp_vdpa && modprobe virtio_vdpa")
+            LOG_JOB.debug("vp_vdpa and virtio_vdpa modules loaded")
+
+            # Re-bind device to vp-vdpa
+            utils_misc.bind_device_driver(pci_id, "vp-vdpa", session_serial)
+            LOG_JOB.debug("Device %s bound to vp-vdpa driver", pci_id)
+
+            # Add vDPA device
+            vdpa_cmd = "vdpa dev add name vdpa0 mgmtdev pci/%s" % pci_id
+            session_serial.cmd(vdpa_cmd)
+
+            LOG_JOB.debug("vDPA device added successfully")
+            time.sleep(5)
+            cmd = "vdpa dev list"
+            output = session_serial.cmd_output_safe(cmd)
+            if "vdpa0" not in output:
+                raise ValueError("vDPA device 'vdpa0' not found in 'vdpa dev list' output")
+        except Exception as err:
+            LOG_JOB.error("Error during vDPA binding process: %s", err)
 
     def configure_pktgen(self, params, script, pkt_cate, test_vm,
                          vm=None, session_serial=None, interface=None):
@@ -160,7 +194,7 @@ def format_result(result, base, fbase):
     return value % result
 
 
-def run_tests_for_category(params, result_file, test_vm, vm=None, session_serial=None, interface=None):
+def run_tests_for_category(params, result_file, test_vm=None, vm=None, session_serial=None, vp_vdpa=None, interface=None):
     """
     Run Pktgen tests for a specific category.
     :param params: Dictionary with the test parameters
@@ -188,6 +222,8 @@ def run_tests_for_category(params, result_file, test_vm, vm=None, session_serial
 
     pktgen_config = PktgenConfig()
     pktgen_runner = PktgenRunner()
+    if vp_vdpa:
+        pktgen_config.vp_vdpa_bind(session_serial)
 
     for script in pktgen_script.split():
         for pkt_cate in category.split():

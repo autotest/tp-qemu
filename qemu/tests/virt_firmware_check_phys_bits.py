@@ -55,7 +55,7 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
         vm.verify_alive()
-    except virt_vm.VMCreateError as e:
+    except (virt_vm.VMCreateError, virt_vm.VMStartError) as e:
         if err_msg:
             if err_msg not in str(e):
                 test.fail("Boot a vm with invalid phys-bits '%s', "

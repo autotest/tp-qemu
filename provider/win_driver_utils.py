@@ -249,7 +249,7 @@ def copy_file_to_samepath(session, test, params):
     dst_path = r"C:\\"
     vol_virtio_key = "VolumeName like '%virtio-win%'"
     vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
-    msi_path = r"%s:\%s" % (vol_virtio, params["msi_name"])
+
     installer_path = r"%s:\%s" % (vol_virtio, "virtio-win-guest-tools.exe")
     install_script_path = utils_misc.set_winutils_letter(session,
                                                          params["install_script_path"])
@@ -257,10 +257,16 @@ def copy_file_to_samepath(session, test, params):
                                                         params["repair_script_path"])
     uninstall_script_path = utils_misc.set_winutils_letter(session,
                                                            params["uninstall_script_path"])
-    uninstall_msi_script_path = utils_misc.set_winutils_letter(session,
-                                                               params["uninstall_msi_script_path"])
-    src_files = [installer_path, msi_path, install_script_path, repair_script_path,
-                 uninstall_script_path, uninstall_msi_script_path]
+    src_files = [installer_path, install_script_path,
+                 repair_script_path, uninstall_script_path]
+    if params.get("msi_name"):
+        msi_path = r"%s:\%s" % (vol_virtio, params["msi_name"])
+        uninstall_msi_script_path = utils_misc.set_winutils_letter(
+            session,
+            params["uninstall_msi_script_path"]
+        )
+        src_files.extend([msi_path, uninstall_msi_script_path])
+
     for src_file in src_files:
         copy_cmd = "xcopy %s %s /Y" % (src_file, dst_path)
         status, output = session.cmd_status_output(copy_cmd)

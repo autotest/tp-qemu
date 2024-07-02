@@ -34,8 +34,8 @@ def run(test, params, env):
         arp_clean = "arp -n|awk '/^[1-9]/{print \"arp -d \" $1}'|sh"
         session.cmd_output_safe(make_conf)
         session.cmd_output_safe("ip link set dev %s up" % ifname)
-        session.cmd_output_safe("dhclient -r", timeout=240)
-        session.cmd_output_safe("dhclient %s" % ifname, timeout=240)
+        dhcp_cmd = params.get("dhcp_cmd")
+        session.cmd_output_safe(dhcp_cmd % ifname, timeout=240)
         session.cmd_output_safe(arp_clean)
 
     def verified_nic_name():

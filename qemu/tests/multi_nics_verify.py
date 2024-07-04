@@ -71,15 +71,30 @@ def run(test, params, env):
         txt = "Create configure file for every NIC interface in guest."
         error_context.context(txt, test.log.info)
         ifname_list = utils_net.get_linux_ifname(session)
+        keyfile_path = "/etc/NetworkManager/system-connections/%s.nmconnection"
         ifcfg_path = "/etc/sysconfig/network-scripts/ifcfg-%s"
-        for ifname in ifname_list:
-            eth_config_path = ifcfg_path % ifname
-            eth_config = "DEVICE=%s\\nBOOTPROTO=dhcp\\nONBOOT=yes" % ifname
-            cmd = "echo -e '%s' > %s" % (eth_config, eth_config_path)
-            s, o = session.cmd_status_output(cmd)
-            if s != 0:
-                err_msg = "Failed to create ether config file: %s\nReason is: %s"
-                test.error(err_msg % (eth_config_path, o))
+        network_manager = params.get_boolean("network_manager")
+        if network_manager:
+            for ifname in ifname_list:
+                eth_keyfile_path = keyfile_path % ifname
+                cmd = "nmcli --offline connection add type ethernet con-name %s ifname %s" \
+                      " ipv4.method auto > %s" % (ifname, ifname, eth_keyfile_path)
+                s, o = session.cmd_status_output(cmd)
+                if s != 0:
+                    err_msg = "Failed to create ether keyfile: %s\nReason is: %s"
+                    test.error(err_msg % (eth_keyfile_path, o))
+            session.cmd("chown root:root /etc/NetworkManager/system-connections/*.nmconnection")
+            session.cmd("chmod 600 /etc/NetworkManager/system-connections/*.nmconnection")
+            session.cmd("nmcli connection reload")
+        else:
+            for ifname in ifname_list:
+                eth_config_path = ifcfg_path % ifname
+                eth_config = "DEVICE=%s\\nBOOTPROTO=dhcp\\nONBOOT=yes" % ifname
+                cmd = "echo -e '%s' > %s" % (eth_config, eth_config_path)
+                s, o = session.cmd_status_output(cmd)
+                if s != 0:
+                    err_msg = "Failed to create ether config file: %s\nReason is: %s"
+                    test.error(err_msg % (eth_config_path, o))
 
         # Reboot and check the configurations.
         session = vm.reboot(session, timeout=login_timeout)

@@ -7,7 +7,7 @@ function tests_failed() {
 }
 
 echo "Deploy ..."
-yum install -y git meson rust cargo python3-docutils rustfmt || tests_failed "Deployment"
+yum install -y wget git meson rust cargo python3-docutils rustfmt || tests_failed "Deployment"
 
 echo "Clean"
 mkdir -p /home/libblkio

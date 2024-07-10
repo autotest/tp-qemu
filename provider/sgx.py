@@ -53,7 +53,7 @@ class SGXHostCapability(object):
         """
         try:
             host_sgx_msg = process.system_output(
-                "journalctl|grep -i 'sgx: EPC section'", shell=True)
+                "journalctl --boot|grep -i 'sgx: EPC section'", shell=True)
         except Exception as e:
             self._test.cancel("Host sgx capability check fail %s" % e)
         else:

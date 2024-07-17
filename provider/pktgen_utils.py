@@ -169,7 +169,7 @@ class PktgenRunner:
         output_cmd(cmd_clean)
 
     def is_version_lt_rhel7(self, uname_str):
-        ver = re.findall('el(\\d)', uname_str)
+        ver = re.findall('el(\\d+)', uname_str)
         if ver:
             return int(ver[0]) > 7
         return False

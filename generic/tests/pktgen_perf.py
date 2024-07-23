@@ -114,6 +114,7 @@ def run(test, params, env):
             dev = vdpa_net_test.add_dev(params.get("netdst_nic2"), params.get("mac_nic2"))
             LOG_JOB.info("The vhost_vdpa device name is: '%s'", dev)
             LOG_JOB.info("Test vhost_vdpa with the simulator on the vm")
+            process.system_output("cat /sys/module/vdpa_sim/parameters/use_va")
             vm, session_serial = init_vm_and_login(test, params, env, result_file, pktgen_runner)
             pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial)
         elif not vdpa_test:

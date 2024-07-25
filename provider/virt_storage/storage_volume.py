@@ -151,6 +151,10 @@ class StorageVolume(object):
         readonly = params.get("image_readonly", "off")
         self.format.set_param("read-only", readonly)
 
+        # Add the protocol node as its child node
+        if self.protocol not in self.format.get_child_nodes():
+            self.format.add_child_node(self.protocol)
+
     def refresh_protocol_by_params(self, params):
         if self.protocol.TYPE == "file":
             aio = params.get("image_aio", "threads")

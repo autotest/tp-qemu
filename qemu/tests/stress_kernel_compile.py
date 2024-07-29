@@ -1,5 +1,6 @@
 from virttest import utils_test, env_process
 from virttest.staging import utils_memory
+from virttest import utils_package
 
 
 def run(test, params, env):
@@ -20,10 +21,14 @@ def run(test, params, env):
         ip = vm.get_address()
         path = params.get("download_url")
         test.log.info("kernel path = %s", path)
-        get_kernel_cmd = "wget %s" % path
+        get_kernel_cmd = "wget %s --progress=none" % path
+        install_status = utils_package.package_install("wget", session,
+                                                       timeout=60)
+        if not install_status:
+            test.error("Failed to install wget.")
         try:
             status, output = session.cmd_status_output(get_kernel_cmd,
-                                                       timeout=240)
+                                                       timeout=2400, safe=True)
             if status != 0:
                 test.log.error(output)
                 test.fail("Fail to download the kernel in %s" % vm_name)

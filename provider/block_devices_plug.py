@@ -347,6 +347,7 @@ class BlockDevicesPlug(object):
         try:
             device.unplug_hook()
             drive = device.get_param("drive")
+            self.vm.devices.remove(device, True)
             if drive:
                 if self.vm.check_capability(Flags.BLOCKDEV):
                     # top node
@@ -372,7 +373,6 @@ class BlockDevicesPlug(object):
                 else:
                     self.vm.devices.remove(drive)
 
-            self.vm.devices.remove(device, True)
             if ver_out is True:
                 self.vm.devices.set_clean()
             elif out is False:

@@ -177,10 +177,12 @@ def run(test, params, env):
             vm.monitor.block_resize(*args)
 
             if params.get("guest_prepare_cmd", ""):
-                session.cmd(params.get("guest_prepare_cmd"))
+                session.cmd(params.get("guest_prepare_cmd") % disk)
             # Update GPT due to size changed
             if os_type == "linux" and labeltype == "gpt":
-                session.cmd("sgdisk -e /dev/%s" % disk)
+                cmd = params.get("guest_part_cmd")
+                if cmd:
+                    session.cmd(cmd % disk, timeout=360)
             if params.get("need_reboot") == "yes":
                 session = vm.reboot(session=session)
             if params.get("need_rescan") == "yes":

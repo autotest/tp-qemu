@@ -60,10 +60,10 @@ class PlaybookExecutor(Expect):
         :param addl_opts: Other ansible-playbook common options.
         :return: The generated ansible-playbook command line.
         """
-        playbook_cmd_options = []
+        playbook_cmd_options = ["ANSIBLE_HOST_KEY_CHECKING=false"]
         if self.callback_plugin:
-            playbook_cmd_options = [
-                'ANSIBLE_STDOUT_CALLBACK={}'.format(self.callback_plugin)]
+            playbook_cmd_options.append(
+                'ANSIBLE_STDOUT_CALLBACK={}'.format(self.callback_plugin))
         playbook_cmd_options.extend([self.program,
                                      self.site_yml,
                                      '-i {}'.format(self.inventory)])

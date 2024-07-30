@@ -75,6 +75,9 @@ class StorageVolume(object):
         else:
             format_cls = qdevices.QBlockdevFormatRaw
         self._format = format_cls(self.name)
+        if (self._protocol is not None and
+                self._protocol not in self._format.get_child_nodes()):
+            self._format.add_child_node(self._protocol)
 
     @property
     def protocol(self):
@@ -85,6 +88,9 @@ class StorageVolume(object):
                 self._protocol = qdevices.QBlockdevProtocolRBD(self.name)
             else:
                 raise NotImplementedError
+            if (self._format is not None and
+                    self._protocol not in self._format.get_child_nodes()):
+                self._format.add_child_node(self._protocol)
         return self._protocol
 
     @property

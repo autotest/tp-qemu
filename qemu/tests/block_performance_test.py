@@ -91,11 +91,11 @@ def run(test, params, env):
             logger.debug(dev)
             if fio_raw_device == "yes":
                 return dev
-            mount = "/home/%s" % (dev.replace("/dev/", ""))
-            cmd = "mkfs.xfs {0} && mkdir -p {1} && mount{0} {1}".format(dev,
-                                                                        mount)
+            mount_dir = "/home/%s" % (dev.replace("/dev/", ""))
+            cmd = "mkfs.xfs {0} && mkdir -p {1} && mount {0} {1}".format(dev,
+                                                                         mount_dir)
             session.cmd_output(cmd)
-            fio_filename = "%s/test.img" % mount
+            fio_filename = "%s/test.img" % mount_dir
 
         if not fio_filename:
             test.fail("Can not get output file path in guest.")
@@ -127,6 +127,7 @@ def run(test, params, env):
              },
              "results":[]
              "cmd": "",
+             "cmds":[],
              "location": "",
              "disk_name":""
              }
@@ -138,7 +139,8 @@ def run(test, params, env):
         opts = preprocess_fio_opts(results)
         for img in results["images"]:
             results[img] = {"filename": "", "global_options": {}, "jobs": {},
-                            "cmd": "", "location": "", "results": []}
+                            "cmd": "", "cmds": [], "location": "",
+                            "results": []}
             results[img]["location"] = params.get("fio_cmd_location_%s" % img,
                                                   "vm")
             # guest fio
@@ -152,6 +154,11 @@ def run(test, params, env):
 
             filename = preprcess_fio_filename(img)
             results[img]["cmd"] = "%s %s" % (fio_bin, opts % filename)
+            cmds = results[img]["cmd"].split("--stonewall")
+            if len(cmds) > 2 and fio_run_mode == "separate":
+                for i in range(1, len(cmds)):
+                    results[img]["cmds"].append(cmds[0] + cmds[i])
+
         logger.debug(results)
 
     def run_fio_test(results):
@@ -165,18 +172,31 @@ def run(test, params, env):
 
             for img in results["images"]:
                 if results[img]["location"] == "vm":
-                    img_output = session.cmd_output(results[img]["cmd"],
-                                                    timeout=cmd_timeout)
+                    runner = session.cmd_output
                 else:
-                    logger.debug(results[img]["cmd"])
-                    img_output = process.getoutput(results[img]["cmd"],
-                                                   timeout=cmd_timeout)
+                    runner = process.getoutput
+
+                if fio_iteration_cmd:
+                    logger.debug(fio_iteration_cmd)
+                    runner(fio_iteration_cmd)
+
+                if results[img]["cmds"]:
+                    cmd_num = len(results[img]["cmds"])
+                    for idx, cmd in enumerate(results[img]["cmds"]):
+                        logger.debug(f"Run sub-cmd {idx}/{cmd_num}:{cmd}")
+                        img_output = runner(cmd, cmd_timeout)
+                        if i > 0:
+                            # discard first result
+                            parse_fio_result(img_output, img, results, record)
+                else:
+                    logger.debug("Run full-cmd: %s", results[img]["cmd"])
+                    img_output = runner(results[img]["cmd"], cmd_timeout)
+                    if i > 0:
+                        # discard first result
+                        parse_fio_result(img_output, img, results, record)
+
                 if fio_interval:
                     time.sleep(fio_interval)
-
-                if i > 0:
-                    # discard first result
-                    parse_fio_result(img_output, img, results, record)
 
     def parse_fio_result(cmd_output, img, results, record=False):
         # if record:
@@ -375,7 +395,7 @@ def run(test, params, env):
         else:
             execute_operation("host", "mkfs.xfs -f %s " % disk)
 
-        execute_operation("host", "mount %s %s" % (disk, fio_dir))
+        execute_operation("host", "mount %s %s && mount" % (disk, fio_dir))
         umount_cmd = "umount -fl %s;" % fio_dir
         params["post_command"] = umount_cmd + params.get("post_command", "")
 
@@ -490,8 +510,10 @@ def run(test, params, env):
     os_type = params["os_type"]
     login_timeout = params.get_numeric("login_timeout", 360)
     guest_operation = params.get("guest_operation")
+    fio_iteration_cmd = params.get("fio_iteration_cmd")
+    fio_run_mode = params.get("fio_run_mode", "separate")
     fio_interval = params.get_numeric("fio_interval")
-    cmd_timeout = params.get_numeric("cmd_timeout", 1800)
+    cmd_timeout = params.get_numeric("fio_cmd_timeout", 1800)
     run_times = params.get_numeric("run_times", 1)
     fio_dir = params["fio_dir"]
     test_results = {}

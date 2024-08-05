@@ -2,7 +2,6 @@ from virttest import env_process
 from virttest import utils_misc
 
 from virttest.qemu_capabilities import Flags
-from virttest.qemu_devices import qdevices
 
 
 def run(test, params, env):
@@ -34,14 +33,13 @@ def run(test, params, env):
     vm.verify_alive()
 
     drive = vm.devices[dev_id]
-    format_node = vm.devices[drive.get_param('drive')]
-    nodes = [format_node]
-    nodes.extend((n for n in format_node.get_child_nodes()))
+    top_node = vm.devices[drive.get_param('drive')]
+    nodes = [top_node]
+    nodes.extend((n for n in top_node.get_child_nodes()))
     for node in nodes:
-        vm.devices.remove(node, True if isinstance(
-                node, qdevices.QBlockdevFormatNode) else False)
-        if not isinstance(node, qdevices.QBlockdevFormatNode):
-            format_node.del_child_node(node)
+        vm.devices.remove(node, True)
+        if node is not top_node:
+            top_node.del_child_node(node)
     drive.set_param('drive', None)
 
     vm.destroy(False)
@@ -52,6 +50,6 @@ def run(test, params, env):
     vm.monitor.blockdev_remove_medium(dev_id)
     for node in reversed(nodes):
         vm.devices.simple_hotplug(node, vm.monitor)
-    vm.monitor.blockdev_insert_medium(dev_id, format_node.get_qid())
+    vm.monitor.blockdev_insert_medium(dev_id, top_node.get_qid())
     move_tary('close', dev_id)
     vm.destroy()

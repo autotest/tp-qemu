@@ -12,6 +12,7 @@ class BlockdevCommitAutoReadonly(BlockDevCommitTest):
         device = self.get_node_name(snapshot_tags[-1])
         commit_cmd = backup_utils.block_commit_qmp_cmd
         cmd, args = commit_cmd(device)
+        backup_utils.set_default_block_job_options(self.main_vm, args)
         self.main_vm.monitor.cmd(cmd, args)
         job_id = args.get("job-id", device)
         job_utils.wait_until_block_job_completed(self.main_vm, job_id)

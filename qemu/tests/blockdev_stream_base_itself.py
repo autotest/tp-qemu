@@ -79,6 +79,7 @@ class BlockdevStreamBaseitself(BlockDevStreamTest):
         device = self.params["base_node"]
         get_stream_cmd = backup_utils.blockdev_stream_qmp_cmd
         cmd, arguments = get_stream_cmd(device, **self._stream_options)
+        backup_utils.set_default_block_job_options(self.clone_vm, arguments)
         try:
             self.clone_vm.monitor.cmd(cmd, arguments)
         except QMPCmdError as e:

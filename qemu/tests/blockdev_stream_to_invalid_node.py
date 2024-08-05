@@ -24,6 +24,7 @@ class BlkdevStreamtoInvalidnode(BlockDevCommitTest):
         device_node = self.get_node_name(stream_node_tag)
         try:
             cmd, arguments = backup_utils.blockdev_stream_qmp_cmd(device_node)
+            backup_utils.set_default_block_job_options(self.main_vm, arguments)
             self.main_vm.monitor.cmd(cmd, arguments)
         except QMPCmdError as e:
             qemu_binary = utils_misc.get_qemu_binary(self.params)

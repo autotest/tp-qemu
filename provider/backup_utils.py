@@ -12,10 +12,33 @@ from virttest import utils_libguestfs
 from virttest import utils_numeric
 from virttest import utils_misc
 from virttest import utils_disk
+from virttest import utils_version
 
 from provider import block_dirty_bitmap as block_bitmap
 from provider.virt_storage.storage_admin import sp_admin
 from provider import job_utils
+
+
+BACKING_MASK_PROTOCOL_VERSION_SCOPE = "[9.0.0, )"
+
+
+def set_default_block_job_options(obj, arguments):
+    """
+    Set the default options only when they are not set by users
+    """
+    options = {
+        "backing-mask-protocol": (BACKING_MASK_PROTOCOL_VERSION_SCOPE, True),
+    }
+
+    version = None
+    if hasattr(obj, "devices"):
+        version = obj.devices.qemu_version
+    elif hasattr(obj, "qsd_version"):
+        version = obj.qsd_version
+
+    for key, (scope, value) in options.items():
+        if version in utils_version.VersionInterval(scope):
+            arguments[key] = arguments.get(key, value)
 
 
 def generate_log2_value(start, end, step=1, blacklist=None):
@@ -61,7 +84,7 @@ def copy_out_dict_if_exists(params_in, keys):
         if key in ["speed", "granularity", "buf-size", "timeout"]:
             params_out[key] = int(val)
             continue
-        if key in ["auto-finalize", "auto-dismiss", "unmap", "persistent"]:
+        if key in ["auto-finalize", "auto-dismiss", "unmap", "persistent", "backing-mask-protocol"]:
             if val in ["yes", "true", "on", True]:
                 params_out[key] = True
                 continue
@@ -174,7 +197,9 @@ def block_commit_qmp_cmd(device, **extra_options):
         'on-error',
         'filter-node-name',
         'auto-finalize',
-        'auto-dismiss']
+        'auto-dismiss',
+        'backing-mask-protocol',
+    ]
     arguments = copy_out_dict_if_exists(extra_options, options)
     arguments["device"] = device
     arguments["job-id"] = job_id
@@ -190,7 +215,7 @@ def blockdev_stream_qmp_cmd(device, **extra_options):
     # TODO: we may have to sync the block-stream options with libvirt
     options = ["speed", "base", "base-node", "snapshot-file",
                "filter-node-name", "on-error", "backing-file",
-               "auto-dismiss", "auto-finalize"]
+               "auto-dismiss", "auto-finalize", 'backing-mask-protocol']
     args = copy_out_dict_if_exists(extra_options, options)
     if args:
         arguments.update(args)
@@ -259,6 +284,7 @@ def blockdev_mirror(vm, source, target, **extra_options):
 @fail_on
 def block_commit(vm, device, **extra_options):
     cmd, arguments = block_commit_qmp_cmd(device, **extra_options)
+    set_default_block_job_options(vm, arguments)
     timeout = int(extra_options.pop("timeout", 600))
     vm.monitor.cmd(cmd, arguments)
     job_id = arguments.get("job-id", device)
@@ -269,6 +295,7 @@ def block_commit(vm, device, **extra_options):
 def blockdev_stream_nowait(vm, device, **extra_options):
     """Do block-stream and don't wait stream completed, return job id"""
     cmd, arguments = blockdev_stream_qmp_cmd(device, **extra_options)
+    set_default_block_job_options(vm, arguments)
     vm.monitor.cmd(cmd, arguments)
     return arguments.get("job-id", device)
 

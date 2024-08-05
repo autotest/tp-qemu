@@ -82,6 +82,7 @@ class BlockDevCommitTest(object):
             else:
                 commit_cmd = backup_utils.block_commit_qmp_cmd
                 cmd, args = commit_cmd(device, **arguments)
+                backup_utils.set_default_block_job_options(self.main_vm, args)
                 job_id = args.get("job-id", device)
                 job_id_list.append(job_id)
                 self.main_vm.monitor.cmd(cmd, args)

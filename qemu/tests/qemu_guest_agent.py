@@ -1322,10 +1322,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             op_func(guest_name, *keys, **kwargs)
             keys_ga = self.gagent.ssh_get_authorized_keys(guest_name)
 
-            add_line_at_end = params["add_line_at_end"]
+            if os_type == "linux":
+                add_line_at_end = params["add_line_at_end"]
+                session.cmd(add_line_at_end)
             cmd_guest_keys = params["cmd_get_guestkey"]
-
-            session.cmd(add_line_at_end)
             keys_guest = session.cmd_output(cmd_guest_keys).strip()
             _value_compared_ga_guest(keys_ga, keys_guest, operation)
             return keys_ga, keys_guest
@@ -1338,15 +1338,20 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
 
             if prepare:
-                output = session.cmd_output("getenforce")
-                if str(output) == "Permissive":
-                    session.cmd("setenforce 1")
-                session.cmd(params["set_sebool"])
-                if guest_user != "root":
+                if os_type == "linux":
+                    if session.cmd_output("getenforce") == "Permissive":
+                        session.cmd("setenforce 1")
+                    session.cmd(params["set_sebool"])
+                else:
+                    install_config_openssh_cmd = utils_misc.set_winutils_letter(
+                        session, self.params["install_config_openssh"])
+                    session.cmd(install_config_openssh_cmd, timeout=720)
+                if guest_user not in ["root", "Administrator"]:
                     session.cmd(params["cmd_add_user_set_passwd"])
             else:
-                session.cmd(params["cmd_del_key_file"])
-                if guest_user != "root":
+                if os_type == "linux":
+                    session.cmd(params["cmd_del_key_file"])
+                if guest_user not in ["root", "Administrator"]:
                     session.cmd(params["cmd_remove_user"])
 
         def _generate_host_keys():
@@ -1407,6 +1412,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         error_context.context("Check the basic function ",
                               LOG_JOB.info)
+        if os_type == "windows":
+            if guest_user == 'Administrator':
+                cmd_first_ssh = params["first_ssh_admin"] % (params["guest_user_passwd"], guest_ip_ipv4)
+            else:
+                cmd_first_ssh = params["first_ssh_VM"] % guest_ip_ipv4
+            process.system(cmd_first_ssh, shell=True)
         host_key1 = _generate_host_keys()
         ssh_key_test("add", guest_user, host_key1, reset=False)
         _login_guest_test(guest_ip_ipv4)

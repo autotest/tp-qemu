@@ -69,7 +69,7 @@ def ping(test, os_type, match_error, dest, count, session, same_vlan):
     """
     if os_type == "linux":
         status, output = utils_test.ping(dest, count,
-                                         timeout=int(count) * 1.50,
+                                         timeout=60,
                                          session=session)
         loss_ratio = utils_test.get_loss_ratio(output)
         ping_result_check(test, loss_ratio, same_vlan)

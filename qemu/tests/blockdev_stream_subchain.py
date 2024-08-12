@@ -3,6 +3,7 @@ import logging
 
 from virttest import data_dir
 from virttest import qemu_storage
+from virttest.qemu_capabilities import Flags
 
 from provider import backup_utils
 
@@ -91,7 +92,14 @@ class BlockdevStreamSubChainTest(BlockDevStreamTest):
                 self.test.fail("Failed to get backing file for %s"
                                % self.snapshot_tag)
             # data->datasn1: check data is datasn1's backing file
-            if not self._is_same_file(backing["backing"]["file"],
+            backing_mask = self.main_vm.check_capability(
+                    Flags.BLOCKJOB_BACKING_MASK_PROTOCOL)
+            raw_format = self.get_image_by_tag(
+                    self.base_tag).image_format == "raw"
+            backing_opts = backing["backing"] if (
+                    backing_mask and raw_format
+                    ) else backing["backing"]["file"]
+            if not self._is_same_file(backing_opts,
                                       data_image_opts):
                 self.test.fail("Failed to get backing file for %s"
                                % self._base_node_tag)

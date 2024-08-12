@@ -3,6 +3,7 @@ import time
 
 from virttest import data_dir
 from virttest import qemu_storage
+from virttest.qemu_capabilities import Flags
 
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.virt_storage.storage_admin import sp_admin
@@ -43,7 +44,12 @@ class BlockdevStreamCORBase(BlockDevStreamTest):
         image = self.get_image_by_tag(name)
         filename = image.image_filename
         is_cor = backing["driver"] == "copy-on-read"
-        opts = backing["file"]["file"] if is_cor else backing["file"]
+        backing_mask = self.main_vm.check_capability(
+                Flags.BLOCKJOB_BACKING_MASK_PROTOCOL)
+        raw_format = image.image_format == "raw"
+        raw_elimi = backing_mask and raw_format
+        opts = backing["file"]["file"] if (
+                is_cor and not raw_elimi) else backing["file"]
         file_opts = qemu_storage.filename_to_file_opts(filename)
         if not self._is_same_file(opts, file_opts):
             self.test.fail("file %s not in backing" % filename)

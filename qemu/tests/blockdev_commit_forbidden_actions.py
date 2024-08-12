@@ -19,6 +19,7 @@ class BlockdevCommitForbiddenActions(BlockDevCommitTest):
         self.forbidden_node = self.get_node_name(self.params["fnode"])
         commit_cmd = backup_utils.block_commit_qmp_cmd
         cmd, args = commit_cmd(self.active_node, **arguments)
+        backup_utils.set_default_block_job_options(self.main_vm, args)
         self.main_vm.monitor.cmd(cmd, args)
         job_id = args.get("job-id", self.active_node)
         self.do_forbidden_actions()

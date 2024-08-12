@@ -22,6 +22,7 @@ class BlockdevCommitWithIgnore(BlockDevCommitTest):
         arguments = {}
         arguments.update({"on-error": "ignore"})
         cmd, arguments = backup_utils.block_commit_qmp_cmd(device, **arguments)
+        backup_utils.set_default_block_job_options(self.main_vm, arguments)
         timeout = self.params.get("job_timeout", 600)
         self.main_vm.monitor.cmd(cmd, arguments)
         job_id = arguments.get("job-id", device)

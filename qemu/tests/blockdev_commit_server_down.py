@@ -72,6 +72,7 @@ class BlockdevCommitServerDown(BlockDevCommitTest):
         device = self.get_node_name(snapshot_tags[-1])
 
         cmd, arguments = backup_utils.block_commit_qmp_cmd(device, **args)
+        backup_utils.set_default_block_job_options(self.main_vm, arguments)
         self.main_vm.monitor.cmd(cmd, arguments)
         job = job_utils.query_block_jobs(self.main_vm)[0]
         self.commit_job = job['device']

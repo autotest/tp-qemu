@@ -26,6 +26,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
             device = self.get_node_name(snapshot_tags[-1])
             commit_cmd = backup_utils.block_commit_qmp_cmd
             cmd, args = commit_cmd(device)
+            backup_utils.set_default_block_job_options(self.main_vm, args)
             job_id = args.get("job-id", device)
             self.main_vm.monitor.cmd(cmd, args)
             job_timeout = self.params.get_numeric("commit_job_timeout", 1800)

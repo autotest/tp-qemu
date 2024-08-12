@@ -21,6 +21,7 @@ class BlockdevCommitHotunplug(BlockDevCommitTest):
         device = self.get_node_name(snapshot_tags[-1])
         commit_cmd = backup_utils.block_commit_qmp_cmd
         cmd, args = commit_cmd(device, **arguments)
+        backup_utils.set_default_block_job_options(self.main_vm, args)
         self.main_vm.monitor.cmd(cmd, args)
         self.main_vm.monitor.cmd('device_del',
                                  {'id': self.params["device_tag"]})

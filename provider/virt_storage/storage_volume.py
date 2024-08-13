@@ -1,4 +1,6 @@
 from virttest import utils_misc
+from virttest import utils_qemu
+from virttest import utils_version
 from virttest.qemu_devices import qdevices
 
 from provider import backup_utils
@@ -22,8 +24,11 @@ class StorageVolume(object):
         self.backing = None
         self.encrypt = None
         self.used_by = []
-        self.pool.add_volume(self)
         self._params = None
+        # After qemu 9.0.0, raw format node is eliminated by default, but
+        # it's still safe to keep it, so the init value is set to False
+        self._no_raw_format_node = False
+        self.pool.add_volume(self)
 
     @property
     def url(self):
@@ -109,13 +114,32 @@ class StorageVolume(object):
                 self._auth = self.pool.source.auth
         return self._auth
 
+    @property
+    def raw_format_node_eliminated(self):
+        return self._no_raw_format_node
+
+    @raw_format_node_eliminated.setter
+    def raw_format_node_eliminated(self, flag):
+        self._no_raw_format_node = flag
+
     def refresh_with_params(self, params):
+        if params.get("image_format") == "raw":
+            qemu_binary = utils_misc.get_qemu_binary(params)
+            qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
+            if qemu_version in utils_version.VersionInterval(
+                    backup_utils.BACKING_MASK_PROTOCOL_VERSION_SCOPE
+            ):
+                self.raw_format_node_eliminated = True
+
         self._params = params
-        self.format = params.get("image_format", "qcow2")
         self.capacity = params.get("image_size", "100M")
         self.preallocation = params.get("preallocation", "off")
         self.refresh_protocol_by_params(params)
-        self.refresh_format_by_params(params)
+
+        if not self.raw_format_node_eliminated:
+            self.format = params.get("image_format", "qcow2")
+            self.refresh_format_by_params(params)
+
         if self.pool.TYPE == "directory":
             volume_params = params.object_params(self.name)
             self.path = self.pool.get_volume_path_by_param(volume_params)
@@ -180,7 +204,8 @@ class StorageVolume(object):
         out["url"] = self.url
         out["path"] = self.path
         out["key"] = self.key
-        out["format"] = self.format.TYPE
+        # __hash__ uses it when adding a volume object
+        out["format"] = self._params.get("image_format", "qcow2") if self._params else None
         out["auth"] = str(self.auth)
         out["capacity"] = self.capacity
         out["preallocation"] = self.preallocation
@@ -188,8 +213,10 @@ class StorageVolume(object):
         return out
 
     def generate_qemu_img_options(self):
-        options = " -f %s" % self.format.TYPE
-        if self.format.TYPE == "qcow2":
+        fmt = self._params.get("image_format", "qcow2")
+        options = f" -f {fmt}"
+
+        if fmt == "qcow2":
             backing_store = self.backing
             if backing_store:
                 options += " -b %s" % backing_store.key
@@ -208,12 +235,15 @@ class StorageVolume(object):
         self.create_protocol_by_qmp(vm)
         cmd, options = protocol_node.hotplug_qmp()
         vm.monitor.cmd(cmd, options)
-        format_node = self.format
-        # Don't need the format blockdev-create for 'raw'
-        if self.format.TYPE != "raw":
-            self.format_protocol_by_qmp(vm)
-        cmd, options = format_node.hotplug_qmp()
-        vm.monitor.cmd(cmd, options)
+
+        if not self.raw_format_node_eliminated:
+            format_node = self.format
+            # Don't need the format blockdev-create for 'raw'
+            if self.format.TYPE != "raw":
+                self.format_protocol_by_qmp(vm)
+            cmd, options = format_node.hotplug_qmp()
+            vm.monitor.cmd(cmd, options)
+
         self.pool.refresh()
 
     def create_protocol_by_qmp(self, vm, timeout=120):
@@ -284,5 +314,9 @@ class StorageVolume(object):
         return "'%s'" % self.name
 
     def as_json(self):
-        _, options = self.format.hotplug_qmp()
+        if not self.raw_format_node_eliminated:
+            _, options = self.format.hotplug_qmp()
+        else:
+            _, options = self.protocol.hotplug_qmp()
+
         return "json: %s" % options

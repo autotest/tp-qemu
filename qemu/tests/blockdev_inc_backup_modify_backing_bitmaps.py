@@ -1,3 +1,5 @@
+import json
+
 from virttest import utils_qemu
 from virttest import utils_misc
 from virttest.utils_version import VersionInterval
@@ -11,10 +13,8 @@ class BlkIncModifyBackingBitmaps(BlockDevSnapshotTest):
     def reopen_backing_image(self, node_name):
         opts = []
         fmt_node = self.main_vm.devices.get_by_qid(node_name)[0]
-        file_node = fmt_node.get_param("file")
-        driver = fmt_node.get_param("driver")
-        item = {"driver": driver, "node-name": node_name, "file": file_node,
-                "read-only": False}
+        fmt_node_cmd = fmt_node.cmdline().strip("-blockdev ").strip("'")
+        item = json.loads(fmt_node_cmd)
         qemu_binary = utils_misc.get_qemu_binary(self.params)
         qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
         required_qemu_version = self.params["required_qemu_version"]

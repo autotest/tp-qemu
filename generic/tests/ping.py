@@ -54,10 +54,11 @@ def run(test, params, env):
     ping_ext_host = params.get("ping_ext_host", "no") == "yes"
     pre_cmd = params.get("pre_cmd", None)
     vm = env.get_vm(params["main_vm"])
+    serial_status = params.get_boolean("serial_login")
 
     error_context.context("Login to guest", test.log.info)
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=timeout)
+    session = vm.wait_for_login(timeout=timeout, serial=serial_status)
 
     # get the test ip, interface & session
     dest_ips = []
@@ -108,14 +109,15 @@ def run(test, params, env):
                                   interval, session=session, count=counts)
 
         # ping with flood
-        if not ping_ext_host or params.get("os_type") == "linux":
-            error_context.context("Flood ping test", test.log.info)
-            _ping_with_params(test, params, ip, interface,
-                              session=session, flood=True)
+        if params.get_boolean("flood_ping"):
+            if not ping_ext_host or params.get("os_type") == "linux":
+                error_context.context("Flood ping test", test.log.info)
+                _ping_with_params(test, params, ip, interface,
+                                  session=session, flood=True)
 
-            # ping to check whether the network is alive
-            error_context.context("Ping test after flood ping,"
-                                  " Check if the network is still alive",
-                                  test.log.info)
-            _ping_with_params(test, params, ip, interface,
-                              session=session, count=counts)
+                # ping to check whether the network is alive
+                error_context.context("Ping test after flood ping,"
+                                      " Check if the network is still alive",
+                                      test.log.info)
+                _ping_with_params(test, params, ip, interface,
+                                  session=session, count=counts)

@@ -2,8 +2,6 @@ import six
 import time
 import random
 
-from virttest import utils_test
-
 from provider.storage_benchmark import generate_instance
 from provider.blockdev_mirror_wait import BlockdevMirrorWaitTest
 
@@ -11,7 +9,7 @@ from provider.blockdev_mirror_wait import BlockdevMirrorWaitTest
 class BlockdevMirrorStressTest(BlockdevMirrorWaitTest):
     """Do block-mirror with fio test as background test"""
 
-    def fio_thread(self):
+    def fio_run_bg(self):
         fio_options = self.params.get("fio_options")
         if fio_options:
             self.test.log.info("Start to run fio")
@@ -38,9 +36,7 @@ class BlockdevMirrorStressTest(BlockdevMirrorWaitTest):
                 session.close()
 
     def do_test(self):
-        bg_test = utils_test.BackgroundTest(self.fio_thread, "")
-        bg_test.thread.daemon = True
-        bg_test.start()
+        self.fio_run_bg()
         self.test.log.info("sleep random time before mirror during fio")
         mint = self.params.get_numeric("sleep_min")
         maxt = self.params.get_numeric("sleep_max")

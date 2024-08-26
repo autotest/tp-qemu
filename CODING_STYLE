@@ -76,7 +76,7 @@ import urllib
 import urlparse
 import MySQLdb
 try:
-    import autotest.common   
+    import autotest.common
 except ImportError:
     import common   # Magic autotest module and sys.path setup code.
 import MySQLdb  # After common so that we check our site-packages first.

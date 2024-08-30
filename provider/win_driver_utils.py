@@ -182,10 +182,11 @@ def run_installer(vm, session, test, params, run_installer_cmd):
     """
     Install/uninstall/repair virtio-win drivers and qxl,spice and
     qemu-ga-win by installer.
-    If installer(virtio-win) version is bigger than 1.9.37,
-    then installer itself will restart vm,
-    otherwise it's needed to reboot vm to make sure all are
-    installed successfully.
+    If installer(virtio-win) version is in [1.9.37, 1.9.40]
+    then installer itself will restart vm for installation and
+    uninstallation function; otherwise there is no need to reboot guest.
+    While for repair function, installer itself always restart vm by
+    itself;
 
     :param vm: vm object.
     :param session: The guest session object.
@@ -196,7 +197,7 @@ def run_installer(vm, session, test, params, run_installer_cmd):
     """
     cdrom_virtio = params["cdrom_virtio"]
     installer_restart_version = params.get("installer_restart_version",
-                                           "[1.9.37.0,)")
+                                           "[1.9.37.0, 1.9.40.0]")
     cdrom_virtio_path = os.path.basename(utils_misc.get_path(
         data_dir.get_data_dir(), cdrom_virtio))
     match = re.search(r"virtio-win-(\d+\.\d+(?:\.\d+)?-\d+)",
@@ -211,14 +212,18 @@ def run_installer(vm, session, test, params, run_installer_cmd):
             params, session), 240, 2, 2):
         test.fail("Autoit exe stop there for 240s,"
                   " please have a check.")
-
-    if cdrom_virtio_version in VersionInterval(installer_restart_version):
+    restart_con_ver = cdrom_virtio_version in VersionInterval(
+        installer_restart_version)
+    restart_con_repair = "repair" in run_installer_cmd
+    if restart_con_ver or restart_con_repair:
+        # Wait for vm re-start by installer itself
         if not utils_misc.wait_for(lambda: not session.is_responsive(),
                                    120, 5, 5):
             test.fail("The previous session still exists,"
                       "seems that the vm doesn't restart.")
         session = vm.wait_for_login(timeout=360)
-    else:
+    # for the early virtio-win instller, rebooting is needed.
+    if cdrom_virtio_version in VersionInterval("(,1.9.37.0)"):
         session = vm.reboot(session)
     return session
 

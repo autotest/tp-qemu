@@ -137,7 +137,8 @@ def run(test, params, env):
                                                             devcon_path,
                                                             media_type,
                                                             driver_name,
-                                                            device_hwid)
+                                                            device_hwid,
+                                                            params)
         win_driver_installer_test.install_gagent(session, test, qemu_ga_pkg,
                                                  gagent_install_cmd,
                                                  gagent_pkg_info_cmd)

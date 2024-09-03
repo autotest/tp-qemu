@@ -2,6 +2,7 @@ import logging
 
 from virttest import error_context
 from virttest import data_dir
+from virttest.qemu_capabilities import Flags
 
 from provider import backup_utils
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
@@ -32,8 +33,14 @@ class BlkSnapshotWithDatafile(BlockDevSnapshotTest):
                     data_file_tag = self.params["image_data_file_%s" % self.snapshot_tag]
                     data_file_image = self.get_image_by_tag(data_file_tag)
                     data_file = eval(filename.lstrip("json:"))["data-file"]
-                    if data_file["file"]["filename"] != data_file_image.image_filename:
-                        self.test.fail("data-file info is not as expected: %s" % data_file_image)
+                    if self.main_vm.check_capability(
+                            Flags.BLOCKJOB_BACKING_MASK_PROTOCOL):
+                        data_filename = data_file["filename"]
+                    else:
+                        data_filename = data_file["file"]["filename"]
+                    if data_filename != data_file_image.image_filename:
+                        self.test.fail("data-file info is not as expected: %s"
+                                       % data_file_image.image_filename)
                     break
                 else:
                     self.test.fail("Data-file option not included in block info")

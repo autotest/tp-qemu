@@ -80,6 +80,8 @@ def run(test, params, env):
             "Could not uninstall Virtio-win-guest-tools package "
             "in guest, detail: '%s'" % o_check)
     error_context.context("Check if all drivers are uninstalled.", test.log.info)
+    # Wait a moment to check if drivers were uninstalled totally
+    time.sleep(5)
     uninstalled_device = []
     device_name_list = [
         "VirtIO RNG Device",

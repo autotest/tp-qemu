@@ -1,3 +1,5 @@
+import time
+
 from virttest import error_context
 
 from provider.storage_benchmark import generate_instance
@@ -23,6 +25,7 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=360)
+    time.sleep(20)
 
     error_context.context("Deploy fio", test.log.info)
     fio = generate_instance(params, vm, 'fio')

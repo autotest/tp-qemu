@@ -52,7 +52,16 @@ def run(test, params, env):
         for vm in vms:
             vm.verify_alive()
             sessions.append(vm.wait_for_login())
+
         for vm, session in zip(vms, sessions):
+            error_context.context("%s: Check Windows event log inside guest before test." % vm.name,
+                                  test.log.info)
+            cmd_check_event_log = params.get("cmd_check_event_log")
+            event_log_pattern = params.get('pattern_output_event_log')
+            if cmd_check_event_log:
+                event_log = session.cmd_output(cmd_check_event_log)
+                search_keywords(event_log_pattern, event_log)
+
             error_context.context("%s: Check TPM info inside guest." % vm.name,
                                   test.log.info)
             for name in params.get('check_cmd_names').split():
@@ -61,11 +70,23 @@ def run(test, params, env):
                     cmd = params.get('cmd_%s' % name)
                     search_keywords(pattern, session.cmd(cmd))
 
+            cmd_get_tpmsupportedfeature = params.get('cmd_get_tpmsupportedfeature')
+            output_get_tpmsupportedfeature = params.get('output_get_tpmsupportedfeature')
+            if cmd_get_tpmsupportedfeature:
+                tpmspportedfeature = session.cmd(cmd_get_tpmsupportedfeature)
+                search_keywords(output_get_tpmsupportedfeature, tpmspportedfeature)
+
             reboot_method = params.get("reboot_method")
             if reboot_method:
                 error_context.context("Reboot guest '%s'." % vm.name, test.log.info)
                 vm.reboot(session, reboot_method).close()
                 continue
+
+            error_context.context("%s: Check Windows event log inside guest after test." % vm.name,
+                                  test.log.info)
+            if cmd_check_event_log:
+                event_log = session.cmd_output(cmd_check_event_log)
+                search_keywords(event_log_pattern, event_log)
 
             error_context.context("Check TPM info on host.", test.log.info)
             cmd_check_log = params.get('cmd_check_log')

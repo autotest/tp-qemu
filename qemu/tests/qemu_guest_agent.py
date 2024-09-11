@@ -2600,13 +2600,19 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
+        # Since Qemu9.1, the report message changes.
+        qga_ver = self.gagent.guest_info()["version"].split('.')
+        main_qga_ver = float("{}.{}".format(qga_ver[0], qga_ver[1]))
+        expected = (
+            "Command guest-fsfreeze-freeze has been disabled: "
+            f"{'the command is not allowed' if 9.1 <= main_qga_ver or main_qga_ver >= 109.0 else 'the agent is in frozen state'}"
+        )
+
         self.gagent.fsfreeze()
         error_context.context("Freeze the frozen FS", LOG_JOB.info)
         try:
             self.gagent.fsfreeze(check_status=False)
         except guest_agent.VAgentCmdError as e:
-            expected = ("Command guest-fsfreeze-freeze has been disabled: "
-                        "the agent is in frozen state")
             if expected not in e.edata["desc"]:
                 test.fail(e)
         else:

@@ -11,6 +11,8 @@ LOG_JOB = logging.getLogger('avocado.test')
 class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
     def pre_test(self):
         if not self.main_vm.is_alive():
+            if self.qsd:
+                self.update_vm_params(self.main_vm, self.base_tag)
             self.main_vm.create()
         self.main_vm.verify_alive()
         if self.base_tag != "image1":
@@ -31,12 +33,17 @@ class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
         params = self.params.copy()
         params.setdefault("target_path", data_dir.get_data_dir())
         image = sp_admin.volume_define_by_params(self.snapshot_tag, params)
-        image.hotplug(self.main_vm)
+        if self.qsd:
+            image.hotplug(self.qsd)
+        else:
+            image.hotplug(self.main_vm)
         return image
 
     def verify_snapshot(self):
         if self.main_vm.is_alive():
             self.main_vm.destroy(free_mac_addresses=False)
+        if self.qsd:
+            self.qsd.stop_daemon()
         snapshot_tag = self.snapshot_tags[-1]
         for base_tag in self.snapshot_tags[-2::-1]:
             snapshot_image = self.get_image_by_tag(snapshot_tag)
@@ -49,6 +56,9 @@ class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
             snapshot_image.commit()
             snapshot_tag = base_tag
         self.clone_vm = self.main_vm
+        if self.qsd:
+            self.qsd = self.get_qsd_demon()
+            self.qsd.start_daemon()
         self.clone_vm.create()
         self.clone_vm.verify_alive()
         if self.base_tag != "image1":
@@ -77,6 +87,8 @@ class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
     def post_test(self):
         try:
             self.clone_vm.destroy()
+            if self.qsd:
+                self.qsd.stop_daemon()
             for snapshot_image in self.snapshot_images:
                 sp_admin.remove_volume(snapshot_image)
         except Exception as error:

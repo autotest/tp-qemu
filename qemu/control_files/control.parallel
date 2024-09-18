@@ -129,7 +129,7 @@ params = {
     ## If you provide only "git_repo" and "user_git_repo", the build test
     ## will assume it will perform all build from the userspace dir, building
     ## modules trough make -C kernel LINUX=%s sync. As of today (07-13-2009)
-    ## we need 3 git repos, "git_repo" (linux sources), "user_git_repo" and 
+    ## we need 3 git repos, "git_repo" (linux sources), "user_git_repo" and
     ## "kmod_repo" to build KVM userspace + kernel modules.
     #"git_repo": 'git://git.kernel.org/pub/scm/linux/kernel/git/avi/kvm.git',
     #"kernel_branch": 'kernel_branch_name',

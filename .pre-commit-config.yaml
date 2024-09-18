@@ -1,0 +1,22 @@
+exclude: "qemu/deps/cpuid/cpuid_dumps/kvm"
+repos:
+- repo: local
+  hooks:
+  - id: cfg-lint
+    entry: .ci/cfg-lint-check.py
+    files: (^|/)tests/cfg/.+\.cfg$
+    language: python
+    name: check cfg
+    require_serial: true
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: check-added-large-files
+    args: ["--maxkb=5120"]
+  - id: check-ast
+  - id: check-yaml
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+    args: ["--fix=lf"]
+  - id: no-commit-to-branch
+  - id: trailing-whitespace

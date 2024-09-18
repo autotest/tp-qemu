@@ -1,16 +1,12 @@
 from avocado.utils import process
 
-from provider import backup_utils
-from provider import job_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitWithIgnore(BlockDevCommitTest):
-
-    def generate_tempfile(self, root_dir, filename="data",
-                          size="1000M", timeout=360):
-        backup_utils.generate_tempfile(
-            self.main_vm, root_dir, filename, size, timeout)
+    def generate_tempfile(self, root_dir, filename="data", size="1000M", timeout=360):
+        backup_utils.generate_tempfile(self.main_vm, root_dir, filename, size, timeout)
         self.files_info.append([root_dir, filename])
 
     def commit_snapshots(self):
@@ -27,11 +23,15 @@ class BlockdevCommitWithIgnore(BlockDevCommitTest):
         self.main_vm.monitor.cmd(cmd, arguments)
         job_id = arguments.get("job-id", device)
         get_event = job_utils.get_event_by_condition
-        event = get_event(self.main_vm, job_utils.BLOCK_JOB_ERROR_EVENT,
-                          timeout, device=job_id, action='ignore')
+        event = get_event(
+            self.main_vm,
+            job_utils.BLOCK_JOB_ERROR_EVENT,
+            timeout,
+            device=job_id,
+            action="ignore",
+        )
         if not event:
-            self.test.fail("Commit job can't reach error after %s seconds",
-                           timeout)
+            self.test.fail("Commit job can't reach error after %s seconds", timeout)
         process.system(self.params["extend_backend_space"])
         process.system(self.params["resize_backend_size"])
         job_utils.wait_until_block_job_completed(self.main_vm, job_id, timeout)

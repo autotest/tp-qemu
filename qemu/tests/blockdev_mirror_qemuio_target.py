@@ -1,5 +1,4 @@
 from avocado.utils import process
-
 from virttest import utils_misc
 
 from provider.blockdev_mirror_nowait import BlockdevMirrorNowaitTest
@@ -22,8 +21,9 @@ class BlockdevMirrorQemuioTarget(BlockdevMirrorNowaitTest):
             process.run(qemuio_cmd, shell=True)
         except process.CmdError as e:
             if self.params["error_msg"] not in e.result.stderr.decode():
-                self.test.fail("Write to used image failed with error: %s"
-                               % e.result.stderr)
+                self.test.fail(
+                    "Write to used image failed with error: %s" % e.result.stderr
+                )
         else:
             self.test.fail("Can qemu-io a using image")
 

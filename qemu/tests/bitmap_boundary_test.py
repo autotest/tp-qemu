@@ -1,11 +1,8 @@
 import json
 
-from virttest import data_dir
-from virttest import qemu_storage
+from virttest import data_dir, qemu_storage
 
-from provider import backup_utils
-from provider import job_utils
-from provider import block_dirty_bitmap
+from provider import backup_utils, block_dirty_bitmap, job_utils
 from provider.virt_storage.storage_admin import sp_admin
 
 
@@ -23,13 +20,15 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def full_backup(vm, source_node, target_node, bitmap_count):
         """start full backup job with 65535 bitmaps"""
 
         test.log.info("Begin full backup %s to %s", source_node, target_node)
         actions, extra_options = [], {"sync": "full"}
         cmd, args = backup_utils.blockdev_backup_qmp_cmd(
-            source_node, target_node, **extra_options)
+            source_node, target_node, **extra_options
+        )
         backup_action = {"type": cmd, "data": args}
         actions.append(backup_action)
         bitmap_data = {"node": source_node, "persistent": True}
@@ -63,8 +62,7 @@ def run(test, params, env):
         output = data_img.info(output="json")
         info = json.loads(output)
         bitmap_len = len(info["format-specific"]["data"]["bitmaps"])
-        msg = "bitmap losts after destory VM, %s != %s" % (
-            bitmap_len, bitmap_count)
+        msg = "bitmap losts after destory VM, %s != %s" % (bitmap_len, bitmap_count)
         assert bitmap_len == bitmap_count, msg
 
     source_image = params.get("source_image")

@@ -22,5 +22,6 @@ def run(test, params, env):
     error_context.context("Verifying whether /dev/dsp is present")
     session.cmd("test -c %s" % audio_device)
     error_context.context("Trying to write to the device")
-    session.cmd("dd if=/dev/urandom of=%s bs=%s count=1" %
-                (audio_device, random_content_size))
+    session.cmd(
+        "dd if=/dev/urandom of=%s bs=%s count=1" % (audio_device, random_content_size)
+    )

@@ -1,10 +1,9 @@
 import json
 
-from virttest import data_dir
-from virttest import qemu_storage
-
 from avocado import fail_on
 from avocado.utils import process
+from virttest import data_dir, qemu_storage
+
 from provider import qemu_img_utils as img_utils
 
 
@@ -36,12 +35,13 @@ def run(test, params, env):
         """Parse params to initialize a QImage."""
         params["image_chain"] = image_chain
         image_chain = params["image_chain"].split()
-        base, sn = (qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
-                    for tag in image_chain)
+        base, sn = (
+            qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
+            for tag in image_chain
+        )
         return base, sn
 
-    def convert_images_from_params(convert_source, convert_target,
-                                   backing_file=None):
+    def convert_images_from_params(convert_source, convert_target, backing_file=None):
         """Convert images with specified parameters"""
         source_params = convert_source.params
         target_params = convert_target.params
@@ -50,22 +50,21 @@ def run(test, params, env):
         source_cache_mode = params.get("source_cache_mode")
         source_params["convert_target"] = convert_target.tag
         source_params["convert_backing_file"] = backing_file
-        test.log.info("Convert from %s to %s",
-                      convert_source.tag, convert_target.tag)
+        test.log.info("Convert from %s to %s", convert_source.tag, convert_target.tag)
         fail_on((process.CmdError,))(convert_source.convert)(
-            source_params, root_dir, cache_mode,
-            source_cache_mode, skip_target_creation)
+            source_params, root_dir, cache_mode, source_cache_mode, skip_target_creation
+        )
 
     def check_image_size(image):
         """Check image is not fully allocated"""
-        test.log.info("Verify qemu-img does not allocate the "
-                      "entire image after image convert")
+        test.log.info(
+            "Verify qemu-img does not allocate the " "entire image after image convert"
+        )
         info = json.loads(image.info(output="json"))
         virtual_size = info["virtual-size"]
         actual_size = info["actual-size"]
         if actual_size >= virtual_size:
-            test.fail("qemu-img wrongly allocates to %s the entire image",
-                      image.tag)
+            test.fail("qemu-img wrongly allocates to %s the entire image", image.tag)
 
     images = params["images"].split()
     params["image_name_%s" % images[0]] = params["image_name"]
@@ -97,8 +96,9 @@ def run(test, params, env):
     vm = img_utils.boot_vm_with_images(test, params, env, (sn2.tag,))
     session = vm.wait_for_login()
     test.log.info("Verify md5 value of the temporary file")
-    img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
-                           md5_value_to_check=md5_value)
+    img_utils.check_md5sum(
+        guest_temp_file, md5sum_bin, session, md5_value_to_check=md5_value
+    )
     session.close()
     vm.destroy()
 
@@ -109,9 +109,13 @@ def run(test, params, env):
     info = json.loads(sn2.info(output="json"))
     full_backing_filename = info["full-backing-filename"]
     if full_backing_filename != base2.image_filename:
-        test.fail("The full-backing-filename of %s is incorrect."
-                  "It should be %s, but it is %s.",
-                  sn2.tag, base2.image_filename, full_backing_filename)
+        test.fail(
+            "The full-backing-filename of %s is incorrect."
+            "It should be %s, but it is %s.",
+            sn2.tag,
+            base2.image_filename,
+            full_backing_filename,
+        )
     base2.remove()
     sn1.remove()
     sn2.remove()

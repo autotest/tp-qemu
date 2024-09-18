@@ -3,8 +3,7 @@ import json
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 
-from qemu.tests.qemu_disk_img import QemuImgTest
-from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
+from qemu.tests.qemu_disk_img import QemuImgTest, generate_base_snapshot_pair
 
 
 def run(test, params, env):
@@ -26,6 +25,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def _get_img_obj_and_params(tag):
         """Get an QemuImg object and its params based on the tag."""
         img_param = params.object_params(tag)
@@ -43,15 +43,15 @@ def run(test, params, env):
         """Verify qemu-img info output for this case."""
         test.log.info("Verify snapshot's backing file information.")
         res = json.loads(output)
-        if (res["backing-filename-format"] != b_fmt or
-                res["backing-filename"] != b_name):
-            test.fail("Backing file information is not correct,"
-                      " got %s." % b_name)
+        if res["backing-filename-format"] != b_fmt or res["backing-filename"] != b_name:
+            test.fail("Backing file information is not correct," " got %s." % b_name)
         compat = res["format-specific"]["data"]["compat"]
         expected = _get_compat_version()
-        if (compat != expected):
-            test.fail("Snapshot's compat mode is not correct,"
-                      " got %s, expected %s." % (compat, expected))
+        if compat != expected:
+            test.fail(
+                "Snapshot's compat mode is not correct,"
+                " got %s, expected %s." % (compat, expected)
+            )
 
     file = params["guest_file_name"]
     gen = generate_base_snapshot_pair(params["image_chain"])
@@ -64,11 +64,15 @@ def run(test, params, env):
     params["image_name_image1"] = params["image_name"]
     sn_qit = QemuImgTest(test, params, env, snapshot)
     sn_qit.create_snapshot()
-    _verify_qemu_img_info(sn_img.info(output="json"),
-                          base_img.image_format, base_img.image_filename)
+    _verify_qemu_img_info(
+        sn_img.info(output="json"), base_img.image_format, base_img.image_filename
+    )
 
-    test.log.info("Boot a guest up from snapshot image: %s, and create a"
-                  " file %s on the disk.", snapshot, file)
+    test.log.info(
+        "Boot a guest up from snapshot image: %s, and create a" " file %s on the disk.",
+        snapshot,
+        file,
+    )
     sn_qit.start_vm()
     md5 = sn_qit.save_file(file)
     test.log.info("Got %s's md5 %s from the snapshot image disk.", file, md5)
@@ -76,8 +80,12 @@ def run(test, params, env):
 
     cache_mode = params.get("cache_mode")
     if cache_mode:
-        test.log.info("Commit snapshot image %s back to %s with cache mode %s.",
-                      snapshot, base, cache_mode)
+        test.log.info(
+            "Commit snapshot image %s back to %s with cache mode %s.",
+            snapshot,
+            base,
+            cache_mode,
+        )
     else:
         test.log.info("Commit snapshot image %s back to %s.", snapshot, base)
 
@@ -101,8 +109,9 @@ def run(test, params, env):
     base_qit = QemuImgTest(test, params, env, base)
     base_qit.start_vm()
     if not base_qit.check_file(file, md5):
-        test.fail("The file %s's md5 on base image and"
-                  " snapshot file are different." % file)
+        test.fail(
+            "The file %s's md5 on base image and" " snapshot file are different." % file
+        )
     base_qit.destroy_vm()
 
     test.log.info("Check image %s.", snapshot)

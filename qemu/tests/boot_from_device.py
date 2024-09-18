@@ -2,10 +2,7 @@ import os
 import re
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
-from virttest import env_process
+from virttest import env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -55,7 +52,7 @@ def run(test, params, env):
         return output
 
     timeout = int(params.get("login_timeout", 360))
-    boot_menu_key = params.get("boot_menu_key", 'esc')
+    boot_menu_key = params.get("boot_menu_key", "esc")
     boot_menu_hint = params["boot_menu_hint"]
     boot_entry_info = params["boot_entry_info"]
     boot_dev = params.get("boot_dev")
@@ -72,8 +69,7 @@ def run(test, params, env):
 
     try:
         if boot_dev:
-            if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint),
-                                       timeout, 1):
+            if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint), timeout, 1):
                 test.fail("Could not get boot menu message")
 
             # Send boot menu key in monitor.
@@ -96,8 +92,7 @@ def run(test, params, env):
                 test.fail(msg)
 
         error_context.context("Check boot result", test.log.info)
-        if not utils_misc.wait_for(lambda: boot_check(boot_entry_info),
-                                   timeout, 1):
+        if not utils_misc.wait_for(lambda: boot_check(boot_entry_info), timeout, 1):
             test.fail("Could not boot from '%s'" % dev_name)
     finally:
         if dev_name == "cdrom":

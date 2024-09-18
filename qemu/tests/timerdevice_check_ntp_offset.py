@@ -2,10 +2,7 @@ import os
 import time
 
 from avocado.utils import process
-from virttest import utils_test
-from virttest import data_dir
-from virttest import env_process
-from virttest import error_context
+from virttest import data_dir, env_process, error_context, utils_test
 
 
 @error_context.context_aware
@@ -38,6 +35,7 @@ def run(test, params, env):
             if not session.cmd_status(diskspd_check_cmd):
                 session.cmd(diskspd_end_cmd)
             session.cmd("del %s" % (dst_path + diskspd_name))
+
     ntp_cmd = params["ntp_cmd"]
     error_context.context("Sync host system time with ntpserver", test.log.info)
     process.system(ntp_cmd, shell=True)
@@ -81,8 +79,9 @@ def run(test, params, env):
         for _ in range(params.get_numeric("nums")):
             time.sleep(int(sleep_time))
             ntp_offset = session.cmd_output(check_offset_cmd)
-            ntp_offset = float(ntp_offset.strip().split("\n")[-1].split()[-2].
-                               strip('-+'))
+            ntp_offset = float(
+                ntp_offset.strip().split("\n")[-1].split()[-2].strip("-+")
+            )
             if ntp_offset > 100:
                 test.fail("The ntp offset %s is larger than 100ms" % ntp_offset)
     finally:

@@ -1,14 +1,12 @@
-import time
-import threading
-import re
 import logging
+import re
+import threading
+import time
 
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import error_context
 from avocado.utils import process
+from virttest import error_context, utils_misc, utils_test
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def _check_cpu_usage(session):
@@ -18,10 +16,9 @@ def _check_cpu_usage(session):
 
     param session: a session object to send wmic commands
     """
-    status, output = session.cmd_status_output(
-        "wmic cpu get loadpercentage /value")
+    status, output = session.cmd_status_output("wmic cpu get loadpercentage /value")
     if not status:
-        result = re.search(r'LoadPercentage=(\d+)', output)
+        result = re.search(r"LoadPercentage=(\d+)", output)
         if result:
             percent = int(result.group(1))
             if percent > 1:
@@ -60,18 +57,18 @@ def _stop_service(test, params, session, service):
     service_stop_cmd = params.get("service_stop_cmd")
     s, o = session.cmd_status_output("sc query")
     if s:
-        test.error("Failed to query service list, "
-                   "status=%s, output=%s" % (s, o))
-    service_item = re.search(
-        r'SERVICE_NAME:\s+%s' % service, o, re.I | re.M)
+        test.error("Failed to query service list, " "status=%s, output=%s" % (s, o))
+    service_item = re.search(r"SERVICE_NAME:\s+%s" % service, o, re.I | re.M)
     if not service_item:
         return
 
     s, o = session.cmd_status_output(service_check_cmd % service)
     if s:
-        test.error("Failed to get status for service: %s, "
-                   "status=%s, output=%s" % (service, s, o))
-    if re.search(r'STOPPED', o, re.I | re.M):
+        test.error(
+            "Failed to get status for service: %s, "
+            "status=%s, output=%s" % (service, s, o)
+        )
+    if re.search(r"STOPPED", o, re.I | re.M):
         return
     session.cmd(service_stop_cmd.format(service))
 
@@ -119,10 +116,10 @@ def run(test, params, env):
 
     # stop windows defender
     if set_owner_cmd and set_full_control_cmd:
-        set_owner_cmd = utils_misc.set_winutils_letter(session,
-                                                       set_owner_cmd)
+        set_owner_cmd = utils_misc.set_winutils_letter(session, set_owner_cmd)
         set_full_control_cmd = utils_misc.set_winutils_letter(
-                session, set_full_control_cmd)
+            session, set_full_control_cmd
+        )
         session.cmd(set_owner_cmd)
         session.cmd(set_full_control_cmd)
     session.cmd(params["reg_cmd"])
@@ -137,8 +134,9 @@ def run(test, params, env):
     time.sleep(1800)
 
     # start background checking guest cpu usage
-    thread = threading.Thread(target=_check_cpu_thread_func,
-                              args=(session, guest_check_timeout))
+    thread = threading.Thread(
+        target=_check_cpu_thread_func, args=(session, guest_check_timeout)
+    )
     thread.start()
     time.sleep(60)
 
@@ -147,14 +145,16 @@ def run(test, params, env):
     process.system(params["host_check_cmd"] % pid, shell=True)
     thread.join(guest_check_timeout + 360)
 
-    vcpu_thread_pattern = params.get("vcpu_thread_pattern",
-                                     r'thread_id.?[:|=]\s*(\d+)')
+    vcpu_thread_pattern = params.get("vcpu_thread_pattern", r"thread_id.?[:|=]\s*(\d+)")
     vcpu_ids = vm.get_vcpu_pids(vcpu_thread_pattern)
     for thread_id in vcpu_ids:
         # output result
         host_cpu_usage = process.system_output(
-            params["thread_process_cmd"] % thread_id, shell=True)
+            params["thread_process_cmd"] % thread_id, shell=True
+        )
         host_cpu_usage = float(host_cpu_usage.decode())
         if host_cpu_usage > thread_cpu_level:
-            test.fail("The cpu usage of thread %s is %s"
-                      " > %s" % (thread_id, host_cpu_usage, thread_cpu_level))
+            test.fail(
+                "The cpu usage of thread %s is %s"
+                " > %s" % (thread_id, host_cpu_usage, thread_cpu_level)
+            )

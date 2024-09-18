@@ -1,11 +1,8 @@
-import time
 import re
+import time
 
 from avocado.utils import process
-from virttest import utils_test
-from virttest import utils_time
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context, utils_test, utils_time
 
 
 @error_context.context_aware
@@ -31,19 +28,19 @@ def run(test, params, env):
 
         :param session: VM session.
         """
-        hwclock_time_command = params.get("hwclock_time_command",
-                                          "hwclock -u")
-        hwclock_time_filter_re = params.get("hwclock_time_filter_re",
-                                            r"(\d+-\d+-\d+ \d+:\d+:\d+)")
-        hwclock_time_format = params.get("hwclock_time_format",
-                                         "%Y-%m-%d %H:%M:%S")
+        hwclock_time_command = params.get("hwclock_time_command", "hwclock -u")
+        hwclock_time_filter_re = params.get(
+            "hwclock_time_filter_re", r"(\d+-\d+-\d+ \d+:\d+:\d+)"
+        )
+        hwclock_time_format = params.get("hwclock_time_format", "%Y-%m-%d %H:%M:%S")
         output = session.cmd_output_safe(hwclock_time_command)
         try:
             str_time = re.findall(hwclock_time_filter_re, output)[0]
             guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
         except Exception as err:
             test.log.debug(
-                "(time_format, time_string): (%s, %s)", hwclock_time_format, str_time)
+                "(time_format, time_string): (%s, %s)", hwclock_time_format, str_time
+            )
             raise err
         return guest_time
 
@@ -60,25 +57,26 @@ def run(test, params, env):
         time_filter_re = params["time_filter_re"]
         # Time format for time.strptime()
         time_format = params["time_format"]
-        timerdevice_drift_threshold = float(params.get(
-            "timerdevice_drift_threshold", 3))
+        timerdevice_drift_threshold = float(
+            params.get("timerdevice_drift_threshold", 3)
+        )
 
         time_type = "system" if not is_hardware else "harware"
-        error_context.context("Check the %s time on guest" % time_type,
-                              test.log.info)
-        host_time, guest_time = utils_test.get_time(session, time_command,
-                                                    time_filter_re,
-                                                    time_format)
+        error_context.context("Check the %s time on guest" % time_type, test.log.info)
+        host_time, guest_time = utils_test.get_time(
+            session, time_command, time_filter_re, time_format
+        )
         if is_hardware:
             guest_time = get_hwtime(session)
         drift = abs(float(host_time) - float(guest_time))
         if drift > timerdevice_drift_threshold:
-            test.fail("The guest's %s time is different with"
-                      " host's system time. Host time: '%s', guest time:"
-                      " '%s'" % (time_type, host_time, guest_time))
+            test.fail(
+                "The guest's %s time is different with"
+                " host's system time. Host time: '%s', guest time:"
+                " '%s'" % (time_type, host_time, guest_time)
+            )
 
-    error_context.context("sync host time with NTP server",
-                          test.log.info)
+    error_context.context("sync host time with NTP server", test.log.info)
     clock_sync_command = params["clock_sync_command"]
     process.system(clock_sync_command, shell=True)
 
@@ -94,8 +92,7 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("check timedrift between guest and host.",
-                          test.log.info)
+    error_context.context("check timedrift between guest and host.", test.log.info)
     verify_timedrift(session)
     verify_timedrift(session, is_hardware=True)
 
@@ -106,7 +103,9 @@ def run(test, params, env):
     error_context.context("Waiting for 11 mins.", test.log.info)
     time.sleep(660)
 
-    error_context.context("check timedrift between guest and host after "
-                          "changing RTC time.", test.log.info)
+    error_context.context(
+        "check timedrift between guest and host after " "changing RTC time.",
+        test.log.info,
+    )
     verify_timedrift(session)
     verify_timedrift(session, is_hardware=True)

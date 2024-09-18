@@ -9,8 +9,7 @@ to be generated.
 
 """
 
-from virttest import utils_misc
-from virttest import utils_spice
+from virttest import utils_misc, utils_spice
 
 
 def run(test, params, env):
@@ -40,17 +39,20 @@ def run(test, params, env):
 
     client_session = client_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)),
-        username="root", password="123456")
+        username="root",
+        password="123456",
+    )
 
     for vm in params.get("vms").split():
-        utils_spice.clear_interface(env.get_vm(vm),
-                                    int(params.get("login_timeout", "360")))
+        utils_spice.clear_interface(
+            env.get_vm(vm), int(params.get("login_timeout", "360"))
+        )
 
     # generate a random string, used to create a random key for the certs
     randomstring = utils_misc.generate_random_string(2048)
     cmd = "echo '" + randomstring + "' > /tmp/randomtext.txt"
     output = client_session.cmd(cmd)
-    #output2 = client_session.cmd("cat /tmp/randomtext.txt")
+    # output2 = client_session.cmd("cat /tmp/randomtext.txt")
     utils_spice.wait_timeout(5)
 
     # for each cert listed by the test, create it on the client
@@ -71,7 +73,7 @@ def run(test, params, env):
 
     # Verify that all the certs have been generated on the client
     for cert in cert_list:
-        if not (cert in output):
+        if cert not in output:
             test.fail("Certificate %s not found" % cert)
 
     client_session.close()

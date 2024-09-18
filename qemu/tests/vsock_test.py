@@ -1,17 +1,13 @@
+import logging
 import os
 import random
-import logging
 import time
+
 import aexpect
+from avocado.utils import path, process
+from virttest import data_dir, error_context, utils_misc
 
-from avocado.utils import path
-from avocado.utils import process
-
-from virttest import data_dir
-from virttest import error_context
-from virttest import utils_misc
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def compile_nc_vsock(test, vm, session):
@@ -23,19 +19,18 @@ def compile_nc_vsock(test, vm, session):
     :param session: vm session
     :return: Path to binary nc-vsock or None if compile failed
     """
-    nc_vsock_dir = '/home/'
-    nc_vsock_bin = 'nc-vsock'
-    nc_vsock_c = 'nc-vsock.c'
+    nc_vsock_dir = "/home/"
+    nc_vsock_bin = "nc-vsock"
+    nc_vsock_c = "nc-vsock.c"
     src_file = os.path.join(data_dir.get_deps_dir("nc_vsock"), nc_vsock_c)
     bin_path = os.path.join(nc_vsock_dir, nc_vsock_bin)
-    rm_cmd = 'rm -rf %s*' % bin_path
+    rm_cmd = "rm -rf %s*" % bin_path
     session.cmd(rm_cmd)
     process.system(rm_cmd, shell=True, ignore_status=True)
     cmd_cp = "cp %s %s" % (src_file, nc_vsock_dir)
     process.system(cmd_cp)
     vm.copy_files_to(src_file, nc_vsock_dir)
-    compile_cmd = "cd %s && gcc -o %s %s" % (
-        nc_vsock_dir, nc_vsock_bin, nc_vsock_c)
+    compile_cmd = "cd %s && gcc -o %s %s" % (nc_vsock_dir, nc_vsock_bin, nc_vsock_c)
     host_status = process.system(compile_cmd, shell=True)
     guest_status = session.cmd_status(compile_cmd)
     if (host_status or guest_status) != 0:
@@ -84,8 +79,10 @@ def check_received_data(test, session, pattern):
         session.read_until_last_line_matches([pattern])
     except aexpect.ExpectError as e:
         if isinstance(e, aexpect.ExpectTimeoutError):
-            test.fail("Does not receive expected content: %s, output"
-                      " of session: %s" % (pattern, e.output))
+            test.fail(
+                "Does not receive expected content: %s, output"
+                " of session: %s" % (pattern, e.output)
+            )
         else:
             test.fail(str(e))
 
@@ -113,11 +110,13 @@ def vsock_connect(tool_bin, guest_cid, port):
         conn_cmd,
         auto_close=False,
         output_func=utils_misc.log_line,
-        output_params=("vsock_%s_%s" % (guest_cid, port),))
+        output_params=("vsock_%s_%s" % (guest_cid, port),),
+    )
 
 
-def send_data_from_guest_to_host(guest_session, tool_bin,
-                                 guest_cid, tmp_file, file_size=1000):
+def send_data_from_guest_to_host(
+    guest_session, tool_bin, guest_cid, tmp_file, file_size=1000
+):
     """
     Generate a temp file and transfer it from guest to host via vsock
 
@@ -128,34 +127,34 @@ def send_data_from_guest_to_host(guest_session, tool_bin,
     :return: The host vsock connection process
     """
 
-    cmd_generate = 'dd if=/dev/urandom of=%s count=%s bs=1M' % (
-        tmp_file, file_size)
+    cmd_generate = "dd if=/dev/urandom of=%s count=%s bs=1M" % (tmp_file, file_size)
     guest_session.cmd_status(cmd_generate, timeout=600)
     port = random.randrange(1, 6000)
     cmd_transfer = None
     if "ncat" in tool_bin:
-        cmd_transfer = '%s --vsock --send-only -l %s < %s' % (
-            tool_bin, port, tmp_file)
+        cmd_transfer = "%s --vsock --send-only -l %s < %s" % (tool_bin, port, tmp_file)
     if "nc-vsock" in tool_bin:
-        cmd_transfer = '%s -l %s < %s' % (tool_bin, port, tmp_file)
+        cmd_transfer = "%s -l %s < %s" % (tool_bin, port, tmp_file)
     if cmd_transfer is None:
         raise ValueError(f"unexpected test tool: {tool_bin}")
-    error_context.context('Transfer file from guest via command: %s'
-                          % cmd_transfer, LOG_JOB.info)
+    error_context.context(
+        "Transfer file from guest via command: %s" % cmd_transfer, LOG_JOB.info
+    )
     guest_session.sendline(cmd_transfer)
     cmd_receive = None
     if "ncat" in tool_bin:
-        cmd_receive = '%s --vsock %s %s > %s' % (
-            tool_bin, guest_cid, port, tmp_file)
+        cmd_receive = "%s --vsock %s %s > %s" % (tool_bin, guest_cid, port, tmp_file)
     if "nc-vsock" in tool_bin:
-        cmd_receive = '%s %s %s > %s' % (tool_bin, guest_cid, port, tmp_file)
+        cmd_receive = "%s %s %s > %s" % (tool_bin, guest_cid, port, tmp_file)
     if cmd_receive is None:
         raise ValueError(f"unexpected test tool: {tool_bin}")
     time.sleep(60)
-    return aexpect.Expect(cmd_receive,
-                          auto_close=True,
-                          output_func=utils_misc.log_line,
-                          output_params=('%s.log' % tmp_file,))
+    return aexpect.Expect(
+        cmd_receive,
+        auto_close=True,
+        output_func=utils_misc.log_line,
+        output_params=("%s.log" % tmp_file,),
+    )
 
 
 def check_guest_vsock_conn_exit(test, session, close_session=False):
@@ -169,8 +168,10 @@ def check_guest_vsock_conn_exit(test, session, close_session=False):
     try:
         session.read_up_to_prompt(timeout=120)
     except aexpect.ExpectTimeoutError:
-        test.fail("vsock listening prcoess inside guest"
-                  " does not exit after close host nc-vsock connection.")
+        test.fail(
+            "vsock listening prcoess inside guest"
+            " does not exit after close host nc-vsock connection."
+        )
     finally:
         if close_session:
             session.close()
@@ -194,7 +195,7 @@ def run(test, params, env):
     """
 
     def clean(tmp_file):
-        """ Clean the environment """
+        """Clean the environment"""
         cmd_rm = "rm -rf %s" % tmp_file
         if vsock_test_tool == "nc_vsock":
             cmd_rm += "; rm -rf %s*" % tool_bin
@@ -237,16 +238,17 @@ def run(test, params, env):
 
     # Transfer data from guest to host
     session = vm.wait_for_login()
-    rec_session = send_data_from_guest_to_host(session, tool_bin,
-                                               guest_cid, tmp_file)
+    rec_session = send_data_from_guest_to_host(session, tool_bin, guest_cid, tmp_file)
     utils_misc.wait_for(lambda: not rec_session.is_alive(), timeout=20)
     check_guest_vsock_conn_exit(test, session)
-    cmd_chksum = 'md5sum %s' % tmp_file
+    cmd_chksum = "md5sum %s" % tmp_file
     md5_origin = session.cmd_output(cmd_chksum).split()[0]
     md5_received = process.system_output(cmd_chksum).split()[0].decode()
     if md5_received != md5_origin:
         clean(tmp_file)
-        test.fail('Data transfer not integrated, the original md5 value'
-                  ' is %s, while the md5 value received on host is %s' %
-                  (md5_origin, md5_received))
+        test.fail(
+            "Data transfer not integrated, the original md5 value"
+            " is %s, while the md5 value received on host is %s"
+            % (md5_origin, md5_received)
+        )
     clean(tmp_file)

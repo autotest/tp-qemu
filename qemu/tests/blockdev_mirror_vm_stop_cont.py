@@ -1,5 +1,5 @@
-import time
 import random
+import time
 
 from provider.blockdev_mirror_parallel import BlockdevMirrorParallelTest
 
@@ -10,7 +10,7 @@ class BlockdevMirrorVMStopContTest(BlockdevMirrorParallelTest):
     def stop_cont_vm(self):
         """Stop VM for a while, then resume it"""
         self.main_vm.pause()
-        t = int(random.choice(self.params.objects('vm_stop_time_list')))
+        t = int(random.choice(self.params.objects("vm_stop_time_list")))
         time.sleep(t)
         self.main_vm.resume()
 

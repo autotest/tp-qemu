@@ -1,7 +1,6 @@
 from virttest.qemu_devices.qdevices import QBlockdevFormatNode
 
 from provider import backup_utils
-
 from provider.blockdev_mirror_nowait import BlockdevMirrorNowaitTest
 
 
@@ -15,8 +14,7 @@ class BlockdevMirrorSyncTopTest(BlockdevMirrorNowaitTest):
 
         # convert source images to convert images
         self._convert_images = params.objects("convert_images")
-        self._convert_nodes = ["drive_%s" %
-                               src for src in self._convert_images]
+        self._convert_nodes = ["drive_%s" % src for src in self._convert_images]
 
         # mirror snapshot images of source images to target images
         self._snap_images = params.objects("snap_images")
@@ -39,20 +37,16 @@ class BlockdevMirrorSyncTopTest(BlockdevMirrorNowaitTest):
     def _blockdev_add_images(self, images, is_backing_null=False):
         for tag in images:
             params = self.params.object_params(tag)
-            devices = self.main_vm.devices.images_define_by_params(tag,
-                                                                   params,
-                                                                   'disk')
+            devices = self.main_vm.devices.images_define_by_params(tag, params, "disk")
             devices.pop()
             for dev in devices:
                 if self.main_vm.devices.get_by_qid(dev.get_qid()):
                     continue
                 if isinstance(dev, QBlockdevFormatNode) and is_backing_null:
                     dev.params["backing"] = None
-                ret = self.main_vm.devices.simple_hotplug(dev,
-                                                          self.main_vm.monitor)
+                ret = self.main_vm.devices.simple_hotplug(dev, self.main_vm.monitor)
                 if not ret[1]:
-                    self.test.fail("Failed to hotplug '%s': %s."
-                                   % (dev, ret[0]))
+                    self.test.fail("Failed to hotplug '%s': %s." % (dev, ret[0]))
 
     def add_convert_images(self):
         """blockdev-add convert images: protocol and format nodes only"""
@@ -66,7 +60,8 @@ class BlockdevMirrorSyncTopTest(BlockdevMirrorNowaitTest):
         """add mirror images where the snapshot images are mirrored"""
         for tag in self._target_images:
             disk = self.target_disk_define_by_params(
-                self.params.object_params(tag), tag)
+                self.params.object_params(tag), tag
+            )
 
             # overlay must not have a current backing file,
             # achieved by passing "backing": null to blockdev-add
@@ -81,17 +76,16 @@ class BlockdevMirrorSyncTopTest(BlockdevMirrorNowaitTest):
         for idx, source_node in enumerate(self._snap_nodes):
             self._jobs.append(
                 backup_utils.blockdev_mirror_nowait(
-                    self.main_vm, source_node,
-                    self._target_nodes[idx],
-                    **args
+                    self.main_vm, source_node, self._target_nodes[idx], **args
                 )
             )
 
     def _blockdev_snapshot(self, nodes, overlays):
         snapshot_options = {}
         for idx, source_node in enumerate(nodes):
-            backup_utils.blockdev_snapshot(self.main_vm, source_node,
-                                           overlays[idx], **snapshot_options)
+            backup_utils.blockdev_snapshot(
+                self.main_vm, source_node, overlays[idx], **snapshot_options
+            )
 
     def take_snapshot_on_data_images(self):
         """snapshot, node: data image node, overlay: snapshot nodes"""

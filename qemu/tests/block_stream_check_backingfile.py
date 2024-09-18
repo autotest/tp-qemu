@@ -1,18 +1,16 @@
-import os
 import logging
+import os
 
 from virttest import utils_misc
 
 from qemu.tests import blk_stream
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockStreamCheckBackingfile(blk_stream.BlockStream):
-
     def __init__(self, test, params, env, tag):
-        super(BlockStreamCheckBackingfile, self).__init__(test,
-                                                          params, env, tag)
+        super(BlockStreamCheckBackingfile, self).__init__(test, params, env, tag)
 
     def check_backingfile(self):
         """
@@ -23,18 +21,20 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
         backingfile = self.get_backingfile("qemu-img")
         if backingfile:
             img_file = self.get_image_file()
-            LOG_JOB.debug("Got backing-file: %s" % backingfile +
-                          "by 'qemu-img info %s'" % img_file)
+            LOG_JOB.debug(
+                "Got backing-file: %s by 'qemu-img info %s'", backingfile, img_file
+            )
             fail |= bool(backingfile)
         backingfile = self.get_backingfile("monitor")
         if backingfile:
-            LOG_JOB.debug("Got backing-file: %s" % backingfile +
-                          "by 'info/query block' " +
-                          "in %s monitor" % self.vm.monitor.protocol)
+            LOG_JOB.debug(
+                "Got backing-file: %s by 'info/query block' in %s monitor",
+                backingfile,
+                self.vm.monitor.protocol,
+            )
             fail |= bool(backingfile)
         if fail:
-            msg = ("Unexpected backing file found, there should be "
-                   "no backing file")
+            msg = "Unexpected backing file found, there should be " "no backing file"
             self.test.fail(msg)
 
     def check_backingfile_exist(self):

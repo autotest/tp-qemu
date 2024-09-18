@@ -1,13 +1,9 @@
 import logging
 
-from virttest import error_context
-from virttest import env_process
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import utils_disk
+from virttest import env_process, error_context, utils_disk, utils_misc, utils_test
 from virttest.qemu_capabilities import Flags
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def prepare_pci_bridge(test, params, pci_bridge_num):
@@ -43,7 +39,7 @@ def prepare_images(test, params, image_num, pci_bridge_num, opr, device_num=0):
     fmt_list = params.objects("disk_driver")
     for i in range(image_num):
         image = "stg%s" % i
-        params["images"] = ' '.join([params["images"], image])
+        params["images"] = " ".join([params["images"], image])
         params["image_name_%s" % image] = "images/%s" % image
         params["image_size_%s" % image] = params["data_image_size"]
         params["force_create_image_%s" % image] = "yes"
@@ -91,8 +87,9 @@ def prepare_nics(test, params, pci_bridge_num, opr, device_num=0):
     if opr != "hotplug_unplug":
         if pci_bridge_num == 1:
             if device_num >= 31:
-                test.fail("There are already %d devices on %s"
-                          % (device_num, pci_bridges[0]))
+                test.fail(
+                    "There are already %d devices on %s" % (device_num, pci_bridges[0])
+                )
             params["nic_pci_bus_%s" % nic] = pci_bridges[0]
         else:
             index = device_num % pci_bridge_num
@@ -102,8 +99,7 @@ def prepare_nics(test, params, pci_bridge_num, opr, device_num=0):
     return device_num
 
 
-def disk_hotplug(test, params, vm, session, image_name,
-                 drive_format, parent_bus):
+def disk_hotplug(test, params, vm, session, image_name, drive_format, parent_bus):
     """
     Hotplug new disk.
 
@@ -115,44 +111,51 @@ def disk_hotplug(test, params, vm, session, image_name,
     :param drive_format: Drive subsystem type (virtio, scsi, usb3)
     :param parent_bus: Bus(es), in which this device is plugged in
     """
+
     def check_usb_in_guest():
         """
         Check USB in guest
         """
         output = session.cmd(params["chk_usb_cmd"])
-        return (usb_serial in output)   # pylint: disable=E0606
+        return usb_serial in output  # pylint: disable=E0606
 
-    if drive_format not in ('virtio', 'scsi-hd', 'usb3'):
+    if drive_format not in ("virtio", "scsi-hd", "usb3"):
         test.cancel("Unsupported drive format: %s" % drive_format)
 
     image_params = params.object_params(image_name)
     image_params["drive_format"] = drive_format
     devices = []
 
-    if drive_format == 'usb3':
-        usbc_params = {'usb_type': 'nec-usb-xhci'}
-        devices = vm.devices.usbc_by_params(drive_format,
-                                            usbc_params,
-                                            pci_bus={'aobject': parent_bus})
+    if drive_format == "usb3":
+        usbc_params = {"usb_type": "nec-usb-xhci"}
+        devices = vm.devices.usbc_by_params(
+            drive_format, usbc_params, pci_bus={"aobject": parent_bus}
+        )
 
-    devices += vm.devices.images_define_by_params(image_name, image_params,
-                                                  'disk', None, False, None,
-                                                  pci_bus={'aobject': parent_bus})
+    devices += vm.devices.images_define_by_params(
+        image_name,
+        image_params,
+        "disk",
+        None,
+        False,
+        None,
+        pci_bus={"aobject": parent_bus},
+    )
 
     for dev in devices:
         ret = vm.devices.simple_hotplug(dev, vm.monitor)
         if ret[1] is False:
-            test.fail("Failed to hotplug device '%s'."
-                      "Output:\n%s" % (dev, ret[0]))
+            test.fail("Failed to hotplug device '%s'." "Output:\n%s" % (dev, ret[0]))
 
-    if drive_format == 'usb3':
+    if drive_format == "usb3":
         usb_serial = params["blk_extra_params_%s" % image_name].split("=")[1]
-        res = utils_misc.wait_for(check_usb_in_guest, timeout=360,
-                                  text="Wait for getting usb device info")
+        res = utils_misc.wait_for(
+            check_usb_in_guest, timeout=360, text="Wait for getting usb device info"
+        )
         if res is None:
             test.fail("Could not find the usb device serial:[%s]" % usb_serial)
 
-    if drive_format == 'virtio':
+    if drive_format == "virtio":
         return [devices[-1]]
     else:
         if Flags.BLOCKDEV in vm.devices.caps:
@@ -176,7 +179,7 @@ def check_data_disks(test, params, env, vm, session):
 
     error_context.context("Check data disks in monitor!", LOG_JOB.info)
     monitor_info_block = vm.monitor.info_block(False)
-    blocks = ','.join(monitor_info_block.keys())
+    blocks = ",".join(monitor_info_block.keys())
     for image in image_list:
         if image not in blocks:
             test.fail("drive_%s is missed: %s!" % (image, blocks))
@@ -206,17 +209,18 @@ def check_data_disks(test, params, env, vm, session):
         if not utils_disk.update_windows_disk_attributes(session, disks):
             test.fail("Failed to update windows disk attributes.")
         for disk in disks:
-            drive_letter = utils_disk.configure_empty_disk(session, disk,
-                                                           data_image_size,
-                                                           os_type)
+            drive_letter = utils_disk.configure_empty_disk(
+                session, disk, data_image_size, os_type
+            )
             if not drive_letter:
                 test.fail("Fail to format disks.")
             iozone_cmd_disk = iozone_cmd % drive_letter[0]
-            status, output = session.cmd_status_output(iozone_cmd_disk,
-                                                       timeout=3600)
+            status, output = session.cmd_status_output(iozone_cmd_disk, timeout=3600)
             if status:
-                test.fail("Check block device '%s' failed! Output: %s"
-                          % (drive_letter[0], output))
+                test.fail(
+                    "Check block device '%s' failed! Output: %s"
+                    % (drive_letter[0], output)
+                )
             utils_disk.clean_partition(session, disk, os_type)
     else:
         test.cancel("Unsupported OS type '%s'" % os_type)
@@ -283,10 +287,12 @@ def run(test, params, env):
                 pci_bridge_id = pci_bridges[index]
             if fmt == "scsi-hd" and params["drive_format"] == "scsi-hd":
                 params["drive_bus_%s" % image] = 1
-            error_context.context("Hotplug a %s disk on %s!"
-                                  % (fmt, pci_bridge_id), test.log.info)
-            device_list += disk_hotplug(test, params, vm, session,
-                                        image, fmt, pci_bridge_id)
+            error_context.context(
+                "Hotplug a %s disk on %s!" % (fmt, pci_bridge_id), test.log.info
+            )
+            device_list += disk_hotplug(
+                test, params, vm, session, image, fmt, pci_bridge_id
+            )
 
     check_data_disks(test, params, env, vm, session)
 
@@ -304,8 +310,7 @@ def run(test, params, env):
         for dev in device_list:
             ret = vm.devices.simple_unplug(dev, vm.monitor)
             if ret[1] is False:
-                test.fail("Failed to unplug device '%s'."
-                          "Output:\n%s" % (dev, ret[0]))
+                test.fail("Failed to unplug device '%s'." "Output:\n%s" % (dev, ret[0]))
     elif opr == "with_migration":
         error_context.context("Migrating...", test.log.info)
         vm.migrate(float(params.get("mig_timeout", "3600")))

@@ -1,5 +1,5 @@
-import time
 import random
+import time
 
 from virttest import error_context
 
@@ -28,7 +28,7 @@ def run(test, params, env):
         vm.monitor.info("balloon")
         error_context.context("Stop and continue vm from monitor", test.log.info)
         vm.monitor.cmd("stop")
-        vm.monitor.cmd('cont')
+        vm.monitor.cmd("cont")
         vm.verify_alive()
         time.sleep(random.randint(0, 3))
 

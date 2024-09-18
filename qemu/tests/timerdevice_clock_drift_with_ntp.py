@@ -2,9 +2,7 @@ import os
 
 import aexpect
 from avocado.utils import process
-from virttest import data_dir
-from virttest import utils_misc
-from virttest import error_context
+from virttest import data_dir, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -28,6 +26,7 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+
     def _drift_file_exist():
         try:
             session.cmd("test -f /var/lib/chrony/drift")
@@ -35,8 +34,7 @@ def run(test, params, env):
         except Exception:
             return False
 
-    error_context.context("Check for an appropriate clocksource on host",
-                          test.log.info)
+    error_context.context("Check for an appropriate clocksource on host", test.log.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
     if "tsc" not in process.getoutput(host_cmd):
@@ -50,8 +48,9 @@ def run(test, params, env):
     sess_guest_load = vm.wait_for_login(timeout=timeout)
 
     error_context.context("Copy time-warp-test.c to guest", test.log.info)
-    src_file_name = os.path.join(data_dir.get_deps_dir(), "tsc_sync",
-                                 "time-warp-test.c")
+    src_file_name = os.path.join(
+        data_dir.get_deps_dir(), "tsc_sync", "time-warp-test.c"
+    )
     vm.copy_files_to(src_file_name, "/tmp")
 
     error_context.context("Compile the time-warp-test.c", test.log.info)
@@ -89,17 +88,17 @@ def run(test, params, env):
     cmd = "systemctl start chronyd; sleep 1; echo"
     session.cmd(cmd)
 
-    error_context.context("Check if the drift file exists on guest",
-                          test.log.info)
+    error_context.context("Check if the drift file exists on guest", test.log.info)
     test_run_timeout = float(params["test_run_timeout"])
     try:
         utils_misc.wait_for(_drift_file_exist, test_run_timeout, step=5)
     except aexpect.ShellCmdError as detail:
-        test.error("Failed to wait for the creation of"
-                   " /var/lib/chronyd/drift file. Detail: '%s'" % detail)
+        test.error(
+            "Failed to wait for the creation of"
+            " /var/lib/chronyd/drift file. Detail: '%s'" % detail
+        )
 
-    error_context.context("Verify the drift file content on guest",
-                          test.log.info)
+    error_context.context("Verify the drift file content on guest", test.log.info)
     output = session.cmd("cat /var/lib/chrony/drift").strip().split()[0]
     if int(abs(float(output))) > 30:
         test.fail("Failed to check the chrony drift. Output: '%s'" % output)

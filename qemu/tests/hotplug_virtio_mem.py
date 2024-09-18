@@ -1,9 +1,6 @@
 import time
 
-from virttest import utils_qemu
-from virttest import error_context
-from virttest import utils_misc
-
+from virttest import error_context, utils_misc, utils_qemu
 from virttest.qemu_monitor import QMPCmdError
 from virttest.utils_misc import normalize_data_size
 from virttest.utils_test.qemu import MemoryHotplugTest
@@ -67,7 +64,7 @@ def run(test, params, env):
         virtio_mem_utils.check_numa_plugged_mem(
             node_id, requested_size, threshold, vm, test
         )
-    if qemu_version in VersionInterval('[8.1.0,)'):
+    if qemu_version in VersionInterval("[8.1.0,)"):
         try:
             hotplug_test.unplug_memory(vm, target_mem)
         except QMPCmdError as e:

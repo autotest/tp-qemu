@@ -1,11 +1,9 @@
 import time
 
+from avocado.utils import process
 from virttest import env_process
 
-from qemu.tests.qemu_disk_img import QemuImgTest
-from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
-
-from avocado.utils import process
+from qemu.tests.qemu_disk_img import QemuImgTest, generate_base_snapshot_pair
 
 
 def run(test, params, env):
@@ -21,6 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def _create_os_snapshot():
         """Crate one external snapshot based on the os image."""
         test.log.info("Create a qcow2 snapshot based on the os image.")
@@ -31,16 +30,17 @@ def run(test, params, env):
         QemuImgTest(test, params, env, snapshot).create_snapshot()
 
     def _verify_write_lock_err_msg(test, img_file=None):
-        test.log.info("Verify qemu-img write lock err msg.",)
-        msgs = ['"write" lock',
-                'Is another process using the image']
+        test.log.info(
+            "Verify qemu-img write lock err msg.",
+        )
+        msgs = ['"write" lock', "Is another process using the image"]
         # Avoid timing issues between writing to log and the check itself
-        check_lock_timeout = params.get_numeric('check_lock_timeout', 5)
+        check_lock_timeout = params.get_numeric("check_lock_timeout", 5)
         time.sleep(check_lock_timeout)
         # Check expected error messages directly in the test log
         output = process.run(
             r"cat " + test.logfile + r"| grep '\[qemu output\]' | grep -v 'warning'",
-            shell=True
+            shell=True,
         ).stdout_text.strip()
         if img_file:
             msgs.append(img_file)

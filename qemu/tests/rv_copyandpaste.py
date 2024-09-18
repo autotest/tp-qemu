@@ -5,17 +5,15 @@ rv_copyandpaste.py Tests copy&paste functionality between client and guest
 Requires: connected binaries remote-viewer, Xorg, gnome session
 
 """
+
 import logging
 import os
 import time
 
 import aexpect
+from virttest import data_dir, utils_misc, utils_spice
 
-from virttest import utils_misc
-from virttest import utils_spice
-from virttest import data_dir
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def wait_timeout(timeout=10):
@@ -54,9 +52,15 @@ def clear_cb(session, params):
     LOG_JOB.info("Clipboard has been cleared.")
 
 
-def place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                           script_call, script_params, dst_image_path,
-                           test_timeout):
+def place_img_in_clipboard(
+    test,
+    session_to_copy_from,
+    interpreter,
+    script_call,
+    script_params,
+    dst_image_path,
+    test_timeout,
+):
     """
     Use the clipboard script to copy an image into the clipboard.
 
@@ -67,13 +71,13 @@ def place_img_in_clipboard(test, session_to_copy_from, interpreter,
     :param dst_image_path: location of the image to be copied
     :param test_timeout: timeout time for the cmd
     """
-    cmd = "%s %s %s %s" % (interpreter, script_call,
-                           script_params, dst_image_path)
+    cmd = "%s %s %s %s" % (interpreter, script_call, script_params, dst_image_path)
 
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if "The image has been placed into the clipboard." in output:
             LOG_JOB.info("Copying of the image was successful")
         else:
@@ -81,12 +85,20 @@ def place_img_in_clipboard(test, session_to_copy_from, interpreter,
     except aexpect.ShellCmdError:
         test.fail("Copying to the clipboard failed")
 
-    LOG_JOB.debug("------------ End of script output of the Copying"
-                  " Session ------------")
+    LOG_JOB.debug(
+        "------------ End of script output of the Copying" " Session ------------"
+    )
 
 
-def verify_img_paste(test, session_to_copy_from, interpreter, script_call,
-                     script_params, final_image_path, test_timeout):
+def verify_img_paste(
+    test,
+    session_to_copy_from,
+    interpreter,
+    script_call,
+    script_params,
+    final_image_path,
+    test_timeout,
+):
     """
     Use the clipboard script to paste an image from the clipboard.
 
@@ -97,13 +109,13 @@ def verify_img_paste(test, session_to_copy_from, interpreter, script_call,
     :param final_image_path: location of where the image should be pasted
     :param test_timeout: timeout time for the cmd
     """
-    cmd = "%s %s %s %s" % (interpreter, script_call,
-                           script_params, final_image_path)
+    cmd = "%s %s %s %s" % (interpreter, script_call, script_params, final_image_path)
 
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if "Cb Image stored and saved to:" in output:
             LOG_JOB.info("Copying of the image was successful")
         else:
@@ -111,28 +123,38 @@ def verify_img_paste(test, session_to_copy_from, interpreter, script_call,
     except aexpect.ShellCmdError:
         test.fail("Copying to the clipboard failed")
 
-    LOG_JOB.debug("------------ End of script output of the Copying"
-                  " Session ------------")
+    LOG_JOB.debug(
+        "------------ End of script output of the Copying" " Session ------------"
+    )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_image_path)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
     except aexpect.ShellCmdError:
         test.fail("Couldn't get the size of the file")
 
-    LOG_JOB.debug("------------ End of script output of the Copying"
-                  " Session ------------")
+    LOG_JOB.debug(
+        "------------ End of script output of the Copying" " Session ------------"
+    )
     # Get the size of the copied image, this will be used for
     # verification on the other session that the paste was successful
     file_checksum = output.split()[0]
     return file_checksum
 
 
-def verify_img_paste_success(test, session_to_copy_from, interpreter,
-                             script_call, script_params, final_image_path,
-                             expected_checksum, test_timeout):
+def verify_img_paste_success(
+    test,
+    session_to_copy_from,
+    interpreter,
+    script_call,
+    script_params,
+    final_image_path,
+    expected_checksum,
+    test_timeout,
+):
     """
     Verify an image paste is successful by pasting an image to a file and
     verify the checksum matches the expected value.
@@ -145,30 +167,33 @@ def verify_img_paste_success(test, session_to_copy_from, interpreter,
     :param expected_checksum: the checksum value of the image to be verified
     :param test_timeout: timeout time for the cmd
     """
-    cmd = "%s %s %s %s" % (interpreter, script_call,
-                           script_params, final_image_path)
+    cmd = "%s %s %s %s" % (interpreter, script_call, script_params, final_image_path)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if "Cb Image stored and saved to:" in output:
             LOG_JOB.info("Copying of the image was successful")
         else:
             test.fail("Copying to the clipboard failed. %s" % output)
     finally:
-        LOG_JOB.info("------------ End of script output of the Pasting"
-                     " Session ------------")
+        LOG_JOB.info(
+            "------------ End of script output of the Pasting" " Session ------------"
+        )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_image_path)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
     except aexpect.ShellCmdError:
         test.fail("Copying to the clipboard failed.")
 
-    LOG_JOB.info("------------ End of script output of the Pasting"
-                 " Session ------------")
+    LOG_JOB.info(
+        "------------ End of script output of the Pasting" " Session ------------"
+    )
     img_checksum = output.split()[0]
     if img_checksum == expected_checksum:
         LOG_JOB.info("PASS: The image was successfully pasted")
@@ -176,9 +201,15 @@ def verify_img_paste_success(test, session_to_copy_from, interpreter,
         test.fail("The pasting of the image failed")
 
 
-def verify_img_paste_fails(test, session_to_copy_from, interpreter,
-                           script_call, script_params, final_image_path,
-                           test_timeout):
+def verify_img_paste_fails(
+    test,
+    session_to_copy_from,
+    interpreter,
+    script_call,
+    script_params,
+    final_image_path,
+    test_timeout,
+):
     """
     Verify that pasting an image fails.
 
@@ -189,13 +220,13 @@ def verify_img_paste_fails(test, session_to_copy_from, interpreter,
     :param final_image_path: location of where the image should be pasted
     :param test_timeout: timeout time for the cmd
     """
-    cmd = "%s %s %s %s" % (interpreter, script_call,
-                           script_params, final_image_path)
+    cmd = "%s %s %s %s" % (interpreter, script_call, script_params, final_image_path)
 
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if "No image stored" in output:
             LOG_JOB.info("PASS: Pasting the image failed as expected.")
         else:
@@ -203,13 +234,21 @@ def verify_img_paste_fails(test, session_to_copy_from, interpreter,
     except aexpect.ShellCmdError:
         test.fail("Copying to the clipboard failed")
 
-    LOG_JOB.debug("------------ End of script output of the Pasting"
-                  " Session ------------")
+    LOG_JOB.debug(
+        "------------ End of script output of the Pasting" " Session ------------"
+    )
 
 
-def verify_text_copy(test, session_to_copy_from, interpreter, script_call,
-                     script_params, string_length, final_text_path,
-                     test_timeout):
+def verify_text_copy(
+    test,
+    session_to_copy_from,
+    interpreter,
+    script_call,
+    script_params,
+    string_length,
+    final_text_path,
+    test_timeout,
+):
     """
     Verify copying a large amount of textual data to the clipboard and to
     a file is successful, and return the checksum of the file.
@@ -223,12 +262,12 @@ def verify_text_copy(test, session_to_copy_from, interpreter, script_call,
 
     :return: file_checksum: checksum of the textfile that was created.
     """
-    cmd = "%s %s %s %s" % (interpreter, script_call,
-                           script_params, string_length)
+    cmd = "%s %s %s %s" % (interpreter, script_call, script_params, string_length)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if "The string has also been placed in the clipboard" in output:
             LOG_JOB.info("Copying of the large text file was successful")
         else:
@@ -236,28 +275,38 @@ def verify_text_copy(test, session_to_copy_from, interpreter, script_call,
     except aexpect.ShellCmdError:
         test.fail("Copying to the clipboard failed")
 
-    LOG_JOB.debug("------------ End of script output of the Copying"
-                  " Session ------------")
+    LOG_JOB.debug(
+        "------------ End of script output of the Copying" " Session ------------"
+    )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_text_path)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
     except aexpect.ShellCmdError:
         test.fail("Couldn't get the size of the file")
 
-    LOG_JOB.debug("------------ End of script output of the Copying"
-                  " Session ------------")
+    LOG_JOB.debug(
+        "------------ End of script output of the Copying" " Session ------------"
+    )
     # Get the size of the copied image, this will be used for
     # verification on the other session that the paste was successful
     file_checksum = output.split()[0]
     return file_checksum
 
 
-def verify_txt_paste_success(test, session_to_paste_to, interpreter,
-                             script_call, script_params,
-                             final_text_path, textfile_checksum, test_timeout):
+def verify_txt_paste_success(
+    test,
+    session_to_paste_to,
+    interpreter,
+    script_call,
+    script_params,
+    final_text_path,
+    textfile_checksum,
+    test_timeout,
+):
     """
     Use the clipboard script to copy text into the clipboard.
 
@@ -269,30 +318,33 @@ def verify_txt_paste_success(test, session_to_paste_to, interpreter,
     :param image_size: the size of the image to be verified
     :param test_timeout: timeout time for the cmd
     """
-    cmd = "%s %s %s %s" % (interpreter, script_call,
-                           script_params, final_text_path)
+    cmd = "%s %s %s %s" % (interpreter, script_call, script_params, final_text_path)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_paste_to.cmd(cmd, print_func=LOG_JOB.info,
-                                         timeout=test_timeout)
+        output = session_to_paste_to.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if "Writing of the clipboard text is complete" in output:
             LOG_JOB.info("Copying of the large text file was successful")
         else:
             test.fail("Copying to the clipboard failed. %s" % output)
     finally:
-        LOG_JOB.info("------------ End of script output of the Pasting"
-                     " Session ------------")
+        LOG_JOB.info(
+            "------------ End of script output of the Pasting" " Session ------------"
+        )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_text_path)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_paste_to.cmd(cmd, print_func=LOG_JOB.info,
-                                         timeout=test_timeout)
+        output = session_to_paste_to.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
     except aexpect.ShellCmdError:
         test.fail("Copying to the clipboard failed.")
 
-    LOG_JOB.info("------------ End of script output of the Pasting"
-                 " Session ------------")
+    LOG_JOB.info(
+        "------------ End of script output of the Pasting" " Session ------------"
+    )
     file_checksum = output.split()[0]
     if file_checksum == textfile_checksum:
         LOG_JOB.info("PASS: The large text file was successfully pasted")
@@ -300,9 +352,15 @@ def verify_txt_paste_success(test, session_to_paste_to, interpreter,
         test.fail("The pasting of the large text file failed")
 
 
-def place_text_in_clipboard(test, session_to_copy_from, interpreter,
-                            script_call, script_params, testing_text,
-                            test_timeout):
+def place_text_in_clipboard(
+    test,
+    session_to_copy_from,
+    interpreter,
+    script_call,
+    script_params,
+    testing_text,
+    test_timeout,
+):
     """
     Use the clipboard script to copy text into the clipboard.
 
@@ -313,13 +371,13 @@ def place_text_in_clipboard(test, session_to_copy_from, interpreter,
     :param testing_text: text to be pasted
     :param test_timeout: timeout time for the cmd
     """
-    cmd = "%s %s %s %s" % (interpreter, script_call,
-                           script_params, testing_text)
+    cmd = "%s %s %s %s" % (interpreter, script_call, script_params, testing_text)
 
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if "The text has been placed into the clipboard." in output:
             LOG_JOB.info("Copying of text was successful")
         else:
@@ -327,16 +385,18 @@ def place_text_in_clipboard(test, session_to_copy_from, interpreter,
     except aexpect.ShellCmdError:
         test.fail("Copying to the clipboard failed")
 
-    LOG_JOB.debug("------------ End of script output of the Copying"
-                  " Session ------------")
+    LOG_JOB.debug(
+        "------------ End of script output of the Copying" " Session ------------"
+    )
 
     # Verify the clipboard of the session that is being copied from,
     # before continuing the test
     cmd = "%s %s" % (interpreter, script_call)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_copy_from.cmd(cmd, print_func=LOG_JOB.info,
-                                          timeout=test_timeout)
+        output = session_to_copy_from.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if testing_text in output:
             LOG_JOB.info("Text was successfully copied to the clipboard")
         else:
@@ -347,8 +407,9 @@ def place_text_in_clipboard(test, session_to_copy_from, interpreter,
     LOG_JOB.debug("------------ End of script output ------------")
 
 
-def verify_paste_fails(test, session_to_paste_to, testing_text, interpreter,
-                       script_call, test_timeout):
+def verify_paste_fails(
+    test, session_to_paste_to, testing_text, interpreter, script_call, test_timeout
+):
     """
     Test that pasting to the other session fails (negative testing:
     spice-vdagentd stopped or copy-paste-disabled is set on the VM
@@ -363,23 +424,29 @@ def verify_paste_fails(test, session_to_paste_to, testing_text, interpreter,
     cmd = "%s %s" % (interpreter, script_call)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_paste_to.cmd(cmd, print_func=LOG_JOB.info,
-                                         timeout=test_timeout)
+        output = session_to_paste_to.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if testing_text in output:
-            test.fail("Pasting from the clipboard was"
-                      " successful, text was copied from the other"
-                      " session with vdagent stopped!!", output)
+            test.fail(
+                "Pasting from the clipboard was"
+                " successful, text was copied from the other"
+                " session with vdagent stopped!!",
+                output,
+            )
         else:
-            LOG_JOB.info("PASS: Pasting from the clipboard was not"
-                         " successful, as EXPECTED")
+            LOG_JOB.info(
+                "PASS: Pasting from the clipboard was not" " successful, as EXPECTED"
+            )
     except aexpect.ShellCmdError:
         test.fail("Pasting from the clipboard failed.")
 
     LOG_JOB.debug("------------ End of script output ------------")
 
 
-def verify_paste_successful(test, session_to_paste_to, testing_text,
-                            interpreter, script_call, test_timeout):
+def verify_paste_successful(
+    test, session_to_paste_to, testing_text, interpreter, script_call, test_timeout
+):
     """
     Test that pasting to the other session fails (negative testing -
     spice-vdagentd stopped or copy-paste-disabled is set on the VM
@@ -394,21 +461,26 @@ def verify_paste_successful(test, session_to_paste_to, testing_text,
     cmd = "%s %s" % (interpreter, script_call)
     try:
         LOG_JOB.debug("------------ Script output ------------")
-        output = session_to_paste_to.cmd(cmd, print_func=LOG_JOB.info,
-                                         timeout=test_timeout)
+        output = session_to_paste_to.cmd(
+            cmd, print_func=LOG_JOB.info, timeout=test_timeout
+        )
         if testing_text in output:
             LOG_JOB.info("Pasting from the clipboard is successful")
         else:
-            test.fail("Pasting from the clipboard failed, "
-                      "nothing copied from other session", output)
+            test.fail(
+                "Pasting from the clipboard failed, "
+                "nothing copied from other session",
+                output,
+            )
     except aexpect.ShellCmdError:
         test.fail("Pasting from the clipboard failed.")
 
     LOG_JOB.debug("------------ End of script output ------------")
 
 
-def copy_and_paste_neg(test, session_to_copy_from, session_to_paste_to,
-                       guest_session, params):
+def copy_and_paste_neg(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Negative Test: Sending the commands to copy from one session to another,
     and make sure it does not work, because spice vdagent is off
@@ -435,17 +507,25 @@ def copy_and_paste_neg(test, session_to_copy_from, session_to_paste_to,
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
-    place_text_in_clipboard(test, session_to_copy_from, interpreter,
-                            script_call, script_params, testing_text,
-                            test_timeout)
+    place_text_in_clipboard(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_params,
+        testing_text,
+        test_timeout,
+    )
     # Now test to see if the copied text from the one session can
     # be pasted on the other
-    verify_paste_fails(test, session_to_paste_to, testing_text, interpreter,
-                       script_call, test_timeout)
+    verify_paste_fails(
+        test, session_to_paste_to, testing_text, interpreter, script_call, test_timeout
+    )
 
 
-def copy_and_paste_pos(test, session_to_copy_from, session_to_paste_to,
-                       guest_session, params):
+def copy_and_paste_pos(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Sending the commands to copy from one session to another, and make
     sure it works correctly
@@ -470,17 +550,25 @@ def copy_and_paste_pos(test, session_to_copy_from, session_to_paste_to,
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
-    place_text_in_clipboard(test, session_to_copy_from, interpreter,
-                            script_call, script_params, testing_text,
-                            test_timeout)
+    place_text_in_clipboard(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_params,
+        testing_text,
+        test_timeout,
+    )
     # Now test to see if the copied text from the one session can be
     # pasted on the other
-    verify_paste_successful(test, session_to_paste_to, testing_text,
-                            interpreter, script_call, test_timeout)
+    verify_paste_successful(
+        test, session_to_paste_to, testing_text, interpreter, script_call, test_timeout
+    )
 
 
-def restart_cppaste(test, session_to_copy_from, session_to_paste_to,
-                    guest_session, params):
+def restart_cppaste(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Sending the commands to copy from one session to another, and make
     sure it works correctly after Restarting vdagent
@@ -505,13 +593,20 @@ def restart_cppaste(test, session_to_copy_from, session_to_paste_to,
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
-    place_text_in_clipboard(test, session_to_copy_from, interpreter,
-                            script_call, script_params, testing_text,
-                            test_timeout)
+    place_text_in_clipboard(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_params,
+        testing_text,
+        test_timeout,
+    )
     # Now test to see if the copied text from the one session can be
     # pasted on the other
-    verify_paste_successful(test, session_to_paste_to, testing_text,
-                            interpreter, script_call, test_timeout)
+    verify_paste_successful(
+        test, session_to_paste_to, testing_text, interpreter, script_call, test_timeout
+    )
     # Restart vdagent, clear the clipboard, verify cp and paste still works
     utils_spice.restart_vdagent(guest_session, test_timeout)
 
@@ -520,19 +615,27 @@ def restart_cppaste(test, session_to_copy_from, session_to_paste_to,
     wait_timeout(5)
 
     # Command to copy text and put it in the keyboard, copy on the client
-    place_text_in_clipboard(test, session_to_copy_from, interpreter,
-                            script_call, script_params, testing_text,
-                            test_timeout)
+    place_text_in_clipboard(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_params,
+        testing_text,
+        test_timeout,
+    )
 
     wait_timeout(5)
     # Now test to see if the copied text from the one session can be
     # pasted on the other
-    verify_paste_successful(test, session_to_paste_to, testing_text,
-                            interpreter, script_call, test_timeout)
+    verify_paste_successful(
+        test, session_to_paste_to, testing_text, interpreter, script_call, test_timeout
+    )
 
 
-def copy_and_paste_cpdisabled_neg(test, session_to_copy_from,
-                                  session_to_paste_to, guest_session, params):
+def copy_and_paste_cpdisabled_neg(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Negative Test: Sending the commands to copy from one session to another,
     for this test cp/paste will be disabled from qemu-kvm, Verify with vdagent
@@ -558,17 +661,25 @@ def copy_and_paste_cpdisabled_neg(test, session_to_copy_from,
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
-    place_text_in_clipboard(test, session_to_copy_from, interpreter,
-                            script_call, script_params, testing_text,
-                            test_timeout)
+    place_text_in_clipboard(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_params,
+        testing_text,
+        test_timeout,
+    )
     # Now test to see if the copied text from the one session can be pasted
     # on the other session
-    verify_paste_fails(test, session_to_paste_to, testing_text, interpreter,
-                       script_call, test_timeout)
+    verify_paste_fails(
+        test, session_to_paste_to, testing_text, interpreter, script_call, test_timeout
+    )
 
 
-def copy_and_paste_largetext(test, session_to_copy_from, session_to_paste_to,
-                             guest_session, params):
+def copy_and_paste_largetext(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Sending the commands to copy large text from one session to another, and
     make sure the data is still correct.
@@ -585,8 +696,7 @@ def copy_and_paste_largetext(test, session_to_copy_from, session_to_paste_to,
     script_write_params = params.get("script_params_writef")
     script_create_params = params.get("script_params_createf")
     dst_path = params.get("dst_dir", "guest_script")
-    final_text_path = os.path.join(params.get("dst_dir"),
-                                   params.get("final_textfile"))
+    final_text_path = os.path.join(params.get("dst_dir"), params.get("final_textfile"))
     script_call = os.path.join(dst_path, script)
     string_length = params.get("text_to_test")
 
@@ -597,20 +707,34 @@ def copy_and_paste_largetext(test, session_to_copy_from, session_to_paste_to,
     utils_spice.verify_virtio(guest_session, test_timeout)
 
     # Command to copy text and put it in the clipboard
-    textfile_checksum = verify_text_copy(test, session_to_copy_from,
-                                         interpreter, script_call,
-                                         script_create_params, string_length,
-                                         final_text_path, test_timeout)
+    textfile_checksum = verify_text_copy(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_create_params,
+        string_length,
+        final_text_path,
+        test_timeout,
+    )
     wait_timeout(30)
 
     # Verify the paste on the session to paste to
-    verify_txt_paste_success(test, session_to_paste_to, interpreter,
-                             script_call, script_write_params,
-                             final_text_path, textfile_checksum, test_timeout)
+    verify_txt_paste_success(
+        test,
+        session_to_paste_to,
+        interpreter,
+        script_call,
+        script_write_params,
+        final_text_path,
+        textfile_checksum,
+        test_timeout,
+    )
 
 
-def restart_cppaste_lrgtext(test, session_to_copy_from, session_to_paste_to,
-                            guest_session, params):
+def restart_cppaste_lrgtext(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Sending the commands to copy large text from one session to another, and
     make sure the data is still correct after restarting vdagent.
@@ -627,8 +751,7 @@ def restart_cppaste_lrgtext(test, session_to_copy_from, session_to_paste_to,
     script_write_params = params.get("script_params_writef")
     script_create_params = params.get("script_params_createf")
     dst_path = params.get("dst_dir", "guest_script")
-    final_text_path = os.path.join(params.get("dst_dir"),
-                                   params.get("final_textfile"))
+    final_text_path = os.path.join(params.get("dst_dir"), params.get("final_textfile"))
     script_call = os.path.join(dst_path, script)
     string_length = params.get("text_to_test")
 
@@ -639,16 +762,29 @@ def restart_cppaste_lrgtext(test, session_to_copy_from, session_to_paste_to,
     utils_spice.verify_virtio(guest_session, test_timeout)
 
     # Command to copy text and put it in the clipboard
-    textfile_checksum = verify_text_copy(test, session_to_copy_from,
-                                         interpreter, script_call,
-                                         script_create_params, string_length,
-                                         final_text_path, test_timeout)
+    textfile_checksum = verify_text_copy(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_create_params,
+        string_length,
+        final_text_path,
+        test_timeout,
+    )
     wait_timeout(30)
 
     # Verify the paste on the session to paste to
-    verify_txt_paste_success(test, session_to_paste_to, interpreter,
-                             script_call, script_write_params,
-                             final_text_path, textfile_checksum, test_timeout)
+    verify_txt_paste_success(
+        test,
+        session_to_paste_to,
+        interpreter,
+        script_call,
+        script_write_params,
+        final_text_path,
+        textfile_checksum,
+        test_timeout,
+    )
     # Restart vdagent & clear the clipboards.
     utils_spice.restart_vdagent(guest_session, test_timeout)
     clear_cb(session_to_paste_to, params)
@@ -656,20 +792,34 @@ def restart_cppaste_lrgtext(test, session_to_copy_from, session_to_paste_to,
     wait_timeout(5)
 
     # Command to copy text and put it in the clipboard
-    textfile_checksum = verify_text_copy(test, session_to_copy_from,
-                                         interpreter, script_call,
-                                         script_create_params, string_length,
-                                         final_text_path, test_timeout)
+    textfile_checksum = verify_text_copy(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_create_params,
+        string_length,
+        final_text_path,
+        test_timeout,
+    )
     wait_timeout(30)
 
     # Verify the paste on the session to paste to
-    verify_txt_paste_success(test, session_to_paste_to, interpreter,
-                             script_call, script_write_params,
-                             final_text_path, textfile_checksum, test_timeout)
+    verify_txt_paste_success(
+        test,
+        session_to_paste_to,
+        interpreter,
+        script_call,
+        script_write_params,
+        final_text_path,
+        textfile_checksum,
+        test_timeout,
+    )
 
 
-def copy_and_paste_image_pos(test, session_to_copy_from, session_to_paste_to,
-                             guest_session, params):
+def copy_and_paste_image_pos(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Sending the commands to copy an image from one session to another.
 
@@ -686,14 +836,16 @@ def copy_and_paste_image_pos(test, session_to_copy_from, session_to_paste_to,
     script_set_params = params.get("script_params_img_set")
     script_save_params = params.get("script_params_img_save")
     dst_path = params.get("dst_dir", "guest_script")
-    dst_image_path = os.path.join(params.get("dst_dir"),
-                                  params.get("image_tocopy_name"))
-    dst_image_path_bmp = os.path.join(params.get("dst_dir"),
-                                      params.get("image_tocopy_name_bmp"))
-    final_image_path = os.path.join(params.get("dst_dir"),
-                                    params.get("final_image"))
-    final_image_path_bmp = os.path.join(params.get("dst_dir"),
-                                        params.get("final_image_bmp"))
+    dst_image_path = os.path.join(
+        params.get("dst_dir"), params.get("image_tocopy_name")
+    )
+    dst_image_path_bmp = os.path.join(
+        params.get("dst_dir"), params.get("image_tocopy_name_bmp")
+    )
+    final_image_path = os.path.join(params.get("dst_dir"), params.get("final_image"))
+    final_image_path_bmp = os.path.join(
+        params.get("dst_dir"), params.get("final_image_bmp")
+    )
     script_call = os.path.join(dst_path, script)
 
     # Before doing the copy and paste, verify vdagent is
@@ -704,41 +856,80 @@ def copy_and_paste_image_pos(test, session_to_copy_from, session_to_paste_to,
 
     if "png" in image_type:
         # Command to copy text and put it in the keyboard, copy on the client
-        place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                               script_call, script_set_params, dst_image_path,
-                               test_timeout)
+        place_img_in_clipboard(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_set_params,
+            dst_image_path,
+            test_timeout,
+        )
         # Now test to see if the copied text from the one session can be
         # pasted on the other
-        image_size = verify_img_paste(test, session_to_copy_from, interpreter,
-                                      script_call, script_save_params,
-                                      final_image_path, test_timeout)
+        image_size = verify_img_paste(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path,
+            test_timeout,
+        )
         wait_timeout(30)
 
         # Verify the paste on the session to paste to
-        verify_img_paste_success(test, session_to_paste_to, interpreter,
-                                 script_call, script_save_params,
-                                 final_image_path, image_size, test_timeout)
+        verify_img_paste_success(
+            test,
+            session_to_paste_to,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path,
+            image_size,
+            test_timeout,
+        )
     else:
         # Testing bmp
-        place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                               script_call, script_set_params,
-                               dst_image_path_bmp, test_timeout)
+        place_img_in_clipboard(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_set_params,
+            dst_image_path_bmp,
+            test_timeout,
+        )
 
         # Now test to see if the copied text from the one session can be
         # pasted on the other
-        image_size = verify_img_paste(test, session_to_copy_from, interpreter,
-                                      script_call, script_save_params,
-                                      final_image_path_bmp, test_timeout)
+        image_size = verify_img_paste(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path_bmp,
+            test_timeout,
+        )
         wait_timeout(30)
 
         # Verify the paste on the session to paste to
-        verify_img_paste_success(test, session_to_paste_to, interpreter,
-                                 script_call, script_save_params,
-                                 final_image_path_bmp, image_size, test_timeout)
+        verify_img_paste_success(
+            test,
+            session_to_paste_to,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path_bmp,
+            image_size,
+            test_timeout,
+        )
 
 
-def restart_cppaste_image(test, session_to_copy_from, session_to_paste_to,
-                          guest_session, params):
+def restart_cppaste_image(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Sending the commands to copy an image from one session to another.
 
@@ -755,14 +946,16 @@ def restart_cppaste_image(test, session_to_copy_from, session_to_paste_to,
     script_set_params = params.get("script_params_img_set")
     script_save_params = params.get("script_params_img_save")
     dst_path = params.get("dst_dir", "guest_script")
-    dst_image_path = os.path.join(params.get("dst_dir"),
-                                  params.get("image_tocopy_name"))
-    dst_image_path_bmp = os.path.join(params.get("dst_dir"),
-                                      params.get("image_tocopy_name_bmp"))
-    final_image_path = os.path.join(params.get("dst_dir"),
-                                    params.get("final_image"))
-    final_image_path_bmp = os.path.join(params.get("dst_dir"),
-                                        params.get("final_image_bmp"))
+    dst_image_path = os.path.join(
+        params.get("dst_dir"), params.get("image_tocopy_name")
+    )
+    dst_image_path_bmp = os.path.join(
+        params.get("dst_dir"), params.get("image_tocopy_name_bmp")
+    )
+    final_image_path = os.path.join(params.get("dst_dir"), params.get("final_image"))
+    final_image_path_bmp = os.path.join(
+        params.get("dst_dir"), params.get("final_image_bmp")
+    )
     script_call = os.path.join(dst_path, script)
 
     # Before doing the copy and paste, verify vdagent is
@@ -773,37 +966,75 @@ def restart_cppaste_image(test, session_to_copy_from, session_to_paste_to,
 
     if "png" in image_type:
         # Command to copy text and put it in the keyboard, copy on the client
-        place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                               script_call, script_set_params, dst_image_path,
-                               test_timeout)
+        place_img_in_clipboard(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_set_params,
+            dst_image_path,
+            test_timeout,
+        )
         # Now test to see if the copied text from the one session can be
         # pasted on the other
-        image_size = verify_img_paste(test, session_to_copy_from, interpreter,
-                                      script_call, script_save_params,
-                                      final_image_path, test_timeout)
+        image_size = verify_img_paste(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path,
+            test_timeout,
+        )
         wait_timeout(30)
 
         # Verify the paste on the session to paste to
-        verify_img_paste_success(test, session_to_paste_to, interpreter,
-                                 script_call, script_save_params,
-                                 final_image_path, image_size, test_timeout)
+        verify_img_paste_success(
+            test,
+            session_to_paste_to,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path,
+            image_size,
+            test_timeout,
+        )
     else:
         # Testing bmp
-        place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                               script_call, script_set_params,
-                               dst_image_path_bmp, test_timeout)
+        place_img_in_clipboard(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_set_params,
+            dst_image_path_bmp,
+            test_timeout,
+        )
 
         # Now test to see if the copied text from the one session can be
         # pasted on the other
-        image_size = verify_img_paste(test, session_to_copy_from, interpreter,
-                                      script_call, script_save_params,
-                                      final_image_path_bmp, test_timeout)
+        image_size = verify_img_paste(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path_bmp,
+            test_timeout,
+        )
         wait_timeout(30)
 
         # Verify the paste on the session to paste to
-        verify_img_paste_success(test, session_to_paste_to, interpreter,
-                                 script_call, script_save_params,
-                                 final_image_path_bmp, image_size, test_timeout)
+        verify_img_paste_success(
+            test,
+            session_to_paste_to,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path_bmp,
+            image_size,
+            test_timeout,
+        )
     # Restart vdagent & clear the clipboards.
     utils_spice.restart_vdagent(guest_session, test_timeout)
     clear_cb(session_to_paste_to, params)
@@ -812,41 +1043,80 @@ def restart_cppaste_image(test, session_to_copy_from, session_to_paste_to,
 
     if "png" in image_type:
         # Command to copy text and put it in the keyboard, copy on the client
-        place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                               script_call, script_set_params, dst_image_path,
-                               test_timeout)
+        place_img_in_clipboard(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_set_params,
+            dst_image_path,
+            test_timeout,
+        )
         # Now test to see if the copied text from the one session can be
         # pasted on the other
-        image_size = verify_img_paste(test, session_to_copy_from, interpreter,
-                                      script_call, script_save_params,
-                                      final_image_path, test_timeout)
+        image_size = verify_img_paste(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path,
+            test_timeout,
+        )
         wait_timeout(30)
 
         # Verify the paste on the session to paste to
-        verify_img_paste_success(test, session_to_paste_to, interpreter,
-                                 script_call, script_save_params,
-                                 final_image_path, image_size, test_timeout)
+        verify_img_paste_success(
+            test,
+            session_to_paste_to,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path,
+            image_size,
+            test_timeout,
+        )
     else:
         # Testing bmp
-        place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                               script_call, script_set_params,
-                               dst_image_path_bmp, test_timeout)
+        place_img_in_clipboard(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_set_params,
+            dst_image_path_bmp,
+            test_timeout,
+        )
 
         # Now test to see if the copied text from the one session can be
         # pasted on the other
-        image_size = verify_img_paste(test, session_to_copy_from, interpreter,
-                                      script_call, script_save_params,
-                                      final_image_path_bmp, test_timeout)
+        image_size = verify_img_paste(
+            test,
+            session_to_copy_from,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path_bmp,
+            test_timeout,
+        )
         wait_timeout(30)
 
         # Verify the paste on the session to paste to
-        verify_img_paste_success(test, session_to_paste_to, interpreter,
-                                 script_call, script_save_params,
-                                 final_image_path_bmp, image_size, test_timeout)
+        verify_img_paste_success(
+            test,
+            session_to_paste_to,
+            interpreter,
+            script_call,
+            script_save_params,
+            final_image_path_bmp,
+            image_size,
+            test_timeout,
+        )
 
 
-def copy_and_paste_image_neg(test, session_to_copy_from, session_to_paste_to,
-                             guest_session, params):
+def copy_and_paste_image_neg(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Negative Test: Sending the commands to copy an image from one
     session to another, with spice-vdagentd off, so copy and pasting
@@ -864,10 +1134,10 @@ def copy_and_paste_image_neg(test, session_to_copy_from, session_to_paste_to,
     script_set_params = params.get("script_params_img_set")
     script_save_params = params.get("script_params_img_save")
     dst_path = params.get("dst_dir", "guest_script")
-    dst_image_path = os.path.join(params.get("dst_dir"),
-                                  params.get("image_tocopy_name"))
-    final_image_path = os.path.join(params.get("dst_dir"),
-                                    params.get("final_image"))
+    dst_image_path = os.path.join(
+        params.get("dst_dir"), params.get("image_tocopy_name")
+    )
+    final_image_path = os.path.join(params.get("dst_dir"), params.get("final_image"))
     script_call = os.path.join(dst_path, script)
 
     # Before doing the copy and paste, verify vdagent is
@@ -878,22 +1148,41 @@ def copy_and_paste_image_neg(test, session_to_copy_from, session_to_paste_to,
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
-    place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                           script_call, script_set_params, dst_image_path,
-                           test_timeout)
+    place_img_in_clipboard(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_set_params,
+        dst_image_path,
+        test_timeout,
+    )
     # Now test to see if the copied text from the one session can be
     # pasted on the other
-    verify_img_paste(test, session_to_copy_from, interpreter,
-                     script_call, script_save_params,
-                     final_image_path, test_timeout)
+    verify_img_paste(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_save_params,
+        final_image_path,
+        test_timeout,
+    )
     # Verify the paste on the session to paste to
-    verify_img_paste_fails(test, session_to_paste_to, interpreter,
-                           script_call, script_save_params,
-                           final_image_path, test_timeout)
+    verify_img_paste_fails(
+        test,
+        session_to_paste_to,
+        interpreter,
+        script_call,
+        script_save_params,
+        final_image_path,
+        test_timeout,
+    )
 
 
-def copyandpasteimg_cpdisabled_neg(test, session_to_copy_from,
-                                   session_to_paste_to, guest_session, params):
+def copyandpasteimg_cpdisabled_neg(
+    test, session_to_copy_from, session_to_paste_to, guest_session, params
+):
     """
     Negative Tests Sending the commands to copy an image from one
     session to another; however, copy-paste will be disabled on the VM
@@ -911,10 +1200,10 @@ def copyandpasteimg_cpdisabled_neg(test, session_to_copy_from,
     script_set_params = params.get("script_params_img_set")
     script_save_params = params.get("script_params_img_save")
     dst_path = params.get("dst_dir", "guest_script")
-    dst_image_path = os.path.join(params.get("dst_dir"),
-                                  params.get("image_tocopy_name"))
-    final_image_path = os.path.join(params.get("dst_dir"),
-                                    params.get("final_image"))
+    dst_image_path = os.path.join(
+        params.get("dst_dir"), params.get("image_tocopy_name")
+    )
+    final_image_path = os.path.join(params.get("dst_dir"), params.get("final_image"))
     script_call = os.path.join(dst_path, script)
 
     # Before doing the copy and paste, verify vdagent is
@@ -923,20 +1212,38 @@ def copyandpasteimg_cpdisabled_neg(test, session_to_copy_from,
     # Make sure virtio driver is running
     utils_spice.verify_virtio(guest_session, test_timeout)
     # Command to copy text and put it in the keyboard, copy on the client
-    place_img_in_clipboard(test, session_to_copy_from, interpreter,
-                           script_call, script_set_params, dst_image_path,
-                           test_timeout)
+    place_img_in_clipboard(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_set_params,
+        dst_image_path,
+        test_timeout,
+    )
     # Now test to see if the copied text from the one session can be
     # pasted on the other
-    verify_img_paste(test, session_to_copy_from, interpreter,
-                     script_call, script_save_params,
-                     final_image_path, test_timeout)
+    verify_img_paste(
+        test,
+        session_to_copy_from,
+        interpreter,
+        script_call,
+        script_save_params,
+        final_image_path,
+        test_timeout,
+    )
     wait_timeout(30)
 
     # Verify the paste on the session to paste to
-    verify_img_paste_fails(test, session_to_paste_to, interpreter,
-                           script_call, script_save_params,
-                           final_image_path, test_timeout)
+    verify_img_paste_fails(
+        test,
+        session_to_paste_to,
+        interpreter,
+        script_call,
+        script_save_params,
+        final_image_path,
+        test_timeout,
+    )
 
 
 def run(test, params, env):
@@ -966,14 +1273,18 @@ def run(test, params, env):
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
     client_session = client_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360))
+    )
 
     guest_vm = env.get_vm(params["guest_vm"])
     guest_session = guest_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360))
+    )
     guest_root_session = guest_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)),
-        username="root", password="123456")
+        username="root",
+        password="123456",
+    )
     test.log.info("Get PID of remote-viewer")
     client_session.cmd("pgrep remote-viewer")
 
@@ -985,12 +1296,15 @@ def run(test, params, env):
 
     # The following is to copy the test image to either the client or guest
     # if the test deals with images.
-    image_path = os.path.join(data_dir.get_deps_dir(), 'spice', image_name)
-    image_path_bmp = os.path.join(data_dir.get_deps_dir(), 'spice', image_name_bmp)
+    image_path = os.path.join(data_dir.get_deps_dir(), "spice", image_name)
+    image_path_bmp = os.path.join(data_dir.get_deps_dir(), "spice", image_name_bmp)
 
-    test.log.info("Transferring the clipboard script to client & guest,"
-                  "destination directory: %s, source script location: %s",
-                  dst_path, script_path)
+    test.log.info(
+        "Transferring the clipboard script to client & guest,"
+        "destination directory: %s, source script location: %s",
+        dst_path,
+        script_path,
+    )
 
     client_vm.copy_files_to(script_path, dst_path, timeout=60)
     guest_vm.copy_files_to(script_path, dst_path, timeout=60)
@@ -998,28 +1312,38 @@ def run(test, params, env):
     if "image" in test_type:
         if "client_to_guest" in test_type:
             if "png" in image_type:
-                test.log.info("Transferring the image to client"
-                              "destination directory: %s, source image: %s",
-                              dst_image_path, image_path)
+                test.log.info(
+                    "Transferring the image to client"
+                    "destination directory: %s, source image: %s",
+                    dst_image_path,
+                    image_path,
+                )
                 client_vm.copy_files_to(image_path, dst_image_path, timeout=60)
             else:
-                test.log.info("Transferring a bmp image to client"
-                              "destination directory: %s, source image: %s",
-                              dst_image_path_bmp, image_path_bmp)
-                client_vm.copy_files_to(image_path_bmp, dst_image_path_bmp,
-                                        timeout=60)
+                test.log.info(
+                    "Transferring a bmp image to client"
+                    "destination directory: %s, source image: %s",
+                    dst_image_path_bmp,
+                    image_path_bmp,
+                )
+                client_vm.copy_files_to(image_path_bmp, dst_image_path_bmp, timeout=60)
         elif "guest_to_client" in test_type:
             if "png" in image_type:
-                test.log.info("Transferring the image to client"
-                              "destination directory: %s, source image: %s",
-                              dst_image_path, image_path)
+                test.log.info(
+                    "Transferring the image to client"
+                    "destination directory: %s, source image: %s",
+                    dst_image_path,
+                    image_path,
+                )
                 guest_vm.copy_files_to(image_path, dst_image_path, timeout=60)
             else:
-                test.log.info("Transferring a bmp image to client"
-                              "destination directory: %s, source image: %s",
-                              dst_image_path_bmp, image_path_bmp)
-                guest_vm.copy_files_to(image_path_bmp, dst_image_path_bmp,
-                                       timeout=60)
+                test.log.info(
+                    "Transferring a bmp image to client"
+                    "destination directory: %s, source image: %s",
+                    dst_image_path_bmp,
+                    image_path_bmp,
+                )
+                guest_vm.copy_files_to(image_path_bmp, dst_image_path_bmp, timeout=60)
         else:
             test.fail("Incorrect Test_Setup")
 
@@ -1039,35 +1363,43 @@ def run(test, params, env):
     wait_timeout(5)
 
     # Figure out which test needs to be run
-    if (cp_disabled_test == "yes"):
+    if cp_disabled_test == "yes":
         # These are negative tests, clipboards are not synced because the VM
         # is set to disable copy and paste.
         if "client_to_guest" in test_type:
             if "image" in test_type:
-                test.log.info("Negative Test Case: Copy/Paste Disabled, Copying"
-                              "Image from the Client to Guest Should Not Work\n")
-                copyandpasteimg_cpdisabled_neg(test, client_session,
-                                               guest_session,
-                                               guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copy/Paste Disabled, Copying"
+                    "Image from the Client to Guest Should Not Work\n"
+                )
+                copyandpasteimg_cpdisabled_neg(
+                    test, client_session, guest_session, guest_root_session, params
+                )
             else:
-                test.log.info("Negative Test Case: Copy/Paste Disabled, Copying"
-                              " from the Client to Guest Should Not Work\n")
-                copy_and_paste_cpdisabled_neg(test, client_session,
-                                              guest_session,
-                                              guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copy/Paste Disabled, Copying"
+                    " from the Client to Guest Should Not Work\n"
+                )
+                copy_and_paste_cpdisabled_neg(
+                    test, client_session, guest_session, guest_root_session, params
+                )
         if "guest_to_client" in test_type:
             if "image" in test_type:
-                test.log.info("Negative Test Case: Copy/Paste Disabled, Copying"
-                              "Image from the Guest to Client Should Not Work\n")
-                copyandpasteimg_cpdisabled_neg(test, guest_session,
-                                               client_session,
-                                               guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copy/Paste Disabled, Copying"
+                    "Image from the Guest to Client Should Not Work\n"
+                )
+                copyandpasteimg_cpdisabled_neg(
+                    test, guest_session, client_session, guest_root_session, params
+                )
             else:
-                test.log.info("Negative Test Case: Copy/Paste Disabled, Copying"
-                              " from the Guest to Client Should Not Work\n")
-                copy_and_paste_cpdisabled_neg(test, guest_session,
-                                              client_session,
-                                              guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copy/Paste Disabled, Copying"
+                    " from the Guest to Client Should Not Work\n"
+                )
+                copy_and_paste_cpdisabled_neg(
+                    test, guest_session, client_session, guest_root_session, params
+                )
 
     elif "positive" in test_type:
         # These are positive tests, where the clipboards are synced because
@@ -1076,94 +1408,119 @@ def run(test, params, env):
             if "image" in test_type:
                 if "restart" in test_type:
                     test.log.info("Restart Vdagent, Cp Img Client to Guest")
-                    restart_cppaste_image(test, client_session, guest_session,
-                                          guest_root_session, params)
+                    restart_cppaste_image(
+                        test, client_session, guest_session, guest_root_session, params
+                    )
                 else:
                     test.log.info("Copying an Image from the Client to Guest")
-                    copy_and_paste_image_pos(test, client_session,
-                                             guest_session,
-                                             guest_root_session, params)
+                    copy_and_paste_image_pos(
+                        test, client_session, guest_session, guest_root_session, params
+                    )
             elif testing_text.isdigit():
                 if "restart" in test_type:
-                    test.log.info("Restart Vdagent, Copying a String of size "
-                                  "%s from the Client to Guest", testing_text)
-                    restart_cppaste_lrgtext(test, client_session,
-                                            guest_session,
-                                            guest_root_session, params)
+                    test.log.info(
+                        "Restart Vdagent, Copying a String of size "
+                        "%s from the Client to Guest",
+                        testing_text,
+                    )
+                    restart_cppaste_lrgtext(
+                        test, client_session, guest_session, guest_root_session, params
+                    )
                 else:
-                    test.log.info("Copying a String of size %s"
-                                  " from the Client to Guest", testing_text)
-                    copy_and_paste_largetext(test, client_session,
-                                             guest_session,
-                                             guest_root_session, params)
+                    test.log.info(
+                        "Copying a String of size %s" " from the Client to Guest",
+                        testing_text,
+                    )
+                    copy_and_paste_largetext(
+                        test, client_session, guest_session, guest_root_session, params
+                    )
             else:
                 if "restart" in test_type:
-                    test.log.info(
-                        "Restart Vdagent, Copying from Client to Guest\n")
-                    restart_cppaste(test, client_session, guest_session,
-                                    guest_root_session, params)
+                    test.log.info("Restart Vdagent, Copying from Client to Guest\n")
+                    restart_cppaste(
+                        test, client_session, guest_session, guest_root_session, params
+                    )
                 else:
                     test.log.info("Copying from the Client to Guest\n")
-                    copy_and_paste_pos(test, client_session, guest_session,
-                                       guest_root_session, params)
+                    copy_and_paste_pos(
+                        test, client_session, guest_session, guest_root_session, params
+                    )
         if "guest_to_client" in test_type:
             if "image" in test_type:
                 if "restart" in test_type:
                     test.log.info("Restart Vdagent, Copy Img Guest to Client")
-                    restart_cppaste_image(test, guest_session, client_session,
-                                          guest_root_session, params)
+                    restart_cppaste_image(
+                        test, guest_session, client_session, guest_root_session, params
+                    )
                 else:
                     test.log.info("Copying an Image from the Guest to Client")
-                    copy_and_paste_image_pos(test, guest_session,
-                                             client_session,
-                                             guest_root_session, params)
+                    copy_and_paste_image_pos(
+                        test, guest_session, client_session, guest_root_session, params
+                    )
             elif testing_text.isdigit():
                 if "restart" in test_type:
-                    test.log.info("Restart Vdagent, Copying a String of size "
-                                  "%s from the Guest to Client", testing_text)
-                    restart_cppaste_lrgtext(test, guest_session,
-                                            client_session,
-                                            guest_root_session, params)
+                    test.log.info(
+                        "Restart Vdagent, Copying a String of size "
+                        "%s from the Guest to Client",
+                        testing_text,
+                    )
+                    restart_cppaste_lrgtext(
+                        test, guest_session, client_session, guest_root_session, params
+                    )
                 else:
-                    test.log.info("Copying a String of size %s"
-                                  " from the Guest to Client", testing_text)
-                    copy_and_paste_largetext(test, guest_session,
-                                             client_session,
-                                             guest_root_session, params)
+                    test.log.info(
+                        "Copying a String of size %s" " from the Guest to Client",
+                        testing_text,
+                    )
+                    copy_and_paste_largetext(
+                        test, guest_session, client_session, guest_root_session, params
+                    )
             else:
                 if "restart" in test_type:
                     test.log.info("Restart Vdagent, Copying: Client to Guest\n")
-                    restart_cppaste(test, guest_session, client_session,
-                                    guest_root_session, params)
+                    restart_cppaste(
+                        test, guest_session, client_session, guest_root_session, params
+                    )
                 else:
                     test.log.info("Copying from the Guest to Client\n")
-                    copy_and_paste_pos(test, guest_session, client_session,
-                                       guest_root_session, params)
+                    copy_and_paste_pos(
+                        test, guest_session, client_session, guest_root_session, params
+                    )
     elif "negative" in test_type:
         # These are negative tests, where the clipboards are not synced because
         # the spice-vdagent service will not be running on the guest.
         if "client_to_guest" in test_type:
             if "image" in test_type:
-                test.log.info("Negative Test Case: Copying an Image from the "
-                              "Client to Guest")
-                copy_and_paste_image_neg(test, client_session, guest_session,
-                                         guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copying an Image from the " "Client to Guest"
+                )
+                copy_and_paste_image_neg(
+                    test, client_session, guest_session, guest_root_session, params
+                )
             else:
-                test.log.info("Negative Test Case: Copying from the Client to"
-                              "Guest Should Not Work\n")
-                copy_and_paste_neg(test, client_session, guest_session,
-                                   guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copying from the Client to"
+                    "Guest Should Not Work\n"
+                )
+                copy_and_paste_neg(
+                    test, client_session, guest_session, guest_root_session, params
+                )
         if "guest_to_client" in test_type:
             if "image" in test_type:
-                test.log.info("Negative Test Case: Copying an Image from the "
-                              "Guest to Client")
-                copy_and_paste_image_neg(test, guest_session, client_session,
-                                         guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copying an Image from the " "Guest to Client"
+                )
+                copy_and_paste_image_neg(
+                    test, guest_session, client_session, guest_root_session, params
+                )
             else:
-                test.log.info("Negative Test Case: Copying from the Guest to"
-                              " Client Should Not Work\n")
-                copy_and_paste_neg(test, guest_session, client_session,
-                                   guest_root_session, params)
+                test.log.info(
+                    "Negative Test Case: Copying from the Guest to"
+                    " Client Should Not Work\n"
+                )
+                copy_and_paste_neg(
+                    test, guest_session, client_session, guest_root_session, params
+                )
     else:
         # The test is not supported, verify what is a supported test.
         test.fail("Couldn't Find the Correct Test To Run")

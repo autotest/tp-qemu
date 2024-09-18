@@ -50,7 +50,7 @@ def hostdev_setup(params):
     for slot in host_pci_slots:
         if not (PCI_DEV_PATH / slot).exists():
             LOG_JOB.warning(
-                f"The provided slot({slot}) does not exist, " f"skipping setup it."
+                "The provided slot(%s) does not exist, skipping setup it.", slot
             )
             continue
         hostdev_params = params.object_params(slot)

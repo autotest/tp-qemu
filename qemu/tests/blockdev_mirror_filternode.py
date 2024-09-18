@@ -7,23 +7,28 @@ class BlockdevMirrorFilterNodeTest(BlockdevMirrorNowaitTest):
     """
 
     def __init__(self, test, params, env):
-        params['filter-node-name'] = params['filter_node_name']
+        params["filter-node-name"] = params["filter_node_name"]
         super(BlockdevMirrorFilterNodeTest, self).__init__(test, params, env)
 
     def check_filter_node_name(self):
         """The filter node name should be set when doing mirror"""
         for item in self.main_vm.monitor.query("block"):
-            if (self._source_images[0] in item["qdev"]
-                    and item["inserted"].get("node-name") == self.params['filter-node-name']):
+            if (
+                self._source_images[0] in item["qdev"]
+                and item["inserted"].get("node-name") == self.params["filter-node-name"]
+            ):
                 break
         else:
-            self.test.fail("Filter node name(%s) is not set when doing mirror"
-                           % self.params['filter-node-name'])
+            self.test.fail(
+                "Filter node name(%s) is not set when doing mirror"
+                % self.params["filter-node-name"]
+            )
 
     def do_test(self):
         self.blockdev_mirror()
         self.check_block_jobs_started(
-            self._jobs, self.params.get_numeric('mirror_started_timeout', 5))
+            self._jobs, self.params.get_numeric("mirror_started_timeout", 5)
+        )
         self.check_filter_node_name()
         self.wait_mirror_jobs_completed()
         self.check_mirrored_block_nodes_attached()

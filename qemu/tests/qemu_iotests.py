@@ -1,10 +1,7 @@
 import os
 
-from avocado.utils import git
-from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
+from avocado.utils import git, process
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -23,14 +20,20 @@ def run(test, params, env):
     # First, let's get qemu-io
     std = "http://git.kernel.org/pub/scm/virt/kvm/qemu-kvm.git"
     uri = params.get("qemu_io_uri", std)
-    branch = params.get("qemu_io_branch", 'master')
-    lbranch = params.get("qemu_io_lbranch", 'master')
+    branch = params.get("qemu_io_branch", "master")
+    lbranch = params.get("qemu_io_lbranch", "master")
     commit = params.get("qemu_io_commit", None)
     base_uri = params.get("qemu_io_base_uri", None)
     iotests_dir = params.get("qemu_iotests_dir", "tests/qemu-iotests")
     destination_dir = os.path.join(test.workdir, "qemu_io_tests")
-    git.get_repo(uri=uri, branch=branch, lbranch=lbranch, commit=commit,
-                 destination_dir=destination_dir, base_uri=base_uri)
+    git.get_repo(
+        uri=uri,
+        branch=branch,
+        lbranch=lbranch,
+        commit=commit,
+        destination_dir=destination_dir,
+        base_uri=base_uri,
+    )
 
     # Then, set the qemu paths for the use of the testsuite
     os.environ["QEMU_PROG"] = utils_misc.get_qemu_binary(params)
@@ -42,10 +45,9 @@ def run(test, params, env):
     image_format = params["qemu_io_image_format"]
     extra_options = params.get("qemu_io_extra_options", "")
 
-    cmd = './check'
+    cmd = "./check"
     if extra_options:
         cmd += extra_options
 
-    error_context.context("running qemu-iotests for image format %s"
-                          % image_format)
+    error_context.context("running qemu-iotests for image format %s" % image_format)
     process.system("%s -%s" % (cmd, image_format), shell=True)

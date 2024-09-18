@@ -1,11 +1,7 @@
 import os
 
-from avocado.utils import aurl
-from avocado.utils import download
-
-from virttest import error_context
-from virttest import utils_test
-from virttest import data_dir
+from avocado.utils import aurl, download
+from virttest import data_dir, error_context, utils_test
 
 CLIENT_TEST = "kernelinstall"
 
@@ -46,7 +42,7 @@ def run(test, params, env):
         try:
             default_kernel = session.cmd_output("grubby --default-kernel")
         except Exception as e:
-            test.log.warn("Save grub config failed: '%s'", e)
+            test.log.warning("Save grub config failed: '%s'", e)
 
         return default_kernel
 
@@ -54,7 +50,7 @@ def run(test, params, env):
         error_context.context("Restore the grub to old version")
 
         if not default_kernel:
-            test.log.warn("Could not get previous grub config, do noting.")
+            test.log.warning("Could not get previous grub config, do noting.")
             return
 
         cmd = "grubby --set-default=%s" % default_kernel.strip()
@@ -68,8 +64,9 @@ def run(test, params, env):
             try:
                 os.unlink(f)
             except Exception as e:
-                test.log.warn("Could remove tmp file '%s', error message: '%s'",
-                              f, e)
+                test.log.warning(
+                    "Could remove tmp file '%s', error message: '%s'", f, e
+                )
 
     def _build_params(param_str, default_value=""):
         param = _tmp_params_dict.get(param_str)
@@ -86,8 +83,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
-    test.log.info("Guest kernel before install: %s",
-                  session.cmd('uname -a').strip())
+    test.log.info("Guest kernel before install: %s", session.cmd("uname -a").strip())
 
     error_context.context("Save current default kernel information")
     default_kernel = _save_bootloader_config(session)
@@ -104,29 +100,29 @@ def run(test, params, env):
     sub_test_params = {}
 
     # rpm
-    sub_test_params.update(_build_params('kernel_rpm_path'))
-    sub_test_params.update(_build_params('kernel_deps_rpms'))
+    sub_test_params.update(_build_params("kernel_rpm_path"))
+    sub_test_params.update(_build_params("kernel_deps_rpms"))
 
     # koji
-    sub_test_params.update(_build_params('kernel_dep_pkgs'))
-    sub_test_params.update(_build_params('kernel_sub_pkgs'))
-    sub_test_params.update(_build_params('kernel_koji_tag'))
-    sub_test_params.update(_build_params('need_reboot'))
+    sub_test_params.update(_build_params("kernel_dep_pkgs"))
+    sub_test_params.update(_build_params("kernel_sub_pkgs"))
+    sub_test_params.update(_build_params("kernel_koji_tag"))
+    sub_test_params.update(_build_params("need_reboot"))
     # git
-    sub_test_params.update(_build_params('kernel_git_repo'))
-    sub_test_params.update(_build_params('kernel_git_repo_base'))
-    sub_test_params.update(_build_params('kernel_git_branch'))
-    sub_test_params.update(_build_params('kernel_git_commit'))
-    sub_test_params.update(_build_params('kernel_patch_list'))
-    sub_test_params.update(_build_params('kernel_config'))
-    sub_test_params.update(_build_params('kernel_config_list'))
+    sub_test_params.update(_build_params("kernel_git_repo"))
+    sub_test_params.update(_build_params("kernel_git_repo_base"))
+    sub_test_params.update(_build_params("kernel_git_branch"))
+    sub_test_params.update(_build_params("kernel_git_commit"))
+    sub_test_params.update(_build_params("kernel_patch_list"))
+    sub_test_params.update(_build_params("kernel_config"))
+    sub_test_params.update(_build_params("kernel_config_list"))
 
     # src
-    sub_test_params.update(_build_params('kernel_src_pkg'))
-    sub_test_params.update(_build_params('kernel_config'))
-    sub_test_params.update(_build_params('kernel_patch_list'))
+    sub_test_params.update(_build_params("kernel_src_pkg"))
+    sub_test_params.update(_build_params("kernel_config"))
+    sub_test_params.update(_build_params("kernel_patch_list"))
 
-    tag = params.get('kernel_tag')
+    tag = params.get("kernel_tag")
 
     error_context.context("Generate control file for kernel install test")
     # Generate control file from parameters
@@ -154,8 +150,9 @@ def run(test, params, env):
     params["test_control_file_install"] = test_control_file
 
     error_context.context("Launch kernel installation test in guest")
-    utils_test.run_virt_sub_test(test, params, env,
-                                 sub_type="autotest_control", tag="install")
+    utils_test.run_virt_sub_test(
+        test, params, env, sub_type="autotest_control", tag="install"
+    )
 
     if params.get("need_reboot", "yes") == "yes":
         error_context.context("Reboot guest after kernel is installed")
@@ -172,11 +169,11 @@ def run(test, params, env):
         sub_test = params.get("sub_test")
         tag = params.get("sub_test_tag", "run")
         try:
-            utils_test.run_virt_sub_test(test, params, env,
-                                         sub_type=sub_test, tag=tag)
+            utils_test.run_virt_sub_test(test, params, env, sub_type=sub_test, tag=tag)
         except Exception as e:
-            test.log.error("Fail to run sub_test '%s', error message: '%s'",
-                           sub_test, e)
+            test.log.error(
+                "Fail to run sub_test '%s', error message: '%s'", sub_test, e
+            )
 
     if params.get("restore_defaut_kernel", "no") == "yes":
         # Restore grub
@@ -187,13 +184,11 @@ def run(test, params, env):
         except Exception as e:
             _clean_up_tmp_files(_tmp_file_list)
             session.close()
-            test.fail("Fail to restore to default kernel,"
-                      " error message:\n '%s'" % e)
+            test.fail("Fail to restore to default kernel," " error message:\n '%s'" % e)
         vm.reboot()
 
     session = vm.wait_for_login(timeout=timeout)
-    test.log.info("Guest kernel after install: %s",
-                  session.cmd('uname -a').strip())
+    test.log.info("Guest kernel after install: %s", session.cmd("uname -a").strip())
 
     # Finally, let me clean up the tmp files.
     _clean_up_tmp_files(_tmp_file_list)

@@ -1,8 +1,7 @@
 import re
 import time
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import error_context
+
+from virttest import error_context, utils_misc, utils_test
 
 
 @error_context.context_aware
@@ -71,7 +70,7 @@ def run(test, params, env):
 
         driver_id = driver_id[0]
         if params["os_type"] == "windows":
-            driver_id = '^&'.join(driver_id.split('&'))
+            driver_id = "^&".join(driver_id.split("&"))
         session.close()
         return driver_id
 
@@ -95,12 +94,11 @@ def run(test, params, env):
     start_service_cmd = params.get("start_service_cmd")
 
     driver_id_pattern = params["driver_id_pattern"]
-    driver_id_cmd = utils_misc.set_winutils_letter(
-        session, params["driver_id_cmd"])
-    driver_load_cmd = utils_misc.set_winutils_letter(
-        session, params["driver_load_cmd"])
+    driver_id_cmd = utils_misc.set_winutils_letter(session, params["driver_id_cmd"])
+    driver_load_cmd = utils_misc.set_winutils_letter(session, params["driver_load_cmd"])
     driver_unload_cmd = utils_misc.set_winutils_letter(
-        session, params["driver_unload_cmd"])
+        session, params["driver_unload_cmd"]
+    )
     session.close()
 
     if stop_service_cmd:
@@ -109,8 +107,9 @@ def run(test, params, env):
 
     try:
         for repeat in range(0, int(params.get("repeats", 1))):
-            error_context.context("Unload and load the driver. Round %s" %
-                                  repeat, test.log.info)
+            error_context.context(
+                "Unload and load the driver. Round %s" % repeat, test.log.info
+            )
             test.log.info("Get driver info from guest")
             driver_id = get_driver_id(driver_id_cmd, driver_id_pattern)
 
@@ -127,5 +126,4 @@ def run(test, params, env):
 
     test_after_load = params.get("test_after_load")
     if test_after_load:
-        utils_test.run_virt_sub_test(test, params, env,
-                                     sub_type=test_after_load)
+        utils_test.run_virt_sub_test(test, params, env, sub_type=test_after_load)

@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import utils_package
+from virttest import error_context, utils_package
 
 
 @error_context.context_aware

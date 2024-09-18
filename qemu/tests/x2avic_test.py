@@ -1,4 +1,5 @@
 from avocado.utils import process
+
 from provider.cpu_utils import check_cpu_flags
 
 
@@ -25,7 +26,7 @@ def run(test, params, env):
     try:
         session = vm.wait_for_login()
         if params.get("os_type") == "linux":
-            output = session.cmd_output('dmesg | grep x2apic')
+            output = session.cmd_output("dmesg | grep x2apic")
             if "x2apic enabled" not in output:
                 if "x2apic: enabled" not in output:
                     test.fail("x2apic is not enabled inside guest.")

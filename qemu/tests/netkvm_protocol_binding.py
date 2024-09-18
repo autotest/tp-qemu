@@ -1,9 +1,5 @@
 from aexpect import ShellTimeoutError
-
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import utils_net
+from virttest import error_context, utils_misc, utils_net, utils_test
 from virttest.utils_windows import virtio_win
 
 
@@ -22,6 +18,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     # workaround for driver has no signature
     def send_key(vm, key):
         # Send key to guest
@@ -31,19 +28,18 @@ def run(test, params, env):
     timeout = params.get_numeric("timeout", 360)
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login(timeout=timeout)
-    error_context.context("Check if the driver is installed and "
-                          "verified", test.log.info)
+    error_context.context(
+        "Check if the driver is installed and " "verified", test.log.info
+    )
     driver_verifier = params["driver_verifier"]
-    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test,
-                                                            driver_verifier,
-                                                            timeout)
+    session = utils_test.qemu.windrv_check_running_verifier(
+        session, vm, test, driver_verifier, timeout
+    )
     error_context.context("Install VIOPROT protocol", test.log.info)
     media_type = params["virtio_win_media_type"]
     try:
         get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
-        get_product_dirname = getattr(virtio_win,
-                                      "product_dirname_%s" % media_type)
+        get_product_dirname = getattr(virtio_win, "product_dirname_%s" % media_type)
         get_arch_dirname = getattr(virtio_win, "arch_dirname_%s" % media_type)
     except AttributeError:
         test.error("Not supported virtio win media type '%s'", media_type)
@@ -57,9 +53,9 @@ def run(test, params, env):
     if not guest_arch:
         test.error("Could not get architecture dirname of the vm")
 
-    inf_middle_path = ("{name}\\{arch}" if media_type == "iso"
-                       else "{arch}\\{name}").format(name=guest_name,
-                                                     arch=guest_arch)
+    inf_middle_path = (
+        "{name}\\{arch}" if media_type == "iso" else "{arch}\\{name}"
+    ).format(name=guest_name, arch=guest_arch)
     inf_find_cmd = 'dir /b /s %s\\vioprot.inf | findstr "\\%s\\\\"'
     inf_find_cmd %= (viowin_ltr, inf_middle_path)
     inf_path = session.cmd(inf_find_cmd, timeout=timeout).strip()
@@ -74,8 +70,12 @@ def run(test, params, env):
     except ShellTimeoutError:
         send_key(vm, key_to_install_driver)
     if utils_misc.wait_for(
-            lambda: params["check_info"] in
-            session.cmd_output(params["check_installation_cmd"]), 30, 15, 5):
+        lambda: params["check_info"]
+        in session.cmd_output(params["check_installation_cmd"]),
+        30,
+        15,
+        5,
+    ):
         test.log.info("inf file installation successfully")
     else:
         test.error("inf file installation failed")
@@ -83,7 +83,8 @@ def run(test, params, env):
     error_context.context("Bind netkvm protocol to netkvm adapter")
     nic_mac = vm.get_mac_address(0)
     connection_id = utils_net.get_windows_nic_attribute(
-        session, "macaddress", nic_mac, "netconnectionid", timeout=timeout)
+        session, "macaddress", nic_mac, "netconnectionid", timeout=timeout
+    )
     bind_cmd = params["bind_cmd"] % connection_id
     status, output = session.cmd_status_output(bind_cmd, timeout=timeout)
     if status:
@@ -91,7 +92,6 @@ def run(test, params, env):
 
     error_context.context("Ping out from guest", test.log.info)
     host_ip = utils_net.get_host_ip_address(params)
-    status, output = utils_net.ping(host_ip, count=10, timeout=60,
-                                    session=session)
+    status, output = utils_net.ping(host_ip, count=10, timeout=60, session=session)
     if status:
         test.fail("Ping %s failed, output=%s" % (host_ip, output))

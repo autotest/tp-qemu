@@ -1,7 +1,4 @@
-from virttest import cpu
-from virttest import utils_misc
-from virttest import env_process
-from virttest import error_context
+from virttest import cpu, env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -20,26 +17,28 @@ def run(test, params, env):
         :param test_model: The model been tested
         """
         vm = None
-        params['cpu_model'] = test_model
-        test.log.info('Start vm with cpu model %s', test_model)
+        params["cpu_model"] = test_model
+        test.log.info("Start vm with cpu model %s", test_model)
         try:
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
             output = vm.process.get_output()
             if warning_text not in output:
-                test.fail("Qemu should output warning for lack flags"
-                          " while it does not.")
+                test.fail(
+                    "Qemu should output warning for lack flags" " while it does not."
+                )
         except Exception as e:
-            if boot_expected == 'no':
-                test.log.info('Expect vm boot up failed when enforce is set.')
+            if boot_expected == "no":
+                test.log.info("Expect vm boot up failed when enforce is set.")
                 if warning_text not in str(e):
                     raise
             else:
                 raise
         else:
-            if boot_expected == 'no':
-                test.fail('The vm should not boot successfully'
-                          ' when cpu enforce mode is on')
+            if boot_expected == "no":
+                test.fail(
+                    "The vm should not boot successfully" " when cpu enforce mode is on"
+                )
         finally:
             if vm and vm.is_alive():
                 vm.verify_kernel_crash()
@@ -59,10 +58,10 @@ def run(test, params, env):
 
     host_cpu_model = cpu.get_qemu_best_cpu_model(params)
     if host_cpu_model.startswith(latest_cpu_model):
-        test.cancel('The host cpu is not old enough for this test.')
+        test.cancel("The host cpu is not old enough for this test.")
 
-    vm_name = params['main_vm']
-    warning_text = params.get('warning_text')
-    boot_expected = params.get('boot_expected', 'yes')
-    params['start_vm'] = 'yes'
+    vm_name = params["main_vm"]
+    warning_text = params.get("warning_text")
+    boot_expected = params.get("boot_expected", "yes")
+    params["start_vm"] = "yes"
     start_with_model(latest_cpu_model)

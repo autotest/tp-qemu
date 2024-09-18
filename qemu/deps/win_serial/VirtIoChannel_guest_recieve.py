@@ -9,10 +9,10 @@
 #
 
 import os
-import sys
+import platform
 import socket
 import struct
-import platform
+import sys
 
 
 class Message:
@@ -44,14 +44,13 @@ WRITE_HEADER_LEN = struct.calcsize(WRITE_HEADER)
 
 
 class VirtIoChannel:
-
     # Python on Windows 7 return 'Microsoft' rather than 'Windows' as documented.
-    is_windows = ((platform.system() == 'Windows') or
-                  (platform.system() == 'Microsoft'))
+    is_windows = (platform.system() == "Windows") or (platform.system() == "Microsoft")
 
     def __init__(self, vport_name):
         if self.is_windows:
             from windows_support import WinBufferedReadFile
+
             self._vport = WinBufferedReadFile(vport_name)
         else:
             self._vport = os.open(vport_name, os.O_RDWR)
@@ -66,7 +65,7 @@ class VirtIoChannel:
         cmd = struct.unpack("%ds" % len(rest), rest)[0]
         return cmd
 
-    def write(self, message, arg=''):
+    def write(self, message, arg=""):
         if not isinstance(message, int):
             raise TypeError("1nd arg must be a known message type.")
         if not isinstance(arg, str):
@@ -82,26 +81,28 @@ class VirtIoChannel:
             hdr = self._vport.read(READ_HEADER_LEN)
         else:
             hdr = os.read(self._vport, (READ_HEADER_LEN))
-        if hdr == '':
+        if hdr == "":
             return 0
         return socket.ntohl(struct.unpack(READ_HEADER, hdr)[2]) - READ_HEADER_LEN
 
     def _pack_message(self, message, arg):
         size = WRITE_HEADER_LEN + len(arg)
-        stream = struct.pack(WRITE_HEADER + "%ds" % len(arg),
-                             socket.htonl(1),
-                             socket.htonl(3),
-                             socket.htonl(size),
-                             socket.htonl(message),
-                             arg)
+        stream = struct.pack(
+            WRITE_HEADER + "%ds" % len(arg),
+            socket.htonl(1),
+            socket.htonl(3),
+            socket.htonl(size),
+            socket.htonl(message),
+            arg,
+        )
         return stream
 
 
 def test(path):
-    if (platform.system() == 'Windows') or (platform.system() == 'Microsoft'):
-        vport_name = '\\\\.\\Global\\' + path
+    if (platform.system() == "Windows") or (platform.system() == "Microsoft"):
+        vport_name = "\\\\.\\Global\\" + path
     else:
-        vport_name = '/dev/virtio-ports/' + path
+        vport_name = "/dev/virtio-ports/" + path
     vio = VirtIoChannel(vport_name)
     print(vio.read())
 

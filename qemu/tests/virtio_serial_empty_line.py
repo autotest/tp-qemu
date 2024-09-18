@@ -46,14 +46,14 @@ def get_port_info(session):
     """
     virtio_ports_debug_path = "/sys/kernel/debug/virtio-ports/"
     info_dict = {}
-    port_devs = session.cmd_output_safe(
-        "ls %s" % virtio_ports_debug_path).split()
+    port_devs = session.cmd_output_safe("ls %s" % virtio_ports_debug_path).split()
     for port_dev in port_devs:
-        port_infos = session.cmd_output("cat %s%s" % (
-            virtio_ports_debug_path, port_dev)).splitlines()
+        port_infos = session.cmd_output(
+            "cat %s%s" % (virtio_ports_debug_path, port_dev)
+        ).splitlines()
         port_dict = {}
         for line in port_infos:
-            option, value = line.split(':')
+            option, value = line.split(":")
             port_dict.update({option: value.strip()})
         info_dict.update({port_dev: port_dict})
     return info_dict
@@ -88,14 +88,15 @@ def run(test, params, env):
             session.cmd(send_data_command, timeout=120)
             received_data = port.sock.recv(10)
             if received_data != b"\n":
-                test.fail("Received data is not same as the data sent,"
-                          " received %s, while expected '\n'"
-                          % received_data)
+                test.fail(
+                    "Received data is not same as the data sent,"
+                    " received %s, while expected '\n'" % received_data
+                )
             check_option = {"bytes_sent": "1"}
         else:
             # Send empty line('\n') from host to guest
             port.open()
-            port.sock.send(b'\n')
+            port.sock.send(b"\n")
             guest_worker.cmd("virt.open('%s')" % port.name)
             guest_worker.cmd("virt.recv('%s', 0, mode=False)" % port.name)
             check_option = {"bytes_received": "1"}
@@ -104,7 +105,7 @@ def run(test, params, env):
         if check is False:
             test.error("The debug info of %s is not found" % device_name)
         elif check:
-            error_msg = ''
+            error_msg = ""
             for option, value in check.items():
                 error_msg += "Option %s is %s," % (option, value[0])
                 error_msg += " while expectation is: %s; " % value[1]

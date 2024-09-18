@@ -1,12 +1,8 @@
 import os
 
-from avocado.utils import genio
+from avocado.utils import genio, process
 from avocado.utils import path as utils_path
-from avocado.utils import process
-
-from virttest import env_process
-from virttest import error_context
-
+from virttest import env_process, error_context
 from virttest.utils_misc import get_linux_drive_path
 
 
@@ -57,7 +53,8 @@ def run(test, params, env):
 
         host_id = output.split()[1]
         cmd = "cat /sys/bus/scsi/devices/{0}/scsi_disk/{0}/provisioning_mode".format(
-            host_id)
+            host_id
+        )
 
         status, output = session.cmd_status_output(cmd)
         if status == 0:
@@ -78,8 +75,7 @@ def run(test, params, env):
     params["start_vm"] = "yes"
     params["image_name_%s" % data_tag] = disk_name
 
-    error_context.context("boot guest with disk '%s'" % disk_name,
-                          test.log.info)
+    error_context.context("boot guest with disk '%s'" % disk_name, test.log.info)
     # boot guest with scsi_debug disk
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)

@@ -105,7 +105,7 @@ def get_ifname_from_pci(pci_slot):
         try:
             return next((PCI_DEV_PATH / pci_slot / "net").iterdir()).name
         except OSError as e:
-            LOG_JOB.error(f"Cannot get the NIC name of {pci_slot}: str({e})")
+            LOG_JOB.error("Cannot get the NIC name of %s: %s", pci_slot, str(e))
             return ""
 
 
@@ -163,7 +163,7 @@ def get_guest_ip_from_mac(vm, mac, ip_version=4):
             raise ValueError("Unknown os type")
     finally:
         serial_session.close()
-    LOG_JOB.info(f"IP address of MAC address({mac}) is: {ip_addr}")
+    LOG_JOB.info("IP address of MAC address(%s) is: %s", mac, ip_addr)
     return ip_addr
 
 

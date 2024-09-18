@@ -2,10 +2,7 @@ import os
 import re
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
-from virttest import env_process
+from virttest import env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -42,13 +39,13 @@ def run(test, params, env):
         """
         boot info check
         """
-        return re.search(info, vm.logsessions['seabios'].get_output(), re.S)
+        return re.search(info, vm.logsessions["seabios"].get_output(), re.S)
 
     def count_of_move_step(boot_dev):
         """
         get the number of steps to move
         """
-        logs = vm.logsessions['seabios'].get_output()
+        logs = vm.logsessions["seabios"].get_output()
         boot_dev = re.findall(boot_dev, logs, re.S)[0]
         return len(re.findall(r"Boot\d+:\sUEFI", logs.split(boot_dev)[0], re.S))
 
@@ -70,8 +67,7 @@ def run(test, params, env):
 
     try:
         if boot_dev:
-            if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint),
-                                       timeout, 1):
+            if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint), timeout, 1):
                 test.fail("Could not get boot menu message")
 
             # Navigate to boot manager menu
@@ -83,8 +79,7 @@ def run(test, params, env):
             vm.send_key("kp_enter")
 
         error_context.context("Check boot result", test.log.info)
-        if not utils_misc.wait_for(lambda: boot_check(boot_entry_info),
-                                   timeout, 1):
+        if not utils_misc.wait_for(lambda: boot_check(boot_entry_info), timeout, 1):
             test.fail("Could not boot from '%s'" % dev_name)
     finally:
         if dev_name == "cdrom":

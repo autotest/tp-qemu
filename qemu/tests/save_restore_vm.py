@@ -1,8 +1,7 @@
-import time
 import os
+import time
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 from virttest.staging import utils_memory
 
 
@@ -27,8 +26,9 @@ def run(test, params, env):
     expect_time = int(params.get("expect_restore_time", 25))
     session = vm.wait_for_login(timeout=timeout)
 
-    save_file = params.get("save_file", os.path.join("/tmp",
-                                                     utils_misc.generate_random_string(8)))
+    save_file = params.get(
+        "save_file", os.path.join("/tmp", utils_misc.generate_random_string(8))
+    )
 
     try:
         error_context.context("Pause VM", test.log.info)
@@ -44,7 +44,7 @@ def run(test, params, env):
         vm.resume()
         session = vm.wait_for_login(timeout=timeout)
         restore_time = utils_misc.monotonic_time() - vm.start_monotonic_time
-        test.write_test_keyval({'result': "%ss" % restore_time})
+        test.write_test_keyval({"result": "%ss" % restore_time})
         test.log.info("Restore time: %ss", restore_time)
 
     finally:

@@ -1,15 +1,13 @@
 from avocado.utils import process
-
-from virttest.lvm import EmulatedLVM
 from virttest.data_dir import get_data_dir
+from virttest.lvm import EmulatedLVM
 
-from provider import backup_utils
-from provider import job_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 
 
 class BlkdevIncWithIgnore(BlockdevLiveBackupBaseTest):
-    """ live backup with on-target-error:ignore """
+    """live backup with on-target-error:ignore"""
 
     def __init__(self, test, params, env):
         super(BlkdevIncWithIgnore, self).__init__(test, params, env)
@@ -22,41 +20,49 @@ class BlkdevIncWithIgnore(BlockdevLiveBackupBaseTest):
         try:
             self._lvm.setup()
             self._lvm.lvs[-1].resize(self.lv_size)
-            process.system(self.params["storage_prepare_cmd"],
-                           ignore_status=False, shell=True)
+            process.system(
+                self.params["storage_prepare_cmd"], ignore_status=False, shell=True
+            )
         except:
             self._clean_inc_dir()
             raise
 
     def _clean_inc_dir(self):
-        process.system(self.params["storage_clean_cmd"],
-                       ignore_status=False, shell=True)
+        process.system(
+            self.params["storage_clean_cmd"], ignore_status=False, shell=True
+        )
         self._lvm.cleanup()
 
-    def generate_tempfile(self, root_dir, filename, size='10M', timeout=360):
+    def generate_tempfile(self, root_dir, filename, size="10M", timeout=360):
         super(BlkdevIncWithIgnore, self).generate_tempfile(
-            root_dir, filename, self.params['tempfile_size'], timeout)
+            root_dir, filename, self.params["tempfile_size"], timeout
+        )
 
     def do_incremental_backup(self):
-        extra_options = {"sync": self.params["inc_sync_mode"],
-                         "bitmap": self._bitmaps[0],
-                         "on-target-error": self.params["on_target_error"],
-                         "auto_disable_bitmap": False}
+        extra_options = {
+            "sync": self.params["inc_sync_mode"],
+            "bitmap": self._bitmaps[0],
+            "on-target-error": self.params["on_target_error"],
+            "auto_disable_bitmap": False,
+        }
         inc_backup = backup_utils.blockdev_backup_qmp_cmd
-        cmd, arguments = inc_backup(self._source_nodes[0],
-                                    self.params["inc_node"],
-                                    **extra_options)
+        cmd, arguments = inc_backup(
+            self._source_nodes[0], self.params["inc_node"], **extra_options
+        )
         self.main_vm.monitor.cmd(cmd, arguments)
         timeout = self.params.get("job_timeout", 600)
         job_id = arguments.get("job-id", self._source_nodes[0])
         get_event = job_utils.get_event_by_condition
-        event = get_event(self.main_vm, job_utils.BLOCK_JOB_ERROR_EVENT,
-                          timeout, device=job_id, action='ignore')
+        event = get_event(
+            self.main_vm,
+            job_utils.BLOCK_JOB_ERROR_EVENT,
+            timeout,
+            device=job_id,
+            action="ignore",
+        )
         if not event:
-            self.test.fail("Backup job can't reach error after %s seconds"
-                           % timeout)
-        process.system(self.params['lv_extend_cmd'],
-                       ignore_status=False, shell=True)
+            self.test.fail("Backup job can't reach error after %s seconds" % timeout)
+        process.system(self.params["lv_extend_cmd"], ignore_status=False, shell=True)
         job_utils.wait_until_block_job_completed(self.main_vm, job_id, timeout)
 
     def rebase_backup_images(self):

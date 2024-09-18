@@ -1,16 +1,17 @@
+import ast
+import re
 import time
 import types
-import re
 
 import aexpect
-import ast
-
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import utils_package
-from virttest import error_context
-from virttest import qemu_monitor     # For MonitorNotSupportedMigCapError
-from virttest import qemu_migration
+from virttest import (
+    error_context,
+    qemu_migration,
+    qemu_monitor,  # For MonitorNotSupportedMigCapError
+    utils_misc,
+    utils_package,
+    utils_test,
+)
 
 
 # Define get_function-functions as global to allow importing from other tests
@@ -34,12 +35,10 @@ def mig_set_speed(vm, params, test):
 
 
 def check_dma(vm, params, test):
-    dmesg_pattern = params.get("dmesg_pattern",
-                               "ata.*?configured for PIO")
+    dmesg_pattern = params.get("dmesg_pattern", "ata.*?configured for PIO")
     dma_pattern = params.get("dma_pattern", r"DMA.*?\(\?\)$")
     pio_pattern = params.get("pio_pattern", r"PIO.*?pio\d+\s+$")
-    hdparm_cmd = params.get("hdparm_cmd",
-                            "i=`ls /dev/[shv]da` ; hdparm -I $i")
+    hdparm_cmd = params.get("hdparm_cmd", "i=`ls /dev/[shv]da` ; hdparm -I $i")
     session_dma = vm.wait_for_login()
     hdparm_output = session_dma.cmd_output(hdparm_cmd)
     failed_msg = ""
@@ -77,6 +76,7 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+
     def guest_stress_start(guest_stress_test):
         """
         Start a stress test in guest, Could be 'iozone', 'dd', 'stress'
@@ -100,9 +100,12 @@ def run(test, params, env):
             vm.verify_alive()
             session = vm.wait_for_login(timeout=login_timeout)
             func = session.cmd_output
-            args = ("for((;;)) do dd if=/dev/zero of=/tmp/test bs=5M "
-                    "count=100; rm -f /tmp/test; done",
-                    login_timeout, test.log.info)
+            args = (
+                "for((;;)) do dd if=/dev/zero of=/tmp/test bs=5M "
+                "count=100; rm -f /tmp/test; done",
+                login_timeout,
+                test.log.info,
+            )
 
         test.log.info("Start %s test in guest", guest_stress_test)
         bg = utils_test.BackgroundTest(func, args)  # pylint: disable=E0606
@@ -139,10 +142,13 @@ def run(test, params, env):
                         vm.verify_alive()
                         session = vm.wait_for_login()
                         if stress_stop_cmd:
-                            test.log.warn("Killing background stress process "
-                                          "with cmd '%s', you would see some "
-                                          "error message in client test result,"
-                                          "it's harmless.", stress_stop_cmd)
+                            test.log.warning(
+                                "Killing background stress process "
+                                "with cmd '%s', you would see some "
+                                "error message in client test result,"
+                                "it's harmless.",
+                                stress_stop_cmd,
+                            )
                             session.cmd(stress_stop_cmd)
                         bg.join(10)
                     except Exception:
@@ -170,7 +176,6 @@ def run(test, params, env):
     vm.verify_alive()
 
     if living_guest_os:
-
         session = vm.wait_for_login(timeout=login_timeout)
 
         # Get the output of migration_test_command
@@ -193,8 +198,10 @@ def run(test, params, env):
 
         try:
             check_command = params.get("migration_bg_check_command", "")
-            error_context.context("Checking the background command in the "
-                                  "guest pre migration", test.log.info)
+            error_context.context(
+                "Checking the background command in the " "guest pre migration",
+                test.log.info,
+            )
             if session2.cmd_status(check_command, timeout=30) != 0:
                 test.error("migration bg check command failed")
             session2.close()
@@ -204,8 +211,7 @@ def run(test, params, env):
             if guest_stress_test:
                 guest_stress_start(guest_stress_test)
                 params["action"] = "run"
-                deamon_thread = utils_test.BackgroundTest(
-                    guest_stress_deamon, ())
+                deamon_thread = utils_test.BackgroundTest(guest_stress_deamon, ())
                 deamon_thread.start()
 
             capabilities = ast.literal_eval(params.get("migrate_capabilities", "{}"))
@@ -227,13 +233,19 @@ def run(test, params, env):
                 else:
                     test.log.info("Round %s pong...", str(i / 2))
                 try:
-                    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay,
-                               offline, check,
-                               migration_exec_cmd_src=mig_exec_cmd_src,
-                               migration_exec_cmd_dst=mig_exec_cmd_dst,
-                               migrate_capabilities=capabilities,
-                               mig_inner_funcs=inner_funcs,
-                               env=env, migrate_parameters=migrate_parameters)
+                    vm.migrate(
+                        mig_timeout,
+                        mig_protocol,
+                        mig_cancel_delay,
+                        offline,
+                        check,
+                        migration_exec_cmd_src=mig_exec_cmd_src,
+                        migration_exec_cmd_dst=mig_exec_cmd_dst,
+                        migrate_capabilities=capabilities,
+                        mig_inner_funcs=inner_funcs,
+                        env=env,
+                        migrate_parameters=migrate_parameters,
+                    )
                 except qemu_monitor.MonitorNotSupportedMigCapError as e:
                     test.cancel("Unable to access capability: %s" % e)
                 except:
@@ -253,8 +265,10 @@ def run(test, params, env):
             test.log.info("Logged in after migration")
 
             # Make sure the background process is still running
-            error_context.context("Checking the background command in the "
-                                  "guest post migration", test.log.info)
+            error_context.context(
+                "Checking the background command in the " "guest post migration",
+                test.log.info,
+            )
             session2.cmd(check_command, timeout=30)
 
             # Get the output of migration_test_command
@@ -262,15 +276,22 @@ def run(test, params, env):
 
             # Compare output to reference output
             if output != reference_output:
-                test.log.info("Command output before migration differs from "
-                              "command output after migration")
+                test.log.info(
+                    "Command output before migration differs from "
+                    "command output after migration"
+                )
                 test.log.info("Command: %s", test_command)
-                test.log.info("Output before: %s",
-                              utils_misc.format_str_for_message(reference_output))
-                test.log.info("Output after: %s",
-                              utils_misc.format_str_for_message(output))
-                test.fail("Command '%s' produced different output "
-                          "before and after migration" % test_command)
+                test.log.info(
+                    "Output before: %s",
+                    utils_misc.format_str_for_message(reference_output),
+                )
+                test.log.info(
+                    "Output after: %s", utils_misc.format_str_for_message(output)
+                )
+                test.fail(
+                    "Command '%s' produced different output "
+                    "before and after migration" % test_command
+                )
 
         finally:
             # Kill the background process
@@ -288,8 +309,10 @@ def run(test, params, env):
                         if not int(details.status) == int(ignore_status):
                             raise
                     except aexpect.ShellTimeoutError:
-                        test.log.debug("Remote session not responsive, "
-                                       "shutting down VM %s", vm.name)
+                        test.log.debug(
+                            "Remote session not responsive, " "shutting down VM %s",
+                            vm.name,
+                        )
                         vm.destroy(gracefully=True)
             if deamon_thread is not None:
                 # Set deamon thread action to stop after migrate
@@ -297,7 +320,13 @@ def run(test, params, env):
                 deamon_thread.join()
     else:
         # Just migrate without depending on a living guest OS
-        vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, offline,
-                   check, migration_exec_cmd_src=mig_exec_cmd_src,
-                   migration_exec_cmd_dst=mig_exec_cmd_dst,
-                   migrate_parameters=migrate_parameters)
+        vm.migrate(
+            mig_timeout,
+            mig_protocol,
+            mig_cancel_delay,
+            offline,
+            check,
+            migration_exec_cmd_src=mig_exec_cmd_src,
+            migration_exec_cmd_dst=mig_exec_cmd_dst,
+            migrate_parameters=migrate_parameters,
+        )

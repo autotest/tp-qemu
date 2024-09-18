@@ -1,15 +1,9 @@
 import json
 
 from avocado.utils import wait
-
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_disk
-from virttest import qemu_storage
-from virttest import data_dir
-from virttest.utils_windows import drive
-
+from virttest import data_dir, error_context, qemu_storage, utils_disk, utils_test
 from virttest.qemu_capabilities import Flags
+from virttest.utils_windows import drive
 
 
 @error_context.context_aware
@@ -32,11 +26,15 @@ def run(test, params, env):
         """
         current_size = utils_disk.get_disk_size(session, os_type, disk)
         accept_ratio = float(params.get("accept_ratio", 0))
-        if (current_size <= block_size and
-                current_size >= block_size * (1 - accept_ratio)):
-            test.log.info("Block Resizing Finished !!! \n"
-                          "Current size %s is same as the expected %s",
-                          current_size, block_size)
+        if current_size <= block_size and current_size >= block_size * (
+            1 - accept_ratio
+        ):
+            test.log.info(
+                "Block Resizing Finished !!! \n"
+                "Current size %s is same as the expected %s",
+                current_size,
+                block_size,
+            )
             return True
         else:
             test.log.error("Current: %s\nExpect: %s\n", current_size, block_size)
@@ -50,8 +48,7 @@ def run(test, params, env):
     img_size = params.get("image_size_stg", "10G")
     data_image = params.get("images").split()[-1]
     data_image_params = params.object_params(data_image)
-    img = qemu_storage.QemuImg(data_image_params, data_dir.get_data_dir(),
-                               data_image)
+    img = qemu_storage.QemuImg(data_image_params, data_dir.get_data_dir(), data_image)
     filters = {}
     data_image_dev = ""
     if vm.check_capability(Flags.BLOCKDEV):
@@ -67,16 +64,15 @@ def run(test, params, env):
     if not data_image_dev:
         test.error("Cannot find device to resize.")
 
-    block_virtual_size = json.loads(img.info(force_share=True,
-                                             output="json"))["virtual-size"]
+    block_virtual_size = json.loads(img.info(force_share=True, output="json"))[
+        "virtual-size"
+    ]
 
     session = vm.wait_for_login(timeout=timeout)
     if os_type == "windows" and driver_name:
-        session = utils_test.qemu.windrv_check_running_verifier(session,
-                                                                vm,
-                                                                test,
-                                                                driver_name,
-                                                                timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(
+            session, vm, test, driver_name, timeout
+        )
     if os_type == "linux":
         disk = sorted(utils_disk.get_linux_disks(session).keys())[0]
     else:
@@ -87,8 +83,9 @@ def run(test, params, env):
         # The new size must be a multiple of 512 for windows
         if os_type == "windows" and block_size % 512 != 0:
             block_size = int(block_size / 512) * 512
-        error_context.context("Change disk size to %s in monitor"
-                              % block_size, test.log.info)
+        error_context.context(
+            "Change disk size to %s in monitor" % block_size, test.log.info
+        )
 
         if vm.check_capability(Flags.BLOCKDEV):
             args = (None, block_size, data_image_dev)
@@ -104,9 +101,9 @@ def run(test, params, env):
         if params.get("need_rescan") == "yes":
             drive.rescan_disks(session)
 
-        if not wait.wait_for(lambda: verify_disk_size(session, os_type,
-                                                      disk), 20, 0, 1,
-                             "Block Resizing"):
+        if not wait.wait_for(
+            lambda: verify_disk_size(session, os_type, disk), 20, 0, 1, "Block Resizing"
+        ):
             test.fail("The current block size is not the same as expected.\n")
 
     session.close()

@@ -1,18 +1,16 @@
 import logging
-import time
 import random
+import time
 
 from avocado.utils import process
-
 from virttest import error_context
 
 from qemu.tests import drive_mirror
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class DriveMirrorSimple(drive_mirror.DriveMirror):
-
     def __init__(self, test, params, env, tag):
         super(DriveMirrorSimple, self).__init__(test, params, env, tag)
 
@@ -33,8 +31,7 @@ class DriveMirrorSimple(drive_mirror.DriveMirror):
 
     @error_context.context_aware
     def clear_readonly_bit(self):
-        error_context.context("Clear readonly bit on target image",
-                              LOG_JOB.info)
+        error_context.context("Clear readonly bit on target image", LOG_JOB.info)
         cmd = "chattr -i %s" % self.target_image
         return process.system(cmd)
 

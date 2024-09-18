@@ -2,12 +2,14 @@ import os
 import time
 
 from avocado.utils import process
-from virttest import data_dir
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import utils_netperf
-from virttest import env_process
-from virttest import error_context
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    utils_misc,
+    utils_net,
+    utils_netperf,
+)
 
 
 @error_context.context_aware
@@ -32,6 +34,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def get_ethernet_driver(session):
         """
         Get driver of network cards.
@@ -60,24 +63,27 @@ def run(test, params, env):
         n_client = utils_netperf.NetperfClient(
             vm.get_address(),
             params.get("client_path"),
-            netperf_source=os.path.join(data_dir.get_deps_dir("netperf"),
-                                        params.get("netperf_client_link")),
+            netperf_source=os.path.join(
+                data_dir.get_deps_dir("netperf"), params.get("netperf_client_link")
+            ),
             client=params.get("shell_client"),
             port=params.get("shell_port"),
             username=params.get("username"),
             password=params.get("password"),
             prompt=params.get("shell_prompt"),
-            linesep=params.get("shell_linesep", "\n").encode().decode(
-                'unicode_escape'),
+            linesep=params.get("shell_linesep", "\n").encode().decode("unicode_escape"),
             status_test_command=params.get("status_test_command", ""),
-            compile_option=params.get("compile_option", ""))
+            compile_option=params.get("compile_option", ""),
+        )
         n_server = utils_netperf.NetperfServer(
             utils_net.get_host_ip_address(params),
             params.get("server_path", "/var/tmp"),
-            netperf_source=os.path.join(data_dir.get_deps_dir("netperf"),
-                                        params.get("netperf_server_link")),
+            netperf_source=os.path.join(
+                data_dir.get_deps_dir("netperf"), params.get("netperf_server_link")
+            ),
             password=params.get("hostpassword"),
-            compile_option=params.get("compile_option", ""))
+            compile_option=params.get("compile_option", ""),
+        )
 
         try:
             n_server.start()
@@ -94,13 +100,16 @@ def run(test, params, env):
             if netperf_output_unit in "GMKgmk":
                 test_option += " -f %s" % netperf_output_unit
             t_option = "%s -t %s" % (test_option, test_protocols)
-            n_client.bg_start(utils_net.get_host_ip_address(params),
-                              t_option,
-                              params.get_numeric("netperf_para_sessions"),
-                              params.get("netperf_cmd_prefix", ""),
-                              package_sizes=params.get("netperf_sizes"))
-            if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
-                                   "Wait netperf test start"):
+            n_client.bg_start(
+                utils_net.get_host_ip_address(params),
+                t_option,
+                params.get_numeric("netperf_para_sessions"),
+                params.get("netperf_cmd_prefix", ""),
+                package_sizes=params.get("netperf_sizes"),
+            )
+            if utils_misc.wait_for(
+                n_client.is_netperf_running, 10, 0, 1, "Wait netperf test start"
+            ):
                 test.log.info("Netperf test start successfully.")
             else:
                 test.error("Can not start netperf client.")
@@ -123,18 +132,21 @@ def run(test, params, env):
             test.log.warning("Could not stop firewall in guest")
 
         try:
-            error_context.context(("Run subtest netperf_stress between"
-                                   " host and guest.", test.log.info))
+            error_context.context(
+                ("Run subtest netperf_stress between" " host and guest.", test.log.info)
+            )
             stress_thread = None
             wait_time = int(params.get("wait_bg_time", 60))
             bg_stress_run_flag = params.get("bg_stress_run_flag")
             vm_wait_time = int(params.get("wait_before_kill_vm"))
             env[bg_stress_run_flag] = False
             stress_thread = utils_misc.InterruptedThread(
-                netperf_stress, (test, params, vm))
+                netperf_stress, (test, params, vm)
+            )
             stress_thread.start()
-            utils_misc.wait_for(lambda: wait_time, 0, 1,
-                                "Wait netperf_stress test start")
+            utils_misc.wait_for(
+                lambda: wait_time, 0, 1, "Wait netperf_stress test start"
+            )
             test.log.info("Sleep %ss before killing the VM", vm_wait_time)
             time.sleep(vm_wait_time)
             msg = "During netperf running, Check that we can kill VM with signal 0"
@@ -154,16 +166,17 @@ def run(test, params, env):
         error_context.context(msg, test.log.info)
         for i in range(times):
             for module in modules:
-                error_context.context("Unload driver %s. Repeat: %s/%s" %
-                                      (module, i, times))
+                error_context.context(
+                    "Unload driver %s. Repeat: %s/%s" % (module, i, times)
+                )
                 session_serial.cmd_output_safe("rmmod %s" % module)
             for module in modules:
-                error_context.context("Load driver %s. Repeat: %s/%s" %
-                                      (module, i, times))
+                error_context.context(
+                    "Load driver %s. Repeat: %s/%s" % (module, i, times)
+                )
                 session_serial.cmd_output_safe("modprobe %s" % module)
 
-        error_context.context("Check that we can kill VM with signal 0.",
-                              test.log.info)
+        error_context.context("Check that we can kill VM with signal 0.", test.log.info)
         kill_and_check(test, vm)
 
     vm = env.get_vm(params["main_vm"])

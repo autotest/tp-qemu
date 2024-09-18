@@ -2,11 +2,7 @@ import re
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import storage
-from virttest import data_dir
-
+from virttest import data_dir, error_context, storage
 
 QUERY_TIMEOUT = 180
 INSTALL_TIMEOUT = 600
@@ -34,8 +30,8 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    def install_rpm(session, url, upgrade=False, nodeps=False,
-                    timeout=INSTALL_TIMEOUT):
+
+    def install_rpm(session, url, upgrade=False, nodeps=False, timeout=INSTALL_TIMEOUT):
         cmd = "rpm -ivhf %s" % url
         if upgrade:
             cmd = "rpm -Uvhf %s" % url
@@ -77,8 +73,7 @@ def run(test, params, env):
             test.error("Could not get the latest kernel build name: %s" % o)
         test.log.info("The latest build for tag '%s' is '%s'", tag, build)
         info_cmd = "brew --topdir='%s' buildinfo %s" % (download_root, build)
-        buildinfo = process.system_output(info_cmd,
-                                          timeout=QUERY_TIMEOUT).decode()
+        buildinfo = process.system_output(info_cmd, timeout=QUERY_TIMEOUT).decode()
 
         ver_rev = re.sub(build_name, "", build).lstrip("-")
         # customize it since old kernel not has arch name in release name
@@ -94,8 +89,7 @@ def run(test, params, env):
             pkg_pattern = re.compile(".*/%s" % re.escape(pkg_pattern))
             match = pkg_pattern.search(buildinfo, re.M | re.I)
             if not match:
-                test.error("Could not get the link of '%s' in buildinfo"
-                           % pkg_name)
+                test.error("Could not get the link of '%s' in buildinfo" % pkg_name)
             pkg_path = match.group(0)
             pkg_links.append(pkg_path)
 
@@ -132,8 +126,9 @@ def run(test, params, env):
         pkgs.append(pkg)
         return pkgs
 
-    def upgrade_guest_pkgs(session, pkg, arch, debuginfo=False,
-                           nodeps=True, timeout=INSTALL_TIMEOUT):
+    def upgrade_guest_pkgs(
+        session, pkg, arch, debuginfo=False, nodeps=True, timeout=INSTALL_TIMEOUT
+    ):
         """
         upgrade given packages in guest os.
 
@@ -143,13 +138,13 @@ def run(test, params, env):
         :parm nodeps: bool type, if True, ignore deps when install rpm.
         :parm timeout: float type, timeout value when install rpm.
         """
-        error_context.context("Upgrade package '%s' in guest" % pkg,
-                              test.log.info)
+        error_context.context("Upgrade package '%s' in guest" % pkg, test.log.info)
         pkgs = get_guest_pkgs(session, pkg, "%{NAME}")
 
         tag = params.get("brew_tag")
-        pkg_urls = get_brew_latest_pkg(download_root, tag, pkg, arch,
-                                       list_path=True).splitlines()
+        pkg_urls = get_brew_latest_pkg(
+            download_root, tag, pkg, arch, list_path=True
+        ).splitlines()
         for url in pkg_urls:
             if "debuginfo" in url and not debuginfo:
                 continue
@@ -163,10 +158,10 @@ def run(test, params, env):
     def compare_version(current, expected):
         if current == expected:
             return 0
-        cur_ver = re.split('[.+-]', current)
+        cur_ver = re.split("[.+-]", current)
         cur_ver = [int(item) for item in cur_ver if item.isdigit()]
         cur_len = len(cur_ver)
-        exp_ver = re.split('[.+-]', expected)
+        exp_ver = re.split("[.+-]", expected)
         exp_ver = [int(item) for item in exp_ver if item.isdigit()]
         exp_len = len(exp_ver)
         if cur_len != exp_len:
@@ -209,8 +204,9 @@ def run(test, params, env):
         kernel_ver = cur_ver
         updated = False
     else:
-        test.log.info("Guest current kernel does not match the "
-                      "requirement, processing upgrade")
+        test.log.info(
+            "Guest current kernel does not match the " "requirement, processing upgrade"
+        )
         for pkg in kernel_deps_pkgs:
             pkg_params = params.object_params(pkg)
             arch = pkg_params["pkg_arch"]
@@ -226,16 +222,15 @@ def run(test, params, env):
             pkg_name = pkg_url.rsplit("/", 1)[-1]
             status, output = session.cmd_status_output(
                 download_cmd % (pkg_url, kernel_pkg_dir, pkg_name),
-                timeout=DOWNLOAD_TIMEOUT)
+                timeout=DOWNLOAD_TIMEOUT,
+            )
             if status:
                 test.fail("Failed to download %s: %s" % (pkg_url, output))
         pm_bin = "dnf"
         if session.cmd_status("command -v %s" % pm_bin) != 0:
             pm_bin = "yum"
-        inst_cmd = ("%s localinstall %s/* -y --nogpgcheck"
-                    % (pm_bin, kernel_pkg_dir))
-        status, output = session.cmd_status_output(inst_cmd,
-                                                   timeout=inst_timeout)
+        inst_cmd = "%s localinstall %s/* -y --nogpgcheck" % (pm_bin, kernel_pkg_dir)
+        status, output = session.cmd_status_output(inst_cmd, timeout=inst_timeout)
         if status != 0:
             test.fail("Failed to install kernel package(s): %s" % output)
         session.cmd("rm -rf %s" % kernel_pkg_dir)
@@ -263,8 +258,7 @@ def run(test, params, env):
 
     # make sure the newly installed kernel as default
     if updated:
-        error_context.context("Make the new installed kernel as default",
-                              test.log.info)
+        error_context.context("Make the new installed kernel as default", test.log.info)
         make_def_cmd = "grubby --set-default=%s " % kernel_path
         s, o = session.cmd_status_output(make_def_cmd)
         if s != 0:
@@ -277,8 +271,10 @@ def run(test, params, env):
     if args_added:
         update_kernel_cmd += ' --args="%s"' % " ".join(args_added)
     if update_kernel_cmd:
-        update_kernel_cmd = ("grubby --update-kernel=%s %s"
-                             % (kernel_path, update_kernel_cmd))
+        update_kernel_cmd = "grubby --update-kernel=%s %s" % (
+            kernel_path,
+            update_kernel_cmd,
+        )
     update_kernel_cmd = params.get("update_kernel_cmd", update_kernel_cmd)
     if update_kernel_cmd:
         error_context.context("Update the guest kernel cmdline", test.log.info)
@@ -293,14 +289,12 @@ def run(test, params, env):
         nodeps = pkg_info.get("ignore_deps") == "yes"
         install_debuginfo = pkg_info.get("install_debuginfo") == "yes"
         ver_before = session.cmd_output("rpm -q %s" % pkg)
-        upgrade_guest_pkgs(session, pkg, arch, install_debuginfo, nodeps,
-                           inst_timeout)
+        upgrade_guest_pkgs(session, pkg, arch, install_debuginfo, nodeps, inst_timeout)
         ver_after = session.cmd_output("rpm -q %s" % pkg)
         if "not installed" in ver_before:
             mesg = "Install '%s' in guest" % ver_after
         else:
-            mesg = "Upgrade '%s' from '%s'  to '%s'" % (
-                pkg, ver_before, ver_after)
+            mesg = "Upgrade '%s' from '%s'  to '%s'" % (pkg, ver_before, ver_after)
         test.log.info(mesg)
 
     # reboot guest and do verify
@@ -309,8 +303,10 @@ def run(test, params, env):
     session = vm.reboot(session)
     cur_ver = get_guest_kernel_version(session)
     if compare_version(cur_ver, kernel_ver) != 0:
-        test.fail("Failed to verify the guest kernel, expected version '%s' "
-                  "vs current version '%s'" % (kernel_ver, cur_ver))
+        test.fail(
+            "Failed to verify the guest kernel, expected version '%s' "
+            "vs current version '%s'" % (kernel_ver, cur_ver)
+        )
     if verify_virtio:
         error_context.context("Verifying the virtio drivers", test.log.info)
         if not is_virtio_driver_installed():

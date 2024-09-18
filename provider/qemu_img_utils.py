@@ -1,16 +1,14 @@
 """qemu-img related functions."""
-import avocado
+
 import contextlib
 import logging
 import tempfile
 
-from avocado.utils import path
-from virttest import env_process
-from virttest import utils_misc
+import avocado
+from avocado.utils import path, process
+from virttest import env_process, utils_misc
 
-from avocado.utils import process
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def boot_vm_with_images(test, params, env, images=None, vm_name=None):
@@ -62,8 +60,10 @@ def check_md5sum(filepath, md5sum_bin, session, md5_value_to_check=None):
     md5_value = out.split()[0]
     LOG_JOB.debug("md5sum value of %s: %s", filepath, md5_value)
     if md5_value_to_check and md5_value != md5_value_to_check:
-        raise ValueError("md5 values mismatch, got: %s, expected: %s" %
-                         (md5_value, md5_value_to_check))
+        raise ValueError(
+            "md5 values mismatch, got: %s, expected: %s"
+            % (md5_value, md5_value_to_check)
+        )
     return md5_value
 
 

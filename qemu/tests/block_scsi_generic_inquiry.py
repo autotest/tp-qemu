@@ -1,9 +1,5 @@
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import env_process
-from virttest import utils_misc
-
+from virttest import data_dir, env_process, utils_misc
 from virttest.iscsi import Iscsi
 from virttest.utils_disk import get_linux_disks
 
@@ -29,8 +25,9 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
+
     def fetch_sg_info(device, session=None):
-        cmd = params['cmd_sg_inq'] % device
+        cmd = params["cmd_sg_inq"] % device
         if session:
             return session.cmd_output(cmd)
         return process.getoutput(cmd, 60, ignore_status=False)
@@ -39,18 +36,17 @@ def run(test, params, env):
     try:
         iscsi.login()
         if not utils_misc.wait_for(lambda: iscsi.get_device_name(), 60):
-            test.error('Can not get the iSCSI device.')
+            test.error("Can not get the iSCSI device.")
 
-        cmd_get_disk_path = params['cmd_get_disk_path']
-        disk_path = process.system_output(cmd_get_disk_path, 60,
-                                          shell=True).decode()
+        cmd_get_disk_path = params["cmd_get_disk_path"]
+        disk_path = process.system_output(cmd_get_disk_path, 60, shell=True).decode()
 
         host_sg_info = fetch_sg_info(disk_path)
-        test.log.info('The scsi generic info from host: %s', host_sg_info)
+        test.log.info("The scsi generic info from host: %s", host_sg_info)
 
-        image_data_tag = params['image_data_tag']
-        params['image_name_%s' % image_data_tag] = disk_path
-        params['image_size'] = params['emulated_image_size']
+        image_data_tag = params["image_data_tag"]
+        params["image_name_%s" % image_data_tag] = disk_path
+        params["image_size"] = params["emulated_image_size"]
         image_params = params.object_params(image_data_tag)
         env_process.preprocess_image(test, image_params, image_data_tag)
 
@@ -60,22 +56,23 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login()
 
-        data_disk = '/dev/' + list(get_linux_disks(session).keys()).pop()
+        data_disk = "/dev/" + list(get_linux_disks(session).keys()).pop()
         guest_sg_info = fetch_sg_info(data_disk, session)
-        test.log.info('The scsi generic info from guest: %s', guest_sg_info)
+        test.log.info("The scsi generic info from guest: %s", guest_sg_info)
 
         for info in guest_sg_info.split():
             if info not in host_sg_info:
-                test.fail('The guest scsi generic info is not similar to host.')
+                test.fail("The guest scsi generic info is not similar to host.")
 
         iscsi.logout()
-        if params['sg_fail_info'] not in fetch_sg_info(data_disk, session):
-            test.fail('No found the fail information after logout iscsi server.')
+        if params["sg_fail_info"] not in fetch_sg_info(data_disk, session):
+            test.fail("No found the fail information after logout iscsi server.")
 
-        session.cmd_output(params['cmd_dd'] % data_disk)
-        vm_status_paused = params['vm_status_paused']
+        session.cmd_output(params["cmd_dd"] % data_disk)
+        vm_status_paused = params["vm_status_paused"]
         if not utils_misc.wait_for(
-                lambda: vm.monitor.verify_status(vm_status_paused), 120, step=3):
-            test.fail('The vm status is not %s.' % vm_status_paused)
+            lambda: vm.monitor.verify_status(vm_status_paused), 120, step=3
+        ):
+            test.fail("The vm status is not %s." % vm_status_paused)
     finally:
         iscsi.delete_target()

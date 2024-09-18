@@ -1,10 +1,7 @@
 import re
 
-from virttest import qemu_storage
-from virttest import error_context
-from virttest import data_dir
-
 from avocado.utils import process
+from virttest import data_dir, error_context, qemu_storage
 
 
 @error_context.context_aware
@@ -21,8 +18,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
     rebase_chain = params.get("rebase_list", "").split(";")
-    error_context.context("Change the backing file of snapshot",
-                          test.log.info)
+    error_context.context("Change the backing file of snapshot", test.log.info)
     for images in rebase_chain:
         output = ""
         images = re.split(r"\s*>\s*", images)
@@ -38,8 +34,7 @@ def run(test, params, env):
         params["base_image_filename"] = image
         t_params = params.object_params(image)
         cache_mode = t_params.get("cache_mode", None)
-        rebase_test = qemu_storage.QemuImg(t_params,
-                                           data_dir.get_data_dir(), image)
+        rebase_test = qemu_storage.QemuImg(t_params, data_dir.get_data_dir(), image)
         try:
             rebase_test.rebase(t_params, cache_mode)
             if negtive_test == "yes":
@@ -47,8 +42,7 @@ def run(test, params, env):
                 test.fail(msg)
         except process.CmdError as err:
             output = err.result.stderr.decode()
-            test.log.info("Rebase image('%s') failed: %s.",
-                          image, output)
+            test.log.info("Rebase image('%s') failed: %s.", image, output)
             if negtive_test == "no":
                 msg = "Fail to rebase image('%s'): %s" % (image, output)
                 test.fail(msg)
@@ -60,8 +54,7 @@ def run(test, params, env):
         if not image_info:
             msg = "Fail to get image('%s') info" % image
             test.fail(msg)
-        backingfile = re.search(r'backing file: +(.*)',
-                                image_info, re.M)
+        backingfile = re.search(r"backing file: +(.*)", image_info, re.M)
         base_name = rebase_test.base_image_filename
         if not output:
             if not backingfile:

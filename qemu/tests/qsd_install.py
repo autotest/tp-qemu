@@ -1,7 +1,8 @@
 """QSD installation test"""
 
-from provider.qsd import QsdDaemonDev, add_vubp_into_boot
 from virttest.tests import unattended_install
+
+from provider.qsd import QsdDaemonDev, add_vubp_into_boot
 
 
 def run(test, params, env):

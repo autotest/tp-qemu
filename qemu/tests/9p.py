@@ -40,16 +40,16 @@ def run(test, params, env):
         cmd = "mount -t 9p -o %s autotest_tag %s" % (mount_option, mount_dir)
         mount_status = session.cmd_status(cmd)
 
-        if (mount_status != 0):
+        if mount_status != 0:
             test.log.error("mount failed")
-            test.fail('mount failed.')
+            test.fail("mount failed.")
 
         # Collect test parameters
         timeout = int(params.get("test_timeout", 14400))
-        control_path = os.path.join(test.virtdir, "autotest_control",
-                                    params.get("test_control_file"))
+        control_path = os.path.join(
+            test.virtdir, "autotest_control", params.get("test_control_file")
+        )
 
         outputdir = test.outputdir
 
-        utils_test.run_autotest(vm, session, control_path,
-                                timeout, outputdir, params)
+        utils_test.run_autotest(vm, session, control_path, timeout, outputdir, params)

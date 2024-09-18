@@ -1,7 +1,4 @@
-from virttest import env_process
-from virttest import error_context
-from virttest import qemu_storage
-from virttest import data_dir
+from virttest import data_dir, env_process, error_context, qemu_storage
 
 
 @error_context.context_aware
@@ -23,9 +20,9 @@ def run(test, params, env):
     image_name = params.get("image_name")
     timeout = int(params.get("login_timeout", 360))
     # Workaroud wrong config file order.
-    params['image_name_backing_file_snapshot'] = params.get("image_name")
-    params['image_format_backing_file_snapshot'] = params.get("image_format")
-    params['image_name_snapshot'] = params.get("image_name") + "-snap"
+    params["image_name_backing_file_snapshot"] = params.get("image_name")
+    params["image_format_backing_file_snapshot"] = params.get("image_format")
+    params["image_name_snapshot"] = params.get("image_name") + "-snap"
 
     error_context.context("boot guest over glusterfs", test.log.info)
     vm = env.get_vm(params["main_vm"])
@@ -41,6 +38,10 @@ def run(test, params, env):
     image = qemu_storage.QemuImg(snapshot_params, base_dir, image_name)
     image.create(snapshot_params)
 
-    env_process.process(test, snapshot_params, env,
-                        env_process.preprocess_image,
-                        env_process.preprocess_vm)
+    env_process.process(
+        test,
+        snapshot_params,
+        env,
+        env_process.preprocess_image,
+        env_process.preprocess_vm,
+    )

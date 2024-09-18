@@ -6,7 +6,7 @@ from provider import backup_utils
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevStreamBackingMaskOffTest(BlockDevStreamTest):
@@ -15,27 +15,31 @@ class BlockdevStreamBackingMaskOffTest(BlockDevStreamTest):
     def __init__(self, test, params, env):
         super(BlockdevStreamBackingMaskOffTest, self).__init__(test, params, env)
         self._snapshot_images = self.params.objects("snapshot_images")
-        self._stream_options["backing-mask-protocol"] = self.params["backing_mask_protocol"]
+        self._stream_options["backing-mask-protocol"] = self.params[
+            "backing_mask_protocol"
+        ]
         self._trash = []
 
     def snapshot_test(self):
         """create one snapshot, create one new file"""
-        self.generate_tempfile(self.disks_info[self.base_tag][1],
-                               filename="base",
-                               size=self.params["tempfile_size"])
+        self.generate_tempfile(
+            self.disks_info[self.base_tag][1],
+            filename="base",
+            size=self.params["tempfile_size"],
+        )
 
         # data->sn1->sn2->sn3->sn4
         chain = [self.base_tag] + self._snapshot_images
         for idx in range(1, len(chain)):
             backup_utils.blockdev_snapshot(
-                self.main_vm,
-                "drive_%s" % chain[idx-1],
-                "drive_%s" % chain[idx]
+                self.main_vm, "drive_%s" % chain[idx - 1], "drive_%s" % chain[idx]
             )
 
-            self.generate_tempfile(self.disks_info[self.base_tag][1],
-                                   filename=chain[idx],
-                                   size=self.params["tempfile_size"])
+            self.generate_tempfile(
+                self.disks_info[self.base_tag][1],
+                filename=chain[idx],
+                size=self.params["tempfile_size"],
+            )
 
     def _disk_define_by_params(self, tag):
         params = self.params.copy()
@@ -62,15 +66,16 @@ class BlockdevStreamBackingMaskOffTest(BlockDevStreamTest):
             LOG_JOB.warning(str(e))
 
     def check_backing_format(self):
-        base_node = self.main_vm.devices.get_by_qid(
-                self.params["base_node"])[0]
+        base_node = self.main_vm.devices.get_by_qid(self.params["base_node"])[0]
         base_format = base_node.get_param("driver")
         output = self.snapshot_image.info(force_share=True).split("\n")
         for item in output:
             if "backing file format" in item:
                 if base_format not in item:
-                    self.test.fail("Expected format: %s, current format: %s"
-                                   % (item.split(":")[1], base_format))
+                    self.test.fail(
+                        "Expected format: %s, current format: %s"
+                        % (item.split(":")[1], base_format)
+                    )
 
     def do_test(self):
         self.snapshot_test()

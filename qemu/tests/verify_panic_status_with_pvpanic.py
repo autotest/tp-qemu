@@ -1,8 +1,7 @@
-import aexpect
 import os
 
-from virttest import data_dir
-from virttest import utils_package
+import aexpect
+from virttest import data_dir, utils_package
 from virttest.remote import scp_to_remote
 
 
@@ -30,13 +29,13 @@ def run(test, params, env):
 
     # trigger kernel panic config
     trigger_kernel_panic = params.get("trigger_kernel_panic")
-    username = params.get('username')
-    password = params.get('password')
-    port = params.get('file_transfer_port')
-    guest_path = params.get('guest_path')
-    depends_pkgs = params.get('depends_pkgs')
-    cmd_make = params.get('cmd_make')
-    io_timeout = params.get_numeric('io_timeout')
+    username = params.get("username")
+    password = params.get("password")
+    port = params.get("file_transfer_port")
+    guest_path = params.get("guest_path")
+    depends_pkgs = params.get("depends_pkgs")
+    cmd_make = params.get("cmd_make")
+    io_timeout = params.get_numeric("io_timeout")
 
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
@@ -48,7 +47,7 @@ def run(test, params, env):
             test.fail("Not find pvpanic device in guest")
 
     if trigger_kernel_panic:
-        host_path = os.path.join(data_dir.get_deps_dir(), 'trigger_panic_drive')
+        host_path = os.path.join(data_dir.get_deps_dir(), "trigger_panic_drive")
         scp_to_remote(guest_addr, port, username, password, host_path, guest_path)
         if not utils_package.package_install(depends_pkgs, session):
             test.cancel("Please install %s inside guest to proceed", depends_pkgs)

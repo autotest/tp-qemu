@@ -1,6 +1,4 @@
-from virttest import utils_test
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net, utils_test
 from virttest.utils_windows import virtio_win
 
 
@@ -28,8 +26,9 @@ def run(test, params, env):
         param param_name: the netkvm driver parameter to modify
         param param_value: the value to set to
         """
-        error_context.context("Start set %s to %s" % (param_name, param_value),
-                              test.log.info)
+        error_context.context(
+            "Start set %s to %s" % (param_name, param_value), test.log.info
+        )
         utils_net.set_netkvm_param_value(vm, param_name, param_value)
 
         test.log.info("Check value after setting %s", param_name)
@@ -55,8 +54,8 @@ def run(test, params, env):
         """
         query_version_cmd = params["query_version_cmd"]
         output = session.cmd_output(query_version_cmd)
-        version_str = output.strip().split('=')[1]
-        version = version_str.split('.')[-1][0:3]
+        version_str = output.strip().split("=")[1]
+        version = version_str.split(".")[-1][0:3]
         return int(version)
 
     timeout = params.get("timeout", 360)
@@ -66,13 +65,13 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=timeout)
-    error_context.context("Check if the driver is installed and "
-                          "verified", test.log.info)
+    error_context.context(
+        "Check if the driver is installed and " "verified", test.log.info
+    )
     driver_verifier = params["driver_verifier"]
-    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test,
-                                                            driver_verifier,
-                                                            timeout)
+    session = utils_test.qemu.windrv_check_running_verifier(
+        session, vm, test, driver_verifier, timeout
+    )
     driver_version = _get_driver_version(session)
     session.close()
 

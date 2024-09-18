@@ -1,15 +1,12 @@
 import logging
 import re
 
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import utils_disk
+from avocado.utils import cpu
+from virttest import error_context, utils_disk, utils_misc, utils_test
+
 from provider.storage_benchmark import generate_instance
 
-from avocado.utils import cpu
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def check_data_disks(test, params, env, vm, session):
@@ -22,24 +19,24 @@ def check_data_disks(test, params, env, vm, session):
     :param vm: VM object
     :param session: VM session
     """
+
     def _get_mount_points():
-        """ Get data disk mount point(s) """
+        """Get data disk mount point(s)"""
         mount_points = []
         os_type = params["os_type"]
         if os_type == "linux":
-            mounts = session.cmd_output_safe('cat /proc/mounts | grep /dev/')
+            mounts = session.cmd_output_safe("cat /proc/mounts | grep /dev/")
             for img in image_list:
                 size = params["image_size_%s" % img]
-                img_param = params["blk_extra_params_%s" % img].split('=')[1]
+                img_param = params["blk_extra_params_%s" % img].split("=")[1]
                 drive_path = utils_misc.get_linux_drive_path(session, img_param)
                 if not drive_path:
                     test.error("Failed to get drive path of '%s'" % img)
                 did = drive_path[5:]
-                for mp in re.finditer(r'/dev/%s\d+\s+(\S+)\s+' % did, mounts):
+                for mp in re.finditer(r"/dev/%s\d+\s+(\S+)\s+" % did, mounts):
                     mount_points.append(mp.group(1))
                 else:
-                    mp = utils_disk.configure_empty_linux_disk(session,
-                                                               did, size)
+                    mp = utils_disk.configure_empty_linux_disk(session, did, size)
                     mount_points.extend(mp)
         elif os_type == "windows":
             size_record = []
@@ -51,13 +48,12 @@ def check_data_disks(test, params, env, vm, session):
                 disks = utils_disk.get_windows_disks_index(session, size)
                 if not disks:
                     test.fail("Fail to list image %s" % img)
-                if not utils_disk.update_windows_disk_attributes(session,
-                                                                 disks):
+                if not utils_disk.update_windows_disk_attributes(session, disks):
                     test.fail("Failed to update windows disk attributes")
                 for disk in disks:
-                    d_letter = utils_disk.configure_empty_windows_disk(session,
-                                                                       disk,
-                                                                       size)
+                    d_letter = utils_disk.configure_empty_windows_disk(
+                        session, disk, size
+                    )
                 if not d_letter:
                     test.fail("Fail to format disks")
                 mount_points.extend(d_letter)
@@ -66,7 +62,7 @@ def check_data_disks(test, params, env, vm, session):
         return mount_points
 
     image_list = params.objects("images")[1:]
-    image_num = len(image_list)
+    len(image_list)
 
     error_context.context("Check data disks in monitor!", LOG_JOB.info)
     monitor_info_block = vm.monitor.info_block(False)
@@ -77,7 +73,7 @@ def check_data_disks(test, params, env, vm, session):
             test.fail("%s is missing: %s" % (drive, blocks))
 
     error_context.context("Read and write data on data disks", LOG_JOB.info)
-    iozone_test = generate_instance(params, vm, 'iozone')
+    iozone_test = generate_instance(params, vm, "iozone")
     iozone_cmd = params["iozone_cmd"]
     iozone_timeout = float(params.get("iozone_timeout", 1800))
     try:
@@ -88,28 +84,30 @@ def check_data_disks(test, params, env, vm, session):
 
 
 def verify_eim_status(test, params, session):
-    error_context.context('verify eim status.', test.log.info)
+    error_context.context("verify eim status.", test.log.info)
     variant_name = params.get("diff_parameter")
     if variant_name == "eim_off" or variant_name == "eim_on":
-        for key_words in params['check_key_words'].split(';'):
-            output = session.cmd_output("journalctl -k | grep -i \"%s\"" % key_words)
+        for key_words in params["check_key_words"].split(";"):
+            output = session.cmd_output('journalctl -k | grep -i "%s"' % key_words)
         if not output:
-            test.fail('journalctl -k | grep -i "%s"'
-                      "from the systemd journal log." % key_words)
+            test.fail(
+                'journalctl -k | grep -i "%s"'
+                "from the systemd journal log." % key_words
+            )
         test.log.debug(output)
 
 
 def verify_x2apic_status(test, params, session):
-    error_context.context('verify x2apic status.', test.log.info)
+    error_context.context("verify x2apic status.", test.log.info)
     variant_name = params.get("diff_parameter")
     if variant_name == "x2apic":
-        for key_words in params['check_key_words'].split(';'):
-            output = session.cmd_output(
-                "journalctl -k | grep -i \"%s\"" % key_words
-            )
+        for key_words in params["check_key_words"].split(";"):
+            output = session.cmd_output('journalctl -k | grep -i "%s"' % key_words)
         if not output:
-            test.fail('journalctl -k | grep -i "%s"'
-                      "from the systemd journal log." % key_words)
+            test.fail(
+                'journalctl -k | grep -i "%s"'
+                "from the systemd journal log." % key_words
+            )
         test.log.debug(output)
 
 
@@ -131,7 +129,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    if cpu.get_vendor() != 'intel':
+    if cpu.get_vendor() != "intel":
         test.cancel("This case only support Intel platform")
 
     vm = env.get_vm(params["main_vm"])

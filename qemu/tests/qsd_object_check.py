@@ -1,7 +1,8 @@
 """QSD throttle object test"""
 
-from provider.qsd import QsdDaemonDev
 from virttest import error_context
+
+from provider.qsd import QsdDaemonDev
 
 
 # This decorator makes the test function aware of context strings
@@ -24,9 +25,11 @@ def run(test, params, env):
         for tg in params["check_groups"].split():
             logger.info("Check throttle %s", tg)
             out = qsd.monitor.qom_get(tg, "limits")
-            test.assertEqual(out[params["key_%s" % tg]],
-                             int(params["value_%s" % tg]),
-                             "Unexpected throttle values :%s" % tg)
+            test.assertEqual(
+                out[params["key_%s" % tg]],
+                int(params["value_%s" % tg]),
+                "Unexpected throttle values :%s" % tg,
+            )
         qsd.stop_daemon()
         qsd = None
     finally:

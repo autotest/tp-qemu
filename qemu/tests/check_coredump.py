@@ -2,19 +2,17 @@
 Check_coredump
 This is a kind of post check case in a test loop.
 """
-import os
+
 import glob
 import logging
+import os
 import time
 
-from avocado.utils import path as utils_path
-
-from virttest import data_dir
-from virttest import error_context
-from virttest import utils_misc
 import virttest.utils_libguestfs as lgf
+from avocado.utils import path as utils_path
+from virttest import data_dir, error_context, utils_misc
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def get_images():
@@ -23,8 +21,7 @@ def get_images():
 
     :return: image names
     """
-    return glob.glob(utils_misc.get_path(data_dir.get_data_dir(),
-                                         "images/*.*"))
+    return glob.glob(utils_misc.get_path(data_dir.get_data_dir(), "images/*.*"))
 
 
 def coredump_exists(mntpnt, files, out_dir):
@@ -52,10 +49,10 @@ def coredump_exists(mntpnt, files, out_dir):
             file_exists = True
             for item in files_glob:
                 file_ctime = time.ctime(os.path.getctime(item))
-                msgs_return.append((os.path.basename(item),
-                                    file_ctime))
-                error_context.context("copy files %s %s" %
-                                      (item, out_dir), LOG_JOB.info)
+                msgs_return.append((os.path.basename(item), file_ctime))
+                error_context.context(
+                    "copy files %s %s" % (item, out_dir), LOG_JOB.info
+                )
                 os.system("cp -rf %s %s" % (item, out_dir))
 
     return file_exists, msgs_return
@@ -75,18 +72,15 @@ def check_images_coredump(image, mntpnt, check_files, debugdir):
     msgs_return = []
 
     try:
-        error_context.context("Mount the guest image %s to host mount point" %
-                              image,
-                              LOG_JOB.info)
-        status = lgf.guestmount(image, mntpnt,
-                                True, True, debug=True, is_disk=True)
+        error_context.context(
+            "Mount the guest image %s to host mount point" % image, LOG_JOB.info
+        )
+        status = lgf.guestmount(image, mntpnt, True, True, debug=True, is_disk=True)
         if status.exit_status:
             msgs_return.append("Could not mount guest image %s." % image)
             error_context.context(msgs_return[0], LOG_JOB.error)
         else:
-            found_coredump, msgs_return = coredump_exists(mntpnt,
-                                                          check_files,
-                                                          debugdir)
+            found_coredump, msgs_return = coredump_exists(mntpnt, check_files, debugdir)
     finally:
         if os.path.ismount(mntpnt):
             error_context.context("guestunmount host mount point")
@@ -157,8 +151,9 @@ def run(test, params, env):
     try:
         utils_path.find_command("guestmount")
     except:
-        warn_msg = "Need packages: libguestfs libguestfs-tools" + \
-                   " libguestfs-winsupport"
+        warn_msg = (
+            "Need packages: libguestfs libguestfs-tools" + " libguestfs-winsupport"
+        )
         test.cancel(warn_msg)
 
     # define the file name need to be checked
@@ -169,12 +164,10 @@ def run(test, params, env):
     host_mountpoint = params.get("host_mountpoint", host_mountpoint_default)
     host_mountpoint = utils_misc.get_path(test.debugdir, host_mountpoint)
     file_chk_for_win = params.get("coredump_check_win", file_check_win_default)
-    file_chk_for_linux = params.get("coredump_check_linux",
-                                    file_check_linux_default)
+    file_chk_for_linux = params.get("coredump_check_linux", file_check_linux_default)
 
     # check if the host_mountpoint exists.
-    if not (os.path.isdir(host_mountpoint) and
-            os.path.exists(host_mountpoint)):
+    if not (os.path.isdir(host_mountpoint) and os.path.exists(host_mountpoint)):
         os.makedirs(host_mountpoint)
 
     coredump_file_exists = False
@@ -189,9 +182,9 @@ def run(test, params, env):
     # mount per-image to check if the dump file exists
     error_context.context("Check coredump file per-image", test.log.info)
     for image in images:
-        status, chk_msgs = check_images_coredump(image,
-                                                 host_mountpoint,
-                                                 check_files, test.debugdir)
+        status, chk_msgs = check_images_coredump(
+            image, host_mountpoint, check_files, test.debugdir
+        )
         coredump_file_exists = coredump_file_exists or status
         if status:
             check_results.append((image, chk_msgs))

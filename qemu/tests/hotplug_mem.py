@@ -2,25 +2,22 @@ import logging
 import time
 
 from avocado.utils.wait import wait_for
-
-from virttest import utils_test
-from virttest import error_context
-from virttest.utils_test import BackgroundTest
-from virttest.utils_test import run_virt_sub_test
+from virttest import error_context, utils_test
+from virttest.utils_test import BackgroundTest, run_virt_sub_test
 from virttest.utils_test.qemu import MemoryHotplugTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class MemoryHotplugSimple(MemoryHotplugTest):
-
     def run_sub_test(self):
-        """ Run virt sub test before/after hotplug/unplug memory device"""
+        """Run virt sub test before/after hotplug/unplug memory device"""
         if self.params.get("sub_type"):
-            step = ("Run sub test '%s' %s %s memory device" %
-                    (self.params["sub_test"],
-                     self.params["stage"],
-                     self.params["operation"]))
+            step = "Run sub test '%s' %s %s memory device" % (
+                self.params["sub_test"],
+                self.params["stage"],
+                self.params["operation"],
+            )
             error_context.context(step, LOG_JOB.info)
             args = (self.test, self.params, self.env, self.params["sub_type"])
             run_virt_sub_test(*args)
@@ -48,9 +45,9 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         elif len(mem_devs_origin) < len(mem_devs_post):
             mem_devs = mem_devs_post - mem_devs_origin
             vm, operation = pre_vm, "unplug"
-        func = getattr(self, "%s_memory" % operation)   # pylint: disable=E0606
-        for mem_dev in mem_devs:    # pylint: disable=E0606
-            func(vm, mem_dev)   # pylint: disable=E0606
+        func = getattr(self, "%s_memory" % operation)  # pylint: disable=E0606
+        for mem_dev in mem_devs:  # pylint: disable=E0606
+            func(vm, mem_dev)  # pylint: disable=E0606
 
     def get_mem_by_name(self, vm, name):
         """
@@ -62,7 +59,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
 
     def unplug_memory(self, vm, target_mem):
         """Unplug the target memory, if the memory not exists,
-           hotplug it, then unplug it
+        hotplug it, then unplug it
         """
         devs = self.get_mem_by_name(vm, target_mem)
         if not devs and self.params.get("strict_check") != "yes":
@@ -75,9 +72,8 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         stage = self.params.get("stage", "before")
         login_timeout = int(self.params.get("login_timeout", 360))
         sub_test_runner = (
-            stage == 'during' and [
-                self.run_background_test] or [
-                self.run_sub_test])[0]
+            stage == "during" and [self.run_background_test] or [self.run_sub_test]
+        )[0]
         func = getattr(self, "%s_memory" % operation)
         if not callable(func):
             self.test.error("Unsupported memory operation '%s'" % operation)
@@ -89,7 +85,7 @@ class MemoryHotplugSimple(MemoryHotplugTest):
             if stage != "after":
                 sub_test = sub_test_runner()
                 if self.params.get("sub_type") == "boot":
-                    time.sleep(bootup_time/2)
+                    time.sleep(bootup_time / 2)
                 for target_mem in target_mems.split():
                     func(vm, target_mem)
                     self.check_memory(vm)
@@ -104,11 +100,9 @@ class MemoryHotplugSimple(MemoryHotplugTest):
             vm.reboot()
         finally:
             try:
-                self.restore_memory(
-                    vm, self.env.get_vm(
-                        self.params['main_vm']))
+                self.restore_memory(vm, self.env.get_vm(self.params["main_vm"]))
             except Exception as details:
-                LOG_JOB.warn("Error happen when restore vm: %s", details)
+                LOG_JOB.warning("Error happen when restore vm: %s", details)
             self.close_sessions()
 
 

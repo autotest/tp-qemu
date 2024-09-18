@@ -2,9 +2,7 @@ import os
 import re
 
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import utils_misc
+from virttest import data_dir, utils_misc
 
 
 def run(test, params, env):
@@ -29,13 +27,18 @@ def run(test, params, env):
     non_utf8_secret_file = os.path.join(tmp_dir, "non_utf8_secret")
     non_utf8_secret = params["echo_non_utf8_secret_cmd"] % non_utf8_secret_file
     process.run(non_utf8_secret, shell=True)
-    qemu_img_create_cmd = params["qemu_img_create_cmd"] % (non_utf8_secret_file,
-                                                           image_stg_path)
-    cmd_result = process.run(qemu_img_create_cmd,
-                             ignore_status=True, shell=True)
+    qemu_img_create_cmd = params["qemu_img_create_cmd"] % (
+        non_utf8_secret_file,
+        image_stg_path,
+    )
+    cmd_result = process.run(qemu_img_create_cmd, ignore_status=True, shell=True)
     if os.path.exists(image_stg_path):
-        test.fail("The image '%s' should not exist. Since created"
-                  " it with non_utf8_secret." % image_stg_path)
+        test.fail(
+            "The image '%s' should not exist. Since created"
+            " it with non_utf8_secret." % image_stg_path
+        )
     if not re.search(err_info, cmd_result.stderr.decode(), re.I):
-        test.fail("Failed to get error information. The actual error "
-                  "information is %s." % cmd_result.stderr.decode())
+        test.fail(
+            "Failed to get error information. The actual error "
+            "information is %s." % cmd_result.stderr.decode()
+        )

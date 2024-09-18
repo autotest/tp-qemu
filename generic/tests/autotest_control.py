@@ -1,9 +1,8 @@
-import os
 import logging
+import os
 import sys
 
 from autotest.client.shared import error
-
 from virttest import utils_test
 
 
@@ -23,18 +22,25 @@ def run(test, params, env):
     # Collect test parameters
     timeout = int(params.get("test_timeout", 300))
     control_args = params.get("control_args")
-    control_path = os.path.join(test.virtdir, "control",
-                                params.get("test_control_file"))
+    control_path = os.path.join(
+        test.virtdir, "control", params.get("test_control_file")
+    )
     ignore_sess_terminated = params.get("ignore_session_terminated") == "yes"
     outputdir = test.outputdir
 
-    utils_test.run_autotest(vm, session, control_path, timeout, outputdir,
-                            params, control_args=control_args,
-                            ignore_session_terminated=ignore_sess_terminated)
+    utils_test.run_autotest(
+        vm,
+        session,
+        control_path,
+        timeout,
+        outputdir,
+        params,
+        control_args=control_args,
+        ignore_session_terminated=ignore_sess_terminated,
+    )
 
 
-def run_autotest_control_background(test, params, env,
-                                    test_control_file="control"):
+def run_autotest_control_background(test, params, env, test_control_file="control"):
     """
     Wrapper of run() and make it run in the background through
     fork() and let it run in the child process.
@@ -51,6 +57,7 @@ def run_autotest_control_background(test, params, env,
     :param env: Dictionary with test environment.
     :param test_control_file: The control file of autotest running in the guest
     """
+
     def flush():
         sys.stdout.flush()
         sys.stderr.flush()
@@ -63,9 +70,9 @@ def run_autotest_control_background(test, params, env,
         return pid
 
     flag_fname = "/tmp/autotest-flag-file-pid-" + str(os.getpid())
-    open(flag_fname, 'w').close()
+    open(flag_fname, "w").close()
     try:
-        params['test_control_file'] = test_control_file
+        params["test_control_file"] = test_control_file
         # Launch autotest
         run(test, params, env)
         os.remove(flag_fname)

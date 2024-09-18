@@ -1,13 +1,10 @@
-import random
 import json
+import random
 import string
 
 from avocado.utils import process
-from virttest import data_dir
+from virttest import data_dir, utils_misc, utils_qemu
 from virttest.qemu_storage import QemuImg
-from virttest import utils_misc
-from virttest import utils_qemu
-
 from virttest.utils_version import VersionInterval
 
 
@@ -23,10 +20,13 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def _generate_random_string(max_len=19):
         """Generate random alphabets string in the range of [1, max_len+1]."""
-        random_str = ''.join(random.choice(
-            string.ascii_lowercase) for _ in range(random.randint(1, max_len)))
+        random_str = "".join(
+            random.choice(string.ascii_lowercase)
+            for _ in range(random.randint(1, max_len))
+        )
         return random_str, len(random_str)
 
     def _verify_qemu_img_map(output, str_len):
@@ -34,30 +34,75 @@ def run(test, params, env):
         test.log.info("Verify the dumped mete-data of the unaligned image.")
         qemu_binary = utils_misc.get_qemu_binary(params)
         qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
-        if qemu_version in VersionInterval('[8.2.0,)'):
+        if qemu_version in VersionInterval("[8.2.0,)"):
             expected = [
-                {"start": 0, "length": str_len, "depth": 0, "present": True,
-                 "zero": False, "data": True, "compressed": False, "offset": 0},
-                {"start": str_len, "length": 512 - (str_len % 512), "depth": 0,
-                 "present": True, "zero": True, "data": False,
-                 "compressed": False, "offset": str_len}]
-        elif qemu_version in VersionInterval('[6.1.0,)'):
+                {
+                    "start": 0,
+                    "length": str_len,
+                    "depth": 0,
+                    "present": True,
+                    "zero": False,
+                    "data": True,
+                    "compressed": False,
+                    "offset": 0,
+                },
+                {
+                    "start": str_len,
+                    "length": 512 - (str_len % 512),
+                    "depth": 0,
+                    "present": True,
+                    "zero": True,
+                    "data": False,
+                    "compressed": False,
+                    "offset": str_len,
+                },
+            ]
+        elif qemu_version in VersionInterval("[6.1.0,)"):
             expected = [
-                {"start": 0, "length": str_len, "depth": 0, "present": True,
-                 "zero": False, "data": True, "offset": 0},
-                {"start": str_len, "length": 512 - (str_len % 512), "depth": 0,
-                 "present": True, "zero": True, "data": False,
-                 "offset": str_len}]
+                {
+                    "start": 0,
+                    "length": str_len,
+                    "depth": 0,
+                    "present": True,
+                    "zero": False,
+                    "data": True,
+                    "offset": 0,
+                },
+                {
+                    "start": str_len,
+                    "length": 512 - (str_len % 512),
+                    "depth": 0,
+                    "present": True,
+                    "zero": True,
+                    "data": False,
+                    "offset": str_len,
+                },
+            ]
         else:
-            expected = [{"start": 0, "length": str_len, "depth": 0,
-                         "zero": False, "data": True, "offset": 0},
-                        {"start": str_len, "length": 512 - (str_len % 512),
-                         "depth": 0, "zero": True, "data": False,
-                         "offset": str_len}]
+            expected = [
+                {
+                    "start": 0,
+                    "length": str_len,
+                    "depth": 0,
+                    "zero": False,
+                    "data": True,
+                    "offset": 0,
+                },
+                {
+                    "start": str_len,
+                    "length": 512 - (str_len % 512),
+                    "depth": 0,
+                    "zero": True,
+                    "data": False,
+                    "offset": str_len,
+                },
+            ]
         res = json.loads(output)
         if res != expected:
-            test.fail("The dumped mete-data of the unaligned "
-                      "image '%s' is not correct." % img.image_filename)
+            test.fail(
+                "The dumped mete-data of the unaligned "
+                "image '%s' is not correct." % img.image_filename
+            )
 
     img_param = params.object_params("test")
     img = QemuImg(img_param, data_dir.get_data_dir(), "test")
@@ -68,8 +113,7 @@ def run(test, params, env):
 
     random_str, str_len = _generate_random_string()
     test.log.info("Write '%s' into the file %s.", random_str, img.image_filename)
-    process.run("echo -n '%s' > %s" % (random_str, img.image_filename),
-                shell=True)
+    process.run("echo -n '%s' > %s" % (random_str, img.image_filename), shell=True)
     res = img.map(output="json")
     if res.exit_status != 0:
         test.fail("qemu-img map error: %s." % res.stderr_text)

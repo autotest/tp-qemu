@@ -1,9 +1,8 @@
 import logging
 
-from virttest import remote
-from virttest import error_context
+from virttest import error_context, remote
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 @error_context.context_aware
@@ -30,9 +29,9 @@ def run_whql_hck_client_install(test, params, env):
     client_password = params["client_password"]
     server_domname = params["server_domname"]
 
-    server_session = remote.remote_login("nc", server_address,
-                                         server_shell_port, "", "",
-                                         session.prompt, session.linesep)
+    server_session = remote.remote_login(
+        "nc", server_address, server_shell_port, "", "", session.prompt, session.linesep
+    )
     client_name = session.cmd_output("echo %computername%").strip()
     install_timeout = float(params.get("install_timeout", 1800))
 
@@ -44,16 +43,22 @@ def run_whql_hck_client_install(test, params, env):
     # Join the server's workgroup
     if params.get("join_domain") == "yes":
         error_context.context("Join the workgroup", LOG_JOB.info)
-        cmd = ("netdom join %s /domain:%s /UserD:%s "
-               "/PasswordD:%s" % (client_name, server_domname,
-                                  client_username, client_password))
+        cmd = "netdom join %s /domain:%s /UserD:%s " "/PasswordD:%s" % (
+            client_name,
+            server_domname,
+            client_username,
+            client_password,
+        )
         session.cmd(cmd, timeout=600)
 
-    error_context.context(("Setting up auto logon for user '%s'" %
-                           client_username), LOG_JOB.info)
-    cmd = ('reg add '
-           '"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\winlogon"'
-           ' /v "%s" /d "%s" /t REG_SZ /f')
+    error_context.context(
+        ("Setting up auto logon for user '%s'" % client_username), LOG_JOB.info
+    )
+    cmd = (
+        "reg add "
+        '"HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion\\winlogon"'
+        ' /v "%s" /d "%s" /t REG_SZ /f'
+    )
     session.cmd(cmd % ("AutoAdminLogon", "1"))
     session.cmd(cmd % ("DefaultUserName", server_username))
     session.cmd(cmd % ("DefaultPassword", server_password))
@@ -61,14 +66,16 @@ def run_whql_hck_client_install(test, params, env):
     session = vm.reboot(session)
 
     if params.get("pre_hck_install"):
-        error_context.context("Install some program before install HCK client",
-                              LOG_JOB.info)
+        error_context.context(
+            "Install some program before install HCK client", LOG_JOB.info
+        )
         install_cmd = params.get("pre_hck_install")
         session.cmd(install_cmd, timeout=install_timeout)
 
     install_cmd = params["install_cmd"]
-    error_context.context(("Installing HCK client (timeout=%ds)" %
-                           install_timeout), LOG_JOB.info)
+    error_context.context(
+        ("Installing HCK client (timeout=%ds)" % install_timeout), LOG_JOB.info
+    )
     session.cmd(install_cmd, timeout=install_timeout)
     reboot_timeout = login_timeout + 1500
     session = vm.reboot(session, timeout=reboot_timeout)

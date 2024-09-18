@@ -1,14 +1,12 @@
-import re
 import logging
+import re
 
-
-from virttest import error_context
-from virttest import data_dir
-from virttest import storage
 from avocado.utils import process
+from virttest import data_dir, error_context, storage
+
 from provider.in_place_upgrade_base import IpuTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class IpuLegacyTest(IpuTest):
@@ -18,7 +16,6 @@ class IpuLegacyTest(IpuTest):
     """
 
     def __init__(self, test, params):
-
         super(IpuLegacyTest, self).__init__(test, params)
         self.session = None
         self.test = test
@@ -43,8 +40,7 @@ class IpuLegacyTest(IpuTest):
             fix_answer_sec = self.params.get("fix_answer_section")
             self.session.cmd(fix_answer_sec, timeout=1200)
             erase_old_kernel = self.params.get("clean_up_old_kernel")
-            s, output = self.session.cmd_status_output(erase_old_kernel,
-                                                       timeout=1200)
+            s, output = self.session.cmd_status_output(erase_old_kernel, timeout=1200)
             error_info = self.params.get("error_info")
             if re.search(error_info, output):
                 pass
@@ -149,9 +145,12 @@ def run(test, params, env):
         post_rhel_ver = upgrade_test.run_guest_cmd(check_rhel_ver)
         vm.verify_kernel_crash()
         if params.get("device_cio_free_check_cmd"):
-            cio_status = str(upgrade_test.session.cmd_status_output(
-                params.get("device_cio_free_check_cmd")))
-            if 'inactive' in cio_status:
+            cio_status = str(
+                upgrade_test.session.cmd_status_output(
+                    params.get("device_cio_free_check_cmd")
+                )
+            )
+            if "inactive" in cio_status:
                 test.fail("device_cio_free is not enabled after upgrading")
     finally:
         vm.graceful_shutdown(timeout=300)
@@ -161,7 +160,6 @@ def run(test, params, env):
             image_path = params.get("images_base_dir", data_dir.get_data_dir())
             old_name = storage.get_image_filename(image_params, image_path)
             upgraded_name = old_name.replace(pre_rhel_ver, post_rhel_ver + "0")
-            process.run(params.get("image_clone_command") %
-                        (old_name, upgraded_name))
+            process.run(params.get("image_clone_command") % (old_name, upgraded_name))
         except Exception as error:
-            test.log.warning("Failed to rename upgraded image:%s" % str(error))
+            test.log.warning("Failed to rename upgraded image:%s", str(error))

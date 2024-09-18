@@ -2,12 +2,7 @@ import functools
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import env_process
-
+from virttest import env_process, error_context, utils_misc, utils_net
 
 _system_output = functools.partial(process.system_output, shell=True)
 
@@ -28,8 +23,7 @@ def run(test, params, env):
 
     qemu_binary = utils_misc.get_qemu_binary(params)
     if not utils_misc.qemu_has_option("qmp", qemu_binary):
-        test.cancel("This test case requires a host QEMU with QMP "
-                    "monitor support")
+        test.cancel("This test case requires a host QEMU with QMP " "monitor support")
     if params.get("nettype", "macvtap") != "macvtap":
         test.cancel("This test case test macvtap.")
 
@@ -48,12 +42,13 @@ def run(test, params, env):
     post_cmd = params.get("post_cmd")
     post_cmd_type = params.get("post_cmd_type")
 
-    session = vm.wait_for_serial_login(timeout=int(params.get("login_timeout",
-                                                              360)))
+    session = vm.wait_for_serial_login(timeout=int(params.get("login_timeout", 360)))
 
-    callback = {"host_cmd": _system_output,
-                "guest_cmd": session.cmd_output,
-                "qmp_cmd": vm.get_monitors_by_type("qmp")[0].send_args_cmd}
+    callback = {
+        "host_cmd": _system_output,
+        "guest_cmd": session.cmd_output,
+        "qmp_cmd": vm.get_monitors_by_type("qmp")[0].send_args_cmd,
+    }
 
     def send_cmd(cmd, cmd_type):
         if cmd_type in callback.keys():
@@ -69,13 +64,15 @@ def run(test, params, env):
     mac = vm.get_mac_address()
     interface_name = utils_net.get_linux_ifname(session, mac)
 
-    error_context.context("In guest, change network interface "
-                          "to promisc state.", test.log.info)
+    error_context.context(
+        "In guest, change network interface " "to promisc state.", test.log.info
+    )
     event_cmd = params.get("event_cmd") % interface_name
     send_cmd(event_cmd, event_cmd_type)
 
-    error_context.context("Try to get qmp events in %s seconds!" % timeout,
-                          test.log.info)
+    error_context.context(
+        "Try to get qmp events in %s seconds!" % timeout, test.log.info
+    )
     end_time = time.time() + timeout
     qmp_monitors = vm.get_monitors_by_type("qmp")
     qmp_num = len(qmp_monitors)

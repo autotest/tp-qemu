@@ -1,7 +1,6 @@
 import signal
 
-from virttest import utils_misc
-from virttest import error_context
+from virttest import error_context, utils_misc
 
 from generic.tests import guest_test
 
@@ -44,37 +43,35 @@ def run(test, params, env):
     # running while the the foreground detecting is on going.
     error_context.context("run benchmark test in background", test.log.info)
     params["test_timeout"] = test_timeout * 2 + sec_per_day
-    test.log.info("set Yonit bitmap test timeout to"
-                  " %ss", params["test_timeout"])
+    test.log.info("set Yonit bitmap test timeout to" " %ss", params["test_timeout"])
     pid = guest_test.run_guest_test_background(test, params, env)
     if pid < 0:
         session.close()
-        test.error("Could not create child process to execute "
-                   "guest_test background")
+        test.error("Could not create child process to execute " "guest_test background")
 
     def is_yonit_benchmark_launched():
-        if session.cmd_status(
-                'tasklist | find /I "compress_benchmark_loop"') != 0:
+        if session.cmd_status('tasklist | find /I "compress_benchmark_loop"') != 0:
             test.log.debug("yonit bitmap benchmark was not found")
             return False
         return True
 
-    error_context.context("Watching Yonit bitmap benchmark is"
-                          " running until timeout", test.log.info)
+    error_context.context(
+        "Watching Yonit bitmap benchmark is" " running until timeout", test.log.info
+    )
     try:
         # Start detecting whether the benchmark is started a few mins
         # after the background test launched, as the downloading
         # will take some time.
         launch_timeout = login_timeout
-        if utils_misc.wait_for(is_yonit_benchmark_launched,
-                               launch_timeout, 180, 5):
+        if utils_misc.wait_for(is_yonit_benchmark_launched, launch_timeout, 180, 5):
             test.log.debug("Yonit bitmap benchmark was launched successfully")
         else:
             test.error("Failed to launch yonit bitmap benchmark")
 
         # If the benchmark exits before timeout, errors happened.
-        if utils_misc.wait_for(lambda: not is_yonit_benchmark_launched(),
-                               test_timeout, 60, 10):
+        if utils_misc.wait_for(
+            lambda: not is_yonit_benchmark_launched(), test_timeout, 60, 10
+        ):
             test.error("Yonit bitmap benchmark exits unexpectly")
         else:
             if session.is_responsive():

@@ -1,5 +1,4 @@
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context
 
 from provider.cpu_utils import check_cpu_flags
 
@@ -24,14 +23,14 @@ def run(test, params, env):
         check_cpu_flags(params, flag, test)
 
     params["start_vm"] = "yes"
-    vm_name = params['main_vm']
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)
     error_context.context("Try to log into guest", test.log.info)
     session = vm.wait_for_login()
     if params["os_type"] == "linux":
-        if params['os_variant'] != 'rhel6':
+        if params["os_variant"] != "rhel6":
             check_cpu_flags(params, flag, test, session)
         check_clock = params["check_clock"]
         check_clock_out = session.cmd_status(check_clock)

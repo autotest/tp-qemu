@@ -1,15 +1,9 @@
+import random
 import re
 import time
-import random
 
 import aexpect
-
-from virttest import data_dir
-from virttest import error_context
-from virttest import utils_misc
-from virttest import storage
-from virttest import arch
-from virttest import env_process
+from virttest import arch, data_dir, env_process, error_context, storage, utils_misc
 
 
 @error_context.context_aware
@@ -32,17 +26,16 @@ def run(test, params, env):
     """
 
     def prepare_image_params(params):
-        pci_num = int(params['pci_num'])
+        pci_num = int(params["pci_num"])
         for i in range(pci_num):
-            image_name = '%s_%s' % ('stg', i)
-            params['images'] = ' '.join([params['images'], image_name])
-            image_image_name = '%s_%s' % ('image_name', image_name)
-            params[image_image_name] = '%s_%s' % ('storage', i)
-            image_image_format = '%s_%s' % ('image_format', image_name)
-            params[image_image_format] = params.get('image_format_extra',
-                                                    'qcow2')
-            image_image_size = '%s_%s' % ('image_size', image_name)
-            params[image_image_size] = params.get('image_size_extra', '128K')
+            image_name = "%s_%s" % ("stg", i)
+            params["images"] = " ".join([params["images"], image_name])
+            image_image_name = "%s_%s" % ("image_name", image_name)
+            params[image_image_name] = "%s_%s" % ("storage", i)
+            image_image_format = "%s_%s" % ("image_format", image_name)
+            params[image_image_format] = params.get("image_format_extra", "qcow2")
+            image_image_size = "%s_%s" % ("image_size", image_name)
+            params[image_image_size] = params.get("image_size_extra", "128K")
         return params
 
     def find_new_device(check_cmd, device_string, chk_timeout=30):
@@ -79,8 +72,10 @@ def run(test, params, env):
 
     def pci_add_block(pci_num, queues, pci_id):
         image_filename = find_image(pci_num)
-        pci_add_cmd = ("pci_add pci_addr=auto storage file=%s,if=%s" %
-                       (image_filename, pci_model))
+        pci_add_cmd = "pci_add pci_addr=auto storage file=%s,if=%s" % (
+            image_filename,
+            pci_model,
+        )
         return pci_add(pci_add_cmd)
 
     def pci_add(pci_add_cmd):
@@ -88,11 +83,12 @@ def run(test, params, env):
         error_context.context("Adding pci device with command 'pci_add'")
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
         guest_device = find_new_device(chk_cmd, guest_devices)
-        pci_info.append(['', '', add_output, pci_model, guest_device])
+        pci_info.append(["", "", add_output, pci_model, guest_device])
         if "OK domain" not in add_output:
-            test.fail("Add PCI device failed. "
-                      "Monitor command is: %s, Output: %r" %
-                      (pci_add_cmd, add_output))
+            test.fail(
+                "Add PCI device failed. "
+                "Monitor command is: %s, Output: %r" % (pci_add_cmd, add_output)
+            )
         return vm.monitor.info("pci")
 
     def is_supported_device(dev):
@@ -107,12 +103,17 @@ def run(test, params, env):
 
         # Probe qemu for a list of supported devices
         probe_output = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)  # pylint: disable=E0606
-        devices_supported = [j.strip('"') for j in
-                             re.findall(r'\"[a-z|0-9|\-|\_|\,|\.]*\"',
-                                        probe_output, re.MULTILINE)]
-        test.log.debug("QEMU reported the following supported devices for "
-                       "PCI hotplug: %s", devices_supported)
-        return (dev in devices_supported)
+        devices_supported = [
+            j.strip('"')
+            for j in re.findall(
+                r"\"[a-z|0-9|\-|\_|\,|\.]*\"", probe_output, re.MULTILINE
+            )
+        ]
+        test.log.debug(
+            "QEMU reported the following supported devices for " "PCI hotplug: %s",
+            devices_supported,
+        )
+        return dev in devices_supported
 
     def verify_supported_device(dev):
         if not is_supported_device(dev):
@@ -133,8 +134,11 @@ def run(test, params, env):
         pci_model = params.get("pci_model")
         controller_model = None
         bus_option = ""
-        if "q35" in params["machine_type"] or "arm64" in params["machine_type"]\
-                and drive_format == "virtio":
+        if (
+            "q35" in params["machine_type"]
+            or "arm64" in params["machine_type"]
+            and drive_format == "virtio"
+        ):
             bus_option = ",bus=pcie_extra_root_port_%d" % pci_num
 
         if pci_model == "virtio":
@@ -142,15 +146,17 @@ def run(test, params, env):
 
         if pci_model == "scsi":
             pci_model = "scsi-disk"
-            if arch.ARCH in ('ppc64', 'ppc64le'):
+            if arch.ARCH in ("ppc64", "ppc64le"):
                 controller_model = "spapr-vscsi"
             else:
                 controller_model = "lsi53c895a"
             if nonlocal_vars["verify_device_flag"]:
                 verify_supported_device(controller_model)
             controller_id = "controller-" + device_id
-            controller_add_cmd = ("device_add %s,id=%s" %
-                                  (controller_model, controller_id))
+            controller_add_cmd = "device_add %s,id=%s" % (
+                controller_model,
+                controller_id,
+            )
             error_context.context("Adding SCSI controller.")
             vm.monitor.send_args_cmd(controller_add_cmd)
 
@@ -159,19 +165,27 @@ def run(test, params, env):
         nonlocal_vars["verify_device_flag"] = False
 
         add_cmd = "{0} driver=file,filename={1},node-name=file_{2}".format(
-            drive_cmd_type, image_filename, pci_info[pci_num][0])
+            drive_cmd_type, image_filename, pci_info[pci_num][0]
+        )
         add_cmd += ";{0} driver={1},node-name={2},file=file_{2}".format(
-            drive_cmd_type, image_format, pci_info[pci_num][0])
+            drive_cmd_type, image_format, pci_info[pci_num][0]
+        )
         driver_add_cmd = add_cmd
 
         if drive_cmd_type == "drive_add":
-            driver_add_cmd = ("%s auto file=%s,if=none,format=%s,id=%s" %
-                              (drive_cmd_type, image_filename, image_format,
-                               pci_info[pci_num][0]))
+            driver_add_cmd = "%s auto file=%s,if=none,format=%s,id=%s" % (
+                drive_cmd_type,
+                image_filename,
+                image_format,
+                pci_info[pci_num][0],
+            )
         elif drive_cmd_type == "__com.redhat_drive_add":
-            driver_add_cmd = ("%s file=%s,format=%s,id=%s" %
-                              (drive_cmd_type, image_filename, image_format,
-                               pci_info[pci_num][0]))
+            driver_add_cmd = "%s file=%s,format=%s,id=%s" % (
+                drive_cmd_type,
+                image_filename,
+                image_format,
+                pci_info[pci_num][0],
+            )
         # add driver.
         error_context.context("Adding driver.")
         if drive_cmd_type != "blockdev-add":
@@ -179,15 +193,18 @@ def run(test, params, env):
         elif pci_id is None:
             vm.monitor.send_args_cmd(driver_add_cmd, convert=False)
 
-        pci_add_cmd = ("device_add id=%s,driver=%s,drive=%s%s" %
-                       (pci_info[pci_num][1], pci_model,
-                        pci_info[pci_num][0], bus_option))
+        pci_add_cmd = "device_add id=%s,driver=%s,drive=%s%s" % (
+            pci_info[pci_num][1],
+            pci_model,
+            pci_info[pci_num][0],
+            bus_option,
+        )
         return device_add(pci_num, pci_add_cmd, pci_id=pci_id)
 
     def device_add(pci_num, pci_add_cmd, pci_id=None):
         error_context.context("Adding pci device with command 'device_add'")
         guest_devices = session.cmd_output(chk_cmd)
-        if vm.monitor.protocol == 'qmp':
+        if vm.monitor.protocol == "qmp":
             add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         else:
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
@@ -201,10 +218,13 @@ def run(test, params, env):
 
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][1] not in str(after_add):
-            test.log.error("Could not find matched id in monitor:"
-                           " %s", pci_info[pci_num][1])
-            test.fail("Add device failed. Monitor command is: %s"
-                      ". Output: %r" % (pci_add_cmd, add_output))
+            test.log.error(
+                "Could not find matched id in monitor:" " %s", pci_info[pci_num][1]
+            )
+            test.fail(
+                "Add device failed. Monitor command is: %s"
+                ". Output: %r" % (pci_add_cmd, add_output)
+            )
         return after_add
 
     # Hot add a pci device
@@ -216,8 +236,11 @@ def run(test, params, env):
             # get function for adding device.
             add_fuction = local_functions["%s_%s" % (cmd_type, pci_type)]
         except Exception:
-            test.error("No function for adding " + "'%s' dev " % pci_type +
-                       "with '%s'" % cmd_type)
+            test.error(
+                "No function for adding "
+                + "'%s' dev " % pci_type
+                + "with '%s'" % cmd_type
+            )
         after_add = None
         if add_fuction:
             # Do add pci device.
@@ -243,27 +266,36 @@ def run(test, params, env):
             error_context.context("Start checking new added device")
             # Compare the output of 'info pci'
             if after_add == info_pci_ref:
-                test.fail("No new PCI device shown after "
-                          "executing monitor command: 'info pci'")
+                test.fail(
+                    "No new PCI device shown after "
+                    "executing monitor command: 'info pci'"
+                )
 
             secs = int(params.get("wait_secs_for_hook_up", 3))
             if not utils_misc.wait_for(_new_shown, test_timeout, secs, 3):
-                test.fail("No new device shown in output of" +
-                          "command executed inside the " +
-                          "guest: %s" % reference_cmd)
+                test.fail(
+                    "No new device shown in output of"
+                    + "command executed inside the "
+                    + "guest: %s" % reference_cmd
+                )
 
             if not utils_misc.wait_for(_find_pci, test_timeout, 3, 3):
-                test.fail("PCI %s %s " % (pci_model, pci_type) +
-                          "device not found in guest. Command " +
-                          "was: %s" % params.get("find_pci_cmd"))
+                test.fail(
+                    "PCI %s %s " % (pci_model, pci_type)
+                    + "device not found in guest. Command "
+                    + "was: %s" % params.get("find_pci_cmd")
+                )
 
             # Test the newly added device
             try:
                 error_context.context("Check disk in guest", test.log.info)
                 session.cmd(params.get("pci_test_cmd") % (pci_num + 1))
             except aexpect.ShellError as e:
-                test.fail("Check for %s device failed" % pci_type +
-                          "after PCI hotplug." + "Output: %r" % e.output)
+                test.fail(
+                    "Check for %s device failed" % pci_type
+                    + "after PCI hotplug."
+                    + "Output: %r" % e.output
+                )
 
         except Exception:
             pci_del(pci_num, ignore_failure=True)
@@ -284,10 +316,14 @@ def run(test, params, env):
             cmd = "device_del id=%s" % pci_info[pci_num][1]
             vm.monitor.send_args_cmd(cmd)
 
-        if (not utils_misc.wait_for(_device_removed, test_timeout, 2, 3) and
-                not ignore_failure):
-            test.fail("Failed to hot remove PCI device: %s. "
-                      "Monitor command: %s" % (pci_info[pci_num][3], cmd))
+        if (
+            not utils_misc.wait_for(_device_removed, test_timeout, 2, 3)
+            and not ignore_failure
+        ):
+            test.fail(
+                "Failed to hot remove PCI device: %s. "
+                "Monitor command: %s" % (pci_info[pci_num][3], cmd)
+            )
 
     nonlocal_vars = {"verify_device_flag": True}
     machine_type = params.get("machine_type")
@@ -313,16 +349,17 @@ def run(test, params, env):
     # check monitor type
     qemu_binary = utils_misc.get_qemu_binary(params)
     # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if vm.monitor.protocol == 'qmp':
+    if vm.monitor.protocol == "qmp":
         cmd_output = vm.monitor.info("commands")
     else:
         cmd_output = vm.monitor.human_monitor_cmd("help", debug=False)
 
-    cmd_type = utils_misc.find_substring(str(cmd_output), "device_add",
-                                         "pci_add")
+    cmd_type = utils_misc.find_substring(str(cmd_output), "device_add", "pci_add")
     if not cmd_type:
-        test.error("Could find a suitable method for hotplugging"
-                   " device in this version of qemu")
+        test.error(
+            "Could find a suitable method for hotplugging"
+            " device in this version of qemu"
+        )
 
     # Determine syntax of drive hotplug
     # __com.redhat_drive_add == qemu-kvm-0.12 on RHEL 6
@@ -330,9 +367,9 @@ def run(test, params, env):
     drive_cmd_type = utils_misc.find_substring(str(cmd_output), "blockdev-add")
 
     if not drive_cmd_type:
-        drive_cmd_type = utils_misc.find_substring(str(cmd_output),
-                                                   "__com.redhat_drive_add",
-                                                   "drive_add")
+        drive_cmd_type = utils_misc.find_substring(
+            str(cmd_output), "__com.redhat_drive_add", "drive_add"
+        )
     if not drive_cmd_type:
         test.error("Unknown version of qemu")
 
@@ -349,8 +386,9 @@ def run(test, params, env):
     pci_info = []
     # Add block device into guest
     for pci_num in range(pci_num_range):
-        error_context.context("Prepare the %d removable pci device" % pci_num,
-                              test.log.info)
+        error_context.context(
+            "Prepare the %d removable pci device" % pci_num, test.log.info
+        )
         add_device(pci_num)
         if pci_info[pci_num][4] is not None:
             partition = pci_info[pci_num][4]
@@ -370,7 +408,8 @@ def run(test, params, env):
         pci_num = random.randint(0, len(pci_info) - 1)
         error_context.context(
             "start unplug device, repeat %d of %d-%d" % (j, rp_times, pci_num),
-            test.log.info)
+            test.log.info,
+        )
         guest_devices = session.cmd_output(chk_cmd)
         pci_del(pci_num)
         device_del = find_del_device(chk_cmd, guest_devices)
@@ -379,14 +418,15 @@ def run(test, params, env):
 
         # sleep to wait delete event
         time.sleep(5)
-        error_context.context("Start plug pci device, repeat %d" % j,
-                              test.log.info)
+        error_context.context("Start plug pci device, repeat %d" % j, test.log.info)
         guest_devices = session.cmd_output(chk_cmd)
         add_device(pci_num, pci_id=pci_info[pci_num][0])
         device_del = find_new_device(chk_cmd, guest_devices)
         if device_del != pci_info[pci_num][4]:
-            test.fail("Device partition changed from %s to %s" %
-                      (pci_info[pci_num][4], device_del))
+            test.fail(
+                "Device partition changed from %s to %s"
+                % (pci_info[pci_num][4], device_del)
+            )
         cmd = confirm_cmd % (pci_info[pci_num][4], offset)
         confirm_info = session.cmd_output(cmd)
         if device_del not in confirm_info:

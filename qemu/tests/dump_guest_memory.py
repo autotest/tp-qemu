@@ -2,9 +2,7 @@ import operator
 import os
 
 from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import utils_package
+from virttest import utils_misc, utils_package
 
 
 def run(test, params, env):
@@ -29,8 +27,7 @@ def run(test, params, env):
         """
         guest_kernel_version = session.cmd("uname -r").strip()
         if host_kernel_version != guest_kernel_version:
-            test.cancel("Please update your host and guest kernel "
-                        "to same version")
+            test.cancel("Please update your host and guest kernel " "to same version")
 
     def check_list(qmp_o, key, val=None, check_item_in_pair=True):
         """
@@ -55,7 +52,7 @@ def run(test, params, env):
             elif isinstance(element, list):
                 if check_list(element, key, val, check_item_in_pair):
                     return True
-            elif element != '' and not check_item_in_pair:
+            elif element != "" and not check_item_in_pair:
                 if key in str(element):
                     return True
         return False
@@ -88,7 +85,7 @@ def run(test, params, env):
                 elif isinstance(value, list):
                     if check_list(value, key, val, check_item_in_pair):
                         return True
-                elif value != '' and not check_item_in_pair:
+                elif value != "" and not check_item_in_pair:
                     if key in str(value):
                         return True
             return False
@@ -112,9 +109,11 @@ def run(test, params, env):
         result = None
         if result_check == "equal":
             if not operator.eq(qmp_o, expect_o):
-                test.fail("QMP output does not equal to the expect result.\n "
-                          "Expect result: '%s'\n"
-                          "Actual result: '%s'" % (expect_o, qmp_o))
+                test.fail(
+                    "QMP output does not equal to the expect result.\n "
+                    "Expect result: '%s'\n"
+                    "Actual result: '%s'" % (expect_o, qmp_o)
+                )
         elif result_check == "contain":
             if len(expect_o) == 0:
                 result = True
@@ -161,7 +160,7 @@ def run(test, params, env):
         status, output = process.getstatusoutput(crash_cmd)
         os.remove(crash_script)
         test.log.debug(output)
-        if status != 0 or 'error' in output:
+        if status != 0 or "error" in output:
             test.fail("vmcore corrupt")
 
     # install crash/gdb/kernel-debuginfo in host
@@ -188,9 +187,10 @@ def run(test, params, env):
 
     if check_dump == "True":
         # query dump status and wait for dump completed
-        utils_misc.wait_for(lambda: execute_qmp_cmd(query_qmp_cmd,
-                                                    query_cmd_return_value),
-                            dump_file_timeout)
+        utils_misc.wait_for(
+            lambda: execute_qmp_cmd(query_qmp_cmd, query_cmd_return_value),
+            dump_file_timeout,
+        )
         check_dump_file()
         os.remove(dump_file)
 

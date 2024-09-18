@@ -22,12 +22,12 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    run_stress = params.get_boolean('run_stress')
-    mq_publisher = params['mq_publisher']
-    mq_port = params.get('mq_port')
-    wait_response_timeout = params.get_numeric('wait_response_timeout', 600)
+    run_stress = params.get_boolean("run_stress")
+    mq_publisher = params["mq_publisher"]
+    mq_port = params.get("mq_port")
+    wait_response_timeout = params.get_numeric("wait_response_timeout", 600)
 
-    vm = env.get_vm(params['main_vm'])
+    vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login()
     stress_tool = None
@@ -39,19 +39,23 @@ def run(test, params, env):
     mq_subscriber = message_queuing.MQSubscriber(mq_publisher, mq_port)
 
     try:
-        error_context.context('Receive the "APPROVE" message from MQ publisher '
-                              'to continue the test.', test.log.info)
+        error_context.context(
+            'Receive the "APPROVE" message from MQ publisher ' "to continue the test.",
+            test.log.info,
+        )
         try:
             event = mq_subscriber.receive_event(wait_response_timeout)
             if event == "NOTIFY":
                 test.log.warning('Got "NOTIFY" message to finish test')
                 return
-            elif event != 'APPROVE':
-                test.fail('Got unwanted message from MQ publisher.')
+            elif event != "APPROVE":
+                test.fail("Got unwanted message from MQ publisher.")
         except message_queuing.UnknownEventError as err:
             test.log.error(err)
-            test.error('The MQ publisher did not enter the "APPROVE" message '
-                       'within the expected time.')
+            test.error(
+                'The MQ publisher did not enter the "APPROVE" message '
+                "within the expected time."
+            )
         test.log.info('Already captured the "APPROVE" message.')
 
         if not stress_tool:

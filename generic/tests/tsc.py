@@ -8,27 +8,26 @@ from generic.tests.monotonic_time import TimeClientTest
 class TscTest(TimeClientTest):
     def __init__(self, test, params, env, test_name):
         super(TscTest, self).__init__(test, params, env, test_name)
-        self.args = '-t 650'
+        self.args = "-t 650"
 
     def _test(self):
-        cmd = self.src_dir + '/checktsc '
+        cmd = self.src_dir + "/checktsc "
         cmd += self.args
 
         (exit_status, result) = self.session.cmd_status_output(cmd)
 
         if exit_status != 0:
             self.test.log.error("Program checktsc exit status is %s", exit_status)
-            default_fail = ("UNKNOWN FAILURE: rc=%d from %s" % (exit_status, cmd))
+            default_fail = "UNKNOWN FAILURE: rc=%d from %s" % (exit_status, cmd)
 
             if exit_status == 1:
-                if result.strip('\n').endswith('FAIL'):
+                if result.strip("\n").endswith("FAIL"):
                     max_delta = 0
-                    reason = ''
+                    reason = ""
                     threshold = int(self.args.split()[1])
-                    latencies = re.findall(r"CPU \d+ - CPU \d+ =\s+-*\d+",
-                                           result)
+                    latencies = re.findall(r"CPU \d+ - CPU \d+ =\s+-*\d+", result)
                     for ln in latencies:
-                        cur_delta = int(ln.split('=', 2)[1])
+                        cur_delta = int(ln.split("=", 2)[1])
                         if abs(cur_delta) > max_delta:
                             max_delta = abs(cur_delta)
                             reason = ln

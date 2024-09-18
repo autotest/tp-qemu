@@ -1,9 +1,9 @@
 """Repeatedly blockdev_add/del iothread enabled node"""
-import os
-from avocado.utils import process
 
-from virttest import error_context
-from virttest import data_dir
+import os
+
+from avocado.utils import process
+from virttest import data_dir, error_context
 
 
 # This decorator makes the test function aware of context strings

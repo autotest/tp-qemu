@@ -6,11 +6,10 @@ from virttest.qemu_monitor import QMPCmdError
 from provider import backup_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevCommitNonExistedNode(BlockDevCommitTest):
-
     def commit_snapshots(self):
         device = self.params.get("device_tag")
         device_params = self.params.object_params(device)
@@ -37,9 +36,11 @@ class BlockdevCommitNonExistedNode(BlockDevCommitTest):
             if not re.search(qmp_error_msg, str(e.data)):
                 self.test.fail("Error message not as expected")
         else:
-            self.test.fail("Block commit should fail with "
-                           "'Cannot find device= nor node_name=sn0'"
-                           ",but block commit succeeded unexpectedly")
+            self.test.fail(
+                "Block commit should fail with "
+                "'Cannot find device= nor node_name=sn0'"
+                ",but block commit succeeded unexpectedly"
+            )
 
     def run_test(self):
         self.pre_test()

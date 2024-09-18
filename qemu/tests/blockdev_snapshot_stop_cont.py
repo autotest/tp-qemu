@@ -4,15 +4,15 @@ from virttest import error_context
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevSnapshotStopContTest(BlockDevSnapshotTest):
-
     @error_context.context_aware
     def create_snapshot(self):
-        error_context.context("do snaoshot during running guest stop_cont",
-                              LOG_JOB.info)
+        error_context.context(
+            "do snaoshot during running guest stop_cont", LOG_JOB.info
+        )
         self.main_vm.pause()
         super(BlockdevSnapshotStopContTest, self).create_snapshot()
         self.main_vm.resume()

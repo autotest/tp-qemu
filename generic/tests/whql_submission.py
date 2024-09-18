@@ -3,9 +3,7 @@ import re
 
 import aexpect
 from aexpect import rss_client
-
-from virttest import utils_misc
-from virttest import remote
+from virttest import remote, utils_misc
 
 
 def run(test, params, env):
@@ -43,27 +41,40 @@ def run(test, params, env):
     server_address = params.get("server_address")
     server_shell_port = int(params.get("server_shell_port"))
     server_file_transfer_port = int(params.get("server_file_transfer_port"))
-    server_studio_path = params.get("server_studio_path", "%programfiles%\\ "
-                                    "Microsoft Driver Test Manager\\Studio")
-    dsso_test_binary = params.get("dsso_test_binary",
-                                  "deps/whql_submission_15.exe")
+    server_studio_path = params.get(
+        "server_studio_path",
+        "%programfiles%\\ " "Microsoft Driver Test Manager\\Studio",
+    )
+    dsso_test_binary = params.get("dsso_test_binary", "deps/whql_submission_15.exe")
     dsso_test_binary = utils_misc.get_path(test.virtdir, dsso_test_binary)
-    dsso_delete_machine_binary = params.get("dsso_delete_machine_binary",
-                                            "deps/whql_delete_machine_15.exe")
-    dsso_delete_machine_binary = utils_misc.get_path(test.virtdir,
-                                                     dsso_delete_machine_binary)
+    dsso_delete_machine_binary = params.get(
+        "dsso_delete_machine_binary", "deps/whql_delete_machine_15.exe"
+    )
+    dsso_delete_machine_binary = utils_misc.get_path(
+        test.virtdir, dsso_delete_machine_binary
+    )
     test_timeout = float(params.get("test_timeout", 600))
 
     # Copy dsso binaries to the server
     for filename in dsso_test_binary, dsso_delete_machine_binary:
-        rss_client.upload(server_address, server_file_transfer_port,
-                          filename, server_studio_path, timeout=60)
+        rss_client.upload(
+            server_address,
+            server_file_transfer_port,
+            filename,
+            server_studio_path,
+            timeout=60,
+        )
 
     # Open a shell session with the server
-    server_session = remote.remote_login("nc", server_address,
-                                         server_shell_port, "", "",
-                                         sessions[0].prompt,
-                                         sessions[0].linesep)
+    server_session = remote.remote_login(
+        "nc",
+        server_address,
+        server_shell_port,
+        "",
+        "",
+        sessions[0].prompt,
+        sessions[0].linesep,
+    )
     server_session.set_status_test_command(sessions[0].status_test_command)
 
     # Get the computer names of the server and clients
@@ -74,13 +85,17 @@ def run(test, params, env):
     # Delete all client machines from the server's data store
     server_session.cmd("cd %s" % server_studio_path)
     for client_name in client_names:
-        cmd = "%s %s %s" % (os.path.basename(dsso_delete_machine_binary),
-                            server_name, client_name)
+        cmd = "%s %s %s" % (
+            os.path.basename(dsso_delete_machine_binary),
+            server_name,
+            client_name,
+        )
         server_session.cmd(cmd, print_func=test.log.debug)
 
     # Reboot the client machines
-    sessions = utils_misc.parallel((vm.reboot, (session,))
-                                   for vm, session in zip(vms, sessions))
+    sessions = utils_misc.parallel(
+        (vm.reboot, (session,)) for vm, session in zip(vms, sessions)
+    )
 
     # Check the NICs again
     for vm in vms:
@@ -92,32 +107,40 @@ def run(test, params, env):
     # Run whql_pre_command and close the sessions
     if params.get("whql_pre_command"):
         for session in sessions:
-            session.cmd(params.get("whql_pre_command"),
-                        int(params.get("whql_pre_command_timeout", 600)))
+            session.cmd(
+                params.get("whql_pre_command"),
+                int(params.get("whql_pre_command_timeout", 600)),
+            )
             session.close()
 
     # Run the automation program on the server
     pool_name = "%s_pool" % client_names[0]
-    submission_name = "%s_%s" % (client_names[0],
-                                 params.get("submission_name"))
-    cmd = "%s %s %s %s %s %s" % (os.path.basename(dsso_test_binary),
-                                 server_name, pool_name, submission_name,
-                                 test_timeout, " ".join(client_names))
+    submission_name = "%s_%s" % (client_names[0], params.get("submission_name"))
+    cmd = "%s %s %s %s %s %s" % (
+        os.path.basename(dsso_test_binary),
+        server_name,
+        pool_name,
+        submission_name,
+        test_timeout,
+        " ".join(client_names),
+    )
     server_session.sendline(cmd)
 
     # Helper function: wait for a given prompt and raise an exception if an
     # error occurs
     def find_prompt(test, prompt):
         m, o = server_session.read_until_last_line_matches(
-            [prompt, server_session.prompt], print_func=test.log.info,
-            timeout=600)
+            [prompt, server_session.prompt], print_func=test.log.info, timeout=600
+        )
         if m != 0:
             errors = re.findall("^Error:.*$", o, re.I | re.M)
             if errors:
                 test.error(errors[0])
             else:
-                test.error("Error running automation program: "
-                           "could not find '%s' prompt" % prompt)
+                test.error(
+                    "Error running automation program: "
+                    "could not find '%s' prompt" % prompt
+                )
 
     # Tell the automation program which device to test
     find_prompt(test, "Device to test:")
@@ -171,8 +194,9 @@ def run(test, params, env):
 
     # Wait for the automation program to terminate
     try:
-        o = server_session.read_up_to_prompt(print_func=test.log.info,
-                                             timeout=test_timeout + 300)
+        o = server_session.read_up_to_prompt(
+            print_func=test.log.info, timeout=test_timeout + 300
+        )
         # (test_timeout + 300 is used here because the automation program is
         # supposed to terminate cleanly on its own when test_timeout expires)
         done = True
@@ -192,16 +216,19 @@ def run(test, params, env):
     for r in results:
         if "report" in r:
             try:
-                rss_client.download(server_address,
-                                    server_file_transfer_port,
-                                    r["report"], test.debugdir)
+                rss_client.download(
+                    server_address,
+                    server_file_transfer_port,
+                    r["report"],
+                    test.debugdir,
+                )
             except rss_client.FileTransferNotFoundError:
                 pass
         if "logs" in r:
             try:
-                rss_client.download(server_address,
-                                    server_file_transfer_port,
-                                    r["logs"], test.debugdir)
+                rss_client.download(
+                    server_address, server_file_transfer_port, r["logs"], test.debugdir
+                )
             except rss_client.FileTransferNotFoundError:
                 pass
             else:
@@ -212,8 +239,10 @@ def run(test, params, env):
                     link_name = "logs_%s" % r["report"].split("\\")[-1]
                     link_name = link_name.replace(" ", "_")
                     link_name = link_name.replace("/", "_")
-                    os.symlink(r["logs"].split("\\")[-1],
-                               os.path.join(test.debugdir, link_name))
+                    os.symlink(
+                        r["logs"].split("\\")[-1],
+                        os.path.join(test.debugdir, link_name),
+                    )
                 except (KeyError, OSError):
                     pass
 
@@ -222,6 +251,7 @@ def run(test, params, env):
     def print_summary_line(f, line):
         test.log.info(line)
         f.write(line + "\n")
+
     if results:
         # Make sure all results have the required keys
         for r in results:
@@ -233,9 +263,10 @@ def run(test, params, env):
             r["notrun"] = int(r.get("notrun", 0))
             r["notapplicable"] = int(r.get("notapplicable", 0))
         # Sort the results by failures and total test count in descending order
-        results = [(r["fail"],
-                    r["pass"] + r["fail"] + r["notrun"] + r["notapplicable"],
-                    r) for r in results]
+        results = [
+            (r["fail"], r["pass"] + r["fail"] + r["notrun"] + r["notapplicable"], r)
+            for r in results
+        ]
         results.sort(reverse=True)
         results = [r[-1] for r in results]
         # Print results
@@ -244,14 +275,26 @@ def run(test, params, env):
         name_length = max(len(r["job"]) for r in results)
         fmt = "%%-6s %%-%ds %%-15s %%-8s %%-8s %%-8s %%-15s" % name_length
         f = open(os.path.join(test.debugdir, "summary"), "w")
-        print_summary_line(f, fmt % ("ID", "Job", "Status", "Pass", "Fail",
-                                     "NotRun", "NotApplicable"))
-        print_summary_line(f, fmt % ("--", "---", "------", "----", "----",
-                                     "------", "-------------"))
+        print_summary_line(
+            f, fmt % ("ID", "Job", "Status", "Pass", "Fail", "NotRun", "NotApplicable")
+        )
+        print_summary_line(
+            f, fmt % ("--", "---", "------", "----", "----", "------", "-------------")
+        )
         for r in results:
-            print_summary_line(f, fmt % (r["id"], r["job"], r["status"],
-                                         r["pass"], r["fail"], r["notrun"],
-                                         r["notapplicable"]))
+            print_summary_line(
+                f,
+                fmt
+                % (
+                    r["id"],
+                    r["job"],
+                    r["status"],
+                    r["pass"],
+                    r["fail"],
+                    r["notrun"],
+                    r["notapplicable"],
+                ),
+            )
         f.close()
         test.log.info("(see logs and HTML reports in %s)", test.debugdir)
 
@@ -263,10 +306,8 @@ def run(test, params, env):
 
     # Fail if there are failed or incomplete jobs (kill the client VMs if there
     # are incomplete jobs)
-    failed_jobs = [r["job"] for r in results
-                   if r["status"].lower() == "investigate"]
-    running_jobs = [r["job"] for r in results
-                    if r["status"].lower() == "inprogress"]
+    failed_jobs = [r["job"] for r in results if r["status"].lower() == "investigate"]
+    running_jobs = [r["job"] for r in results if r["status"].lower() == "inprogress"]
     errors = []
     if failed_jobs:
         errors += ["Jobs failed: %s." % failed_jobs]

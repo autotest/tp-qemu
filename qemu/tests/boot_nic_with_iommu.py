@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
 
 
 @error_context.context_aware
@@ -25,13 +24,15 @@ def run(test, params, env):
     guest_ip = vm.get_address()
 
     try:
-        status, output = utils_test.ping(guest_ip, ping_count,
-                                         timeout=float(ping_count) * 1.5)
+        status, output = utils_test.ping(
+            guest_ip, ping_count, timeout=float(ping_count) * 1.5
+        )
         if status != 0:
             test.fail("Ping returns non-zero value %s" % output)
         package_lost = utils_test.get_loss_ratio(output)
         if package_lost != 0:
-            test.fail("%s package lost when ping guest ip %s " %
-                      (package_lost, guest_ip))
+            test.fail(
+                "%s package lost when ping guest ip %s " % (package_lost, guest_ip)
+            )
     finally:
         session.close()

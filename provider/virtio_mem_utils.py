@@ -4,10 +4,10 @@ virtio_mem useful functions.
 This module is meant to reduce code size on virtio_mem cases avoiding
 repeat functions implementation.
 """
+
 import re
 
 from avocado.utils.wait import wait_for
-
 from virttest import error_context
 from virttest.utils_misc import normalize_data_size
 

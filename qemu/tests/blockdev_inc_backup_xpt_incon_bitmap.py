@@ -2,18 +2,15 @@ import json
 import logging
 
 from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import data_dir
+from virttest import data_dir, utils_misc
 
 from provider import backup_utils
 from provider.blockdev_base import BlockdevBaseTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlkdevIncXptInconBitmap(BlockdevBaseTest):
-
     def __init__(self, test, params, env):
         super(BlkdevIncXptInconBitmap, self).__init__(test, params, env)
         self.source_images = []
@@ -31,15 +28,18 @@ class BlkdevIncXptInconBitmap(BlockdevBaseTest):
         image_params["nbd_export_bitmaps"] = "bitmap_%s" % tag
 
     def do_full_backup(self):
-        extra_options = {"sync": "full",
-                         "persistent": True,
-                         "auto_disable_bitmap": False}
+        extra_options = {
+            "sync": "full",
+            "persistent": True,
+            "auto_disable_bitmap": False,
+        }
         backup_utils.blockdev_batch_backup(
             self.main_vm,
             self.source_images,
             self.full_backups,
             list(self.bitmaps),
-            **extra_options)
+            **extra_options,
+        )
 
     def prepare_data_disk(self, tag):
         """
@@ -54,15 +54,16 @@ class BlkdevIncXptInconBitmap(BlockdevBaseTest):
     def kill_vm_after_restart(self):
         LOG_JOB.info("Re-start vm again")
         self.main_vm.create()
-        session = self.main_vm.wait_for_login()
+        self.main_vm.wait_for_login()
         LOG_JOB.info("Kill vm after its start")
         self.main_vm.monitors = []
         self.main_vm.destroy(gracefully=False)
 
     def check_bitmap_status(self, inconsistent=False):
         def _get_bitmap_info(bitmap_name):
-            src_img = self.source_disk_define_by_params(self.params,
-                                                        self.src_img_tags[0])
+            src_img = self.source_disk_define_by_params(
+                self.params, self.src_img_tags[0]
+            )
             output = json.loads(src_img.info(output="json"))
             bitmaps = output["format-specific"]["data"].get("bitmaps")
             if bitmaps:
@@ -85,17 +86,15 @@ class BlkdevIncXptInconBitmap(BlockdevBaseTest):
         LOG_JOB.info("Export inconsistent bitmap with qemu-nbd")
         img_path = data_dir.get_data_dir()
         qemu_nbd_cmd = utils_misc.get_qemu_nbd_binary(self.params)
-        cmd = self.params.get("export_cmd") % (qemu_nbd_cmd,
-                                               self.bitmaps[0],
-                                               img_path)
-        result = process.run(cmd, ignore_status=True, shell=True,
-                             ignore_bg_processes=True)
+        cmd = self.params.get("export_cmd") % (qemu_nbd_cmd, self.bitmaps[0], img_path)
+        result = process.run(
+            cmd, ignore_status=True, shell=True, ignore_bg_processes=True
+        )
         if result.exit_status == 0:
             ck_qemunbd_pid = self.params.get("ck_qemunbd_pid")
-            qemu_nbd_ck = process.run(ck_qemunbd_pid,
-                                      ignore_status=True,
-                                      shell=True,
-                                      ignore_bg_processes=True)
+            qemu_nbd_ck = process.run(
+                ck_qemunbd_pid, ignore_status=True, shell=True, ignore_bg_processes=True
+            )
             qemu_nbd_pid = qemu_nbd_ck.stdout_text.strip()
             utils_misc.kill_process_tree(qemu_nbd_pid, 9, timeout=60)
             self.test.fail("Can expose image with a non-exist bitmap")

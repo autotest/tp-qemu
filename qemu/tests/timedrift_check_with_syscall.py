@@ -1,8 +1,7 @@
 import os
 
 import aexpect
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context
 
 
 @error_context.context_aware
@@ -28,11 +27,12 @@ def run(test, params, env):
 
     test_cmd = params.get("test_cmd", "./clktest")
     if session.cmd_status("test -x %s" % test_cmd):
-        src_dir = os.path.join(data_dir.get_deps_dir(), 'timedrift')
+        src_dir = os.path.join(data_dir.get_deps_dir(), "timedrift")
         src_file = os.path.join(src_dir, "clktest.c")
         dst_file = os.path.join(tmp_dir, "clktest.c")
-        error_context.context("transfer '%s' to guest('%s')" %
-                              (src_file, dst_file), test.log.info)
+        error_context.context(
+            "transfer '%s' to guest('%s')" % (src_file, dst_file), test.log.info
+        )
         vm.copy_files_to(src_file, tmp_dir, timeout=120)
 
         build_cmd = params.get("build_cmd", "gcc -lrt clktest.c -o clktest")
@@ -44,6 +44,6 @@ def run(test, params, env):
     try:
         session.cmd_output(test_cmd, timeout=check_timeout)
     except aexpect.ShellTimeoutError as msg:
-        if 'Interval is' in msg.output:
+        if "Interval is" in msg.output:
             test.fail(msg.output)
         pass

@@ -3,11 +3,8 @@ from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitToNospace(BlockDevCommitTest):
-
-    def generate_tempfile(self, root_dir, filename="data",
-                          size="1000M", timeout=360):
-        backup_utils.generate_tempfile(
-            self.main_vm, root_dir, filename, size, timeout)
+    def generate_tempfile(self, root_dir, filename="data", size="1000M", timeout=360):
+        backup_utils.generate_tempfile(self.main_vm, root_dir, filename, size, timeout)
         self.files_info.append([root_dir, filename])
 
     def commit_snapshots(self):

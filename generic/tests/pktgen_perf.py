@@ -3,16 +3,15 @@ import os
 import time
 
 from avocado.utils import process
+from virttest import env_process, error_context, utils_misc, utils_test
 
 from provider import pktgen_utils
-from provider.vdpa_sim_utils import VhostVdpaNetSimulatorTest, VirtioVdpaNetSimulatorTest
+from provider.vdpa_sim_utils import (
+    VhostVdpaNetSimulatorTest,
+    VirtioVdpaNetSimulatorTest,
+)
 
-from virttest import env_process
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import error_context
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 @error_context.context_aware
@@ -59,7 +58,7 @@ def run(test, params, env):
 
     def init_vm_and_login(test, params, env, result_file, pktgen_runner):
         error_context.context("Init the VM, and try to login", test.log.info)
-        params["start_vm"] = 'yes'
+        params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
@@ -70,8 +69,10 @@ def run(test, params, env):
         _pin_vm_threads(params.get("numa_node"))
         guest_ver = session_serial.cmd_output(guest_ver_cmd)
         result_file.write("### guest-kernel-ver :%s" % guest_ver)
-        if pktgen_runner.is_version_lt_rhel7(session_serial.cmd('uname -r')):
-            pktgen_runner.install_package(guest_ver.strip(), vm=vm, session_serial=session_serial)
+        if pktgen_runner.is_version_lt_rhel7(session_serial.cmd("uname -r")):
+            pktgen_runner.install_package(
+                guest_ver.strip(), vm=vm, session_serial=session_serial
+            )
         return vm, session_serial
 
     # get parameter from dictionary
@@ -95,7 +96,7 @@ def run(test, params, env):
         process.system(disable_iptables_rules_cmd, shell=True)
 
     pktgen_runner = pktgen_utils.PktgenRunner()
-    if pktgen_runner.is_version_lt_rhel7(process.getoutput('uname -r')):
+    if pktgen_runner.is_version_lt_rhel7(process.getoutput("uname -r")):
         pktgen_runner.install_package(host_ver)
 
     vdpa_net_test = None
@@ -107,22 +108,36 @@ def run(test, params, env):
             interface = vdpa_net_test.add_dev(params.get("netdst"), params.get("mac"))
             LOG_JOB.info("The virtio_vdpa device name is: '%s'", interface)
             LOG_JOB.info("Test virtio_vdpa with the simulator on the host")
-            pktgen_utils.run_tests_for_category(params, result_file, interface=interface)
+            pktgen_utils.run_tests_for_category(
+                params, result_file, interface=interface
+            )
         elif vdpa_test and test_vm:
             vdpa_net_test = VhostVdpaNetSimulatorTest()
             vdpa_net_test.setup()
-            dev = vdpa_net_test.add_dev(params.get("netdst_nic2"), params.get("mac_nic2"))
+            dev = vdpa_net_test.add_dev(
+                params.get("netdst_nic2"), params.get("mac_nic2")
+            )
             LOG_JOB.info("The vhost_vdpa device name is: '%s'", dev)
             LOG_JOB.info("Test vhost_vdpa with the simulator on the vm")
             process.system_output("cat /sys/module/vdpa_sim/parameters/use_va")
-            vm, session_serial = init_vm_and_login(test, params, env, result_file, pktgen_runner)
-            pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial)
+            vm, session_serial = init_vm_and_login(
+                test, params, env, result_file, pktgen_runner
+            )
+            pktgen_utils.run_tests_for_category(
+                params, result_file, test_vm, vm, session_serial
+            )
         elif not vdpa_test:
-            vm, session_serial = init_vm_and_login(test, params, env, result_file, pktgen_runner)
+            vm, session_serial = init_vm_and_login(
+                test, params, env, result_file, pktgen_runner
+            )
             if vp_vdpa:
-                pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial, vp_vdpa)
+                pktgen_utils.run_tests_for_category(
+                    params, result_file, test_vm, vm, session_serial, vp_vdpa
+                )
             else:
-                pktgen_utils.run_tests_for_category(params, result_file, test_vm, vm, session_serial)
+                pktgen_utils.run_tests_for_category(
+                    params, result_file, test_vm, vm, session_serial
+                )
     finally:
         if test_vm:
             vm.verify_kernel_crash()
@@ -134,5 +149,6 @@ def run(test, params, env):
             time.sleep(5)
             vdpa_net_test.remove_dev(params.get("netdst_nic2"))
             vdpa_net_test.cleanup()
-        error_context.context("Verify Host and guest kernel no error"
-                              "and call trace", test.log.info)
+        error_context.context(
+            "Verify Host and guest kernel no error" "and call trace", test.log.info
+        )

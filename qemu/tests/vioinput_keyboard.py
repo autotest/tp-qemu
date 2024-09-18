@@ -1,5 +1,5 @@
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
+
 from provider.vioinput_basic import key_tap_test
 
 
@@ -26,8 +26,9 @@ def run(test, params, env):
         error_context.context("Check vioinput driver is running", test.log.info)
         utils_test.qemu.windrv_verify_running(session, test, driver.split()[0])
 
-        error_context.context("Enable all vioinput related driver verified",
-                              test.log.info)
+        error_context.context(
+            "Enable all vioinput related driver verified", test.log.info
+        )
         session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
         session.close()
 

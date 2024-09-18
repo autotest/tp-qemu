@@ -1,9 +1,6 @@
 import os
 
-from virttest import error_context
-from virttest import utils_netperf
-from virttest import data_dir
-from virttest import utils_net
+from virttest import data_dir, error_context, utils_net, utils_netperf
 
 
 @error_context.context_aware
@@ -33,15 +30,18 @@ def run(test, params, env):
     guest_address = vm.get_address()
     host_address = utils_net.get_host_ip_address(params)
     remote_ip = params.get("remote_host", host_address)
-    netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                params.get("netperf_link"))
+    netperf_link = os.path.join(
+        data_dir.get_deps_dir("netperf"), params.get("netperf_link")
+    )
     netperf_server_link = params.get("netperf_server_link_win")
     if netperf_server_link:
-        netperf_server_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                           netperf_server_link)
+        netperf_server_link = os.path.join(
+            data_dir.get_deps_dir("netperf"), netperf_server_link
+        )
     netperf_client_link = params.get("netperf_client_link_win", netperf_link)
-    netperf_client_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                       netperf_client_link)
+    netperf_client_link = os.path.join(
+        data_dir.get_deps_dir("netperf"), netperf_client_link
+    )
     server_path = params.get("server_path", "/var/tmp/")
     client_path = params.get("client_path", "/var/tmp/")
     server_path_win = params.get("server_path_win")
@@ -68,28 +68,32 @@ def run(test, params, env):
     netperf_server_h = None
     try:
         netperf_client_g = utils_netperf.NetperfClient(
-            guest_address, g_client_path,
+            guest_address,
+            g_client_path,
             netperf_source=g_client_link,
             client=params.get("shell_client"),
             port=params.get("shell_port"),
             prompt=params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#"),
             username=params.get("username"),
             password=params.get("password"),
-            linesep=params.get("shell_linesep", "\n").encode().decode(
-                'unicode_escape'),
+            linesep=params.get("shell_linesep", "\n").encode().decode("unicode_escape"),
             status_test_command=params.get("status_test_command", ""),
-            compile_option=params.get("compile_option_client_g", ""))
+            compile_option=params.get("compile_option_client_g", ""),
+        )
         netperf_server_h = utils_netperf.NetperfServer(
             remote_ip,
             server_path,
             netperf_source=netperf_link,
             password=params.get("hostpassword"),
-            compile_option=params.get("compile_option", ""))
+            compile_option=params.get("compile_option", ""),
+        )
         netperf_client_h = utils_netperf.NetperfClient(
-            remote_ip, client_path,
+            remote_ip,
+            client_path,
             netperf_source=netperf_link,
             password=params.get("hostpassword"),
-            compile_option=params.get("compile_option", ""))
+            compile_option=params.get("compile_option", ""),
+        )
         netperf_server_g = utils_netperf.NetperfServer(
             guest_address,
             g_server_path,
@@ -99,10 +103,10 @@ def run(test, params, env):
             client=params.get("shell_client"),
             port=params.get("shell_port"),
             prompt=params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#"),
-            linesep=params.get("shell_linesep", "\n").encode().decode(
-                'unicode_escape'),
+            linesep=params.get("shell_linesep", "\n").encode().decode("unicode_escape"),
             status_test_command=params.get("status_test_command", "echo $?"),
-            compile_option=params.get("compile_option_server_g", ""))
+            compile_option=params.get("compile_option_server_g", ""),
+        )
         error_context.base_context("Run netperf test between host and guest")
         error_context.context("Start netserver in guest.", test.log.info)
         netperf_server_g.start()
@@ -120,8 +124,9 @@ def run(test, params, env):
         m_count = 0
         while netperf_client_h.is_netperf_running():
             m_count += 1
-            error_context.context("Start migration iterations: %s " % m_count,
-                                  test.log.info)
+            error_context.context(
+                "Start migration iterations: %s " % m_count, test.log.info
+            )
             vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
     finally:
         if netperf_server_g:

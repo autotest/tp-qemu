@@ -1,7 +1,6 @@
 import re
 
-from virttest import utils_qemu
-from virttest import utils_misc
+from virttest import utils_misc, utils_qemu
 from virttest.qemu_monitor import QMPCmdError
 from virttest.utils_version import VersionInterval
 
@@ -10,7 +9,6 @@ from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 
 
 class BlockdevFullBackupInvalidSyncTest(BlockdevLiveBackupBaseTest):
-
     def do_full_backup(self):
         """
         Backup source image to target image

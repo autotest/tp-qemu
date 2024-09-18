@@ -1,19 +1,14 @@
 import logging
 
-from virttest import qemu_storage
-from virttest import data_dir
-from virttest import utils_disk
+from virttest import data_dir, qemu_storage, utils_disk
 
-from provider import backup_utils
-from provider import job_utils
-
+from provider import backup_utils, job_utils
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockDevCommitTest(object):
-
     def __init__(self, test, params, env):
         self.env = env
         self.test = test
@@ -35,8 +30,7 @@ class BlockDevCommitTest(object):
         return qemu_storage.QemuImg(image_params, image_dir, name)
 
     def prepare_snapshot_file(self, snapshot_tags):
-        self.snapshot_images = list(
-            map(self.get_image_by_tag, snapshot_tags))
+        self.snapshot_images = list(map(self.get_image_by_tag, snapshot_tags))
         params = self.params.copy()
         params.setdefault("target_path", data_dir.get_data_dir())
         for tag in snapshot_tags:
@@ -46,8 +40,7 @@ class BlockDevCommitTest(object):
     def verify_data_file(self):
         for info in self.files_info:
             mount_point, filename = info[0], info[1]
-            backup_utils.verify_file_md5(
-                self.main_vm, mount_point, filename)
+            backup_utils.verify_file_md5(self.main_vm, mount_point, filename)
 
     def create_snapshots(self, snapshot_tags, device):
         options = ["node", "overlay"]
@@ -59,8 +52,7 @@ class BlockDevCommitTest(object):
             if idx == 0:
                 arguments["node"] = self.device_node
             else:
-                arguments["node"] = self.get_node_name(
-                    snapshot_tags[idx - 1])
+                arguments["node"] = self.get_node_name(snapshot_tags[idx - 1])
             self.main_vm.monitor.cmd(cmd, dict(arguments))
             for info in self.disks_info:
                 if device in info:
@@ -119,24 +111,21 @@ class BlockDevCommitTest(object):
                 disk_id = self.get_linux_disk_path(session, disk_size)
                 assert disk_id, "Disk not found in guest!"
                 mount_point = utils_disk.configure_empty_linux_disk(
-                    session, disk_id, disk_size)[0]
-                self.disks_info.append([
-                    r"/dev/%s1" %
-                    disk_id, mount_point, tag])
+                    session, disk_id, disk_size
+                )[0]
+                self.disks_info.append([r"/dev/%s1" % disk_id, mount_point, tag])
             else:
-                disk_id = utils_disk.get_windows_disks_index(
-                    session, disk_size)
+                disk_id = utils_disk.get_windows_disks_index(session, disk_size)
                 driver_letter = utils_disk.configure_empty_windows_disk(
-                    session, disk_id, disk_size)[0]
+                    session, disk_id, disk_size
+                )[0]
                 mount_point = r"%s:\\" % driver_letter
                 self.disks_info.append([disk_id, mount_point, tag])
         finally:
             session.close()
 
-    def generate_tempfile(self, root_dir, filename="data",
-                          size="10M", timeout=360):
-        backup_utils.generate_tempfile(
-            self.main_vm, root_dir, filename, size, timeout)
+    def generate_tempfile(self, root_dir, filename="data", size="10M", timeout=360):
+        backup_utils.generate_tempfile(self.main_vm, root_dir, filename, size, timeout)
         self.files_info.append([root_dir, filename])
 
     def pre_test(self):

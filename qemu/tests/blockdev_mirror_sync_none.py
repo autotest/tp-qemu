@@ -15,16 +15,15 @@ class BlockdevMirrorSyncModeNoneTest(BlockdevMirrorNowaitTest):
 
                 s, o = session.cmd_status_output(cat_cmd)
                 if s == 0:
-                    self.test.fail('File (%s) exists' % f)
-                elif 'No such file' not in o.strip():
-                    self.test.fail('Unknown error: %s' % o)
+                    self.test.fail("File (%s) exists" % f)
+                elif "No such file" not in o.strip():
+                    self.test.fail("Unknown error: %s" % o)
         finally:
             session.close()
 
     def verify_data_files(self):
         dir_list = [self.disks_info[t][1] for t in self._source_images]
-        none_existed_files = [self.files_info[t].pop(
-            0) for t in self._source_images]
+        none_existed_files = [self.files_info[t].pop(0) for t in self._source_images]
 
         # the second file should exist
         super(BlockdevMirrorSyncModeNoneTest, self).verify_data_files()
@@ -43,8 +42,7 @@ class BlockdevMirrorSyncModeNoneTest(BlockdevMirrorNowaitTest):
         # total-progress are same, but in fact, the mirror is still running.
         # This is expected.
         time.sleep(int(self.params.get("sync_none_mirror_timeout", "20")))
-        super(BlockdevMirrorSyncModeNoneTest,
-              self).wait_mirror_jobs_completed()
+        super(BlockdevMirrorSyncModeNoneTest, self).wait_mirror_jobs_completed()
 
     def reboot_vm(self):
         """

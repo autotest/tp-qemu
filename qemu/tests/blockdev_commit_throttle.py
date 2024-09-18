@@ -3,9 +3,7 @@ from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitThrottle(BlockDevCommitTest):
-
     def commit_snapshots(self):
-
         def _commit_snapshots(device, base_node=None, top_node=None):
             arguments = {}
             if base_node:

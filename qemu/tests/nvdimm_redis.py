@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import utils_package
+from virttest import error_context, utils_package
 
 
 @error_context.context_aware
@@ -37,5 +36,5 @@ def run(test, params, env):
         vm.verify_kernel_crash()
     finally:
         if session:
-            session.cmd_output_safe('rm -rf %s' % params["redis_dir"])
+            session.cmd_output_safe("rm -rf %s" % params["redis_dir"])
         vm.destroy()

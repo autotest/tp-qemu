@@ -1,5 +1,4 @@
-from provider.block_dirty_bitmap import get_bitmap_by_name
-from provider.block_dirty_bitmap import block_dirty_bitmap_remove
+from provider.block_dirty_bitmap import block_dirty_bitmap_remove, get_bitmap_by_name
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 
 
@@ -7,24 +6,31 @@ class BlockdevIncbkRemoveBitmapTest(BlockdevLiveBackupBaseTest):
     """Persistent bitmaps remove testing"""
 
     def _get_bitmaps(self):
-        return list(map(
-            lambda n, b: get_bitmap_by_name(self.main_vm, n, b),
-            self._source_nodes, self._bitmaps))
+        return list(
+            map(
+                lambda n, b: get_bitmap_by_name(self.main_vm, n, b),
+                self._source_nodes,
+                self._bitmaps,
+            )
+        )
 
     def remove_bitmaps(self):
-        list(map(
-            lambda n, b: block_dirty_bitmap_remove(self.main_vm, n, b),
-            self._source_nodes, self._bitmaps))
+        list(
+            map(
+                lambda n, b: block_dirty_bitmap_remove(self.main_vm, n, b),
+                self._source_nodes,
+                self._bitmaps,
+            )
+        )
 
     def check_bitmaps_gone_from_qmp(self):
         """bitmaps should be gone from output of query-block"""
         if any(list(map(lambda b: b is not None, self._get_bitmaps()))):
-            self.test.fail('bitmap was found unexpectedly.')
+            self.test.fail("bitmap was found unexpectedly.")
 
     def check_bitmaps_count_gt_zero(self):
         """count should be greater than 0"""
-        if not all(list(map(lambda b: b and b['count'] > 0,
-                            self._get_bitmaps()))):
+        if not all(list(map(lambda b: b and b["count"] > 0, self._get_bitmaps()))):
             self.test.fail("bitmaps' count should be greater than 0")
 
     def do_test(self):

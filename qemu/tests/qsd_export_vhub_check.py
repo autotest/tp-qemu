@@ -1,7 +1,8 @@
 """QSD export vhost-user-blk option test"""
 
-from provider.qsd import QsdDaemonDev
 from virttest import error_context
+
+from provider.qsd import QsdDaemonDev
 
 
 @error_context.context_aware

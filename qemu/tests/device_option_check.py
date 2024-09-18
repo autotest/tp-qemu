@@ -1,9 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_misc
-from virttest import env_process
-from virttest import qemu_qtree
+from virttest import env_process, error_context, qemu_qtree, utils_misc
 
 
 @error_context.context_aware
@@ -33,11 +30,11 @@ def run(test, params, env):
             parameter_len = int(params.get("parameter_len", 4))
             random_ignore_str = params.get("ignore_str")
             func_generate_random_string = utils_misc.generate_random_string
-            args = (parameter_len, )
+            args = (parameter_len,)
             if random_ignore_str:
-                args += ("ignore_str=%s" % random_ignore_str, )
+                args += ("ignore_str=%s" % random_ignore_str,)
             if convert_str:
-                args += ("convert_str=%s" % convert_str, )
+                args += ("convert_str=%s" % convert_str,)
             parameter_value = func_generate_random_string(*args)
 
         params[params_name] = parameter_prefix + parameter_value
@@ -47,9 +44,9 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, vm.name)
 
     if convert_str:
-        tmp_str = re.sub(r'\\\\', 'Abackslash', parameter_value)
-        tmp_str = re.sub(r'\\', '', tmp_str)
-        tmp_str = re.sub('Abackslash', r"\\", tmp_str)
+        tmp_str = re.sub(r"\\\\", "Abackslash", parameter_value)
+        tmp_str = re.sub(r"\\", "", tmp_str)
+        tmp_str = re.sub("Abackslash", r"\\", tmp_str)
         parameter_value_raw = tmp_str
     else:
         parameter_value_raw = parameter_value
@@ -58,10 +55,10 @@ def run(test, params, env):
         error_context.context("Check option in qtree", test.log.info)
         qtree = qemu_qtree.QtreeContainer()
         try:
-            qtree.parse_info_qtree(vm.monitor.info('qtree'))
-            keyword = params['qtree_check_keyword']
-            qtree_check_value = params['qtree_check_value']
-            qtree_check_option = params['qtree_check_option']
+            qtree.parse_info_qtree(vm.monitor.info("qtree"))
+            keyword = params["qtree_check_keyword"]
+            qtree_check_value = params["qtree_check_value"]
+            qtree_check_option = params["qtree_check_option"]
 
             for qdev in qtree.get_nodes():
                 if keyword not in qdev.qtree:
@@ -80,15 +77,18 @@ def run(test, params, env):
             else:
                 test.fail(
                     "Can not find property '%s' from info qtree where '%s' is "
-                    "'%s'" % (qtree_check_option, keyword, qtree_check_value))
+                    "'%s'" % (qtree_check_option, keyword, qtree_check_value)
+                )
 
             qtree_value = re.findall('"?(.*)"?$', qtree_value)[0]
-            if (qtree_value != parameter_value_raw and
-                    parameter_value_raw not in qtree_value):
+            if (
+                qtree_value != parameter_value_raw
+                and parameter_value_raw not in qtree_value
+            ):
                 test.fail(
                     "Value from info qtree is not match with the value from"
-                    "command line: '%s' vs '%s'" % (
-                        qtree_value, parameter_value_raw))
+                    "command line: '%s' vs '%s'" % (qtree_value, parameter_value_raw)
+                )
         except AttributeError:
             test.log.debug("Monitor deson't support info qtree skip this test")
 
@@ -97,27 +97,31 @@ def run(test, params, env):
     failed_log = ""
     for check_cmd in check_cmds.split():
         check_cmd_params = params.object_params(check_cmd)
-        cmd = check_cmd_params['cmd']
+        cmd = check_cmd_params["cmd"]
         cmd = utils_misc.set_winutils_letter(session, cmd)
-        pattern = check_cmd_params['pattern'] % parameter_value_raw
+        pattern = check_cmd_params["pattern"] % parameter_value_raw
 
         error_context.context("Check option with command %s" % cmd, test.log.info)
         _, output = session.cmd_status_output(cmd)
-        if not re.findall(r'%s' % pattern, output):
-            failed_log += ("Can not find option %s from guest."
-                           " Guest output is '%s'" % (params_name,
-                                                      output))
+        if not re.findall(r"%s" % pattern, output):
+            failed_log += (
+                "Can not find option %s from guest."
+                " Guest output is '%s'" % (params_name, output)
+            )
 
         if sg_vpd_cmd:
-            error_context.context("Check serial number length with command %s"
-                                  % sg_vpd_cmd, test.log.info)
+            error_context.context(
+                "Check serial number length with command %s" % sg_vpd_cmd, test.log.info
+            )
             sg_vpd_cmd = utils_misc.set_winutils_letter(session, sg_vpd_cmd)
             output = session.cmd_output(sg_vpd_cmd)
             actual_len = sum(len(_.split()[-1]) for _ in output.splitlines()[1:3])
             expected_len = len(params.get("drive_serial_image1")) + 4
             if actual_len != expected_len:
-                test.fail("Incorrect serial number length return."
-                          " Guest output serial number is %s" % actual_len)
+                test.fail(
+                    "Incorrect serial number length return."
+                    " Guest output serial number is %s" % actual_len
+                )
 
     session.close()
 

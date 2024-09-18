@@ -1,12 +1,7 @@
 import re
 
 import aexpect
-
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import utils_net
-from virttest import test_setup
-from virttest import error_context
+from virttest import error_context, test_setup, utils_misc, utils_net, utils_test
 
 iface_scripts = []
 
@@ -57,8 +52,10 @@ def run(test, params, env):
         return devnames
 
     def pci_add_iov(pci_num):
-        pci_add_cmd = ("pci_add pci_addr=auto host host=%s,if=%s" %
-                       (pa_pci_ids[pci_num], pci_model))
+        pci_add_cmd = "pci_add pci_addr=auto host host=%s,if=%s" % (
+            pa_pci_ids[pci_num],
+            pci_model,
+        )
         if params.get("hotplug_params"):
             assign_param = params.get("hotplug_params").split()
             for param in assign_param:
@@ -70,14 +67,16 @@ def run(test, params, env):
     def pci_add(pci_add_cmd):
         error_context.context("Adding pci device with command 'pci_add'")
         add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
-        pci_info.append(['', add_output])
+        pci_info.append(["", add_output])
         if "OK domain" not in add_output:
-            test.fail("Add PCI device failed. Monitor command is: %s, "
-                      "Output: %r" % (pci_add_cmd, add_output))
+            test.fail(
+                "Add PCI device failed. Monitor command is: %s, "
+                "Output: %r" % (pci_add_cmd, add_output)
+            )
         return vm.monitor.info("pci")
 
     def check_support_device(dev):
-        if vm.monitor.protocol == 'qmp':
+        if vm.monitor.protocol == "qmp":
             devices_supported = vm.monitor.human_monitor_cmd("%s ?" % cmd_type)
         else:
             devices_supported = vm.monitor.send_args_cmd("%s ?" % cmd_type)
@@ -91,8 +90,11 @@ def run(test, params, env):
         pci_info.append([device_id])
         driver = params.get("device_driver", "pci-assign")
         check_support_device(driver)
-        pci_add_cmd = ("device_add id=%s,driver=%s,host=%s" %
-                       (pci_info[pci_num][0], driver, pa_pci_ids[pci_num]))
+        pci_add_cmd = "device_add id=%s,driver=%s,host=%s" % (
+            pci_info[pci_num][0],
+            driver,
+            pa_pci_ids[pci_num],
+        )
         if params.get("hotplug_params"):
             assign_param = params.get("hotplug_params").split()
             for param in assign_param:
@@ -103,7 +105,7 @@ def run(test, params, env):
 
     def device_add(pci_num, pci_add_cmd):
         error_context.context("Adding pci device with command 'device_add'")
-        if vm.monitor.protocol == 'qmp':
+        if vm.monitor.protocol == "qmp":
             add_output = vm.monitor.send_args_cmd(pci_add_cmd)
         else:
             add_output = vm.monitor.send_args_cmd(pci_add_cmd, convert=False)
@@ -111,8 +113,10 @@ def run(test, params, env):
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][0] not in str(after_add):
             test.log.debug("Print info pci after add the block: %s", after_add)
-            test.fail("Add device failed. Monitor command is: %s"
-                      ". Output: %r" % (pci_add_cmd, add_output))
+            test.fail(
+                "Add device failed. Monitor command is: %s"
+                ". Output: %r" % (pci_add_cmd, add_output)
+            )
         return after_add
 
     def clean_network_scripts():
@@ -125,8 +129,9 @@ def run(test, params, env):
                 cmd = "mv %s.BACKUP %s" % (iface_script, iface_script)
                 status, output = session.cmd_status_output(cmd)
                 if status:
-                    test.error("Failed to cleanup network script in guest: "
-                               "%s" % output)
+                    test.error(
+                        "Failed to cleanup network script in guest: " "%s" % output
+                    )
         else:
             global iface_scripts
             for iface_script in iface_scripts:
@@ -154,8 +159,7 @@ def run(test, params, env):
             # get function for adding device.
             add_function = local_functions["%s_iov" % cmd_type]
         except Exception:
-            test.error("No function for adding sr-iov dev with '%s'" %
-                       cmd_type)
+            test.error("No function for adding sr-iov dev with '%s'" % cmd_type)
         after_add = None
         if add_function:
             # Do add pci device.
@@ -171,8 +175,7 @@ def run(test, params, env):
             def _check_ip():
                 post_nics = get_active_network_device(session, nic_filter)
                 test.log.debug("Active nics after hotplug - %s", post_nics)
-                return (len(active_nics) <= len(post_nics) and
-                        active_nics != post_nics)
+                return len(active_nics) <= len(post_nics) and active_nics != post_nics
 
             # Define a helper function to catch PCI device string
             def _find_pci():
@@ -196,33 +199,40 @@ def run(test, params, env):
             error_context.context("Start checking new added device")
             # Compare the output of 'info pci'
             if after_add == info_pci_ref:
-                test.fail("No new PCI device shown after executing "
-                          "monitor command: 'info pci'")
+                test.fail(
+                    "No new PCI device shown after executing "
+                    "monitor command: 'info pci'"
+                )
 
             secs = int(params["wait_secs_for_hook_up"])
             if not utils_misc.wait_for(_new_shown, test_timeout, secs, 3):
-                test.fail("No new device shown in output of command "
-                          "executed inside the guest: %s" % reference_cmd)
+                test.fail(
+                    "No new device shown in output of command "
+                    "executed inside the guest: %s" % reference_cmd
+                )
 
             if not utils_misc.wait_for(_find_pci, test_timeout, 3, 3):
-                test.fail("New add device not found in guest. "
-                          "Command was: lspci -nn")
+                test.fail(
+                    "New add device not found in guest. " "Command was: lspci -nn"
+                )
 
             # Assign static IP to the hotplugged interface
             if params.get("assign_static_ip", "no") == "yes":
                 cmd = "service networking restart"
                 static_ip = next(ip_gen)
                 net_mask = params.get("static_net_mask", "255.255.255.0")
-                broadcast = params.get("static_broadcast", "10.10.10.255")
-                pci_id = utils_misc.get_pci_id_using_filter(vf_filter,
-                                                            session)
-                test.log.debug("PCIs associated with %s - %s", vf_filter,
-                               ', '.join(map(str, pci_id)))
+                params.get("static_broadcast", "10.10.10.255")
+                pci_id = utils_misc.get_pci_id_using_filter(vf_filter, session)
+                test.log.debug(
+                    "PCIs associated with %s - %s",
+                    vf_filter,
+                    ", ".join(map(str, pci_id)),
+                )
                 for each_pci in pci_id:
-                    iface_name = utils_misc.get_interface_from_pci_id(each_pci,
-                                                                      session)
-                    test.log.debug("Interface associated with PCI %s - %s",
-                                   each_pci, iface_name)
+                    iface_name = utils_misc.get_interface_from_pci_id(each_pci, session)
+                    test.log.debug(
+                        "Interface associated with PCI %s - %s", each_pci, iface_name
+                    )
                     mac = session.cmd_output("ethtool -P %s" % iface_name)
                     mac = mac.split("Permanent address:")[-1].strip()
                     test.log.debug("mac address of %s: %s", iface_name, mac)
@@ -231,26 +241,33 @@ def run(test, params, env):
                         cmd = "service network restart"
                         iface_scripts.append(utils_net.get_network_cfg_file(iface_name))
                     if not check_interface(str(iface_name), nic_filter):
-                        utils_net.create_network_script(iface_name, mac,
-                                                        boot_proto="static",
-                                                        net_mask=net_mask,
-                                                        vm=vm,
-                                                        ip_addr=static_ip)
+                        utils_net.create_network_script(
+                            iface_name,
+                            mac,
+                            boot_proto="static",
+                            net_mask=net_mask,
+                            vm=vm,
+                            ip_addr=static_ip,
+                        )
                         status, output = session.cmd_status_output(cmd)
                         if status:
-                            test.error("Failed to set static ip in guest: "
-                                       "%s" % output)
+                            test.error(
+                                "Failed to set static ip in guest: " "%s" % output
+                            )
             # Test the newly added device
             if not utils_misc.wait_for(_check_ip, 120, 3, 3):
                 ifconfig = session.cmd_output("ifconfig -a")
-                test.fail("New hotpluged device could not get ip "
-                          "after 120s in guest. guest ifconfig "
-                          "output: \n%s" % ifconfig)
+                test.fail(
+                    "New hotpluged device could not get ip "
+                    "after 120s in guest. guest ifconfig "
+                    "output: \n%s" % ifconfig
+                )
             try:
                 session.cmd(params["pci_test_cmd"] % (pci_num + 1))
             except aexpect.ShellError as e:
-                test.fail("Check device failed after PCI "
-                          "hotplug. Output: %r" % e.output)
+                test.fail(
+                    "Check device failed after PCI " "hotplug. Output: %r" % e.output
+                )
 
         except Exception:
             pci_del(pci_num, ignore_failure=True)
@@ -271,10 +288,14 @@ def run(test, params, env):
             cmd = "device_del id=%s" % pci_info[pci_num][0]
             vm.monitor.send_args_cmd(cmd)
 
-        if (not utils_misc.wait_for(_device_removed, test_timeout, 0, 1) and
-                not ignore_failure):
-            test.fail("Failed to hot remove PCI device: %s. "
-                      "Monitor command: %s" % (pci_model, cmd))
+        if (
+            not utils_misc.wait_for(_device_removed, test_timeout, 0, 1)
+            and not ignore_failure
+        ):
+            test.fail(
+                "Failed to hot remove PCI device: %s. "
+                "Monitor command: %s" % (pci_model, cmd)
+            )
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -295,7 +316,7 @@ def run(test, params, env):
         device = {}
         device["type"] = device_type
         if generate_mac == "yes":
-            device['mac'] = utils_net.generate_mac_address_simple()
+            device["mac"] = utils_net.generate_mac_address_simple()
         if params.get("device_name"):
             device["name"] = params.get("device_name")
         devices.append(device)
@@ -309,7 +330,8 @@ def run(test, params, env):
             vf_filter_re=vf_filter,
             pf_filter_re=params.get("pf_filter_re"),
             device_driver=device_driver,
-            pa_type=params.get("pci_assignable"))
+            pa_type=params.get("pci_assignable"),
+        )
 
     pa_pci_ids = vm.pci_assignable.request_devs(devices)
     # Modprobe the module if specified in config file
@@ -319,7 +341,7 @@ def run(test, params, env):
         session.cmd("modprobe %s" % module)
 
     # Probe qemu to verify what is the supported syntax for PCI hotplug
-    if vm.monitor.protocol == 'qmp':
+    if vm.monitor.protocol == "qmp":
         cmd_o = vm.monitor.info("commands")
     else:
         cmd_o = vm.monitor.send_args_cmd("help")
@@ -350,13 +372,13 @@ def run(test, params, env):
                     iface_script = "/etc/network/interfaces"
                     cmd = "cat %s" % iface_script
                     if not session.cmd_status(cmd):
-                        test.log.debug("Backup network script in guest - %s",
-                                       iface_script)
+                        test.log.debug(
+                            "Backup network script in guest - %s", iface_script
+                        )
                         cmd = "cp %s %s.BACKUP" % (iface_script, iface_script)
                         status, output = session.cmd_status_output(cmd)
                         if status:
-                            test.error("Failed to backup in guest: %s" %
-                                       output)
+                            test.error("Failed to backup in guest: %s" % output)
             for pci_num in range(pci_num_range):
                 msg = "Start hot-adding %sth pci device," % (pci_num + 1)
                 msg += " repeat %d" % (j + 1)
@@ -364,8 +386,9 @@ def run(test, params, env):
                 add_device(pci_num)
             sub_type = params.get("sub_type_after_plug")
             if sub_type:
-                error_context.context("Running sub test '%s' after hotplug" %
-                                      sub_type, test.log.info)
+                error_context.context(
+                    "Running sub test '%s' after hotplug" % sub_type, test.log.info
+                )
                 utils_test.run_virt_sub_test(test, params, env, sub_type)
                 if "guest_suspend" == sub_type:
                     # Hotpluged device have been released after guest suspend,
@@ -383,8 +406,9 @@ def run(test, params, env):
         # clean network scripts on error
         clean_network_scripts()
         if params.get("enable_set_link", "yes") == "yes":
-            error_context.context("Re-enabling the primary link(s) of guest",
-                                  test.log.info)
+            error_context.context(
+                "Re-enabling the primary link(s) of guest", test.log.info
+            )
             for nic in vm.virtnet:
                 vm.set_link(nic.device_id, up=True)
         if session:

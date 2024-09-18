@@ -8,26 +8,31 @@ class BlkdevIncMergeWithNonexistBitmap(BlockdevLiveBackupBaseTest):
     """Merge bitmaps with a non-exist bitmap to the target bitmap"""
 
     def __init__(self, test, params, env):
-        super(BlkdevIncMergeWithNonexistBitmap, self).__init__(
-            test, params, env)
-        self._merged_bitmaps = params.objects('bitmap_merge_list')
-        self._merged_target = params['bitmap_merge_target']
+        super(BlkdevIncMergeWithNonexistBitmap, self).__init__(test, params, env)
+        self._merged_bitmaps = params.objects("bitmap_merge_list")
+        self._merged_target = params["bitmap_merge_target"]
 
     def add_one_bitmap(self):
-        args = {'target_device': self._source_nodes[0],
-                'bitmap_name': self._merged_bitmaps[0]}
+        args = {
+            "target_device": self._source_nodes[0],
+            "bitmap_name": self._merged_bitmaps[0],
+        }
         block_dirty_bitmap_add(self.main_vm, args)
 
     def merge_two_bitmaps(self):
-        target_bitmap = {'node': self._source_nodes[0],
-                         'name': self._merged_target,
-                         'disabled': True}
-        merged_bitmap = {'node': self._source_nodes[0],
-                         'bitmaps': self._merged_bitmaps,
-                         'target': self._merged_target}
+        target_bitmap = {
+            "node": self._source_nodes[0],
+            "name": self._merged_target,
+            "disabled": True,
+        }
+        merged_bitmap = {
+            "node": self._source_nodes[0],
+            "bitmaps": self._merged_bitmaps,
+            "target": self._merged_target,
+        }
         job_list = [
-            {'type': 'block-dirty-bitmap-add', 'data': target_bitmap},
-            {'type': 'block-dirty-bitmap-merge', 'data': merged_bitmap}
+            {"type": "block-dirty-bitmap-add", "data": target_bitmap},
+            {"type": "block-dirty-bitmap-merge", "data": merged_bitmap},
         ]
         try:
             self.main_vm.monitor.transaction(job_list)
@@ -37,8 +42,9 @@ class BlkdevIncMergeWithNonexistBitmap(BlockdevLiveBackupBaseTest):
             if qmp_error_msg not in str(e.data):
                 self.test.fail(str(e))
         else:
-            self.test.fail("Can merge with a non-exist bitmap:%s"
-                           % self._merged_bitmaps[1])
+            self.test.fail(
+                "Can merge with a non-exist bitmap:%s" % self._merged_bitmaps[1]
+            )
 
     def do_test(self):
         self.add_one_bitmap()

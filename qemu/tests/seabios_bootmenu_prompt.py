@@ -1,8 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import env_process
-from virttest import utils_misc
+from virttest import env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -18,13 +16,14 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def prepare_images(img_num):
         """
         prepare extra images
         """
         for i in range(img_num):
             img = "stg%s" % i
-            params["images"] = ' '.join([params["images"], img])
+            params["images"] = " ".join([params["images"], img])
             params["image_name_%s" % img] = "images/%s" % img
             params["image_size_%s" % img] = params["extra_img_size"]
             params["force_create_image_%s" % img] = "yes"
@@ -40,12 +39,11 @@ def run(test, params, env):
         return re.search(boot_menu_hint, get_output(seabios_session))
 
     def get_boot_menu_list():
-        return re.findall(r"^([1-9a-z])\. (.*)\s",
-                          get_output(seabios_session), re.M)
+        return re.findall(r"^([1-9a-z])\. (.*)\s", get_output(seabios_session), re.M)
 
     timeout = float(params.get("timeout", 60))
     boot_menu_hint = params["boot_menu_hint"]
-    boot_menu_key = params.get("boot_menu_key", 'esc')
+    boot_menu_key = params.get("boot_menu_key", "esc")
     boot_device = str(int(params["bootindex_image1"]) + 1)
     extra_img_num = int(params["extra_img_num"])
 
@@ -58,7 +56,7 @@ def run(test, params, env):
     error_context.context("Start guest with sga bios", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    seabios_session = vm.logsessions['seabios']
+    seabios_session = vm.logsessions["seabios"]
 
     error_context.context("Get boot menu list", test.log.info)
     if not utils_misc.wait_for(boot_menu, timeout, 1):

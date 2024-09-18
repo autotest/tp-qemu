@@ -4,8 +4,7 @@ from avocado.utils import process
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 
-from qemu.tests.qemu_disk_img import QemuImgTest
-from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
+from qemu.tests.qemu_disk_img import QemuImgTest, generate_base_snapshot_pair
 
 
 def run(test, params, env):
@@ -20,6 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def _get_img_obj_and_params(tag):
         """Get an QemuImg object and its params based on the tag."""
         img_param = params.object_params(tag)
@@ -37,23 +37,27 @@ def run(test, params, env):
         """Verify qemu-img info output for this case."""
         test.log.info("Verify snapshot's backing file information.")
         res = json.loads(output)
-        if (res["backing-filename-format"] != b_fmt or
-                res["backing-filename"] != b_name):
-            test.fail("Backing file information is not correct,"
-                      " got %s." % b_name)
+        if res["backing-filename-format"] != b_fmt or res["backing-filename"] != b_name:
+            test.fail("Backing file information is not correct," " got %s." % b_name)
         compat = res["format-specific"]["data"]["compat"]
         expected = _get_compat_version()
-        if (compat != expected):
-            test.fail("Snapshot's compat mode is not correct,"
-                      " got %s, expected %s." % (compat, expected))
+        if compat != expected:
+            test.fail(
+                "Snapshot's compat mode is not correct,"
+                " got %s, expected %s." % (compat, expected)
+            )
 
     def _verify_unsafe_rebase(img):
         """Verify qemu-img check output for this case."""
         test.log.info("Verify snapshot's unsafe check information.")
-        res = process.run("%s check %s" % (img.image_cmd, img.image_filename),
-                          ignore_status=True)
-        expected = ["Could not open backing file", img.base_image_filename,
-                    "No such file or directory"]
+        res = process.run(
+            "%s check %s" % (img.image_cmd, img.image_filename), ignore_status=True
+        )
+        expected = [
+            "Could not open backing file",
+            img.base_image_filename,
+            "No such file or directory",
+        ]
         for msg in expected:
             if msg not in res.stderr_text:
                 test.fail("The %s should not exist." % img.base_image_filename)
@@ -67,12 +71,14 @@ def run(test, params, env):
     # workaround to assign system disk's image_name to image_name_image1
     params["image_name_image1"] = params["image_name"]
     QemuImgTest(test, params, env, snapshot).create_snapshot()
-    _verify_qemu_img_info(sn_img.info(output="json"),
-                          base_img.image_format, base_img.image_filename)
+    _verify_qemu_img_info(
+        sn_img.info(output="json"), base_img.image_format, base_img.image_filename
+    )
 
     sn_img.base_tag = params["none_existing_image"]
     sn_img.rebase(sn_img_params)
-    _verify_qemu_img_info(sn_img.info(output="json"),
-                          sn_img.base_format, sn_img.base_image_filename)
+    _verify_qemu_img_info(
+        sn_img.info(output="json"), sn_img.base_format, sn_img.base_image_filename
+    )
 
     _verify_unsafe_rebase(sn_img)

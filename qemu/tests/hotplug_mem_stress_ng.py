@@ -1,5 +1,4 @@
-from virttest import utils_test
-from virttest import error_context
+from virttest import error_context, utils_test
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 

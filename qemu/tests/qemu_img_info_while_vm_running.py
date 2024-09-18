@@ -1,10 +1,8 @@
 from avocado.utils import process
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context
 from virttest.qemu_storage import QemuImg
 
-from qemu.tests.qemu_disk_img import QemuImgTest
-from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
+from qemu.tests.qemu_disk_img import QemuImgTest, generate_base_snapshot_pair
 
 
 @error_context.context_aware
@@ -30,6 +28,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _boot_vm(boot_img):
         error_context.context("Boot vm with %s." % boot_img, test.log.info)
         vm.params["images"] = boot_img
@@ -37,8 +36,7 @@ def run(test, params, env):
         vm.verify_alive()
 
     def _qemu_img_info(info_img):
-        error_context.context("Check qemu-img info with %s." % info_img,
-                              test.log.info)
+        error_context.context("Check qemu-img info with %s." % info_img, test.log.info)
         img_param = params.object_params(info_img)
         img = QemuImg(img_param, data_dir.get_data_dir(), info_img)
         try:

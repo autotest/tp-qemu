@@ -4,20 +4,18 @@ This is a virt-test test for testing PCI devices in various PCI setups
 :author: Lukas Doktor <ldoktor@redhat.com>
 :copyright: 2013 Red Hat, Inc.
 """
+
 import logging
 import random
 import re
+
 import six
+from virttest import env_process, error_context, qemu_qtree
 
-from virttest import env_process
-from virttest import error_context
-from virttest import qemu_qtree
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class PCIBusInfo:
-
     """
     Structured info about PCI bus
     """
@@ -26,13 +24,13 @@ class PCIBusInfo:
         self.name = device.aobject
         if device.child_bus:
             bus = device.child_bus[0]
-            self.type = bus.type == 'PCI'
+            self.type = bus.type == "PCI"
             self.first = bus.first_port[0]
             self.last = bus.addr_lengths[0]
         else:
-            self.type = True    # PCI
-            self.first = 0      # (first usable)
-            self.last = 32      # (last + 1)
+            self.type = True  # PCI
+            self.first = 0  # (first usable)
+            self.last = 32  # (last + 1)
 
 
 def process_qdev(qdev):
@@ -41,20 +39,22 @@ def process_qdev(qdev):
     """
     qdev_devices = {}
     qdev_devices_noid = []
-    for bus in qdev.get_buses({'type': ('PCI', 'PCIE')}):
+    for bus in qdev.get_buses({"type": ("PCI", "PCIE")}):
         for device in bus:
             if isinstance(device, six.string_types):
                 LOG_JOB.error("Not a device %s (bus %s)", device, bus)
                 continue
-            dev_id = device.get_param('id')
-            addr = [int(_, 16) for _ in device.get_param('addr').split('.')]
+            dev_id = device.get_param("id")
+            addr = [int(_, 16) for _ in device.get_param("addr").split(".")]
             if len(addr) == 1:
                 addr.append(0)
             addr = "%02x.%x" % (addr[0], addr[1])
-            dev = {'id': dev_id,
-                   'type': device.get_param('driver'),
-                   'bus': device.get_param('bus'),
-                   'addr': addr}
+            dev = {
+                "id": dev_id,
+                "type": device.get_param("driver"),
+                "bus": device.get_param("bus"),
+                "addr": addr,
+            }
             if dev_id is None:
                 qdev_devices_noid.append(dev)
             else:
@@ -70,23 +70,28 @@ def process_qtree(qtree):
     qtree_devices_noid = []
     qtree_pciinfo = []
     for node in qtree.get_nodes():
-        if node.parent and node.parent.qtree.get('type') in ('PCI', 'PCIE'):
-            dev_id = node.qtree.get('id')
-            dev = {'id': dev_id,
-                   'type': node.qtree.get('type'),
-                   'bus': node.parent.qtree.get('id'),
-                   'addr': node.qtree.get('addr')}
+        if node.parent and node.parent.qtree.get("type") in ("PCI", "PCIE"):
+            dev_id = node.qtree.get("id")
+            dev = {
+                "id": dev_id,
+                "type": node.qtree.get("type"),
+                "bus": node.parent.qtree.get("id"),
+                "addr": node.qtree.get("addr"),
+            }
             if dev_id is None:
                 # HOOK for VGA
-                if 'vga' in dev['type'].lower():
-                    dev['type'] = None
+                if "vga" in dev["type"].lower():
+                    dev["type"] = None
                 qtree_devices_noid.append(dev)
             else:
                 qtree_devices[dev_id] = dev
 
-            qtree_pciinfo.append({'class_addr': node.qtree.get('class_addr'),
-                                  'class_pciid': node.qtree.get('class_pciid')
-                                  })
+            qtree_pciinfo.append(
+                {
+                    "class_addr": node.qtree.get("class_addr"),
+                    "class_pciid": node.qtree.get("class_pciid"),
+                }
+            )
     return (qtree_devices, qtree_devices_noid, qtree_pciinfo)
 
 
@@ -94,11 +99,15 @@ def process_lspci(lspci):
     """
     Get info about PCI devices from lspci
     """
-    lspci = re.findall(r'(\w\w:\w\w.\w) "[^"]+ \[\w{4}\]" "[^"]+ '
-                       r'\[(\w{4})\]" "[^"]+ \[(\w{4})\].*', lspci)
-    return [{'class_addr': info[0],
-             'class_pciid': "%s:%s" % (info[1], info[2])}
-            for info in lspci]
+    lspci = re.findall(
+        r'(\w\w:\w\w.\w) "[^"]+ \[\w{4}\]" "[^"]+ '
+        r'\[(\w{4})\]" "[^"]+ \[(\w{4})\].*',
+        lspci,
+    )
+    return [
+        {"class_addr": info[0], "class_pciid": "%s:%s" % (info[1], info[2])}
+        for info in lspci
+    ]
 
 
 def verify_qdev_vs_qtree(qdev_info, qtree_info):
@@ -118,8 +127,7 @@ def verify_qdev_vs_qtree(qdev_info, qtree_info):
             if qdev_devices[dev_id][key] != value:
                 err += "  %s != %s\n" % (qdev_devices[dev_id][key], value)
             if err:
-                errors += ("Device %s properties mismatch:\n%s"
-                           % (dev_id, err))
+                errors += "Device %s properties mismatch:\n%s" % (dev_id, err)
 
     for dev_id in qdev_devices:
         if dev_id not in qtree_devices:
@@ -158,18 +166,18 @@ def add_bus(qdev, params, bus_type, name, parent_bus):
     """
     Define new bus in params
     """
-    if bus_type == 'bridge':
-        if parent_bus.type is True:    # PCI
-            bus_type = 'pci-bridge'
-        else:   # PCIE
-            bus_type = 'i82801b11-bridge'
-    elif bus_type == 'switch':
-        bus_type = 'x3130'
-    elif bus_type == 'root':
-        bus_type = 'ioh3420'
-    params['pci_controllers'] += " %s" % name
-    params['type_%s' % name] = bus_type
-    params['pci_bus_%s' % name] = parent_bus.name
+    if bus_type == "bridge":
+        if parent_bus.type is True:  # PCI
+            bus_type = "pci-bridge"
+        else:  # PCIE
+            bus_type = "i82801b11-bridge"
+    elif bus_type == "switch":
+        bus_type = "x3130"
+    elif bus_type == "root":
+        bus_type = "ioh3420"
+    params["pci_controllers"] += " %s" % name
+    params["type_%s" % name] = bus_type
+    params["pci_bus_%s" % name] = parent_bus.name
     pci_params = params.object_params(name)
     bus = PCIBusInfo(qdev.pcic_by_params(name, pci_params))
     return params, bus
@@ -197,9 +205,9 @@ def add_devices_random(params, name_idxs, bus, add_device):
     Define three devices in first, last and random ports of the given bus
     """
     params, name_idxs = add_device(params, name_idxs, bus.name, bus.first)
-    params, name_idxs = add_device(params, name_idxs, bus.name,
-                                   random.randrange(bus.first + 1,
-                                                    bus.last - 1))
+    params, name_idxs = add_device(
+        params, name_idxs, bus.name, random.randrange(bus.first + 1, bus.last - 1)
+    )
     params, name_idxs = add_device(params, name_idxs, bus.name, bus.last - 1)
     return params, name_idxs
 
@@ -211,15 +219,14 @@ def add_device_usb(params, name_idxs, parent_bus, addr, device):
     idx = name_idxs.get(device[0], 0) + 1
     name_idxs[device[0]] = idx
     name = "test_%s%d" % (device[0], idx)
-    params['usbs'] += ' %s' % name
-    params['pci_bus_%s' % name] = parent_bus
-    params['pci_addr_%s' % name] = addr
-    params['usb_type_%s' % name] = device[1]
-    if not params.get('reserved_slots_%s' % parent_bus):
-        params['reserved_slots_%s' % parent_bus] = ""
-    params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
-    LOG_JOB.debug("Add test device %s %s %s addr:%s", name, device[1],
-                  parent_bus, addr)
+    params["usbs"] += " %s" % name
+    params["pci_bus_%s" % name] = parent_bus
+    params["pci_addr_%s" % name] = addr
+    params["usb_type_%s" % name] = device[1]
+    if not params.get("reserved_slots_%s" % parent_bus):
+        params["reserved_slots_%s" % parent_bus] = ""
+    params["reserved_slots_%s" % parent_bus] += " 0x%x-0x0" % addr
+    LOG_JOB.debug("Add test device %s %s %s addr:%s", name, device[1], parent_bus, addr)
     return params, name_idxs
 
 
@@ -227,24 +234,23 @@ def add_device_usb_uhci(params, name_idxs, parent_bus, addr):
     """
     Creates ehci usb controller
     """
-    return add_device_usb(params, name_idxs, parent_bus,
-                          addr, ('uhci', 'ich9-usb-uhci1'))
+    return add_device_usb(
+        params, name_idxs, parent_bus, addr, ("uhci", "ich9-usb-uhci1")
+    )
 
 
 def add_device_usb_ehci(params, name_idxs, parent_bus, addr):
     """
     Creates ehci usb controller
     """
-    return add_device_usb(params, name_idxs, parent_bus,
-                          addr, ('ehci', 'usb-ehci'))
+    return add_device_usb(params, name_idxs, parent_bus, addr, ("ehci", "usb-ehci"))
 
 
 def add_device_usb_xhci(params, name_idxs, parent_bus, addr):
     """
     Creates xhci usb controller
     """
-    return add_device_usb(params, name_idxs, parent_bus,
-                          addr, ('xhci', 'nec-usb-xhci'))
+    return add_device_usb(params, name_idxs, parent_bus, addr, ("xhci", "nec-usb-xhci"))
 
 
 def add_virtio_disk(params, name_idxs, parent_bus, addr):
@@ -254,19 +260,18 @@ def add_virtio_disk(params, name_idxs, parent_bus, addr):
     idx = name_idxs.get("virtio_disk", 0) + 1
     name_idxs["virtio_disk"] = idx
     name = "test_virtio_disk%d" % idx
-    params['images'] += ' %s' % name
-    params['image_name_%s' % name] = 'images/%s' % name
-    params['pci_bus_%s' % name] = parent_bus
-    params['drive_bus_%s' % name] = addr
-    params['drive_format_%s' % name] = 'virtio'
-    params['force_create_image_%s' % name] = 'yes'
-    params['remove_image_%s' % name] = 'yes'
-    params['image_size_%s' % name] = '1M'
-    if not params.get('reserved_slots_%s' % parent_bus):
-        params['reserved_slots_%s' % parent_bus] = ""
-    params['reserved_slots_%s' % parent_bus] += " 0x%x-0x0" % addr
-    LOG_JOB.debug("Add test device %s virtio_disk %s addr:%s", name,
-                  parent_bus, addr)
+    params["images"] += " %s" % name
+    params["image_name_%s" % name] = "images/%s" % name
+    params["pci_bus_%s" % name] = parent_bus
+    params["drive_bus_%s" % name] = addr
+    params["drive_format_%s" % name] = "virtio"
+    params["force_create_image_%s" % name] = "yes"
+    params["remove_image_%s" % name] = "yes"
+    params["image_size_%s" % name] = "1M"
+    if not params.get("reserved_slots_%s" % parent_bus):
+        params["reserved_slots_%s" % parent_bus] = ""
+    params["reserved_slots_%s" % parent_bus] += " 0x%x-0x0" % addr
+    LOG_JOB.debug("Add test device %s virtio_disk %s addr:%s", name, parent_bus, addr)
     return params, name_idxs
 
 
@@ -274,8 +279,12 @@ def add_device_random(params, name_idxs, parent_bus, addr):
     """
     Add device of random type
     """
-    variants = (add_device_usb_uhci, add_device_usb_ehci, add_device_usb_xhci,
-                add_virtio_disk)
+    variants = (
+        add_device_usb_uhci,
+        add_device_usb_ehci,
+        add_device_usb_xhci,
+        add_virtio_disk,
+    )
     return random.choice(variants)(params, name_idxs, parent_bus, addr)
 
 
@@ -296,31 +305,31 @@ def run(test, params, env):
     error_context.context("Creating early names representation")
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
-    qdev = vm.make_create_command()    # parse params into qdev
+    qdev = vm.make_create_command()  # parse params into qdev
     if isinstance(qdev, tuple):
         qdev = qdev[0]
 
     error_context.context("Getting main PCI bus info")
 
     error_context.context("Processing test params")
-    test_params = params['test_setup']
-    test_devices = params['test_devices']
-    test_device_type = params['test_device_type']
-    if not params.get('pci_controllers'):
-        params['pci_controllers'] = ''
-    _lasts = [PCIBusInfo(qdev.get_by_properties({'aobject': 'pci.0'})[0])]
-    _lasts[0].first = 7     # first 6 slots might be already occupied on pci.0
-    _lasts[0].last -= 1     # last port is usually used by the VM
+    test_params = params["test_setup"]
+    test_devices = params["test_devices"]
+    test_device_type = params["test_device_type"]
+    if not params.get("pci_controllers"):
+        params["pci_controllers"] = ""
+    _lasts = [PCIBusInfo(qdev.get_by_properties({"aobject": "pci.0"})[0])]
+    _lasts[0].first = 7  # first 6 slots might be already occupied on pci.0
+    _lasts[0].last -= 1  # last port is usually used by the VM
     use_buses = []
     names = {}
     test.log.info("Test setup")
-    for line in test_params.split('\\n'):
+    for line in test_params.split("\\n"):
         _idx = 0
         out = ""
-        for device in line.split('->'):
+        for device in line.split("->"):
             device = device.strip()
             if device:
-                if device == 'devices':
+                if device == "devices":
                     use_buses.append(_lasts[_idx])
                     out += "->(test_devices)"
                     break
@@ -340,20 +349,22 @@ def run(test, params, env):
                 out += " " * (len(_lasts[_idx].name) + 2)
         test.log.info(out)
 
-    add_devices = {'first': add_devices_first,
-                   'all': add_devices_all}.get(test_devices,
-                                               add_devices_random)
-    add_device = {'uhci': add_device_usb_uhci,
-                  'ehci': add_device_usb_ehci,
-                  'xhci': add_device_usb_xhci,
-                  'virtio_disk': add_virtio_disk,
-                  }.get(test_device_type, add_device_random)
+    add_devices = {"first": add_devices_first, "all": add_devices_all}.get(
+        test_devices, add_devices_random
+    )
+    add_device = {
+        "uhci": add_device_usb_uhci,
+        "ehci": add_device_usb_ehci,
+        "xhci": add_device_usb_xhci,
+        "virtio_disk": add_virtio_disk,
+    }.get(test_device_type, add_device_random)
     name_idxs = {}
     for bus in use_buses:
         params, name_idxs = add_devices(params, name_idxs, bus, add_device)
-    params['start_vm'] = 'yes'
-    env_process.process(test, params, env, env_process.preprocess_image,
-                        env_process.preprocess_vm)
+    params["start_vm"] = "yes"
+    env_process.process(
+        test, params, env, env_process.preprocess_image, env_process.preprocess_vm
+    )
     vm = env.get_vm(params["main_vm"])
 
     # PCI devices are initialized by firmware, which might require some time
@@ -363,7 +374,7 @@ def run(test, params, env):
 
     error_context.context("Verify qtree vs. qemu devices", test.log.info)
     qtree = qemu_qtree.QtreeContainer()
-    _info_qtree = vm.monitor.info('qtree', False)
+    _info_qtree = vm.monitor.info("qtree", False)
     qtree.parse_info_qtree(_info_qtree)
     info_qdev = process_qdev(vm.devices)
     info_qtree = process_qtree(qtree)
@@ -377,8 +388,8 @@ def run(test, params, env):
         errors += "qdev vs. qtree, "
 
     error_context.context("Verify lspci vs. qtree", test.log.info)
-    if params.get('lspci_cmd'):
-        _info_lspci = session.cmd_output(params['lspci_cmd'])
+    if params.get("lspci_cmd"):
+        _info_lspci = session.cmd_output(params["lspci_cmd"])
         info_lspci = process_lspci(_info_lspci)
         err = verify_lspci(info_lspci, info_qtree[2])
         if err:
@@ -389,5 +400,7 @@ def run(test, params, env):
 
     error_context.context("Results")
     if errors:
-        test.fail("Errors occurred while comparing %s. Please check"
-                  " the log for details." % errors[:-2])
+        test.fail(
+            "Errors occurred while comparing %s. Please check"
+            " the log for details." % errors[:-2]
+        )

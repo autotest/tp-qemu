@@ -1,10 +1,8 @@
 from provider import backup_utils
-
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitTop(BlockDevCommitTest):
-
     def commit_snapshots(self):
         device = self.params.get("device_tag")
         device_params = self.params.object_params(device)

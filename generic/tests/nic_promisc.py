@@ -1,9 +1,7 @@
 import os
 
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import utils_net
 from virttest import error_context as error
+from virttest import utils_misc, utils_net, utils_test
 
 
 @error.context_aware
@@ -19,6 +17,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def set_nic_promisc_onoff(session):
         if os_type == "linux":
             session.cmd_output_safe("ip link set %s promisc on" % ethname)
@@ -43,13 +42,15 @@ def run(test, params, env):
 
     try:
         transfer_thread = utils_misc.InterruptedThread(
-            utils_test.run_file_transfer, (test, params, env))
+            utils_test.run_file_transfer, (test, params, env)
+        )
 
         error.context("Run utils_test.file_transfer ...", test.log.info)
         transfer_thread.start()
 
-        error.context("Perform file transfer while turning nic promisc on/off",
-                      test.log.info)
+        error.context(
+            "Perform file transfer while turning nic promisc on/off", test.log.info
+        )
         while transfer_thread.is_alive():
             set_nic_promisc_onoff(session_serial)
     except Exception:

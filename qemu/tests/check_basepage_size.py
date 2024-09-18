@@ -1,10 +1,7 @@
 import os
 
 from avocado.utils import process
-
-from virttest import env_process
-from virttest import error_context
-
+from virttest import env_process, error_context
 from virttest.utils_numeric import normalize_data_size
 
 
@@ -23,9 +20,9 @@ def run(test, params, env):
     :params params: Dictionary with the test parameters.
     :params env: Dictionary with test environment.
     """
-    get_basic_page = params.get('get_basic_page')
-    local_pglist = params.get('local_pglist')
-    basic_page_list = params.objects('basic_page_list')
+    get_basic_page = params.get("get_basic_page")
+    local_pglist = params.get("local_pglist")
+    basic_page_list = params.objects("basic_page_list")
 
     test.log.info("Check system configuration basic page size on host.")
     host_basic_page = process.system_output(get_basic_page).decode()

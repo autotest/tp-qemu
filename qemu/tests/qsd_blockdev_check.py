@@ -1,8 +1,10 @@
 """QSD blockdev option test"""
+
 import json
 
-from provider.qsd import QsdDaemonDev
 from virttest import error_context
+
+from provider.qsd import QsdDaemonDev
 
 
 # This decorator makes the test function aware of context strings

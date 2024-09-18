@@ -1,7 +1,6 @@
 import re
 
 from avocado.utils import process
-
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 
@@ -30,11 +29,12 @@ def run(test, params, env):
         for qemu_img_cmd in cmds:
             if qemu_img_cmd_agrs:
                 qemu_img_cmd %= qemu_img_cmd_agrs
-            cmd_result = process.run(qemu_img_cmd, ignore_status=True,
-                                     shell=True)
+            cmd_result = process.run(qemu_img_cmd, ignore_status=True, shell=True)
             if not re.search(err_info, cmd_result.stderr.decode(), re.I | re.M):
-                test.fail("Failed to get error information. The actual error "
-                          "information is %s." % cmd_result.stderr.decode())
+                test.fail(
+                    "Failed to get error information. The actual error "
+                    "information is %s." % cmd_result.stderr.decode()
+                )
 
     def run_cmd_with_incorrect_format():
         cmds = params.get("cmd_with_incorrect_format")

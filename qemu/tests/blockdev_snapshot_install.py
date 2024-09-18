@@ -1,9 +1,8 @@
-import time
 import random
 import re
+import time
 
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import utils_misc, utils_test
 from virttest.tests import unattended_install
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
@@ -21,6 +20,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def tag_for_install(vm, tag):
         if vm.serial_console:
             serial_output = vm.serial_console.get_output()
@@ -30,15 +30,16 @@ def run(test, params, env):
         return False
 
     base_image = params.get("images", "image1").split()[0]
-    params.update(
-        {"image_format_%s" % base_image: params["image_format"]})
+    params.update({"image_format_%s" % base_image: params["image_format"]})
     snapshot_test = BlockDevSnapshotTest(test, params, env)
     args = (test, params, env)
     bg = utils_test.BackgroundTest(unattended_install.run, args)
     bg.start()
     if bg.is_alive():
         tag = params["tag_for_install_start"]
-        if utils_misc.wait_for(lambda: tag_for_install(snapshot_test.main_vm, tag), 120, 10, 5):
+        if utils_misc.wait_for(
+            lambda: tag_for_install(snapshot_test.main_vm, tag), 120, 10, 5
+        ):
             test.log.info("sleep random time before do snapshots")
             time.sleep(random.randint(120, 600))
             snapshot_test.pre_test()

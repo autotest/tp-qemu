@@ -2,9 +2,8 @@ import json
 
 from avocado.utils import process
 from virttest import data_dir
-from virttest.qemu_storage import QemuImg
-from virttest.qemu_storage import get_image_json
 from virttest.qemu_io import QemuIOSystem
+from virttest.qemu_storage import QemuImg, get_image_json
 
 
 def run(test, params, env):
@@ -26,6 +25,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _get_img_obj_and_params(tag):
         """Get an QemuImg object and its params based on the tag."""
         img_param = params.object_params(tag)
@@ -52,21 +52,29 @@ def run(test, params, env):
 
     def _verify_file_size_with_benchmark(tag, file_size, key):
         """Verify image file size with the qemu-img measure benchmark."""
-        test.log.info("Verify the %s's size with benchmark.\n"
-                      "The image size %s does not exceed the benchmark '%s'"
-                      " size %s.", tag, file_size, key, benchmark[key])
+        test.log.info(
+            "Verify the %s's size with benchmark.\n"
+            "The image size %s does not exceed the benchmark '%s'"
+            " size %s.",
+            tag,
+            file_size,
+            key,
+            benchmark[key],
+        )
         if file_size > benchmark[key]:
-            test.fail("The %s's file size should not exceed benchmark '%s'"
-                      " size %s, got %s." % (tag, key,
-                                             benchmark[key], file_size))
+            test.fail(
+                "The %s's file size should not exceed benchmark '%s'"
+                " size %s, got %s." % (tag, key, benchmark[key], file_size)
+            )
 
     img, img_param = _get_img_obj_and_params(params["images"])
     img.create(img_param)
-    _qemu_io(img, 'write 0 %s' % params["write_size"])
+    _qemu_io(img, "write 0 %s" % params["write_size"])
 
     test.log.info("Using qemu-img measure to get the benchmark size.")
-    benchmark = json.loads(img.measure(target_fmt=params["target_format"],
-                                       output="json").stdout_text)
+    benchmark = json.loads(
+        img.measure(target_fmt=params["target_format"], output="json").stdout_text
+    )
 
     for c_tag in params["convert_tags"].split():
         img_param["convert_target"] = c_tag

@@ -1,10 +1,7 @@
 import logging
 
-from autotest.client.shared import error
-from autotest.client.shared import utils
-
-from virttest import utils_misc
-from virttest import utils_test
+from autotest.client.shared import error, utils
+from virttest import utils_misc, utils_test
 from virttest.utils_test.qemu import migration
 
 
@@ -34,10 +31,10 @@ def run(test, params, env):
         mig_type = migration.MultihostMigrationRdma
 
     class TestMultihostMigration(mig_type):
-
         def __init__(self, test, params, env):
-            super(TestMultihostMigration, self).__init__(test, params, env,
-                                                         preprocess_env)
+            super(TestMultihostMigration, self).__init__(
+                test, params, env, preprocess_env
+            )
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
             self.is_src = params["hostid"] == self.srchost
@@ -54,12 +51,14 @@ def run(test, params, env):
 
         def migration_scenario(self):
             def clean_up(vm):
-                kill_bg_stress_cmd = params.get("kill_bg_stress_cmd",
-                                                "killall -9 stress")
+                kill_bg_stress_cmd = params.get(
+                    "kill_bg_stress_cmd", "killall -9 stress"
+                )
 
                 logging.info("Kill the background test in guest.")
-                session = vm.wait_for_login(timeout=self.login_timeout,
-                                            nic_index=self.nic_index)
+                session = vm.wait_for_login(
+                    timeout=self.login_timeout, nic_index=self.nic_index
+                )
                 if self.params.get("bg_stress_test") == "driver_load":
                     if self.bg and self.bg.is_alive():
                         self.bg.join()
@@ -69,8 +68,9 @@ def run(test, params, env):
                 else:
                     s, o = session.cmd_status_output(kill_bg_stress_cmd)
                     if s:
-                        raise error.TestFail("Failed to kill the background"
-                                             " test in guest: %s" % o)
+                        raise error.TestFail(
+                            "Failed to kill the background" " test in guest: %s" % o
+                        )
                 session.close()
 
             @error.context_aware
@@ -78,15 +78,22 @@ def run(test, params, env):
                 logging.info("Try to login guest before migration test.")
                 vm = env.get_vm(params["main_vm"])
                 bg_stress_test = self.params.get("bg_stress_test")
-                session = vm.wait_for_login(timeout=self.login_timeout,
-                                            nic_index=self.nic_index)
+                session = vm.wait_for_login(
+                    timeout=self.login_timeout, nic_index=self.nic_index
+                )
 
                 error.context("Do stress test before migration.", logging.info)
                 check_running_cmd = params.get("check_running_cmd")
 
-                self.bg = utils.InterruptedThread(utils_test.run_virt_sub_test,
-                                                  args=(test, params, env,),
-                                                  kwargs={"sub_type": bg_stress_test})
+                self.bg = utils.InterruptedThread(
+                    utils_test.run_virt_sub_test,
+                    args=(
+                        test,
+                        params,
+                        env,
+                    ),
+                    kwargs={"sub_type": bg_stress_test},
+                )
 
                 self.bg.start()
 
@@ -95,8 +102,9 @@ def run(test, params, env):
 
                 if check_running_cmd:
                     if not utils_misc.wait_for(check_running, timeout=360):
-                        raise error.TestFail("Failed to start %s in guest." %
-                                             bg_stress_test)
+                        raise error.TestFail(
+                            "Failed to start %s in guest." % bg_stress_test
+                        )
 
             def check_worker(mig_data):
                 if not self.is_src and self.need_cleanup:
@@ -106,8 +114,9 @@ def run(test, params, env):
             if params.get("check_vm_before_migration", "yes") == "no":
                 params["check_vm_needs_restart"] = "no"
 
-            self.migrate_wait(self.vms, self.srchost, self.dsthost,
-                              start_worker, check_worker)
+            self.migrate_wait(
+                self.vms, self.srchost, self.dsthost, start_worker, check_worker
+            )
 
     mig = TestMultihostMigration(test, params, env)
     mig.run()

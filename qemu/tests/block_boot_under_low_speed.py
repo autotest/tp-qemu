@@ -1,12 +1,12 @@
 """QEMU Low Speed Booting Test"""
-import threading
-import time
+
 import os
 import shutil
-from avocado.utils import process
+import threading
+import time
 
-from virttest import error_context, storage, env_process, nfs
-from virttest import data_dir
+from avocado.utils import process
+from virttest import data_dir, env_process, error_context, nfs, storage
 
 
 # This decorator makes the test function aware of context strings
@@ -37,11 +37,12 @@ def run(test, params, env):
         org_img = storage.get_image_filename(params, data_dir.DATA_DIR)
         logger.info(org_img)
         file_name = os.path.basename(org_img)
-        if not os.path.exists(params['export_dir'] + "/" + file_name):
-            logger.info("Copy file %s %s", org_img, params['export_dir'])
-            shutil.copy(org_img, params['export_dir'])
-        params["image_name"] = params['nfs_mount_dir'] + "/" + \
-            os.path.splitext(file_name)[0]
+        if not os.path.exists(params["export_dir"] + "/" + file_name):
+            logger.info("Copy file %s %s", org_img, params["export_dir"])
+            shutil.copy(org_img, params["export_dir"])
+        params["image_name"] = (
+            params["nfs_mount_dir"] + "/" + os.path.splitext(file_name)[0]
+        )
 
     logger = test.log
     nfs_local = nfs.Nfs(params)
@@ -52,11 +53,12 @@ def run(test, params, env):
         thread = threading.Thread(target=_limit_daemon)
         thread.start()
         time.sleep(2)
-        logger.info('Booting vm...%s', params["image_name"])
-        params['start_vm'] = 'yes'
-        vm = env.get_vm(params['main_vm'])
-        env_process.process(test, params, env, env_process.preprocess_image,
-                            env_process.preprocess_vm)
+        logger.info("Booting vm...%s", params["image_name"])
+        params["start_vm"] = "yes"
+        vm = env.get_vm(params["main_vm"])
+        env_process.process(
+            test, params, env, env_process.preprocess_image, env_process.preprocess_vm
+        )
         timeout = int(params.get("login_timeout", 360))
         vm.wait_for_login(timeout=timeout)
     finally:

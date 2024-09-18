@@ -62,8 +62,7 @@ def run(test, params, env):
     )
 
     win_installer_test(session, test, params)
-    check_gagent_version(session, test, gagent_pkg_info_cmd,
-                         expected_gagent_version)
+    check_gagent_version(session, test, gagent_pkg_info_cmd, expected_gagent_version)
     driver_check(session, test, params)
 
     error_context.context(
@@ -78,7 +77,8 @@ def run(test, params, env):
     if s_check == 0:
         test.fail(
             "Could not uninstall Virtio-win-guest-tools package "
-            "in guest, detail: '%s'" % o_check)
+            "in guest, detail: '%s'" % o_check
+        )
     error_context.context("Check if all drivers are uninstalled.", test.log.info)
     uninstalled_device = []
     device_name_list = [

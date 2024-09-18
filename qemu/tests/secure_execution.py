@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import virt_vm
+from virttest import error_context, virt_vm
 
 
 @error_context.context_aware
@@ -15,8 +14,7 @@ def run(test, params, env):
     """
 
     vm = env.get_vm(params["main_vm"])
-    error_context.context("Try to log into guest '%s'." % vm.name,
-                          test.log.info)
+    error_context.context("Try to log into guest '%s'." % vm.name, test.log.info)
     if params.get("start_vm") == "yes":
         session = vm.wait_for_serial_login()
         session.close()
@@ -31,6 +29,8 @@ def run(test, params, env):
         except virt_vm.VMCreateError as detail:
             output = detail.output
         if error_msg not in output:
-            test.fail("Error message is not expected! "
-                      "Expected: {} Actual: {}"
-                      .format(error_msg, output))
+            test.fail(
+                "Error message is not expected! " "Expected: {} Actual: {}".format(
+                    error_msg, output
+                )
+            )

@@ -5,7 +5,6 @@ from autotest.client.shared import error
 
 
 class MiniSubtest(object):
-
     def __new__(cls, *args, **kargs):
         self = super(MiniSubtest, cls).__new__(cls)
         ret = None
@@ -30,7 +29,6 @@ def run(test, params, env):
     """
 
     class hot_unplug_block_dev(MiniSubtest):
-
         def test(self):
             attempts = int(params.get("attempts", "100"))
             attempt_timeout = int(params.get("attempt_timeout", "1"))
@@ -40,20 +38,25 @@ def run(test, params, env):
 
             for block in params.objects("unplug_block"):
                 for _ in range(attempts):
-                    if vm.devices.simple_unplug(vm.devices["drive_%s" % block],
-                                                vm.monitor)[1] is True:
+                    if (
+                        vm.devices.simple_unplug(
+                            vm.devices["drive_%s" % block], vm.monitor
+                        )[1]
+                        is True
+                    ):
                         break
                     else:
                         time.sleep(attempt_timeout)
                 for _ in range(attempts):
-                    if vm.devices.simple_unplug(vm.devices[block],
-                                                vm.monitor)[1] is True:
+                    if (
+                        vm.devices.simple_unplug(vm.devices[block], vm.monitor)[1]
+                        is True
+                    ):
                         break
                     else:
                         time.sleep(attempt_timeout)
 
     class hot_plug_block_dev(MiniSubtest):
-
         def test(self):
             def get_index(vm, index):
                 while vm.index_in_use.get(str(index)):
@@ -78,47 +81,43 @@ def run(test, params, env):
                     if drive_index:
                         index = drive_index
                     else:
-                        vm.last_driver_index = get_index(vm,
-                                                         vm.last_driver_index)
+                        vm.last_driver_index = get_index(vm, vm.last_driver_index)
                         index = str(vm.last_driver_index)
                         vm.last_driver_index += 1
                 else:
                     index = None
                 image_bootindex = None
                 image_boot = image_params.get("image_boot")
-                if not re.search(r"boot=on\|off", devices.get_help_text(),
-                                 re.MULTILINE):
-                    if image_boot in ['yes', 'on', True]:
+                if not re.search(
+                    r"boot=on\|off", devices.get_help_text(), re.MULTILINE
+                ):
+                    if image_boot in ["yes", "on", True]:
                         image_bootindex = str(vm.last_boot_index)
                         vm.last_boot_index += 1
                     image_boot = "unused"
-                    image_bootindex = image_params.get('bootindex',
-                                                       image_bootindex)
+                    image_bootindex = image_params.get("bootindex", image_bootindex)
                 else:
-                    if image_boot in ['yes', 'on', True]:
+                    if image_boot in ["yes", "on", True]:
                         if vm.last_boot_index > 0:
                             image_boot = False
                         vm.last_boot_index += 1
                 image_params = params.object_params(image_name)
                 if image_params.get("boot_drive") == "no":
                     continue
-                devs = vm.devices.images_define_by_params(image_name,
-                                                          image_params,
-                                                          'disk',
-                                                          index,
-                                                          image_boot,
-                                                          image_bootindex)
+                devs = vm.devices.images_define_by_params(
+                    image_name, image_params, "disk", index, image_boot, image_bootindex
+                )
                 for dev in devs:
                     for _ in range(attempts):
-                        if (vm.devices.simple_hotplug(dev,
-                                                      vm.monitor)[1] is True):
+                        if vm.devices.simple_hotplug(dev, vm.monitor)[1] is True:
                             return
                         time.sleep(attempt_timeout)
 
     test_type = params.get("helper_test")
-    if (test_type in locals()):
+    if test_type in locals():
         tests_group = locals()[test_type]
         tests_group()
     else:
-        raise error.TestFail("Test group '%s' is not defined in"
-                             " cpuflags test" % test_type)
+        raise error.TestFail(
+            "Test group '%s' is not defined in" " cpuflags test" % test_type
+        )

@@ -1,4 +1,5 @@
 from virttest import env_process
+
 from provider.cpu_utils import check_cpu_flags
 
 

@@ -1,7 +1,4 @@
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import error_context, utils_misc, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -34,11 +31,9 @@ def run(test, params, env):
         """
         error_context.context("launch stress app in guest", test.log.info)
         args = (test, params, env, params["stress_test"])
-        bg_test = utils_test.BackgroundTest(
-            utils_test.run_virt_sub_test, args)
+        bg_test = utils_test.BackgroundTest(utils_test.run_virt_sub_test, args)
         bg_test.start()
-        if not utils_misc.wait_for(bg_test.is_alive, first=10,
-                                   step=3, timeout=100):
+        if not utils_misc.wait_for(bg_test.is_alive, first=10, step=3, timeout=100):
             test.fail("background test start failed")
 
     def unload_stress(session):
@@ -64,8 +59,7 @@ def run(test, params, env):
     if os_type == "linux":
         test_mem = params.get("memory", 256)
         stress_args = "--cpu 4 --io 4 --vm 2 --vm-bytes %sM" % int(test_mem)
-        stress_test = utils_test.VMStress(vm, "stress", params,
-                                          stress_args=stress_args)
+        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
         stress_test.load_stress_tool()
     else:
         load_stress()
@@ -76,15 +70,14 @@ def run(test, params, env):
     else:
         unload_stress(session)
 
-    error_context.context("Ping test after flood ping,"
-                          " Check if the network is still alive",
-                          test.log.info)
+    error_context.context(
+        "Ping test after flood ping," " Check if the network is still alive",
+        test.log.info,
+    )
     count = params["count"]
     timeout = float(count) * 2
-    status, output = utils_net.ping(guest_ip, count,
-                                    timeout=timeout)
+    status, output = utils_net.ping(guest_ip, count, timeout=timeout)
     if status != 0:
-        test.fail("Ping failed, status: %s,"
-                  " output: %s" % (status, output))
+        test.fail("Ping failed, status: %s," " output: %s" % (status, output))
 
     session.close()

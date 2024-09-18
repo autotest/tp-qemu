@@ -5,8 +5,7 @@ please refer to blockdev_mirror_base for detailed test strategy.
 
 from avocado.utils import memory
 
-from provider import backup_utils
-from provider import blockdev_mirror_base
+from provider import backup_utils, blockdev_mirror_base
 
 
 class BlockdevMirrorWaitTest(blockdev_mirror_base.BlockdevMirrorBaseTest):
@@ -18,8 +17,11 @@ class BlockdevMirrorWaitTest(blockdev_mirror_base.BlockdevMirrorBaseTest):
         """Run block-mirror and wait job done"""
         try:
             for idx, source_node in enumerate(self._source_nodes):
-                backup_utils.blockdev_mirror(self.main_vm, source_node,
-                                             self._target_nodes[idx],
-                                             **self._backup_options[idx])
+                backup_utils.blockdev_mirror(
+                    self.main_vm,
+                    source_node,
+                    self._target_nodes[idx],
+                    **self._backup_options[idx],
+                )
         finally:
             memory.drop_caches()

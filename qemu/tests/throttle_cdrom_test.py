@@ -1,21 +1,21 @@
 """IO-Throttling cdrom relevant testing"""
 
-
 from virttest import error_context
 from virttest.qemu_capabilities import Flags
-from provider.cdrom import QMPEventCheckCDEject, QMPEventCheckCDChange
+
+from provider.cdrom import QMPEventCheckCDChange, QMPEventCheckCDEject
 
 
 # This decorator makes the test function aware of context strings
 @error_context.context_aware
 def run(test, params, env):
     """
-        Test cdrom operation with throttle feature.
-        1) Boot up guest with cdrom device in throttle groups.
-        2) Query cdrom device.
-        3) Execute change media operation
-        4) Query cdrom device
-        5) Execute eject media operation
+    Test cdrom operation with throttle feature.
+    1) Boot up guest with cdrom device in throttle groups.
+    2) Query cdrom device.
+    3) Execute change media operation
+    4) Query cdrom device
+    5) Execute eject media operation
     """
 
     error_context.context("Get the main VM", test.log.info)
@@ -35,7 +35,7 @@ def run(test, params, env):
     eject_check = QMPEventCheckCDEject(vm, device_name)
     change_check = QMPEventCheckCDChange(vm, device_name)
 
-    monitor = vm.get_monitors_by_type('qmp')[0]
+    monitor = vm.get_monitors_by_type("qmp")[0]
     if vm.check_capability(Flags.BLOCKDEV):
         qdev = vm.devices.get_qdev_by_drive(device_name)
         monitor.blockdev_open_tray(qdev, force=True)

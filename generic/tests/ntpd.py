@@ -1,15 +1,12 @@
 import time
 
 import aexpect
-
 from avocado.utils import process
-from virttest import remote
-from virttest import utils_test
+from virttest import remote, utils_test
 from virttest.staging import service
 
 
 class NTPTest(object):
-
     """
     This class is for ntpd test
     """
@@ -35,11 +32,14 @@ class NTPTest(object):
         self.long_sleep = int(params.get("long_sleep", "0"))
         self.vm = env.get_vm(self.vm_name)
         try:
-            self.server_session = remote.wait_for_login('ssh',
-                                                        self.server_ip, "22",
-                                                        self.server_user,
-                                                        self.server_password,
-                                                        r"[\$#]\s*$")
+            self.server_session = remote.wait_for_login(
+                "ssh",
+                self.server_ip,
+                "22",
+                self.server_user,
+                self.server_password,
+                r"[\$#]\s*$",
+            )
             self.session = self.vm.wait_for_login()
         except remote.LoginTimeoutError as detail:
             self.test.cancel(str(detail))
@@ -60,38 +60,36 @@ class NTPTest(object):
         3.restrict the host and guest
         """
         self.test.log.info("waiting for login server.....")
-        self.server_hostname = self.server_session.\
-            cmd_output('hostname').strip()
+        self.server_hostname = self.server_session.cmd_output("hostname").strip()
         self.test.log.debug("service hostname is %s", self.server_hostname)
-        cmd = 'echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock'
+        cmd = "echo 'ZONE = \"America/New_York\"' > /etc/sysconfig/clock"
         status = self.server_session.cmd_status(cmd)
         if status:
             self.test.error("set ZONE in server failed.")
-        cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
+        cmd_ln = "ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime"
         self.server_session.cmd_status(cmd_ln)
 
         # Add server of local clock
-        output = self.server_session.cmd_output("grep '^server %s'"
-                                                " /etc/ntp.conf"
-                                                % self.local_clock).strip()
+        output = self.server_session.cmd_output(
+            "grep '^server %s'" " /etc/ntp.conf" % self.local_clock
+        ).strip()
         if not output:
-            status = self.server_session.cmd_status("echo 'server %s' >> "
-                                                    "/etc/ntp.conf"
-                                                    % self.local_clock)
+            status = self.server_session.cmd_status(
+                "echo 'server %s' >> " "/etc/ntp.conf" % self.local_clock
+            )
             if status:
                 self.test.error("config local_clock failed.")
 
         # Add host and guest in restrict
-        output = self.server_session.cmd_output("grep '^restrict %s'"
-                                                " /etc/ntp.conf"
-                                                % self.net_range).strip()
+        output = self.server_session.cmd_output(
+            "grep '^restrict %s'" " /etc/ntp.conf" % self.net_range
+        ).strip()
         if not output:
-            status = self.server_session.cmd_status("echo 'restrict %s "
-                                                    "mask %s %s' "
-                                                    ">> /etc/ntp.conf"
-                                                    % (self.net_range,
-                                                       self.mask,
-                                                       self.restrict_option))
+            status = self.server_session.cmd_status(
+                "echo 'restrict %s "
+                "mask %s %s' "
+                ">> /etc/ntp.conf" % (self.net_range, self.mask, self.restrict_option)
+            )
             if status:
                 self.test.error("config restrict failed.")
 
@@ -110,12 +108,12 @@ class NTPTest(object):
         4.start ntpd service
         """
         # Set the time zone to New_York
-        cmd = ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
+        cmd = "echo 'ZONE = \"America/New_York\"' > /etc/sysconfig/clock;"
         try:
             process.run(cmd, ignore_status=False, shell=True)
         except process.CmdError as detail:
             self.test.fail("set Zone on host failed.%s" % detail)
-        cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
+        cmd_ln = "ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime"
         process.run(cmd_ln, ignore_status=True, shell=True)
 
         # Check the cpu info of constant_tsc
@@ -140,11 +138,13 @@ class NTPTest(object):
             self.test.fail("timing by ntpdate on host failed!!")
 
         # Delete server of local clock
-        result = process.run("grep '^server %s' /etc/ntp.conf" %
-                             self.local_clock, ignore_status=True, shell=True)
+        result = process.run(
+            "grep '^server %s' /etc/ntp.conf" % self.local_clock,
+            ignore_status=True,
+            shell=True,
+        )
         if result.stdout.strip():
-            process.run("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock,
-                        shell=True)
+            process.run("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock, shell=True)
         # Check the ntp.conf and add server ip into it
         cmd = "grep '^server %s' /etc/ntp.conf" % self.server_ip
         result = process.run(cmd, ignore_status=True, shell=True)
@@ -152,7 +152,7 @@ class NTPTest(object):
             cmd = "echo 'server %s' >> /etc/ntp.conf" % self.server_ip
             try:
                 process.run(cmd, ignore_status=False, shell=True)
-            except process.CmdError as detail:
+            except process.CmdError:
                 self.test.fail("config /etc/ntp.conf on host failed!!")
 
         # Start ntpd service
@@ -168,9 +168,9 @@ class NTPTest(object):
         4.restart ntpd service
         """
         # Set the time zone to american new york
-        cmd = ('echo \'ZONE = "America/New_York"\' > /etc/sysconfig/clock;')
+        cmd = "echo 'ZONE = \"America/New_York\"' > /etc/sysconfig/clock;"
         self.session.cmd(cmd)
-        cmd_ln = 'ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime'
+        cmd_ln = "ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime"
         self.session.cmd(cmd_ln)
 
         # Timing by ntpdate
@@ -190,13 +190,15 @@ class NTPTest(object):
             self.test.fail("timing by ntpdate on guest failed!!")
 
         # Delete server of local clock
-        output = self.session.cmd_output("grep '%s' /etc/ntp.conf"
-                                         % self.local_clock).strip()
+        output = self.session.cmd_output(
+            "grep '%s' /etc/ntp.conf" % self.local_clock
+        ).strip()
         if not output:
             self.session.cmd("sed -i '/%s/d' /etc/ntp.conf" % self.local_clock)
         # Check the ntp.conf and add server ip into it
-        output = self.session.cmd_output("grep '^server %s' /etc/ntp.conf"
-                                         % self.server_ip)
+        output = self.session.cmd_output(
+            "grep '^server %s' /etc/ntp.conf" % self.server_ip
+        )
         if not output:
             cmd = "echo 'server %s' >> /etc/ntp.conf" % self.server_ip
             status = self.session.cmd_status(cmd)
@@ -219,10 +221,8 @@ class NTPTest(object):
         if self.server_hostname:
             cmd_name = "ntpq -p | grep '^*%s'" % self.server_hostname
         result_ntpq_ip = process.run(cmd_ip, ignore_status=True, shell=True)
-        result_ntpq_name = process.run(cmd_name, ignore_status=True,
-                                       shell=True)
-        if (not result_ntpq_ip.stdout.strip() and
-                not result_ntpq_name.stdout.strip()):
+        result_ntpq_name = process.run(cmd_name, ignore_status=True, shell=True)
+        if not result_ntpq_ip.stdout.strip() and not result_ntpq_name.stdout.strip():
             self.test.fail("ntpd setting failed of %s host !!" % self.vm_name)
         # Test on guest
         output_ip = self.session.cmd_output(cmd_ip).strip()
@@ -257,8 +257,9 @@ def run(test, params, env):
     """
 
     ntp_test = NTPTest(test, params, env)
-    ping_s, _ = utils_test.ping(ntp_test.server_ip, count=1,
-                                timeout=5, session=ntp_test.session)
+    ping_s, _ = utils_test.ping(
+        ntp_test.server_ip, count=1, timeout=5, session=ntp_test.session
+    )
     if ping_s:
         ntp_test.close_session()
         test.cancel("Please make sure the guest can ping server!")

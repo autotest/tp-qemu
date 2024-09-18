@@ -3,10 +3,9 @@ slof_balloon.py include following case:
  1. virtio balloon can work with pci-bridge.
 """
 
-from virttest import error_context
+from virttest import error_context, utils_misc, utils_net
+
 from provider import slof
-from virttest import utils_net
-from virttest import utils_misc
 
 
 @error_context.context_aware
@@ -26,45 +25,45 @@ def run(test, params, env):
     :param params: Dictionary with the test .
     :param env: Dictionary with test environment.
     """
+
     def _get_qmp_port():
-        """ Get the qmp monitor port. """
-        qmp_ports = vm.get_monitors_by_type('qmp')
+        """Get the qmp monitor port."""
+        qmp_ports = vm.get_monitors_by_type("qmp")
         if not qmp_ports:
             test.error("Incorrect configuration, no QMP monitor found.")
         return qmp_ports[0]
 
     def _check_balloon_info():
-        """ Check virtio balloon device info. """
-        error_context.context('Check virtio balloon device info.')
-        balloon_size = qmp.query('balloon')['actual']
-        test.log.debug('The balloon size is %s', balloon_size)
-        mem = int(params["mem"]) * 1024 ** 2
+        """Check virtio balloon device info."""
+        error_context.context("Check virtio balloon device info.")
+        balloon_size = qmp.query("balloon")["actual"]
+        test.log.debug("The balloon size is %s", balloon_size)
+        mem = int(params["mem"]) * 1024**2
         if int(balloon_size) != mem:
-            test.error(
-                'The balloon size is not equal to %d' % mem)
+            test.error("The balloon size is not equal to %d" % mem)
 
     def _change_balloon_size():
-        """ Change the ballloon size. """
-        changed_ballon_size = int(params['balloon_size'])
-        balloon_timeout = int(params['balloon_timeout'])
-        error_context.context(
-            'Change the balloon size to %s' % changed_ballon_size)
+        """Change the ballloon size."""
+        changed_ballon_size = int(params["balloon_size"])
+        balloon_timeout = int(params["balloon_timeout"])
+        error_context.context("Change the balloon size to %s" % changed_ballon_size)
         qmp.balloon(changed_ballon_size)
-        error_context.context('Check balloon size after changed.')
+        error_context.context("Check balloon size after changed.")
         if not utils_misc.wait_for(
-                lambda: bool(
-                    changed_ballon_size == int(
-                        qmp.query('balloon')['actual'])), balloon_timeout):
-            test.fail('The balloon size is not changed to %s in %s sec.'
-                      % (changed_ballon_size, balloon_timeout))
-        test.log.debug(
-            'The balloon size is %s after changed.', changed_ballon_size)
+            lambda: bool(changed_ballon_size == int(qmp.query("balloon")["actual"])),
+            balloon_timeout,
+        ):
+            test.fail(
+                "The balloon size is not changed to %s in %s sec."
+                % (changed_ballon_size, balloon_timeout)
+            )
+        test.log.debug("The balloon size is %s after changed.", changed_ballon_size)
 
     def _ping_host():
-        """ Ping host from guest. """
+        """Ping host from guest."""
         error_context.context("Try to ping external host.", test.log.info)
         extra_host_ip = utils_net.get_host_ip_address(params)
-        session.cmd('ping %s -c 5' % extra_host_ip)
+        session.cmd("ping %s -c 5" % extra_host_ip)
         test.log.info("Ping host(%s) successfully.", extra_host_ip)
 
     vm = env.get_vm(params["main_vm"])

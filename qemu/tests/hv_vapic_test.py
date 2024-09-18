@@ -1,11 +1,8 @@
-import re
 import os
+import re
 import time
 
-from virttest import error_context
-from virttest import utils_disk
-from virttest import env_process
-from virttest import data_dir
+from virttest import data_dir, env_process, error_context, utils_disk
 from virttest.qemu_storage import QemuImg
 
 from provider.storage_benchmark import generate_instance
@@ -58,7 +55,8 @@ def run(test, params, env):
         disk_size = params["image_size_" + params["tmpfs_image_name"]]
         disk_id = utils_disk.get_windows_disks_index(session, disk_size)[0]
         drive_letter = utils_disk.configure_empty_windows_disk(
-            session, disk_id, disk_size)[0]
+            session, disk_id, disk_size
+        )[0]
         vm.graceful_shutdown(timeout=timeout)
         return drive_letter
 
@@ -92,7 +90,7 @@ def run(test, params, env):
         test.log.info("Format tmpfs data disk")
         utils_disk.create_filesystem_windows(session, drive_letter, "ntfs")
         test.log.info("Start fio test")
-        fio = generate_instance(params, vm, 'fio')
+        fio = generate_instance(params, vm, "fio")
         o = fio.run(params["fio_options"] % drive_letter)
         return int(re.search(bw_search_reg, o, re.M).group(1))
 
@@ -111,8 +109,7 @@ def run(test, params, env):
     error_context.context("Start fio in guest", test.log.info)
     bw_with_hv_vapic = _run_fio(session, drive_letter)
 
-    error_context.context("Shutdown guest and boot without hv_vapnic",
-                          test.log.info)
+    error_context.context("Shutdown guest and boot without hv_vapnic", test.log.info)
     vm.graceful_shutdown(timeout=timeout)
     cpu_model_flags = cpu_model_flags.replace(",hv_vapic", "")
     vm, session = _boot_guest_with_cpu_flag(cpu_model_flags)
@@ -124,7 +121,8 @@ def run(test, params, env):
     improvement = (float)(bw_with_hv_vapic - bw_without_hv_vapic)
     improvement /= bw_without_hv_vapic
     if improvement < 0.05:
-        test.fail("Improvement not above 5%%."
-                  " bw with hv_vapic: %s,"
-                  " bw without hv_vapic: %s" %
-                  (bw_with_hv_vapic, bw_without_hv_vapic))
+        test.fail(
+            "Improvement not above 5%%."
+            " bw with hv_vapic: %s,"
+            " bw without hv_vapic: %s" % (bw_with_hv_vapic, bw_without_hv_vapic)
+        )

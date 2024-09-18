@@ -1,6 +1,5 @@
-from virttest import utils_test, env_process
+from virttest import env_process, utils_package, utils_test
 from virttest.staging import utils_memory
-from virttest import utils_package
 
 
 def run(test, params, env):
@@ -16,25 +15,25 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def kernelcompile(session, vm_name):
         vm = env.get_vm(vm_name)
         ip = vm.get_address()
         path = params.get("download_url")
         test.log.info("kernel path = %s", path)
         get_kernel_cmd = "wget %s --progress=none" % path
-        install_status = utils_package.package_install("wget", session,
-                                                       timeout=60)
+        install_status = utils_package.package_install("wget", session, timeout=60)
         if not install_status:
             test.error("Failed to install wget.")
         try:
-            status, output = session.cmd_status_output(get_kernel_cmd,
-                                                       timeout=2400, safe=True)
+            status, output = session.cmd_status_output(
+                get_kernel_cmd, timeout=2400, safe=True
+            )
             if status != 0:
                 test.log.error(output)
                 test.fail("Fail to download the kernel in %s" % vm_name)
             else:
-                test.log.info("Completed download the kernel src"
-                              " in %s", vm_name)
+                test.log.info("Completed download the kernel src" " in %s", vm_name)
             test_cmd = params.get("test_cmd")
             status, output = session.cmd_status_output(test_cmd, timeout=1200)
             if status != 0:
@@ -48,8 +47,9 @@ def run(test, params, env):
     guest_number = int(params.get("guest_number", "1"))
 
     if guest_number < 1:
-        test.log.warn("At least boot up one guest for this test,"
-                      " set up guest number to 1")
+        test.log.warning(
+            "At least boot up one guest for this test," " set up guest number to 1"
+        )
         guest_number = 1
 
     for tag in range(1, guest_number):
@@ -59,9 +59,11 @@ def run(test, params, env):
     vmem = int(mem_host * over_c / guest_number)
 
     if vmem < 256:
-        test.cancel("The memory size set for guest is too small."
-                    " Please try less than %s guests"
-                    " in this host." % guest_number)
+        test.cancel(
+            "The memory size set for guest is too small."
+            " Please try less than %s guests"
+            " in this host." % guest_number
+        )
     params["mem"] = vmem
     params["start_vm"] = "yes"
     login_timeout = int(params.get("login_timeout", 360))
@@ -85,8 +87,7 @@ def run(test, params, env):
         for session_info in sessions_info:
             session = session_info[0]
             vm_name = session_info[1]
-            bg_thread = utils_test.BackgroundTest(kernelcompile,
-                                                  (session, vm_name))
+            bg_thread = utils_test.BackgroundTest(kernelcompile, (session, vm_name))
             bg_thread.start()
             bg_threads.append(bg_thread)
 

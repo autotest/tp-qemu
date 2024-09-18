@@ -32,7 +32,7 @@ def run(test, params, env):
         stress_test.create_file(file_name_sn1)
         stress_test.action_after_finished()
         format_postfix = ".%s" % params["image_format"]
-        snapshot = stress_test.snapshot_file.replace(format_postfix, '')
+        snapshot = stress_test.snapshot_file.replace(format_postfix, "")
         stress_test.reopen(snapshot)
         for name in file_names:
             stress_test.verify_md5(name)

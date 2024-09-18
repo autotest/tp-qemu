@@ -1,8 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_misc
-from virttest import env_process
+from virttest import env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -38,17 +36,17 @@ def run(test, params, env):
         session = vm.reboot(session, timeout=timeout)
         s, o = session.cmd_status_output(check_pltclk_cmd)
         if s:
-            test.error("Failed to check the useplatfromclock after reboot, "
-                       "status=%s, output=%s" % (s, o))
-        use_pltck = re.search(r'useplatformclock\s+no', o, re.I | re.M)
+            test.error(
+                "Failed to check the useplatfromclock after reboot, "
+                "status=%s, output=%s" % (s, o)
+            )
+        use_pltck = re.search(r"useplatformclock\s+no", o, re.I | re.M)
         if not use_pltck:
-            test.error("The useplatfromclock isn't off after reboot, "
-                       "output=%s" % o)
+            test.error("The useplatfromclock isn't off after reboot, " "output=%s" % o)
 
         test.log.info("Copy the related files to the guest")
         for f in gettime_filenames:
-            copy_file_cmd = utils_misc.set_winutils_letter(session,
-                                                           copy_cmd % f)
+            copy_file_cmd = utils_misc.set_winutils_letter(session, copy_cmd % f)
             session.cmd(copy_file_cmd)
         vm.graceful_shutdown(timeout=timeout)
 
@@ -59,7 +57,7 @@ def run(test, params, env):
         return: the cpu cycles amount of certain IO operation
         """
         o = session.cmd_output_safe(run_gettime_cmd, timeout=timeout)
-        cycles = int(re.search(r'\d+', o).group(0))
+        cycles = int(re.search(r"\d+", o).group(0))
         test.log.info("The cycles with out hv_time is %d", cycles)
         return cycles
 
@@ -105,10 +103,11 @@ def run(test, params, env):
         """
         factor = cycles_with_flag / float(cycles_without_flag)
         if factor > 0.1:
-            test.fail("Cycles with flag is %d, cycles without flag is %d, "
-                      "the factor is %f > 0.1" % (cycles_with_flag,
-                                                  cycles_without_flag,
-                                                  factor))
+            test.fail(
+                "Cycles with flag is %d, cycles without flag is %d, "
+                "the factor is %f > 0.1"
+                % (cycles_with_flag, cycles_without_flag, factor)
+            )
 
     close_pltclk_cmd = params["close_pltclk_cmd"]
     check_pltclk_cmd = params["check_pltclk_cmd"]
@@ -118,8 +117,9 @@ def run(test, params, env):
     timeout = params.get("timeout", 360)
     hv_time_flags = params["hv_time_flags"].split()
     flags_with_hv_time = params["cpu_model_flags"]
-    flags_without_hv_time = ','.join(
-        [_ for _ in flags_with_hv_time.split(',') if _ not in hv_time_flags])
+    flags_without_hv_time = ",".join(
+        [_ for _ in flags_with_hv_time.split(",") if _ not in hv_time_flags]
+    )
 
     error_context.context("Setting up environments", test.log.info)
     _setup_environments()

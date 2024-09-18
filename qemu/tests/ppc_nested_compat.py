@@ -19,19 +19,20 @@ def run(test, params, env):
     :param env: test environment.
     """
 
-    params['start_vm'] = 'yes'
-    error_msg = params['error_msg']
-    vm = env.get_vm(params['main_vm'])
+    params["start_vm"] = "yes"
+    error_msg = params["error_msg"]
+    vm = env.get_vm(params["main_vm"])
 
-    error_context.base_context('Try to create a qemu instance...', test.log.info)
+    error_context.base_context("Try to create a qemu instance...", test.log.info)
     try:
         vm.create(params=params)
     except VMCreateError as e:
         if not re.search(error_msg, e.output):
             test.log.error(e.output)
-            test.error('The error message could not be searched at qemu '
-                       'outputs.')
-        test.log.info('qemu terminated with the expected error message.')
+            test.error("The error message could not be searched at qemu " "outputs.")
+        test.log.info("qemu terminated with the expected error message.")
     else:
-        test.fail('The qemu instance should not be launched with '
-                  '"cap-nested-hv=on" and "max-cpu-compat=power8".')
+        test.fail(
+            "The qemu instance should not be launched with "
+            '"cap-nested-hv=on" and "max-cpu-compat=power8".'
+        )

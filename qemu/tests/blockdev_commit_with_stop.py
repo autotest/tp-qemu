@@ -1,16 +1,12 @@
 from avocado.utils import process
 
-from provider import backup_utils
-from provider import job_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitWithStop(BlockDevCommitTest):
-
-    def generate_tempfile(self, root_dir, filename="data",
-                          size="1000M", timeout=360):
-        backup_utils.generate_tempfile(
-            self.main_vm, root_dir, filename, size, timeout)
+    def generate_tempfile(self, root_dir, filename="data", size="1000M", timeout=360):
+        backup_utils.generate_tempfile(self.main_vm, root_dir, filename, size, timeout)
         self.files_info.append([root_dir, filename])
 
     def commit_snapshots(self):
@@ -25,8 +21,7 @@ class BlockdevCommitWithStop(BlockDevCommitTest):
         timeout = self.params.get("job_timeout", 600)
         self.main_vm.monitor.cmd(cmd, arguments)
         job_id = arguments.get("job-id", device)
-        job_utils.wait_until_job_status_match(self.main_vm, "paused",
-                                              job_id, timeout)
+        job_utils.wait_until_job_status_match(self.main_vm, "paused", job_id, timeout)
         process.system(self.params["extend_backend_space"])
         process.system(self.params["resize_backend_size"])
         args = {"id": job_id}

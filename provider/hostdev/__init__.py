@@ -129,11 +129,11 @@ class PFDevice:
         if current_driver:
             if current_driver == driver:
                 LOG_JOB.info(
-                    f"Notice: {slot_id} already bound to driver " f"{driver}, skipping"
+                    "Notice: %s already bound to driver %s, skipping", slot_id, driver
                 )
                 return
             self.unbind_one(slot_id)
-        LOG_JOB.info(f"Binding driver for device {slot_id}")
+        LOG_JOB.info("Binding driver for device %s", slot_id)
         # For kernels >= 3.15 driver_override can be used to specify the driver
         # for a device rather than relying on the driver to provide a positive
         # match of the device.
@@ -198,7 +198,7 @@ class PFDevice:
         """
         current_driver = self._get_current_driver(slot_id)
         if current_driver:
-            LOG_JOB.info(f'Unbinding current driver "{current_driver}"')
+            LOG_JOB.info('Unbinding current driver "%s"', current_driver)
             driver_path = PCI_DRV_PATH / current_driver
             try:
                 with (driver_path / "unbind").open("a") as unbind_f:
@@ -236,7 +236,7 @@ class VFDevice(PFDevice):
                 f"hostdev_vf{idx}_mac", utils_net.generate_mac_address_simple()
             )
             self.mac_addresses.append(mac)
-            LOG_JOB.info(f'Assigning MAC address "{mac}" to VF "{vf}"')
+            LOG_JOB.info('Assigning MAC address "%s" to VF "%s"', mac, vf)
             process.run(f"ip link set dev {dev_name} vf {idx} mac {mac}")
 
     def bind_all(self, driver):
@@ -256,8 +256,8 @@ class VFDevice(PFDevice):
         super().config(params)
         if (self.slot_path / "class").read_text()[2:4] == "02":
             LOG_JOB.info(
-                f'Device "{self.slot_id}" is a network device, configure MAC address '
-                f"for VFs"
+                'Device "%s" is a network device, configure MAC address for VFs',
+                self.slot_id,
             )
             self._config_net_vfs(params)
 

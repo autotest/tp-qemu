@@ -3,11 +3,9 @@ hot-plug discard disk testing
 """
 
 from avocado.utils import process
+from virttest import data_dir, error_context, storage
 
-from virttest import storage
-from virttest import error_context
 from provider.block_devices_plug import BlockDevicesPlug
-from virttest import data_dir
 
 
 @error_context.context_aware
@@ -32,8 +30,8 @@ def run(test, params, env):
     """
 
     def get_scsi_debug_disk():
-        """"
-         Get scsi debug disk on host which created as scsi-block.
+        """ "
+        Get scsi debug disk on host which created as scsi-block.
         """
         cmd = "lsblk -S -n -p|grep scsi_debug"
         status, output = process.getstatusoutput(cmd)
@@ -67,18 +65,16 @@ def run(test, params, env):
         vm.params["image_name_%s" % data_tag] = disk_name
     else:
         image_params = params.object_params(data_tag)
-        disk_name = storage.get_image_filename(image_params,
-                                               data_dir.get_data_dir())
+        disk_name = storage.get_image_filename(image_params, data_dir.get_data_dir())
 
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     plug = BlockDevicesPlug(vm)
     error_context.context("Hot-plug discarded disk in guest.", test.log.info)
     plug.hotplug_devs_serial(data_tag)
-    guest_disk_name = '/dev/' + plug[0]
+    guest_disk_name = "/dev/" + plug[0]
 
-    guest_format_command = params["guest_format_command"].format(
-        guest_disk_name)
+    guest_format_command = params["guest_format_command"].format(guest_disk_name)
     guest_dd_command = params["guest_dd_command"]
     guest_rm_command = params["guest_rm_command"]
 

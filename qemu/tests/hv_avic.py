@@ -1,4 +1,5 @@
 import time
+
 from virttest import error_context
 
 
@@ -49,12 +50,14 @@ def run(test, params, env):
         status = session.cmd_status("yum -y install %s" % cpuid_pkg, timeout=300)
         if status:
             test.error("Fail to install target cpuid")
-    error_context.context("Check the corresponding CPUID entries with "
-                          "the flag 'hv-avic'", test.log.info)
+    error_context.context(
+        "Check the corresponding CPUID entries with " "the flag 'hv-avic'",
+        test.log.info,
+    )
     output = session.cmd_output(check_cpuid_entry_cmd)
-    eax_value = output.splitlines()[-1].split()[2].split('0x')[-1]
-    eax_value = bin(int(eax_value, 16)).split('0b')[-1]
-    if eax_value[-4] != '0':
-        test.fail('CPUID 0x40000004.EAX BIT(3) not cleared')
-    if eax_value[-10] == '0':
-        test.fail('CPUID 0x40000004.EAX BIT(9) not set')
+    eax_value = output.splitlines()[-1].split()[2].split("0x")[-1]
+    eax_value = bin(int(eax_value, 16)).split("0b")[-1]
+    if eax_value[-4] != "0":
+        test.fail("CPUID 0x40000004.EAX BIT(3) not cleared")
+    if eax_value[-10] == "0":
+        test.fail("CPUID 0x40000004.EAX BIT(9) not set")

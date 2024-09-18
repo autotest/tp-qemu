@@ -2,17 +2,14 @@ import logging
 
 from avocado.core import exceptions
 from avocado.utils import process
-
-from virttest import storage
-from virttest import error_context
+from virttest import error_context, storage
 
 from qemu.tests import qemu_disk_img
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class ConvertTest(qemu_disk_img.QemuImgTest):
-
     def __init__(self, test, params, env):
         self.tag = params["convert_source"]
         t_params = params.object_params(self.tag)
@@ -28,8 +25,7 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         if t_params:
             params.update(t_params)
         cache_mode = params.get("cache_mode")
-        conv = super(ConvertTest, self).convert(
-            params, self.data_dir, cache_mode)
+        conv = super(ConvertTest, self).convert(params, self.data_dir, cache_mode)
         params = params.object_params(conv)
         converted = storage.get_image_filename(params, self.data_dir)
         process.run("sync")
@@ -44,15 +40,14 @@ class ConvertTest(qemu_disk_img.QemuImgTest):
         :param t_params: Dictionary with the test parameters
         """
         for mode in t_params.objects("compare_mode_list"):
-            error_context.context("Compare images in %s mode" % mode,
-                                  LOG_JOB.info)
+            error_context.context("Compare images in %s mode" % mode, LOG_JOB.info)
             cmd_result = None
-            is_strict = ("strict" == mode)
+            is_strict = "strict" == mode
             image1 = self.image_filename
             image2 = storage.get_image_filename(t_params, self.data_dir)
             try:
                 cmd_result = self.compare_images(image1, image2, is_strict)
-            except (exceptions.TestFail, exceptions.TestError) as detail:
+            except (exceptions.TestFail, exceptions.TestError):
                 if not is_strict:
                     raise
             if is_strict and cmd_result:
@@ -70,8 +65,11 @@ def run(test, params, env):
 
     base_image = params.get("images", "image1").split()[0]
     params.update(
-        {"image_name_%s" % base_image: params["image_name"],
-         "image_format_%s" % base_image: params["image_format"]})
+        {
+            "image_name_%s" % base_image: params["image_name"],
+            "image_format_%s" % base_image: params["image_format"],
+        }
+    )
     t_file = params["guest_file_name"]
     convert_test = ConvertTest(test, params, env)
     n_params = convert_test.create_snapshot()

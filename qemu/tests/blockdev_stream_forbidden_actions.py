@@ -9,14 +9,13 @@ class BlockdevStreamForbiddenActionsTest(BlockdevStreamNowaitTest):
     """Do qmp commands during block-stream"""
 
     def __init__(self, test, params, env):
-        super(BlockdevStreamForbiddenActionsTest, self).__init__(test,
-                                                                 params,
-                                                                 env)
+        super(BlockdevStreamForbiddenActionsTest, self).__init__(test, params, env)
         self._snapshot_images = self.params.objects("snapshot_images")
         self._trash = []
 
     def prepare_snapshot_file(self):
         """hotplug all snapshot images"""
+
         def _disk_define_by_params(tag):
             params = self.params.copy()
             params.setdefault("target_path", data_dir.get_data_dir())
@@ -31,51 +30,52 @@ class BlockdevStreamForbiddenActionsTest(BlockdevStreamNowaitTest):
         list(map(sp_admin.remove_volume, self._trash))
 
     def commit(self):
-        self.main_vm.monitor.cmd(
-            "block-commit", {'device': self._top_device}
-        )
+        self.main_vm.monitor.cmd("block-commit", {"device": self._top_device})
 
     def resize(self):
         self.main_vm.monitor.cmd(
-            "block_resize",
-            {'node-name': self._top_device, 'size': 1024*1024*1024}
+            "block_resize", {"node-name": self._top_device, "size": 1024 * 1024 * 1024}
         )
 
     def mirror(self):
         self.main_vm.monitor.cmd(
             "blockdev-mirror",
-            {'device': self._top_device,
-             'target': self.params['overlay_node'], 'sync': 'full'}
+            {
+                "device": self._top_device,
+                "target": self.params["overlay_node"],
+                "sync": "full",
+            },
         )
 
     def snapshot(self):
         self.main_vm.monitor.cmd(
             "blockdev-snapshot",
-            {'node': self._top_device, 'overlay': self.params['overlay_node']}
+            {"node": self._top_device, "overlay": self.params["overlay_node"]},
         )
 
     def stream(self):
-        self.main_vm.monitor.cmd("block-stream", {'device': self._top_device})
+        self.main_vm.monitor.cmd("block-stream", {"device": self._top_device})
 
     def do_forbidden_actions(self):
         """Run the qmp commands one by one, all should fail"""
-        for action in self.params.objects('forbidden_actions'):
-            error_msg = self.params['error_msg_%s' % action]
+        for action in self.params.objects("forbidden_actions"):
+            error_msg = self.params["error_msg_%s" % action]
             f = getattr(self, action)
             try:
                 f()
             except QMPCmdError as e:
                 if error_msg not in str(e):
-                    self.test.fail('Unexpected error: %s' % str(e))
+                    self.test.fail("Unexpected error: %s" % str(e))
             else:
-                self.test.fail('Unexpected qmp command success')
+                self.test.fail("Unexpected qmp command success")
 
     def do_test(self):
         self.create_snapshot()
         self.blockdev_stream()
         self.do_forbidden_actions()
-        self.main_vm.monitor.cmd("block-job-set-speed",
-                                 {'device': self._job, 'speed': 0})
+        self.main_vm.monitor.cmd(
+            "block-job-set-speed", {"device": self._job, "speed": 0}
+        )
         self.wait_stream_job_completed()
 
 

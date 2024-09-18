@@ -20,25 +20,31 @@ def run(test, params, env):
     try:
         for image in params.objects("images"):
             image_params = params.object_params(image)
-            transaction_test = live_snapshot_basic.LiveSnapshot(test,
-                                                                image_params,
-                                                                env, image)
+            transaction_test = live_snapshot_basic.LiveSnapshot(
+                test, image_params, env, image
+            )
             transaction_test.snapshot_args.update({"device": transaction_test.device})
             transaction_test.snapshot_file = image + "-snap"
             snapshot_file = transaction_test.get_snapshot_file()
             transaction_test.snapshot_args.update({"snapshot-file": snapshot_file})
-            args = {"type": "blockdev-snapshot-sync",
-                    "data": transaction_test.snapshot_args}
+            args = {
+                "type": "blockdev-snapshot-sync",
+                "data": transaction_test.snapshot_args,
+            }
             arg_list.append(args)
 
-        error_context.context("Create multiple live snapshots simultaneously"
-                              " with transaction", test.log.info)
+        error_context.context(
+            "Create multiple live snapshots simultaneously" " with transaction",
+            test.log.info,
+        )
         output = transaction_test.vm.monitor.transaction(arg_list)
         # return nothing on successful transaction
         if bool(output):
-            test.fail("Live snapshot transatcion failed,"
-                      " there should be nothing on success.\n"
-                      "More details: %s" % output)
+            test.fail(
+                "Live snapshot transatcion failed,"
+                " there should be nothing on success.\n"
+                "More details: %s" % output
+            )
         transaction_test.action_after_finished()
     finally:
         try:

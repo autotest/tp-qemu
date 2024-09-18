@@ -1,12 +1,9 @@
 import os
-import time
 import random
+import time
 
 from avocado.utils import crypto, process
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context, utils_misc, utils_net
 
 
 @error_context.context_aware
@@ -24,6 +21,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def reset_guest_udevrules(session, rules_file, rules_content):
         """
         Write guest udev rules, then reboot the guest and
@@ -80,26 +78,29 @@ def run(test, params, env):
     sys_path = params.get("sys_path") % (ethname)
     # readlink in RHEL4.8 doesn't have '-e' param, should use '-f' in RHEL4.8.
     readlink_cmd = params.get("readlink_command", "readlink -e")
-    driver = os.path.basename(session.cmd("%s %s" % (readlink_cmd,
-                                                     sys_path)).strip())
+    driver = os.path.basename(session.cmd("%s %s" % (readlink_cmd, sys_path)).strip())
     test.log.info("The guest interface %s using driver %s", ethname, driver)
 
-    error_context.context("Host test file prepare, create %dMB file on host" %
-                          filesize, test.log.info)
+    error_context.context(
+        "Host test file prepare, create %dMB file on host" % filesize, test.log.info
+    )
     tmp_dir = data_dir.get_tmp_dir()
-    host_path = os.path.join(tmp_dir, "host_file_%s" %
-                             utils_misc.generate_random_string(8))
-    guest_path = os.path.join("/home", "guest_file_%s" %
-                              utils_misc.generate_random_string(8))
+    host_path = os.path.join(
+        tmp_dir, "host_file_%s" % utils_misc.generate_random_string(8)
+    )
+    guest_path = os.path.join(
+        "/home", "guest_file_%s" % utils_misc.generate_random_string(8)
+    )
     cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (host_path, filesize)
     process.run(cmd)
     file_checksum = crypto.hash_file(host_path, algorithm="md5")
 
-    error_context.context("Guest test file prepare, Copy file %s from host to "
-                          "guest" % host_path, test.log.info)
+    error_context.context(
+        "Guest test file prepare, Copy file %s from host to " "guest" % host_path,
+        test.log.info,
+    )
     vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
-    if session.cmd_status("md5sum %s | grep %s" %
-                          (guest_path, file_checksum)):
+    if session.cmd_status("md5sum %s | grep %s" % (guest_path, file_checksum)):
         test.cancel("File MD5SUMs changed after copy to guest")
     test.log.info("Test env prepare successfully")
 
@@ -115,12 +116,14 @@ def run(test, params, env):
             host_sess_path = os.path.join(tmp_dir, "dst-%s" % sess_index)
 
             thread1 = utils_misc.InterruptedThread(
-                vm.copy_files_to, (host_path, sess_path),
-                {"timeout": transfer_timeout})
+                vm.copy_files_to, (host_path, sess_path), {"timeout": transfer_timeout}
+            )
 
             thread2 = utils_misc.InterruptedThread(
-                vm.copy_files_from, (guest_path, host_sess_path),
-                {"timeout": transfer_timeout})
+                vm.copy_files_from,
+                (guest_path, host_sess_path),
+                {"timeout": transfer_timeout},
+            )
             thread1.start()
             threads.append(thread1)
             thread2.start()
@@ -131,11 +134,13 @@ def run(test, params, env):
         utils_misc.wait_for(lambda: all_threads_alive(threads), 60, 10, 1)
 
         time.sleep(5)
-        error_context.context("Repeatedly unload/load NIC driver during file "
-                              "transfer", test.log.info)
+        error_context.context(
+            "Repeatedly unload/load NIC driver during file " "transfer", test.log.info
+        )
         while not all_threads_done(threads):
-            error_context.context("Shutdown the driver for NIC interface.",
-                                  test.log.info)
+            error_context.context(
+                "Shutdown the driver for NIC interface.", test.log.info
+            )
             sleep_time = random.randint(1, 5)
             error_context.context("Unload  NIC driver.", test.log.info)
             session_serial.cmd_output_safe("modprobe -r %s" % driver)
@@ -145,17 +150,20 @@ def run(test, params, env):
             time.sleep(sleep_time)
 
         # files md5sums check
-        error_context.context("File transfer finished, checking files md5sums",
-                              test.log.info)
+        error_context.context(
+            "File transfer finished, checking files md5sums", test.log.info
+        )
         err_info = []
         for copied_file in file_paths:
-            if session_serial.cmd_status("md5sum %s | grep %s" %
-                                         (copied_file, file_checksum)):
+            if session_serial.cmd_status(
+                "md5sum %s | grep %s" % (copied_file, file_checksum)
+            ):
                 err_msg = "Guest file %s md5sum changed"
                 err_info.append(err_msg % copied_file)
         for copied_file in host_file_paths:
-            if process.system("md5sum %s | grep %s" %
-                              (copied_file, file_checksum), shell=True):
+            if process.system(
+                "md5sum %s | grep %s" % (copied_file, file_checksum), shell=True
+            ):
                 err_msg = "Host file %s md5sum changed"
                 err_info.append(err_msg % copied_file)
         if err_info:

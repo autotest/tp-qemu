@@ -1,13 +1,10 @@
-import re
 import json
+import re
 
-from virttest import arch
-from virttest import utils_misc
-from virttest import error_context
+from virttest import arch, error_context, utils_misc
 from virttest.qemu_monitor import QMPCmdError
 
-from provider import cpu_utils
-from provider import win_wora
+from provider import cpu_utils, win_wora
 
 
 @error_context.context_aware
@@ -23,8 +20,9 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    not_match_err = ("Hotplug %s failed but the error description does not "
-                     "match: '%s'")
+    not_match_err = (
+        "Hotplug %s failed but the error description does not " "match: '%s'"
+    )
     expected_info = "Hotplug %s failed as expected, error description: '%s'"
     hotplug_pass_err = "Still able to hotplug %s via qmp"
 
@@ -35,10 +33,12 @@ def run(test, params, env):
         for vcpu_prop in vcpu_props:
             main_vcpu_props.setdefault(vcpu_prop, "0")
         vm.params["vcpu_props_main_vcpu"] = json.dumps(main_vcpu_props)
-        error_context.context("Define the invalid vcpu: %s" % "main_vcpu",
-                              test.log.info)
-        in_use_vcpu_dev = vm.devices.vcpu_device_define_by_params(vm.params,
-                                                                  "main_vcpu")
+        error_context.context(
+            "Define the invalid vcpu: %s" % "main_vcpu", test.log.info
+        )
+        in_use_vcpu_dev = vm.devices.vcpu_device_define_by_params(
+            vm.params, "main_vcpu"
+        )
         try:
             error_context.context("Hotplug the main vcpu", test.log.info)
             in_use_vcpu_dev.enable(vm.monitor)
@@ -51,27 +51,26 @@ def run(test, params, env):
             test.fail(hotplug_pass_err % "main vcpu")
 
         # New vCPU
-        error_context.context("hotplug vcpu device: %s" % vcpu_device_id,
-                              test.log.info)
+        error_context.context("hotplug vcpu device: %s" % vcpu_device_id, test.log.info)
         vm.hotplug_vcpu_device(vcpu_device_id)
         if not utils_misc.wait_for(
-                lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 10):
+            lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 10
+        ):
             test.fail("Actual number of guest CPUs is not equal to expected")
 
         # Duplicate vCPU
-        duplicate_vcpu_params = vm.devices.get_by_qid(
-            vcpu_device_id)[0].params.copy()
+        duplicate_vcpu_params = vm.devices.get_by_qid(vcpu_device_id)[0].params.copy()
         del duplicate_vcpu_params["id"]
-        vm.params["vcpu_props_duplicate_vcpu"] = json.dumps(
-            duplicate_vcpu_params)
+        vm.params["vcpu_props_duplicate_vcpu"] = json.dumps(duplicate_vcpu_params)
         duplicate_vcpu_dev = vm.devices.vcpu_device_define_by_params(
-            vm.params, "duplicate_vcpu")
+            vm.params, "duplicate_vcpu"
+        )
         try:
             error_context.context("hotplug the duplicate vcpu", test.log.info)
             duplicate_vcpu_dev.enable(vm.monitor)
         except QMPCmdError as err:
             dev_count = maxcpus
-            if 'ppc64' in arch_name:
+            if "ppc64" in arch_name:
                 dev_count //= threads
             qmp_desc = err.data["desc"]
             if not re.match(error_desc.format(str(dev_count - 1)), qmp_desc):
@@ -110,14 +109,18 @@ def run(test, params, env):
             vcpu_device.enable(vm.monitor)
         except QMPCmdError as err:
             qmp_desc = err.data["desc"]
-            if error_desc.format(outofrange_vcpu_num, vcpu_props[0],
-                                 (vcpu_bus.addr_lengths[0] - 1)) != qmp_desc:
+            if (
+                error_desc.format(
+                    outofrange_vcpu_num, vcpu_props[0], (vcpu_bus.addr_lengths[0] - 1)
+                )
+                != qmp_desc
+            ):
                 test.error(not_match_err % ("out_of_range vcpu", qmp_desc))
             test.log.info(expected_info, "out_of_range vcpu", qmp_desc)
         else:
             test.fail(hotplug_pass_err % "out_of_range vcpu")
 
-    arch_name = params.get('vm_arch_name', arch.ARCH)
+    arch_name = params.get("vm_arch_name", arch.ARCH)
     vcpu_device_id = params["vcpu_devices"]
     error_desc = params["error_desc"]
     vm = env.get_vm(params["main_vm"])
@@ -127,19 +130,22 @@ def run(test, params, env):
     if params.get_boolean("workaround_need"):
         win_wora.modify_driver(params, session)
 
-    error_context.context("Check the number of guest CPUs after startup",
-                          test.log.info)
+    error_context.context("Check the number of guest CPUs after startup", test.log.info)
     if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
-        test.error("The number of guest CPUs is not equal to the qemu command "
-                   "line configuration")
+        test.error(
+            "The number of guest CPUs is not equal to the qemu command "
+            "line configuration"
+        )
 
-    vcpu_bus = vm.devices.get_buses({'aobject': 'vcpu'})[0]
+    vcpu_bus = vm.devices.get_buses({"aobject": "vcpu"})[0]
     vcpu_props = vcpu_bus.addr_items
     maxcpus = vm.cpuinfo.maxcpus
     threads = vm.cpuinfo.threads
 
-    invalid_hotplug_tests = {"in_use_vcpu": hotplug_inuse_vcpu,
-                             "invalid_vcpu": hotplug_invalid_vcpu,
-                             "out_of_range_vcpu": hotplug_outofrange_vcpu}
+    invalid_hotplug_tests = {
+        "in_use_vcpu": hotplug_inuse_vcpu,
+        "invalid_vcpu": hotplug_invalid_vcpu,
+        "out_of_range_vcpu": hotplug_outofrange_vcpu,
+    }
     invalid_hotplug_tests[params["execute_test"]]()
     session.close()

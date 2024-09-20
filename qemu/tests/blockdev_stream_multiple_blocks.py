@@ -1,21 +1,17 @@
 import logging
 
 from provider import backup_utils
-
 from provider.blockdev_base import BlockdevBaseTest
 from provider.blockdev_stream_parallel import BlockdevStreamParallelTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
-class BlockdevStreamMultipleBlocksTest(BlockdevStreamParallelTest,
-                                       BlockdevBaseTest):
+class BlockdevStreamMultipleBlocksTest(BlockdevStreamParallelTest, BlockdevBaseTest):
     """Do block-stream for multiple disks in parallel"""
 
     def __init__(self, test, params, env):
-        super(BlockdevStreamMultipleBlocksTest, self).__init__(test,
-                                                               params,
-                                                               env)
+        super(BlockdevStreamMultipleBlocksTest, self).__init__(test, params, env)
         self._source_images = self.params.objects("source_images")
         self._snapshot_images = self.params.objects("snapshot_images")
         self.disks_info = {}  # tag, [dev, mount_point]
@@ -52,7 +48,7 @@ class BlockdevStreamMultipleBlocksTest(BlockdevStreamParallelTest,
             backup_utils.blockdev_snapshot(
                 self.main_vm,
                 "drive_%s" % source,
-                "drive_%s" % self._snapshot_images[idx]
+                "drive_%s" % self._snapshot_images[idx],
             )
 
     def post_test(self):

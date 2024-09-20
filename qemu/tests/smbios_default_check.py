@@ -19,13 +19,17 @@ def run(test, params, env):
         msg_log = "Check " + template + " info"
         error_context.context(msg_log, test.log.info)
         cmd_output = session.cmd_output(cmd)
-        cmd_output_re = re.split('\n', cmd_output.strip('\n'))[-1].strip(' ')
+        cmd_output_re = re.split("\n", cmd_output.strip("\n"))[-1].strip(" ")
         template = params[template]
         if not re.match(template, cmd_output_re):
             return cmd_output_re
 
-    re_template = ["System_Manufacturer", "System_SKU_Number",
-                   "Baseboard_Manufacturer", "Baseboard_Product_Name"]
+    re_template = [
+        "System_Manufacturer",
+        "System_SKU_Number",
+        "Baseboard_Manufacturer",
+        "Baseboard_Product_Name",
+    ]
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -41,10 +45,12 @@ def run(test, params, env):
     for cmd, template in zip(check_info_cmd, re_template):
         output = check_info(cmd, template)
         if output:
-            e_msg = ("%s mismatch, out: %s" % (template, output))
+            e_msg = "%s mismatch, out: %s" % (template, output)
             failures.append(e_msg)
     session.close()
 
     if failures:
-        test.fail("Smbios default check test reported %s failures:\n%s"
-                  % (len(failures), "\n".join(failures)))
+        test.fail(
+            "Smbios default check test reported %s failures:\n%s"
+            % (len(failures), "\n".join(failures))
+        )

@@ -1,11 +1,11 @@
 import logging
 import os
+
 from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData
-from virttest import env_process
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import env_process, utils_misc, utils_test
 from virttest.utils_test.qemu import migration
+
 from provider import cpuflags
 
 
@@ -42,7 +42,6 @@ def run(test, params, env):
         base_class = migration.MultihostMigrationRdma
 
     class TestMultihostMigration(base_class):
-
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.srchost = self.params.get("hosts")[0]
@@ -54,12 +53,13 @@ def run(test, params, env):
             self.stress_memory = int(params.get("stress_memory", "128"))
             self.stress_type = params.get("stress_type", "none")
             self.migrate_count = int(params.get("migrate_count", "3")) - 1
-            self.migration_timeout = int(params.get("migration_timeout",
-                                                    "240"))
+            self.migration_timeout = int(params.get("migration_timeout", "240"))
             self.disk_usage = int(params.get("disk_usage", "512"))
-            self.id = {'src': self.srchost,
-                       'dst': self.dsthost,
-                       "type": "file_transfer"}
+            self.id = {
+                "src": self.srchost,
+                "dst": self.dsthost,
+                "type": "file_transfer",
+            }
             self.vmaddr = None
             self.cpuflags_test_out = os.path.join("/tmp", "cpuflags_test.out")
             self.disktest_out = os.path.join("/tmp", "disktest.out")
@@ -94,20 +94,21 @@ def run(test, params, env):
                     cpu_flags_out = ""
                     disk_out = ""
                     if "cpuflags-test" in run_error:
-                        cpu_flags_out = ("\ncpuflags_test_output: \n" +
-                                         session.cmd_output("cat %s" %
-                                                            (self.cpuflags_test_out)))
+                        cpu_flags_out = (
+                            "\ncpuflags_test_output: \n"
+                            + session.cmd_output("cat %s" % (self.cpuflags_test_out))
+                        )
                     if "disktest" in run_error:
-                        disk_out = ("\ndisk_test_output: \n" +
-                                    session.cmd_output("cat %s" %
-                                                       (self.disktest_out)))
-                    raise error.TestFail("Something wrong happened"
-                                         " during migration %s"
-                                         " should be running all time"
-                                         " during this test."
-                                         " outputs%s%s" %
-                                         (run_error, cpu_flags_out,
-                                          disk_out))
+                        disk_out = "\ndisk_test_output: \n" + session.cmd_output(
+                            "cat %s" % (self.disktest_out)
+                        )
+                    raise error.TestFail(
+                        "Something wrong happened"
+                        " during migration %s"
+                        " should be running all time"
+                        " during this test."
+                        " outputs%s%s" % (run_error, cpu_flags_out, disk_out)
+                    )
 
         def _prepare_vm(self, vm_name):
             """
@@ -119,12 +120,16 @@ def run(test, params, env):
             """
             new_params = self.params.copy()
 
-            new_params['migration_mode'] = None
-            new_params['start_vm'] = 'yes'
+            new_params["migration_mode"] = None
+            new_params["start_vm"] = "yes"
             self.vm_lock.acquire()
-            env_process.process(self.test, new_params, self.env,
-                                env_process.preprocess_image,
-                                env_process.preprocess_vm)
+            env_process.process(
+                self.test,
+                new_params,
+                self.env,
+                env_process.preprocess_image,
+                env_process.preprocess_vm,
+            )
             self.vm_lock.release()
             vm = self.env.get_vm(vm_name)
             vm.wait_for_login(timeout=self.login_timeout)
@@ -132,76 +137,81 @@ def run(test, params, env):
 
         def ping_pong_migrate(self, sync, worker):
             for _ in range(self.migrate_count):
-                logging.info("File transfer not ended, starting"
-                             " a round of migration...")
+                logging.info(
+                    "File transfer not ended, starting" " a round of migration..."
+                )
                 sync.sync(True, timeout=self.migration_timeout)
-                self.migrate_wait([self.vm],
-                                  self.srchost,
-                                  self.dsthost)
+                self.migrate_wait([self.vm], self.srchost, self.dsthost)
                 tmp = self.dsthost
                 self.dsthost = self.srchost
                 self.srchost = tmp
 
         def install_disktest(self):
-            test.job.setup_dep(['disktest'])
-            self.disk_srcdir = os.path.join(test.autodir, "deps",
-                                            "disktest", "src")
+            test.job.setup_dep(["disktest"])
+            self.disk_srcdir = os.path.join(test.autodir, "deps", "disktest", "src")
 
         def migration_scenario(self):
-            error.context("Migration from %s to %s over protocol %s." %
-                          (self.srchost, self.dsthost, mig_protocol),
-                          logging.info)
-            sync = SyncData(self.master_id(), self.hostid, self.hosts,
-                            self.id, self.sync_server)
+            error.context(
+                "Migration from %s to %s over protocol %s."
+                % (self.srchost, self.dsthost, mig_protocol),
+                logging.info,
+            )
+            sync = SyncData(
+                self.master_id(), self.hostid, self.hosts, self.id, self.sync_server
+            )
             address_cache = env.get("address_cache")
 
             def worker_cpu_mem(mig_data):
                 vm = mig_data.vms[0]
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
-                cpuflags.install_cpuflags_util_on_vm(test, vm,
-                                                     self.install_path,
-                                                     extra_flags="-msse3 -msse2")
+                cpuflags.install_cpuflags_util_on_vm(
+                    test, vm, self.install_path, extra_flags="-msse3 -msse2"
+                )
 
-                cmd = ("nohup %s/cpuflags-test --stressmem %d,32"
-                       " > %s &" %
-                       (os.path.join(self.install_path, "cpu_flags"),
-                        self.stress_memory,
-                        self.cpuflags_test_out))
+                cmd = "nohup %s/cpuflags-test --stressmem %d,32" " > %s &" % (
+                    os.path.join(self.install_path, "cpu_flags"),
+                    self.stress_memory,
+                    self.cpuflags_test_out,
+                )
                 logging.debug("Sending command: %s", cmd)
                 session.sendline(cmd)
                 if session.cmd_status("killall -s 0 cpuflags-test") != 0:
-                    cpu_flags_out = ("\n cpuflags_test_output: \n" +
-                                     session.cmd_output("cat %s" %
-                                                        (self.cpuflags_test_out)))
-                    raise error.TestFail("Something wrong happened"
-                                         " during migration cpuflags-test"
-                                         " should be running all time"
-                                         " during this test.\n%s" %
-                                         (cpu_flags_out))
+                    cpu_flags_out = "\n cpuflags_test_output: \n" + session.cmd_output(
+                        "cat %s" % (self.cpuflags_test_out)
+                    )
+                    raise error.TestFail(
+                        "Something wrong happened"
+                        " during migration cpuflags-test"
+                        " should be running all time"
+                        " during this test.\n%s" % (cpu_flags_out)
+                    )
 
             def worker_disk(mig_data):
                 vm = mig_data.vms[0]
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
-                utils_misc.install_disktest_on_vm(test, vm, self.disk_srcdir,
-                                                  self.install_path)
+                utils_misc.install_disktest_on_vm(
+                    test, vm, self.disk_srcdir, self.install_path
+                )
 
-                cmd = ("nohup %s/disktest -m %s -L -S > %s &" %
-                       (os.path.join(self.install_path, "disktest", "src"),
-                        self.disk_usage,
-                        self.disktest_out))
+                cmd = "nohup %s/disktest -m %s -L -S > %s &" % (
+                    os.path.join(self.install_path, "disktest", "src"),
+                    self.disk_usage,
+                    self.disktest_out,
+                )
                 logging.debug("Sending command: %s", cmd)
                 session.sendline(cmd)
                 if session.cmd_status("killall -s 0 disktest") != 0:
-                    disk_out = ("\n cpuflags_test_output: \n" +
-                                session.cmd_output("cat %s" %
-                                                   (self.disktest_out)))
-                    raise error.TestFail("Something wrong happened"
-                                         " during migration disktest"
-                                         " should be running all time"
-                                         " during this test.\n%s" %
-                                         (disk_out))
+                    disk_out = "\n cpuflags_test_output: \n" + session.cmd_output(
+                        "cat %s" % (self.disktest_out)
+                    )
+                    raise error.TestFail(
+                        "Something wrong happened"
+                        " during migration disktest"
+                        " should be running all time"
+                        " during this test.\n%s" % (disk_out)
+                    )
 
             def worker_all(mig_data):
                 worker_cpu_mem(mig_data)
@@ -212,16 +222,16 @@ def run(test, params, env):
                 self.worker = worker_cpu_mem
 
             elif self.stress_type == "disk":
-                if (self.hostid == self.master_id()):
+                if self.hostid == self.master_id():
                     self.install_disktest()
                 self.worker = worker_disk
 
             elif self.stress_type == "all":
-                if (self.hostid == self.master_id()):
+                if self.hostid == self.master_id():
                     self.install_disktest()
                 self.worker = worker_all
 
-            if (self.hostid == self.master_id()):
+            if self.hostid == self.master_id():
                 self.vm_addr = self._prepare_vm(self.vm).get_address()
                 self._hosts_barrier(self.hosts, self.id, "befor_mig", 120)
                 sync.sync(address_cache, timeout=120)
@@ -229,8 +239,9 @@ def run(test, params, env):
                 self._hosts_barrier(self.hosts, self.id, "befor_mig", 260)
                 address_cache.update(sync.sync(timeout=120)[self.master_id()])
 
-            self.migrate_wait([self.vm], self.srchost, self.dsthost,
-                              start_work=self.worker)
+            self.migrate_wait(
+                [self.vm], self.srchost, self.dsthost, start_work=self.worker
+            )
             sync.sync(True, timeout=self.migration_timeout)
             tmp = self.dsthost
             self.dsthost = self.srchost

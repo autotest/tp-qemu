@@ -1,11 +1,8 @@
 import os
 
-from provider.virt_storage.helper import rbdcli
-
-from provider.virt_storage import storage_volume
-from provider.virt_storage import virt_source
-from provider.virt_storage import virt_target
+from provider.virt_storage import storage_volume, virt_source, virt_target
 from provider.virt_storage.backend import base
+from provider.virt_storage.helper import rbdcli
 
 
 class RBDPool(base.BaseStoragePool):
@@ -32,9 +29,7 @@ class RBDPool(base.BaseStoragePool):
         pass
 
     def refresh(self):
-        files = filter(
-            lambda x: not self.find_volume_by_path,
-            self.find_sources())
+        files = filter(lambda x: not self.find_volume_by_path, self.find_sources())
         return map(self.create_volume_on_rbd, files)
 
     def create_volume_on_rbd(self, path):
@@ -73,9 +68,10 @@ class RBDPool(base.BaseStoragePool):
     def pool_define_by_params(cls, name, params):
         inst = cls(name)
         inst.target = virt_target.PoolTarget.target_define_by_params(params)
-        inst.target.path = params['rbd_pool_name']
+        inst.target.path = params["rbd_pool_name"]
         source_params = params.object_params(name)
         inst.source = virt_source.PoolSource.source_define_by_params(
-                                                 name, source_params)
+            name, source_params
+        )
         inst.set_special_opts_by_params(params)
         return inst

@@ -1,11 +1,8 @@
-import re
 import os
+import re
 
 from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -24,7 +21,7 @@ def run(test, params, env):
         """
         Check log info
         """
-        logs = vm.logsessions['seabios'].get_output()
+        logs = vm.logsessions["seabios"].get_output()
         result = re.search(info, logs, re.S)
         return result
 
@@ -44,9 +41,9 @@ def run(test, params, env):
     if cdrom_test:
         create_cdroms(cdrom_test)
     params["start_vm"] = "yes"
-    env_process.process(test, params, env,
-                        env_process.preprocess_image,
-                        env_process.preprocess_vm)
+    env_process.process(
+        test, params, env, env_process.preprocess_image, env_process.preprocess_vm
+    )
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
@@ -55,11 +52,9 @@ def run(test, params, env):
             expect_result = check_info_pattern
         elif boot_splash_time:
             splash_time_pattern = params.get("splash_time_pattern")
-            expect_result = (splash_time_pattern %
-                             (int(boot_splash_time) // 1000))
+            expect_result = splash_time_pattern % (int(boot_splash_time) // 1000)
         if not utils_misc.wait_for(lambda: info_check(expect_result), timeout):  # pylint: disable=E0606
-            test.fail("Does not get expected result from bios log: %s"
-                      % expect_result)
+            test.fail("Does not get expected result from bios log: %s" % expect_result)
     finally:
         if params.get("cdroms") == "test":
             test.log.info("cleaning up temp cdrom images")

@@ -1,8 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import error_context, utils_misc, utils_test
 
 
 @error_context.context_aware
@@ -22,8 +20,7 @@ def run(test, params, env):
     name = params["main_vm"]
     if params.get("need_install") == "yes":
         error_context.context("Install guest with a new image", test.log.info)
-        utils_test.run_virt_sub_test(test, params, env,
-                                     sub_type='unattended_install')
+        utils_test.run_virt_sub_test(test, params, env, sub_type="unattended_install")
         params["cdroms"] = ""
         params["unattended_file"] = ""
         params["cdrom_unattended"] = ""
@@ -44,8 +41,7 @@ def run(test, params, env):
         drive_serial = str(params["drive_serial_stg"])
         expect_physical = int(params.get("physical_block_size_stg", 512))
         expect_logical = int(params.get("logical_block_size_stg", 512))
-        error_context.context("Verify physical/Logical block size",
-                              test.log.info)
+        error_context.context("Verify physical/Logical block size", test.log.info)
         if params["os_type"] == "linux":
             drive_path = utils_misc.get_linux_drive_path(session, drive_serial)
             if not drive_path:
@@ -68,10 +64,13 @@ def run(test, params, env):
                     break
             else:
                 test.error("Could not find the specified device")
-            out_physical = int(re.search(r'PhysicalSectorSize\s*:\s*(\d+)', target_blk).group(1))
-            out_logical = int(re.search(r'LogicalSectorSize\s*:\s(\d+)', target_blk).group(1))
-        if ((out_physical != expect_physical) or
-                (out_logical != expect_logical)):
+            out_physical = int(
+                re.search(r"PhysicalSectorSize\s*:\s*(\d+)", target_blk).group(1)
+            )
+            out_logical = int(
+                re.search(r"LogicalSectorSize\s*:\s(\d+)", target_blk).group(1)
+            )
+        if (out_physical != expect_physical) or (out_logical != expect_logical):
             msg = "Block size in guest doesn't match with qemu parameter\n"
             msg += "Physical block size in guest: %s, " % out_physical
             msg += "expect: %s" % expect_physical

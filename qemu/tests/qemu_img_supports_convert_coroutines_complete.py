@@ -20,6 +20,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _get_img_obj_and_params(tag):
         """Get an QemuImg object and its params based on the tag."""
         img_param = params.object_params(tag)
@@ -34,8 +35,9 @@ def run(test, params, env):
 
     def _create_error_cfg(file):
         test.log.info("Create error cfg %s.", file)
-        error_cfg = ('[inject-error]\nevent = "write_aio"\n'
-                     'sector = "819200"\nonce = "on"')
+        error_cfg = (
+            '[inject-error]\nevent = "write_aio"\n' 'sector = "819200"\nonce = "on"'
+        )
         with open(file, "w") as cfg:
             cfg.write(error_cfg)
 
@@ -44,9 +46,11 @@ def run(test, params, env):
             pkg = utils_package.LocalPackageMgr("valgrind")
             pkg.install()
             _create_error_cfg(file)
-            cmd = ("valgrind --soname-synonyms=somalloc=libtcmalloc.so "
-                   "qemu-img convert -npWO qcow2 source.qcow2 "
-                   "blkdebug:%s:target.qcow2" % file)
+            cmd = (
+                "valgrind --soname-synonyms=somalloc=libtcmalloc.so "
+                "qemu-img convert -npWO qcow2 source.qcow2 "
+                "blkdebug:%s:target.qcow2" % file
+            )
             stderr = process.run(cmd, ignore_status=True).stderr_text
             if "ERROR SUMMARY: 0 errors from 0 contexts" not in stderr:
                 test.fail("There should be no errors in the summary.")
@@ -59,6 +63,6 @@ def run(test, params, env):
         img, img_param = _get_img_obj_and_params(tag)
         img.create(img_param)
         if tag == "source":
-            _qemu_io(img, 'write 0 1G')
+            _qemu_io(img, "write 0 1G")
 
     _inject_error_and_verify(params["error_cfg"])

@@ -1,6 +1,4 @@
-from virttest import data_dir
-from virttest import storage
-from virttest import qemu_storage
+from virttest import data_dir, qemu_storage, storage
 
 from provider import backup_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
@@ -12,13 +10,11 @@ class BlockdevCommitBackingFile(BlockDevCommitTest):
             self.main_vm.destroy()
         device = self.params["snapshot_tags"].split()[-1]
         device_params = self.params.object_params(device)
-        image_obj = qemu_storage.QemuImg(device_params,
-                                         data_dir.get_data_dir(), device)
+        image_obj = qemu_storage.QemuImg(device_params, data_dir.get_data_dir(), device)
         output = image_obj.info()
         self.test.log.info(output)
         if self.backing_file not in output:
-            self.test.fail("The backing file info of % is not correct"
-                           % device)
+            self.test.fail("The backing file info of % is not correct" % device)
 
     def commit_snapshots(self):
         device = self.params.get("device_tag")
@@ -29,8 +25,9 @@ class BlockdevCommitBackingFile(BlockDevCommitTest):
         arguments = self.params.copy_from_keys(options)
         arguments["base-node"] = self.get_node_name(device)
         backing_file = self.params.object_params(snapshot_tags[-2])
-        self.backing_file = storage.get_image_filename(backing_file,
-                                                       data_dir.get_data_dir())
+        self.backing_file = storage.get_image_filename(
+            backing_file, data_dir.get_data_dir()
+        )
         arguments["backing-file"] = self.backing_file
         arguments["top-node"] = self.get_node_name(snapshot_tags[-2])
         device = self.get_node_name(snapshot_tags[-1])

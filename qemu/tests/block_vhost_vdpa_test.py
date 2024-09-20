@@ -1,13 +1,14 @@
 """VDPA blk vhost vdpa test"""
+
+from aexpect import ShellCmdError
 from avocado.core import exceptions
 from avocado.utils import process
-
-from provider.block_devices_plug import BlockDevicesPlug
-from provider.vdpa_sim_utils import VhostVdpaBlkSimulatorTest
 from virttest import env_process, utils_disk, utils_misc, virt_vm
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
-from aexpect import ShellCmdError
+
+from provider.block_devices_plug import BlockDevicesPlug
+from provider.vdpa_sim_utils import VhostVdpaBlkSimulatorTest
 
 
 def run(test, params, env):
@@ -41,7 +42,7 @@ def run(test, params, env):
     def _setup_vdpa_disks():
         for img in vdpa_blk_images:
             dev = vdpa_blk_test.add_dev(img)
-            logger.debug("Add vhost device %s %s" % (img, dev))
+            logger.debug("Add vhost device %s %s", img, dev)
 
     def _cleanup_vdpa_disks():
         for img in vdpa_blk_images:
@@ -55,8 +56,8 @@ def run(test, params, env):
 
     def _check_disk_in_guest(img):
         os_type = params["os_type"]
-        logger.debug("Check disk %s in guest" % img)
-        if os_type == 'windows':
+        logger.debug("Check disk %s in guest", img)
+        if os_type == "windows":
             img_size = params.get("image_size_%s" % img)
             cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             disk = _get_window_disk_index_by_serial(img)
@@ -64,9 +65,9 @@ def run(test, params, env):
             logger.info("Clean disk:%s", disk)
             utils_disk.clean_partition_windows(session, disk)
             logger.info("Formatting disk:%s", disk)
-            driver = \
-                utils_disk.configure_empty_disk(session, disk, img_size,
-                                                os_type)[0]
+            driver = utils_disk.configure_empty_disk(session, disk, img_size, os_type)[
+                0
+            ]
             output_path = driver + ":\\test.dat"
             cmd = cmd.format(output_path)
         else:
@@ -116,11 +117,11 @@ def run(test, params, env):
 
         locals_var = locals()
         if host_operation:
-            logger.debug("Execute operation %s" % host_operation)
+            logger.debug("Execute operation %s", host_operation)
             locals_var[host_operation]()
 
         logger.debug("Ready boot VM...")
-        params["start_vm"] = 'yes'
+        params["start_vm"] = "yes"
         login_timeout = params.get_numeric("login_timeout", 360)
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         vm = env.get_vm(params["main_vm"])
@@ -128,7 +129,7 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
 
         if guest_operation:
-            logger.debug("Execute guest operation %s" % guest_operation)
+            logger.debug("Execute guest operation %s", guest_operation)
             locals_var[guest_operation]()
 
         logger.debug("Destroy VM...")
@@ -136,9 +137,9 @@ def run(test, params, env):
         vm.destroy()
         vm = None
     except (virt_vm.VMCreateError, ShellCmdError) as e:
-        logger.debug("Find exception %s" % e)
+        logger.debug("Find exception %s", e)
         if expect_to_fail == "yes" and err_msg in e.output:
-            logger.info("%s is expected " % err_msg)
+            logger.info("%s is expected ", err_msg)
             # reset expect_to_fail
             expect_to_fail = "no"
         else:

@@ -1,9 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import utils_test
+from virttest import error_context, utils_misc, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -71,24 +68,19 @@ def run(test, params, env):
     if os_type == "linux":
         interface = utils_net.get_linux_ifname(session_serial, old_mac)
         if params.get("shutdown_int", "yes") == "yes":
-            int_shutdown_cmd = params.get("int_shutdown_cmd",
-                                          "ifconfig %s down")
+            int_shutdown_cmd = params.get("int_shutdown_cmd", "ifconfig %s down")
             session_serial.cmd_output_safe(int_shutdown_cmd % interface)
     else:
-
-        connection_id = utils_net.get_windows_nic_attribute(session_serial,
-                                                            "macaddress",
-                                                            old_mac,
-                                                            "netconnectionid")
-        nic_index = utils_net.get_windows_nic_attribute(session_serial,
-                                                        "netconnectionid",
-                                                        connection_id,
-                                                        "index")
+        connection_id = utils_net.get_windows_nic_attribute(
+            session_serial, "macaddress", old_mac, "netconnectionid"
+        )
+        nic_index = utils_net.get_windows_nic_attribute(
+            session_serial, "netconnectionid", connection_id, "index"
+        )
         if os_variant == "winxp" and session is not None:
-            pnpdevice_id = utils_net.get_windows_nic_attribute(session,
-                                                               "netconnectionid",
-                                                               connection_id,
-                                                               "pnpdeviceid")
+            pnpdevice_id = utils_net.get_windows_nic_attribute(
+                session, "netconnectionid", connection_id, "pnpdeviceid"
+            )
             cd_drive = utils_misc.get_winutils_vol(session)
             copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_drive
             session.cmd(copy_cmd)
@@ -98,18 +90,17 @@ def run(test, params, env):
     if os_type == "linux":
         change_cmd = change_cmd_pattern % (interface, new_mac)
     else:
-        change_cmd = change_cmd_pattern % (int(nic_index),
-                                           "".join(new_mac.split(":")))
+        change_cmd = change_cmd_pattern % (int(nic_index), "".join(new_mac.split(":")))
     try:
         session_serial.cmd_output_safe(change_cmd)
 
         # Verify whether MAC address was changed to the new one
-        error_context.context("Verify the new mac address, and restart the network",
-                              test.log.info)
+        error_context.context(
+            "Verify the new mac address, and restart the network", test.log.info
+        )
         if os_type == "linux":
             if params.get("shutdown_int", "yes") == "yes":
-                int_activate_cmd = params.get("int_activate_cmd",
-                                              "ifconfig %s up")
+                int_activate_cmd = params.get("int_activate_cmd", "ifconfig %s up")
                 session_serial.cmd_output_safe(int_activate_cmd % interface)
             session_serial.cmd_output_safe("ifconfig | grep -i %s" % new_mac)
             test.log.info("Mac address change successfully, net restart...")
@@ -120,9 +111,9 @@ def run(test, params, env):
             if os_variant == "winxp":
                 connection_id = pnpdevice_id.split("&")[-1]
                 mode = "devcon"
-            utils_net.restart_windows_guest_network(session_serial,
-                                                    connection_id,
-                                                    mode=mode)
+            utils_net.restart_windows_guest_network(
+                session_serial, connection_id, mode=mode
+            )
 
             o = session_serial.cmd_output_safe("ipconfig /all")
             if params.get("ctrl_mac_addr") == "off":
@@ -139,7 +130,7 @@ def run(test, params, env):
                 # Just warning when failed to see the session become dead,
                 # because there is a little chance the ip does not change.
                 msg = "The session is still responsive, settings may fail."
-                test.log.warn(msg)
+                test.log.warning(msg)
             session.close()
 
             # In the following case, mac address should not change,
@@ -156,8 +147,10 @@ def run(test, params, env):
             if not session.is_responsive():
                 test.error("The new session is not responsive.")
             if params.get("reboot_vm_after_mac_changed") == "yes":
-                error_context.context("Reboot guest and check the the mac address by "
-                                      "monitor", test.log.info)
+                error_context.context(
+                    "Reboot guest and check the the mac address by " "monitor",
+                    test.log.info,
+                )
                 mac_check = new_mac
                 if os_type == "linux":
                     nic = vm.virtnet[0]
@@ -171,8 +164,9 @@ def run(test, params, env):
                 session_serial = vm.reboot(session_serial, serial=True)
                 check_guest_mac(test, mac_check, vm)
             if params.get("file_transfer", "no") == "yes":
-                error_context.context("File transfer between host and guest.",
-                                      test.log.info)
+                error_context.context(
+                    "File transfer between host and guest.", test.log.info
+                )
                 utils_test.run_file_transfer(test, params, env)
         else:
             if params.get("ctrl_mac_addr") == "off":
@@ -184,9 +178,9 @@ def run(test, params, env):
             clean_cmd_pattern = params.get("clean_cmd")
             clean_cmd = clean_cmd_pattern % int(nic_index)
             session_serial.cmd_output_safe(clean_cmd)
-            utils_net.restart_windows_guest_network(session_serial,
-                                                    connection_id,
-                                                    mode=mode)
+            utils_net.restart_windows_guest_network(
+                session_serial, connection_id, mode=mode
+            )
             nic = vm.virtnet[0]
             nic.mac = old_mac
             vm.virtnet.update_db()

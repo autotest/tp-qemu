@@ -12,9 +12,10 @@ class RtcTest(TimeClientTest):
     def _test(self):
         if self.session.cmd_status("ls %s" % self.def_rtc):
             self.test.cancel("RTC device %s does not exist" % self.def_rtc)
-        (exit_status, output) = self.session.cmd_status_output("cd %s && ./rtctest %s %s" %
-                                                               (self.src_dir, self.def_rtc,
-                                                                self.maxfreq), timeout=240)
+        (exit_status, output) = self.session.cmd_status_output(
+            "cd %s && ./rtctest %s %s" % (self.src_dir, self.def_rtc, self.maxfreq),
+            timeout=240,
+        )
         if exit_status != 0:
             self.test.fail("Test fail on RTC device, output: %s" % output)
 
@@ -33,7 +34,7 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
 
-    rtc_test = RtcTest(test, params, env, 'rtc', '/dev/rtc0')
+    rtc_test = RtcTest(test, params, env, "rtc", "/dev/rtc0")
     rtc_test.setUp()
     rtc_test.runTest()
     rtc_test.cleanUp()

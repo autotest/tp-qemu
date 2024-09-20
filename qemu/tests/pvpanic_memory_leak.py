@@ -1,5 +1,5 @@
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
+
 from provider import win_driver_utils
 
 
@@ -21,10 +21,12 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
 
-    error_context.context("Check if the driver is installed and "
-                          "verified", test.log.info)
+    error_context.context(
+        "Check if the driver is installed and " "verified", test.log.info
+    )
     session = utils_test.qemu.windrv_check_running_verifier(
-        session, vm, test, params["driver_name"])
+        session, vm, test, params["driver_name"]
+    )
 
     try:
         win_driver_utils.memory_leak_check(vm, test, params)

@@ -1,7 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -19,6 +18,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def get_output(session_obj):
         """
         Use the function to short the lines in the scripts
@@ -33,8 +33,7 @@ def run(test, params, env):
         return re.search(boot_menu_hint, get_output(seabios_session))
 
     def boot_menu_check():
-        return (len(re.findall(boot_menu_hint,
-                               get_output(seabios_session))) > 1)
+        return len(re.findall(boot_menu_hint, get_output(seabios_session))) > 1
 
     error_context.context("Start guest with sga bios", test.log.info)
     vm = env.get_vm(params["main_vm"])
@@ -44,20 +43,19 @@ def run(test, params, env):
     vm.create()
 
     timeout = float(params.get("login_timeout", 240))
-    boot_menu_key = params.get("boot_menu_key", 'esc')
+    boot_menu_key = params.get("boot_menu_key", "esc")
     restart_key = params.get("restart_key")
     boot_menu_hint = params.get("boot_menu_hint")
     boot_device = params.get("boot_device", "")
     sgabios_info = params.get("sgabios_info")
 
-    seabios_session = vm.logsessions['seabios']
+    seabios_session = vm.logsessions["seabios"]
 
     if sgabios_info:
         error_context.context("Display and check the SGABIOS info", test.log.info)
 
         def info_check():
-            return re.search(sgabios_info,
-                             get_output(vm.serial_console))
+            return re.search(sgabios_info, get_output(vm.serial_console))
 
         if not utils_misc.wait_for(info_check, timeout, 1):
             err_msg = "Cound not get sgabios message. The output"
@@ -100,13 +98,11 @@ def run(test, params, env):
     test.log.info("Got boot menu entries: '%s'", boot_list)
     for i, v in enumerate(boot_list, start=1):
         if re.search(boot_device, v, re.I):
-            error_context.context("Start guest from boot entry '%s'" % v,
-                                  test.log.info)
+            error_context.context("Start guest from boot entry '%s'" % v, test.log.info)
             vm.send_key(str(i))
             break
     else:
-        test.fail("Could not get any boot entry match "
-                  "pattern '%s'" % boot_device)
+        test.fail("Could not get any boot entry match " "pattern '%s'" % boot_device)
 
     error_context.context("Log into the guest to verify it's up")
     session = vm.wait_for_login(timeout=timeout)

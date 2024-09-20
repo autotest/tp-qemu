@@ -1,6 +1,5 @@
-from virttest import (env_process,
-                      error_context,
-                      virt_vm)
+from virttest import env_process, error_context, virt_vm
+
 from qemu.tests.usb_common import parse_usb_topology
 
 
@@ -20,12 +19,13 @@ def run(test, params, env):
     parse_usb_topology(params)
     test.log.info("starting vm according to the usb topology")
     error_info = params["error_info"]
-    error_context.context(("verify [%s] is reported by QEMU..." %
-                           error_info), test.log.info)
+    error_context.context(
+        ("verify [%s] is reported by QEMU..." % error_info), test.log.info
+    )
     try:
-        env_process.process(test, params, env,
-                            env_process.preprocess_image,
-                            env_process.preprocess_vm)
+        env_process.process(
+            test, params, env, env_process.preprocess_image, env_process.preprocess_vm
+        )
     except virt_vm.VMCreateError as e:
         if error_info not in e.output:
             test.fail("%s is not reported by QEMU" % error_info)

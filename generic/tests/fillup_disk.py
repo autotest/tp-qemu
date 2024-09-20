@@ -28,8 +28,7 @@ def run(test, params, env):
     number = 0
 
     try:
-        error_context.context("Start filling the disk in %s" % fill_dir,
-                              test.log.info)
+        error_context.context("Start filling the disk in %s" % fill_dir, test.log.info)
         cmd = params.get("fillup_cmd")
         while not filled:
             # As we want to test the backing file, so bypass the cache

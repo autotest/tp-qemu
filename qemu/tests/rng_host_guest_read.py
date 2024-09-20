@@ -1,6 +1,6 @@
-from virttest import error_context
-from virttest import utils_test
 from avocado.utils import process
+from virttest import error_context, utils_test
+
 from provider import win_driver_utils
 
 
@@ -42,14 +42,12 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.wait_for_login()
 
-    error_context.context("Host read random numbers in the background",
-                          test.log.info)
+    error_context.context("Host read random numbers in the background", test.log.info)
     host_read_process = host_read_start(host_read_cmd)
 
     try:
         if host_read_process.poll() is None:
-            error_context.context("Guest begin to read random numbers",
-                                  test.log.info)
+            error_context.context("Guest begin to read random numbers", test.log.info)
             utils_test.run_virt_sub_test(test, params, env, guest_rng_test)
         else:
             test.error("Host reading data is not alive!")

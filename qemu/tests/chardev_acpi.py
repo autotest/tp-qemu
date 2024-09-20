@@ -1,7 +1,5 @@
-from virttest import error_context
-from virttest import env_process
-
 from avocado.utils import process
+from virttest import env_process, error_context
 
 
 @error_context.context_aware
@@ -20,19 +18,23 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     outputs = []
-    check_cmd = params['check_cmd']
+    check_cmd = params["check_cmd"]
     host_output = process.getoutput(check_cmd)[:35]
     outputs.append(host_output)
     for x in range(2):
         if x >= 1:
-            params['serials'] = " ".join(params['serials'].split()[:-1])
-            params['extra_params'] = params.get('extra_params', '') + ' -serial /dev/ttyS0'
+            params["serials"] = " ".join(params["serials"].split()[:-1])
+            params["extra_params"] = (
+                params.get("extra_params", "") + " -serial /dev/ttyS0"
+            )
             env_process.preprocess(test, params, env)
         vm = env.get_vm(params["main_vm"])
         session = vm.wait_for_login()
         vm_output = session.cmd_status_output(check_cmd)[1][:35]
         outputs.append(vm_output)
         vm.destroy()
-    assert outputs.count(outputs[0]) == len(outputs), \
-        "Host: {} and VM 1: {} and VM 2: {} are not the same".\
-        format(outputs[0], outputs[1], outputs[2])
+    assert outputs.count(outputs[0]) == len(
+        outputs
+    ), "Host: {} and VM 1: {} and VM 2: {} are not the same".format(
+        outputs[0], outputs[1], outputs[2]
+    )

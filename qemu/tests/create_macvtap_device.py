@@ -1,10 +1,7 @@
 import re
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_test
+from virttest import error_context, utils_net, utils_test
 
 
 def get_macvtap_device_on_ifname(ifname):
@@ -46,21 +43,22 @@ def run(test, params, env):
         ifname = params.get("netdst")
     ifname = utils_net.get_macvtap_base_iface(ifname)
 
-    error_context.context("Verify no other macvtap share the physical "
-                          "network device.", test.log.info)
+    error_context.context(
+        "Verify no other macvtap share the physical " "network device.", test.log.info
+    )
     macvtap_devices = get_macvtap_device_on_ifname(ifname)
     for device in macvtap_devices:
         process.system_output("ip link delete %s" % device)
 
     for mode in macvtap_mode.split():
         macvtap_name = "%s_01" % mode
-        txt = "Create %s mode macvtap device %s on %s." % (mode,
-                                                           macvtap_name,
-                                                           ifname)
+        txt = "Create %s mode macvtap device %s on %s." % (mode, macvtap_name, ifname)
         error_context.context(txt, test.log.info)
-        cmd = " ip link add link %s name %s type macvtap mode %s" % (ifname,
-                                                                     macvtap_name,
-                                                                     mode)
+        cmd = " ip link add link %s name %s type macvtap mode %s" % (
+            ifname,
+            macvtap_name,
+            mode,
+        )
         process.system(cmd, timeout=240)
         if set_mac:
             txt = "Determine and configure mac address of %s, " % macvtap_name
@@ -70,8 +68,7 @@ def run(test, params, env):
             cmd = " ip link set %s address %s up" % (macvtap_name, mac)
             process.system(cmd, timeout=240)
 
-        error_context.context("Check configuraton of macvtap device",
-                              test.log.info)
+        error_context.context("Check configuraton of macvtap device", test.log.info)
         check_cmd = " ip -d link show %s" % macvtap_name
         try:
             tap_info = process.system_output(check_cmd, timeout=240)
@@ -87,14 +84,12 @@ def run(test, params, env):
     if not dest_host:
         dest_host_get_cmd = "ip route | awk '/default/ { print $3 }'"
         dest_host_get_cmd = params.get("dest_host_get_cmd", dest_host_get_cmd)
-        dest_host = process.system_output(
-            dest_host_get_cmd, shell=True).split()[-1]
+        dest_host = process.system_output(dest_host_get_cmd, shell=True).split()[-1]
 
     txt = "Ping dest host %s from " % dest_host
     txt += "localhost with the interface %s" % ifname
     error_context.context(txt, test.log.info)
-    status, output = utils_test.ping(dest_host, 10,
-                                     interface=ifname, timeout=20)
+    status, output = utils_test.ping(dest_host, 10, interface=ifname, timeout=20)
     ratio = utils_test.get_loss_ratio(output)
     if "passthru" in macvtap_mode:
         ifnames = utils_net.get_host_iface()
@@ -137,8 +132,7 @@ def run(test, params, env):
     txt = "Ping dest host %s from " % dest_host
     txt += "localhost with the interface %s" % ifname
     error_context.context(txt, test.log.info)
-    status, output = utils_test.ping(dest_host, 10,
-                                     interface=ifname, timeout=20)
+    status, output = utils_test.ping(dest_host, 10, interface=ifname, timeout=20)
     if status != 0:
         test.fail("Ping failed, status: %s, output: %s" % (status, output))
     ratio = utils_test.get_loss_ratio(output)

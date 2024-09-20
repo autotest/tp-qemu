@@ -1,5 +1,4 @@
 from avocado.utils import process
-
 from virttest import data_dir
 from virttest.qemu_io import QemuIOSystem
 from virttest.qemu_storage import QemuImg
@@ -20,6 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
         test.log.info("Run qemu-io %s", img.image_filename)
@@ -28,9 +28,16 @@ def run(test, params, env):
     def _convert_with_copy_offloading_and_verify(src, tgt):
         """Verify whether copy_offloading works."""
         test.log.info("Verify whether copy_offloading works for commit.")
-        cmd = ("strace -e trace=copy_file_range -f qemu-img convert -C -f "
-               "%s %s -O %s %s " % (src.image_format, src.image_filename,
-                                    tgt.image_format, tgt.image_filename))
+        cmd = (
+            "strace -e trace=copy_file_range -f qemu-img convert -C -f "
+            "%s %s -O %s %s "
+            % (
+                src.image_format,
+                src.image_filename,
+                tgt.image_format,
+                tgt.image_filename,
+            )
+        )
         sts, text = process.getstatusoutput(cmd, verbose=True)
         if sts != 0:
             test.fail("Convert with copy_offloading failed: %s." % text)
@@ -41,7 +48,7 @@ def run(test, params, env):
 
     source = QemuImg(params.object_params(src_image), img_dir, src_image)
     source.create(source.params)
-    _qemu_io(source, 'write -P 1 0 %s' % params["write_size"])
+    _qemu_io(source, "write -P 1 0 %s" % params["write_size"])
 
     target = QemuImg(params.object_params(tgt_image), img_dir, tgt_image)
     _convert_with_copy_offloading_and_verify(source, target)

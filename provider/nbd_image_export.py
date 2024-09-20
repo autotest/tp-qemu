@@ -48,24 +48,18 @@ create/delete block exports (since 5.2):
                            will be exported
 """
 
+import logging
 import os
 import signal
-import logging
 
-from avocado.utils import process
 from avocado.core import exceptions
-
-from virttest import nbd
-from virttest import data_dir
-from virttest import qemu_storage
-from virttest import utils_misc
-from virttest import qemu_devices
-
+from avocado.utils import process
+from virttest import data_dir, nbd, qemu_devices, qemu_storage, utils_misc
 from virttest.qemu_monitor import MonitorNotSupportedCmdError
 
 from provider.job_utils import get_event_by_condition
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class NBDExportImage(object):
@@ -83,19 +77,19 @@ class NBDExportImage(object):
 
     def create_image(self):
         result = None
-        if self._image_params.get('create_image_cmd'):
-            result = process.run(self._image_params['create_image_cmd'],
-                                 ignore_status=True, shell=True)
+        if self._image_params.get("create_image_cmd"):
+            result = process.run(
+                self._image_params["create_image_cmd"], ignore_status=True, shell=True
+            )
         elif not self._image_params.get_boolean("force_create_image"):
             _, result = qemu_storage.QemuImg(
-                self._image_params,
-                data_dir.get_data_dir(),
-                self._tag
+                self._image_params, data_dir.get_data_dir(), self._tag
             ).create(self._image_params)
 
         if result and result.exit_status != 0:
-            raise exceptions.TestFail('Failed to create image, error: %s'
-                                      % result.stderr.decode())
+            raise exceptions.TestFail(
+                "Failed to create image, error: %s" % result.stderr.decode()
+            )
 
     def export_image(self):
         raise NotImplementedError()
@@ -110,28 +104,31 @@ class QemuNBDExportImage(NBDExportImage):
     def __init__(self, params, local_image):
         super(QemuNBDExportImage, self).__init__(params, local_image)
         self._qemu_nbd = utils_misc.get_qemu_nbd_binary(self._params)
-        filename_repr = 'json' if self._image_params.get(
-            'nbd_export_format') == 'luks' else 'filename'
+        filename_repr = (
+            "json"
+            if self._image_params.get("nbd_export_format") == "luks"
+            else "filename"
+        )
         self._local_filename = qemu_storage.get_image_repr(
-            self._tag, self._image_params,
-            data_dir.get_data_dir(), filename_repr)
+            self._tag, self._image_params, data_dir.get_data_dir(), filename_repr
+        )
         self._nbd_server_pid = None
 
     def export_image(self):
         LOG_JOB.info("Export image with qemu-nbd")
-        self._nbd_server_pid = nbd.export_image(self._qemu_nbd,
-                                                self._local_filename,
-                                                self._tag, self._image_params)
+        self._nbd_server_pid = nbd.export_image(
+            self._qemu_nbd, self._local_filename, self._tag, self._image_params
+        )
         if self._nbd_server_pid is None:
-            raise exceptions.TestFail('Failed to export image')
+            raise exceptions.TestFail("Failed to export image")
 
     def list_exported_image(self, nbd_image, nbd_image_params):
         LOG_JOB.info("List the nbd image with qemu-nbd")
-        result = nbd.list_exported_image(self._qemu_nbd, nbd_image,
-                                         nbd_image_params)
+        result = nbd.list_exported_image(self._qemu_nbd, nbd_image, nbd_image_params)
         if result.exit_status != 0:
-            raise exceptions.TestFail('Failed to list nbd image: %s'
-                                      % result.stderr.decode())
+            raise exceptions.TestFail(
+                "Failed to list nbd image: %s" % result.stderr.decode()
+            )
 
     def stop_export(self):
         if self._nbd_server_pid is not None:
@@ -139,8 +136,7 @@ class QemuNBDExportImage(NBDExportImage):
                 # when qemu-nbd crashes unexpectedly, we can handle it
                 os.kill(self._nbd_server_pid, signal.SIGKILL)
             except Exception as e:
-                LOG_JOB.warn("Error occurred when killing nbd server: %s",
-                             str(e))
+                LOG_JOB.warning("Error occurred when killing nbd server: %s", str(e))
             finally:
                 self._nbd_server_pid = None
 
@@ -150,8 +146,9 @@ class QemuNBDExportImage(NBDExportImage):
             try:
                 os.kill(self._nbd_server_pid, signal.SIGSTOP)
             except Exception as e:
-                LOG_JOB.warning("Error occurred when suspending"
-                                "nbd server: %s", str(e))
+                LOG_JOB.warning(
+                    "Error occurred when suspending" "nbd server: %s", str(e)
+                )
 
     def resume_export(self):
         if self._nbd_server_pid is not None:
@@ -159,8 +156,7 @@ class QemuNBDExportImage(NBDExportImage):
             try:
                 os.kill(self._nbd_server_pid, signal.SIGCONT)
             except Exception as e:
-                LOG_JOB.warning("Error occurred when resuming nbd server: %s",
-                                str(e))
+                LOG_JOB.warning("Error occurred when resuming nbd server: %s", str(e))
 
 
 class InternalNBDExportImage(NBDExportImage):
@@ -176,14 +172,17 @@ class InternalNBDExportImage(NBDExportImage):
 
     def get_export_name(self):
         """export name is the node name if nbd_export_name is not set"""
-        return self._image_params['nbd_export_name'] if self._image_params.get(
-            'nbd_export_name') else self._node_name
+        return (
+            self._image_params["nbd_export_name"]
+            if self._image_params.get("nbd_export_name")
+            else self._node_name
+        )
 
     def hotplug_image(self):
         """Hotplug the image to be exported"""
-        devices = self._vm.devices.images_define_by_params(self._tag,
-                                                           self._image_params,
-                                                           'disk')
+        devices = self._vm.devices.images_define_by_params(
+            self._tag, self._image_params, "disk"
+        )
 
         # Only hotplug protocol and format node and the related objects
         devices.pop()
@@ -194,35 +193,38 @@ class InternalNBDExportImage(NBDExportImage):
         for dev in devices:
             ret = self._vm.devices.simple_hotplug(dev, self._vm.monitor)
             if not ret[1]:
-                raise exceptions.TestFail("Failed to hotplug device '%s': %s."
-                                          % (dev, ret[0]))
+                raise exceptions.TestFail(
+                    "Failed to hotplug device '%s': %s." % (dev, ret[0])
+                )
 
     def hotplug_tls(self):
         """Hotplug tls creds object for nbd server"""
-        if self._image_params.get('nbd_unix_socket'):
-            LOG_JOB.info('TLS is only supported with IP')
-        elif self._image_params.get('nbd_server_tls_creds'):
+        if self._image_params.get("nbd_unix_socket"):
+            LOG_JOB.info("TLS is only supported with IP")
+        elif self._image_params.get("nbd_server_tls_creds"):
             LOG_JOB.info("Plug server tls creds device")
-            self._tls_creds_id = '%s_server_tls_creds' % self._tag
-            dev = qemu_devices.qdevices.QObject('tls-creds-x509')
+            self._tls_creds_id = "%s_server_tls_creds" % self._tag
+            dev = qemu_devices.qdevices.QObject("tls-creds-x509")
             dev.set_param("id", self._tls_creds_id)
             dev.set_param("endpoint", "server")
-            dev.set_param("dir", self._image_params['nbd_server_tls_creds'])
+            dev.set_param("dir", self._image_params["nbd_server_tls_creds"])
             ret = self._vm.devices.simple_hotplug(dev, self._vm.monitor)
             if not ret[1]:
-                raise exceptions.TestFail("Failed to hotplug device '%s': %s."
-                                          % (dev, ret[0]))
+                raise exceptions.TestFail(
+                    "Failed to hotplug device '%s': %s." % (dev, ret[0])
+                )
 
     def start_nbd_server(self):
         """Start internal nbd server"""
-        server = {
-            'type': 'unix',
-            'path': self._image_params['nbd_unix_socket']
-        } if self._image_params.get('nbd_unix_socket') else {
-            'type': 'inet',
-            'host': '0.0.0.0',
-            'port': self._image_params.get('nbd_port', '10809')
-        }
+        server = (
+            {"type": "unix", "path": self._image_params["nbd_unix_socket"]}
+            if self._image_params.get("nbd_unix_socket")
+            else {
+                "type": "inet",
+                "host": "0.0.0.0",
+                "port": self._image_params.get("nbd_port", "10809"),
+            }
+        )
 
         LOG_JOB.info("Start internal nbd server")
         return self._vm.monitor.nbd_server_start(server, self._tls_creds_id)
@@ -230,39 +232,52 @@ class InternalNBDExportImage(NBDExportImage):
     def _block_export_add(self):
         # block export arguments
         self._export_uid = self._image_params.get(
-            'block_export_uid', 'block_export_%s' % self._node_name)
-        iothread = self._image_params.get('block_export_iothread')
-        writethrough = self._image_params['block_export_writethrough'] == 'yes' \
-            if self._image_params.get('block_export_writethrough') else None
-        fixed = self._image_params['block_export_fixed_iothread'] == 'yes' \
-            if self._image_params.get('block_export_fixed_iothread') else None
+            "block_export_uid", "block_export_%s" % self._node_name
+        )
+        iothread = self._image_params.get("block_export_iothread")
+        writethrough = (
+            self._image_params["block_export_writethrough"] == "yes"
+            if self._image_params.get("block_export_writethrough")
+            else None
+        )
+        fixed = (
+            self._image_params["block_export_fixed_iothread"] == "yes"
+            if self._image_params.get("block_export_fixed_iothread")
+            else None
+        )
 
         # to be compatible with the original test cases using nbd-server-add
         export_writable = self._image_params.get(
-            'block_export_writable',
-            self._image_params.get('nbd_export_writable')
+            "block_export_writable", self._image_params.get("nbd_export_writable")
         )
-        writable = export_writable == 'yes' if export_writable else None
+        writable = export_writable == "yes" if export_writable else None
 
         # nbd specified arguments
         kw = {
-            'name': self._image_params.get('nbd_export_name'),
-            'description': self._image_params.get('nbd_export_description')
+            "name": self._image_params.get("nbd_export_name"),
+            "description": self._image_params.get("nbd_export_description"),
         }
-        if self._image_params.get('nbd_export_bitmaps') is not None:
-            kw['bitmaps'] = self._image_params.objects('nbd_export_bitmaps')
-        if self._image_params.get('nbd_allocation_exported') is not None:
-            kw['allocation-depth'] = self._image_params['nbd_allocation_exported'] == 'yes'
+        if self._image_params.get("nbd_export_bitmaps") is not None:
+            kw["bitmaps"] = self._image_params.objects("nbd_export_bitmaps")
+        if self._image_params.get("nbd_allocation_exported") is not None:
+            kw["allocation-depth"] = (
+                self._image_params["nbd_allocation_exported"] == "yes"
+            )
 
-        return self._vm.monitor.block_export_add(self._export_uid, 'nbd',
-                                                 self._node_name, iothread,
-                                                 fixed, writable, writethrough,
-                                                 **kw)
+        return self._vm.monitor.block_export_add(
+            self._export_uid,
+            "nbd",
+            self._node_name,
+            iothread,
+            fixed,
+            writable,
+            writethrough,
+            **kw,
+        )
 
     def _block_export_del(self):
         return self._vm.monitor.block_export_del(
-            self._export_uid,
-            self._image_params.get('block_export_remove_mode')
+            self._export_uid, self._image_params.get("block_export_remove_mode")
         )
 
     def wait_till_export_removed(self):
@@ -272,14 +287,13 @@ class InternalNBDExportImage(NBDExportImage):
         emitted when a block export is removed and its id can be reused.
         """
         if self._export_uid is not None:
-            cond = {'id': self._export_uid}
-            tmo = self._image_params.get_numeric('block_export_del_timeout',
-                                                 60)
-            event = get_event_by_condition(self._vm, 'BLOCK_EXPORT_DELETED',
-                                           tmo, **cond)
+            cond = {"id": self._export_uid}
+            tmo = self._image_params.get_numeric("block_export_del_timeout", 60)
+            event = get_event_by_condition(
+                self._vm, "BLOCK_EXPORT_DELETED", tmo, **cond
+            )
             if event is None:
-                raise exceptions.TestFail(
-                    'Failed to receive BLOCK_EXPORT_DELETED')
+                raise exceptions.TestFail("Failed to receive BLOCK_EXPORT_DELETED")
             self._export_uid = None
 
     def add_nbd_image(self, node_name=None):
@@ -299,9 +313,9 @@ class InternalNBDExportImage(NBDExportImage):
             self._export_uid = None
             return self._vm.monitor.nbd_server_add(
                 self._node_name,
-                self._image_params.get('nbd_export_name'),
-                self._image_params.get('nbd_export_writable'),
-                self._image_params.get('nbd_export_bitmaps')
+                self._image_params.get("nbd_export_name"),
+                self._image_params.get("nbd_export_writable"),
+                self._image_params.get("nbd_export_bitmaps"),
             )
 
     def remove_nbd_image(self):
@@ -311,8 +325,7 @@ class InternalNBDExportImage(NBDExportImage):
             return self._block_export_del()
         except MonitorNotSupportedCmdError:
             return self._vm.monitor.nbd_server_remove(
-                self.get_export_name(),
-                self._image_params.get('nbd_remove_mode')
+                self.get_export_name(), self._image_params.get("nbd_remove_mode")
             )
 
     def stop_nbd_server(self):
@@ -336,5 +349,5 @@ class InternalNBDExportImage(NBDExportImage):
     def query_nbd_export(self):
         """Get the nbd export info"""
         exports = self._vm.monitor.query_block_exports()
-        nbd_exports = [e for e in exports if e['id'] == self._export_uid]
+        nbd_exports = [e for e in exports if e["id"] == self._export_uid]
         return nbd_exports[0] if nbd_exports else None

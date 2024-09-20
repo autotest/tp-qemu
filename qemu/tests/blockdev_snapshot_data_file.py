@@ -1,17 +1,15 @@
 import logging
 
-from virttest import error_context
-from virttest import data_dir
+from virttest import data_dir, error_context
 
 from provider import backup_utils
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlkSnapshotWithDatafile(BlockDevSnapshotTest):
-
     def __init__(self, test, params, env):
         super(BlkSnapshotWithDatafile, self).__init__(test, params, env)
         self.trash = []
@@ -29,11 +27,15 @@ class BlkSnapshotWithDatafile(BlockDevSnapshotTest):
             filename = item["inserted"]["image"]["filename"]
             if self.snapshot_tag in filename:
                 if "data-file" in filename:
-                    data_file_tag = self.params["image_data_file_%s" % self.snapshot_tag]
+                    data_file_tag = self.params[
+                        "image_data_file_%s" % self.snapshot_tag
+                    ]
                     data_file_image = self.get_image_by_tag(data_file_tag)
                     data_file = eval(filename.lstrip("json:"))["data-file"]
                     if data_file["file"]["filename"] != data_file_image.image_filename:
-                        self.test.fail("data-file info is not as expected: %s" % data_file_image)
+                        self.test.fail(
+                            "data-file info is not as expected: %s" % data_file_image
+                        )
                     break
                 else:
                     self.test.fail("Data-file option not included in block info")

@@ -11,19 +11,17 @@ class BlockdevMirrorRemoteServerDownTest(BlockdevMirrorNowaitTest):
 
     def __init__(self, test, params, env):
         localhost = socket.gethostname()
-        params['nbd_server_%s' % params['nbd_image_tag']] = localhost \
-            if localhost else 'localhost'
-        self.nbd_export = QemuNBDExportImage(params,
-                                             params["local_image_tag"])
-        super(BlockdevMirrorRemoteServerDownTest, self).__init__(test,
-                                                                 params,
-                                                                 env)
+        params["nbd_server_%s" % params["nbd_image_tag"]] = (
+            localhost if localhost else "localhost"
+        )
+        self.nbd_export = QemuNBDExportImage(params, params["local_image_tag"])
+        super(BlockdevMirrorRemoteServerDownTest, self).__init__(test, params, env)
 
     def _create_local_image(self):
-        image_params = self.params.object_params(
-            self.params['local_image_tag'])
+        image_params = self.params.object_params(self.params["local_image_tag"])
         local_image = self.source_disk_define_by_params(
-            image_params, self.params['local_image_tag'])
+            image_params, self.params["local_image_tag"]
+        )
         local_image.create(image_params)
         self.trash.append(local_image)
 
@@ -41,15 +39,14 @@ class BlockdevMirrorRemoteServerDownTest(BlockdevMirrorNowaitTest):
 
         tag = self._target_images[0]
         devices = self.main_vm.devices.images_define_by_params(
-            tag, self.params.object_params(tag), 'disk')
+            tag, self.params.object_params(tag), "disk"
+        )
         devices.pop()
 
         for dev in devices:
-            ret = self.main_vm.devices.simple_hotplug(dev,
-                                                      self.main_vm.monitor)
+            ret = self.main_vm.devices.simple_hotplug(dev, self.main_vm.monitor)
             if not ret[1]:
-                self.test.fail("Failed to hotplug '%s': %s."
-                               % (dev, ret[0]))
+                self.test.fail("Failed to hotplug '%s': %s." % (dev, ret[0]))
 
     def clean_images(self):
         self.nbd_export.stop_export()
@@ -58,17 +55,18 @@ class BlockdevMirrorRemoteServerDownTest(BlockdevMirrorNowaitTest):
     def do_test(self):
         self.blockdev_mirror()
         self.check_block_jobs_started(
-            self._jobs, self.params.get_numeric('job_started_timeout', 10))
+            self._jobs, self.params.get_numeric("job_started_timeout", 10)
+        )
         self.nbd_export.suspend_export()
         try:
             self.check_block_jobs_paused(
-                self._jobs,
-                self.params.get_numeric('job_paused_interval', 30)
+                self._jobs, self.params.get_numeric("job_paused_interval", 30)
             )
         finally:
             self.nbd_export.resume_export()
-        self.main_vm.monitor.cmd("block-job-set-speed",
-                                 {'device': self._jobs[0], 'speed': 0})
+        self.main_vm.monitor.cmd(
+            "block-job-set-speed", {"device": self._jobs[0], "speed": 0}
+        )
         self.wait_mirror_jobs_completed()
         self.check_mirrored_block_nodes_attached()
         self.clone_vm_with_mirrored_images()

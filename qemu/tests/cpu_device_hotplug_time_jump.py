@@ -1,5 +1,5 @@
-import time
 import re
+import time
 
 from virttest import error_context
 
@@ -39,10 +39,14 @@ def run(test, params, env):
     error_context.context("Check if guest has time jump", test.log.info)
     output = session.cmd_output("dmesg")
     session.close()
-    time1 = float(re.findall(r"^\[\s*(\d+\.?\d+)\].*CPU.*has been hot-added$",
-                             output, re.M)[0])
-    time2 = float(re.findall(r"^\[\s*(\d+\.?\d+)\].*Will online and init "
-                             "hotplugged CPU", output, re.M)[0])
+    time1 = float(
+        re.findall(r"^\[\s*(\d+\.?\d+)\].*CPU.*has been hot-added$", output, re.M)[0]
+    )
+    time2 = float(
+        re.findall(
+            r"^\[\s*(\d+\.?\d+)\].*Will online and init " "hotplugged CPU", output, re.M
+        )[0]
+    )
     time_gap = time2 - time1
     test.log.info("The time gap is %.6fs", time_gap)
     expected_gap = params.get_numeric("expected_gap", target_type=float)

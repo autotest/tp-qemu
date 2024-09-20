@@ -1,5 +1,4 @@
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context
 
 
 @error_context.context_aware

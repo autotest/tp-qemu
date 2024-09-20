@@ -1,6 +1,5 @@
 from avocado import fail_on
 from avocado.utils import process
-
 from virttest import data_dir
 from virttest.qemu_io import QemuIOSystem
 from virttest.qemu_storage import QemuImg
@@ -20,6 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
         test.log.info("Run qemu-io %s", img.image_filename)

@@ -1,11 +1,10 @@
+import logging
 import re
 import time
-import logging
-
 
 from virttest import utils_package
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class IpuTest(object):
@@ -34,8 +33,7 @@ class IpuTest(object):
         """
         status, output = self.session.cmd_status_output(cmd, timeout=timeout)
         if check_status and status != 0:
-            self.test.fail("Execute command %s failed, output: %s"
-                           % (cmd, output))
+            self.test.fail("Execute command %s failed, output: %s" % (cmd, output))
         return output.strip()
 
     def upgrade_process(self, cmd, timeout=6000):
@@ -125,8 +123,7 @@ class IpuTest(object):
             self.session.cmd(self.params.get("fix_permit"))
             # New kernel is not used
             erase_old_kernel = self.params.get("clean_up_old_kernel")
-            s, output = self.session.cmd_status_output(erase_old_kernel,
-                                                       timeout=1200)
+            s, output = self.session.cmd_status_output(erase_old_kernel, timeout=1200)
             error_info = self.params.get("error_info")
             if re.search(error_info, output):
                 pass
@@ -141,14 +138,18 @@ class IpuTest(object):
             release = self.params.get("release_check")
             status, output_release = self.session.cmd_status_output(release)
             if not re.search(post_release, output_release):
-                test.fail("Post_release: %s, expected result: %s"
-                          % (post_release, output_release))
+                test.fail(
+                    "Post_release: %s, expected result: %s"
+                    % (post_release, output_release)
+                )
             new_kernel = self.params.get("new_kernel_ver")
             check_kernel = self.params.get("check_kernel")
             s, actual_new_kernel = self.session.cmd_status_output(check_kernel)
             if not re.search(new_kernel, actual_new_kernel):
-                test.fail("kernel is not right, expected is %s and new is %s"
-                          % (new_kernel, actual_new_kernel))
+                test.fail(
+                    "kernel is not right, expected is %s and new is %s"
+                    % (new_kernel, actual_new_kernel)
+                )
         except Exception as error:
             test.fail("Post upgrade checking failed : %s" % str(error))
 

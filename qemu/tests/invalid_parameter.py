@@ -1,5 +1,4 @@
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context
 
 
 @error_context.context_aware
@@ -14,7 +13,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     vm_name = params["main_vm"]
-    params['start_vm'] = "yes"
+    params["start_vm"] = "yes"
     try:
         error_context.context("Start guest with invalid parameters.")
         env_process.preprocess_vm(test, params, env, vm_name)

@@ -1,11 +1,9 @@
-import aexpect
-import time
 import re
+import time
 
+import aexpect
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
 from virttest.qemu_devices import qdevices
 
 
@@ -55,28 +53,30 @@ def run(test, params, env):
 
     if params.get("pre_cmd"):
         error_context.context("Fetch data from host", test.log.info)
-        process.system(params.get("pre_cmd"), shell=True,
-                       ignore_bg_processes=True)
+        process.system(params.get("pre_cmd"), shell=True, ignore_bg_processes=True)
 
     error_context.context("Read rng device in guest", test.log.info)
     utils_test.run_virt_sub_test(test, params, env, sub_test)
 
     if params.get("os_type") == "linux":
-        error_context.context("Query virtio rng device in guest",
-                              test.log.info)
+        error_context.context("Query virtio rng device in guest", test.log.info)
         rng_devices = get_available_rng(session)
         rng_attached = get_rng_list(vm)
         if len(rng_devices) != len(rng_attached):
-            test.fail("The devices get from rng_arriable"
-                      " don't match the rng devices attached")
+            test.fail(
+                "The devices get from rng_arriable"
+                " don't match the rng devices attached"
+            )
 
         if len(rng_devices) > 1:
             for rng_device in rng_devices:
-                error_context.context("Change virtio rng device to %s" %
-                                      rng_device, test.log.info)
+                error_context.context(
+                    "Change virtio rng device to %s" % rng_device, test.log.info
+                )
                 session.cmd_status(params.get("switch_rng_cmd") % rng_device)
-                error_context.context("Read from %s in guest" % rng_device,
-                                      test.log.info)
+                error_context.context(
+                    "Read from %s in guest" % rng_device, test.log.info
+                )
                 utils_test.run_virt_sub_test(test, params, env, sub_test)
 
     if params.get("post_cmd"):
@@ -85,6 +85,7 @@ def run(test, params, env):
             s = process.system(
                 params.get("post_cmd"),
                 ignore_status=(params.get("ignore_status") == "yes"),
-                shell=True)
+                shell=True,
+            )
             if s == 0:
                 break

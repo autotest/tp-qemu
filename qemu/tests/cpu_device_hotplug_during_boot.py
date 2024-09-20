@@ -21,21 +21,26 @@ def run(test, params, env):
     """
     vcpu_devices = params.objects("vcpu_devices")
     unplug_during_boot = params.get_boolean("unplug_during_boot")
-    boot_patterns = [r".*Started udev Wait for Complete Device Initialization.*",
-                     r".*Finished .*Wait for udev To Complete Device Initialization.*"]
-    reboot_patterns = [r".*[Rr]ebooting.*", r".*[Rr]estarting system.*",
-                       r".*[Mm]achine restart.*"]
+    boot_patterns = [
+        r".*Started udev Wait for Complete Device Initialization.*",
+        r".*Finished .*Wait for udev To Complete Device Initialization.*",
+    ]
+    reboot_patterns = [
+        r".*[Rr]ebooting.*",
+        r".*[Rr]estarting system.*",
+        r".*[Mm]achine restart.*",
+    ]
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.base_context("Hotplug vCPU devices during boot stage.",
-                               test.log.info)
+    error_context.base_context("Hotplug vCPU devices during boot stage.", test.log.info)
     error_context.context("Verify guest is in the boot stage.", test.log.info)
     vm.serial_console.read_until_any_line_matches(boot_patterns)
 
-    error_context.context("Hotplug vCPU devices, waiting for guest alive.",
-                          test.log.info)
+    error_context.context(
+        "Hotplug vCPU devices, waiting for guest alive.", test.log.info
+    )
     for vcpu_device in vcpu_devices:
         vm.hotplug_vcpu_device(vcpu_device)
     vm.wait_for_login().close()
@@ -48,23 +53,29 @@ def run(test, params, env):
         # 1) vm.reboot() will return a new session, which is not what we want.
         # 2) Send reboot command directly because it will close the ssh client
         # so we can not get the command status.
-        error_context.base_context("Reboot guest to boot stage, hotunplug the "
-                                   "vCPU device.", test.log.info)
+        error_context.base_context(
+            "Reboot guest to boot stage, hotunplug the " "vCPU device.", test.log.info
+        )
         vm.wait_for_login().sendline(params["reboot_command"])
 
-        error_context.context("Verify guest is in boot stage after reboot.",
-                              test.log.info)
+        error_context.context(
+            "Verify guest is in boot stage after reboot.", test.log.info
+        )
         vm.serial_console.read_until_any_line_matches(reboot_patterns)
         vm.serial_console.read_until_any_line_matches(boot_patterns)
 
-        error_context.context("Hotunplug vCPU devices, waiting for guest "
-                              "alive.", test.log.info)
+        error_context.context(
+            "Hotunplug vCPU devices, waiting for guest " "alive.", test.log.info
+        )
         for vcpu_device in reversed(vcpu_devices):
             vm.hotunplug_vcpu_device(vcpu_device)
         vm.wait_for_login().close()
 
-        error_context.context("Check number of CPU inside guest after unplug.",
-                              test.log.info)
+        error_context.context(
+            "Check number of CPU inside guest after unplug.", test.log.info
+        )
         if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
-            test.fail("Actual number of guest CPUs is not equal to expected "
-                      "after hotunplug.")
+            test.fail(
+                "Actual number of guest CPUs is not equal to expected "
+                "after hotunplug."
+            )

@@ -1,16 +1,11 @@
 import os
+import random
 import re
 import time
-import random
-
-from avocado.utils import process
-from virttest import error_context
-from virttest import utils_misc
-from virttest import env_process
-from virttest import utils_test
-from virttest import data_dir
 
 from aexpect.exceptions import ShellTimeoutError
+from avocado.utils import process
+from virttest import data_dir, env_process, error_context, utils_misc, utils_test
 
 
 @error_context.context_aware
@@ -26,8 +21,8 @@ def run(test, params, env):
         :param env: Dictionary with the test environment.
     """
 
-    timeout = int(params.get("login_timeout", '360'))
-    relogin_timeout = int(params.get("relogin_timeout", '240'))
+    timeout = int(params.get("login_timeout", "360"))
+    relogin_timeout = int(params.get("relogin_timeout", "240"))
     vm_arch_name = params["vm_arch_name"]
 
     watchdog_device_type = params.get("watchdog_device_type", "i6300esb")
@@ -50,8 +45,9 @@ def run(test, params, env):
 
         # when wDT is 6300esb need check pci info
         if watchdog_device == "i6300esb":
-            error_context.context("checking pci info to ensure have WDT"
-                                  " device", test.log.info)
+            error_context.context(
+                "checking pci info to ensure have WDT" " device", test.log.info
+            )
             session.cmd("echo 1 > /sys/bus/pci/rescan")
             o = session.cmd_output("lspci")
             if o:
@@ -63,14 +59,14 @@ def run(test, params, env):
         # checking watchdog init info using dmesg
         error_context.context("Checking watchdog load info", test.log.info)
         dmesg_info = params.get("dmesg_info", "(i6300ESB|ib700wdt).*init")
-        module_check_cmd = params.get("module_check_cmd",
-                                      "dmesg | grep -i '%s' " % dmesg_info)
+        module_check_cmd = params.get(
+            "module_check_cmd", "dmesg | grep -i '%s' " % dmesg_info
+        )
         (s, o) = session.cmd_status_output(module_check_cmd)
         if s != 0:
             error_msg = "Wactchdog device '%s' load/initialization failed "
             test.error(error_msg % watchdog_device)
-        test.log.info("Watchdog device '%s' add and init successfully",
-                      watchdog_device)
+        test.log.info("Watchdog device '%s' add and init successfully", watchdog_device)
         test.log.debug("Init info : '%s'", o)
 
     def _trigger_watchdog(session, trigger_cmd=None):
@@ -81,8 +77,9 @@ def run(test, params, env):
             @trigger_cmd: cmd trigger the watchdog
         """
         if trigger_cmd is not None:
-            error_context.context(("Trigger Watchdog action using:'%s'." %
-                                   trigger_cmd), test.log.info)
+            error_context.context(
+                ("Trigger Watchdog action using:'%s'." % trigger_cmd), test.log.info
+            )
             session.sendline(trigger_cmd)
 
     def _action_check(test, session, watchdog_action):
@@ -100,27 +97,39 @@ def run(test, params, env):
                     return True
             return False
 
-        response_timeout = int(params.get("response_timeout", '240'))
-        error_context.context("Check whether or not watchdog action '%s' took"
-                              " effect" % watchdog_action, test.log.info)
+        response_timeout = int(params.get("response_timeout", "240"))
+        error_context.context(
+            "Check whether or not watchdog action '%s' took"
+            " effect" % watchdog_action,
+            test.log.info,
+        )
         if watchdog_action == "inject-nmi":
-            if (vm_arch_name in ("x86_64", "i686")):
-                if not utils_misc.wait_for(lambda: "NMI received" in session.cmd_output("dmesg"),
-                                           response_timeout, 0, 1):
-                    test.fail("Guest didn't receive dmesg with 'NMI received',"
-                              "after action '%s'." % watchdog_action)
+            if vm_arch_name in ("x86_64", "i686"):
+                if not utils_misc.wait_for(
+                    lambda: "NMI received" in session.cmd_output("dmesg"),
+                    response_timeout,
+                    0,
+                    1,
+                ):
+                    test.fail(
+                        "Guest didn't receive dmesg with 'NMI received',"
+                        "after action '%s'." % watchdog_action
+                    )
                 msg = session.cmd_output("dmesg").splitlines()[-8:]
                 test.log.info("Guest received dmesg info: %s", msg)
-            elif (vm_arch_name in ("ppc64", "ppc64le")):
+            elif vm_arch_name in ("ppc64", "ppc64le"):
                 rebooted = check_guest_reboot(params["guest_reboot_pattern"])
                 if not rebooted:
-                    test.fail("Guest isn't rebooted after watchdog action '%s'"
-                              % watchdog_action)
+                    test.fail(
+                        "Guest isn't rebooted after watchdog action '%s'"
+                        % watchdog_action
+                    )
                 test.log.info("Try to login the guest after reboot")
                 session = vm.wait_for_login(timeout=timeout)
-        if not utils_misc.wait_for(lambda: not session.is_responsive(),
-                                   response_timeout, 0, 1):
-            if (watchdog_action in ("none", "debug", "inject-nmi")):
+        if not utils_misc.wait_for(
+            lambda: not session.is_responsive(), response_timeout, 0, 1
+        ):
+            if watchdog_action in ("none", "debug", "inject-nmi"):
                 test.log.info("OK, the guest session is responsive still")
             else:
                 txt = "It seems action '%s' took no" % watchdog_action
@@ -130,10 +139,10 @@ def run(test, params, env):
         # when action is poweroff or shutdown(without no-shutdown option),
         # the vm will dead, and qemu exit.
         # The others the vm monitor still responsive, can report the vm status.
-        if (watchdog_action == "poweroff" or (watchdog_action == "shutdown" and
-                                              params.get("disable_shutdown") != "yes")):
-            if not utils_misc.wait_for(lambda: vm.is_dead(),
-                                       response_timeout, 0, 1):
+        if watchdog_action == "poweroff" or (
+            watchdog_action == "shutdown" and params.get("disable_shutdown") != "yes"
+        ):
+            if not utils_misc.wait_for(lambda: vm.is_dead(), response_timeout, 0, 1):
                 txt = "It seems '%s' action took no effect, " % watchdog_action
                 txt += "guest is still alive!"
                 test.fail(txt)
@@ -146,8 +155,8 @@ def run(test, params, env):
                 f_param = "running"
 
             if not utils_misc.wait_for(
-                lambda: vm.monitor.verify_status(f_param),
-                    response_timeout, 5, 1):
+                lambda: vm.monitor.verify_status(f_param), response_timeout, 5, 1
+            ):
                 test.log.debug("Monitor status is:%s", vm.monitor.get_status())
                 txt = "It seems action '%s' took no effect" % watchdog_action
                 txt += " , Wrong monitor status!"
@@ -157,8 +166,7 @@ def run(test, params, env):
         if watchdog_action == "reset":
             test.log.info("Try to login the guest after reboot")
             vm.wait_for_login(timeout=relogin_timeout)
-        test.log.info("Watchdog action '%s' come into effect.",
-                      watchdog_action)
+        test.log.info("Watchdog action '%s' come into effect.", watchdog_action)
 
     def check_watchdog_support():
         """
@@ -169,22 +177,27 @@ def run(test, params, env):
         """
         qemu_binary = utils_misc.get_qemu_binary(params)
 
-        watchdog_type_check = params.get(
-            "watchdog_type_check", " -device '?'")
+        watchdog_type_check = params.get("watchdog_type_check", " -device '?'")
         qemu_cmd = qemu_binary + watchdog_type_check
 
         # check the host support watchdog types.
-        error_context.context("Checking whether or not the host support"
-                              " WDT '%s'" % watchdog_device_type, test.log.info)
-        watchdog_device = process.system_output("%s 2>&1" % qemu_cmd,
-                                                shell=True).decode()
+        error_context.context(
+            "Checking whether or not the host support"
+            " WDT '%s'" % watchdog_device_type,
+            test.log.info,
+        )
+        watchdog_device = process.system_output(
+            "%s 2>&1" % qemu_cmd, shell=True
+        ).decode()
         if watchdog_device:
             if re.findall(watchdog_device_type, watchdog_device, re.I):
-                test.log.info("The host support '%s' type watchdog device",
-                              watchdog_device_type)
+                test.log.info(
+                    "The host support '%s' type watchdog device", watchdog_device_type
+                )
             else:
-                test.log.info("The host support watchdog device type is: '%s'",
-                              watchdog_device)
+                test.log.info(
+                    "The host support watchdog device type is: '%s'", watchdog_device
+                )
                 test.cancel("watdog %s isn't supported" % watchdog_device_type)
         else:
             test.cancel("No watchdog device supported by the host!")
@@ -223,7 +236,7 @@ def run(test, params, env):
         5. Wait heartbeat timeout check the watchdog action deactive.
         """
 
-        response_timeout = int(params.get("response_timeout", '240'))
+        response_timeout = int(params.get("response_timeout", "240"))
         magic_cmd = params.get("magic_close_cmd", "echo V > /dev/watchdog")
 
         _watchdog_device_check(test, session, watchdog_device_type)
@@ -233,8 +246,9 @@ def run(test, params, env):
         error_context.context("Magic close is start", test.log.info)
         _trigger_watchdog(session, magic_cmd)
 
-        if utils_misc.wait_for(lambda: not session.is_responsive(),
-                               response_timeout, 0, 1):
+        if utils_misc.wait_for(
+            lambda: not session.is_responsive(), response_timeout, 0, 1
+        ):
             error_msg = "Watchdog action took effect, magic close FAILED"
             test.fail(error_msg)
         test.log.info("Magic close took effect.")
@@ -258,8 +272,10 @@ def run(test, params, env):
         _watchdog_device_check(test, session, watchdog_device_type)
         _trigger_watchdog(session, trigger_cmd)
 
-        error_context.context("Do migration(protocol:%s),Watchdog have"
-                              " been triggered." % mig_protocol, test.log.info)
+        error_context.context(
+            "Do migration(protocol:%s),Watchdog have" " been triggered." % mig_protocol,
+            test.log.info,
+        )
         args = (mig_timeout, mig_protocol, mig_cancel_delay)
         migrate_thread = utils_misc.InterruptedThread(vm.migrate, args)
         migrate_thread.start()
@@ -286,14 +302,17 @@ def run(test, params, env):
 
         plug_watchdog_device = params.get("plug_watchdog_device", "i6300esb")
         machine_type = params.get("machine_type")
-        watchdog_device_add = ("device_add driver=%s, id=%s"
-                               % (plug_watchdog_device, "watchdog"))
+        watchdog_device_add = "device_add driver=%s, id=%s" % (
+            plug_watchdog_device,
+            "watchdog",
+        )
         if machine_type == "q35":
             watchdog_device_add += ",bus=pcie-pci-bridge-0,addr=0x1f"
-        watchdog_device_del = ("device_del id=%s" % "watchdog")
+        watchdog_device_del = "device_del id=%s" % "watchdog"
 
-        error_context.context(("Hotplug watchdog device '%s'" %
-                               plug_watchdog_device), test.log.info)
+        error_context.context(
+            ("Hotplug watchdog device '%s'" % plug_watchdog_device), test.log.info
+        )
         vm.monitor.send_args_cmd(watchdog_device_add)
 
         # wait watchdog device init
@@ -305,8 +324,9 @@ def run(test, params, env):
         error_context.context("Hot unplug watchdog device", test.log.info)
         vm.monitor.send_args_cmd(watchdog_device_del)
 
-        error_context.context("Resume the guest, check the WDT have"
-                              " been removed", test.log.info)
+        error_context.context(
+            "Resume the guest, check the WDT have" " been removed", test.log.info
+        )
         vm.resume()
         session = vm.wait_for_login(timeout=timeout)
         o = session.cmd_output("lspci")
@@ -322,22 +342,31 @@ def run(test, params, env):
         continue operation
         """
 
-        response_timeout = int(params.get("response_timeout", '240'))
+        response_timeout = int(params.get("response_timeout", "240"))
         _watchdog_device_check(test, session, watchdog_device_type)
         vm.monitor.clear_event("WATCHDOG")
         _trigger_watchdog(session, trigger_cmd)
         vm.pause()
-        if utils_misc.wait_for(lambda: vm.monitor.get_event("WATCHDOG"),
-                               timeout=response_timeout):
-            test.fail("Watchdog action '%s' still took effect after pausing "
-                      "VM." % watchdog_action)
-        test.log.info("Watchdog action '%s' didn't take effect after pausing "
-                      "VM, it is expected.", watchdog_action)
+        if utils_misc.wait_for(
+            lambda: vm.monitor.get_event("WATCHDOG"), timeout=response_timeout
+        ):
+            test.fail(
+                "Watchdog action '%s' still took effect after pausing "
+                "VM." % watchdog_action
+            )
+        test.log.info(
+            "Watchdog action '%s' didn't take effect after pausing "
+            "VM, it is expected.",
+            watchdog_action,
+        )
         vm.resume()
-        if not utils_misc.wait_for(lambda: vm.monitor.get_event("WATCHDOG"),
-                                   timeout=response_timeout):
-            test.fail("Watchodg action '%s' didn't take effect after resuming "
-                      "VM." % watchdog_action)
+        if not utils_misc.wait_for(
+            lambda: vm.monitor.get_event("WATCHDOG"), timeout=response_timeout
+        ):
+            test.fail(
+                "Watchodg action '%s' didn't take effect after resuming "
+                "VM." % watchdog_action
+            )
         _action_check(test, session, watchdog_action)
 
     def watchdog_test_suit():
@@ -388,8 +417,9 @@ def run(test, params, env):
         del_module_cmd = params["del_module_cmd"]
         reload_module_cmd = params["reload_module_cmd"]
         _watchdog_device_check(test, session, watchdog_device_type)
-        error_context.context("set heartbeat value and reload the i6300esb "
-                              "module", test.log.info)
+        error_context.context(
+            "set heartbeat value and reload the i6300esb " "module", test.log.info
+        )
         session.cmd(del_module_cmd)
         heartbeat = params["heartbeat"]
         if heartbeat == "random_value":
@@ -402,15 +432,17 @@ def run(test, params, env):
         if heartbeat < -2147483648 or heartbeat > 2147483647:
             o = session.cmd_output("dmesg | grep -i 'i6300esb.*invalid'")
             if o:
-                test.log.info("Heartbeat value %s is out of range, it is "
-                              "expected.", heartbeat)
+                test.log.info(
+                    "Heartbeat value %s is out of range, it is " "expected.", heartbeat
+                )
             else:
                 test.fail("No invalid heartbeat info in dmesg.")
         elif -2147483648 <= heartbeat < 1 or 2046 < heartbeat <= 2147483647:
             o = session.cmd_output("dmesg | grep -i 'heartbeat=30'")
             if not o:
-                test.fail("Heartbeat value isn't default 30 sec in dmesg, it "
-                          "should be.")
+                test.fail(
+                    "Heartbeat value isn't default 30 sec in dmesg, it " "should be."
+                )
             heartbeat = 30
         elif 1 <= heartbeat <= 2046:
             o = session.cmd_output("dmesg | grep -i 'heartbeat=%s'" % heartbeat)
@@ -419,22 +451,30 @@ def run(test, params, env):
         if heartbeat <= 2147483647 and heartbeat > -2147483648:
             _watchdog_device_check(test, session, watchdog_device_type)
             _trigger_watchdog(session, trigger_cmd)
-            error_context.context("Watchdog will fire after %s s" % heartbeat,
-                                  test.log.info)
+            error_context.context(
+                "Watchdog will fire after %s s" % heartbeat, test.log.info
+            )
             start_time = time.time()
             end_time = start_time + float(heartbeat) + 2
             while not vm.monitor.verify_status("paused"):
                 if time.time() > end_time:
-                    test.fail("Monitor status is:%s, watchdog action '%s' didn't take"
-                              "effect" % (vm.monitor.get_status(), watchdog_action))
+                    test.fail(
+                        "Monitor status is:%s, watchdog action '%s' didn't take"
+                        "effect" % (vm.monitor.get_status(), watchdog_action)
+                    )
                 time.sleep(1)
             guest_pause_time = time.time() - start_time
             if abs(guest_pause_time - float(heartbeat)) <= 2:
-                test.log.info("Watchdog action '%s' took effect after '%s's.",
-                              watchdog_action, guest_pause_time)
+                test.log.info(
+                    "Watchdog action '%s' took effect after '%s's.",
+                    watchdog_action,
+                    guest_pause_time,
+                )
             else:
-                test.fail("Watchdog action '%s' took effect after '%s's, it is earlier"
-                          " than expected." % (watchdog_action, guest_pause_time))
+                test.fail(
+                    "Watchdog action '%s' took effect after '%s's, it is earlier"
+                    " than expected." % (watchdog_action, guest_pause_time)
+                )
 
     # main procedure
     test_type = params.get("test_type")
@@ -445,10 +485,11 @@ def run(test, params, env):
         check_watchdog_support()
 
     error_context.context("'%s' test starting ... " % test_type, test.log.info)
-    error_context.context("Boot VM with WDT(Device:'%s', Action:'%s'),"
-                          " and try to login" %
-                          (watchdog_device_type, watchdog_action),
-                          test.log.info)
+    error_context.context(
+        "Boot VM with WDT(Device:'%s', Action:'%s'),"
+        " and try to login" % (watchdog_device_type, watchdog_action),
+        test.log.info,
+    )
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])
@@ -458,12 +499,11 @@ def run(test, params, env):
         error_context.context("Setup the runlevel for guest", test.log.info)
         utils_test.qemu.setup_runlevel(params, session)
 
-    if (test_type in locals()):
+    if test_type in locals():
         test_running = locals()[test_type]
         try:
             test_running()
         finally:
             vm.destroy()
     else:
-        test.error("Oops test %s doesn't exist, have a check please."
-                   % test_type)
+        test.error("Oops test %s doesn't exist, have a check please." % test_type)

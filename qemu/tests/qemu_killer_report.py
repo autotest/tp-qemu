@@ -1,8 +1,7 @@
 import os
 import re
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -43,10 +42,8 @@ def run(test, params, env):
     error_context.context("Kill VM by signal 15", test.log.info)
     thread_pid = kill_vm_by_signal_15()
     # Wait QEMU print error log.
-    results = utils_misc.wait_for(lambda: killer_report(re_str),
-                                  60, 2, 2)
-    error_context.context("Check that QEMU can report who killed it",
-                          test.log.info)
+    results = utils_misc.wait_for(lambda: killer_report(re_str), 60, 2, 2)
+    error_context.context("Check that QEMU can report who killed it", test.log.info)
     if not results:
         test.fail("QEMU did not tell us who killed it")
     elif int(results[-1]) != thread_pid:

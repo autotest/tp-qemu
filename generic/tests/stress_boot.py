@@ -1,6 +1,5 @@
-from virttest import env_process
-from virttest import error_context
 from avocado.utils import process
+from virttest import env_process, error_context
 
 
 @error_context.context_aware
@@ -17,8 +16,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env:    Dictionary with test environment.
     """
-    error_context.base_context("waiting for the first guest to be up",
-                               test.log.info)
+    error_context.base_context("waiting for the first guest to be up", test.log.info)
 
     host_cpu_cnt_cmd = params.get("host_cpu_cnt_cmd")
     host_cpu_num = int(process.getoutput(host_cpu_cnt_cmd).strip())
@@ -32,7 +30,7 @@ def run(test, params, env):
     params["mem"] = vm_mem_size
 
     params["start_vm"] = "yes"
-    vm_name = params['main_vm']
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)
@@ -48,8 +46,7 @@ def run(test, params, env):
         try:
             while num <= int(params.get("max_vms")):
                 # Clone vm according to the first one
-                error_context.base_context("booting guest #%d" % num,
-                                           test.log.info)
+                error_context.base_context("booting guest #%d" % num, test.log.info)
                 vm_name = "vm%d" % num
                 vm_params = vm.params.copy()
                 curr_vm = vm.clone(vm_name, vm_params)
@@ -63,14 +60,18 @@ def run(test, params, env):
 
                 # Check whether all previous shell sessions are responsive
                 for i, se in enumerate(sessions):
-                    error_context.context("checking responsiveness of guest"
-                                          " #%d" % (i + 1), test.log.debug)
+                    error_context.context(
+                        "checking responsiveness of guest" " #%d" % (i + 1),
+                        test.log.debug,
+                    )
                     se.cmd(params.get("alive_test_cmd"))
                 num += 1
         except Exception as emsg:
-            test.fail("Expect to boot up %s guests."
-                      "Failed to boot up #%d guest with "
-                      "error: %s." % (params["max_vms"], num, emsg))
+            test.fail(
+                "Expect to boot up %s guests."
+                "Failed to boot up #%d guest with "
+                "error: %s." % (params["max_vms"], num, emsg)
+            )
     finally:
         for se in sessions:
             se.close()

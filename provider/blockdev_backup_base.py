@@ -2,23 +2,23 @@ import logging
 
 from avocado.core import exceptions
 from avocado.utils import memory
-
-from virttest import data_dir
-from virttest import env_process
-from virttest import qemu_storage
-from virttest import error_context
-from virttest import utils_disk
-from virttest import qemu_vm
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    qemu_storage,
+    qemu_vm,
+    utils_disk,
+)
 from virttest.qemu_capabilities import Flags
 
 from provider import backup_utils
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevBackupBaseTest(object):
-
     def __init__(self, test, params, env):
         self.main_vm = None
         self.clone_vm = None
@@ -54,13 +54,10 @@ class BlockdevBackupBaseTest(object):
 
     def __target_disk_define_by_params(self, params, image_name):
         if params.get("random_cluster_size") == "yes":
-            blacklist = list(
-                map(int, params.objects("cluster_size_blacklist")))
+            blacklist = list(map(int, params.objects("cluster_size_blacklist")))
             cluster_size = backup_utils.generate_random_cluster_size(blacklist)
             params["image_cluster_size"] = cluster_size
-            LOG_JOB.info(
-                "set target image cluster size to '%s'",
-                cluster_size)
+            LOG_JOB.info("set target image cluster size to '%s'", cluster_size)
         params.setdefault("target_path", data_dir.get_data_dir())
         return sp_admin.volume_define_by_params(image_name, params)
 
@@ -68,13 +65,10 @@ class BlockdevBackupBaseTest(object):
         for tag in self.source_disks:
             params = self.params.object_params(tag)
             if params.get("random_cluster_size") == "yes":
-                blacklist = list(
-                    map(int, params.objects("cluster_size_blacklist")))
+                blacklist = list(map(int, params.objects("cluster_size_blacklist")))
                 cluster_size = backup_utils.generate_random_cluster_size(blacklist)
                 params["image_cluster_size"] = cluster_size
-                LOG_JOB.info(
-                    "set image cluster size to '%s'",
-                    cluster_size)
+                LOG_JOB.info("set image cluster size to '%s'", cluster_size)
             disk = self.__source_disk_define_by_params(params, tag)
             disk.create(params)
 
@@ -94,7 +88,8 @@ class BlockdevBackupBaseTest(object):
         for tag in self.source_disks:
             self.format_data_disk(tag)
             backup_utils.generate_tempfile(
-                self.main_vm, self.disks_info[tag][1], "data")
+                self.main_vm, self.disks_info[tag][1], "data"
+            )
 
     def verify_data_files(self):
         session = self.clone_vm.wait_for_login()
@@ -137,7 +132,8 @@ class BlockdevBackupBaseTest(object):
                 raise exceptions.TestFail("disk not found in guest ...")
             disk_path = "/dev/%s1" % kname
             mount_point = utils_disk.configure_empty_linux_disk(
-                session, disk_id, disk_size)[0]
+                session, disk_id, disk_size
+            )[0]
             self.disks_info[tag] = [disk_path, mount_point]
         finally:
             session.close()
@@ -157,29 +153,33 @@ class BlockdevBackupBaseTest(object):
 
     @error_context.context_aware
     def blockdev_backup(self):
-        assert len(
-            self.target_disks) >= len(
-            self.source_disks), "No enough target disks define in cfg!"
+        assert len(self.target_disks) >= len(
+            self.source_disks
+        ), "No enough target disks define in cfg!"
         source_lst = list(map(lambda x: "drive_%s" % x, self.source_disks))
         target_lst = list(map(lambda x: "drive_%s" % x, self.target_disks))
-        bitmap_lst = list(map(lambda x: "bitmap_%s" %
-                              x, range(len(self.source_disks))))
+        bitmap_lst = list(map(lambda x: "bitmap_%s" % x, range(len(self.source_disks))))
         try:
             if len(source_lst) > 1:
                 error_context.context(
-                    "backup %s to %s, options: %s" %
-                    (source_lst, target_lst, self.backup_options))
+                    "backup %s to %s, options: %s"
+                    % (source_lst, target_lst, self.backup_options)
+                )
                 backup_utils.blockdev_batch_backup(
-                    self.main_vm, source_lst, target_lst, bitmap_lst, **self.backup_options)
+                    self.main_vm,
+                    source_lst,
+                    target_lst,
+                    bitmap_lst,
+                    **self.backup_options,
+                )
             else:
                 error_context.context(
-                    "backup %s to %s, options: %s" %
-                    (source_lst[0], target_lst[0], self.backup_options))
+                    "backup %s to %s, options: %s"
+                    % (source_lst[0], target_lst[0], self.backup_options)
+                )
                 backup_utils.blockdev_backup(
-                    self.main_vm,
-                    source_lst[0],
-                    target_lst[0],
-                    **self.backup_options)
+                    self.main_vm, source_lst[0], target_lst[0], **self.backup_options
+                )
         finally:
             memory.drop_caches()
 

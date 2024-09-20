@@ -1,13 +1,13 @@
 """Wild hot-plug-unplug test"""
+
 import copy
-import time
 import os
+import time
 
 from avocado.utils import process
-
-from virttest.qemu_monitor import QMPCmdError
-from virttest import error_context, env_process
 from virttest import data_dir as virttest_data_dir
+from virttest import env_process, error_context
+from virttest.qemu_monitor import QMPCmdError
 
 
 # This decorator makes the test function aware of context strings
@@ -48,12 +48,12 @@ def run(test, params, env):
     def _configure_images_params():
         for i in range(image_num):
             name = "stg%d" % i
-            params['image_name_%s' % name] = "images/%s" % name
-            params['image_size_%s' % name] = stg_image_size
+            params["image_name_%s" % name] = "images/%s" % name
+            params["image_size_%s" % name] = stg_image_size
             params["images"] = params["images"] + " " + name
             if params["drive_format"] == "scsi-hd":
                 params["drive_bus_%s" % name] = 0 if share_bus == "yes" else 1
-                params["blk_extra_params_%s" % name] = "lun=%d" % (i+1)
+                params["blk_extra_params_%s" % name] = "lun=%d" % (i + 1)
             image_params = params.object_params(name)
             env_process.preprocess_image(test, image_params, name)
 
@@ -69,7 +69,7 @@ def run(test, params, env):
             try:
                 vm.monitor.cmd("device_add", images_params[name], debug=False)
             except QMPCmdError as e:
-                test.log.warning('Ignore hotplug error: %s', str(e))
+                test.log.warning("Ignore hotplug error: %s", str(e))
 
     def _hotunplug_images():
         for i in range(1, image_num):
@@ -77,7 +77,7 @@ def run(test, params, env):
             try:
                 vm.monitor.cmd("device_del", {"id": name}, debug=False)
             except QMPCmdError as e:
-                test.log.warning('Ignore hotunplug error: %s', str(e))
+                test.log.warning("Ignore hotunplug error: %s", str(e))
 
     stg_image_size = params.get("stg_image_size", "256M")
     image_num = params.get_numeric("stg_image_num", 20)
@@ -89,12 +89,11 @@ def run(test, params, env):
     images_params = {}
     error_context.context("Create images %d" % image_num, test.log.info)
     _configure_images_params()
-    params['start_vm'] = 'yes'
+    params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params["main_vm"])
-    vm = env.get_vm(params['main_vm'])
+    vm = env.get_vm(params["main_vm"])
     try:
-        session = vm.wait_for_login(
-            timeout=params.get_numeric("login_timeout", 360))
+        session = vm.wait_for_login(timeout=params.get_numeric("login_timeout", 360))
 
         error_context.context("Get images params", test.log.info)
         _get_images_params()
@@ -120,13 +119,13 @@ def run(test, params, env):
         time.sleep(wait_time)
         error_context.context("Check disks in guest.", test.log.info)
         # re-login in case previous session is expired
-        session = vm.wait_for_login(
-            timeout=params.get_numeric("relogin_timeout", 60))
+        session = vm.wait_for_login(timeout=params.get_numeric("relogin_timeout", 60))
         new_disks_num = int(session.cmd("lsblk -d -n|wc -l", timeout=300))
         test.log.info("There are total %d disks after hotplug", new_disks_num)
         if new_disks_num != disks_num:
-            test.log.warning("Find unmatched disk numbers %d %d", disks_num,
-                             new_disks_num)
+            test.log.warning(
+                "Find unmatched disk numbers %d %d", disks_num, new_disks_num
+            )
     except Exception as e:
         pid = vm.get_pid()
         test.log.debug("Find %s Exception:'%s'.", pid, str(e))
@@ -134,8 +133,9 @@ def run(test, params, env):
             logdir = test.logdir
             process.getoutput("gstack %s > %s/gstack.log" % (pid, logdir))
             process.getoutput(
-                "timeout 20 strace -tt -T -v -f -s 32 -p %s -o %s/strace.log" % (
-                    pid, logdir))
+                "timeout 20 strace -tt -T -v -f -s 32 -p %s -o %s/strace.log"
+                % (pid, logdir)
+            )
         else:
             test.log.debug("VM dead...")
         raise e

@@ -1,9 +1,6 @@
 import time
 
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_disk
-from virttest import utils_misc
+from virttest import error_context, utils_disk, utils_misc, utils_net
 
 
 @error_context.context_aware
@@ -24,19 +21,23 @@ def run(test, params, env):
         """
         Get interrupt information using specified pattern
         """
-        return session.cmd_output("grep '%s' /proc/interrupts" % irq_pattern,
-                                  print_func=test.log.info).split()
+        return session.cmd_output(
+            "grep '%s' /proc/interrupts" % irq_pattern, print_func=test.log.info
+        ).split()
 
     def analyze_interrupts(irq_before_test, irq_after_test):
         """
         Compare interrupt information and analyze them
         """
         error_context.context("Analyzing interrupts", test.log.info)
-        filtered_result = [x for x in zip(irq_before_test, irq_after_test)
-                           if x[0] != x[1]]
+        filtered_result = [
+            x for x in zip(irq_before_test, irq_after_test) if x[0] != x[1]
+        ]
         if not filtered_result:
-            test.fail("Number of interrupts on the CPUs have not changed after"
-                      " test execution")
+            test.fail(
+                "Number of interrupts on the CPUs have not changed after"
+                " test execution"
+            )
         elif any([int(x[1]) < int(x[0]) for x in filtered_result]):
             test.fail("The number of interrupts has decreased")
 
@@ -78,19 +79,21 @@ def run(test, params, env):
         for vcpu_device in vcpu_devices:
             vm.hotplug_vcpu_device(vcpu_device)
         if not utils_misc.wait_for(
-                lambda: vm.get_cpu_count() == current_cpu + len(vcpu_devices),
-                30):
+            lambda: vm.get_cpu_count() == current_cpu + len(vcpu_devices), 30
+        ):
             test.fail("Actual number of guest CPUs is not equal to expected")
         guest_cpus = vm.get_cpu_count()
         irq_info_after_hotplug = get_irq_info()
-        if (len(irq_info_after_hotplug) != (len(irq_info_before_test)
-                                            + len(vcpu_devices))):
+        if len(irq_info_after_hotplug) != (
+            len(irq_info_before_test) + len(vcpu_devices)
+        ):
             test.fail("Number of CPUs for %s is incorrect" % irq_pattern)
 
-        irq_num_before_hotplug = irq_info_before_test[1: (current_cpu+1)]
-        irq_num_after_hotplug = irq_info_after_hotplug[1: (guest_cpus+1)]
-        if (sum(map(int, irq_num_after_hotplug)) <=
-                sum(map(int, irq_num_before_hotplug))):
+        irq_num_before_hotplug = irq_info_before_test[1 : (current_cpu + 1)]
+        irq_num_after_hotplug = irq_info_after_hotplug[1 : (guest_cpus + 1)]
+        if sum(map(int, irq_num_after_hotplug)) <= sum(
+            map(int, irq_num_before_hotplug)
+        ):
             test.fail("Abnormal number of interrupts")
 
     def standby_test():
@@ -107,11 +110,16 @@ def run(test, params, env):
     guest_ip = vm.get_address()
     guest_ifname = utils_net.get_linux_ifname(session, vm.get_mac_address(0))
     irq_pattern = params["irq_pattern"].format(ifname=guest_ifname)
-    test_execution = {"dd": dd_test, "ping": ping_test,
-                      "hotplug": hotplug_test, "standby": standby_test}
+    test_execution = {
+        "dd": dd_test,
+        "ping": ping_test,
+        "hotplug": hotplug_test,
+        "standby": standby_test,
+    }
 
-    error_context.base_context("Get interrupt info before executing test",
-                               test.log.info)
+    error_context.base_context(
+        "Get interrupt info before executing test", test.log.info
+    )
     irq_info_before_test = get_irq_info()
 
     error_context.context("Execute test to verify increased interrupts")

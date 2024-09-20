@@ -1,5 +1,4 @@
 from virttest import env_process
-
 from virttest.tests import unattended_install
 
 

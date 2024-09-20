@@ -1,9 +1,7 @@
 import re
 
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_package
 from avocado.utils import process
+from virttest import error_context, utils_misc, utils_package
 
 
 @error_context.context_aware
@@ -35,8 +33,7 @@ def run(test, params, env):
         if s:
             test.fail("Run htm unit test failed, output: %s" % o)
         # Make sure if host is available by do commands on host
-        status, output = process.getstatusoutput("rm -rf %s"
-                                                 % params["htm_dir"])
+        status, output = process.getstatusoutput("rm -rf %s" % params["htm_dir"])
         if status:
             test.fail("Please check host's status: %s" % output)
         utils_misc.verify_dmesg()
@@ -44,8 +41,10 @@ def run(test, params, env):
         check_exist_cmd = params["check_htm_env"]
         s, o = process.getstatusoutput(check_exist_cmd)
         if s:
-            test.error("Please check htm is supported or not by '%s', output: %s"
-                       % (check_exist_cmd, o))
+            test.error(
+                "Please check htm is supported or not by '%s', output: %s"
+                % (check_exist_cmd, o)
+            )
         vm = env.get_vm(params["main_vm"])
         session = vm.wait_for_login()
         pkgs = params["depends_pkgs"].split()
@@ -55,8 +54,10 @@ def run(test, params, env):
         download_htm_demo = params["download_htm_demo"]
         status = session.cmd_status("wget %s" % download_htm_demo)
         if status:
-            test.error("Failed to download test file, please configure it in cfg : %s"
-                       % download_htm_demo)
+            test.error(
+                "Failed to download test file, please configure it in cfg : %s"
+                % download_htm_demo
+            )
         else:
             status, output = session.cmd_status_output(params["test_htm_command"])
             if not re.search(params["expected_htm_test_result"], output):

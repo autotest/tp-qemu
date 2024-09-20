@@ -1,8 +1,8 @@
 import time
 
 from virttest import error_context
-
 from virttest.utils_misc import normalize_data_size
+
 from provider import virtio_mem_utils
 
 
@@ -36,25 +36,32 @@ def run(test, params, env):
         mig_protocol = params.get("migration_protocol", "tcp")
         vm.migrate(mig_timeout, mig_protocol, env=env)
 
-    virtio_mem_model = 'virtio-mem-pci'
-    if '-mmio:' in params.get("machine_type"):
-        virtio_mem_model = 'virtio-mem-device'
-    for i, vmem_dev in enumerate(vm.devices.get_by_params({'driver': virtio_mem_model})):
+    virtio_mem_model = "virtio-mem-pci"
+    if "-mmio:" in params.get("machine_type"):
+        virtio_mem_model = "virtio-mem-device"
+    for i, vmem_dev in enumerate(
+        vm.devices.get_by_params({"driver": virtio_mem_model})
+    ):
         device_id = vmem_dev.get_qid()
         requested_size_vmem = params.get("requested-size_test_vmem%d" % i)
         node_id = int(vmem_dev.params.get("node"))
         for requested_size in requested_size_vmem.split():
-            req_size_normalized = int(float(normalize_data_size(requested_size, 'B')))
+            req_size_normalized = int(float(normalize_data_size(requested_size, "B")))
             vm.monitor.qom_set(device_id, "requested-size", req_size_normalized)
             time.sleep(30)
-            virtio_mem_utils.check_memory_devices(device_id, requested_size, threshold, vm, test)
-            virtio_mem_utils.check_numa_plugged_mem(node_id, requested_size, threshold, vm, test)
+            virtio_mem_utils.check_memory_devices(
+                device_id, requested_size, threshold, vm, test
+            )
+            virtio_mem_utils.check_numa_plugged_mem(
+                node_id, requested_size, threshold, vm, test
+            )
 
     if operation_type == "with_reboot":
         vm.reboot()
-        error_context.context("Verify virtio-mem device after reboot",
-                              test.log.info)
-        virtio_mem_utils.check_memory_devices(device_id, requested_size,
-                                              threshold, vm, test)
-        virtio_mem_utils.check_numa_plugged_mem(node_id, requested_size,
-                                                threshold, vm, test)
+        error_context.context("Verify virtio-mem device after reboot", test.log.info)
+        virtio_mem_utils.check_memory_devices(
+            device_id, requested_size, threshold, vm, test
+        )
+        virtio_mem_utils.check_numa_plugged_mem(
+            node_id, requested_size, threshold, vm, test
+        )

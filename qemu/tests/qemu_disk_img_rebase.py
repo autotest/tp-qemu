@@ -2,17 +2,14 @@ import copy
 import logging
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import storage
+from virttest import error_context, storage
 
 from qemu.tests import qemu_disk_img
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class RebaseTest(qemu_disk_img.QemuImgTest):
-
     def __init__(self, test, params, env, tag):
         self.tag = tag
         t_params = params.object_params(tag)
@@ -51,11 +48,14 @@ def run(test, params, env):
     params_bak = copy.deepcopy(params)
     md5_dict = {}
     params.update(
-        {"image_name_%s" % base_image: params["image_name"],
-         "image_format_%s" % base_image: params["image_format"]})
+        {
+            "image_name_%s" % base_image: params["image_name"],
+            "image_format_%s" % base_image: params["image_format"],
+        }
+    )
     image_chain = params.get("image_chain", "").split()
     for idx, tag in enumerate(image_chain):
-        params["image_chain"] = " ".join(image_chain[:idx + 1])
+        params["image_chain"] = " ".join(image_chain[: idx + 1])
         rebase_test = RebaseTest(test, params, env, tag)
         n_params = rebase_test.create_snapshot()
         rebase_test.start_vm(n_params)

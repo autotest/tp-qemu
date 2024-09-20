@@ -1,22 +1,29 @@
 #!/usr/bin/python
 
-'''
+"""
 Script to build and install packages from git in VMs
-'''
+"""
 
-import os
-import sys
-import re
 import optparse
+import os
+import re
 import subprocess
+import sys
 
 
 def run_subprocess_cmd(args):
-    output = subprocess.Popen(args, shell=False,
-                              stdin=subprocess.PIPE,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              close_fds=True).stdout.read().strip()
+    output = (
+        subprocess.Popen(
+            args,
+            shell=False,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+        )
+        .stdout.read()
+        .strip()
+    )
     return output
 
 
@@ -34,9 +41,11 @@ git_repo["virt-viewer"] = "https://git.fedorahosted.org/git/virt-viewer.git"
 git_repo["spice-server"] = "git://anongit.freedesktop.org/spice/spice"
 
 # options to pass
-autogen_options["spice-gtk"] = "--disable-gtk-doc --disable-werror --disable-vala  --enable-smartcard"
+autogen_options["spice-gtk"] = (
+    "--disable-gtk-doc --disable-werror --disable-vala  --enable-smartcard"
+)
 autogen_options["spice-vd-agent"] = "--libdir=/usr/lib64 --sysconfdir=/etc"
-autogen_options["xf86-video-qxl"] = "--libdir=\"/usr/lib64\""
+autogen_options["xf86-video-qxl"] = '--libdir="/usr/lib64"'
 autogen_options["virt-viewer"] = "--with-spice-gtk --disable-update-mimedb"
 autogen_options["spice-server"] = "--enable-smartcard"
 prefix_defaults["spice-protocol"] = "/usr/local"
@@ -59,22 +68,33 @@ usageMsg += "\n\tspice-server\t -> SPICE Server"
 
 # Getting all parameters
 parser = optparse.OptionParser(usage=usageMsg)
-parser.add_option("-p", "--package", dest="pkgName",
-                  help="Name of package to build. Required.")
-parser.add_option("-g", "--gitRepo", dest="gitRepo",
-                  help="Repo to download and build package from")
-parser.add_option("-b", "--branch", dest="branch", default="master",
-                  help="Branch to checkout and use")
-parser.add_option("-d", "--destDir", dest="destDir",
-                  help="Destination Dir to store repo at")
-parser.add_option("-c", "--commit", dest="commit",
-                  help="Specific commit to download")
-parser.add_option("-l", "--prefix", dest="prefix",
-                  help="Location to store built binaries/libraries")
-parser.add_option("-o", "--buildOptions", dest="buildOptions",
-                  help="Options to pass to autogen.sh while building")
-parser.add_option("--tarball", dest="tarballLocation",
-                  help="Option to build from tarball. Pass tarball location")
+parser.add_option(
+    "-p", "--package", dest="pkgName", help="Name of package to build. Required."
+)
+parser.add_option(
+    "-g", "--gitRepo", dest="gitRepo", help="Repo to download and build package from"
+)
+parser.add_option(
+    "-b", "--branch", dest="branch", default="master", help="Branch to checkout and use"
+)
+parser.add_option(
+    "-d", "--destDir", dest="destDir", help="Destination Dir to store repo at"
+)
+parser.add_option("-c", "--commit", dest="commit", help="Specific commit to download")
+parser.add_option(
+    "-l", "--prefix", dest="prefix", help="Location to store built binaries/libraries"
+)
+parser.add_option(
+    "-o",
+    "--buildOptions",
+    dest="buildOptions",
+    help="Options to pass to autogen.sh while building",
+)
+parser.add_option(
+    "--tarball",
+    dest="tarballLocation",
+    help="Option to build from tarball. Pass tarball location",
+)
 
 
 (options, args) = parser.parse_args()
@@ -106,7 +126,6 @@ if re.findall("release 6", rhelVersion):
         autogen_options[pkgName] += " --disable-kms"
 
 if not tarballLocation:
-
     # If spice-gtk & not tarball, then disable spice controller
     if pkgName == "spice-gtk":
         autogen_options[pkgName] += " --disable-controller"
@@ -133,17 +152,27 @@ if not tarballLocation:
     os.chdir(destDir)
 
     # If git repo already exists, reset. If not, initialize
-    if os.path.exists('.git'):
-        print("Resetting previously existing git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName]))
+    if os.path.exists(".git"):
+        print(
+            "Resetting previously existing git repo at %s for receiving git repo %s"
+            % (destDir, git_repo[pkgName])
+        )
         subprocess.check_call("git reset --hard".split())
     else:
-        print("Initializing new git repo at %s for receiving git repo %s" % (destDir, git_repo[pkgName]))
+        print(
+            "Initializing new git repo at %s for receiving git repo %s"
+            % (destDir, git_repo[pkgName])
+        )
         subprocess.check_call("git init".split())
 
     # Fetch the contents of the repo
-    print("Fetching git [REP '%s' BRANCH '%s'] -> %s" % (git_repo[pkgName], branch, destDir))
-    subprocess.check_call(("git fetch -q -f -u -t %s %s:%s" %
-                           (git_repo[pkgName], branch, branch)).split())
+    print(
+        "Fetching git [REP '%s' BRANCH '%s'] -> %s"
+        % (git_repo[pkgName], branch, destDir)
+    )
+    subprocess.check_call(
+        ("git fetch -q -f -u -t %s %s:%s" % (git_repo[pkgName], branch, branch)).split()
+    )
 
     # checkout the branch specified, master by default
     print("Checking out branch %s" % branch)
@@ -162,26 +191,26 @@ if not tarballLocation:
     output = run_subprocess_cmd(args)
 
     # Get the commit and tag which repo is at
-    args = 'git log --pretty=format:%H -1'.split()
+    args = "git log --pretty=format:%H -1".split()
     print("Running 'git log --pretty=format:%H -1' to get top commit")
     top_commit = run_subprocess_cmd(args)
 
-    args = 'git describe'.split()
+    args = "git describe".split()
     print("Running 'git describe' to get top tag")
     top_tag = run_subprocess_cmd(args)
     if top_tag is None:
-        top_tag_desc = 'no tag found'
+        top_tag_desc = "no tag found"
     else:
-        top_tag_desc = 'tag %s' % top_tag
+        top_tag_desc = "tag %s" % top_tag
     print("git commit ID is %s (%s)" % (top_commit, top_tag_desc))
 
 # If tarball is not specified
 else:
     tarballName = tarballLocation.split("/")[-1]
-    args = ('wget -O /tmp/%s %s' % (tarballName, tarballLocation)).split()
+    args = ("wget -O /tmp/%s %s" % (tarballName, tarballLocation)).split()
     output = run_subprocess_cmd(args)
 
-    args = ('tar xf /tmp/%s -C /tmp' % tarballName).split()
+    args = ("tar xf /tmp/%s -C /tmp" % tarballName).split()
     output = run_subprocess_cmd(args)
 
     tarballName = re.sub(".tar.bz2", "", tarballName)
@@ -195,12 +224,16 @@ if pkgName in prefix_defaults.keys() and options.prefix is None:
 # if no prefix is set, the use default PKG_CONFIG_PATH. If not, set to
 # prefix's PKG_CONFIG_PATH
 if prefix is None:
-    env_vars = ("PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:"
-                "/usr/local/lib:/usr/local/lib/pkgconfig:/usr/local/lib/pkg-config:")
+    env_vars = (
+        "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/local/share/pkgconfig:"
+        "/usr/local/lib:/usr/local/lib/pkgconfig:/usr/local/lib/pkg-config:"
+    )
 else:
-    env_vars = ("PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:"
-                "/usr/local/share/pkgconfig:%s/lib/pkgconfig:%s/lib/pkg-config:"
-                % (prefix, prefix, prefix, prefix))
+    env_vars = (
+        "PKG_CONFIG_PATH=$PKG_CONFIG_PATH:%s/share/pkgconfig:%s/lib:"
+        "/usr/local/share/pkgconfig:%s/lib/pkgconfig:%s/lib/pkg-config:"
+        % (prefix, prefix, prefix, prefix)
+    )
 
 # Running autogen.sh with prefix and any other options
 # Using os.system because subprocess.Popen would not work
@@ -215,7 +248,7 @@ if not os.path.exists(cmd):
         sys.exit(1)
 
 if prefix is not None:
-    cmd += " --prefix=\"" + prefix + "\""
+    cmd += ' --prefix="' + prefix + '"'
 if pkgName in autogen_options.keys():
     cmd += " " + autogen_options[pkgName]
 
@@ -227,7 +260,9 @@ if ret != 0:
 
 # Temporary workaround for building spice-vdagent
 if pkgName == "spice-vd-agent":
-    os.system("sed -i '/^src_spice_vdagent_CFLAGS/ s/$/  -fno-strict-aliasing/g' Makefile.am")
+    os.system(
+        "sed -i '/^src_spice_vdagent_CFLAGS/ s/$/  -fno-strict-aliasing/g' Makefile.am"
+    )
     os.system("sed -i '/(PCIACCESS_CFLAGS)/ s/$/  -fno-strict-aliasing/g' Makefile.am")
 
 # Running 'make' to build and using os.system again

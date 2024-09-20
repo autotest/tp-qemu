@@ -1,8 +1,7 @@
 from avocado import fail_on
 from avocado.utils import process
-
-from virttest.qemu_io import QemuIOSystem
 from virttest import data_dir
+from virttest.qemu_io import QemuIOSystem
 from virttest.qemu_storage import QemuImg
 
 
@@ -26,7 +25,7 @@ def run(test, params, env):
     img_dir = data_dir.get_data_dir()
 
     source = QemuImg(params.object_params(src_image), img_dir, src_image)
-    _qemu_io(source, 'write -P 1 0 %s' % params["write_size"])
+    _qemu_io(source, "write -P 1 0 %s" % params["write_size"])
 
     fail_on((process.CmdError,))(source.convert)(source.params, img_dir)
 

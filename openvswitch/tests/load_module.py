@@ -1,11 +1,9 @@
 import sys
 import traceback
-import six
 
+import six
 from avocado.utils import process
-from virttest import openvswitch
-from virttest import versionable_class
-from virttest import error_context
+from virttest import error_context, openvswitch, versionable_class
 
 
 @error_context.context_aware
@@ -43,8 +41,8 @@ def run(test, params, env):
             if _e is None:
                 raise
             else:
-                test.log.error("Cleaning function raised exception too: \n%s",
-                               "".join(traceback.format_exception(e[0],
-                                                                  e[1],
-                                                                  e[2])))
+                test.log.error(
+                    "Cleaning function raised exception too: \n%s",
+                    "".join(traceback.format_exception(e[0], e[1], e[2])),
+                )
                 six.reraise(_e[0], _e[1], _e[2])

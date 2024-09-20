@@ -1,7 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -33,14 +32,14 @@ def run(test, params, env):
     vm.verify_alive()
 
     timeout = float(params.get("login_timeout", 360))
-    seabios_session = vm.logsessions['seabios']
+    seabios_session = vm.logsessions["seabios"]
     rb_timeout = int(params["boot_reboot_timeout"])
     if rb_timeout < 0:
         test.cancel("Do not support rb_timeout = %s" % rb_timeout)
     elif rb_timeout > 65535:
         rb_timeout = 65535
 
-    rb_timeout = rb_timeout//1000
+    rb_timeout = rb_timeout // 1000
     pattern = "No bootable device.*Retrying in %d seconds" % rb_timeout
 
     error_context.context("Check reboot-timeout option", test.log.info)

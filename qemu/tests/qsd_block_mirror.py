@@ -6,7 +6,6 @@ from provider.qsd import QsdDaemonDev
 
 
 class QSDMirrorTest(BlockdevMirrorWaitTest):
-
     def __init__(self, test, params, env):
         super(QSDMirrorTest, self).__init__(test, params, env)
         self._source_nodes = ["fmt_%s" % src for src in self._source_images]
@@ -24,7 +23,8 @@ class QSDMirrorTest(BlockdevMirrorWaitTest):
         """Hot plug target disks to VM with qmp monitor"""
         for tag in self._target_images:
             disk = self.target_disk_define_by_params(
-                self.params.object_params(tag), tag)
+                self.params.object_params(tag), tag
+            )
             disk.hotplug(self.qsd)
             self.trash.append(disk)
 
@@ -32,17 +32,19 @@ class QSDMirrorTest(BlockdevMirrorWaitTest):
         """Run block-mirror and wait job done"""
         try:
             for idx, source_node in enumerate(self._source_nodes):
-                backup_utils.blockdev_mirror(self.qsd, source_node,
-                                             self._target_nodes[idx],
-                                             **self._backup_options[idx])
+                backup_utils.blockdev_mirror(
+                    self.qsd,
+                    source_node,
+                    self._target_nodes[idx],
+                    **self._backup_options[idx],
+                )
         finally:
             memory.drop_caches()
 
     def _check_mirrored_block_node_attached(self, source_qdev, target_node):
         out = self.qsd.monitor.cmd("query-named-block-nodes")[0]
         if out.get("node-name") != target_node:
-            self.test.fail("Device is not attached to target node(%s)"
-                           % target_node)
+            self.test.fail("Device is not attached to target node(%s)" % target_node)
 
     def clone_vm_with_mirrored_images(self):
         """Boot VM with mirrored data disks"""
@@ -53,7 +55,7 @@ class QSDMirrorTest(BlockdevMirrorWaitTest):
 
         params = self.main_vm.params.copy()
         self.clone_vm = self.main_vm.clone(params=params)
-        self.params.update({"qsd_images_qsd1": ' '.join(self._target_images)})
+        self.params.update({"qsd_images_qsd1": " ".join(self._target_images)})
         self.start_qsd()
         self.clone_vm.create()
         self.clone_vm.verify_alive()

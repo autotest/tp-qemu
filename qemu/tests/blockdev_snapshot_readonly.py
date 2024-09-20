@@ -4,27 +4,25 @@ from aexpect import ShellCmdError
 from virttest import utils_disk
 
 from provider import backup_utils
-
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
 
 class BlockdevSnapshotReadonly(BlockDevSnapshotTest):
     def configure_data_disk(self):
-        os_type = self.params["os_type"]
+        self.params["os_type"]
         disk_params = self.params.object_params(self.base_tag)
         disk_size = disk_params["image_size"]
         session = self.main_vm.wait_for_login()
         disk_id = self.get_linux_disk_path(session, disk_size)
         assert disk_id, "Disk not found in guest!"
         try:
-            mount_point = utils_disk.configure_empty_linux_disk(
-                session, disk_id, disk_size)[0]
+            utils_disk.configure_empty_linux_disk(session, disk_id, disk_size)[0]
         except ShellCmdError as e:
             disk_tag = r"/dev/%s" % disk_id
-            error_msg = self.params['error_msg'] % disk_tag
+            error_msg = self.params["error_msg"] % disk_tag
             if not re.search(error_msg, str(e)):
                 self.test.fail("Unexpected disk format error: %s" % str(e))
-            self.disks_info[self.base_tag] = [disk_tag, '/mnt']
+            self.disks_info[self.base_tag] = [disk_tag, "/mnt"]
         else:
             self.test.fail("Read-only disk is formated")
         finally:

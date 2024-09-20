@@ -1,10 +1,10 @@
+import argparse
+import logging
 import os
 import re
-import sys
 import shutil
-import logging
-import argparse
 import subprocess
+import sys
 
 logger = logging.getLogger(f"avocado.test.{__name__}")
 
@@ -17,10 +17,11 @@ def cmd_output(cmd):
     """
     logger.debug("Sending command: %s", cmd)
     try:
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
     except Exception as err:
-        error_msg = (f"Failed to execute cmd {cmd}!\n"
-                     f"Details refers: {err}")
+        error_msg = f"Failed to execute cmd {cmd}!\n" f"Details refers: {err}"
         logger.error(error_msg)
         sys.exit(1)
     stdoutput = p.stdout.readlines()
@@ -33,7 +34,7 @@ def getdpinst(vol_utils):
 
     :param vol_utils: Volume of Win_utils.
     """
-    if os.environ.get('PROCESSOR_ARCHITECTURE') == "AMD64":
+    if os.environ.get("PROCESSOR_ARCHITECTURE") == "AMD64":
         dpinst_dir = r"%s\dpinst_64.exe" % vol_utils
     else:
         dpinst_dir = r"%s\dpinst_32.exe" % vol_utils
@@ -89,8 +90,7 @@ def get_inf_files(driver_path, driver_name):
     inf_files = []
     for root, dirs, files in os.walk(driver_path):
         files_path = map(lambda x: os.path.join(root, x), files)
-        inf_files += list(
-            filter(lambda x: x.lower().endswith(inf_name), files_path))
+        inf_files += list(filter(lambda x: x.lower().endswith(inf_name), files_path))
     return inf_files
 
 
@@ -121,8 +121,10 @@ def get_current_driver_ver(device_name):
     :return: Current driver version.
     """
     key = r"\d*\.\d*\.\d*\.\d*"
-    get_driver_ver_cmd = ("wmic path win32_pnpsigneddriver where"
-                          " Devicename='%s' get driverversion" % device_name)
+    get_driver_ver_cmd = (
+        "wmic path win32_pnpsigneddriver where"
+        " Devicename='%s' get driverversion" % device_name
+    )
     driver_version = os.popen(get_driver_ver_cmd).read()
     if not driver_version.strip():
         return ""
@@ -155,9 +157,11 @@ def verify_driver_ver(driver_path, device_name, driver_name):
     expected_driver_ver = get_expected_driver_ver(driver_path, driver_name)
     logger.info("Compare whether driver version is same as expected.")
     if current_driver_ver != expected_driver_ver:
-        error_msg = ("Driver installation failed !\n"
-                     "Current driver version %s is not equal"
-                     " to the expected %s." % (current_driver_ver, expected_driver_ver))
+        error_msg = (
+            "Driver installation failed !\n"
+            "Current driver version %s is not equal"
+            " to the expected %s." % (current_driver_ver, expected_driver_ver)
+        )
         logger.error(error_msg)
         sys.exit(1)
     logger.info("Current driver version %s is same as expected.", current_driver_ver)
@@ -174,33 +178,57 @@ def show_log_output(result_file):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Windows Driver Operation')
-    parser.add_argument('-i', '--install_driver',
-                        help='operation for install driver',
-                        dest='install_driver', action='store_true')
-    parser.add_argument('-u', '--uninstall_driver',
-                        help='operation for uninstall driver',
-                        dest='uninstall_driver', action='store_true')
-    parser.add_argument('-q', '--query_driver',
-                        help='operation for query driver',
-                        dest='query_driver', action='store_true')
-    parser.add_argument('-v', '--verify_driver',
-                        help='operation for verify driver',
-                        dest='verify_driver', action='store_true')
-    parser.add_argument('-o', '--log_output',
-                        help='operation for show log output',
-                        dest='log_output', action='store_true')
-    parser.add_argument('--driver_path',
-                        help='driver path', dest='driver_path', action='store')
-    parser.add_argument('--driver_name',
-                        help='driver name', dest='driver_name', action='store')
-    parser.add_argument('--device_name',
-                        help='the corresponding device name with driver',
-                        dest='device_name', action='store')
-    parser.add_argument('--vol_utils',
-                        help='volume of WIN_UTILS',
-                        dest='vol_utils', action='store')
+    parser = argparse.ArgumentParser(description="Windows Driver Operation")
+    parser.add_argument(
+        "-i",
+        "--install_driver",
+        help="operation for install driver",
+        dest="install_driver",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-u",
+        "--uninstall_driver",
+        help="operation for uninstall driver",
+        dest="uninstall_driver",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-q",
+        "--query_driver",
+        help="operation for query driver",
+        dest="query_driver",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-v",
+        "--verify_driver",
+        help="operation for verify driver",
+        dest="verify_driver",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-o",
+        "--log_output",
+        help="operation for show log output",
+        dest="log_output",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--driver_path", help="driver path", dest="driver_path", action="store"
+    )
+    parser.add_argument(
+        "--driver_name", help="driver name", dest="driver_name", action="store"
+    )
+    parser.add_argument(
+        "--device_name",
+        help="the corresponding device name with driver",
+        dest="device_name",
+        action="store",
+    )
+    parser.add_argument(
+        "--vol_utils", help="volume of WIN_UTILS", dest="vol_utils", action="store"
+    )
     arguments = parser.parse_args()
 
     result_file = r"C:\driver_install.log"
@@ -208,7 +236,9 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     fh = logging.FileHandler(result_file, mode="a+")
     fh.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
@@ -221,16 +251,20 @@ if __name__ == "__main__":
         uninstall_driver(arguments.driver_name)
     elif arguments.install_driver:
         getdpinst(arguments.vol_utils)
-        install_driver(arguments.driver_path, arguments.driver_name,
-                       arguments.vol_utils)
+        install_driver(
+            arguments.driver_path, arguments.driver_name, arguments.vol_utils
+        )
     elif arguments.query_driver:
         current_driver_ver = get_current_driver_ver(arguments.device_name)
-        msg = "Current driver version for %s is %s" % (arguments.driver_name,
-                                                       current_driver_ver)
+        msg = "Current driver version for %s is %s" % (
+            arguments.driver_name,
+            current_driver_ver,
+        )
         logger.debug(msg)
     elif arguments.verify_driver:
-        verify_driver_ver(arguments.driver_path, arguments.device_name,
-                          arguments.driver_name)
+        verify_driver_ver(
+            arguments.driver_path, arguments.device_name, arguments.driver_name
+        )
     elif arguments.log_output:
         print("Execution log:\n")
         show_log_output(result_file)

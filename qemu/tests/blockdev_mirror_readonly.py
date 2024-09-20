@@ -19,7 +19,7 @@ class BlockdevMirrorReadonlyDeviceTest(BlockdevMirrorWaitTest):
             try:
                 self.format_data_disk(tag)
             except ShellCmdError as e:
-                if not re.search(self.params['error_msg'], str(e), re.M):
+                if not re.search(self.params["error_msg"], str(e), re.M):
                     self.test.fail("Unexpected disk format error: %s" % str(e))
             else:
                 self.test.fail("Unexpected disk format success")

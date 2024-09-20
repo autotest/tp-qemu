@@ -1,5 +1,4 @@
-from provider import blockdev_stream_nowait
-from provider import job_utils
+from provider import blockdev_stream_nowait, job_utils
 
 
 class BlkdevStreamFilterNode(blockdev_stream_nowait.BlockdevStreamNowaitTest):
@@ -21,28 +20,37 @@ class BlkdevStreamFilterNode(blockdev_stream_nowait.BlockdevStreamNowaitTest):
         if during_stream:
             for block in blocks_info:
                 block_node_name = block["inserted"].get("node-name")
-                if (self.params.get("source_images") in block["qdev"] and
-                        block_node_name == self.params['filter_node_name']):
+                if (
+                    self.params.get("source_images") in block["qdev"]
+                    and block_node_name == self.params["filter_node_name"]
+                ):
                     break
             else:
-                self.test.fail("Filter node name '%s' is not set as expected"
-                               "during stream" % self.params['filter_node_name'])
+                self.test.fail(
+                    "Filter node name '%s' is not set as expected"
+                    "during stream" % self.params["filter_node_name"]
+                )
         else:
             for block in blocks_info:
                 block_node_name = block["inserted"].get("node-name")
-                if (self.params.get("source_images") in block["qdev"] and
-                        block_node_name != self.params['filter_node_name']):
+                if (
+                    self.params.get("source_images") in block["qdev"]
+                    and block_node_name != self.params["filter_node_name"]
+                ):
                     break
             else:
-                self.test.fail("Filter node name '%s' set after stream"
-                               % self.params['filter_node_name'])
+                self.test.fail(
+                    "Filter node name '%s' set after stream"
+                    % self.params["filter_node_name"]
+                )
 
     def do_test(self):
         self.snapshot_test()
         self.blockdev_stream()
         job_utils.check_block_jobs_started(
-            self.main_vm, [self._job],
-            self.params.get_numeric('job_started_timeout', 60)
+            self.main_vm,
+            [self._job],
+            self.params.get_numeric("job_started_timeout", 60),
         )
         self.check_filter_nodes_name()
         self.wait_stream_job_completed()

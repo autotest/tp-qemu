@@ -1,8 +1,7 @@
 import logging
 
 from autotest.client.shared import error
-from virttest import remote
-from virttest import virt_vm
+from virttest import remote, virt_vm
 from virttest.utils_test.qemu import migration
 
 
@@ -34,26 +33,26 @@ def run(test, params, env):
         base_class = migration.MultihostMigrationRdma
 
     class TestMultihostMigrationCancel(base_class):
-
         def __init__(self, test, params, env):
-            super(TestMultihostMigrationCancel, self).__init__(test, params,
-                                                               env,
-                                                               preprocess_env)
+            super(TestMultihostMigrationCancel, self).__init__(
+                test, params, env, preprocess_env
+            )
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
             self.vms = params["vms"].split()
             self.vm = params["vms"].split()[0]
-            self.id = {'src': self.srchost,
-                       'dst': self.dsthost,
-                       "type": "cancel_migration"}
+            self.id = {
+                "src": self.srchost,
+                "dst": self.dsthost,
+                "type": "cancel_migration",
+            }
 
         def check_guest(self):
             broken_vms = []
             for vm in self.vms:
                 try:
                     vm = env.get_vm(vm)
-                    stress_kill_cmd = params.get("stress_kill_cmd",
-                                                 "killall -9 stress")
+                    stress_kill_cmd = params.get("stress_kill_cmd", "killall -9 stress")
                     error.context("Kill load and reboot vm.", logging.info)
                     session = vm.wait_for_login(timeout=self.login_timeout)
                     session.sendline(stress_kill_cmd)
@@ -61,9 +60,11 @@ def run(test, params, env):
                 except (remote.LoginError, virt_vm.VMError):
                     broken_vms.append(vm)
             if broken_vms:
-                raise error.TestError("VMs %s should work on src"
-                                      " host after canceling of"
-                                      " migration." % (broken_vms))
+                raise error.TestError(
+                    "VMs %s should work on src"
+                    " host after canceling of"
+                    " migration." % (broken_vms)
+                )
 
         def migration_scenario(self):
             @error.context_aware
@@ -82,8 +83,9 @@ def run(test, params, env):
             if params.get("hostid") == self.master_id():
                 self.check_guest()
 
-            self._hosts_barrier(self.hosts, self.id,
-                                'wait_for_cancel', self.login_timeout)
+            self._hosts_barrier(
+                self.hosts, self.id, "wait_for_cancel", self.login_timeout
+            )
 
             params["cancel_delay"] = None
             error.context("Do migration again", logging.info)

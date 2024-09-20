@@ -2,11 +2,14 @@ import os
 import re
 import time
 
-from virttest import postprocess_iozone
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import utils_disk
-from virttest import error_context
+from virttest import (
+    error_context,
+    postprocess_iozone,
+    utils_disk,
+    utils_misc,
+    utils_test,
+)
+
 from provider import win_driver_utils
 
 
@@ -31,11 +34,13 @@ def run(test, params, env):
         :params results_path: iozone test result path
         :params analysisdir: output of analysis result
         """
-        a = postprocess_iozone.IOzoneAnalyzer(list_files=[results_path],
-                                              output_dir=analysisdir)
+        a = postprocess_iozone.IOzoneAnalyzer(
+            list_files=[results_path], output_dir=analysisdir
+        )
         a.analyze()
-        p = postprocess_iozone.IOzonePlotter(results_file=results_path,
-                                             output_dir=analysisdir)
+        p = postprocess_iozone.IOzonePlotter(
+            results_file=results_path, output_dir=analysisdir
+        )
         p.plot_all()
 
     def get_driver():
@@ -54,7 +59,7 @@ def run(test, params, env):
         return driver_name
 
     def run_iozone_parallel(timeout):
-        """ Run the iozone parallel. """
+        """Run the iozone parallel."""
         iozone_sessions = []
         iozone_threads = []
         thread_maps = {}
@@ -78,42 +83,43 @@ def run(test, params, env):
                     thread_name = iozone_thread.name
                     iozone_threads.remove(iozone_thread)
                     iozone_threads.append(
-                        utils_misc.InterruptedThread(thread_maps[thread_name][0],
-                                                     thread_maps[thread_name][1]))
+                        utils_misc.InterruptedThread(
+                            thread_maps[thread_name][0], thread_maps[thread_name][1]
+                        )
+                    )
                     iozone_threads[-1].name = thread_name
                     iozone_threads[-1].start()
 
         for iozone_thread in iozone_threads:
             iozone_thread.join()
 
-        test.log.info('All the iozone threads are done.')
+        test.log.info("All the iozone threads are done.")
 
     def check_gpt_labletype(disk_index):
         """
         Check the disk is gpt labletype.
         """
         cmd = "echo list disk > {0} && diskpart /s {0} && del {0}"
-        pattern = r'Disk %s.+?B.{8}\*' % disk_index
+        pattern = r"Disk %s.+?B.{8}\*" % disk_index
         return re.search(pattern, session.cmd_output(cmd.format("test.dp")))
 
     timeout = int(params.get("login_timeout", 360))
     iozone_timeout = int(params.get("iozone_timeout"))
-    disk_letters = params.get("disk_letter", 'C').split()
+    disk_letters = params.get("disk_letter", "C").split()
     disk_indexes = params.get("disk_index", "2").split()
     disk_fstypes = params.get("disk_fstype", "ntfs").split()
     labletype = params.get("labletype", "msdos")
-    results_path = os.path.join(test.resultsdir,
-                                'raw_output_%s' % test.iteration)
-    analysisdir = os.path.join(test.resultsdir, 'analysis_%s' % test.iteration)
+    results_path = os.path.join(test.resultsdir, "raw_output_%s" % test.iteration)
+    analysisdir = os.path.join(test.resultsdir, "analysis_%s" % test.iteration)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     driver_name = get_driver()
     if driver_name:
-        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test, driver_name,
-                                                                timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(
+            session, vm, test, driver_name, timeout
+        )
 
     if params.get("format_disk", "no") == "yes":
         for index, letter, fstype in zip(disk_indexes, disk_letters, disk_fstypes):
@@ -121,14 +127,16 @@ def run(test, params, env):
             if orig_letters:
                 orig_letter = orig_letters[0]
                 if orig_letter != letter:
-                    test.log.info("Change the drive letter from %s to %s",
-                                  orig_letter, letter)
+                    test.log.info(
+                        "Change the drive letter from %s to %s", orig_letter, letter
+                    )
                     utils_disk.drop_drive_letter(session, orig_letter)
                     utils_disk.set_drive_letter(session, index, target_letter=letter)
             else:
                 error_context.context("Format disk", test.log.info)
-                utils_misc.format_windows_disk(session, index, letter, fstype=fstype,
-                                               labletype=labletype)
+                utils_misc.format_windows_disk(
+                    session, index, letter, fstype=fstype, labletype=labletype
+                )
 
     if params.get("gpt_check", "no") == "yes":
         if not check_gpt_labletype(disk_indexes[0]):
@@ -136,23 +144,23 @@ def run(test, params, env):
 
     cmd = params["iozone_cmd"]
     iozone_cmd = utils_misc.set_winutils_letter(session, cmd)
-    error_context.context("Running IOzone command on guest, timeout %ss"
-                          % iozone_timeout, test.log.info)
+    error_context.context(
+        "Running IOzone command on guest, timeout %ss" % iozone_timeout, test.log.info
+    )
 
-    if params.get('run_iozone_parallel', 'no') == 'yes':
-        disk_letters.append('C')
-        run_iozone_parallel(int(params['stress_timeout']))
+    if params.get("run_iozone_parallel", "no") == "yes":
+        disk_letters.append("C")
+        run_iozone_parallel(int(params["stress_timeout"]))
         if params.get("need_memory_leak_check", "no") == "yes":
             win_driver_utils.memory_leak_check(vm, test, params)
         return
 
-    status, results = session.cmd_status_output(cmd=iozone_cmd,
-                                                timeout=iozone_timeout)
+    status, results = session.cmd_status_output(cmd=iozone_cmd, timeout=iozone_timeout)
     error_context.context("Write results to %s" % results_path, test.log.info)
     if status != 0:
         test.fail("iozone test failed: %s" % results)
 
-    with open(results_path, 'w') as file:
+    with open(results_path, "w") as file:
         file.write(results)
 
     if params.get("post_result", "no") == "yes":

@@ -1,12 +1,10 @@
-import os
-
 import configparser
+import os
 
 from .virt_secret import secret_admin
 
 
 class StorageAuthation(object):
-
     def __init__(self, _type=None, username=None, password=None, secret=None):
         self.type = _type
         self.username = username
@@ -40,6 +38,7 @@ class StorageAuthation(object):
             if not secret:
                 secret_params = params.object_params(secret_name)
                 secret = secret_admin.secret_define_by_params(
-                    secret_name, secret_params)
+                    secret_name, secret_params
+                )
             instance.secret = secret
         return instance

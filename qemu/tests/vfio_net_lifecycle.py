@@ -1,7 +1,6 @@
 import json
 
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net
 
 from provider.hostdev import utils as hostdev_utils
 from provider.hostdev.dev_setup import hostdev_setup

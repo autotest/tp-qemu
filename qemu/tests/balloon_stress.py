@@ -1,12 +1,10 @@
 import random
 import re
 
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import error_context
-from qemu.tests.balloon_check import BallooningTestWin
-from qemu.tests.balloon_check import BallooningTestLinux
+from virttest import error_context, utils_misc, utils_test
+
 from provider import win_driver_utils
+from qemu.tests.balloon_check import BallooningTestLinux, BallooningTestWin
 
 
 @error_context.context_aware
@@ -28,7 +26,7 @@ def run(test, params, env):
         Check the background test status in guest.
         :return: return True if find the process name; otherwise False
         """
-        if params['os_type'] == 'windows':
+        if params["os_type"] == "windows":
             list_cmd = params.get("list_cmd", "wmic process get name")
             output = session.cmd_output_safe(list_cmd, timeout=60)
             process = re.findall("mplayer", output, re.M | re.I)
@@ -43,22 +41,26 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    if params['os_type'] == 'windows':
+    if params["os_type"] == "windows":
         driver_name = params["driver_name"]
-        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test, driver_name,
-                                                                timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(
+            session, vm, test, driver_name, timeout
+        )
         balloon_test = BallooningTestWin(test, params, env)
     else:
         balloon_test = BallooningTestLinux(test, params, env)
 
     error_context.context("Run stress background", test.log.info)
     stress_test = params.get("stress_test")
-    if params['os_type'] == 'windows':
+    if params["os_type"] == "windows":
         utils_test.run_virt_sub_test(test, params, env, stress_test)
-        if not utils_misc.wait_for(check_bg_running, first=2.0,
-                                   text="wait for stress app to start",
-                                   step=1.0, timeout=60):
+        if not utils_misc.wait_for(
+            check_bg_running,
+            first=2.0,
+            text="wait for stress app to start",
+            step=1.0,
+            timeout=60,
+        ):
             test.error("Run stress background failed")
     else:
         stress_bg = utils_test.VMStress(vm, "stress", params)
@@ -69,7 +71,7 @@ def run(test, params, env):
 
     error_context.context("balloon vm memory in loop", test.log.info)
     try:
-        for i in range(1, int(repeat_times+1)):
+        for i in range(1, int(repeat_times + 1)):
             test.log.info("repeat times: %d", i)
             balloon_test.balloon_memory(int(random.uniform(min_sz, max_sz)))
             if not check_bg_running():

@@ -2,11 +2,11 @@
 Heartbeat server/client to detect soft lockups
 """
 
-import socket
+import getopt
 import os
+import socket
 import sys
 import time
-import getopt
 
 
 def daemonize(output_file):
@@ -24,14 +24,14 @@ def daemonize(output_file):
     sys.stderr.flush()
 
     if output_file:
-        output_handle = open(output_file, 'a+')
+        output_handle = open(output_file, "a+")
         # autoflush stdout/stderr
-        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w')
-        sys.stderr = os.fdopen(sys.stderr.fileno(), 'w')
+        sys.stdout = os.fdopen(sys.stdout.fileno(), "w")
+        sys.stderr = os.fdopen(sys.stderr.fileno(), "w")
     else:
-        output_handle = open('/dev/null', 'a+')
+        output_handle = open("/dev/null", "a+")
 
-    stdin_handle = open('/dev/null', 'r')
+    stdin_handle = open("/dev/null", "r")
     os.dup2(output_handle.fileno(), sys.stdout.fileno())
     os.dup2(output_handle.fileno(), sys.stderr.fileno())
     os.dup2(stdin_handle.fileno(), sys.stdin.fileno())
@@ -44,7 +44,7 @@ def recv_all(sock):
         if not data:
             break
         total_data.append(data)
-    return ''.join(total_data)
+    return "".join(total_data)
 
 
 def run_server(host, port, daemon, path, queue_size, threshold, drift):
@@ -58,8 +58,7 @@ def run_server(host, port, daemon, path, queue_size, threshold, drift):
         c_sock, _ = sock.accept()
         heartbeat = recv_all(c_sock)
         local_timestamp = float(time.time())
-        drift = check_heartbeat(heartbeat, local_timestamp, threshold,
-                                check_drift)
+        drift = check_heartbeat(heartbeat, local_timestamp, threshold, check_drift)
         # NOTE: this doesn't work if the only client is the one that timed
         # out, but anything more complete would require another thread and
         # a lock for client_prev_timestamp.
@@ -87,8 +86,7 @@ def run_client(host, port, daemon, path, interval):
             if verbose:
                 print(heartbeat)
         except socket.error as message:
-            print("%.2f: ERROR - %s"
-                  % (float(time.time()), message))
+            print("%.2f: ERROR - %s" % (float(time.time()), message))
 
         seq += 1
         time.sleep(interval)
@@ -104,8 +102,10 @@ def check_heartbeat(heartbeat, local_timestamp, threshold, check_drift):
     if hostname in client_prev_timestamp:
         delta = local_timestamp - client_prev_timestamp[hostname]
         if delta > threshold:
-            print("%.2f: ALERT, SLU detected on host %s, delta %ds" %
-                  (float(time.time()), hostname, delta))
+            print(
+                "%.2f: ALERT, SLU detected on host %s, delta %ds"
+                % (float(time.time()), hostname, delta)
+            )
 
     client_prev_timestamp[hostname] = local_timestamp
 
@@ -126,8 +126,10 @@ def check_for_timeouts(threshold, check_drift):
         timestamp = client_prev_timestamp[hostname]
         delta = local_timestamp - timestamp
         if delta > threshold * 2:
-            print("%.2f: ALERT, SLU detected on host %s, no heartbeat for %ds"
-                  % (local_timestamp, hostname, delta))
+            print(
+                "%.2f: ALERT, SLU detected on host %s, no heartbeat for %ds"
+                % (local_timestamp, hostname, delta)
+            )
             del client_prev_timestamp[hostname]
             if check_drift:
                 del client_clock_offset[hostname]
@@ -156,7 +158,7 @@ client_prev_drift = {}
 
 # default param values
 host_port = 9001
-host_address = ''
+host_address = ""
 interval = 1  # seconds between heartbeats
 threshold = 10  # seconds late till alert
 is_server = False
@@ -170,10 +172,24 @@ check_drift = False
 
 # process cmdline opts
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "vhsfd:p:a:i:t:", [
-        "server", "client", "no-daemon", "address=", "port=",
-        "file=", "server", "interval=", "threshold=", "verbose",
-        "check-drift", "help"])
+    opts, args = getopt.getopt(
+        sys.argv[1:],
+        "vhsfd:p:a:i:t:",
+        [
+            "server",
+            "client",
+            "no-daemon",
+            "address=",
+            "port=",
+            "file=",
+            "server",
+            "interval=",
+            "threshold=",
+            "verbose",
+            "check-drift",
+            "help",
+        ],
+    )
 except getopt.GetoptError as e:
     print("error: %s" % str(e))
     usage()
@@ -211,8 +227,15 @@ for param, value in opts:
 # run until we're terminated
 if is_server:
     file_server = file_selected or file_server
-    run_server(host_address, host_port, is_daemon, file_server, queue_size,
-               threshold, check_drift)
+    run_server(
+        host_address,
+        host_port,
+        is_daemon,
+        file_server,
+        queue_size,
+        threshold,
+        check_drift,
+    )
 else:
     file_client = file_selected or file_client
     run_client(host_address, host_port, is_daemon, file_client, interval)

@@ -7,7 +7,7 @@ from provider import backup_utils
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevStreamBaseitself(BlockDevStreamTest):
@@ -32,21 +32,25 @@ class BlockdevStreamBaseitself(BlockDevStreamTest):
 
     def snapshot_test(self):
         """create one snapshot, create one new file"""
-        self.generate_tempfile(self.disks_info[self.base_tag][1],
-                               filename="base",
-                               size=self.params["tempfile_size"])
+        self.generate_tempfile(
+            self.disks_info[self.base_tag][1],
+            filename="base",
+            size=self.params["tempfile_size"],
+        )
 
         self.snapshot_chain = [self.base_tag] + self._snapshot_images
         for idx in range(1, len(self.snapshot_chain)):
             backup_utils.blockdev_snapshot(
                 self.main_vm,
-                "drive_%s" % self.snapshot_chain[idx-1],
-                "drive_%s" % self.snapshot_chain[idx]
+                "drive_%s" % self.snapshot_chain[idx - 1],
+                "drive_%s" % self.snapshot_chain[idx],
             )
 
-            self.generate_tempfile(self.disks_info[self.base_tag][1],
-                                   filename=self.snapshot_chain[idx],
-                                   size=self.params["tempfile_size"])
+            self.generate_tempfile(
+                self.disks_info[self.base_tag][1],
+                filename=self.snapshot_chain[idx],
+                size=self.params["tempfile_size"],
+            )
 
     def _remove_images(self):
         for img in self._trash:

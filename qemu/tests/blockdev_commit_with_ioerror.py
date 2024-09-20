@@ -5,7 +5,6 @@ from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitWithIoerror(BlockDevCommitTest):
-
     def dd_io_error(self, root_dir, ori_filename, tar_filename, timeout=20):
         """dd file in snapshot"""
         self.session = self.main_vm.wait_for_login()
@@ -13,11 +12,12 @@ class BlockdevCommitWithIoerror(BlockDevCommitTest):
         ori_file_path = "%s/%s" % (root_dir, ori_filename)
         tar_file_path = "%s/%s" % (root_dir, tar_filename)
         dd_cmd = self.main_vm.params.get(
-            "dd_cmd", "dd if=%s of=%s bs=1M count=500 oflag=direct")
+            "dd_cmd", "dd if=%s of=%s bs=1M count=500 oflag=direct"
+        )
         mk_file_cmd = dd_cmd % (ori_file_path, tar_file_path)
         try:
             self.session.cmd(mk_file_cmd, timeout=timeout)
-        except ShellTimeoutError as e:
+        except ShellTimeoutError:
             self.main_vm.verify_status("io-error")
             self.file_info.append(tar_filename)
         else:
@@ -36,8 +36,7 @@ class BlockdevCommitWithIoerror(BlockDevCommitTest):
             if idx == 0:
                 arguments["node"] = self.device_node
             else:
-                arguments["node"] = self.get_node_name(
-                    snapshot_tags[idx - 1])
+                arguments["node"] = self.get_node_name(snapshot_tags[idx - 1])
             self.main_vm.monitor.cmd(cmd, dict(arguments))
             for info in self.disks_info:
                 if device in info:
@@ -46,7 +45,7 @@ class BlockdevCommitWithIoerror(BlockDevCommitTest):
     def md5_io_error_file(self):
         if not self.session:
             self.session = self.main_vm.wait_for_login()
-        output = self.session.cmd_output('\n', timeout=120)
+        output = self.session.cmd_output("\n", timeout=120)
         if self.params["dd_done"] not in output:
             self.test.fail("dd not continue to run after vm resume")
         tar_file_path = "%s/%s" % (self.file_info[0], self.file_info[2])

@@ -15,13 +15,15 @@ class BlockdevMirrorHotunplugTest(BlockdevMirrorNowaitTest):
         device_del the frontend devices during mirroring,
         the devices CAN be removed without any issue
         """
+
         def _device_del(device):
-            self.main_vm.monitor.cmd('device_del', {'id': device})
+            self.main_vm.monitor.cmd("device_del", {"id": device})
 
         list(map(_device_del, self._source_images))
 
     def wait_till_frontend_devices_deleted(self):
         """Wait till devices removed from output of query-block"""
+
         def _is_device_deleted(device):
             for item in self.main_vm.monitor.query("block"):
                 """
@@ -35,13 +37,13 @@ class BlockdevMirrorHotunplugTest(BlockdevMirrorNowaitTest):
             return True
 
         def _wait_till_device_deleted(device):
-            tmo = self.params.get_numeric('device_del_timeout', 60)
+            tmo = self.params.get_numeric("device_del_timeout", 60)
             for i in range(tmo):
                 if _is_device_deleted(device):
                     break
                 time.sleep(1)
             else:
-                self.test.fail('Failed to hotunplug the frontend device')
+                self.test.fail("Failed to hotunplug the frontend device")
 
         list(map(_wait_till_device_deleted, self._source_images))
 
@@ -50,15 +52,16 @@ class BlockdevMirrorHotunplugTest(BlockdevMirrorNowaitTest):
         blockdev-del the format nodes during mirroring,
         the nodes CANNOT be removed for they are busy
         """
+
         def _blockdev_del(node):
             try:
-                self.main_vm.monitor.cmd('blockdev-del', {'node-name': node})
+                self.main_vm.monitor.cmd("blockdev-del", {"node-name": node})
             except QMPCmdError as e:
-                err = self.params['block_node_busy_error'] % node
+                err = self.params["block_node_busy_error"] % node
                 if err not in str(e):
-                    self.test.fail('Unexpected error: %s' % str(e))
+                    self.test.fail("Unexpected error: %s" % str(e))
             else:
-                self.test.fail('blockdev-del succeeded unexpectedly')
+                self.test.fail("blockdev-del succeeded unexpectedly")
 
         list(map(_blockdev_del, self._source_nodes))
 

@@ -19,14 +19,14 @@ def run(test, params, env):
 
     msrs = str(params["msrs"]).split()
     dmesg = str(session.cmd_output("dmesg"))
-    msrs_catch_re = params.get("msrs_catch_re",
-                               r"kvm-clock: Using msrs (\w+) and (\w+)")
+    msrs_catch_re = params.get(
+        "msrs_catch_re", r"kvm-clock: Using msrs (\w+) and (\w+)"
+    )
     current_msrs = re.search(r"%s" % msrs_catch_re, dmesg, re.M | re.I)
     if current_msrs:
         current_msrs = set(current_msrs.groups())
         if current_msrs != set(msrs):
-            test.fail("Except msrs (%s), " % msrs +
-                      "got (%s)" % current_msrs)
+            test.fail("Except msrs (%s), " % msrs + "got (%s)" % current_msrs)
     else:
         test.log.debug(dmesg)
         test.fail("No newer msr available for kvm-clock")

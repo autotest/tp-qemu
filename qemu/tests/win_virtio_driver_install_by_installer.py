@@ -2,10 +2,7 @@ import ast
 
 from virttest import error_context
 
-from provider import win_driver_installer_test
-from provider import win_driver_utils
-from provider import virtio_fs_utils
-
+from provider import virtio_fs_utils, win_driver_installer_test, win_driver_utils
 from qemu.tests.balloon_check import BallooningTestWin
 
 
@@ -45,28 +42,22 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     expected_gagent_version = win_driver_installer_test.install_gagent(
-                                             session, test,
-                                             qemu_ga_pkg,
-                                             gagent_install_cmd,
-                                             gagent_pkg_info_cmd)
-    win_driver_installer_test.uninstall_gagent(session, test,
-                                               gagent_uninstall_cmd)
+        session, test, qemu_ga_pkg, gagent_install_cmd, gagent_pkg_info_cmd
+    )
+    win_driver_installer_test.uninstall_gagent(session, test, gagent_uninstall_cmd)
 
-    win_driver_utils.uninstall_driver(session, test,
-                                      devcon_path,
-                                      driver_name,
-                                      device_name,
-                                      device_hwid)
+    win_driver_utils.uninstall_driver(
+        session, test, devcon_path, driver_name, device_name, device_hwid
+    )
     session = vm.reboot(session)
 
     session = win_driver_installer_test.run_installer_with_interaction(
-        vm, session, test, params,
-        run_install_cmd,
-        copy_files_params=params)
+        vm, session, test, params, run_install_cmd, copy_files_params=params
+    )
     win_driver_installer_test.win_installer_test(session, test, params)
-    win_driver_installer_test.check_gagent_version(session, test,
-                                                   gagent_pkg_info_cmd,
-                                                   expected_gagent_version)
+    win_driver_installer_test.check_gagent_version(
+        session, test, gagent_pkg_info_cmd, expected_gagent_version
+    )
     win_driver_installer_test.driver_check(session, test, params)
 
     driver_test_names = params.objects("driver_test_names")

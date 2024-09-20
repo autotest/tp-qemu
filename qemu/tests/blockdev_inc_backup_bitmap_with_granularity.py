@@ -10,29 +10,34 @@ class BlockdevIncbkBitmapGranularityTest(BlockdevLiveBackupBaseTest):
     """bitmap with granularity testing"""
 
     def __init__(self, test, params, env):
-        super(BlockdevIncbkBitmapGranularityTest, self).__init__(test,
-                                                                 params,
-                                                                 env)
+        super(BlockdevIncbkBitmapGranularityTest, self).__init__(test, params, env)
         self._set_granularity()
 
     def _set_granularity(self):
-        granularities = self.params.objects('granularity_list')
-        granularity = random.choice(
-            granularities) if granularities else self.params['granularity']
-        self._full_backup_options['granularity'] = int(
-            normalize_data_size(granularity, "B"))
+        granularities = self.params.objects("granularity_list")
+        granularity = (
+            random.choice(granularities)
+            if granularities
+            else self.params["granularity"]
+        )
+        self._full_backup_options["granularity"] = int(
+            normalize_data_size(granularity, "B")
+        )
 
     def _get_bitmaps(self):
-        return list(map(
-            lambda n, b: get_bitmap_by_name(self.main_vm, n, b),
-            self._source_nodes, self._bitmaps))
+        return list(
+            map(
+                lambda n, b: get_bitmap_by_name(self.main_vm, n, b),
+                self._source_nodes,
+                self._bitmaps,
+            )
+        )
 
     def check_bitmaps_granularity(self):
         bitmaps = self._get_bitmaps()
-        granularity = self._full_backup_options['granularity']
-        if not all(list(map(
-                lambda b: b.get('granularity') == granularity, bitmaps))):
-            self.test.fail('Failed to set granularity')
+        granularity = self._full_backup_options["granularity"]
+        if not all(list(map(lambda b: b.get("granularity") == granularity, bitmaps))):
+            self.test.fail("Failed to set granularity")
 
     def do_test(self):
         self.do_full_backup()

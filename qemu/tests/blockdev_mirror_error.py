@@ -9,8 +9,7 @@ class BlockdevMirrorErrorTest(BlockdevMirrorNowaitTest):
         tmo = int(self.params.get("mirror_error_stop_timeout", "300"))
         status = self.params.get("mirror_error_stop_status", "paused")
         for job_id in self._jobs:
-            wait_until_job_status_match(self.main_vm, status,
-                                        job_id, timeout=tmo)
+            wait_until_job_status_match(self.main_vm, status, job_id, timeout=tmo)
 
     def do_test(self):
         self.blockdev_mirror()

@@ -4,11 +4,10 @@ from virttest import error_context
 
 from qemu.tests import blk_stream
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockStreamNegative(blk_stream.BlockStream):
-
     def __init__(self, test, params, env, tag):
         super(BlockStreamNegative, self).__init__(test, params, env, tag)
 
@@ -23,19 +22,17 @@ class BlockStreamNegative(blk_stream.BlockStream):
         expected_speed = params.get("expected_speed", default_speed)
         if params.get("need_convert_to_int", "no") == "yes":
             expected_speed = int(expected_speed)
-        error_context.context("set speed to %s B/s" % expected_speed,
-                              LOG_JOB.info)
-        args = {"device": self.device,
-                "speed": expected_speed}
+        error_context.context("set speed to %s B/s" % expected_speed, LOG_JOB.info)
+        args = {"device": self.device, "speed": expected_speed}
         response = str(self.vm.monitor.cmd_qmp("block-job-set-speed", args))
         if "(core dump)" in response:
-            self.test.fail("Qemu core dump when reset "
-                           "speed to a negative value.")
+            self.test.fail("Qemu core dump when reset " "speed to a negative value.")
         if match_str not in response:
-            self.test.fail("Fail to get expected result. %s is expected in %s"
-                           % (match_str, response))
-        LOG_JOB.info("Keyword '%s' is found in QMP output '%s'.",
-                     match_str, response)
+            self.test.fail(
+                "Fail to get expected result. %s is expected in %s"
+                % (match_str, response)
+            )
+        LOG_JOB.info("Keyword '%s' is found in QMP output '%s'.", match_str, response)
 
 
 def run(test, params, env):

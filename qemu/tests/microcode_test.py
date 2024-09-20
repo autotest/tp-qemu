@@ -16,6 +16,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def get_microcode_ver(cmd, session=None):
         """
         Get microcde version in guest or host

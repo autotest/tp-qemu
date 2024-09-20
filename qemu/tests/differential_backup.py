@@ -1,18 +1,16 @@
-import time
 import logging
+import time
 from functools import partial
 
 from virttest import error_context
-from provider import block_dirty_bitmap
-from provider import job_utils
-from provider import backup_utils
+
+from provider import backup_utils, block_dirty_bitmap, job_utils
 from qemu.tests import live_backup_base
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class DifferentialBackupTest(live_backup_base.LiveBackup):
-
     def __init__(self, test, params, env, tag):
         super(DifferentialBackupTest, self).__init__(test, params, env, tag)
         self.device = "drive_%s" % tag
@@ -40,8 +38,7 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         :return: record counts
         :rtype: int
         """
-        bitmap = block_dirty_bitmap.get_bitmap_by_name(
-            self.vm, self.device, name)
+        bitmap = block_dirty_bitmap.get_bitmap_by_name(self.vm, self.device, name)
         return bitmap["count"] if bitmap else -1
 
     def get_sha256_of_bitmap(self, name):
@@ -54,7 +51,8 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         return block_dirty_bitmap.debug_block_dirty_bitmap_sha256(**kwargs)
 
     def _make_bitmap_transaction_action(
-            self, operator="add", index=1, extra_options=None):
+        self, operator="add", index=1, extra_options=None
+    ):
         bitmap = "bitmap_%d" % index
         action = "block-dirty-bitmap-%s" % operator
         action = self.vm.monitor.get_workable_cmd(action)
@@ -65,10 +63,8 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         return job_utils.make_transaction_action(action, data)
 
     def _bitmap_batch_operate_by_transaction(self, action, bitmap_index_list):
-        bitmap_lists = ",".join(
-            map(lambda x: "bitmap_%d" % x, bitmap_index_list))
-        LOG_JOB.info("%s %s in a transaction",
-                     action.capitalize(), bitmap_lists)
+        bitmap_lists = ",".join(map(lambda x: "bitmap_%d" % x, bitmap_index_list))
+        LOG_JOB.info("%s %s in a transaction", action.capitalize(), bitmap_lists)
         func = partial(self._make_bitmap_transaction_action, action)
         actions = list(map(func, bitmap_index_list))
         return self.vm.monitor.transaction(actions)
@@ -81,23 +77,27 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         :param action_items: list of bitmap action.
                              eg, [{"operator": "add", "index": 1}
         """
-        full_name = "%s/%s" % (self.params.get("mount_point",
-                                               "/mnt"), filename)
+        full_name = "%s/%s" % (self.params.get("mount_point", "/mnt"), filename)
         self.create_file(full_name)
-        actions = list([self._make_bitmap_transaction_action(**item)
-                        for item in action_items])
+        actions = list(
+            [self._make_bitmap_transaction_action(**item) for item in action_items]
+        )
         self.vm.monitor.transaction(actions)
 
     def track_file1_with_bitmap2(self):
         """track file1 with bitmap2"""
-        action_items = [{"operator": "disable", "index": 2},
-                        {"operator": "add", "index": 3}]
+        action_items = [
+            {"operator": "disable", "index": 2},
+            {"operator": "add", "index": 3},
+        ]
         self._track_file_with_bitmap("file1", action_items)
 
     def track_file2_with_bitmap3(self):
         """track file2 with bitmap3"""
-        action_items = [{"operator": "disable", "index": 1},
-                        {"operator": "disable", "index": 3}]
+        action_items = [
+            {"operator": "disable", "index": 1},
+            {"operator": "disable", "index": 3},
+        ]
         self._track_file_with_bitmap("file2", action_items)
 
     def merge_bitmap2_and_bitmap3_to_bitmap4(self):
@@ -106,10 +106,12 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         args = {
             "bitmap_name": target_bitmap,
             "target_device": self.device,
-            "disabled": "on"}
+            "disabled": "on",
+        }
         block_dirty_bitmap.block_dirty_bitmap_add(self.vm, args)
         block_dirty_bitmap.block_dirty_bitmap_merge(
-            self.vm, self.device, source_bitmaps, target_bitmap)
+            self.vm, self.device, source_bitmaps, target_bitmap
+        )
         time.sleep(5)
 
     def track_file3_with_bitmap5(self):
@@ -122,7 +124,8 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
     def merge_bitmap5_to_bitmap4(self):
         source_bitmaps, target_bitmap = ["bitmap_5"], "bitmap_4"
         return block_dirty_bitmap.block_dirty_bitmap_merge(
-            self.vm, self.device, source_bitmaps, target_bitmap)
+            self.vm, self.device, source_bitmaps, target_bitmap
+        )
 
     def do_full_backup(self, tag):
         """Do full backup"""
@@ -140,8 +143,7 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         """Do incremental backup with bitmap4"""
         img = backup_utils.create_image_by_params(self.vm, self.params, tag)
         node_name = img.format.get_param("node-name")
-        backup_utils.incremental_backup(
-            self.vm, self.device, node_name, "bitmap_4")
+        backup_utils.incremental_backup(self.vm, self.device, node_name, "bitmap_4")
         self.trash_files.append(img.key)
 
     def clean(self):
@@ -181,33 +183,32 @@ def run(test, params, env):
         backup_test.track_file1_with_bitmap2()
         error_context.context("track file2 in bitmap3", test.log.info)
         backup_test.track_file2_with_bitmap3()
-        error_context.context(
-            "Record counts & sha256 of bitmap1", test.log.info)
+        error_context.context("Record counts & sha256 of bitmap1", test.log.info)
         sha256_bitmap1 = backup_test.get_sha256_of_bitmap("bitmap_1")
-        record_counts_bitmap1 = backup_test.get_record_counts_of_bitmap(
-            "bitmap_1")
-        error_context.context(
-            "Merge bitmap2 and bitmap3 to bitmap4", test.log.info)
+        record_counts_bitmap1 = backup_test.get_record_counts_of_bitmap("bitmap_1")
+        error_context.context("Merge bitmap2 and bitmap3 to bitmap4", test.log.info)
         backup_test.merge_bitmap2_and_bitmap3_to_bitmap4()
         error_context.context("Record sha256 of bitmap4", test.log.info)
         sha256_bitmap4 = backup_test.get_sha256_of_bitmap("bitmap_4")
         error_context.context("Record count of bitmap4", test.log.info)
-        record_counts_bitmap4 = backup_test.get_record_counts_of_bitmap(
-            "bitmap_4")
+        record_counts_bitmap4 = backup_test.get_record_counts_of_bitmap("bitmap_4")
         if sha256_bitmap4 != sha256_bitmap1:
-            test.log.debug("sha256_bitmap1: %s, sha256_bitmap4: %s",
-                           sha256_bitmap1, sha256_bitmap4)
+            test.log.debug(
+                "sha256_bitmap1: %s, sha256_bitmap4: %s", sha256_bitmap1, sha256_bitmap4
+            )
             raise test.fail("sha256 of bitmap4 not equal sha256 of bitmap1")
         if record_counts_bitmap4 != record_counts_bitmap1:
-            test.log.debug("count_bitmap1: %d, count_bitmap4: %d",
-                           record_counts_bitmap1, record_counts_bitmap4)
+            test.log.debug(
+                "count_bitmap1: %d, count_bitmap4: %d",
+                record_counts_bitmap1,
+                record_counts_bitmap4,
+            )
             raise test.fail("counts of bitmap4 not equal counts of bitmap4")
         error_context.context("track file3 in bitmap5", test.log.info)
         backup_test.track_file3_with_bitmap5()
         error_context.context("Merge bitmap5 in bitmap4", test.log.info)
         backup_test.merge_bitmap5_to_bitmap4()
-        error_context.context(
-            "Do incremental backup with bitmap4", test.log.info)
+        error_context.context("Do incremental backup with bitmap4", test.log.info)
         backup_test.do_incremental_backup_with_bitmap4(node_name, "inc")
     finally:
         backup_test.clean()

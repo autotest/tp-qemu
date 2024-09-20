@@ -1,9 +1,7 @@
 import re
 
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context
 from virttest.qemu_storage import QemuImg
 
 
@@ -49,30 +47,44 @@ def run(test, params, env):
         sn_list.append((sn_tmp, image_params))
 
     # Write to the test image
-    error_context.context("Prepare the image with write a certain size block",
-                          test.log.info)
-    dropcache = 'echo 3 > /proc/sys/vm/drop_caches && sleep 5'
+    error_context.context(
+        "Prepare the image with write a certain size block", test.log.info
+    )
+    dropcache = "echo 3 > /proc/sys/vm/drop_caches && sleep 5"
     snapshot_file = sn_list[test_image][0].image_filename
 
     if op_type != "writeoffset1":
         offset = 0
-        writecmd0 = writecmd % (write_round, offset, interval_size,
-                                write_unit, interval_size, write_unit)
+        writecmd0 = writecmd % (
+            write_round,
+            offset,
+            interval_size,
+            write_unit,
+            interval_size,
+            write_unit,
+        )
         iocmd0 = iocmd % (writecmd0, io_options, snapshot_file)
         test.log.info("writecmd-offset-0: %s", writecmd0)
         process.run(dropcache, shell=True)
         output = process.run(iocmd0, shell=True)
     else:
         offset = 1
-        writecmd1 = writecmd % (write_round, offset, interval_size,
-                                write_unit, interval_size, write_unit)
+        writecmd1 = writecmd % (
+            write_round,
+            offset,
+            interval_size,
+            write_unit,
+            interval_size,
+            write_unit,
+        )
         iocmd1 = iocmd % (writecmd1, io_options, snapshot_file)
         test.log.info("writecmd-offset-1: %s", writecmd1)
         process.run(dropcache, shell=True)
         output = process.run(iocmd1, shell=True)
 
-    error_context.context("Do one operations to the image and "
-                          "measure the time", test.log.info)
+    error_context.context(
+        "Do one operations to the image and " "measure the time", test.log.info
+    )
 
     if op_type == "read":
         readcmd = opcmd % (io_options, snapshot_file)
@@ -85,11 +97,9 @@ def run(test, params, env):
         process.run(dropcache, shell=True)
         output = process.run(commitcmd, shell=True)
     elif op_type == "rebase":
-        new_base_img = QemuImg(params.object_params(new_base), image_dir,
-                               new_base)
+        new_base_img = QemuImg(params.object_params(new_base), image_dir, new_base)
         new_base_img.create(params.object_params(new_base))
-        rebasecmd = opcmd % (new_base_img.image_filename,
-                             cache_mode, snapshot_file)
+        rebasecmd = opcmd % (new_base_img.image_filename, cache_mode, snapshot_file)
         test.log.info("rebase: %s", rebasecmd)
         process.run(dropcache, shell=True)
         output = process.run(rebasecmd, shell=True)
@@ -101,8 +111,9 @@ def run(test, params, env):
         output = process.run(convertcmd, shell=True)
 
     error_context.context("Result recording", test.log.info)
-    result_file = open("%s/%s_%s_results" %
-                       (test.resultsdir, "qcow2perf", op_type), 'w')
+    result_file = open(
+        "%s/%s_%s_results" % (test.resultsdir, "qcow2perf", op_type), "w"
+    )
     result_file.write("%s:%s\n" % (op_type, output))
     test.log.info("%s takes %s", op_type, output)
     result_file.close()

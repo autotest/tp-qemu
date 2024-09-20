@@ -1,4 +1,5 @@
 from virttest import error_context
+
 from provider import qemu_img_utils
 
 
@@ -20,14 +21,17 @@ def run(test, params, env):
     cpu_model_flags_list = params.objects("cpu_model_flags_list")
     for cpu_model_flags in cpu_model_flags_list:
         try:
-            error_context.context("Start the guest with %s."
-                                  % cpu_model_flags, test.log.info)
+            error_context.context(
+                "Start the guest with %s." % cpu_model_flags, test.log.info
+            )
             params["cpu_model_flags"] = cpu_model_flags
             vm = qemu_img_utils.boot_vm_with_images(test, params, env)
             vm.wait_for_login(timeout=360)
         except Exception:
-            res.append("Case was failed in smoke test with "
-                       "parameter(s): %s \n " % cpu_model_flags)
+            res.append(
+                "Case was failed in smoke test with "
+                "parameter(s): %s \n " % cpu_model_flags
+            )
             pass
         finally:
             if vm:
@@ -37,6 +41,8 @@ def run(test, params, env):
         error_msg = ""
         for case in res:
             error_msg += case
-        test.fail("The failed message(s): \n"
-                  + error_msg
-                  + "The number of failed cases is: %s. " % len(res))
+        test.fail(
+            "The failed message(s): \n"
+            + error_msg
+            + "The number of failed cases is: %s. " % len(res)
+        )

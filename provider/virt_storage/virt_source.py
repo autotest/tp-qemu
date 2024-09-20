@@ -1,11 +1,8 @@
 from .virt_auth import StorageAuthation
-from .virt_device import HostAdapter
-from .virt_device import StorageDevice
-from .virt_device import StorageHost
+from .virt_device import HostAdapter, StorageDevice, StorageHost
 
 
 class PoolSource(object):
-
     def __init__(self):
         self.name = None
         self.pool_name = None

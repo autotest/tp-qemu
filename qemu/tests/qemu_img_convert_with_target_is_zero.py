@@ -1,8 +1,7 @@
-from virttest import data_dir
-from virttest import qemu_storage
-
 from avocado import fail_on
 from avocado.utils import process
+from virttest import data_dir, qemu_storage
+
 from provider import qemu_img_utils as img_utils
 
 
@@ -48,15 +47,16 @@ def run(test, params, env):
 
     test.log.info("Convert from %s to %s", convert_source, convert_target)
     fail_on((process.CmdError,))(source.convert)(
-        source_params, root_dir, cache_mode,
-        source_cache_mode, skip_target_creation)
+        source_params, root_dir, cache_mode, source_cache_mode, skip_target_creation
+    )
     test.log.debug("sync host data after convert")
     process.system("sync")
 
     vm = img_utils.boot_vm_with_images(test, params, env, (convert_target,))
     session = vm.wait_for_login()
     test.log.info("Verify md5 value of the temporary file")
-    img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
-                           md5_value_to_check=md5_value)
+    img_utils.check_md5sum(
+        guest_temp_file, md5sum_bin, session, md5_value_to_check=md5_value
+    )
     session.close()
     target.remove()

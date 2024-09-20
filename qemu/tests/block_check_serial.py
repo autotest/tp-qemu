@@ -1,5 +1,4 @@
-"""Test serial length """
-
+"""Test serial length"""
 
 from virttest import error_context
 from virttest.utils_misc import get_linux_drive_path
@@ -27,10 +26,10 @@ def run(test, params, env):
         wrong_disks = []
         for img in images:
             image_params = params.object_params(img)
-            serial = image_params['image_serial']
+            serial = image_params["image_serial"]
             test.log.info("Try to Find the image %s by %s", img, serial)
-            os_type = params['os_type']
-            cmd = params['cmd_get_disk_id']
+            os_type = params["os_type"]
+            cmd = params["cmd_get_disk_id"]
             if os_type == "windows":
                 cmd = cmd.format(serial)
                 status, output = session.cmd_status_output(cmd)
@@ -55,7 +54,7 @@ def run(test, params, env):
         if len(wrong_disks):
             test.fail("Can not get disks %s by serial or uid" % wrong_disks)
 
-    images = params['data_images'].split()
+    images = params["data_images"].split()
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()

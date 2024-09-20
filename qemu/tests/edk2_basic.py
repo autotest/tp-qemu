@@ -26,12 +26,12 @@ def run(test, params, env):
         vm.create()
         error_context.context("Check serial log result", test.log.info)
         try:
-            output = vm.serial_console.read_until_output_matches([check_messgae],
-                                                                 timeout=timeout)
+            output = vm.serial_console.read_until_output_matches(
+                [check_messgae], timeout=timeout
+            )
         except Exception as msg:
             test.log.error(msg)
-            test.fail("No highlighted entry was detected "
-                      "the boot was abnormal.")
+            test.fail("No highlighted entry was detected " "the boot was abnormal.")
         error_context.context("Check edk2 output information", test.log.info)
         if len(output[1].splitlines()) > line_numbers:
             test.fail("Warning edk2 line count exceeds %d." % line_numbers)

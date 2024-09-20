@@ -1,19 +1,13 @@
-import os
 import logging
+import os
 import threading
-import six
 import time
 
+import six
 from avocado.utils import process
+from virttest import data_dir, error_context, remote, utils_misc, utils_test, virt_vm
 
-from virttest import error_context
-from virttest import virt_vm
-from virttest import remote
-from virttest import data_dir
-from virttest import utils_misc
-from virttest import utils_test
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def format_result(result, base="12", fbase="2"):
@@ -63,11 +57,11 @@ def run(test, params, env):
             utils_test.qemu.pin_vm_threads(vm, node)
 
     def install_dpdk():
-        """ Install dpdk realted packages"""
+        """Install dpdk realted packages"""
 
-        cmd = 'yum install -y %s' % params.get("env_pkg")
+        cmd = "yum install -y %s" % params.get("env_pkg")
         session.cmd(cmd, timeout=360, ignore_all_errors=True)
-        session.cmd_output('rpm -qa |grep dpdk')
+        session.cmd_output("rpm -qa |grep dpdk")
 
     def env_setup():
         """
@@ -89,8 +83,7 @@ def run(test, params, env):
 
         # copy testpmd script to guest
         testpmd_exec = params.get("testpmd_exec")
-        src = os.path.join(data_dir.get_deps_dir(),
-                           "performance/%s" % testpmd_exec)
+        src = os.path.join(data_dir.get_deps_dir(), "performance/%s" % testpmd_exec)
         dst = "/tmp/%s" % testpmd_exec
         vm.copy_files_to(src, dst, nic_index=0)
 
@@ -108,20 +101,24 @@ def run(test, params, env):
         cmd += " && modprobe vfio-pci"
         session.cmd(cmd, timeout=360, ignore_all_errors=True)
         session.cmd_output("lspci|grep Eth")
-        cmd_nic_pci = "lspci |awk '/%s/ {print $1}'" % params.get("nic_driver")
+        "lspci |awk '/%s/ {print $1}'" % params.get("nic_driver")
         nic_driver = params.get("nic_driver").split()
         if len(nic_driver) > 1:
             for i in nic_driver:
                 if i == "Virtio":
-                    nic_pci_1 = "0000:%s" % session.cmd(
-                        "lspci |awk '/%s network/ {print $1}'" % i).strip()
-                    cmd_str = "%s --bind=vfio-pci %s" % (
-                            dpdk_bind_cmd, nic_pci_1)
+                    nic_pci_1 = (
+                        "0000:%s"
+                        % session.cmd(
+                            "lspci |awk '/%s network/ {print $1}'" % i
+                        ).strip()
+                    )
+                    cmd_str = "%s --bind=vfio-pci %s" % (dpdk_bind_cmd, nic_pci_1)
                 else:
-                    nic_pci_2 = "0000:%s" % session.cmd(
-                        "lspci |awk '/%s/ {print $1}'" % i).strip()
-                    cmd_str = "%s --bind=vfio-pci %s" % (
-                            dpdk_bind_cmd,  nic_pci_2)
+                    nic_pci_2 = (
+                        "0000:%s"
+                        % session.cmd("lspci |awk '/%s/ {print $1}'" % i).strip()
+                    )
+                    cmd_str = "%s --bind=vfio-pci %s" % (dpdk_bind_cmd, nic_pci_2)
                 session.cmd_output(cmd_str)
         session.cmd_output("%s --status" % dpdk_bind_cmd)
         return nic_pci_1, nic_pci_2
@@ -136,9 +133,9 @@ def run(test, params, env):
         # copy MoonGen.zip to remote moongen host
         moongen_pkg = params.get("moongen_pkg")
         local_path = os.path.join(
-            data_dir.get_deps_dir(), "performance/%s" % moongen_pkg)
-        remote.scp_to_remote(ip, shell_port, username,
-                             password, local_path, "/home")
+            data_dir.get_deps_dir(), "performance/%s" % moongen_pkg
+        )
+        remote.scp_to_remote(ip, shell_port, username, password, local_path, "/home")
 
         # install moongen
         cmd_str = "rm -rf /home/MoonGen"
@@ -178,15 +175,14 @@ def run(test, params, env):
         moongen_dpdk_nic_list = params.get("moongen_dpdk_nic")
         cmd_unbind = "%s -b ixgbe %s" % (dpdk_bind_cmd, moongen_dpdk_nic_list)
         if session.cmd_status(cmd_unbind) != 0:
-            test.error("Fail to unbind nic %s on monngen host"
-                       % moongen_dpdk_nic_list)
+            test.error("Fail to unbind nic %s on monngen host" % moongen_dpdk_nic_list)
 
     def result(recode, dst):
-
         if os.path.getsize(dst) > 0:
-
-            cmd = "grep -i %s %s | tail -2 | awk  -F ':'  '{print $2}' | head -1"\
-                  "| awk '{print $1}'" % (recode, dst)
+            cmd = (
+                "grep -i %s %s | tail -2 | awk  -F ':'  '{print $2}' | head -1"
+                "| awk '{print $1}'" % (recode, dst)
+            )
             pps_results = process.system_output(cmd, shell=True)
             power = 10**6
             mpps_results = float(pps_results) / float(power)
@@ -201,8 +197,7 @@ def run(test, params, env):
     login_timeout = int(params.get("login_timeout", 360))
 
     try:
-        vm.wait_for_serial_login(
-            timeout=login_timeout, restart_network=True).close()
+        vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
     except virt_vm.VMIPAddressMissingError:
         pass
 
@@ -214,13 +209,13 @@ def run(test, params, env):
 
     session = vm.wait_for_login(nic_index=0, timeout=login_timeout)
 
-    guest_ip = vm.wait_for_get_address(0, timeout=90)
-    macvtap_mac = vm.get_mac_address(1)
-    vfio_mac = vm.get_mac_address(2)
+    vm.wait_for_get_address(0, timeout=90)
+    vm.get_mac_address(1)
+    vm.get_mac_address(2)
 
     # get parameter from dictionary
     category = params.get("category")
-    pkt_size = params.get("pkt_size")
+    params.get("pkt_size")
     kvm_ver_chk_cmd = params.get("kvm_ver_chk_cmd")
     guest_ver_cmd = params["guest_ver_cmd"]
     guest_dpdk_cmd = params["guest_dpdk_cmd"]
@@ -242,20 +237,25 @@ def run(test, params, env):
     shell_port = params.get("shell_port_generator")
     password = params.get("password_generator")
     username = params.get("username_generator")
-    generator1 = remote.wait_for_login(params.get("shell_client_generator"),
-                                       generator_ip,
-                                       shell_port,
-                                       username,
-                                       password,
-                                       params.get("shell_prompt_generator"))
-    generator2 = remote.wait_for_login(params.get("shell_client_generator"),
-                                       generator_ip,
-                                       shell_port,
-                                       username,
-                                       password,
-                                       params.get("shell_prompt_generator"))
-    install_moongen(generator1, generator_ip, username,
-                    shell_port, password, dpdk_bind_cmd)
+    generator1 = remote.wait_for_login(
+        params.get("shell_client_generator"),
+        generator_ip,
+        shell_port,
+        username,
+        password,
+        params.get("shell_prompt_generator"),
+    )
+    generator2 = remote.wait_for_login(
+        params.get("shell_client_generator"),
+        generator_ip,
+        shell_port,
+        username,
+        password,
+        params.get("shell_prompt_generator"),
+    )
+    install_moongen(
+        generator1, generator_ip, username, shell_port, password, dpdk_bind_cmd
+    )
 
     # get qemu, guest kernel, kvm version and dpdk version and write them into result
     result_path = utils_misc.get_path(test.resultsdir, "virtio_net_dpdk.RHS")
@@ -282,27 +282,34 @@ def run(test, params, env):
         size = 60
 
         if pkt_cate == "rx":
-            error_context.context("test guest rx pps performance",
-                                  test.log.info)
+            error_context.context("test guest rx pps performance", test.log.info)
             port = 1
             record = "Rx-pps"
             mac = vm.get_mac_address(1)
         if pkt_cate == "tx":
-            error_context.context("test guest tx pps performance",
-                                  test.log.info)
+            error_context.context("test guest tx pps performance", test.log.info)
             port = 0
             record = "Tx-pps"
             mac = vm.get_mac_address(2)
 
-        status = launch_test(session, generator1, generator2,
-                             mac, port, exec_file,  # pylint: disable=E0606
-                             nic1_driver, nic2_driver,
-                             whitelist_option,
-                             nic_pci_1, nic_pci_2,
-                             cores, queues, running_time)
+        status = launch_test(
+            session,
+            generator1,
+            generator2,
+            mac,  # pylint: disable=E0606
+            port,  # pylint: disable=E0606
+            exec_file,
+            nic1_driver,
+            nic2_driver,
+            whitelist_option,
+            nic_pci_1,
+            nic_pci_2,
+            cores,
+            queues,
+            running_time,
+        )
         if status is True:
-            error_context.context("%s test is finished" %
-                                  pkt_cate, test.log.info)
+            error_context.context("%s test is finished" % pkt_cate, test.log.info)
         else:
             test.fail("test is failed, please check your command and env")
 
@@ -314,8 +321,9 @@ def run(test, params, env):
         line += "%s" % format_result(pkt_cate_r)
         result_file.write(("%s\n" % line))
 
-    unbind_dpdk_nic(generator1, generator_ip, username,
-                    shell_port, password, dpdk_bind_cmd)
+    unbind_dpdk_nic(
+        generator1, generator_ip, username, shell_port, password, dpdk_bind_cmd
+    )
 
     generator1.close()
     generator2.close()
@@ -323,54 +331,94 @@ def run(test, params, env):
 
 
 @error_context.context_aware
-def launch_test(session, generator1, generator2,
-                mac, port_id, exec_file,
-                nic1_driver, nic2_driver,
-                whitelist_option,
-                nic_pci_1, nic_pci_2,
-                cores, queues, running_time):
-    """ Launch MoonGen """
+def launch_test(
+    session,
+    generator1,
+    generator2,
+    mac,
+    port_id,
+    exec_file,
+    nic1_driver,
+    nic2_driver,
+    whitelist_option,
+    nic_pci_1,
+    nic_pci_2,
+    cores,
+    queues,
+    running_time,
+):
+    """Launch MoonGen"""
 
     def start_moongen(generator1, mac, port_id, running_time):
-
-        file = '/home/MoonGen/examples/udp-throughput.lua'
+        file = "/home/MoonGen/examples/udp-throughput.lua"
         cmd = "cp %s %s.tmp" % (file, file)
         tmp_file = "%s.tmp" % file
         cmd += " && sed -i 's/10:11:12:13:14:15/%s/g' %s" % (mac, tmp_file)
-        cmd += " && cd /home/MoonGen "\
-               " && ./build/MoonGen %s %s > /tmp/throughput.log &" % (
-                       tmp_file, port_id)
+        cmd += (
+            " && cd /home/MoonGen "
+            " && ./build/MoonGen %s %s > /tmp/throughput.log &" % (tmp_file, port_id)
+        )
         generator1.cmd_output(cmd)
 
     def run_moongen_up(generator2):
-
         cmd = 'grep "1 devices are up" /tmp/throughput.log'
         if generator2.cmd_status(cmd) == 0:
             return True
         else:
             return False
 
-    def start_testpmd(session, exec_file, nic1_driver, nic2_driver,
-                      whitelist_option, nic1_pci_1, nic2_pci_2, cores,
-                      queues, running_time):
-        """ Start testpmd on VM """
+    def start_testpmd(
+        session,
+        exec_file,
+        nic1_driver,
+        nic2_driver,
+        whitelist_option,
+        nic1_pci_1,
+        nic2_pci_2,
+        cores,
+        queues,
+        running_time,
+    ):
+        """Start testpmd on VM"""
 
         cmd = "`command -v python python3 | head -1` "
         cmd += " %s %s %s %s %s %s %s %s %s > /tmp/testpmd.log" % (
-                exec_file, nic1_driver, nic2_driver, whitelist_option,
-                nic_pci_1, nic_pci_2, cores, queues, running_time)
+            exec_file,
+            nic1_driver,
+            nic2_driver,
+            whitelist_option,
+            nic_pci_1,
+            nic_pci_2,
+            cores,
+            queues,
+            running_time,
+        )
         session.cmd_output(cmd)
 
     moongen_thread = threading.Thread(
-        target=start_moongen, args=(generator1, mac, port_id, running_time))
+        target=start_moongen, args=(generator1, mac, port_id, running_time)
+    )
     moongen_thread.start()
 
-    if utils_misc.wait_for(lambda: run_moongen_up(generator2), 30,
-                           text="Wait until devices is up to work"):
+    if utils_misc.wait_for(
+        lambda: run_moongen_up(generator2), 30, text="Wait until devices is up to work"
+    ):
         LOG_JOB.debug("MoonGen start to work")
-        testpmd_thread = threading.Thread(target=start_testpmd, args=(
-            session, exec_file, nic1_driver, nic2_driver, whitelist_option,
-            nic_pci_1, nic_pci_2, cores, queues, running_time))
+        testpmd_thread = threading.Thread(
+            target=start_testpmd,
+            args=(
+                session,
+                exec_file,
+                nic1_driver,
+                nic2_driver,
+                whitelist_option,
+                nic_pci_1,
+                nic_pci_2,
+                cores,
+                queues,
+                running_time,
+            ),
+        )
         time.sleep(3)
         testpmd_thread.start()
         testpmd_thread.join()

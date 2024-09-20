@@ -1,6 +1,4 @@
-from provider import job_utils
-from provider import backup_utils
-
+from provider import backup_utils, job_utils
 from provider.blockdev_stream_nowait import BlockdevStreamNowaitTest
 
 
@@ -17,17 +15,18 @@ class BlockdevStreamPowerdown(BlockdevStreamNowaitTest):
         self.clone_vm.create()
 
     def stream_with_clone_vm(self):
-        job_id = backup_utils.blockdev_stream_nowait(self.clone_vm,
-                                                     self._top_device,
-                                                     **self._stream_options)
+        job_id = backup_utils.blockdev_stream_nowait(
+            self.clone_vm, self._top_device, **self._stream_options
+        )
         job_utils.wait_until_block_job_completed(self.clone_vm, job_id)
 
     def do_test(self):
         self.snapshot_test()
         self.blockdev_stream()
         job_utils.check_block_jobs_started(
-            self.main_vm, [self._job],
-            self.params.get_numeric('job_started_timeout', 30)
+            self.main_vm,
+            [self._job],
+            self.params.get_numeric("job_started_timeout", 30),
         )
         self.main_vm.monitor.cmd("quit")
         self.start_vm_with_snapshot()

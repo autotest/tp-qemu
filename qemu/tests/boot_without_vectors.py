@@ -1,6 +1,4 @@
-from virttest import error_context
-from virttest import utils_test
-from virttest import env_process
+from virttest import env_process, error_context, utils_test
 
 
 @error_context.context_aware
@@ -28,8 +26,9 @@ def run(test, params, env):
         """
         if params["os_type"] == "linux":
             devices = session.cmd_output("lspci | grep Eth").strip()
-            error_context.context("Check if vnic inside guest support msi.",
-                                  test.log.info)
+            error_context.context(
+                "Check if vnic inside guest support msi.", test.log.info
+            )
             for device in devices.splitlines():
                 if not device:
                     continue
@@ -37,8 +36,9 @@ def run(test, params, env):
                 msi_check_cmd = params["msi_check_cmd"] % d_id
                 output = session.cmd_output(msi_check_cmd)
                 if output:
-                    req_args = utils_test.check_kernel_cmdline(session,
-                                                               args="pci=nomsi")
+                    req_args = utils_test.check_kernel_cmdline(
+                        session, args="pci=nomsi"
+                    )
                     if not req_args:
                         if "MSI-X: Enable-" in output:
                             test.log.info("MSI-X is disabled")
@@ -63,8 +63,9 @@ def run(test, params, env):
         guest_ip = vm.get_address()
         ping_count = int(params.get("ping_count", 0))
         if not ping_count == 0:
-            status, output = utils_test.ping(guest_ip, ping_count,
-                                             timeout=float(ping_count) * 1.5)
+            status, output = utils_test.ping(
+                guest_ip, ping_count, timeout=float(ping_count) * 1.5
+            )
             if status != 0:
                 test.fail("Ping returns non-zero value %s" % output)
 

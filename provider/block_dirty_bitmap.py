@@ -1,18 +1,15 @@
 """
 Module to provide functions related to block dirty bitmap operations.
 """
-import time
+
 import logging
+import time
 from functools import partial
 
 from avocado import fail_on
+from virttest import data_dir, qemu_monitor, qemu_storage, storage
 
-from virttest import data_dir
-from virttest import storage
-from virttest import qemu_storage
-from virttest import qemu_monitor
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def parse_params(vm, params):
@@ -26,12 +23,13 @@ def parse_params(vm, params):
         json_backend_list = ["ceph", "iscsi_direct"]
         if target_image_params["image_backend"] in json_backend_list:
             get_image_name = qemu_storage.get_image_json
-            target_image_filename = get_image_name(target_image,
-                                                   target_image_params,
-                                                   data_dir.get_data_dir())
+            target_image_filename = get_image_name(
+                target_image, target_image_params, data_dir.get_data_dir()
+            )
         else:
             target_image_filename = storage.get_image_filename(
-                target_image_params, data_dir.get_data_dir())
+                target_image_params, data_dir.get_data_dir()
+            )
         target_device = vm.get_block({"file": target_image_filename})
         bitmap_params["target_device"] = target_device
         bitmaps.append(bitmap_params)
@@ -66,8 +64,9 @@ def check_bitmap_existence(bitmaps, bitmap_params, expected_existence=True):
     """
     bname = bitmap_params.get("bitmap_name")
     dev = bitmap_params.get("target_device")
-    bitmap = (dev in bitmaps and
-              next((b for b in bitmaps[dev] if b["name"] == bname), {}))
+    bitmap = dev in bitmaps and next(
+        (b for b in bitmaps[dev] if b["name"] == bname), {}
+    )
     return bool(bitmap) == expected_existence
 
 
@@ -80,13 +79,13 @@ def block_dirty_bitmap_add(vm, bitmap_params):
     mapping = {}
     for item in ["persistent", "disabled"]:
         mapping[item] = {
-            "on": {
-                item: True}, "off": {
-                item: False}, "default": {
-                item: None}}
+            "on": {item: True},
+            "off": {item: False},
+            "default": {item: None},
+        }
     kargs = dict(node=target_device, name=bitmap)
-    if bitmap_params.get('bitmap_granularity'):
-        kargs['granularity'] = bitmap_params['bitmap_granularity']
+    if bitmap_params.get("bitmap_granularity"):
+        kargs["granularity"] = bitmap_params["bitmap_granularity"]
     for item in ["persistent", "disabled"]:
         kargs.update(mapping[item][bitmap_params.get(item, "default")])
     vm.monitor.block_dirty_bitmap_add(**kargs)
@@ -101,8 +100,7 @@ def debug_block_dirty_bitmap_sha256(vm, device, bitmap):
     :param bitmap: bitmap name
     :return: sha256 string or None if bitmap is not exists
     """
-    func = qemu_monitor.get_monitor_function(
-        vm, "debug-block-dirty-bitmap-sha256")
+    func = qemu_monitor.get_monitor_function(vm, "debug-block-dirty-bitmap-sha256")
     return func(device, bitmap).get("sha256")
 
 
@@ -147,8 +145,7 @@ def get_bitmap_by_name(vm, device, name):
 
 @fail_on
 def block_dirty_bitmap_clear(vm, device, name):
-    qemu_monitor.get_monitor_function(
-        vm, "block-dirty-bitmap-clear")(device, name)
+    qemu_monitor.get_monitor_function(vm, "block-dirty-bitmap-clear")(device, name)
     count = int(get_bitmap_by_name(vm, device, name)["count"])
     msg = "Count of '%s' in device '%s'" % (name, device)
     msg += "is '%d' not equal '0' after clear it" % count
@@ -167,8 +164,7 @@ def clear_all_bitmaps_in_device(vm, device):
 @fail_on
 def block_dirty_bitmap_remove(vm, device, name):
     """Remove bitmaps on the device one by one"""
-    qemu_monitor.get_monitor_function(
-        vm, "block-dirty-bitmap-remove")(device, name)
+    qemu_monitor.get_monitor_function(vm, "block-dirty-bitmap-remove")(device, name)
     time.sleep(0.3)
     msg = "Bitmap '%s' in device '%s' still exists!" % (name, device)
     assert get_bitmap_by_name(vm, device, name) is None, msg
@@ -190,7 +186,7 @@ def block_dirty_bitmap_disable(vm, node, name):
     func(node, name)
     bitmap = get_bitmap_by_name(vm, node, name)
     msg = "block dirty bitmap '%s' is not disabled" % name
-    assert (bitmap["recording"] is False), msg
+    assert bitmap["recording"] is False, msg
 
 
 @fail_on
@@ -200,7 +196,7 @@ def block_dirty_bitmap_enable(vm, node, name):
     func(node, name)
     bitmap = get_bitmap_by_name(vm, node, name)
     msg = "block dirty bitmap '%s' is not enabled" % name
-    assert (bitmap["recording"] is True), msg
+    assert bitmap["recording"] is True, msg
 
 
 def get_bitmaps_in_device(vm, device):
@@ -211,9 +207,9 @@ def get_bitmaps_in_device(vm, device):
 
 
 @fail_on
-def handle_block_dirty_bitmap_transaction(vm, disabled_params=None,
-                                          added_params=None,
-                                          merged_params=None):
+def handle_block_dirty_bitmap_transaction(
+    vm, disabled_params=None, added_params=None, merged_params=None
+):
     """
     Add/disable/merge bitmaps in one transaction.
     :param vm: an active VM object
@@ -231,34 +227,41 @@ def handle_block_dirty_bitmap_transaction(vm, disabled_params=None,
     actions = []
 
     if disabled_params:
-        bitmap_disable_cmd = disabled_params.get('bitmap_disable_cmd',
-                                                 'block-dirty-bitmap-disable')
-        bitmap_data = {"node": disabled_params['bitmap_device_node'],
-                       "name": disabled_params['bitmap_name']}
+        bitmap_disable_cmd = disabled_params.get(
+            "bitmap_disable_cmd", "block-dirty-bitmap-disable"
+        )
+        bitmap_data = {
+            "node": disabled_params["bitmap_device_node"],
+            "name": disabled_params["bitmap_name"],
+        }
         actions.append({"type": bitmap_disable_cmd, "data": bitmap_data})
 
     if added_params:
-        bitmap_add_cmd = added_params.get('bitmap_add_cmd',
-                                          'block-dirty-bitmap-add')
-        bitmap_data = {"node": added_params['bitmap_device_node'],
-                       "name": added_params['bitmap_name']}
-        if added_params.get('bitmap_granularity'):
-            bitmap_data['granularity'] = added_params['bitmap_granularity']
+        bitmap_add_cmd = added_params.get("bitmap_add_cmd", "block-dirty-bitmap-add")
+        bitmap_data = {
+            "node": added_params["bitmap_device_node"],
+            "name": added_params["bitmap_name"],
+        }
+        if added_params.get("bitmap_granularity"):
+            bitmap_data["granularity"] = added_params["bitmap_granularity"]
 
-        mapping = {'on': True, 'yes': True, 'off': False, 'no': False}
-        if added_params.get('bitmap_persistent'):
-            bitmap_data['persistent'] = mapping[added_params['bitmap_persistent']]
-        if added_params.get('bitmap_disabled'):
-            bitmap_data['disabled'] = mapping[added_params['bitmap_disabled']]
-        actions.append({'type': bitmap_add_cmd, 'data': bitmap_data})
+        mapping = {"on": True, "yes": True, "off": False, "no": False}
+        if added_params.get("bitmap_persistent"):
+            bitmap_data["persistent"] = mapping[added_params["bitmap_persistent"]]
+        if added_params.get("bitmap_disabled"):
+            bitmap_data["disabled"] = mapping[added_params["bitmap_disabled"]]
+        actions.append({"type": bitmap_add_cmd, "data": bitmap_data})
 
     if merged_params:
-        bitmap_merge_cmd = merged_params.get('bitmap_merge_cmd',
-                                             'block-dirty-bitmap-merge')
-        bitmap_data = {'node': merged_params['bitmap_device_node'],
-                       'target': merged_params['bitmap_target'],
-                       'bitmaps': merged_params['bitmap_sources']}
-        actions.append({'type': bitmap_merge_cmd, 'data': bitmap_data})
+        bitmap_merge_cmd = merged_params.get(
+            "bitmap_merge_cmd", "block-dirty-bitmap-merge"
+        )
+        bitmap_data = {
+            "node": merged_params["bitmap_device_node"],
+            "target": merged_params["bitmap_target"],
+            "bitmaps": merged_params["bitmap_sources"],
+        }
+        actions.append({"type": bitmap_merge_cmd, "data": bitmap_data})
 
     if actions:
         arguments = {"actions": actions}

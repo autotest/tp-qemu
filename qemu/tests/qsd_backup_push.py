@@ -1,17 +1,13 @@
 from functools import partial
 
 from avocado.utils import memory
+from virttest import error_context, utils_misc
 
-from virttest import utils_misc
-from virttest import error_context
-
-from provider import backup_utils
-from provider import blockdev_base
+from provider import backup_utils, blockdev_base
 from provider.qsd import QsdDaemonDev
 
 
 class QSDBackupTest(blockdev_base.BlockdevBaseTest):
-
     def __init__(self, test, params, env):
         super(QSDBackupTest, self).__init__(test, params, env)
         self.source_images = []
@@ -19,7 +15,7 @@ class QSDBackupTest(blockdev_base.BlockdevBaseTest):
         self.inc_backups = []
         self.bitmaps = []
         self.rebase_targets = []
-        for tag in params.objects('source_images'):
+        for tag in params.objects("source_images"):
             image_params = params.object_params(tag)
             image_chain = image_params.objects("image_backup_chain")
             self.source_images.append("fmt_%s" % tag)
@@ -30,9 +26,8 @@ class QSDBackupTest(blockdev_base.BlockdevBaseTest):
             inc_img_params = params.object_params(inc_img_tag)
 
             # rebase 'inc' image onto 'base' image, so inc's backing is base
-            inc_img_params['image_chain'] = image_params['image_backup_chain']
-            inc_img = self.source_disk_define_by_params(
-                inc_img_params, inc_img_tag)
+            inc_img_params["image_chain"] = image_params["image_backup_chain"]
+            inc_img = self.source_disk_define_by_params(inc_img_params, inc_img_tag)
             target_func = partial(inc_img.rebase, params=inc_img_params)
             self.rebase_targets.append(target_func)
 
@@ -63,20 +58,22 @@ class QSDBackupTest(blockdev_base.BlockdevBaseTest):
             self.source_images,
             self.full_backups,
             self.bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def generate_inc_files(self):
         for tag in self.params.objects("source_images"):
             self.generate_data_file(tag)
 
     def do_incremental_backup(self):
-        extra_options = {'sync': 'incremental', 'auto_disable_bitmap': False}
+        extra_options = {"sync": "incremental", "auto_disable_bitmap": False}
         backup_utils.blockdev_batch_backup(
             self.qsd,
             self.source_images,
             self.inc_backups,
             self.bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def rebase_target_disk(self):
         self.qsd.stop_daemon()
@@ -89,7 +86,7 @@ class QSDBackupTest(blockdev_base.BlockdevBaseTest):
         clone_params = self.main_vm.params.copy()
         for tag in self.params.objects("source_images"):
             img_params = self.params.object_params(tag)
-            image_chain = img_params.objects('image_backup_chain')
+            image_chain = img_params.objects("image_backup_chain")
             images = images.replace(tag, image_chain[-1])
             qsd_images.append(image_chain[-1])
         self.params["qsd_images_qsd1"] = " ".join(qsd_images)

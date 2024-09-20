@@ -1,6 +1,5 @@
 from avocado.utils import process
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net
 
 
 @error_context.context_aware
@@ -28,18 +27,21 @@ def run(test, params, env):
     if host_bridge.br_exist(new_br_name) is True:
         host_bridge.del_br(new_br_name)
     host_bridge.add_br(new_br_name)
-    error_context.context("OVS bridge %s created." % new_br_name,
-                          test.log.info)
+    error_context.context("OVS bridge %s created." % new_br_name, test.log.info)
 
     try:
         ports = host_bridge.list_ports(netdst)
         host_bridge.add_port(new_br_name, ports[0])
     except process.CmdError as e:
         if "already exists on bridge" not in e.result.stderr_text:
-            test.fail("Port %s should not be enslaved to another bridge."
-                      " Output: %s" % (ports[0], e.result.stderr_text))
+            test.fail(
+                "Port %s should not be enslaved to another bridge."
+                " Output: %s" % (ports[0], e.result.stderr_text)
+            )
     else:
-        test.fail("Add port cmd successfully excuted. However, port %s "
-                  "should not be enslaved to another bridge." % ports[0])
+        test.fail(
+            "Add port cmd successfully excuted. However, port %s "
+            "should not be enslaved to another bridge." % ports[0]
+        )
     finally:
         host_bridge.del_br(new_br_name)

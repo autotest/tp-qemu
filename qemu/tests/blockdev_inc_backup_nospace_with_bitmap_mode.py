@@ -2,8 +2,7 @@ from time import sleep
 
 from provider.block_dirty_bitmap import get_bitmap_by_name
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
-from provider.job_utils import BLOCK_JOB_COMPLETED_EVENT
-from provider.job_utils import get_event_by_condition
+from provider.job_utils import BLOCK_JOB_COMPLETED_EVENT, get_event_by_condition
 
 
 class BlockdevIncbkIncNospaceWithSyncMode(BlockdevLiveBackupBaseTest):
@@ -13,9 +12,7 @@ class BlockdevIncbkIncNospaceWithSyncMode(BlockdevLiveBackupBaseTest):
     """
 
     def __init__(self, test, params, env):
-        super(BlockdevIncbkIncNospaceWithSyncMode, self).__init__(test,
-                                                                  params,
-                                                                  env)
+        super(BlockdevIncbkIncNospaceWithSyncMode, self).__init__(test, params, env)
         self._inc_bitmap_mode = params["inc_bitmap_mode"]
         self._inc_bk_nodes = ["drive_%s" % t for t in self._target_images]
 
@@ -24,8 +21,7 @@ class BlockdevIncbkIncNospaceWithSyncMode(BlockdevLiveBackupBaseTest):
         # failed to be synced immediately after creating a new file
         sleep(10)
 
-        bm = get_bitmap_by_name(self.main_vm, self._source_nodes[0],
-                                self._bitmaps[0])
+        bm = get_bitmap_by_name(self.main_vm, self._source_nodes[0], self._bitmaps[0])
         if bm:
             if bm.get("count", 0) <= 0:
                 self.test.fail("Count of bitmap should be greater than 0")
@@ -36,26 +32,27 @@ class BlockdevIncbkIncNospaceWithSyncMode(BlockdevLiveBackupBaseTest):
     def do_incremental_backup(self):
         self.count_before_incbk = self._get_bitmap_count()
         self.inc_job_id = "job_%s" % self._inc_bk_nodes[0]
-        args = {"device": self._source_nodes[0],
-                "target": self._inc_bk_nodes[0],
-                "sync": "bitmap",
-                "job-id": self.inc_job_id,
-                "bitmap": self._bitmaps[0],
-                "bitmap-mode": self._inc_bitmap_mode}
+        args = {
+            "device": self._source_nodes[0],
+            "target": self._inc_bk_nodes[0],
+            "sync": "bitmap",
+            "job-id": self.inc_job_id,
+            "bitmap": self._bitmaps[0],
+            "bitmap-mode": self._inc_bitmap_mode,
+        }
         self.main_vm.monitor.cmd("blockdev-backup", args)
 
     def check_no_space_error(self):
-        tmo = self.params.get_numeric('job_completed_timeout', 360)
-        cond = {'device': self.inc_job_id}
-        event = get_event_by_condition(self.main_vm,
-                                       BLOCK_JOB_COMPLETED_EVENT,
-                                       tmo, **cond)
+        tmo = self.params.get_numeric("job_completed_timeout", 360)
+        cond = {"device": self.inc_job_id}
+        event = get_event_by_condition(
+            self.main_vm, BLOCK_JOB_COMPLETED_EVENT, tmo, **cond
+        )
         if event:
-            if event['data'].get('error') != self.params['error_msg']:
-                self.test.fail('Unexpected error: %s'
-                               % event['data'].get('error'))
+            if event["data"].get("error") != self.params["error_msg"]:
+                self.test.fail("Unexpected error: %s" % event["data"].get("error"))
         else:
-            self.test.fail('Failed to get BLOCK_JOB_COMPLETED event')
+            self.test.fail("Failed to get BLOCK_JOB_COMPLETED event")
 
     def check_bitmap_count(self):
         count_after_incbk = self._get_bitmap_count()

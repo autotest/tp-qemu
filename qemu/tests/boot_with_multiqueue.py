@@ -1,8 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_net
+from virttest import error_context, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -24,8 +22,7 @@ def run(test, params, env):
 
     # boot the vm with the queues
     queues = int(params["queues"])
-    error_context.context("Boot the guest with queues = %s" % queues,
-                          test.log.info)
+    error_context.context("Boot the guest with queues = %s" % queues, test.log.info)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -36,9 +33,9 @@ def run(test, params, env):
         nic = vm.virtnet[0]
         ifname = utils_net.get_linux_ifname(session, nic.mac)
         set_queue_cmd = "ethtool -L %s combined %s" % (ifname, queues)
-        status, output = session.cmd_status_output(set_queue_cmd,
-                                                   timeout=cmd_timeout,
-                                                   safe=True)
+        status, output = session.cmd_status_output(
+            set_queue_cmd, timeout=cmd_timeout, safe=True
+        )
         if status:
             err = "Failed to set queues to %s with status = %s and output= %s"
             err %= (queues, status, output)
@@ -46,21 +43,21 @@ def run(test, params, env):
         check_queue_cmd = "ethtool -l %s" % ifname
         output = session.cmd_output(check_queue_cmd, timeout=cmd_timeout)
         if len(re.findall(r"Combined:\s+%d\s" % queues, output)) != 2:
-            test.fail("Fail to set queues to %s on %s" %
-                      (queues, nic.nic_name))
+            test.fail("Fail to set queues to %s on %s" % (queues, nic.nic_name))
 
         # check the msi for linux guest
         error_context.context("Check the msi number in guest", test.log.info)
-        devices = session.cmd_output("lspci | grep Ethernet",
-                                     timeout=cmd_timeout, safe=True).strip()
+        devices = session.cmd_output(
+            "lspci | grep Ethernet", timeout=cmd_timeout, safe=True
+        ).strip()
         for device in devices.split("\n"):
             if not device:
                 continue
             d_id = device.split()[0]
             msi_check_cmd = params["msi_check_cmd"] % d_id
-            status, output = session.cmd_status_output(msi_check_cmd,
-                                                       timeout=cmd_timeout,
-                                                       safe=True)
+            status, output = session.cmd_status_output(
+                msi_check_cmd, timeout=cmd_timeout, safe=True
+            )
             find_result = re.search(r"MSI-X: Enable\+\s+Count=(\d+)", output)
             if not find_result:
                 test.fail("No MSI info in output: %s" % output)
@@ -69,20 +66,18 @@ def run(test, params, env):
                 test.fail("MSI not correct with output: %s" % output)
     else:
         # verify driver
-        error_context.context("Check if the driver is installed and "
-                              "verified", test.log.info)
+        error_context.context(
+            "Check if the driver is installed and " "verified", test.log.info
+        )
         driver_name = params.get("driver_name", "netkvm")
-        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test,
-                                                                driver_name,
-                                                                cmd_timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(
+            session, vm, test, driver_name, cmd_timeout
+        )
         # check the msi for windows guest with trace view
         error_context.context("Check the msi number in guest", test.log.info)
-        msis, cur_queues = utils_net.get_msis_and_queues_windows(params,
-                                                                 vm)
+        msis, cur_queues = utils_net.get_msis_and_queues_windows(params, vm)
         if cur_queues != queues or msis != 2 * queues + 2:
-            test.fail("queues not correct with %s, expect %s" %
-                      (cur_queues, queues))
+            test.fail("queues not correct with %s, expect %s" % (cur_queues, queues))
 
     # start scp test
     error_context.context("Start scp file transfer test", test.log.info)

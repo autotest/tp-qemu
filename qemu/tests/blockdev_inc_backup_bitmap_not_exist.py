@@ -13,17 +13,19 @@ class BlockdevIncbkNonExistedBitmap(BlockdevLiveBackupBaseTest):
     def do_incremental_backup(self):
         try:
             self.main_vm.monitor.cmd(
-                'blockdev-backup',
-                {'device': self._source_nodes[0],
-                 'target': self._full_bk_nodes[0],
-                 'bitmap': self.params['non_existed_bitmap'],
-                 'sync': 'incremental'}
+                "blockdev-backup",
+                {
+                    "device": self._source_nodes[0],
+                    "target": self._full_bk_nodes[0],
+                    "bitmap": self.params["non_existed_bitmap"],
+                    "sync": "incremental",
+                },
             )
         except QMPCmdError as e:
-            if self.params['error_msg'] not in str(e):
-                self.test.fail('Unexpected error: %s' % str(e))
+            if self.params["error_msg"] not in str(e):
+                self.test.fail("Unexpected error: %s" % str(e))
         else:
-            self.test.fail('blockdev-backup succeeded unexpectedly')
+            self.test.fail("blockdev-backup succeeded unexpectedly")
 
     def do_test(self):
         self.do_incremental_backup()

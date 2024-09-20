@@ -13,6 +13,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
+
     def has_fd(pid, filepath):
         """
         Returns true if process has a file descriptor pointing to filepath
@@ -40,7 +41,7 @@ def run(test, params, env):
         test.error("Fail to get process id for VM")
 
     # directory for storing temporary files
-    fdfiles_dir = os.path.join(test.tmpdir, 'fdfiles')
+    fdfiles_dir = os.path.join(test.tmpdir, "fdfiles")
     if not os.path.isdir(fdfiles_dir):
         os.mkdir(fdfiles_dir)
 
@@ -57,8 +58,10 @@ def run(test, params, env):
             test.error("getfd returned error: %s" % response)
         # check if qemu process has a copy of the fd
         if not has_fd(pid, path):
-            test.error("QEMU process does not seem to have a file "
-                       "descriptor pointing to file %s" % path)
+            test.error(
+                "QEMU process does not seem to have a file "
+                "descriptor pointing to file %s" % path
+            )
 
     # clean up files
     for n in range(nofiles):

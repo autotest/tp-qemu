@@ -1,8 +1,6 @@
 import re
 
-from virttest import env_process
-from virttest import error_context
-from virttest import cpu
+from virttest import cpu, env_process, error_context
 
 
 @error_context.context_aware
@@ -45,9 +43,9 @@ def run(test, params, env):
     msg_unavailable = params.get("msg_unavailable", "").split(":")
     msg_unknow = params.get("msg_unknow", "not found")
     try:
-        error_context.context("boot guest with -cpu %s,%s" %
-                              (guest_cpumodel, extra_flags),
-                              test.log.info)
+        error_context.context(
+            "boot guest with -cpu %s,%s" % (guest_cpumodel, extra_flags), test.log.info
+        )
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     except Exception as err:

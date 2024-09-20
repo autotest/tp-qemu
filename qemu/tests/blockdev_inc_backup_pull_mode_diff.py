@@ -1,34 +1,25 @@
-import six
 import socket
-
 from functools import partial
 
-from provider import backup_utils
-from provider import blockdev_base
-from provider import job_utils
-from provider import block_dirty_bitmap
+import six
+from virttest import utils_disk, utils_misc
 
+from provider import backup_utils, block_dirty_bitmap, blockdev_base, job_utils
 from provider.nbd_image_export import InternalNBDExportImage
-
-from virttest import utils_disk
-from virttest import utils_misc
 
 
 class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
-
     def __init__(self, test, params, env):
-        super(BlockdevIncBackupPullModeDiff, self).__init__(test,
-                                                            params,
-                                                            env)
+        super(BlockdevIncBackupPullModeDiff, self).__init__(test, params, env)
         self.source_images = []
         self.fleecing_full_backups = []
         self.fleecing_inc_backups = []
         self.full_backup_tags = []
         self.inc_backup_tags = []
-        self.full_backup_bitmaps = []     # added along with full backup
+        self.full_backup_bitmaps = []  # added along with full backup
         self.before_2nd_inc_bitmaps = []  # added before 2nd inc files
-        self.merged_bitmaps = []          # merge above two into this one
-        self.inc_backup_bitmaps = []      # added along with inc backup
+        self.merged_bitmaps = []  # merge above two into this one
+        self.inc_backup_bitmaps = []  # added along with inc backup
         self.backup_jobs = []
         self.full_backup_nbd_objs = []
         self.inc_backup_nbd_objs = []
@@ -38,7 +29,7 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
         self.inc_backup_nbd_images = []
         self.src_img_tags = params.objects("source_images")
         localhost = socket.gethostname()
-        self.params['nbd_server'] = localhost if localhost else 'localhost'
+        self.params["nbd_server"] = localhost if localhost else "localhost"
         list(map(self._init_arguments_by_params, self.src_img_tags))
 
     def _init_arguments_by_params(self, tag):
@@ -55,33 +46,34 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
         self.before_2nd_inc_bitmaps.append("before_2nd_inc_bitmap_%s" % tag)
         self.merged_bitmaps.append("merged_bitmap_%s" % tag)
         self.inc_backup_bitmaps.append("inc_bitmap_%s" % tag)
-        self.params['nbd_export_bitmaps_%s' %
-                    bk_tags[1]] = self.merged_bitmaps[-1]
+        self.params["nbd_export_bitmaps_%s" % bk_tags[1]] = self.merged_bitmaps[-1]
 
         # nbd images
-        nbd_image = self.params['nbd_image_%s' % bk_tags[0]]
+        nbd_image = self.params["nbd_image_%s" % bk_tags[0]]
         self.full_backup_nbd_images.append(
-            self.source_disk_define_by_params(self.params, nbd_image))
-        nbd_image = self.params['nbd_image_%s' % bk_tags[1]]
+            self.source_disk_define_by_params(self.params, nbd_image)
+        )
+        nbd_image = self.params["nbd_image_%s" % bk_tags[1]]
         self.inc_backup_nbd_images.append(
-            self.source_disk_define_by_params(self.params, nbd_image))
+            self.source_disk_define_by_params(self.params, nbd_image)
+        )
 
         # target 'fullbk' image, copy data from exported full bk image to it
-        fullbk = self.params['client_image_%s' % bk_tags[0]]
+        fullbk = self.params["client_image_%s" % bk_tags[0]]
         disk = self.source_disk_define_by_params(self.params, fullbk)
         disk.create(disk.params)
         self.trash.append(disk)
         self.full_backup_client_images.append(disk)
 
         # target 'incbk' image, copy data from exported inc bk image to it
-        incbk = self.params['client_image_%s' % bk_tags[1]]
+        incbk = self.params["client_image_%s" % bk_tags[1]]
         disk = self.source_disk_define_by_params(self.params, incbk)
         disk.create(disk.params)
         self.trash.append(disk)
         self.inc_backup_client_images.append(disk)
 
         # Only hotplug fleecing images for full backup before full-backup
-        self.params['image_backup_chain_%s' % tag] = bk_tags[0]
+        self.params["image_backup_chain_%s" % tag] = bk_tags[0]
 
         self.full_backup_tags.append(bk_tags[0])
         self.inc_backup_tags.append(bk_tags[1])
@@ -90,29 +82,36 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
         # nbd export objects, used for exporting local images
         for i, tag in enumerate(self.src_img_tags):
             self.full_backup_nbd_objs.append(
-                InternalNBDExportImage(self.main_vm, self.params,
-                                       self.full_backup_tags[i]))
+                InternalNBDExportImage(
+                    self.main_vm, self.params, self.full_backup_tags[i]
+                )
+            )
             self.inc_backup_nbd_objs.append(
-                InternalNBDExportImage(self.main_vm, self.params,
-                                       self.inc_backup_tags[i]))
+                InternalNBDExportImage(
+                    self.main_vm, self.params, self.inc_backup_tags[i]
+                )
+            )
 
     def _copy_data_from_export(self, nbd_imgs, target_imgs, bitmaps=None):
         for i, nbd_obj in enumerate(nbd_imgs):
             if bitmaps is None:
-                backup_utils.copyif(self.params, nbd_obj.tag,
-                                    target_imgs[i].tag)
+                backup_utils.copyif(self.params, nbd_obj.tag, target_imgs[i].tag)
             else:
-                backup_utils.copyif(self.params, nbd_obj.tag,
-                                    target_imgs[i].tag, bitmaps[i])
+                backup_utils.copyif(
+                    self.params, nbd_obj.tag, target_imgs[i].tag, bitmaps[i]
+                )
 
     def copy_full_data_from_export(self):
-        self._copy_data_from_export(self.full_backup_nbd_images,
-                                    self.full_backup_client_images)
+        self._copy_data_from_export(
+            self.full_backup_nbd_images, self.full_backup_client_images
+        )
 
     def copy_inc_data_from_export(self):
-        self._copy_data_from_export(self.inc_backup_nbd_images,
-                                    self.inc_backup_client_images,
-                                    self.merged_bitmaps)
+        self._copy_data_from_export(
+            self.inc_backup_nbd_images,
+            self.inc_backup_client_images,
+            self.merged_bitmaps,
+        )
 
     def _export_fleecing_images(self, nbd_objs, nodes):
         for i, obj in enumerate(nbd_objs):
@@ -124,43 +123,40 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
             obj.stop_export()
 
     def export_full_bk_fleecing_imgs(self):
-        self._export_fleecing_images(self.full_backup_nbd_objs,
-                                     self.fleecing_full_backups)
+        self._export_fleecing_images(
+            self.full_backup_nbd_objs, self.fleecing_full_backups
+        )
 
     def stop_export_full_bk_fleecing_imgs(self):
         self._stop_export_fleecing_images(self.full_backup_nbd_objs)
 
     def export_inc_bk_fleecing_imgs(self):
-        self._export_fleecing_images(self.inc_backup_nbd_objs,
-                                     self.fleecing_inc_backups)
+        self._export_fleecing_images(
+            self.inc_backup_nbd_objs, self.fleecing_inc_backups
+        )
 
     def stop_export_inc_bk_fleecing_imgs(self):
         self._stop_export_fleecing_images(self.inc_backup_nbd_objs)
 
     def cancel_backup_jobs(self):
         for job_id in self.backup_jobs:
-            arguments = {'id': job_id}
-            self.main_vm.monitor.cmd('job-cancel', arguments)
+            arguments = {"id": job_id}
+            self.main_vm.monitor.cmd("job-cancel", arguments)
 
     def generate_inc_files(self):
         return list(map(self.generate_data_file, self.src_img_tags))
 
     def hotplug_inc_backup_images(self):
         for idx, tag in enumerate(self.src_img_tags):
-            self.params['image_backup_chain_%s' %
-                        tag] = self.inc_backup_tags[idx]
+            self.params["image_backup_chain_%s" % tag] = self.inc_backup_tags[idx]
         self.add_target_data_disks()
 
     def _do_backup(self, backup_nodes, bitmaps):
         extra_options = {"sync": "none", "wait_job_complete": False}
         backup_utils.blockdev_batch_backup(
-            self.main_vm,
-            self.source_images,
-            backup_nodes,
-            bitmaps,
-            ** extra_options)
-        self.backup_jobs = [job['id']
-                            for job in job_utils.query_jobs(self.main_vm)]
+            self.main_vm, self.source_images, backup_nodes, bitmaps, **extra_options
+        )
+        self.backup_jobs = [job["id"] for job in job_utils.query_jobs(self.main_vm)]
 
     def do_full_backup(self):
         self._do_backup(self.fleecing_full_backups, self.full_backup_bitmaps)
@@ -171,21 +167,22 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
     def restart_vm_with_incbk_images(self):
         """restart vm with incbk as its data disk"""
         self.main_vm.destroy()
-        images = self.params['images']
-        self.params['images'] = ' '.join(
-            [images.split()[0]] + [o.tag for o in self.inc_backup_client_images])
+        images = self.params["images"]
+        self.params["images"] = " ".join(
+            [images.split()[0]] + [o.tag for o in self.inc_backup_client_images]
+        )
         self.prepare_main_vm()
         self.clone_vm = self.main_vm
-        self.params['images'] = images
+        self.params["images"] = images
 
     def rebase_inc_onto_full(self):
         # rebase target 'incbk' onto target 'fullbk'
         rebase_funcs = []
         for i, tag in enumerate(self.inc_backup_tags):
-            incbk = self.params['client_image_%s' % tag]
-            fullbk = self.params['client_image_%s' % self.full_backup_tags[i]]
+            incbk = self.params["client_image_%s" % tag]
+            fullbk = self.params["client_image_%s" % self.full_backup_tags[i]]
             image_params = self.params.object_params(incbk)
-            image_params['image_chain'] = '%s %s' % (fullbk, incbk)
+            image_params["image_chain"] = "%s %s" % (fullbk, incbk)
             disk = self.source_disk_define_by_params(image_params, incbk)
             rebase_funcs.append(partial(disk.rebase, params=image_params))
         utils_misc.parallel(rebase_funcs)
@@ -212,53 +209,68 @@ class BlockdevIncBackupPullModeDiff(blockdev_base.BlockdevBaseTest):
 
                 s, o = session.cmd_status_output(cat_cmd)
                 if s == 0:
-                    self.test.fail('File (%s) exists' % non_existed_files[tag])
-                elif 'No such file' not in o.strip():
-                    self.test.fail('Unknown error: %s' % o)
+                    self.test.fail("File (%s) exists" % non_existed_files[tag])
+                elif "No such file" not in o.strip():
+                    self.test.fail("Unknown error: %s" % o)
         finally:
             session.close()
 
     def _handle_bitmaps(self, disabled_list, new_list, **extra):
         for idx, bitmap in enumerate(disabled_list):
             block_dirty_bitmap.block_dirty_bitmap_disable(
-                self.main_vm, self.source_images[idx], bitmap)
+                self.main_vm, self.source_images[idx], bitmap
+            )
 
         for idx, bitmap in enumerate(new_list):
             bitmap_params = {}
-            bitmap_params['bitmap_name'] = bitmap
-            bitmap_params['target_device'] = self.source_images[idx]
-            bitmap_params['disabled'] = extra.pop('disabled', 'off')
-            block_dirty_bitmap.block_dirty_bitmap_add(self.main_vm,
-                                                      bitmap_params)
+            bitmap_params["bitmap_name"] = bitmap
+            bitmap_params["target_device"] = self.source_images[idx]
+            bitmap_params["disabled"] = extra.pop("disabled", "off")
+            block_dirty_bitmap.block_dirty_bitmap_add(self.main_vm, bitmap_params)
 
-        merged_list = extra.pop('merged_list', [])
+        merged_list = extra.pop("merged_list", [])
         for idx, target in enumerate(merged_list):
             src_list = [v[idx] for v in extra.values()]
             block_dirty_bitmap.block_dirty_bitmap_merge(
-                self.main_vm, self.source_images[idx], src_list, target)
+                self.main_vm, self.source_images[idx], src_list, target
+            )
 
     def add_bitmaps_transaction(self):
         for i, bitmap in enumerate(self.full_backup_bitmaps):
-            disabled_params = {'bitmap_device_node': self.source_images[i],
-                               'bitmap_name': bitmap}
-            added_params = {'bitmap_device_node': self.source_images[i],
-                            'bitmap_name': self.before_2nd_inc_bitmaps[i]}
+            disabled_params = {
+                "bitmap_device_node": self.source_images[i],
+                "bitmap_name": bitmap,
+            }
+            added_params = {
+                "bitmap_device_node": self.source_images[i],
+                "bitmap_name": self.before_2nd_inc_bitmaps[i],
+            }
             block_dirty_bitmap.handle_block_dirty_bitmap_transaction(
-                self.main_vm, disabled_params, added_params)
+                self.main_vm, disabled_params, added_params
+            )
 
     def merge_bitmaps_transaction(self):
         for i, bitmap in enumerate(self.before_2nd_inc_bitmaps):
-            disabled_params = {'bitmap_device_node': self.source_images[i],
-                               'bitmap_name': bitmap}
-            added_params = {'bitmap_device_node': self.source_images[i],
-                            'bitmap_name': self.merged_bitmaps[i],
-                            'bitmap_disabled': 'on'}
-            merged_params = {'bitmap_device_node': self.source_images[i],
-                             'bitmap_target': self.merged_bitmaps[i],
-                             'bitmap_sources': [self.full_backup_bitmaps[i],
-                                                self.before_2nd_inc_bitmaps[i]]}
+            disabled_params = {
+                "bitmap_device_node": self.source_images[i],
+                "bitmap_name": bitmap,
+            }
+            added_params = {
+                "bitmap_device_node": self.source_images[i],
+                "bitmap_name": self.merged_bitmaps[i],
+                "bitmap_disabled": "on",
+            }
+            merged_params = {
+                "bitmap_device_node": self.source_images[i],
+                "bitmap_target": self.merged_bitmaps[i],
+                "bitmap_sources": [
+                    self.full_backup_bitmaps[i],
+                    self.before_2nd_inc_bitmaps[i],
+                ],
+            }
             block_dirty_bitmap.handle_block_dirty_bitmap_transaction(
-                self.main_vm, disabled_params, added_params, merged_params)
+                self.main_vm, disabled_params, added_params, merged_params
+            )
 
     def do_test(self):
         self.init_nbd_exports()

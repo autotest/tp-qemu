@@ -1,17 +1,16 @@
 import logging
 import re
 
-from virttest import utils_misc
-from virttest import data_dir
-from virttest.qemu_storage import QemuImg
 from avocado.core import exceptions
+from virttest import data_dir, utils_misc
+from virttest.qemu_storage import QemuImg
+
 from qemu.tests import block_copy
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class LiveSnapshot(block_copy.BlockCopy):
-
     """
     Provide basic functions for live snapshot test cases.
     """
@@ -30,8 +29,10 @@ class LiveSnapshot(block_copy.BlockCopy):
         self.snapshot_node_name = self.params.get("snapshot_node_name")
         self.snapshot_mode = params.get("snapshot_mode", "absolute-paths")
         self.snapshot_format = params.get("snapshot_format", "qcow2")
-        self.snapshot_args = {"mode": self.snapshot_mode,
-                              "format": self.snapshot_format}
+        self.snapshot_args = {
+            "mode": self.snapshot_mode,
+            "format": self.snapshot_format,
+        }
         if self.node_name:
             self.snapshot_args.update({"node-name": self.node_name})
         if self.snapshot_node_name:
@@ -42,7 +43,7 @@ class LiveSnapshot(block_copy.BlockCopy):
         Create a image.
         """
         image_name = self.params.get("image_name")
-        self.params['image_name_snapshot'] = image_name + "-snap"
+        self.params["image_name_snapshot"] = image_name + "-snap"
         snapshot_params = self.params.object_params("snapshot")
         base_dir = self.params.get("images_base_dir", data_dir.get_data_dir())
 
@@ -69,8 +70,9 @@ class LiveSnapshot(block_copy.BlockCopy):
             self.snapshot_file = self.get_snapshot_file()
         self.trash_files.append(self.snapshot_file)
         LOG_JOB.info("Creating snapshot")
-        self.vm.monitor.live_snapshot(self.device, self.snapshot_file,
-                                      **self.snapshot_args)
+        self.vm.monitor.live_snapshot(
+            self.device, self.snapshot_file, **self.snapshot_args
+        )
         LOG_JOB.info("Checking snapshot created successfully")
         self.check_snapshot()
 
@@ -86,10 +88,11 @@ class LiveSnapshot(block_copy.BlockCopy):
             match_string = "u?'node-name': u?'%s'" % self.snapshot_node_name
             if not re.search(match_string, snapshot_info):
                 LOG_JOB.error(snapshot_info)
-                raise exceptions.TestFail("Can not find node name %s of"
-                                          " snapshot in block info %s"
-                                          % (self.snapshot_node_name,
-                                             snapshot_info))
+                raise exceptions.TestFail(
+                    "Can not find node name %s of"
+                    " snapshot in block info %s"
+                    % (self.snapshot_node_name, snapshot_info)
+                )
 
     def action_after_finished(self):
         """

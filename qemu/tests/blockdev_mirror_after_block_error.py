@@ -10,16 +10,16 @@ class BlockdevMirrorAfterBlockErrorTest(BlockdevMirrorWaitTest):
     def overflow_source_image(self):
         session = self.main_vm.wait_for_login()
         tag = self._source_images[0]
-        dd_cmd = self.params['write_file_cmd'] % self.disks_info[tag][1]
+        dd_cmd = self.params["write_file_cmd"] % self.disks_info[tag][1]
         session.cmd(dd_cmd, ignore_all_errors=True)
         session.close()
 
     def wait_block_io_error(self):
         event = get_event_by_condition(
-            self.main_vm, 'BLOCK_IO_ERROR',
-            self.params.get_numeric('event_timeout', 30))
+            self.main_vm, "BLOCK_IO_ERROR", self.params.get_numeric("event_timeout", 30)
+        )
         if event is None:
-            self.test.fail('Failed to get BLOCK_IO_ERROR event')
+            self.test.fail("Failed to get BLOCK_IO_ERROR event")
 
     def do_test(self):
         self.overflow_source_image()

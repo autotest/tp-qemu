@@ -1,9 +1,8 @@
-from provider.blockdev_commit_base import BlockDevCommitTest
 from provider import backup_utils
+from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockDevCommitBackingMaskOn(BlockDevCommitTest):
-
     def commit_snapshots(self):
         self.base_device = self.params["device_tag"].split()[0]
         device_params = self.params.object_params(self.base_device)
@@ -24,8 +23,10 @@ class BlockDevCommitBackingMaskOn(BlockDevCommitTest):
         for item in output:
             if "backing file format" in item:
                 if base_format not in item:
-                    self.test.fail("Expected format: %s, current format: %s"
-                                   % (item.split(":")[1], base_format))
+                    self.test.fail(
+                        "Expected format: %s, current format: %s"
+                        % (item.split(":")[1], base_format)
+                    )
 
     def run_test(self):
         self.pre_test()

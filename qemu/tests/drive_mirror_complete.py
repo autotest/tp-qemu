@@ -1,7 +1,4 @@
-from virttest import data_dir
-from virttest import env_process
-from virttest import error_context
-from virttest import qemu_storage
+from virttest import data_dir, env_process, error_context, qemu_storage
 
 from qemu.tests import drive_mirror
 

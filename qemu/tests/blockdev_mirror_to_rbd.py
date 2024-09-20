@@ -5,6 +5,7 @@ class BlockdevMirrorRBDNode(BlockdevMirrorWaitTest):
     """
     Block mirror to rbd target
     """
+
     pass
 
 

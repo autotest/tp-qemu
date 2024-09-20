@@ -4,12 +4,7 @@ import shutil
 
 from aexpect import ShellCmdError
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import utils_net
-from virttest import utils_misc
-from virttest import error_context
-from virttest import utils_package
+from virttest import data_dir, error_context, utils_misc, utils_net, utils_package
 
 
 @error_context.context_aware
@@ -33,8 +28,11 @@ def run(test, params, env):
         """Compile iperf and return its binary file path."""
         iperf_version = params["iperf_version"]
         iperf_source_path = os.path.join(dst_path, iperf_version)
-        compile_cmd = params["linux_compile_cmd"] % (src_path, dst_path,
-                                                     iperf_source_path)
+        compile_cmd = params["linux_compile_cmd"] % (
+            src_path,
+            dst_path,
+            iperf_source_path,
+        )
         try:
             if session:
                 test.log.info("Compiling %s in guest...", iperf_version)
@@ -46,8 +44,8 @@ def run(test, params, env):
             test.log.error(err_msg)
             test.error("Failed to compile iperf")
         else:
-            iperf_bin_name = re.sub(r'[-2]', '', iperf_version.split('.')[0])
-            return os.path.join(iperf_source_path, 'src', iperf_bin_name)
+            iperf_bin_name = re.sub(r"[-2]", "", iperf_version.split(".")[0])
+            return os.path.join(iperf_source_path, "src", iperf_bin_name)
 
     def iperf_start(session, iperf_path, options, catch_data):
         """Start iperf session, analyze result if catch_data."""
@@ -59,8 +57,9 @@ def run(test, params, env):
                 data_info = session.cmd_output(iperf_cmd, timeout=120)
             else:
                 test.log.info(info_text, "host", iperf_cmd)
-                data_info = process.system_output(iperf_cmd, timeout=120,
-                                                  verbose=False).decode()
+                data_info = process.system_output(
+                    iperf_cmd, timeout=120, verbose=False
+                ).decode()
         except Exception as err_msg:
             test.log.error(str(err_msg))
             test.error("Failed to start iperf session")
@@ -72,9 +71,11 @@ def run(test, params, env):
                 if not parallel_cur:
                     test.fail("iperf client not connected to server")
                 elif parallel_exp and parallel_cur != parallel_exp:
-                    test.fail("Number of parallel threads running(%d) is "
-                              "inconsistent with expectations(%d)"
-                              % (parallel_cur, parallel_exp))
+                    test.fail(
+                        "Number of parallel threads running(%d) is "
+                        "inconsistent with expectations(%d)"
+                        % (parallel_cur, parallel_exp)
+                    )
                 test.log.info("iperf client successfully connected to server")
 
     def is_iperf_running(name_pattern, session=None):
@@ -82,12 +83,13 @@ def run(test, params, env):
             check_iperf_cmd = params["check_iperf_cmd"] % name_pattern
             status = serial_session.cmd_status(check_iperf_cmd)
         else:
-            status = process.system("pgrep -f %s" % name_pattern,
-                                    ignore_status=True, verbose=False)
+            status = process.system(
+                "pgrep -f %s" % name_pattern, ignore_status=True, verbose=False
+            )
         return status == 0
 
     def rss_check():
-        if os_type == 'linux':
+        if os_type == "linux":
             ifname = utils_net.get_linux_ifname(guest_session, vm.get_mac_address())
             check_rss_state_cmd = params.get("check_rss_state")
             output = guest_session.cmd_output(check_rss_state_cmd % ifname)
@@ -96,18 +98,18 @@ def run(test, params, env):
                 test.fail("Rss support for virtio-net driver is bad")
             else:
                 test.log.info("Rss support for virtio-net driver is works well")
-            test.log.info('enable rxhash to check network if can works well')
+            test.log.info("enable rxhash to check network if can works well")
             enable_rxhash_cmd = params.get("enable_rxhash_cmd")
             status, output = guest_session.cmd_status_output(enable_rxhash_cmd % ifname)
             if status != 0:
                 test.fail("Can not enable rxhash: %s" % output)
         else:
-
             test.log.info('Run the command "netkvm-wmi.cmd rss" to collect statistics')
             rss_test_cmd = utils_misc.set_winutils_letter(
-                guest_session, params["rss_test_cmd"])
+                guest_session, params["rss_test_cmd"]
+            )
             rss_statistics = guest_session.cmd_output(rss_test_cmd)
-            patterns = r'^((?:Errors)|(?:Misses))=0'
+            patterns = r"^((?:Errors)|(?:Misses))=0"
             result = re.findall(patterns, rss_statistics, re.M)
             if len(result) == 2:
                 test.log.info("Rss support for virtio-net driver is works well")
@@ -121,10 +123,10 @@ def run(test, params, env):
     iperf_test_duration = int(params["iperf_test_duration"])
     iperf_deps_dir = data_dir.get_deps_dir("iperf")
     host_iperf_file = params["host_iperf_file"]
-    guest_iperf_file = params.get('guest_iperf_file', host_iperf_file)
+    guest_iperf_file = params.get("guest_iperf_file", host_iperf_file)
     host_iperf_src_path = os.path.join(iperf_deps_dir, host_iperf_file)
     guest_iperf_remote_path = os.path.join(iperf_deps_dir, guest_iperf_file)
-    guest_iperf_path = params.get('guest_iperf_path', tmp_dir)
+    guest_iperf_path = params.get("guest_iperf_path", tmp_dir)
     guest_iperf_src_path = os.path.join(guest_iperf_path, guest_iperf_file)
 
     vm = env.get_vm(params["main_vm"])
@@ -138,7 +140,7 @@ def run(test, params, env):
     guest_ip_addr = vm.get_address()
     host_iperf_bin = iperf_compile(host_iperf_src_path, tmp_dir)
 
-    if os_type == 'linux':
+    if os_type == "linux":
         if not utils_package.package_install("gcc-c++", guest_session):
             test.cancel("Please install gcc-c++ to proceed")
         guest_iperf__bin = iperf_compile(guest_iperf_src_path, tmp_dir, guest_session)
@@ -146,13 +148,15 @@ def run(test, params, env):
         guest_iperf__bin = guest_iperf_src_path
         iperf_deplist = params.get("iperf_deplist")
         if iperf_deplist:
-            for d_name in iperf_deplist.split(','):
+            for d_name in iperf_deplist.split(","):
                 dep_path = os.path.join(data_dir.get_deps_dir("iperf"), d_name)
                 vm.copy_files_to(dep_path, guest_iperf_path)
 
-    search_pattern = {'host': host_iperf_bin.replace('src/', 'src/.*'),
-                      'linux': guest_iperf__bin.replace('src/', 'src/.*'),
-                      'windows': guest_iperf_file}
+    search_pattern = {
+        "host": host_iperf_bin.replace("src/", "src/.*"),
+        "linux": guest_iperf__bin.replace("src/", "src/.*"),
+        "windows": guest_iperf_file,
+    }
 
     if params.get("iperf_server") == params["main_vm"]:
         s_ip = params.get("multicast_addr", guest_ip_addr)
@@ -161,12 +165,20 @@ def run(test, params, env):
     else:
         s_ip = params.get("multicast_addr", host_ip_addr)
         s_info = [search_pattern["host"], s_ip, None, host_iperf_bin]
-        c_info = [search_pattern[os_type], guest_ip_addr, guest_session, guest_iperf__bin]
+        c_info = [
+            search_pattern[os_type],
+            guest_ip_addr,
+            guest_session,
+            guest_iperf__bin,
+        ]
 
     s_catch_data = params["catch_data"] % (s_info[1], c_info[1])
     s_options = params["iperf_server_options"]
-    c_options = params["iperf_client_options"] % (s_info[1], c_info[1],
-                                                  iperf_test_duration)
+    c_options = params["iperf_client_options"] % (
+        s_info[1],
+        c_info[1],
+        iperf_test_duration,
+    )
     s_info.extend([s_options, s_catch_data])
     c_info.extend([c_options, None])
 
@@ -180,26 +192,33 @@ def run(test, params, env):
         bg_client = utils_misc.InterruptedThread(iperf_start, c_start_args)
 
         bg_server.start()
-        if not utils_misc.wait_for(lambda: is_iperf_running(s_info[0],
-                                                            s_info[2]), 5, 2):
+        if not utils_misc.wait_for(
+            lambda: is_iperf_running(s_info[0], s_info[2]), 5, 2
+        ):
             test.error("Failed to start iperf server.")
         error_context.context("iperf server has started.", test.log.info)
         bg_client.start()
-        if not utils_misc.wait_for(lambda: is_iperf_running(c_info[0],
-                                                            c_info[2]), 5):
+        if not utils_misc.wait_for(lambda: is_iperf_running(c_info[0], c_info[2]), 5):
             test.error("Failed to start iperf client.")
         error_context.context("iperf client has started.", test.log.info)
-        utils_misc.wait_for(lambda: not is_iperf_running(c_info[0], c_info[2]),
-                            iperf_test_duration, 0, 5,
-                            "Waiting for iperf test to finish.")
+        utils_misc.wait_for(
+            lambda: not is_iperf_running(c_info[0], c_info[2]),
+            iperf_test_duration,
+            0,
+            5,
+            "Waiting for iperf test to finish.",
+        )
         bg_server.join(timeout=60)
         bg_client.join(timeout=60)
 
     finally:
         test.log.info("Cleanup host environment...")
         if is_iperf_running(search_pattern["host"]):
-            process.run('pkill -9 -f %s' % search_pattern["host"],
-                        verbose=False, ignore_status=True)
-        shutil.rmtree(host_iperf_bin.rsplit('/', 2)[0], ignore_errors=True)
+            process.run(
+                "pkill -9 -f %s" % search_pattern["host"],
+                verbose=False,
+                ignore_status=True,
+            )
+        shutil.rmtree(host_iperf_bin.rsplit("/", 2)[0], ignore_errors=True)
         guest_session.close()
         serial_session.close()

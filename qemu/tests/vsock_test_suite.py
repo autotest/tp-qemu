@@ -2,13 +2,8 @@ import os
 import time
 
 import aexpect
-
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_net
+from virttest import data_dir, error_context, utils_misc, utils_net
 
 
 def copy_compile_testsuite(test, vm, session):
@@ -21,20 +16,20 @@ def copy_compile_testsuite(test, vm, session):
     """
     vsock_test_base_dir = "/home/"
     vsock_test_src_file = os.path.join(
-        data_dir.get_deps_dir("vsock_test"),
-        "vsock_test.tar.xz")
+        data_dir.get_deps_dir("vsock_test"), "vsock_test.tar.xz"
+    )
     rm_cmd = "rm -rf %s" % os.path.join(vsock_test_base_dir, "vsock*")
     process.system(rm_cmd, shell=True, ignore_status=True)
     session.cmd(rm_cmd, ignore_all_errors=True)
     cp_cmd = "cp %s %s" % (vsock_test_src_file, vsock_test_base_dir)
     process.system(cp_cmd, shell=True)
     vm.copy_files_to(vsock_test_src_file, vsock_test_base_dir)
-    uncompress_cmd = "cd %s && tar zxf %s" % (
-        vsock_test_base_dir, "vsock_test.tar.xz")
+    uncompress_cmd = "cd %s && tar zxf %s" % (vsock_test_base_dir, "vsock_test.tar.xz")
     process.system(uncompress_cmd, shell=True, ignore_status=True)
     session.cmd(uncompress_cmd)
     compile_cmd = "cd %s && make vsock_test" % os.path.join(
-        vsock_test_base_dir, "vsock/")
+        vsock_test_base_dir, "vsock/"
+    )
     host_status = process.system(compile_cmd, shell=True)
     guest_status = session.cmd_status(compile_cmd)
     if (host_status or guest_status) != 0:
@@ -78,22 +73,19 @@ def run(test, params, env):
 
         # Scenario I: host = client, guest = server
         test.log.info("Host as client, guest as server...")
-        client_cmd = params["client_cmd"] % (
-            test_bin, guest_ip, port, guest_cid)
+        client_cmd = params["client_cmd"] % (test_bin, guest_ip, port, guest_cid)
         server_cmd = params["server_cmd"] % (test_bin, port, host_cid)
         session.sendline(server_cmd)
         time.sleep(5)
-        status, output = process.getstatusoutput(
-            client_cmd, timeout=30, shell=True)
+        status, output = process.getstatusoutput(client_cmd, timeout=30, shell=True)
         if status != 0:
             test.fail("Test fail %s %s" % (status, output))
-        test.log.info("command output: %s" % output)
+        test.log.info("command output: %s", output)
 
         try:
             session.read_up_to_prompt(timeout=10)
         except aexpect.ExpectTimeoutError:
-            test.fail(
-                "server_cmd inside guest dosn't closed after test execution.")
+            test.fail("server_cmd inside guest dosn't closed after test execution.")
 
         # Scenario II: host = server, guest = client
         test.log.info("Host as server, guest as client...")
@@ -103,12 +95,13 @@ def run(test, params, env):
             server_cmd,
             auto_close=False,
             output_func=utils_misc.log_line,
-            output_params=("vsock_%s_%s" % (guest_cid, port),))
+            output_params=("vsock_%s_%s" % (guest_cid, port),),
+        )
         time.sleep(5)
         status, output = session.cmd_status_output(client_cmd)
         if status != 0:
             test.fail("Test fail %s %s" % (status, output))
-        test.log.info("command output: %s" % output)
+        test.log.info("command output: %s", output)
     finally:
         rm_cmd = "rm -rf /home/vsock*"
         process.system(rm_cmd, shell=True, timeout=10, ignore_status=True)

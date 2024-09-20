@@ -1,16 +1,13 @@
 import logging
 
-from virttest import env_process
-from virttest import error_context
-from virttest import storage
+from virttest import env_process, error_context, storage
 
 from qemu.tests import qemu_disk_img
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class InfoTest(qemu_disk_img.QemuImgTest):
-
     def __init__(self, test, params, env, tag):
         self.tag = tag
         t_params = params.object_params(self.tag)
@@ -54,11 +51,12 @@ def run(test, params, env):
 
     update_params = {
         "image_name_%s" % base_image: params["image_name"],
-        "image_format_%s" % base_image: params["image_format"]
+        "image_format_%s" % base_image: params["image_format"],
     }
 
-    optval = (lambda opt, img, p, default: p.get('%s_%s' % (opt, img),
-                                                 p.get(opt, default)))
+    def optval(opt, img, p, default):
+        return p.get("%s_%s" % (opt, img), p.get(opt, default))
+
     enable_ceph = params.get("enable_ceph") == "yes"
     enable_iscsi = params.get("enable_iscsi") == "yes"
     enable_gluster = params.get("enable_gluster") == "yes"
@@ -66,60 +64,78 @@ def run(test, params, env):
     enable_curl = params.get("enable_curl") == "yes"
     enable_ssh = params.get("enable_ssh") == "yes"
     if enable_ceph:
-        update_params.update({
-             "enable_ceph_%s" % base_image: optval("enable_ceph",
-                                                   base_image,
-                                                   params, "no"),
-             "storage_type_%s" % base_image: optval("storage_type",
-                                                    base_image,
-                                                    params, "filesystem")})
+        update_params.update(
+            {
+                "enable_ceph_%s" % base_image: optval(
+                    "enable_ceph", base_image, params, "no"
+                ),
+                "storage_type_%s" % base_image: optval(
+                    "storage_type", base_image, params, "filesystem"
+                ),
+            }
+        )
     elif enable_iscsi:
-        update_params.update({
-            "enable_iscsi_%s" % base_image: optval("enable_iscsi",
-                                                   base_image,
-                                                   params, "no"),
-            "storage_type_%s" % base_image: optval("storage_type",
-                                                   base_image,
-                                                   params, "filesystem"),
-            "image_raw_device_%s" % base_image: optval("image_raw_device",
-                                                       base_image,
-                                                       params, "no"),
-            "lun_%s" % base_image: optval("lun", base_image, params, "0")})
+        update_params.update(
+            {
+                "enable_iscsi_%s" % base_image: optval(
+                    "enable_iscsi", base_image, params, "no"
+                ),
+                "storage_type_%s" % base_image: optval(
+                    "storage_type", base_image, params, "filesystem"
+                ),
+                "image_raw_device_%s" % base_image: optval(
+                    "image_raw_device", base_image, params, "no"
+                ),
+                "lun_%s" % base_image: optval("lun", base_image, params, "0"),
+            }
+        )
     elif enable_gluster:
-        update_params.update({
-            "enable_gluster_%s" % base_image: optval("enable_gluster",
-                                                     base_image,
-                                                     params, "no"),
-            "storage_type_%s" % base_image: optval("storage_type",
-                                                   base_image,
-                                                   params, "filesystem")})
+        update_params.update(
+            {
+                "enable_gluster_%s" % base_image: optval(
+                    "enable_gluster", base_image, params, "no"
+                ),
+                "storage_type_%s" % base_image: optval(
+                    "storage_type", base_image, params, "filesystem"
+                ),
+            }
+        )
     elif enable_nbd:
-        update_params.update({
-            "enable_nbd_%s" % base_image: optval("enable_nbd",
-                                                 base_image,
-                                                 params, "no"),
-            "nbd_port_%s" % base_image: optval("nbd_port",
-                                               base_image,
-                                               params, "10809"),
-            "storage_type_%s" % base_image: optval("storage_type",
-                                                   base_image,
-                                                   params, "filesystem")})
+        update_params.update(
+            {
+                "enable_nbd_%s" % base_image: optval(
+                    "enable_nbd", base_image, params, "no"
+                ),
+                "nbd_port_%s" % base_image: optval(
+                    "nbd_port", base_image, params, "10809"
+                ),
+                "storage_type_%s" % base_image: optval(
+                    "storage_type", base_image, params, "filesystem"
+                ),
+            }
+        )
     elif enable_curl:
-        update_params.update({
-            "enable_curl_%s" % base_image: optval("enable_curl",
-                                                  base_image,
-                                                  params, "no"),
-            "storage_type_%s" % base_image: optval("storage_type",
-                                                   base_image,
-                                                   params, "filesystem")})
+        update_params.update(
+            {
+                "enable_curl_%s" % base_image: optval(
+                    "enable_curl", base_image, params, "no"
+                ),
+                "storage_type_%s" % base_image: optval(
+                    "storage_type", base_image, params, "filesystem"
+                ),
+            }
+        )
     elif enable_ssh:
-        update_params.update({
-            "enable_ssh_%s" % base_image: optval("enable_ssh",
-                                                 base_image,
-                                                 params, "no"),
-            "storage_type_%s" % base_image: optval("storage_type",
-                                                   base_image,
-                                                   params, "filesystem")})
+        update_params.update(
+            {
+                "enable_ssh_%s" % base_image: optval(
+                    "enable_ssh", base_image, params, "no"
+                ),
+                "storage_type_%s" % base_image: optval(
+                    "storage_type", base_image, params, "filesystem"
+                ),
+            }
+        )
     params.update(update_params)
 
     image_chain = params.get("image_chain", "").split()
@@ -127,10 +143,10 @@ def run(test, params, env):
     md5_dict = {}
     for idx, tag in enumerate(image_chain):
         # VM cannot boot up from a readonly image
-        if params.object_params(tag).get('image_readonly') == 'yes':
+        if params.object_params(tag).get("image_readonly") == "yes":
             continue
 
-        params["image_chain"] = " ".join(image_chain[:idx + 1])
+        params["image_chain"] = " ".join(image_chain[: idx + 1])
         info_test = InfoTest(test, params, env, tag)
         n_params = info_test.create_snapshot()
         info_test.start_vm(n_params)

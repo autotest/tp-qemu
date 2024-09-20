@@ -1,6 +1,4 @@
-from provider import backup_utils
-from provider import job_utils
-
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 

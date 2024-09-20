@@ -1,8 +1,7 @@
-import time
 import random
+import time
 
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import utils_misc, utils_test
 
 from qemu.tests import blk_stream
 
@@ -19,8 +18,9 @@ def run(test, params, env):
     """
 
     args = (test, params, env)
-    bg = utils_misc.InterruptedThread(utils_test.run_virt_sub_test, args,
-                                      {"sub_type": "unattended_install"})
+    bg = utils_misc.InterruptedThread(
+        utils_test.run_virt_sub_test, args, {"sub_type": "unattended_install"}
+    )
     bg.start()
     utils_misc.wait_for(bg.is_alive, timeout=10)
     time.sleep(random.uniform(60, 200))

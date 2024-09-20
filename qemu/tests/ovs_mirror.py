@@ -1,15 +1,12 @@
-import re
-import os
 import glob
+import os
+import re
 import shutil
 import time
 
-from avocado.utils import process
 from avocado.utils import path as utils_path
-
-from virttest import error_context
-from virttest import utils_net
-from virttest import env_process
+from avocado.utils import process
+from virttest import env_process, error_context, utils_net
 
 
 @error_context.context_aware
@@ -30,8 +27,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def make_mirror_cmd(
-            mirror_port, target_port, direction="all", ovs="ovs0"):
+    def make_mirror_cmd(mirror_port, target_port, direction="all", ovs="ovs0"):
         """
         Generate create ovs port mirror command.
 
@@ -46,17 +42,13 @@ def run(test, params, env):
         for port in [mirror_port, target_port]:
             cmd.append("-- --id=@%s get Port %s " % (port, port))
         if direction == "input":
-            cmd.append(
-                "-- --id=@m create Mirror name=input_of_%s" %
-                target_port)
+            cmd.append("-- --id=@m create Mirror name=input_of_%s" % target_port)
             cmd.append("select-dst-port=@%s" % target_port)
         elif direction == "output":
-            cmd.append(
-                "-- --id=@m create Mirror name=output_of_%s" % target_port)
+            cmd.append("-- --id=@m create Mirror name=output_of_%s" % target_port)
             cmd.append("select-src-port=@%s" % target_port)
         else:
-            cmd.append(
-                "-- --id=@m create Mirror name=mirror_%s" % target_port)
+            cmd.append("-- --id=@m create Mirror name=mirror_%s" % target_port)
             cmd.append("select-src-port=@%s" % target_port)
             cmd.append("select-dst-port=@%s" % target_port)
         cmd.append("output-port=@%s" % mirror_port)
@@ -151,8 +143,7 @@ def run(test, params, env):
             test.log.debug("Ping results: %s", output)
             test.fail("All packets from %s to host should lost" % mirror_vm)
 
-        error_context.context("Start tcpdump threads in %s" % mirror_vm,
-                              test.log.info)
+        error_context.context("Start tcpdump threads in %s" % mirror_vm, test.log.info)
         ifup_cmd = "ifconfig %s 0 up" % mirror_nic
         session.cmd(ifup_cmd, timeout=60)
         for vm, ip in [(target_vm, target_ip), (refer_vm, refer_ip)]:
@@ -161,8 +152,9 @@ def run(test, params, env):
             test.log.info("tcpdump command: %s", tcpdump_cmd)
             session.sendline(tcpdump_cmd)
 
-        error_context.context("Start ping threads in %s %s"
-                              % (target_vm, refer_vm), test.log.info)
+        error_context.context(
+            "Start ping threads in %s %s" % (target_vm, refer_vm), test.log.info
+        )
         for vm in [target_vm, refer_vm]:
             ses = vms_info[vm][3]
             nic_name = vms_info[vm][4]
@@ -188,11 +180,10 @@ def run(test, params, env):
             fd.close()
             if vm == refer_vm and content:
                 test.fail(
-                    "should not packet from %s dumped in %s" %
-                    (refer_vm, mirror_vm))
+                    "should not packet from %s dumped in %s" % (refer_vm, mirror_vm)
+                )
             elif not check_tcpdump(content, target_ip, host_ip, direction):
-                test.fail(
-                    "Unexpect packages from %s dumped in %s" % (vm, mirror_vm))
+                test.fail("Unexpect packages from %s dumped in %s" % (vm, mirror_vm))
     finally:
         for vm in vms_info:
             vms_info[vm][0].destroy(gracefully=False)

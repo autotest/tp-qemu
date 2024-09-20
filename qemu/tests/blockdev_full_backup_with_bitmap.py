@@ -8,10 +8,11 @@ from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 
 
 class BlockdevFullBackupWithBitmapTest(BlockdevLiveBackupBaseTest):
-
     def add_bitmap(self):
-        kargs = {'bitmap_name': self._bitmaps[0],
-                 'target_device': self._source_nodes[0]}
+        kargs = {
+            "bitmap_name": self._bitmaps[0],
+            "target_device": self._source_nodes[0],
+        }
         block_dirty_bitmap_add(self.main_vm, kargs)
 
     def _get_full_backup_options(self):

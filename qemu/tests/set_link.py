@@ -1,13 +1,7 @@
 import time
 
 import aexpect
-
-from virttest import error_context
-from virttest import remote
-from virttest import utils_test
-from virttest import utils_net
-from virttest import utils_misc
-from virttest import virt_vm
+from virttest import error_context, remote, utils_misc, utils_net, utils_test, virt_vm
 
 
 @error_context.context_aware
@@ -34,6 +28,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def change_queues_number(session, ifname, q_number):
         """
         Change queues number, only used for mq test
@@ -81,14 +76,17 @@ def run(test, params, env):
         if change_queues:
             env["run_change_queues"] = False
             bg_thread = utils_misc.InterruptedThread(
-                change_queues_number_repeatly, (guest_ifname,))
+                change_queues_number_repeatly, (guest_ifname,)
+            )
             bg_thread.start()
 
-            utils_misc.wait_for(lambda: env["run_change_queues"], 30, 0, 2,
-                                "wait queues change start")
+            utils_misc.wait_for(
+                lambda: env["run_change_queues"], 30, 0, 2, "wait queues change start"
+            )
         time.sleep(0.5)
-        output = utils_test.ping(guest_ip, 10, interface=host_interface,
-                                 timeout=20, session=None)[1]
+        output = utils_test.ping(
+            guest_ip, 10, interface=host_interface, timeout=20, session=None
+        )[1]
         if not link_up and utils_test.get_loss_ratio(output) < 80:
             err_msg = "guest network still connecting after down the link"
             test.fail(err_msg)
@@ -105,24 +103,26 @@ def run(test, params, env):
         Check Guest interface operstate
         """
         if params.get("os_type") == "linux":
-            if_operstate = utils_net.get_net_if_operstate(guest_ifname,
-                                                          session.cmd_output_safe)
+            if_operstate = utils_net.get_net_if_operstate(
+                guest_ifname, session.cmd_output_safe
+            )
         else:
-            if_operstate = utils_net.get_windows_nic_attribute(session,
-                                                               "macaddress",
-                                                               vm.get_mac_address(),
-                                                               "netconnectionstatus")
+            if_operstate = utils_net.get_windows_nic_attribute(
+                session, "macaddress", vm.get_mac_address(), "netconnectionstatus"
+            )
 
         if if_operstate != expect_status:
             err_msg = "Guest interface %s status error, " % guest_ifname
             err_msg = "currently interface status is '%s', " % if_operstate
             err_msg += "but expect status is '%s'" % expect_status
             test.fail(err_msg)
-        test.log.info("Guest interface operstate '%s' is exactly as expected",
-                      if_operstate)
+        test.log.info(
+            "Guest interface operstate '%s' is exactly as expected", if_operstate
+        )
 
-    def guest_interface_operstate_check(expect_status, guest_ifname="",
-                                        change_queues=False):
+    def guest_interface_operstate_check(
+        expect_status, guest_ifname="", change_queues=False
+    ):
         """
         Check guest interface operstate, support mq
         """
@@ -168,16 +168,16 @@ def run(test, params, env):
         mac_addr = vm.get_mac_address()
         try:
             if not utils_misc.wait_for(
-                    lambda: check_interface_ip_routine(session, mac_addr),
-                    timeout,
-                    step=5.0):
+                lambda: check_interface_ip_routine(session, mac_addr), timeout, step=5.0
+            ):
                 err_msg = "Can't get valid ip in %s seconds" % timeout
                 test.fail(err_msg)
         finally:
             session.close()
 
-    def set_link_test(linkid, link_up, expect_status, change_queues=False,
-                      operstate_always_up=False):
+    def set_link_test(
+        linkid, link_up, expect_status, change_queues=False, operstate_always_up=False
+    ):
         """
         Issue set_link commands and test its function
 
@@ -199,25 +199,26 @@ def run(test, params, env):
                 expect_status = "up"
             if expect_status == win_media_disconnected:
                 expect_status = win_media_connected
-        guest_interface_operstate_check(expect_status, guest_ifname,
-                                        change_queues)
+        guest_interface_operstate_check(expect_status, guest_ifname, change_queues)
         if params.get("os_type") == "windows" and expect_status == win_media_connected:
             check_interface_ip()
 
-        error_context.context("Check if guest network connective",
-                              test.log.info)
+        error_context.context("Check if guest network connective", test.log.info)
         guest_netwok_connecting_check(guest_ip, link_up, change_queues)
 
         reboot_method = params.get("reboot_method", "shell")
 
-        error_context.context("Reboot guest by '%s' and recheck interface "
-                              "operstate" % reboot_method, test.log.info)
+        error_context.context(
+            "Reboot guest by '%s' and recheck interface " "operstate" % reboot_method,
+            test.log.info,
+        )
         guest_reboot(reboot_method, link_up)
-        guest_interface_operstate_check(expect_status, guest_ifname,
-                                        change_queues)
+        guest_interface_operstate_check(expect_status, guest_ifname, change_queues)
 
-        error_context.context("Check guest network connecting after reboot "
-                              "by '%s'" % reboot_method, test.log.info)
+        error_context.context(
+            "Check guest network connecting after reboot " "by '%s'" % reboot_method,
+            test.log.info,
+        )
         guest_netwok_connecting_check(guest_ip, link_up, change_queues)
 
     vm = env.get_vm(params["main_vm"])
@@ -240,8 +241,7 @@ def run(test, params, env):
     win_media_disconnected = params.get("win_media_disconnected", "7")
 
     if os_type == "linux":
-        guest_ifname = utils_net.get_linux_ifname(session,
-                                                  vm.get_mac_address())
+        guest_ifname = utils_net.get_linux_ifname(session, vm.get_mac_address())
         queues = int(params.get("queues", 1))
         if queues != 1 and vm.virtnet[0].nic_model == "virtio":
             change_queues = True
@@ -252,24 +252,27 @@ def run(test, params, env):
     expect_up_status = params.get("up-status", "up")
     operstate_always_up = params.get("operstate_always_up", "no") == "yes"
 
-    error_context.context("Disable guest netdev link '%s' by set_link"
-                          % netdev_id, test.log.info)
-    set_link_test(netdev_id, False, expect_down_status, change_queues,
-                  operstate_always_up)
+    error_context.context(
+        "Disable guest netdev link '%s' by set_link" % netdev_id, test.log.info
+    )
+    set_link_test(
+        netdev_id, False, expect_down_status, change_queues, operstate_always_up
+    )
 
-    error_context.context("Re-enable guest netdev link '%s' by set_link"
-                          % netdev_id, test.log.info)
-    set_link_test(netdev_id, True, expect_up_status, change_queues,
-                  operstate_always_up)
+    error_context.context(
+        "Re-enable guest netdev link '%s' by set_link" % netdev_id, test.log.info
+    )
+    set_link_test(netdev_id, True, expect_up_status, change_queues, operstate_always_up)
 
-    error_context.context("Disable guest nic device '%s' by set_link"
-                          % device_id, test.log.info)
+    error_context.context(
+        "Disable guest nic device '%s' by set_link" % device_id, test.log.info
+    )
     set_link_test(device_id, False, expect_down_status, change_queues)
 
-    error_context.context("Re-enable guest nic device '%s' by set_link"
-                          % device_id, test.log.info)
+    error_context.context(
+        "Re-enable guest nic device '%s' by set_link" % device_id, test.log.info
+    )
     set_link_test(device_id, True, expect_up_status, change_queues)
 
-    error_context.context("Do file transfer after setlink on and off",
-                          test.log.info)
+    error_context.context("Do file transfer after setlink on and off", test.log.info)
     utils_test.run_file_transfer(test, params, env)

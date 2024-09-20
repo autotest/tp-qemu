@@ -1,14 +1,12 @@
-import time
 import random
+import time
 
-from virttest import utils_test
-from virttest import error_context
+from virttest import error_context, utils_test
 
 from provider.blockdev_full_backup_parallel import BlockdevFullBackupParallelTest
 
 
 class BlockdevFullBackupStressTest(BlockdevFullBackupParallelTest):
-
     def blockdev_backup(self):
         """sleep some secondes to wait VM load stress then do blockdev backup test."""
         time.sleep(random.randint(1, 4))

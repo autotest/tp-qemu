@@ -25,7 +25,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    char_backend = params["backend_char_plug"]
+    params["backend_char_plug"]
     char_id = params["id_char_plug"]
     gagent_name = params["gagent_name"]
     char_path = vm.get_serial_console_filename(gagent_name)

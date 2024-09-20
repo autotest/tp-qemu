@@ -12,17 +12,17 @@ Available functions:
  - check_error: Check if there are error info in the SLOF content.
 """
 
-import re
-import time
 import logging
 import os
+import re
+import time
 
 from virttest import utils_misc
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
-START_PATTERN = r'\s+SLOF\S+\s+\*+'
-END_PATTERN = r'\s+Successfully loaded$'
+START_PATTERN = r"\s+SLOF\S+\s+\*+"
+END_PATTERN = r"\s+Successfully loaded$"
 
 
 def get_boot_content(vm, start_pos=0, start_str=START_PATTERN, end_str=END_PATTERN):
@@ -59,8 +59,9 @@ def get_boot_content(vm, start_pos=0, start_str=START_PATTERN, end_str=END_PATTE
             return None, start_str_pos
 
 
-def wait_for_loaded(vm, test, start_pos=0, start_str=START_PATTERN,
-                    end_str=END_PATTERN, timeout=300):
+def wait_for_loaded(
+    vm, test, start_pos=0, start_str=START_PATTERN, end_str=END_PATTERN, timeout=300
+):
     """
     Wait for loading the SLOF.
 
@@ -80,19 +81,18 @@ def wait_for_loaded(vm, test, start_pos=0, start_str=START_PATTERN,
     :rtype: tuple(list, int)
     """
     file_timeout = 30
-    if not utils_misc.wait_for(lambda: os.path.isfile(vm.serial_console_log),
-                               file_timeout):
-        test.error('No found serial log in %s sec.' % file_timeout)
+    if not utils_misc.wait_for(
+        lambda: os.path.isfile(vm.serial_console_log), file_timeout
+    ):
+        test.error("No found serial log in %s sec." % file_timeout)
 
     end_time = timeout + time.time()
     while time.time() < end_time:
         content, start_pos = get_boot_content(vm, start_pos, start_str, end_str)
         if content:
-            LOG_JOB.info('Output of SLOF:\n%s', ''.join(content))
+            LOG_JOB.info("Output of SLOF:\n%s", "".join(content))
             return content, start_pos
-    test.fail(
-        'No found corresponding SLOF info in serial log during %s sec.' %
-        timeout)
+    test.fail("No found corresponding SLOF info in serial log during %s sec." % timeout)
 
 
 def get_booted_devices(content):
@@ -107,16 +107,21 @@ def get_booted_devices(content):
     position = 0
     devices = {}
     for line in content:
-        ret = re.search(r'(\s+Trying to load:\s+from:\s)(/.+)(\s+\.\.\.)',
-                        line)
+        ret = re.search(r"(\s+Trying to load:\s+from:\s)(/.+)(\s+\.\.\.)", line)
         if ret:
             devices[position] = ret.group(2)
             position += 1
     return devices
 
 
-def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
-                       sub_child_addr=None, position=0):
+def verify_boot_device(
+    content,
+    parent_bus_type,
+    child_bus_type,
+    child_addr,
+    sub_child_addr=None,
+    position=0,
+):
     """
     Verify whether the vm is booted from the specified device.
 
@@ -135,51 +140,60 @@ def verify_boot_device(content, parent_bus_type, child_bus_type, child_addr,
     :return: true if booted from the specified device
     :rtype: bool
     """
-    pattern = re.compile(r'^0x0?')
-    addr = pattern.sub('', child_addr)
+    pattern = re.compile(r"^0x0?")
+    addr = pattern.sub("", child_addr)
     sub_addr = ""
     if sub_child_addr:
-        sub_addr = pattern.sub('', sub_child_addr)
+        sub_addr = pattern.sub("", sub_child_addr)
 
-    pattern = re.compile(r'/\w+.{1}\w+@')
+    pattern = re.compile(r"/\w+.{1}\w+@")
     devices = get_booted_devices(content)
     for k, v in devices.items():
         if int(k) == position:
-            LOG_JOB.info('Position [%d]: %s', k, v)
+            LOG_JOB.info("Position [%d]: %s", k, v)
             break
 
     if position in devices:
         name = devices[position]
-        info = ('Check whether the device({0}@{1}@{2}) is the {3} bootable '
-                'device.'.format(parent_bus_type, child_bus_type,
-                                 child_addr, position))
+        info = (
+            "Check whether the device({0}@{1}@{2}) is the {3} bootable "
+            "device.".format(parent_bus_type, child_bus_type, child_addr, position)
+        )
         if sub_child_addr:
-            info = ('Check whether the device({0}@{1}@{2}@{3}) is the {4} '
-                    'bootable device.'.format(parent_bus_type, child_bus_type,
-                                              child_addr, sub_child_addr,
-                                              position))
+            info = (
+                "Check whether the device({0}@{1}@{2}@{3}) is the {4} "
+                "bootable device.".format(
+                    parent_bus_type,
+                    child_bus_type,
+                    child_addr,
+                    sub_child_addr,
+                    position,
+                )
+            )
         LOG_JOB.info(info)
-        if parent_bus_type == 'pci':
+        if parent_bus_type == "pci":
             # virtio-blk, virtio-scsi and ethernet device.
-            if child_bus_type == 'scsi' or child_bus_type == 'ethernet':
+            if child_bus_type == "scsi" or child_bus_type == "ethernet":
                 if addr == pattern.split(name)[2]:
                     return True
             # pci-bridge, usb device.
-            elif child_bus_type == 'pci-bridge' or child_bus_type == 'usb':
-                if (addr == pattern.split(name)[2] and
-                        sub_addr == pattern.split(name)[3]):
+            elif child_bus_type == "pci-bridge" or child_bus_type == "usb":
+                if (
+                    addr == pattern.split(name)[2]
+                    and sub_addr == pattern.split(name)[3]
+                ):
                     return True
-        elif parent_bus_type == 'vdevice':
+        elif parent_bus_type == "vdevice":
             # v-scsi device, spapr-vlan device.
-            if child_bus_type == 'v-scsi' or child_bus_type == 'l-lan':
+            if child_bus_type == "v-scsi" or child_bus_type == "l-lan":
                 if addr == pattern.split(name)[1]:
                     return True
         else:
             return False
     else:
         LOG_JOB.debug(
-            'No such device at position %s in all devices in SLOF contents.',
-            position)
+            "No such device at position %s in all devices in SLOF contents.", position
+        )
         return False
 
 
@@ -192,6 +206,6 @@ def check_error(test, content):
     :type content: list
     """
     for line in content:
-        if re.search(r'error', line, re.IGNORECASE):
-            test.fail('Found errors: %s' % line)
+        if re.search(r"error", line, re.IGNORECASE):
+            test.fail("Found errors: %s" % line)
     LOG_JOB.info("No errors in SLOF content.")

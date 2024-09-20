@@ -1,5 +1,4 @@
-from virttest import utils_misc
-from virttest import error_context
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -25,14 +24,12 @@ def run(test, params, env):
     vm.verify_alive()
     vm.wait_for_login().close()
     try:
-        error_context.base_context("Saving VM to %s" % snapshot_tag,
-                                   test.log.info)
+        error_context.base_context("Saving VM to %s" % snapshot_tag, test.log.info)
         vm.monitor.human_monitor_cmd("savevm %s" % snapshot_tag)
         vm_snapshots = vm.monitor.info("snapshots")
         if snapshot_tag not in vm_snapshots:
             test.fail("Failed to save VM to %s" % snapshot_tag)
-        error_context.context("Loading VM from %s" % snapshot_tag,
-                              test.log.info)
+        error_context.context("Loading VM from %s" % snapshot_tag, test.log.info)
         vm.monitor.human_monitor_cmd("loadvm %s" % snapshot_tag)
         if os_type == "linux":
             vm.verify_kernel_crash()

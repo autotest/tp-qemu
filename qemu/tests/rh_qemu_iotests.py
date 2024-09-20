@@ -1,11 +1,9 @@
 import os
 import re
 
-from virttest import utils_misc
-from virttest import error_context
-
-from avocado.utils import process
 from avocado.core import exceptions
+from avocado.utils import process
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -23,6 +21,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
+
     def retry_command(cmd):
         """
         Retry the command when it fails, and raise the error once
@@ -40,8 +39,9 @@ def run(test, params, env):
             except process.CmdError as detail:
                 msg = "Fail to execute command"
                 test.log.error("%s: %s.", msg, detail)
-        raise exceptions.TestError("%s after %s times retry: %s" %
-                                   (msg, max_retry, detail))
+                raise exceptions.TestError(
+                    "%s after %s times retry: %s" % (msg, max_retry, detail)
+                )
 
     def install_test(build_root):
         """
@@ -56,13 +56,15 @@ def run(test, params, env):
         query_format = params["query_format"]
         download_rpm_cmd = params["download_rpm_cmd"]
         get_src_cmd = params["get_src_cmd"]
-        qemu_spec = params.get("qemu_spec", 'SPECS/qemu-kvm.spec')
-        get_rpm_name_cmd = ("rpm -qf %s --queryformat=%s" %
-                            (utils_misc.get_qemu_binary(params), query_format))
+        qemu_spec = params.get("qemu_spec", "SPECS/qemu-kvm.spec")
+        get_rpm_name_cmd = "rpm -qf %s --queryformat=%s" % (
+            utils_misc.get_qemu_binary(params),
+            query_format,
+        )
         src_rpm_name = process.system_output(get_rpm_name_cmd, shell=True)
         retry_command(download_rpm_cmd % src_rpm_name)
         spec = os.path.join(build_root, qemu_spec)
-        build_dir = os.path.join(build_root, 'BUILD')
+        build_dir = os.path.join(build_root, "BUILD")
         cmd = get_src_cmd % (src_rpm_name, spec)
         process.system(cmd, shell=True)
         src_dir = os.listdir(build_dir)[0]
@@ -94,14 +96,15 @@ def run(test, params, env):
         extra_options = params.get("qemu_io_extra_options", "")
         image_format = params.get("qemu_io_image_format")
         result_pattern = params.get("iotests_result_pattern")
-        error_context.context("running qemu-iotests for image format %s"
-                              % image_format, test.log.info)
+        error_context.context(
+            "running qemu-iotests for image format %s" % image_format, test.log.info
+        )
         os.environ["QEMU_PROG"] = utils_misc.get_qemu_binary(params)
         os.environ["QEMU_IMG_PROG"] = utils_misc.get_qemu_img_binary(params)
         os.environ["QEMU_IO_PROG"] = utils_misc.get_qemu_io_binary(params)
-        os.environ["QEMU_NBD_PROG"] = utils_misc.get_binary('qemu-nbd', params)
+        os.environ["QEMU_NBD_PROG"] = utils_misc.get_binary("qemu-nbd", params)
         os.chdir(os.path.join(qemu_src_dir, iotests_root))
-        cmd = './check'
+        cmd = "./check"
         if extra_options:
             cmd += " %s" % extra_options
         cmd += " -%s" % image_format
@@ -110,7 +113,7 @@ def run(test, params, env):
         if match:
             iotests_log_file = "qemu_iotests_%s.log" % image_format
             iotests_log_file = utils_misc.get_path(test.debugdir, iotests_log_file)
-            with open(iotests_log_file, 'w+') as log:
+            with open(iotests_log_file, "w+") as log:
                 log.write(output)
                 log.flush()
             msg = "Total test %s cases, %s failed"
@@ -131,4 +134,4 @@ def run(test, params, env):
             os.chdir(cwd)
             process.system(rpmbuild_clean_cmd % spec, shell=True)
         except Exception:
-            test.log.warn("Fail to clean test environment")
+            test.log.warning("Fail to clean test environment")

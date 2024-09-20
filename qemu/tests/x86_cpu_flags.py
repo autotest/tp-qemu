@@ -1,4 +1,5 @@
-from virttest import error_context, env_process, cpu
+from virttest import cpu, env_process, error_context
+
 from provider.cpu_utils import check_cpu_flags
 
 
@@ -26,12 +27,12 @@ def run(test, params, env):
         cpu_model = cpu.get_qemu_best_cpu_model(params)
     if cpu_model in unsupported_models.split():
         test.cancel("'%s' doesn't support this test case" % cpu_model)
-    fallback_models_map = eval(params.get('fallback_models_map', '{}'))
+    fallback_models_map = eval(params.get("fallback_models_map", "{}"))
     if cpu_model in fallback_models_map.keys():
         params["cpu_model"] = fallback_models_map[cpu_model]
 
     params["start_vm"] = "yes"
-    vm_name = params['main_vm']
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)

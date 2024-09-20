@@ -2,9 +2,9 @@ import json
 
 from avocado import fail_on
 from avocado.utils import process
+from virttest import data_dir, qemu_storage
+
 from provider import qemu_img_utils as img_utils
-from virttest import data_dir
-from virttest import qemu_storage
 
 
 def run(test, params, env):
@@ -21,12 +21,15 @@ def run(test, params, env):
         """Verify image backing file."""
         info_output = json.loads(image.info(output="json"))
         backing_params = image.params.object_params(image.base_tag)
-        backing_file = qemu_storage.get_image_repr(image.base_tag,
-                                                   backing_params, root_dir)
+        backing_file = qemu_storage.get_image_repr(
+            image.base_tag, backing_params, root_dir
+        )
         backing_file_info = info_output["backing-filename"]
         if backing_file != backing_file_info:
-            err_msg = "backing file mismatch, got %s, expected %s." % \
-                (backing_file_info, backing_file)
+            err_msg = "backing file mismatch, got %s, expected %s." % (
+                backing_file_info,
+                backing_file,
+            )
             raise ValueError(err_msg)
 
     timeout = int(params.get("timeout", 360))
@@ -34,12 +37,16 @@ def run(test, params, env):
     images = params["image_chain"].split()
     params["image_name_%s" % images[0]] = params["image_name"]
     params["image_format_%s" % images[0]] = params["image_format"]
-    images = [qemu_storage.QemuImg(params.object_params(tag),
-                                   root_dir, tag) for tag in images]
+    images = [
+        qemu_storage.QemuImg(params.object_params(tag), root_dir, tag) for tag in images
+    ]
 
     for image in images[1:]:
-        test.log.debug("create snapshot %s based on %s",
-                       image.image_filename, image.base_image_filename)
+        test.log.debug(
+            "create snapshot %s based on %s",
+            image.image_filename,
+            image.base_image_filename,
+        )
         image.create(image.params)
 
     md5sum_bin = params.get("md5sum_bin", "md5sum")
@@ -48,12 +55,10 @@ def run(test, params, env):
     for image in images:
         vm = img_utils.boot_vm_with_images(test, params, env, (image.tag,))
         guest_file = params["guest_tmp_filename"] % image.tag
-        test.log.debug("save tmp file %s in image %s",
-                       guest_file, image.image_filename)
+        test.log.debug("save tmp file %s in image %s", guest_file, image.image_filename)
         img_utils.save_random_file_to_vm(vm, guest_file, 2048 * 100, sync_bin)
         session = vm.wait_for_login(timeout=timeout)
-        hashes[guest_file] = img_utils.check_md5sum(guest_file,
-                                                    md5sum_bin, session)
+        hashes[guest_file] = img_utils.check_md5sum(guest_file, md5sum_bin, session)
         session.close()
         vm.destroy()
 
@@ -62,7 +67,8 @@ def run(test, params, env):
     # ensure size equals to the base
     params["image_size_%s" % rebase_target] = images[0].size
     rebase_target = qemu_storage.QemuImg(
-        params.object_params(rebase_target), root_dir, rebase_target)
+        params.object_params(rebase_target), root_dir, rebase_target
+    )
     rebase_target.create(rebase_target.params)
     test.log.debug("rebase snapshot")
     snapshot.base_tag = rebase_target.tag
@@ -73,8 +79,9 @@ def run(test, params, env):
     vm = img_utils.boot_vm_with_images(test, params, env, (snapshot.tag,))
     session = vm.wait_for_login(timeout=timeout)
     for guest_file, hashval in hashes.items():
-        img_utils.check_md5sum(guest_file, md5sum_bin, session,
-                               md5_value_to_check=hashval)
+        img_utils.check_md5sum(
+            guest_file, md5sum_bin, session, md5_value_to_check=hashval
+        )
     session.close()
     vm.destroy()
 

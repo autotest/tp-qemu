@@ -1,8 +1,6 @@
 import time
 
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_test
+from virttest import error_context, utils_misc, utils_test
 
 
 @error_context.context_aware
@@ -31,20 +29,17 @@ def run(test, params, env):
 
     try:
         stress_timeout = float(params.get("stress_timeout", "3600"))
-        error_context.context("Do file transfer between host and guest",
-                              test.log.info)
+        error_context.context("Do file transfer between host and guest", test.log.info)
         start_time = time.time()
         stop_time = start_time + stress_timeout
         # here when set a run flag, when other case call this case as a
         # subprocess backgroundly, can set this run flag to False to stop
         # the stress test.
         env["file_transfer_run"] = True
-        while (env["file_transfer_run"] and time.time() < stop_time):
+        while env["file_transfer_run"] and time.time() < stop_time:
             scp_threads = []
             for index in range(scp_sessions):
-                scp_threads.append((utils_test.run_file_transfer, (test,
-                                                                   params,
-                                                                   env)))
+                scp_threads.append((utils_test.run_file_transfer, (test, params, env)))
             utils_misc.parallel(scp_threads)
 
     finally:

@@ -1,11 +1,9 @@
 import os
 
-from avocado.utils import path
-from avocado.utils import process
-from provider.qemu_img_utils import check_flag
-from provider.qemu_img_utils import strace
-from virttest import data_dir
-from virttest import qemu_storage
+from avocado.utils import path, process
+from virttest import data_dir, qemu_storage
+
+from provider.qemu_img_utils import check_flag, strace
 
 
 def run(test, params, env):
@@ -16,6 +14,7 @@ def run(test, params, env):
     6. compare with source cache mode `none`.
     7. check strace output that `O_DIRECT` is on.
     """
+
     def compare_images(source, target, source_cache_mode=None):
         ret = source.compare_to(target, source_cache_mode=source_cache_mode)
         if ret.exit_status == 0:

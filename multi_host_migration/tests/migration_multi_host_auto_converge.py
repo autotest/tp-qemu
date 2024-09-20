@@ -1,10 +1,8 @@
 import logging
 import time
-from autotest.client.shared import error
-from autotest.client.shared import utils
-from virttest import virt_vm
-from virttest import utils_test
-from virttest import utils_misc
+
+from autotest.client.shared import error, utils
+from virttest import utils_misc, utils_test, virt_vm
 from virttest.utils_test.qemu import migration
 
 
@@ -52,19 +50,17 @@ def run(test, params, env):
         mig_type = migration.MultihostMigrationRdma
 
     class TestMultihostMigration(mig_type, migration.MigrationBase):
-
         """
         multihost migration test
         """
 
         def __init__(self, test, params, env):
-
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            super(TestMultihostMigration, self).__setup__(test, params, env,
-                                                          self.srchost,
-                                                          self.dsthost)
+            super(TestMultihostMigration, self).__setup__(
+                test, params, env, self.srchost, self.dsthost
+            )
             self.load_host_cmd = params.get("load_host_cmd")
             self.need_stress = params.get("need_stress") == "yes"
             self.need_cleanup = self.need_stress
@@ -92,8 +88,7 @@ def run(test, params, env):
             """
 
             for i in range(1, len(self.sub_test)):
-                self.set_migration_capability(self.sub_test[i],
-                                              "auto-converge")
+                self.set_migration_capability(self.sub_test[i], "auto-converge")
                 self.capabilitys.append("auto-converge")
                 self.capabilitys_state.append(self.sub_test[i])
                 self.get_migration_capability(len(self.capabilitys) - 1)
@@ -125,8 +120,9 @@ def run(test, params, env):
 
             if self.check_running_cmd:
                 if not utils_misc.wait_for(check_running, timeout=360):
-                    raise error.TestFail("Failed to start '%s' in guest." %
-                                         self.bg_stress_test)
+                    raise error.TestFail(
+                        "Failed to start '%s' in guest." % self.bg_stress_test
+                    )
 
         @error.context_aware
         def load_host(self):
@@ -162,10 +158,10 @@ def run(test, params, env):
             all_items = set(vars())
             interested_items = set(["cpu_average", "memory_average"])
             if not interested_items.issubset(all_items):
-                raise error.TestFail("Failed to get '%s' '%s' in "
-                                     "sar output: '%s'" % (sar_cpu_str,
-                                                           sar_memory_str,
-                                                           output))
+                raise error.TestFail(
+                    "Failed to get '%s' '%s' in "
+                    "sar output: '%s'" % (sar_cpu_str, sar_memory_str, output)
+                )
             logging.info("cpu average list: %s", cpu_average)
             logging.info("memory average list: %s", memory_average)
             sar_output.append(cpu_average)
@@ -179,15 +175,15 @@ def run(test, params, env):
             :param vm: vm object
             """
 
-            error.context("Get output of command sar during migration",
-                          logging.info)
+            error.context("Get output of command sar during migration", logging.info)
             vm = self.env.get_vm(self.params["main_vm"])
             session = vm.wait_for_login(timeout=self.login_timeout)
             while vm.is_alive():
-                s, o = session.cmd_status_output(get_sar_output_cmd)    # pylint: disable=E0606
+                s, o = session.cmd_status_output(get_sar_output_cmd)  # pylint: disable=E0606
                 if s != 0:
-                    raise error.TestFail("Failed to get sar output in guest."
-                                         "The detail is: %s" % o)
+                    raise error.TestFail(
+                        "Failed to get sar output in guest." "The detail is: %s" % o
+                    )
             session.close()
             self.analysis_sar_output(o)
 
@@ -204,14 +200,18 @@ def run(test, params, env):
             memory_average = zip(sar_output[1], sar_output[3])
             for i in cpu_average:
                 if abs(i[0] - i[1]) > 30:
-                    raise error.TestFail("The guest performance should "
-                                         "not be effected obviously with "
-                                         "auto-converge on.")
+                    raise error.TestFail(
+                        "The guest performance should "
+                        "not be effected obviously with "
+                        "auto-converge on."
+                    )
             for i in memory_average:
                 if abs(i[0] - i[1]) > 30:
-                    raise error.TestFail("The guest performance should "
-                                         "not be effected obviously with "
-                                         "auto-converge on.")
+                    raise error.TestFail(
+                        "The guest performance should "
+                        "not be effected obviously with "
+                        "auto-converge on."
+                    )
 
         @error.context_aware
         def get_mig_cpu_throttling_percentage(self, vm):
@@ -221,12 +221,15 @@ def run(test, params, env):
             :param vm: vm object
             """
 
-            error.context("Get cpu throttling percentage during migration",
-                          logging.info)
+            error.context(
+                "Get cpu throttling percentage during migration", logging.info
+            )
             cpu_throttling_percentage = vm.monitor.info("migrate").get(
-                "cpu-throttle-percentage")
-            logging.info("The cpu throttling percentage is %s%%",
-                         cpu_throttling_percentage)
+                "cpu-throttle-percentage"
+            )
+            logging.info(
+                "The cpu throttling percentage is %s%%", cpu_throttling_percentage
+            )
             return cpu_throttling_percentage
 
         @error.context_aware
@@ -235,25 +238,33 @@ def run(test, params, env):
             check if cpu throttling percentage equal to given value
             """
 
-            error.context("check cpu throttling percentage during migration",
-                          logging.info)
-            logging.info("The cpu throttling percentage list is %s",
-                         cpu_throttling_percentage_list)
-            if ((self.parameters_value[0] not in cpu_throttling_percentage_list) or
-                    (sum(self.parameters_value) not in cpu_throttling_percentage_list)):
-                raise error.TestFail("The value of cpu throttling percentage "
-                                     "should include: %s %s" %
-                                     (self.parameters_value[0],
-                                      sum(self.parameters_value)))
+            error.context(
+                "check cpu throttling percentage during migration", logging.info
+            )
+            logging.info(
+                "The cpu throttling percentage list is %s",
+                cpu_throttling_percentage_list,
+            )
+            if (self.parameters_value[0] not in cpu_throttling_percentage_list) or (
+                sum(self.parameters_value) not in cpu_throttling_percentage_list
+            ):
+                raise error.TestFail(
+                    "The value of cpu throttling percentage "
+                    "should include: %s %s"
+                    % (self.parameters_value[0], sum(self.parameters_value))
+                )
             if min(cpu_throttling_percentage_list) != self.parameters_value[0]:
-                raise error.TestFail("The expected cpu-throttle-initial is %s,"
-                                     " but the actual value is %s" %
-                                     (self.parameters_value[0],
-                                      min(cpu_throttling_percentage_list)))
+                raise error.TestFail(
+                    "The expected cpu-throttle-initial is %s,"
+                    " but the actual value is %s"
+                    % (self.parameters_value[0], min(cpu_throttling_percentage_list))
+                )
             if max(cpu_throttling_percentage_list) > 99:
-                raise error.TestFail("The expected max cpu-throttling percentage"
-                                     "is %s, but the actual value is %s" %
-                                     (99, max(cpu_throttling_percentage_list)))
+                raise error.TestFail(
+                    "The expected max cpu-throttling percentage"
+                    "is %s, but the actual value is %s"
+                    % (99, max(cpu_throttling_percentage_list))
+                )
 
         def thread_check_mig_cpu_throttling_percentage(self):
             """
@@ -311,8 +322,16 @@ def run(test, params, env):
 
         @error.context_aware
         def post_migration_capability(
-                self, vm, cancel_delay, mig_offline, dsthost,
-                vm_ports, not_wait_for_migration, fd, mig_data):
+            self,
+            vm,
+            cancel_delay,
+            mig_offline,
+            dsthost,
+            vm_ports,
+            not_wait_for_migration,
+            fd,
+            mig_data,
+        ):
             """
             set auto-converge off/on during migration
             set/get parameter cpu-throttle-initial 30
@@ -333,26 +352,29 @@ def run(test, params, env):
 
             if set_auto_converge == "yes":
                 mig_thread = utils.InterruptedThread(
-                    self.thread_check_mig_cpu_throttling_percentage)
+                    self.thread_check_mig_cpu_throttling_percentage
+                )
                 mig_thread.start()
             try:
                 vm.wait_for_migration(self.migration_timeout)
                 logging.info("Migration completed with auto-converge on")
             except virt_vm.VMMigrateTimeoutError:
                 if set_auto_converge == "yes":
-                    raise error.TestFail("Migration failed with "
-                                         "auto-converge on")
+                    raise error.TestFail("Migration failed with " "auto-converge on")
                 else:
-                    logging.info("migration would never finish with "
-                                 "auto-converge off")
+                    logging.info(
+                        "migration would never finish with " "auto-converge off"
+                    )
                     if self.need_cleanup:
                         self.clean_up(self.kill_bg_stress_cmd, vm)
                     try:
                         vm.wait_for_migration(self.migration_timeout)
                     except virt_vm.VMMigrateTimeoutError:
-                        raise error.TestFail("After kill stessapptest, "
-                                             "migration failed with "
-                                             "auto-converge off")
+                        raise error.TestFail(
+                            "After kill stessapptest, "
+                            "migration failed with "
+                            "auto-converge off"
+                        )
             finally:
                 if self.session:
                     self.session.close()
@@ -360,8 +382,16 @@ def run(test, params, env):
 
         @error.context_aware
         def post_migration_capability_load_host(
-                self, vm, cancel_delay, mig_offline, dsthost,
-                vm_ports, not_wait_for_migration, fd, mig_data):
+            self,
+            vm,
+            cancel_delay,
+            mig_offline,
+            dsthost,
+            vm_ports,
+            not_wait_for_migration,
+            fd,
+            mig_data,
+        ):
             """
             set auto-converge off/on during migration
 
@@ -385,19 +415,21 @@ def run(test, params, env):
                 logging.info("Migration completed with auto-converge on")
             except virt_vm.VMMigrateTimeoutError:
                 if set_auto_converge == "yes":
-                    raise error.TestFail("Migration failed with "
-                                         "auto-converge on")
+                    raise error.TestFail("Migration failed with " "auto-converge on")
                 else:
-                    logging.info("migration would never finish with "
-                                 "auto-converge off")
+                    logging.info(
+                        "migration would never finish with " "auto-converge off"
+                    )
                     if self.need_cleanup:
                         self.clean_up(self.kill_bg_stress_cmd, vm)
                     try:
                         vm.wait_for_migration(self.migration_timeout)
                     except virt_vm.VMMigrateTimeoutError:
-                        raise error.TestFail("After kill stessapptest, "
-                                             "migration failed with "
-                                             "auto-converge off")
+                        raise error.TestFail(
+                            "After kill stessapptest, "
+                            "migration failed with "
+                            "auto-converge off"
+                        )
             finally:
                 if self.session:
                     self.session.close()
@@ -406,8 +438,16 @@ def run(test, params, env):
 
         @error.context_aware
         def post_migration_capability_load_host_io(
-                self, vm, cancel_delay, mig_offline, dsthost,
-                vm_ports, not_wait_for_migration, fd, mig_data):
+            self,
+            vm,
+            cancel_delay,
+            mig_offline,
+            dsthost,
+            vm_ports,
+            not_wait_for_migration,
+            fd,
+            mig_data,
+        ):
             """
             set auto-converge off/on during migration
 
@@ -428,11 +468,14 @@ def run(test, params, env):
             mig_thread.start()
             try:
                 vm.wait_for_migration(self.migration_timeout)
-                logging.info("Migration completed with set auto-converge: "
-                             "%s", set_auto_converge)
+                logging.info(
+                    "Migration completed with set auto-converge: " "%s",
+                    set_auto_converge,
+                )
             except virt_vm.VMMigrateTimeoutError:
-                raise error.TestFail("Migration failed with set auto-converge"
-                                     ": %s" % set_auto_converge)
+                raise error.TestFail(
+                    "Migration failed with set auto-converge" ": %s" % set_auto_converge
+                )
             finally:
                 if self.session:
                     self.session.close()
@@ -441,10 +484,11 @@ def run(test, params, env):
 
         @error.context_aware
         def migration_scenario(self):
-
-            error.context("Migration from %s to %s over protocol %s." %
-                          (self.srchost, self.dsthost, mig_protocol),
-                          logging.info)
+            error.context(
+                "Migration from %s to %s over protocol %s."
+                % (self.srchost, self.dsthost, mig_protocol),
+                logging.info,
+            )
 
             def start_worker(mig_data):
                 """
@@ -466,18 +510,17 @@ def run(test, params, env):
                         if vm.is_paused():
                             vm.resume()
                         if not utils_test.qemu.guest_active(vm):
-                            raise error.TestFail("Guest not active "
-                                                 "after migration")
+                            raise error.TestFail("Guest not active " "after migration")
                     if self.need_cleanup:
                         self.clean_up(self.kill_bg_stress_cmd, vm)
                     else:
-                        logging.info("No need to kill the background "
-                                     "test in guest.")
+                        logging.info("No need to kill the background " "test in guest.")
                     vm.reboot()
                     vm.destroy()
 
-            self.migrate_wait([self.vm], self.srchost, self.dsthost,
-                              start_worker, check_worker)
+            self.migrate_wait(
+                [self.vm], self.srchost, self.dsthost, start_worker, check_worker
+            )
 
     set_auto_converge_list = params.objects("need_set_auto_converge")
     sar_log_name = params.get("sar_log_name", "")
@@ -491,10 +534,8 @@ def run(test, params, env):
             sar_log_index = str(set_auto_converge_list.index(set_auto_converge))
             tmp_sar_log_name = sar_log_name
             sar_log_name += sar_log_index
-            sar_cmd_in_guest = sar_cmd_in_guest.replace(tmp_sar_log_name,
-                                                        sar_log_name)
-            get_sar_output_cmd = params.get("get_sar_output_cmd",
-                                            "tail -n 200 %s")
+            sar_cmd_in_guest = sar_cmd_in_guest.replace(tmp_sar_log_name, sar_log_name)
+            get_sar_output_cmd = params.get("get_sar_output_cmd", "tail -n 200 %s")
             get_sar_output_cmd %= sar_log_name
         mig = TestMultihostMigration(test, params, env)
         mig.run()

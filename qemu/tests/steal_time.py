@@ -1,9 +1,8 @@
-import time
 import re
+import time
 
 from avocado.utils import process
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
 
 
 @error_context.context_aware
@@ -21,6 +20,7 @@ def run(test, params, env):
     :params params: Dictionary with the test parameters.
     :params env: Dictionary with test environment.
     """
+
     def get_stat_val():
         """
         Get steal time value in /proc/stat
@@ -40,8 +40,7 @@ def run(test, params, env):
     for vm in vms:
         session = vm.wait_for_login()
         sessions.append(session)
-        stress_test = utils_test.VMStress(vm, "stress",
-                                          params, stress_args=stress_args)
+        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
         stress_test.load_stress_tool()
         stress_tests.append(stress_test)
 
@@ -58,8 +57,10 @@ def run(test, params, env):
                 test.fail("Guest steal time is not around 50")
 
         error_context.context("Check two qemu process cpu usage", test.log.info)
-        cmd = "top -n1 -b -p %s -p %s | grep qemu-kvm | awk '{print $9}'" \
-              % (vms[0].get_pid(), vms[1].get_pid())
+        cmd = "top -n1 -b -p %s -p %s | grep qemu-kvm | awk '{print $9}'" % (
+            vms[0].get_pid(),
+            vms[1].get_pid(),
+        )
         cpu_usage = process.getoutput(cmd, shell=True).split()
         test.log.info("QEMU cpu usage are %s", cpu_usage)
         cpu_usage = sorted([float(x) for x in cpu_usage])
@@ -71,11 +72,10 @@ def run(test, params, env):
         test.log.info("Steal time value in /proc/stat is %s", stat_val_pre)
         time.sleep(60)
         stat_val_post = get_stat_val()
-        test.log.info("After 60s, steal time value in /proc/stat is %s",
-                      stat_val_post)
+        test.log.info("After 60s, steal time value in /proc/stat is %s", stat_val_post)
 
         delta = list(map(lambda x, y: y - x, stat_val_pre, stat_val_post))
-        if abs(delta[0] - delta[1]) > sum(delta)/2*0.1:
+        if abs(delta[0] - delta[1]) > sum(delta) / 2 * 0.1:
             test.fail("Guest steal time change in /proc/stat is not close")
 
     finally:

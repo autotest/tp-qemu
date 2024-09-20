@@ -22,11 +22,15 @@ def run(test, params, env):
         installer_obj.write_version_keyval(test)
         if installer_obj.minor_failure is True:
             minor_failure = True
-            reason = "%s_%s: %s" % (installer_obj.name,
-                                    installer_obj.mode,
-                                    installer_obj.minor_failure_reason)
+            reason = "%s_%s: %s" % (
+                installer_obj.name,
+                installer_obj.mode,
+                installer_obj.minor_failure_reason,
+            )
             minor_failure_reasons.append(reason)
 
     if minor_failure:
-        test.error("Minor (worked around) failures during build "
-                   "test: %s" % ", ".join(minor_failure_reasons))
+        test.error(
+            "Minor (worked around) failures during build "
+            "test: %s" % ", ".join(minor_failure_reasons)
+        )

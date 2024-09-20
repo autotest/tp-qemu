@@ -1,8 +1,7 @@
-import time
 import random
+import time
 
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context
 
 
 @error_context.context_aware
@@ -44,8 +43,7 @@ def run(test, params, env):
     time.sleep(wait_time)
 
     for i in range(1, reset_times + 1):
-        error_context.context("Reset guest system for %s times" % i,
-                              test.log.info)
+        error_context.context("Reset guest system for %s times" % i, test.log.info)
 
         vm.monitor.cmd("system_reset")
 
@@ -53,8 +51,7 @@ def run(test, params, env):
         if params.get("fixed_interval", "yes") != "yes":
             interval_tmp = random.randint(0, interval * 1000) / 1000.0
 
-        test.log.debug("Reset the system by monitor cmd"
-                       " after %ssecs", interval_tmp)
+        test.log.debug("Reset the system by monitor cmd" " after %ssecs", interval_tmp)
         time.sleep(interval_tmp)
 
     error_context.context("Try to login guest after reset", test.log.info)

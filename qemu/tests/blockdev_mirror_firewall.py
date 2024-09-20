@@ -13,24 +13,26 @@ class BlockdevMirrorFirewallTest(BlockdevMirrorNowaitTest):
 
     def __init__(self, test, params, env):
         localhost = socket.gethostname()
-        params['nbd_server_%s' % params['nbd_image_tag']] = localhost \
-            if localhost else 'localhost'
+        params["nbd_server_%s" % params["nbd_image_tag"]] = (
+            localhost if localhost else "localhost"
+        )
         self._offset = None
         self._net_down = False
 
         super(BlockdevMirrorFirewallTest, self).__init__(test, params, env)
 
     def _create_local_image(self):
-        image_params = self.params.object_params(
-            self.params['local_image_tag'])
+        image_params = self.params.object_params(self.params["local_image_tag"])
         local_image = self.source_disk_define_by_params(
-            image_params, self.params['local_image_tag'])
+            image_params, self.params["local_image_tag"]
+        )
         local_image.create(image_params)
         self.trash.append(local_image)
 
     def _export_local_image_with_nbd(self):
-        self._nbd_export = QemuNBDExportImage(self.params,
-                                              self.params["local_image_tag"])
+        self._nbd_export = QemuNBDExportImage(
+            self.params, self.params["local_image_tag"]
+        )
         self._nbd_export.export_image()
 
     def prepare_test(self):
@@ -45,29 +47,27 @@ class BlockdevMirrorFirewallTest(BlockdevMirrorNowaitTest):
     def add_target_data_disks(self):
         tag = self._target_images[0]
         devices = self.main_vm.devices.images_define_by_params(
-            tag, self.params.object_params(tag), 'disk')
+            tag, self.params.object_params(tag), "disk"
+        )
         devices.pop()  # ignore the front end device
 
         for dev in devices:
-            ret = self.main_vm.devices.simple_hotplug(dev,
-                                                      self.main_vm.monitor)
+            ret = self.main_vm.devices.simple_hotplug(dev, self.main_vm.monitor)
             if not ret[1]:
-                self.test.fail("Failed to hotplug '%s': %s."
-                               % (dev, ret[0]))
+                self.test.fail("Failed to hotplug '%s': %s." % (dev, ret[0]))
 
     def _run_iptables(self, cmd):
-        cmd = cmd.format(
-            s=self.params['nbd_server_%s' % self.params['nbd_image_tag']])
+        cmd = cmd.format(s=self.params["nbd_server_%s" % self.params["nbd_image_tag"]])
         result = process.run(cmd, ignore_status=True, shell=True)
         if result.exit_status != 0:
-            self.test.error('command error: %s' % result.stderr.decode())
+            self.test.error("command error: %s" % result.stderr.decode())
 
     def break_net_with_iptables(self):
-        self._run_iptables(self.params['net_break_cmd'])
+        self._run_iptables(self.params["net_break_cmd"])
         self._net_down = True
 
     def resume_net_with_iptables(self):
-        self._run_iptables(self.params['net_resume_cmd'])
+        self._run_iptables(self.params["net_resume_cmd"])
         self._net_down = False
 
     def clean_images(self):
@@ -83,13 +83,16 @@ class BlockdevMirrorFirewallTest(BlockdevMirrorNowaitTest):
     def do_test(self):
         self.blockdev_mirror()
         self.check_block_jobs_started(
-            self._jobs, self.params.get_numeric('mirror_started_timeout', 10))
+            self._jobs, self.params.get_numeric("mirror_started_timeout", 10)
+        )
         self.break_net_with_iptables()
         self.check_block_jobs_paused(
-            self._jobs, self.params.get_numeric('mirror_paused_interval', 50))
+            self._jobs, self.params.get_numeric("mirror_paused_interval", 50)
+        )
         self.resume_net_with_iptables()
         self.check_block_jobs_running(
-            self._jobs, self.params.get_numeric('mirror_resmued_timeout', 200))
+            self._jobs, self.params.get_numeric("mirror_resmued_timeout", 200)
+        )
         self.wait_mirror_jobs_completed()
         self.check_mirrored_block_nodes_attached()
         self.clone_vm_with_mirrored_images()

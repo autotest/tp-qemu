@@ -1,9 +1,8 @@
 import os
-import six
 
+import six
 from avocado import TestError
 from avocado.utils import partition as p
-
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 

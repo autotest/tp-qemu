@@ -1,13 +1,12 @@
-import time
 import json
+import time
 
-from virttest import error_context
-from virttest import data_dir
+from virttest import data_dir, error_context
 
+from provider import backup_utils
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.qsd import QsdDaemonDev, add_vubp_into_boot
 from provider.virt_storage.storage_admin import sp_admin
-from provider import backup_utils
 
 
 class QSDStreamTest(BlockDevStreamTest):
@@ -41,7 +40,8 @@ class QSDStreamTest(BlockDevStreamTest):
         self.params.update({"qsd_images_qsd1": self.snapshot_tag})
         self.start_qsd()
         self.clone_vm.params["extra_params"] = add_vubp_into_boot(
-                self.snapshot_tag, self.params)
+            self.snapshot_tag, self.params
+        )
         self.clone_vm.create()
         self.mount_data_disks()
         self.verify_data_file()
@@ -49,7 +49,8 @@ class QSDStreamTest(BlockDevStreamTest):
     def pre_test(self):
         self.start_qsd()
         self.main_vm.params["extra_params"] = add_vubp_into_boot(
-                self.base_tag, self.params)
+            self.base_tag, self.params
+        )
         super(QSDStreamTest, self).pre_test()
 
     def create_snapshot(self):
@@ -60,8 +61,7 @@ class QSDStreamTest(BlockDevStreamTest):
         return self.qsd.monitor.cmd(cmd, dict(arguments))
 
     def blockdev_stream(self):
-        backup_utils.blockdev_stream(self.qsd, self._top_device,
-                                     **self._stream_options)
+        backup_utils.blockdev_stream(self.qsd, self._top_device, **self._stream_options)
         time.sleep(0.5)
 
     def post_test(self):

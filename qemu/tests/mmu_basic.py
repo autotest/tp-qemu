@@ -1,7 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
 
 
 @error_context.context_aware
@@ -30,25 +29,25 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     error_context.context("Check the MMU mode.", test.log.info)
-    if cpu_info_match('MMU'):
-        if cpu_info_match('POWER9'):
-            if cpu_info_match('Radix') is False:
+    if cpu_info_match("MMU"):
+        if cpu_info_match("POWER9"):
+            if cpu_info_match("Radix") is False:
                 test.fail("mmu mode is not Radix, doesn't meet expectations.")
         else:
-            if cpu_info_match('Hash') is False:
+            if cpu_info_match("Hash") is False:
                 test.fail("mmu mode is not Hash, doesn't meet expectations.")
     else:
-        if params["mmu_option"] == 'yes':
+        if params["mmu_option"] == "yes":
             test.fail("There should be MMU mode.")
     utils_test.update_boot_option(vm, args_added="disable_radix")
     session = vm.wait_for_login()
 
     error_context.context("Check the MMU mode.", test.log.info)
-    if cpu_info_match('MMU'):
-        if cpu_info_match('Hash') is False:
+    if cpu_info_match("MMU"):
+        if cpu_info_match("Hash") is False:
             test.fail("mmu mode is not Hash, mmu mode disabled failure.")
     else:
-        if params["mmu_option"] == 'yes':
+        if params["mmu_option"] == "yes":
             test.fail("There should be MMU mode.")
 
     vm.verify_dmesg()

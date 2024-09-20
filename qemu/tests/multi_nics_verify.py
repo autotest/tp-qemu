@@ -1,9 +1,6 @@
 import os
 
-from virttest import error_context
-from virttest import utils_net
-from virttest import env_process
-from virttest import utils_misc
+from virttest import env_process, error_context, utils_misc, utils_net
 
 
 @error_context.context_aware
@@ -23,6 +20,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def check_nics_num(expect_c, session):
         """
         Check whether guest NICs number match with params set in cfg file
@@ -40,13 +38,13 @@ def run(test, params, env):
         if not expect_c == actual_c:
             msg += "Nics count mismatch!\n"
             return (False, msg)
-        return (True, msg + 'Nics count match')
+        return (True, msg + "Nics count match")
 
     # Get the ethernet cards number from params
     nics_num = int(params.get("nics_num", 8))
     for i in range(nics_num):
         nics = "nic%s" % i
-        params["nics"] = ' '.join([params["nics"], nics])
+        params["nics"] = " ".join([params["nics"], nics])
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params["main_vm"])
 
@@ -77,14 +75,20 @@ def run(test, params, env):
         if network_manager:
             for ifname in ifname_list:
                 eth_keyfile_path = keyfile_path % ifname
-                cmd = "nmcli --offline connection add type ethernet con-name %s ifname %s" \
-                      " ipv4.method auto > %s" % (ifname, ifname, eth_keyfile_path)
+                cmd = (
+                    "nmcli --offline connection add type ethernet con-name %s ifname %s"
+                    " ipv4.method auto > %s" % (ifname, ifname, eth_keyfile_path)
+                )
                 s, o = session.cmd_status_output(cmd)
                 if s != 0:
                     err_msg = "Failed to create ether keyfile: %s\nReason is: %s"
                     test.error(err_msg % (eth_keyfile_path, o))
-            session.cmd("chown root:root /etc/NetworkManager/system-connections/*.nmconnection")
-            session.cmd("chmod 600 /etc/NetworkManager/system-connections/*.nmconnection")
+            session.cmd(
+                "chown root:root /etc/NetworkManager/system-connections/*.nmconnection"
+            )
+            session.cmd(
+                "chmod 600 /etc/NetworkManager/system-connections/*.nmconnection"
+            )
             session.cmd("nmcli connection reload")
         else:
             for ifname in ifname_list:
@@ -108,22 +112,26 @@ def run(test, params, env):
 
     def _check_ip_number():
         for index, nic in enumerate(vm.virtnet):
-            guest_ip = utils_net.get_guest_ip_addr(session_srl, nic.mac, os_type,
-                                                   ip_version="ipv4")
+            guest_ip = utils_net.get_guest_ip_addr(
+                session_srl, nic.mac, os_type, ip_version="ipv4"
+            )
             if not guest_ip:
                 return False
         return True
 
     # Check all the interfaces in guest get ips
-    session_srl = vm.wait_for_serial_login(timeout=int(params.get("login_timeout", 360)))
+    session_srl = vm.wait_for_serial_login(
+        timeout=int(params.get("login_timeout", 360))
+    )
     if not utils_misc.wait_for(_check_ip_number, 1000, step=10):
         test.error("Timeout when wait for nics to get ip")
 
     nic_interface = []
     for index, nic in enumerate(vm.virtnet):
         test.log.info("index %s nic", index)
-        guest_ip = utils_net.get_guest_ip_addr(session_srl, nic.mac, os_type,
-                                               ip_version="ipv4")
+        guest_ip = utils_net.get_guest_ip_addr(
+            session_srl, nic.mac, os_type, ip_version="ipv4"
+        )
         if not guest_ip:
             err_log = "vm get interface %s's ip failed." % index
             test.fail(err_log)

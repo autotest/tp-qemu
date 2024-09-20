@@ -5,12 +5,10 @@ from avocado import TestError
 from virttest import error_context
 from virttest.utils_test.qemu import MemoryHotplugTest
 
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class MemoryHotplugSimple(MemoryHotplugTest):
-
     def check_memory(self, vm, wait_time=0):
         """
         Check is guest memory is really match assigned to VM.
@@ -24,11 +22,15 @@ class MemoryHotplugSimple(MemoryHotplugTest):
         vm_mem_size = self.get_guest_total_mem(vm)
         assigned_vm_mem_size = self.get_vm_mem(vm)
         sev_rom_size = self.params.get_numeric("sev_rom_size", 0)
-        if abs(vm_mem_size + sev_rom_size - assigned_vm_mem_size) > \
-                assigned_vm_mem_size * threshold:
-            msg = ("Assigned '%s MB' memory to '%s'"
-                   "but, '%s MB' memory detect by OS" %
-                   (assigned_vm_mem_size, vm.name, vm_mem_size))
+        if (
+            abs(vm_mem_size + sev_rom_size - assigned_vm_mem_size)
+            > assigned_vm_mem_size * threshold
+        ):
+            msg = (
+                "Assigned '%s MB' memory to '%s'"
+                "but, '%s MB' memory detect by OS"
+                % (assigned_vm_mem_size, vm.name, vm_mem_size)
+            )
             raise TestError(msg)
 
 
@@ -54,7 +56,7 @@ def run(test, params, env):
     plugged = []
     wait_time = params.get_numeric("wait_time", 0)
     for target_mem in params.objects("target_mems"):
-        if target_mem in vm.params.objects('mem_devs'):
+        if target_mem in vm.params.objects("mem_devs"):
             hotplug_test.unplug_memory(vm, target_mem)
         else:
             hotplug_test.hotplug_memory(vm, target_mem)

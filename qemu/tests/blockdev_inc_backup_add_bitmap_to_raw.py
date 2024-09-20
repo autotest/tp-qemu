@@ -11,17 +11,18 @@ class BlockdevIncbkAddBitmapToRawImgNeg(BlockdevLiveBackupBaseTest):
 
     def add_bitmap_to_raw_image(self):
         try:
-            kargs = {'node': self._source_nodes[0],
-                     'name': self._bitmaps[0],
-                     'persistent': self._full_backup_options['persistent']}
+            kargs = {
+                "node": self._source_nodes[0],
+                "name": self._bitmaps[0],
+                "persistent": self._full_backup_options["persistent"],
+            }
             self.main_vm.monitor.block_dirty_bitmap_add(**kargs)
         except QMPCmdError as e:
-            error_msg = self.params['error_msg'].format(
-                node=self._source_nodes[0])
+            error_msg = self.params["error_msg"].format(node=self._source_nodes[0])
             if error_msg not in str(e):
-                self.test.fail('Unexpected error: %s' % str(e))
+                self.test.fail("Unexpected error: %s" % str(e))
         else:
-            self.test.fail('Adding bitmap succeeded unexpectedly')
+            self.test.fail("Adding bitmap succeeded unexpectedly")
 
     def do_test(self):
         self.add_bitmap_to_raw_image()

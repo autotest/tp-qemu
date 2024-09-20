@@ -1,9 +1,7 @@
 import socket
 
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import qemu_storage
+from virttest import data_dir, qemu_storage
 from virttest.qemu_io import QemuIOSystem
 from virttest.qemu_storage import QemuImg
 
@@ -23,13 +21,13 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def _qemu_io(img, cmd):
         """Run qemu-io cmd to a given img."""
         try:
             QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
         except process.CmdError as err:
-            test.fail(
-                "qemu-io to '%s' failed: %s." % (img.image_filename, str(err)))
+            test.fail("qemu-io to '%s' failed: %s." % (img.image_filename, str(err)))
 
     images = params["image_chain"].split()
     base_img = images[0]
@@ -51,10 +49,10 @@ def run(test, params, env):
     nbd_export = QemuNBDExportImage(params, top_img)
     nbd_export.export_image()
 
-    nbd_image_tag = params['nbd_image_tag']
+    nbd_image_tag = params["nbd_image_tag"]
     nbd_image_params = params.object_params(nbd_image_tag)
     localhost = socket.gethostname()
-    nbd_image_params['nbd_server'] = localhost if localhost else 'localhost'
+    nbd_image_params["nbd_server"] = localhost if localhost else "localhost"
     qemu_img = qemu_storage.QemuImg(nbd_image_params, None, nbd_image_tag)
     nbd_image = qemu_img.image_filename
     map_cmd = params["map_cmd"]
@@ -62,13 +60,16 @@ def run(test, params, env):
 
     test.log.info("Dump the info of '%s'", nbd_image)
     try:
-        result = process.run(map_cmd + " " + nbd_image, ignore_status=True,
-                             shell=True)
+        result = process.run(map_cmd + " " + nbd_image, ignore_status=True, shell=True)
         if result.exit_status != 0:
-            test.fail('Failed to execute the map command, error message: %s'
-                      % result.stderr.decode())
+            test.fail(
+                "Failed to execute the map command, error message: %s"
+                % result.stderr.decode()
+            )
         elif check_msg not in result.stdout.decode().strip():
-            test.fail("Message '%s' mismatched with '%s'" % (
-                check_msg, result.stdout.decode()))
+            test.fail(
+                "Message '%s' mismatched with '%s'"
+                % (check_msg, result.stdout.decode())
+            )
     finally:
         nbd_export.stop_export()

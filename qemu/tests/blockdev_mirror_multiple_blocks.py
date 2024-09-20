@@ -3,6 +3,7 @@ from provider.blockdev_mirror_parallel import BlockdevMirrorParallelTest
 
 class BlockdevMirrorMultipleBlocksTest(BlockdevMirrorParallelTest):
     """do block-mirror for multiple disks in parallel"""
+
     pass
 
 

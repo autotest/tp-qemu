@@ -1,13 +1,11 @@
 """sg_write_same command testing for discard feature"""
+
 import os
 
 from avocado.utils import process
-from virttest import data_dir
-from virttest import env_process
-from virttest import error_context
-from virttest import storage
-from virttest.utils_misc import get_linux_drive_path
+from virttest import data_dir, env_process, error_context, storage
 from virttest import data_dir as virttest_data_dir
+from virttest.utils_misc import get_linux_drive_path
 
 
 @error_context.context_aware
@@ -35,14 +33,13 @@ def run(test, params, env):
         host_file = os.path.join(deps_dir, file_name)
         guest_file = guest_dir + file_name
         vm.copy_files_to(host_file, guest_dir)
-        status, output = session.cmd_status_output(
-            "$SHELL " + guest_file + " " + dev)
+        status, output = session.cmd_status_output("$SHELL " + guest_file + " " + dev)
         if status != 0:
             test.fail("run sg_write_same failed:" + output)
         test.log.debug(output)
 
     def _get_scsi_debug_disk(guest_session=None):
-        """"
+        """ "
         Get scsi debug disk on host or guest which created as scsi-block.
         """
         cmd = "lsblk -S -n -p|grep scsi_debug"
@@ -84,16 +81,14 @@ def run(test, params, env):
         env_process.preprocess_vm(test, params, env, vm_name)
     else:
         image_params = params.object_params(data_tag)
-        disk_name = storage.get_image_filename(image_params,
-                                               data_dir.get_data_dir())
+        disk_name = storage.get_image_filename(image_params, data_dir.get_data_dir())
 
     vm = env.get_vm(vm_name)
     vm.verify_alive()
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Boot guest with disk '%s'" % disk_name,
-                          test.log.info)
+    error_context.context("Boot guest with disk '%s'" % disk_name, test.log.info)
     guest_disk_drive = get_linux_drive_path(session, disk_serial)
     if not guest_disk_drive:
         test.fail("Can not get data disk in guest.")

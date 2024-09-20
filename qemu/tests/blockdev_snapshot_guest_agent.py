@@ -1,30 +1,30 @@
 import logging
 import time
 
-from virttest import utils_test
-from virttest import error_context
-from virttest import guest_agent
+from virttest import error_context, guest_agent, utils_test
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevSnapshotGuestAgentTest(BlockDevSnapshotTest):
-
     def pre_test(self):
         super(BlockdevSnapshotGuestAgentTest, self).pre_test()
-        params = self.params.object_params(self.params['agent_name'])
+        params = self.params.object_params(self.params["agent_name"])
         params["monitor_filename"] = self.main_vm.get_serial_console_filename(
-            self.params['agent_name'])
+            self.params["agent_name"]
+        )
         self.guest_agent = guest_agent.QemuAgent(
-            self.main_vm, self.params['agent_name'],
-            self.params['agent_serial_type'], params
+            self.main_vm,
+            self.params["agent_name"],
+            self.params["agent_serial_type"],
+            params,
         )
         session = self.main_vm.wait_for_login()
         try:
-            if session.cmd_status(self.params['enable_nonsecurity_files_cmd']) != 0:
-                session.cmd_status(self.params['enable_permissive_cmd'])
+            if session.cmd_status(self.params["enable_nonsecurity_files_cmd"]) != 0:
+                session.cmd_status(self.params["enable_permissive_cmd"])
         finally:
             session.close()
 
@@ -37,12 +37,10 @@ class BlockdevSnapshotGuestAgentTest(BlockDevSnapshotTest):
         bg_test.start()
         LOG_JOB.info("Sleep some time to wait for scp's preparation done")
         time.sleep(30)
-        error_context.context("freeze guest before snapshot",
-                              LOG_JOB.info)
+        error_context.context("freeze guest before snapshot", LOG_JOB.info)
         self.guest_agent.fsfreeze()
         super(BlockdevSnapshotGuestAgentTest, self).create_snapshot()
-        error_context.context("thaw guest after snapshot",
-                              LOG_JOB.info)
+        error_context.context("thaw guest after snapshot", LOG_JOB.info)
         self.guest_agent.fsthaw()
         bg_test.join()
 

@@ -1,12 +1,13 @@
+import re
 import subprocess
 import sys
-import re
 
 # Ensure paramiko is installed
-for pip in ['pip3', 'pip']:
+for pip in ["pip3", "pip"]:
     try:
-        subprocess.check_call([pip, 'install', '--default-timeout=100', 'paramiko'])
+        subprocess.check_call([pip, "install", "--default-timeout=100", "paramiko"])
         import paramiko
+
         break
     except ImportError:
         continue
@@ -23,7 +24,7 @@ def install_dpdk(params, session):
     :param session: the session of guest or host
     """
 
-    cmd = 'yum install -y %s' % params.get("env_pkg")
+    cmd = "yum install -y %s" % params.get("env_pkg")
     session.cmd(cmd, timeout=360, ignore_all_errors=True)
 
 
@@ -95,7 +96,7 @@ class TestPMD:
         while True:
             data = self.dpdk_channel.recv(16384).decode()
             output += data
-            print(data, end='')
+            print(data, end="")
 
             if "testpmd>" in output:
                 return output
@@ -128,7 +129,9 @@ class TestPMD:
         self.session.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         try:
-            self.session.connect(self.host, username=self.username, password=self.password)
+            self.session.connect(
+                self.host, username=self.username, password=self.password
+            )
             print("Successfully logged in to %s." % self.host)
             return self.session
         except paramiko.AuthenticationException:
@@ -140,7 +143,9 @@ class TestPMD:
         except Exception as e:
             print("Error occurred while logging in to %s: %s" % (self.host, str(e)))
 
-    def launch_testpmd(self, dpdk_tool_path, cpu_cores, pci_id, forward_mode, queue, pkts, mac=None):
+    def launch_testpmd(
+        self, dpdk_tool_path, cpu_cores, pci_id, forward_mode, queue, pkts, mac=None
+    ):
         """
         Launch the testpmd tool with the specified parameters.
 
@@ -153,22 +158,31 @@ class TestPMD:
         :param mac: MAC address (optional)
         """
 
-        base_cmd = ("{} -l 0-{} -a {} --file-prefix {} -- "
-                    "--port-topology=chained --disable-rss -i "
-                    "--rxq={} --txq={} --rxd=256 --txd=256 "
-                    "--nb-cores={} --burst=64 --auto-start "
-                    "--forward-mode={} --{}pkts={} ")
+        base_cmd = (
+            "{} -l 0-{} -a {} --file-prefix {} -- "
+            "--port-topology=chained --disable-rss -i "
+            "--rxq={} --txq={} --rxd=256 --txd=256 "
+            "--nb-cores={} --burst=64 --auto-start "
+            "--forward-mode={} --{}pkts={} "
+        )
 
         eth_peer = "--eth-peer={} ".format(mac) if mac else ""
 
-        cmd = base_cmd.format(dpdk_tool_path, int(cpu_cores) - 1,
-                              pci_id,
-                              'tx' if forward_mode == 'txonly' else 'rx',
-                              queue, queue,
-                              int(cpu_cores) - 1, forward_mode,
-                              'tx' if forward_mode == 'txonly' else 'rx',
-                              pkts
-                              ) + eth_peer
+        cmd = (
+            base_cmd.format(
+                dpdk_tool_path,
+                int(cpu_cores) - 1,
+                pci_id,
+                "tx" if forward_mode == "txonly" else "rx",
+                queue,
+                queue,
+                int(cpu_cores) - 1,
+                forward_mode,
+                "tx" if forward_mode == "txonly" else "rx",
+                pkts,
+            )
+            + eth_peer
+        )
 
         if forward_mode == "txonly":
             cmd += "--txonly-multi-flow "

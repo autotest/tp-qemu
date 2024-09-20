@@ -1,4 +1,4 @@
-from avocado.utils import process, cpu
+from avocado.utils import cpu, process
 from virttest import env_process
 
 
@@ -16,7 +16,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    if cpu.get_cpu_vendor_name() != 'intel':
+    if cpu.get_cpu_vendor_name() != "intel":
         test.cancel("This test is supposed to run on Intel host")
 
     unload_cmd = params["unload_cmd"]

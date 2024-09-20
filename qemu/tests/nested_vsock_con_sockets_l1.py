@@ -1,11 +1,9 @@
 import os
 import time
 
-from avocado.utils import path
-from avocado.utils import process
+from avocado.utils import path, process
+from virttest import data_dir, error_context
 
-from virttest import data_dir
-from virttest import error_context
 from provider import message_queuing
 
 
@@ -18,16 +16,15 @@ def compile_nc_vsock_guest(test, vm, session):
     :param session: vm session
     :return: Path to binary nc-vsock or None if compile failed
     """
-    nc_vsock_dir = '/home/'
-    nc_vsock_bin = 'nc-vsock'
-    nc_vsock_c = 'nc-vsock.c'
+    nc_vsock_dir = "/home/"
+    nc_vsock_bin = "nc-vsock"
+    nc_vsock_c = "nc-vsock.c"
     src_file = os.path.join(data_dir.get_deps_dir("nc_vsock"), nc_vsock_c)
     bin_path = os.path.join(nc_vsock_dir, nc_vsock_bin)
-    rm_cmd = 'rm -rf %s*' % bin_path
+    rm_cmd = "rm -rf %s*" % bin_path
     session.cmd(rm_cmd)
     vm.copy_files_to(src_file, nc_vsock_dir)
-    compile_cmd = "cd %s && gcc -o %s %s" % (
-        nc_vsock_dir, nc_vsock_bin, nc_vsock_c)
+    compile_cmd = "cd %s && gcc -o %s %s" % (nc_vsock_dir, nc_vsock_bin, nc_vsock_c)
     guest_status = session.cmd_status(compile_cmd)
     if guest_status != 0:
         session.cmd_output_safe(rm_cmd)
@@ -57,18 +54,17 @@ def run(test, params, env):
 
         session.sendline(cmd_receive)
         time.sleep(10)
-        chksum_cmd = 'md5sum %s' % tmp_file
+        chksum_cmd = "md5sum %s" % tmp_file
         md5_received = session.cmd_output(chksum_cmd, timeout=60).split()[0]
         md5_origin = msg.split(":")[1]
-        test.log.info("md5_origin:" + md5_origin)
-        test.log.info("md5_received:" + md5_received)
+        test.log.info("md5_origin: %s", md5_origin)
+        test.log.info("md5_received: %s", md5_received)
 
         obj.set_msg_loop(False)
         obj.send_message("exit")
 
         if md5_origin != md5_received:
-            test.fail(
-                "File got on L2 is not identical with the file on the host.")
+            test.fail("File got on L2 is not identical with the file on the host.")
 
         test.log.info("Test ended.")
 
@@ -88,20 +84,23 @@ def run(test, params, env):
 
     host = params.get("mq_publisher")
     mq_port = params.get_numeric("mq_port", 2000)
-    test.log.info("host:{} port:{}".format(host, mq_port))
+    test.log.info("host:%s port:%s", host, mq_port)
     client = message_queuing.MQClient(host, mq_port)
     time.sleep(5)
 
     cmd_receive = None
     if vsock_test_tool == "ncat":
         tool_bin = path.find_command("ncat")
-        cmd_receive = '%s --vsock %s %s > %s &' % (
-            tool_bin, host_cid, vsock_port, tmp_file)
+        cmd_receive = "%s --vsock %s %s > %s &" % (
+            tool_bin,
+            host_cid,
+            vsock_port,
+            tmp_file,
+        )
 
     if vsock_test_tool == "nc_vsock":
         tool_bin = compile_nc_vsock_guest(test, vm, session)
-        cmd_receive = '%s %s %s > %s &' % (
-            tool_bin, host_cid, vsock_port, tmp_file)
+        cmd_receive = "%s %s %s > %s &" % (tool_bin, host_cid, vsock_port, tmp_file)
 
     if cmd_receive is None:
         raise ValueError(f"unexpected test tool: {vsock_test_tool}")

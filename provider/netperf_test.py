@@ -2,13 +2,9 @@ import logging
 import os
 import time
 
-from virttest import error_context
-from virttest import data_dir
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import utils_netperf
+from virttest import data_dir, error_context, utils_misc, utils_net, utils_netperf
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 @error_context.context_aware
@@ -19,24 +15,27 @@ def netperf_stress(test, params, vm):
     n_client = utils_netperf.NetperfClient(
         vm.get_address(),
         params.get("client_path"),
-        netperf_source=os.path.join(data_dir.get_deps_dir("netperf"),
-                                    params.get("netperf_client_link")),
+        netperf_source=os.path.join(
+            data_dir.get_deps_dir("netperf"), params.get("netperf_client_link")
+        ),
         client=params.get("shell_client"),
         port=params.get("shell_port"),
         username=params.get("username"),
         password=params.get("password"),
         prompt=params.get("shell_prompt"),
-        linesep=params.get("shell_linesep", "\n").encode().decode(
-            'unicode_escape'),
+        linesep=params.get("shell_linesep", "\n").encode().decode("unicode_escape"),
         status_test_command=params.get("status_test_command", ""),
-        compile_option=params.get("compile_option", ""))
+        compile_option=params.get("compile_option", ""),
+    )
     n_server = utils_netperf.NetperfServer(
         utils_net.get_host_ip_address(params),
         params.get("server_path", "/var/tmp"),
-        netperf_source=os.path.join(data_dir.get_deps_dir("netperf"),
-                                    params.get("netperf_server_link")),
+        netperf_source=os.path.join(
+            data_dir.get_deps_dir("netperf"), params.get("netperf_server_link")
+        ),
         password=params.get("hostpassword"),
-        compile_option=params.get("compile_option", ""))
+        compile_option=params.get("compile_option", ""),
+    )
 
     try:
         n_server.start()
@@ -54,13 +53,16 @@ def netperf_stress(test, params, vm):
         if netperf_output_unit in "GMKgmk":
             test_option += " -f %s" % netperf_output_unit
         t_option = "%s -t %s" % (test_option, test_protocols)
-        n_client.bg_start(utils_net.get_host_ip_address(params),
-                          t_option,
-                          params.get_numeric("netperf_para_sessions"),
-                          params.get("netperf_cmd_prefix", ""),
-                          package_sizes=params.get("netperf_sizes"))
-        if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
-                               "Wait netperf test start"):
+        n_client.bg_start(
+            utils_net.get_host_ip_address(params),
+            t_option,
+            params.get_numeric("netperf_para_sessions"),
+            params.get("netperf_cmd_prefix", ""),
+            package_sizes=params.get("netperf_sizes"),
+        )
+        if utils_misc.wait_for(
+            n_client.is_netperf_running, 10, 0, 3, "Wait netperf test start"
+        ):
             LOG_JOB.info("Netperf test start successfully.")
         else:
             test.error("Can not start netperf client.")

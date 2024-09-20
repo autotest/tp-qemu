@@ -4,7 +4,7 @@ import time
 
 from aexpect import client
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 DEFAULT_MONITOR_TIMEOUT = 60
@@ -17,8 +17,9 @@ class MessageNotFoundError(Exception):
         self.output = output
 
     def __str__(self):
-        return ('No matching message("{}") was found. '
-                'Output: {}'.format(self.message, self.output))
+        return 'No matching message("{}") was found. ' "Output: {}".format(
+            self.message, self.output
+        )
 
 
 class UnknownEventError(Exception):
@@ -45,7 +46,7 @@ class MQBase(client.Expect):
 
         :param message: The message you need to send.
         """
-        self.sendline('CONFIRM-' + message)
+        self.sendline("CONFIRM-" + message)
 
     def _monitor_message(self, message, timeout=DEFAULT_MONITOR_TIMEOUT):
         """
@@ -56,20 +57,19 @@ class MQBase(client.Expect):
         """
         try:
             self.read_until_last_line_matches([message], timeout)
-            LOG_JOB.info('The message "{}" has been monitored.'.format(message))
+            LOG_JOB.info('The message "%s" has been monitored.', message)
         except client.ExpectTimeoutError as err:
             raise MessageNotFoundError(message, err.output)
 
-    def _monitor_confirm_message(self, message,
-                                 timeout=DEFAULT_MONITOR_TIMEOUT):
-        return self._monitor_message('CONFIRM-' + message, timeout)
+    def _monitor_confirm_message(self, message, timeout=DEFAULT_MONITOR_TIMEOUT):
+        return self._monitor_message("CONFIRM-" + message, timeout)
 
     def close(self):
         """
         Check and close the message queuing environment.
         """
         if self.is_alive():
-            self.send_ctrl('^C')
+            self.send_ctrl("^C")
         super(MQBase, self).close()
 
     def send_message(self, msg):
@@ -80,8 +80,9 @@ class MQBase(client.Expect):
 
 
 class MQPublisher(MQBase):
-    def __init__(self, port=None, udp=False, multiple_connections=False,
-                 other_options=""):
+    def __init__(
+        self, port=None, udp=False, multiple_connections=False, other_options=""
+    ):
         """
         MQ publisher.
 
@@ -90,32 +91,32 @@ class MQPublisher(MQBase):
         :param multiple_connections: Accept multiple connections in listen mode.
         :param other_options: extra options for the server.
         """
-        cmd_options = ['nc', '-l']
-        port and cmd_options.append('-p ' + str(port))
-        udp and cmd_options.append('--udp')
-        multiple_connections and cmd_options.append('--keep-open')
+        cmd_options = ["nc", "-l"]
+        port and cmd_options.append("-p " + str(port))
+        udp and cmd_options.append("--udp")
+        multiple_connections and cmd_options.append("--keep-open")
         cmd_options.append(other_options)
-        super(MQPublisher, self).__init__(' '.join(cmd_options))
+        super(MQPublisher, self).__init__(" ".join(cmd_options))
 
     def confirm_access(self, timeout=DEFAULT_MONITOR_TIMEOUT):
-        self._monitor_message('ACCESS', timeout)
-        self._confirm_message('ACCESS')
+        self._monitor_message("ACCESS", timeout)
+        self._confirm_message("ACCESS")
 
     def approve(self, timeout=DEFAULT_MONITOR_TIMEOUT):
-        self.sendline('APPROVE')
-        self._monitor_confirm_message('APPROVE', timeout)
+        self.sendline("APPROVE")
+        self._monitor_confirm_message("APPROVE", timeout)
 
     def notify(self, timeout=DEFAULT_MONITOR_TIMEOUT):
-        self.sendline('NOTIFY')
-        self._monitor_confirm_message('NOTIFY', timeout)
+        self.sendline("NOTIFY")
+        self._monitor_confirm_message("NOTIFY", timeout)
 
     def alert(self, timeout=DEFAULT_MONITOR_TIMEOUT):
-        self.sendline('ALERT')
-        self._monitor_confirm_message('ALERT', timeout)
+        self.sendline("ALERT")
+        self._monitor_confirm_message("ALERT", timeout)
 
     def refuse(self, timeout=DEFAULT_MONITOR_TIMEOUT):
-        self.sendline('REFUSE')
-        self._monitor_message('REFUSE', timeout)
+        self.sendline("REFUSE")
+        self._monitor_message("REFUSE", timeout)
 
 
 class MQSubscriber(MQBase):
@@ -127,35 +128,35 @@ class MQSubscriber(MQBase):
         :param port: The listening port of the MQ server.
         :param udp: Use UDP instead of default TCP.
         """
-        cmd_options = ['nc', server_address]
+        cmd_options = ["nc", server_address]
         port and cmd_options.append(str(port))
-        udp and cmd_options.append('--udp')
-        super(MQSubscriber, self).__init__(' '.join(cmd_options))
+        udp and cmd_options.append("--udp")
+        super(MQSubscriber, self).__init__(" ".join(cmd_options))
         self._access()
 
     def _access(self):
-        self.sendline('ACCESS')
-        self._monitor_confirm_message('ACCESS')
+        self.sendline("ACCESS")
+        self._monitor_confirm_message("ACCESS")
 
     def confirm_approve(self):
-        self._confirm_message('APPROVE')
+        self._confirm_message("APPROVE")
 
     def confirm_notify(self):
-        self._confirm_message('NOTIFY')
+        self._confirm_message("NOTIFY")
 
     def confirm_alert(self):
-        self._confirm_message('ALERT')
+        self._confirm_message("ALERT")
 
     def confirm_refuse(self):
-        self._confirm_message('REFUSE')
+        self._confirm_message("REFUSE")
 
     def receive_event(self, timeout=DEFAULT_MONITOR_TIMEOUT):
-        event_pattern = ['APPROVE', 'NOTIFY', 'ALERT', 'REFUSE']
+        event_pattern = ["APPROVE", "NOTIFY", "ALERT", "REFUSE"]
         try:
             event = self.read_until_last_line_matches(event_pattern, timeout)[1]
             if len(event.splitlines()) > 1:
                 event = event.splitlines()[-1]
-            getattr(self, 'confirm_' + event.strip().lower())()
+            getattr(self, "confirm_" + event.strip().lower())()
         except client.ExpectTimeoutError as err:
             raise UnknownEventError(err.output.strip())
         return event.strip()
@@ -175,11 +176,11 @@ class MQClient(MQBase):
         :param server_address: The address of remote/local MQ server.
         :param port: The listening port of the MQ server.
         """
-        cmd_options = ['nc', server_address]
+        cmd_options = ["nc", server_address]
         port and cmd_options.append(str(port))
         self.msg_loop_flag = True
         self.msg_callback = {}
-        super(MQClient, self).__init__(' '.join(cmd_options))
+        super(MQClient, self).__init__(" ".join(cmd_options))
 
     def match_patterns(self, lines, patterns):
         matches = []
@@ -215,12 +216,12 @@ class MQClient(MQBase):
             if not msgs:
                 msgs = self.msg_callback.keys()
 
-            output = self.read_until_output_matches(msgs,
-                                                    lambda x: x.splitlines(),
-                                                    timeout, 0.1)
+            output = self.read_until_output_matches(
+                msgs, lambda x: x.splitlines(), timeout, 0.1
+            )
 
             if output:
-                LOG_JOB.debug('Monitor The message "{}"'.format(output))
+                LOG_JOB.debug('Monitor The message "%s"', output)
                 return output[0]
 
         except client.ExpectTimeoutError as err:

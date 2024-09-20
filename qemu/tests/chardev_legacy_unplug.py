@@ -1,4 +1,4 @@
-from virttest import error_context, env_process
+from virttest import env_process, error_context
 from virttest.qemu_monitor import QMPCmdError
 
 
@@ -16,11 +16,11 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    serial_id = params.objects('serials')[-1]
-    params['start_vm'] = 'yes'
-    for backend in ['unix_socket', 'tcp_socket', 'pty']:
-        params['chardev_backend_%s' % serial_id] = backend
-        vm = params['main_vm']
+    serial_id = params.objects("serials")[-1]
+    params["start_vm"] = "yes"
+    for backend in ["unix_socket", "tcp_socket", "pty"]:
+        params["chardev_backend_%s" % serial_id] = backend
+        vm = params["main_vm"]
         env_process.preprocess_vm(test, params, env, vm)
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
@@ -31,7 +31,7 @@ def run(test, params, env):
             chardev_device.unplug(vm.monitor)
         except QMPCmdError as e:
             if e.data["desc"] != "Chardev '%s' is busy" % chardev_qid:
-                test.fail('It is not the expected error')
+                test.fail("It is not the expected error")
         else:
             test.fail("Should not be unplug successfully")
         vm.verify_kernel_crash()

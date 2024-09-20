@@ -1,10 +1,7 @@
 import re
 
 from aexpect import ShellCmdError
-from virttest import remote
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import error_context
+from virttest import error_context, remote, utils_misc, utils_net
 
 
 @error_context.context_aware
@@ -19,6 +16,7 @@ def run(test, params, env):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
     """
+
     def _is_process_finished(session, process_name):
         """
         Check whether the target process is finished running
@@ -42,13 +40,13 @@ def run(test, params, env):
                 test.fail("God! Capture the transfet data:'%s'" % str(e))
             test.log.info("Guest3 catch data is '%s'", str(e))
 
-    timeout = int(params.get("login_timeout", '360'))
+    timeout = int(params.get("login_timeout", "360"))
     password = params.get("password")
     username = params.get("username")
     shell_port = params.get("shell_port")
     tmp_dir = params.get("tmp_dir", "/tmp/")
     clean_cmd = params.get("clean_cmd", "rm -f")
-    filesize = int(params.get("filesize", '100'))
+    filesize = int(params.get("filesize", "100"))
 
     wireshark_name = params.get("wireshark_name")
     check_proc_temp = params.get("check_proc_temp")
@@ -71,8 +69,8 @@ def run(test, params, env):
     mon_session = vms[2].wait_for_login(timeout=timeout)
     mon_macaddr = vms[2].get_mac_address()
 
-    src_file = (tmp_dir + "src-%s" % utils_misc.generate_random_string(8))
-    dst_file = (tmp_dir + "dst-%s" % utils_misc.generate_random_string(8))
+    src_file = tmp_dir + "src-%s" % utils_misc.generate_random_string(8)
+    dst_file = tmp_dir + "dst-%s" % utils_misc.generate_random_string(8)
 
     try:
         # Before transfer, run tcpdump to try to catche data
@@ -87,44 +85,59 @@ def run(test, params, env):
             error_context.context("Install wireshark", test.log.info)
             install_wireshark_cmd = params.get("install_wireshark_cmd")
             install_wireshark_cmd = utils_misc.set_winutils_letter(
-                sessions[2], install_wireshark_cmd)
-            status, output = sessions[2].cmd_status_output(install_wireshark_cmd,
-                                                           timeout=timeout)
+                sessions[2], install_wireshark_cmd
+            )
+            status, output = sessions[2].cmd_status_output(
+                install_wireshark_cmd, timeout=timeout
+            )
             if status:
-                test.error("Failed to install wireshark, status=%s, output=%s"
-                           % (status, output))
+                test.error(
+                    "Failed to install wireshark, status=%s, output=%s"
+                    % (status, output)
+                )
             test.log.info("Wait for wireshark installation to complete")
             utils_misc.wait_for(
                 lambda: _is_process_finished(sessions[2], wireshark_name),
-                timeout, 20, 3)
+                timeout,
+                20,
+                3,
+            )
             test.log.info("Wireshark is already installed")
         interface_name = if_func(*args)
-        tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0],
-                                     interface_name)
-        dthread = utils_misc.InterruptedThread(data_mon,
-                                               (sessions[2],
-                                                tcpdump_cmd,
-                                                mon_process_timeout))
+        tcpdump_cmd = tcpdump_cmd % (addresses[1], addresses[0], interface_name)
+        dthread = utils_misc.InterruptedThread(
+            data_mon, (sessions[2], tcpdump_cmd, mon_process_timeout)
+        )
 
         test.log.info("Tcpdump mon start ...")
         test.log.info("Creating %dMB file on guest1", filesize)
         sessions[0].cmd(dd_cmd % (src_file, filesize), timeout=timeout)
         dthread.start()
 
-        error_context.context("Transferring file guest1 -> guest2",
-                              test.log.info)
+        error_context.context("Transferring file guest1 -> guest2", test.log.info)
         if params.get("os_type") == "windows":
             cp_cmd = params["copy_cmd"]
-            cp_cmd = cp_cmd % (addresses[1], params['file_transfer_port'],
-                               src_file, dst_file)
+            cp_cmd = cp_cmd % (
+                addresses[1],
+                params["file_transfer_port"],
+                src_file,
+                dst_file,
+            )
             sessions[0].cmd_output(cp_cmd)
         else:
-            remote.scp_between_remotes(addresses[0], addresses[1],
-                                       shell_port, password, password,
-                                       username, username, src_file, dst_file)
+            remote.scp_between_remotes(
+                addresses[0],
+                addresses[1],
+                shell_port,
+                password,
+                password,
+                username,
+                username,
+                src_file,
+                dst_file,
+            )
 
-        error_context.context("Check the src and dst file is same",
-                              test.log.info)
+        error_context.context("Check the src and dst file is same", test.log.info)
         src_md5 = sessions[0].cmd_output(md5_check % src_file).split()[0]
         dst_md5 = sessions[1].cmd_output(md5_check % dst_file).split()[0]
 

@@ -1,58 +1,61 @@
 import ast
 
-from provider.block_dirty_bitmap import block_dirty_bitmap_disable
-from provider.block_dirty_bitmap import debug_block_dirty_bitmap_sha256
-from provider.block_dirty_bitmap import get_bitmap_by_name
+from provider.block_dirty_bitmap import (
+    block_dirty_bitmap_disable,
+    debug_block_dirty_bitmap_sha256,
+    get_bitmap_by_name,
+)
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 
 
 class BlockdevIncbkMigrateNoBitmap(BlockdevLiveBackupBaseTest):
-
     def __init__(self, test, params, env):
         super(BlockdevIncbkMigrateNoBitmap, self).__init__(test, params, env)
-        self._bitmap_debugged = self.params.get_boolean('bitmap_debugged')
+        self._bitmap_debugged = self.params.get_boolean("bitmap_debugged")
         self._bitmap_sha256 = None
 
     def migrate_vm(self):
         capabilities = ast.literal_eval(self.params["migrate_capabilities"])
-        self.main_vm.migrate(self.params.get_numeric('mig_timeout'),
-                             self.params["migration_protocol"],
-                             migrate_capabilities=capabilities,
-                             env=self.env)
+        self.main_vm.migrate(
+            self.params.get_numeric("mig_timeout"),
+            self.params["migration_protocol"],
+            migrate_capabilities=capabilities,
+            env=self.env,
+        )
 
     def check_bitmap_after_migration(self):
-        bitmap = get_bitmap_by_name(self.main_vm, self._source_nodes[0],
-                                    self._bitmaps[0])
+        bitmap = get_bitmap_by_name(
+            self.main_vm, self._source_nodes[0], self._bitmaps[0]
+        )
         if self._bitmap_debugged:
             if bitmap is None:
-                self.test.fail('No persistent bitmap was found '
-                               'after migration')
-            if bitmap.get('recording') is not False:
-                self.test.fail('Persistent bitmap was not disabled '
-                               'after migration')
-            v = debug_block_dirty_bitmap_sha256(self.main_vm,
-                                                self._source_nodes[0],
-                                                self._bitmaps[0])
+                self.test.fail("No persistent bitmap was found " "after migration")
+            if bitmap.get("recording") is not False:
+                self.test.fail("Persistent bitmap was not disabled " "after migration")
+            v = debug_block_dirty_bitmap_sha256(
+                self.main_vm, self._source_nodes[0], self._bitmaps[0]
+            )
             if self._bitmap_sha256 != v:
-                self.test.fail('Persistent bitmap sha256 changed '
-                               'after migration')
+                self.test.fail("Persistent bitmap sha256 changed " "after migration")
         else:
             if bitmap is not None:
-                self.test.fail('Got non-persistent bitmap unexpectedly '
-                               'after migration')
+                self.test.fail(
+                    "Got non-persistent bitmap unexpectedly " "after migration"
+                )
 
     def get_bitmap_sha256(self):
         if self._bitmap_debugged:
-            v = debug_block_dirty_bitmap_sha256(self.main_vm,
-                                                self._source_nodes[0],
-                                                self._bitmaps[0])
+            v = debug_block_dirty_bitmap_sha256(
+                self.main_vm, self._source_nodes[0], self._bitmaps[0]
+            )
             if v is None:
-                self.test.fail('Failed to get persistent bitmap sha256')
+                self.test.fail("Failed to get persistent bitmap sha256")
             self._bitmap_sha256 = v
 
     def disable_bitmap(self):
-        block_dirty_bitmap_disable(self.main_vm, self._source_nodes[0],
-                                   self._bitmaps[0])
+        block_dirty_bitmap_disable(
+            self.main_vm, self._source_nodes[0], self._bitmaps[0]
+        )
 
     def do_test(self):
         self.do_full_backup()

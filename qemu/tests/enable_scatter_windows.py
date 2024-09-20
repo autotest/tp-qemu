@@ -1,9 +1,6 @@
 import time
 
-from virttest import utils_test
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_misc
+from virttest import error_context, utils_misc, utils_net, utils_test
 from virttest.utils_windows import virtio_win
 
 
@@ -26,6 +23,7 @@ def run(test, params, env):
     param params: the test params
     param env: test environment
     """
+
     def _is_process_finished(session, process_name):
         """
         Check whether the target process is finished running
@@ -50,14 +48,18 @@ def run(test, params, env):
         guest_ip = vm.get_address()
         try:
             run_wireshark_cmd = run_wireshark_temp % (host_ip, guest_ip)
-            status, output = session_serial.cmd_status_output(run_wireshark_cmd,
-                                                              timeout=timeout)
+            status, output = session_serial.cmd_status_output(
+                run_wireshark_cmd, timeout=timeout
+            )
 
             if status:
-                test.error("Failed to start wireshark session, "
-                           "status=%s, output=%s" % (status, output))
+                test.error(
+                    "Failed to start wireshark session, "
+                    "status=%s, output=%s" % (status, output)
+                )
             is_started = utils_misc.wait_for(
-                lambda: not _is_process_finished(session_serial, "tshark.exe"), 20, 5, 1)
+                lambda: not _is_process_finished(session_serial, "tshark.exe"), 20, 5, 1
+            )
             if not is_started:
                 test.error("Timeout when wait for wireshark start")
         finally:
@@ -68,11 +70,11 @@ def run(test, params, env):
         Stop the running wireshark session
         """
         error_context.context("Stop wireshark", test.log.info)
-        status, output = session.cmd_status_output(stop_wireshark_cmd,
-                                                   timeout=timeout)
+        status, output = session.cmd_status_output(stop_wireshark_cmd, timeout=timeout)
         if status:
-            test.error("Failed to stop wireshark: status=%s, output=%s"
-                       % (status, output))
+            test.error(
+                "Failed to stop wireshark: status=%s, output=%s" % (status, output)
+            )
 
     def _parse_log_file(packet_filter):
         """
@@ -83,11 +85,12 @@ def run(test, params, env):
         """
         error_context.context("Parse wireshark log file", test.log.info)
         parse_log_cmd = parse_log_temp % packet_filter
-        status, output = session.cmd_status_output(
-            parse_log_cmd, timeout=timeout)
+        status, output = session.cmd_status_output(parse_log_cmd, timeout=timeout)
         if status:
-            test.error("Failed to parse session log file,"
-                       " status=%s, output=%s" % (status, output))
+            test.error(
+                "Failed to parse session log file,"
+                " status=%s, output=%s" % (status, output)
+            )
         return output
 
     def _get_traffic_log(packet_filter):
@@ -122,8 +125,8 @@ def run(test, params, env):
         """
         query_version_cmd = params["query_version_cmd"]
         output = session.cmd_output(query_version_cmd)
-        version_str = output.strip().split('=')[1]
-        version = version_str.split('.')[-1][0:3]
+        version_str = output.strip().split("=")[1]
+        version = version_str.split(".")[-1][0:3]
         return int(version)
 
     timeout = params.get("timeout", 360)
@@ -142,14 +145,14 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=timeout)
     # make sure to enter desktop
-    vm.send_key('meta_l-d')
+    vm.send_key("meta_l-d")
     time.sleep(30)
-    error_context.context("Check if the driver is installed and "
-                          "verified", test.log.info)
-    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test,
-                                                            driver_verifier,
-                                                            timeout)
+    error_context.context(
+        "Check if the driver is installed and " "verified", test.log.info
+    )
+    session = utils_test.qemu.windrv_check_running_verifier(
+        session, vm, test, driver_verifier, timeout
+    )
 
     if _get_driver_version(session) > 189:
         param_names.append("*JumboPacket")
@@ -158,18 +161,16 @@ def run(test, params, env):
 
     error_context.context("Install winpcap", test.log.info)
     install_winpcap_cmd = params.get("install_winpcap_cmd")
-    install_winpcap_cmd = utils_misc.set_winutils_letter(
-         session, install_winpcap_cmd)
-    status, output = session.cmd_status_output(install_winpcap_cmd,
-                                               timeout=timeout)
+    install_winpcap_cmd = utils_misc.set_winutils_letter(session, install_winpcap_cmd)
+    status, output = session.cmd_status_output(install_winpcap_cmd, timeout=timeout)
     if status:
-        test.error("Failed to install pcap, status=%s, output=%s"
-                   % (status, output))
+        test.error("Failed to install pcap, status=%s, output=%s" % (status, output))
 
     test.log.info("Wait for pcap installation to complete")
     autoit_name = params.get("autoit_name")
     utils_misc.wait_for(
-         lambda: _is_process_finished(session, autoit_name), timeout, 20, 3)
+        lambda: _is_process_finished(session, autoit_name), timeout, 20, 3
+    )
 
     error_context.context("Check if wireshark is installed", test.log.info)
     check_installed_cmd = params.get("check_installed_cmd")
@@ -178,15 +179,19 @@ def run(test, params, env):
         error_context.context("Install wireshark", test.log.info)
         install_wireshark_cmd = params.get("install_wireshark_cmd")
         install_wireshark_cmd = utils_misc.set_winutils_letter(
-            session, install_wireshark_cmd)
-        status, output = session.cmd_status_output(install_wireshark_cmd,
-                                                   timeout=timeout)
+            session, install_wireshark_cmd
+        )
+        status, output = session.cmd_status_output(
+            install_wireshark_cmd, timeout=timeout
+        )
         if status:
-            test.error("Failed to install wireshark, status=%s, output=%s"
-                       % (status, output))
+            test.error(
+                "Failed to install wireshark, status=%s, output=%s" % (status, output)
+            )
         test.log.info("Wait for wireshark installation to complete")
         utils_misc.wait_for(
-            lambda: _is_process_finished(session, wireshark_name), timeout, 20, 3)
+            lambda: _is_process_finished(session, wireshark_name), timeout, 20, 3
+        )
     else:
         test.log.info("Wireshark is already installed")
     session.close()
@@ -197,7 +202,8 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=timeout)
     error_context.context(
-        "Log network traffic with scatter gather enabled", test.log.info)
+        "Log network traffic with scatter gather enabled", test.log.info
+    )
     output = _get_traffic_log("frame.len>1514")
     test.log.info("Check length > 1514 packets")
     if "Len" not in output:
@@ -210,7 +216,8 @@ def run(test, params, env):
 
     session = vm.wait_for_login(timeout=timeout)
     error_context.context(
-        "Log network traffic with scatter gather disabled", test.log.info)
+        "Log network traffic with scatter gather disabled", test.log.info
+    )
     test.log.info("Check length > 1014 packets")
     output = _get_traffic_log("frame.len>1014")
     if "Len" in output:

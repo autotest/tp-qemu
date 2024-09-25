@@ -1,6 +1,5 @@
 import re
 
-from aexpect.exceptions import ShellTimeoutError
 from virttest import env_process, error_context, utils_misc, virt_vm
 
 
@@ -34,23 +33,22 @@ def run(test, params, env):
     if not max_bytes and not period:
         test.error("Please specify the expected max-bytes and/or period.")
     if not max_bytes or not period:
-        if max_bytes != "0":
-            error_info = params["expected_error_info"]
-            try:
-                env_process.process(
-                    test,
-                    params,
-                    env,
-                    env_process.preprocess_image,
-                    env_process.preprocess_vm,
+        error_info = params["expected_error_info"]
+        try:
+            env_process.process(
+                test,
+                params,
+                env,
+                env_process.preprocess_image,
+                env_process.preprocess_vm,
+            )
+        except virt_vm.VMCreateError as e:
+            if error_info not in e.output:
+                test.fail(
+                    "Expected error info '%s' is not reported, "
+                    "output: %s" % (error_info, e.output)
                 )
-            except virt_vm.VMCreateError as e:
-                if error_info not in e.output:
-                    test.fail(
-                        "Expected error info '%s' is not reported, "
-                        "output: %s" % (error_info, e.output)
-                    )
-            return
+        return
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -68,25 +66,17 @@ def run(test, params, env):
             if status:
                 test.error(output)
 
-    if max_bytes == "0":
-        try:
-            s, o = session.cmd_status_output(read_rng_cmd, timeout=read_rng_timeout)
-        except ShellTimeoutError:
-            pass
-        else:
-            test.fail("Unexpected dd result, status: %s, output: %s" % (s, o))
-    else:
-        s, o = session.cmd_status_output(read_rng_cmd, timeout=read_rng_timeout)
-        if s:
-            test.error(o)
-        test.log.info(o)
-        data_rate = re.search(r"\s(\d+\.\d+) kB/s", o, re.M)
-        expected_data_rate = float(params["expected_data_rate"])
-        if float(data_rate.group(1)) > expected_data_rate * 1.1:
-            test.error(
-                "Read data rate is not as expected. "
-                "data rate: %s kB/s, max-bytes: %s, period: %s"
-                % (data_rate.group(1), max_bytes, period)
-            )
+    s, o = session.cmd_status_output(read_rng_cmd, timeout=read_rng_timeout)
+    if s:
+        test.error(o)
+    test.log.info(o)
+    data_rate = re.search(r"\s(\d+\.\d+) kB/s", o, re.M)
+    expected_data_rate = float(params["expected_data_rate"])
+    if float(data_rate.group(1)) > expected_data_rate * 1.1:
+        test.error(
+            "Read data rate is not as expected. "
+            "data rate: %s kB/s, max-bytes: %s, period: %s"
+            % (data_rate.group(1), max_bytes, period)
+        )
 
     session.close()

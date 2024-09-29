@@ -103,6 +103,8 @@ def run(test, params, env):
         upgrade_test.post_upgrade_restore(test)
         # post checking
         upgrade_test.post_upgrade_check(test, post_release)
+        # check virtiofsd's version
+        upgrade_test.check_version_virtiofsd(test)
         post_rhel_ver = upgrade_test.run_guest_cmd(check_rhel_ver)
         vm.verify_kernel_crash()
         if params.get("device_cio_free_check_cmd"):

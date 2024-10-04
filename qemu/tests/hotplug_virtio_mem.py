@@ -1,3 +1,4 @@
+import re
 import time
 
 from virttest import utils_qemu
@@ -33,9 +34,9 @@ def run(test, params, env):
 
     timeout = params.get_numeric("login_timeout", 240)
     threshold = params.get_numeric("threshold", target_type=float)
-    error_msg = params.get("error_msg")
     qemu_path = utils_misc.get_qemu_binary(params)
     qemu_version = utils_qemu.get_qemu_version(qemu_path)[0]
+    error_msg = params.get("error_msg")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
@@ -67,11 +68,11 @@ def run(test, params, env):
         virtio_mem_utils.check_numa_plugged_mem(
             node_id, requested_size, threshold, vm, test
         )
-    if qemu_version in VersionInterval('[8.1.0,)'):
+    if qemu_version in VersionInterval("[8.1.0,)"):
         try:
             hotplug_test.unplug_memory(vm, target_mem)
         except QMPCmdError as e:
-            if error_msg not in str(e.data):
+            if not re.search(error_msg, str(e.data)):
                 test.fail("Unexpected error message: %s" % str(e.data))
             test.log.info(error_msg)
         else:

@@ -130,6 +130,10 @@ class IpuTest(object):
             error_info = self.params.get("error_info")
             if re.search(error_info, output):
                 pass
+            #rmmod unsupported modules since it's not supported on RHEL9
+            post_release = self.params.get("post_release")
+            if post_release == "release 9":
+                self.session.cmd(self.params.get("rmmod_module"))
         except Exception as error:
             test.fail("Failed to fix issues in advance: %s" % str(error))
 

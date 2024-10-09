@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+import sys
 
 from aexpect.client import Expect
 
@@ -29,7 +30,7 @@ class ExecutorTimeoutError(Exception):
 
 class PlaybookExecutor(Expect):
     def __init__(self, inventory, site_yml, remote_user=None, extra_vars=None,
-                 callback_plugin=None, addl_opts=None):
+                 callback_plugin=None, connection_plugin=None, addl_opts=None):
         """
         The wrapper of Ansible-playbook.
 
@@ -38,6 +39,7 @@ class PlaybookExecutor(Expect):
         :param remote_user: Connect as this user.
         :param extra_vars: Set additional variables.
         :param callback_plugin: The plugin of the main manager of console output.
+        :param connection_plugin: Connection plugin to connect to target hosts
         :param addl_opts: Other ansible-playbook common options.
         """
         self.program = path.find_command('ansible-playbook')
@@ -45,6 +47,7 @@ class PlaybookExecutor(Expect):
         self.site_yml = site_yml
         self.remote_user = remote_user
         self.callback_plugin = callback_plugin
+        self.connection_plugin = connection_plugin
         super(PlaybookExecutor, self).__init__(self._generate_cmd(extra_vars,
                                                                   addl_opts))
         LOG_JOB.info("Command of ansible playbook: '%s'", self.command)
@@ -57,13 +60,15 @@ class PlaybookExecutor(Expect):
         :param addl_opts: Other ansible-playbook common options.
         :return: The generated ansible-playbook command line.
         """
-        playbook_cmd_options = []
+        playbook_cmd_options = ["ANSIBLE_HOST_KEY_CHECKING=false"]
         if self.callback_plugin:
-            playbook_cmd_options = [
-                'ANSIBLE_STDOUT_CALLBACK={}'.format(self.callback_plugin)]
+            playbook_cmd_options.append(
+                'ANSIBLE_STDOUT_CALLBACK={}'.format(self.callback_plugin))
         playbook_cmd_options.extend([self.program,
                                      self.site_yml,
                                      '-i {}'.format(self.inventory)])
+        not self.connection_plugin or playbook_cmd_options.append(
+            '-c {}'.format(self.connection_plugin))
         not self.remote_user or playbook_cmd_options.append(
             '-u {}'.format(self.remote_user))
         not extra_vars or playbook_cmd_options.append(
@@ -119,33 +124,26 @@ def check_ansible_playbook(params):
     :param params: Dictionary with the test parameters.
     :return: True if full ansible version is installed, else False.
     """
-
-    def _pip_binary():
-        """
-        Define pip binary
-        """
-        for binary in ['pip', 'pip3', 'pip2']:
-            if process.system("which %s" % binary, ignore_status=True) == 0:
-                return binary
-        LOG_JOB.error("Failed to get available pip binary")
-        return False
-
-    def python_install():
+    def python_install(packages=None):
         """
         Install python ansible.
         """
-        install_cmd = '%s install ansible' % pip_bin    # pylint: disable=E0606
+        if packages is None:
+            packages = ["ansible"]
+        install_cmd = f"{sys.executable} -m pip install {' '.join(packages)}"
         status, output = process.getstatusoutput(install_cmd, verbose=True)
         if status != 0:
-            LOG_JOB.error("Install python ansible failed as: %s", output)
+            LOG_JOB.error("Install python packages failed as: %s", output)
             return False
         return True
 
-    def distro_install(packages="ansible"):
+    def distro_install(packages=None):
         """
         Install ansible from the distro
         """
         # Provide custom dnf repo containing ansible
+        if packages is None:
+            packages = ["ansible"]
         if params.get("ansible_repo"):
             repo_options = {
                 "priority": "1",
@@ -174,15 +172,10 @@ def check_ansible_playbook(params):
         if ansible_install_policy not in policy_map:
             LOG_JOB.error(f"No valid install policy: {ansible_install_policy}.")
             return False
-    package_list = params.get_list("package_list", 'sshpass')
     try:
         check_cmd = params.get("ansible_check_cmd")
         if ansible_install_policy == 'python_install':
-            global pip_bin
-            pip_bin = _pip_binary()
-            check_cmd = rf"{pip_bin} freeze | grep -v ansible-core | grep -q ansible="
-        elif ansible_install_policy == 'distro_install':
-            package_list.insert(0, 'ansible')
+            check_cmd = rf"{sys.executable} -m pip freeze | grep -q ^ansible=="
         if check_cmd:
             LOG_JOB.debug(f"Is full ansible version installed: '{check_cmd}'")
             process.run(check_cmd, verbose=False, shell=True)
@@ -196,8 +189,10 @@ def check_ansible_playbook(params):
         if not policy_map[ansible_install_policy]():
             return False
     # Install ansible depended packages that can't be installed
-    # by pip (or are not a dependency) when installing ansible
-    if not policy_map['distro_install'](package_list):
-        return False
+    # automatically when installing ansible
+    package_dict = params.get_dict("package_dict", delimiter=",")
+    for policy, pkg_list in package_dict.items():
+        if not policy_map[f'{policy}_install'](pkg_list.split()):
+            return False
     # If ansible and dependents packages are installed correctly
     return True

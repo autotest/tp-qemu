@@ -76,8 +76,8 @@ def run(test, params, env):
     guest_passwd = params["password"]
     step_time = params.get_numeric("step_time", 60)
     ansible_callback_plugin = params.get("ansible_callback_plugin")
+    ansible_connection_plugin = params.get("ansible_connection_plugin")
     ansible_addl_opts = params.get("ansible_addl_opts", "")
-    ansible_ssh_extra_args = params["ansible_ssh_extra_args"]
     ansible_extra_vars = params.get("ansible_extra_vars", "{}")
     playbook_repo = params["playbook_repo"]
     playbook_timeout = params.get_numeric("playbook_timeout")
@@ -97,8 +97,7 @@ def run(test, params, env):
 
     error_context.base_context("Generate playbook related options.",
                                test.log.info)
-    extra_vars = {"ansible_ssh_extra_args": ansible_ssh_extra_args,
-                  "ansible_ssh_pass": guest_passwd,
+    extra_vars = {"ansible_ssh_pass": guest_passwd,
                   "mq_port": mq_listen_port,
                   "test_harness_log_dir": test_harness_log_dir}
     extra_vars.update(json.loads(ansible_extra_vars))
@@ -110,6 +109,7 @@ def run(test, params, env):
         remote_user=guest_user,
         extra_vars=json.dumps(extra_vars),
         callback_plugin=ansible_callback_plugin,
+        connection_plugin=ansible_connection_plugin,
         addl_opts=ansible_addl_opts
     )
 

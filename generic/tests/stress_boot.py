@@ -1,6 +1,7 @@
 from virttest import env_process
 from virttest import error_context
 from avocado.utils import process
+import math
 
 
 @error_context.context_aware
@@ -22,13 +23,21 @@ def run(test, params, env):
 
     host_cpu_cnt_cmd = params.get("host_cpu_cnt_cmd")
     host_cpu_num = int(process.getoutput(host_cpu_cnt_cmd).strip())
+    if host_cpu_num <= int(params.get("max_vms")):
+        test.cancel("No enough physical cpus to pin all guests")
     vm_cpu_num = host_cpu_num // int(params.get("max_vms"))
+    if vm_cpu_num == 1:
+        params["vcpu_sockets"] = 1
+        params["vcpu_threads"] = 1
+        params["vcpu_cores"] = 1
+    else:
+        vm_cpu_num = int(math.floor(float(vm_cpu_num) / 2) * 2)
 
     host_mem_size_cmd = params.get("host_mem_size_cmd")
     host_mem_size = int(process.getoutput(host_mem_size_cmd).strip())
     vm_mem_size = host_mem_size // int(params.get("max_vms"))
 
-    params["smp"] = params["vcpu_maxcpus"] = vm_cpu_num
+    params["vcpu_maxcpus"] = vm_cpu_num
     params["mem"] = vm_mem_size
 
     params["start_vm"] = "yes"

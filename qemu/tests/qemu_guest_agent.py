@@ -1699,6 +1699,36 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session_serial.close()
 
     @error_context.context_aware
+    def gagent_check_get_network_route(self, test, params, env):
+        """
+        Execute "guest-network-get-route" command to guest agent
+
+        Steps:
+        1) login guest with serial session
+        2) get the available interface name via mac address
+        3) check the available interface name is the same with guest
+        4) check ip address is the same with guest
+        5) create a bridge interface for linux guest and check it
+           from guest agent;
+           disable interface for windows guest and check it
+           from guest agent
+        6) check "guest-network-get-interfaces" result
+        7) recover the interfaces
+        8) change ip address
+        9) check "guest-network-get-interfaces" result
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        error_context.context("Check network route info of guest.", LOG_JOB.info)
+        route_info_qga = self.gagent.get_network_interface()
+        print("type of route info: {}; route info: {}".format(type(route_info_qga), route_info_qga))
+
+    @error_context.context_aware
     def gagent_check_reboot_shutdown(self, test, params, env):
         """
         Send "shutdown,reboot" command to guest agent

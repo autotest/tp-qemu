@@ -137,7 +137,7 @@ def dump_windbg_check(test, params, session):
         test.error("Cannot generate dump analyze log.")
     chk_id_cmd = params["chk_id_cmd"] % log_file
     if utils_misc.wait_for(lambda: not session.cmd_status(chk_id_cmd),
-                           timeout=60, step=5):
+                           timeout=600, step=20):
         LOG_JOB.info("Check dump file passed")
     else:
         output = session.cmd_output("type %s" % log_file)

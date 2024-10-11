@@ -123,6 +123,14 @@ def run(test, params, env):
     session_srl = vm.wait_for_serial_login(
         timeout=int(params.get("login_timeout", 360))
     )
+    nics_num_checking_cmd = params.get("nics_num_checking_cmd")
+    utils_misc.wait_for(
+        lambda: int(session.cmd_output(nics_num_checking_cmd, timeout=360)) == nics_num,
+        timeout=600,
+        first=0,
+        step=30,
+        text="waiting for all nics to get ip",
+    )
     if not utils_misc.wait_for(_check_ip_number, 1000, step=10):
         test.error("Timeout when wait for nics to get ip")
 

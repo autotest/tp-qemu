@@ -47,13 +47,13 @@ def run(test, params, env):
         pre_release = params.get("pre_release")
         release_chk = params.get("release_check")
         if pre_release not in upgrade_test.run_guest_cmd(release_chk):
-            test.cancel("your image is not for rhel 8 product, please check")
+            test.cancel("your image is not for rhel %s, please check"
+                        % pre_release)
         post_release = params.get("post_release")
         # create an assistant user
         upgrade_test.create_ipuser(test)
         # prepare ipu test env and execute leapp tool
         if not params.get_boolean("com_install"):
-            upgrade_test.run_guest_cmd(params.get("repo_leapp"))
             upgrade_test.run_guest_cmd(params.get("com_ins_leapp"))
             upgrade_test.run_guest_cmd(params.get("prepare_env"))
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))
@@ -66,7 +66,10 @@ def run(test, params, env):
             # this parameter should contain the repo files,
             # by which you can upgrade old system to the newer version
             # before you really do in place upgade
-            old_custom_repo = params.get("old_custom_internal_repo")
+            if pre_release == "release 9":
+                old_custom_repo = params.get("old_custom_internal_repo_9")
+            else:
+                old_custom_repo = params.get("old_custom_internal_repo")
             if params.get_boolean("com_install"):
                 upgrade_test.run_guest_cmd(params.get("com_ins_leapp"))
                 upgrade_test.run_guest_cmd(params.get("prepare_env"))

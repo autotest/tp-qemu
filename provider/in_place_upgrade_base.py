@@ -176,3 +176,25 @@ class IpuTest(object):
                 test.fail("Failed to restart sshd: %s" % o)
         except Exception as error:
             test.fail("Failed to restore permit: %s" % str(error))
+
+    def check_version_virtiofsd(self, test):
+        """
+        Check virtiofsd's version
+        """
+        try:
+            virtiofsd = self.params.get("chk_virtiofsd")
+            status, actual_fsd = self.session.cmd_status_output(virtiofsd)
+            post_release = self.params.get("post_release")
+            if post_release == "release 10":
+                expected_fsd = "el10"
+            elif post_release == "release 9":
+                expected_fsd = "el9"
+            else:
+                #  No virtiofsd on rhel7 so skip test from rhel7 to rhel8
+                expected_fsd = "el8"
+            if not re.search(expected_fsd, actual_fsd):
+                test.fail("Actual result: %s, expected result: %s"
+                          % (actual_fsd, expected_fsd))
+        except Exception as error:
+            test.fail("virtiofsd's version is not expected : %s"
+                      % str(error))

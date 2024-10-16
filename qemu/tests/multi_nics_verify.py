@@ -1,4 +1,5 @@
 import os
+import time
 
 from virttest import error_context
 from virttest import utils_net
@@ -116,6 +117,12 @@ def run(test, params, env):
 
     # Check all the interfaces in guest get ips
     session_srl = vm.wait_for_serial_login(timeout=int(params.get("login_timeout", 360)))
+    nics_num_checking_cmd = params.get("nics_num_checking_cmd")
+    while True:
+        status, nics_num_checking_cmd_out = session.cmd_status_output(nics_num_checking_cmd, timeout=360)
+        if int(nics_num_checking_cmd_out) == nics_num:
+            break
+        time.sleep(30)
     if not utils_misc.wait_for(_check_ip_number, 1000, step=10):
         test.error("Timeout when wait for nics to get ip")
 

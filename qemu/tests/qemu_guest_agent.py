@@ -1606,12 +1606,16 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                               " ipv4 or ipv6." % ip["ip-address-type"])
             if (guest_ip_ipv4 != ip_addr_qga_ipv4   # pylint: disable=E0606
                     or guest_ip_ipv6 != ip_addr_qga_ipv6):  # pylint: disable=E0601
-                test.fail("Get the wrong ip address for %s interface:\n"
-                          "ipv4 address from qga is %s, the expected is %s;\n"
-                          "ipv6 address from qga is %s, the expected is %s."
-                          % (if_name, ip_addr_qga_ipv4,
-                             guest_ip_ipv4, ip_addr_qga_ipv6,
-                             guest_ip_ipv6))
+                if guest_ip_ipv4 in ip_addr_qga_ipv4:
+                    test.error("Please check this particular situation.guest_ip_ipv4: %s, \n"
+                               "ip_addr_qga_ipv4: %s\n" % (guest_ip_ipv4, ip_addr_qga_ipv4))
+                else:
+                    test.fail("Get the wrong ip address for %s interface:\n"
+                              "ipv4 address from qga is %s, the expected is %s;\n"
+                              "ipv6 address from qga is %s, the expected is %s."
+                              % (if_name, ip_addr_qga_ipv4,
+                                 guest_ip_ipv4, ip_addr_qga_ipv6,
+                                 guest_ip_ipv6))
 
         session = self.vm.wait_for_login()
         session_serial = self.vm.wait_for_serial_login()

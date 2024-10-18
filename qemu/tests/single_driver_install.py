@@ -5,6 +5,7 @@ from aexpect import ShellTimeoutError
 
 from virttest import error_context
 from virttest import utils_misc
+from virttest import utils_net
 from virttest.utils_windows import virtio_win, wmic
 from virttest.utils_test.qemu import windrv_verify_running
 
@@ -144,7 +145,8 @@ def run(test, params, env):
             vm.destroy()
             vm.create()
             vm = env.get_vm(params["main_vm"])
-            session = vm.wait_for_login()
+            # This is a workaround for session logout issue
+            session = vm.wait_for_serial_login()
         else:
             session = vm.reboot(session)
 
@@ -172,6 +174,15 @@ def run(test, params, env):
         if not utils_misc.wait_for(lambda: not session.cmd_status(chk_cmd),
                                    600, 60, 10):
             test.fail("Failed to install driver '%s'" % driver_name)
+        if "Red Hat VirtIO Ethernet Adapter" in device_name:
+            ext_host = utils_net.get_ip_address_by_interface(ifname="%s" % params.get("netdst"))
+            test.log.info("ext_host of netkvm adapter is %s" % ext_host)
+            guest_ip = vm.get_address("nic2")
+            test.log.info("guest_ip of netkvm adapter is %s" % guest_ip)
+            status, output = utils_net.ping(
+                ext_host, interface=guest_ip, count=10, timeout=60, session=session)
+            if status:
+                test.fail("Ping %s failed, output=%s" % (ext_host, output))
 
         installed_any |= True
     if not installed_any:

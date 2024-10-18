@@ -53,7 +53,6 @@ def run(test, params, env):
         upgrade_test.create_ipuser(test)
         # prepare ipu test env and execute leapp tool
         if not params.get_boolean("com_install"):
-            upgrade_test.run_guest_cmd(params.get("repo_leapp"))
             upgrade_test.run_guest_cmd(params.get("com_ins_leapp"))
             upgrade_test.run_guest_cmd(params.get("prepare_env"))
             upgrade_test.run_guest_cmd(params.get("get_answer_files_source"))

@@ -23,6 +23,12 @@ def run(test, params, env):
     unit_tests_mapping = params["unit_tests_mapping"]
     skip_tests = params.get("skip_tests", "").split()
     cpu_flags = params["cpu_model_flags"]
+    # Add a workaround here, remove the lm=off,pae=on flags,
+    # since they will block this case tests.
+    flags_items = cpu_flags.split(",")
+    remove_items = ["lm=off", "pae=on"]
+    filtered_list = [item for item in flags_items if item not in remove_items]
+    cpu_flags = ",".join(filtered_list)
     cpu_model = cpu.get_qemu_best_cpu_model(params)
     cpu_param = cpu_model + cpu_flags
 

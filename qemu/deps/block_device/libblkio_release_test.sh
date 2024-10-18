@@ -31,7 +31,9 @@ rpm -ivh ${libblkio_package} || tests_failed "Install source rpm failed"
 
 
 mkdir source;cd source
-tar xvf ~/rpmbuild/SOURCES/libblkio-v[0-9]*.bz2 || tests_failed "Untar source rpm failed"
+for p in `ls ~/rpmbuild/SOURCES/libblkio-v[0-9]*.bz2`;do
+tar xvf $p || tests_failed "Untar source rpm failed"
+done
 cd `ls -d libblkio*` ||  tests_failed "Can not find  source folder"
 
 

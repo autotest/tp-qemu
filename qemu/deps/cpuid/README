@@ -19,7 +19,7 @@ e.g New cpu_model: Haswell
     Make sure the host cpu model is "Haswell" or advance than "Haswell"
     and support rhel7.0 machine type
 2). Add cpu_model
-    Add cpu model Haswell to file cpuid/cpuid_dumps/scripts/dump-cpus-from-qemu 
+    Add cpu model Haswell to file cpuid/cpuid_dumps/scripts/dump-cpus-from-qemu
 3). Add machine_tpye
     Add machine type rhel7.0 to file cpuid/cpuid_dumps/scripts/dump-cpus-from-qemu
     and to file cpuid/cpuid_dumps/scripts/machines-versions

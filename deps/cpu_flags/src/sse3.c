@@ -31,4 +31,3 @@ int sse3(){
 	return 0;
 }
 #endif
-

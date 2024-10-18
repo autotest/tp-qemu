@@ -63,7 +63,7 @@
            file:
              path: '{{kar_local}}'
              state: absent
-         - name: Clean env when bootstrap failed 
+         - name: Clean env when bootstrap failed
            pip:
              name: aexpect, avocado-framework, avocado-framework-plugin-vt, avocado-framework-plugin-result-html
              state: absent
@@ -121,5 +121,5 @@
     - name: Handle cancelled test cases
       fail:
         msg: "Test failed! There are unexpected cancelled test cases."
-      when: 
-        - results_json.cancel != 0 and not acc_cancel|bool 
+      when:
+        - results_json.cancel != 0 and not acc_cancel|bool

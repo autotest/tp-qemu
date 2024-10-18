@@ -2,6 +2,7 @@ import re
 import time
 
 from virttest import error_context
+from provider import win_driver_utils
 
 from provider.win_driver_installer_test import (
     check_gagent_version,
@@ -100,6 +101,10 @@ def run(test, params, env):
         inf_name = re.findall(r"\.inf", output, re.I)
         if inf_name:
             uninstalled_device.append(device_name)
+            ver_list = win_driver_utils._pnpdrv_info(session, device_name,
+                                                     ["DriverVersion"])
+            test.log.info(" %s driver version is %s" % (device_name,
+                                                        ver_list))
     if uninstalled_device:
         test.fail("%s uninstall failed" % uninstalled_device)
     error_context.context("Check qemu-ga service.", test.log.info)

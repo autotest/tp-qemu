@@ -33,10 +33,10 @@ jobs:
           pip install -r requirements-ci.txt
       - name: Run inspekt
         if: ${{ matrix.python-version > 3.6 }}
-        run: inspekt checkall --disable-style E501,E265,W601,E402,E722,E741 --disable-lint=W,R,C,E0601,E1002,E1101,E1103,E1120,F0401,I0011,I1101 --enable-lint W0611,W1201 --no-license-check
+        run: inspekt checkall --disable-style E203,E501,E265,W601,E402,E722,E741 --disable-lint=W,R,C,E0601,E1002,E1101,E1103,E1120,F0401,I0011,I1101 --enable-lint W0611,W1201 --no-license-check
       - name: Run inspekt (py36)
         if: ${{ matrix.python-version == 3.6 }}
-        run: inspekt checkall --disable-style E501,E265,W601,E402,E722,E741 --disable-lint=W,R,C,E0012,E0601,E1002,E1101,E1103,E1120,F0401,I0011,I1101 --enable-lint W0611,W1201 --no-license-check
+        run: inspekt checkall --disable-style E203,E501,E265,W601,E402,E722,E741 --disable-lint=W,R,C,E0012,E0601,E1002,E1101,E1103,E1120,F0401,I0011,I1101 --enable-lint W0611,W1201 --no-license-check
       - run: echo "This job's status is ${{ job.status }}."
 
   commitlint:

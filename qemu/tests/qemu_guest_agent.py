@@ -3746,8 +3746,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         if black_list_spec == "allow-rpcs":
             black_list_change_cmd = (
                 "sed -i 's/%s.*/%s=guest-info\"/g' /etc/sysconfig/qemu-ga"
-                % (black_list_spec, black_list_spec_replace)
-            )  # pylint: disable=E0606
+                % (black_list_spec, black_list_spec_replace)  # pylint: disable=E0606
+            )
         else:
             black_list_change_cmd = (
                 "sed -i 's/%s.*/%s=guest-info/g' /etc/sysconfig/qemu-ga"

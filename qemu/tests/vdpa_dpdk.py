@@ -140,8 +140,8 @@ def run(test, params, env):
                     dpdk_tool_path,
                     queue,
                     pkts,
-                    mac if forward == "rxonly" else None,
-                )  # pylint: disable=E0606
+                    mac if forward == "rxonly" else None,  # pylint: disable=E0606
+                )
                 time.sleep(2)
                 mpps = "%.2f" % (float(pps) / (10**6))
                 line = "%s|" % format_result(pkts, base, fbase)

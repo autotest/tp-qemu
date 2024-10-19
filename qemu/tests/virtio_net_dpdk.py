@@ -296,9 +296,9 @@ def run(test, params, env):
             session,
             generator1,
             generator2,
-            mac,
-            port,
-            exec_file,  # pylint: disable=E0606
+            mac,  # pylint: disable=E0606
+            port,  # pylint: disable=E0606
+            exec_file,
             nic1_driver,
             nic2_driver,
             whitelist_option,

@@ -32,9 +32,11 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    def run_serial_data_transfer():
+    def run_bg_test(sender="both"):
         """
-        Transfer data via every virtserialport.
+        Set the operation of transferring data as background
+        :return: return the background case thread if it's successful;
+                 else raise error
         """
         for serial_port in serials:
             port_params = params.object_params(serial_port)
@@ -42,19 +44,14 @@ def run(test, params, env):
                 continue
             test.log.info("transfer data with port %s", serial_port)
             params['file_transfer_serial_port'] = serial_port
-            transfer_data(params, vm, sender='both')
-
-    def run_bg_test():
-        """
-        Set the operation of transferring data as background
-        :return: return the background case thread if it's successful;
-                 else raise error
-        """
-        stress_thread = utils_misc.InterruptedThread(run_serial_data_transfer)
-        stress_thread.start()
-        if not utils_misc.wait_for(lambda: driver_in_use.check_bg_running(
-                vm, params), check_bg_timeout, 0, 1):
-            test.fail("Backgroud test is not alive!")
+            stress_thread = utils_misc.InterruptedThread(transfer_data, (params, vm),
+                {"sender": sender})
+            stress_thread.daemon = True
+            stress_thread.start()
+            if not utils_misc.wait_for(lambda: driver_in_use.check_bg_running(
+                    vm, params), check_bg_timeout, 0, 1):
+                test.fail("Background test is not alive!")
+            time.sleep(5)
         return stress_thread
 
     vm = env.get_vm(params["main_vm"])

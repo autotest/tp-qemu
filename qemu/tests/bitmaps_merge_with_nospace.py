@@ -1,9 +1,8 @@
 from avocado.utils import process
-
 from virttest.data_dir import get_data_dir
 from virttest.lvm import EmulatedLVM
-from virttest.qemu_storage import QemuImg
 from virttest.qemu_io import QemuIOSystem
+from virttest.qemu_storage import QemuImg
 
 
 def run(test, params, env):
@@ -25,6 +24,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env:    Dictionary with test environment.
     """
+
     def _image_create(image_name):
         """Create an image."""
         img_param = params.object_params(image_name)
@@ -37,8 +37,7 @@ def run(test, params, env):
         try:
             QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
         except process.CmdError as err:
-            test.fail(
-                "qemu-io to '%s' failed: %s." % (img.image_filename, str(err)))
+            test.fail("qemu-io to '%s' failed: %s." % (img.image_filename, str(err)))
 
     def _clean_images(img_list):
         """Remove images from image_list."""
@@ -64,9 +63,13 @@ def run(test, params, env):
         top_image.commit(params.get("cache_mode"), base=base)
         base_image.bitmap_add(params.get("new_bitmap_base"))
         try:
-            base_image.bitmap_merge(params, get_data_dir(),
-                                    params["bitmap_name_top"],
-                                    params["new_bitmap_base"], top)
+            base_image.bitmap_merge(
+                params,
+                get_data_dir(),
+                params["bitmap_name_top"],
+                params["new_bitmap_base"],
+                top,
+            )
         except process.CmdError as err:
             err_msg = err.result.stderr.decode()
             err_msg_cfg = params.get("error_msg").split(",")

@@ -1,11 +1,9 @@
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 from qemu.tests import live_snapshot_basic
 
 
 class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
-
     def __init__(self, test, params, env, tag):
         super(LiveSnapshotRuntime, self).__init__(test, params, env, tag)
 
@@ -23,7 +21,7 @@ class LiveSnapshotRuntime(live_snapshot_basic.LiveSnapshot):
         start pre-action in new threads;
         do live snapshot during pre-action.
         """
-        tag = self.params.get("source_image", "image1")
+        self.params.get("source_image", "image1")
         for test in self.params.get("when_start").split():
             if hasattr(self, test):
                 fun = getattr(self, test)

@@ -1,12 +1,8 @@
-import os
 import math
+import os
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import data_dir
+from virttest import data_dir, error_context, utils_misc, utils_test
 from virttest.staging import utils_memory
 
 
@@ -72,43 +68,71 @@ def run(test, params, env):
     try:
         test_mem = float(params.get("mem")) * mem_ratio
         guest_stress_args = "-a -p -l %sM" % int(test_mem)
-        stress_path = os.path.join(data_dir.get_deps_dir('mem_mapping'), mem_map_tool)
+        stress_path = os.path.join(data_dir.get_deps_dir("mem_mapping"), mem_map_tool)
         test.log.info("Compile the mem_mapping tool")
-        cmd_cp_mmap_tool = cmd_cp_mmap_tool % (stress_path, tmp_directory, tmp_directory)
+        cmd_cp_mmap_tool = cmd_cp_mmap_tool % (
+            stress_path,
+            tmp_directory,
+            tmp_directory,
+        )
         process.run(cmd_cp_mmap_tool, shell=True)
         utils_memory.drop_caches()
         for test_round in range(test_count):
             cmd_mmap = params.get("cmd_mmap")
-            error_context.context("Executing stress test round: %s" % test_round, test.log.info)
+            error_context.context(
+                "Executing stress test round: %s" % test_round, test.log.info
+            )
             try:
-                error_context.context("Get the qemu process memory use status", test.log.info)
+                error_context.context(
+                    "Get the qemu process memory use status", test.log.info
+                )
                 most_used_node, memory_used = max_mem_map_node(host_numa_node, qemu_pid)
                 numa_node_malloc = most_used_node
-                mmap_size = math.floor(float(node_meminfo(numa_node_malloc, 'MemTotal')) * mem_ratio)
+                mmap_size = math.floor(
+                    float(node_meminfo(numa_node_malloc, "MemTotal")) * mem_ratio
+                )
                 cmd_mmap = cmd_mmap % (tmp_directory, numa_node_malloc, mmap_size)
-                error_context.context("Run mem_mapping on host node "
-                                      "%s." % numa_node_malloc, test.log.info)
+                error_context.context(
+                    "Run mem_mapping on host node " "%s." % numa_node_malloc,
+                    test.log.info,
+                )
                 process.system(cmd_mmap, shell=True, ignore_bg_processes=True)
                 error_context.context("Run memory heavy stress in guest", test.log.info)
                 try:
-                    guest_stress = utils_test.VMStress(vm, "mem_mapping", params,
-                                                       download_url=stress_path,
-                                                       stress_args=guest_stress_args)
+                    guest_stress = utils_test.VMStress(
+                        vm,
+                        "mem_mapping",
+                        params,
+                        download_url=stress_path,
+                        stress_args=guest_stress_args,
+                    )
                     guest_stress.load_stress_tool()
                 except utils_test.StressError as guest_info:
                     test.error(guest_info)
-                error_context.context("Get the qemu process memory use status", test.log.info)
+                error_context.context(
+                    "Get the qemu process memory use status", test.log.info
+                )
                 node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
                 if node_after == most_used_node and memory_after >= memory_used:
                     idle_nodes = node_list.copy()
                     idle_nodes.remove(numa_node_malloc)
-                    error_context.context("Run migratepages on host from node "
-                                          "%s to node %s." % (numa_node_malloc,
-                                                              idle_nodes[0]), test.log.info)
-                    migrate_pages = cmd_migrate_pages % (qemu_pid, numa_node_malloc, idle_nodes[0])
+                    error_context.context(
+                        "Run migratepages on host from node "
+                        "%s to node %s." % (numa_node_malloc, idle_nodes[0]),
+                        test.log.info,
+                    )
+                    migrate_pages = cmd_migrate_pages % (
+                        qemu_pid,
+                        numa_node_malloc,
+                        idle_nodes[0],
+                    )
                     process.system_output(migrate_pages, shell=True)
-                    error_context.context("Get the qemu process memory use status again", test.log.info)
-                    node_after, memory_after = max_mem_map_node(host_numa_node, qemu_pid)
+                    error_context.context(
+                        "Get the qemu process memory use status again", test.log.info
+                    )
+                    node_after, memory_after = max_mem_map_node(
+                        host_numa_node, qemu_pid
+                    )
                     if node_after == most_used_node and memory_after >= memory_used:
                         test.fail("Memory still stick in node %s" % numa_node_malloc)
             finally:

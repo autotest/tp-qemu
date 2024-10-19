@@ -1,11 +1,11 @@
 from __future__ import division
-import time
 
+import time
 from collections import Counter
-from virttest import error_context
-from virttest import utils_test
+
+from virttest import error_context, graphical_console, utils_test
+
 from provider import input_event_proxy
-from virttest import graphical_console
 
 
 def query_mice_status(vm, mice_name):
@@ -14,7 +14,7 @@ def query_mice_status(vm, mice_name):
     """
     events = vm.monitor.query_mice()
     for event in events:
-        if event['name'] == mice_name:
+        if event["name"] == mice_name:
             return event
 
 
@@ -30,11 +30,13 @@ def mouse_btn_test(test, params, console, listener, wait_time):
     :param listener: listening the mouse button event in guest.
     :param wait_time: wait event received in listener event queue.
     """
-    mouse_btn_map = {'left': 'BTN_LEFT',
-                     'right': 'BTN_RIGHT',
-                     'middle': 'BTN_MIDDLE',
-                     'side': 'BTN_SIDE',
-                     'extra': 'BTN_EXTRA'}
+    mouse_btn_map = {
+        "left": "BTN_LEFT",
+        "right": "BTN_RIGHT",
+        "middle": "BTN_MIDDLE",
+        "side": "BTN_SIDE",
+        "extra": "BTN_EXTRA",
+    }
     btns = params.objects("btns")
     for btn in btns:
         error_context.context("Click mouse %s button" % btn, test.log.info)
@@ -46,8 +48,7 @@ def mouse_btn_test(test, params, console, listener, wait_time):
         events_queue = listener.events
         btn_event = list()
 
-        error_context.context("Check correct button event is received",
-                              test.log.info)
+        error_context.context("Check correct button event is received", test.log.info)
         while not events_queue.empty():
             events = events_queue.get()
             # some windows os will return pointer move event first
@@ -57,9 +58,11 @@ def mouse_btn_test(test, params, console, listener, wait_time):
             btn_event.append((events["keyCode"], events["type"]))
 
         if btn_event != exp_events:
-            test.fail("Received btn events don't match expected events.\n"
-                      "Received btn events as: %s\n Expected events as: %s"
-                      % (btn_event, exp_events))
+            test.fail(
+                "Received btn events don't match expected events.\n"
+                "Received btn events as: %s\n Expected events as: %s"
+                % (btn_event, exp_events)
+            )
 
 
 @error_context.context_aware
@@ -76,7 +79,7 @@ def mouse_scroll_test(test, params, console, listener, wait_time, count=1):
     """
 
     scrolls = params.objects("scrolls")
-    exp_events = {'wheel-up': ("WHEELFORWARD", 0), 'wheel-down': ('WHEELBACKWARD', 0)}
+    exp_events = {"wheel-up": ("WHEELFORWARD", 0), "wheel-down": ("WHEELBACKWARD", 0)}
     for scroll in scrolls:
         error_context.context("Scroll mouse %s" % scroll, test.log.info)
         if "up" in scroll:
@@ -100,17 +103,20 @@ def mouse_scroll_test(test, params, console, listener, wait_time, count=1):
         counter = Counter(samples)
         num = counter.pop(exp_event, 0)
         if num != count:
-            test.fail("Received scroll number %s don't match expected"
-                      "scroll count %s" % (num, count))
+            test.fail(
+                "Received scroll number %s don't match expected"
+                "scroll count %s" % (num, count)
+            )
         if counter:
-            test.fail("Received scroll events don't match expected events"
-                      "Received scroll events as: %s\n Expected events as: %s"
-                      % (counter, exp_event))
+            test.fail(
+                "Received scroll events don't match expected events"
+                "Received scroll events as: %s\n Expected events as: %s"
+                % (counter, exp_event)
+            )
 
 
 @error_context.context_aware
-def mouse_move_test(test, params, console, listener,
-                    wait_time, end_pos, absolute):
+def mouse_move_test(test, params, console, listener, wait_time, end_pos, absolute):
     """
     Mouse move test.
 
@@ -155,39 +161,53 @@ def mouse_move_test(test, params, console, listener,
 
     xn_guest, yn_guest = event_lst[-1]
     tolerance = int(params.get("tolerance", 5))
-    error_context.context("Compare if pointer move to destination pos (%s, %s)"
-                          "the missed value should in tolerance scope." % end_pos)
+    error_context.context(
+        "Compare if pointer move to destination pos (%s, %s)"
+        "the missed value should in tolerance scope." % end_pos
+    )
     if (abs(xn - xn_guest) > tolerance) or (abs(yn - yn_guest) > tolerance):
-        test.fail("pointer did not move to destination position."
-                  "it move to pos (%s, %s) in guest, but exepected pos is"
-                  "(%s, %s)" % (xn_guest, yn_guest, xn, yn))
+        test.fail(
+            "pointer did not move to destination position."
+            "it move to pos (%s, %s) in guest, but exepected pos is"
+            "(%s, %s)" % (xn_guest, yn_guest, xn, yn)
+        )
 
-    error_context.context("Compare if pointer move trace nearby destination line,"
-                          "the missed value should in tolerance scope.")
+    error_context.context(
+        "Compare if pointer move trace nearby destination line,"
+        "the missed value should in tolerance scope."
+    )
     for i, (x, y) in enumerate(event_lst):
         if not vertical:
-            if abs((k * x + b) - y) > tolerance:    # pylint: disable=E0606
-                test.fail("Received pointer pos beyond line's tolerance scope "
-                          "when move from {0} to {1}. Received pos is ({2}, {3}),"
-                          "it didn't nearby the expected line "
-                          "y={4}x+{5}.".format(start_pos, end_pos, x, y, k, b))
+            if abs((k * x + b) - y) > tolerance:  # pylint: disable=E0606
+                test.fail(
+                    "Received pointer pos beyond line's tolerance scope "
+                    "when move from {0} to {1}. Received pos is ({2}, {3}),"
+                    "it didn't nearby the expected line "
+                    "y={4}x+{5}.".format(start_pos, end_pos, x, y, k, b)
+                )
             elif k == 0:
                 # for horizontal direction line, only x value will change.
                 if i > 0:
-                    dx = [x2 - x1 for x1, x2 in zip(event_lst[i-1], event_lst[i])][0]
-                    if (xn - x0 > 0 and dx <= 0):
-                        test.fail("pointer move direction is wrong when "
-                                  "move from {0} to {1}.".format(start_pos, end_pos))
-                    elif (xn - x0 < 0 and dx >= 0):
-                        test.fail("pointer move direction is wrong when "
-                                  "move from {0} to {1}.".format(start_pos, end_pos))
+                    dx = [x2 - x1 for x1, x2 in zip(event_lst[i - 1], event_lst[i])][0]
+                    if xn - x0 > 0 and dx <= 0:
+                        test.fail(
+                            "pointer move direction is wrong when "
+                            "move from {0} to {1}.".format(start_pos, end_pos)
+                        )
+                    elif xn - x0 < 0 and dx >= 0:
+                        test.fail(
+                            "pointer move direction is wrong when "
+                            "move from {0} to {1}.".format(start_pos, end_pos)
+                        )
         else:
             # for vertical direction line, only y value will change.
             if i > 0:
-                dy = [y2 - y1 for y1, y2 in zip(event_lst[i-1], event_lst[i])][1]
+                dy = [y2 - y1 for y1, y2 in zip(event_lst[i - 1], event_lst[i])][1]
                 if (yn - y0 > 0 and dy <= 0) or (yn - y0 < 0 and dy >= 0):
-                    test.fail("pointer move to incorrect direction when "
-                              "move from {0} to {1}.".format(start_pos, end_pos))
+                    test.fail(
+                        "pointer move to incorrect direction when "
+                        "move from {0} to {1}.".format(start_pos, end_pos)
+                    )
 
 
 @error_context.context_aware
@@ -218,14 +238,14 @@ def run(test, params, env):
         error_context.context("Check vioinput driver is running", test.log.info)
         utils_test.qemu.windrv_verify_running(session, test, driver.split()[0])
 
-        error_context.context("Enable all vioinput related driver verified",
-                              test.log.info)
+        error_context.context(
+            "Enable all vioinput related driver verified", test.log.info
+        )
         session = utils_test.qemu.setup_win_driver_verifier(session, driver, vm)
 
     mice_name = params.get("mice_name", "QEMU PS/2 Mouse")
     mice_info = query_mice_status(vm, mice_name)
-    error_context.context("Check if %s device is working" % mice_name,
-                          test.log.info)
+    error_context.context("Check if %s device is working" % mice_name, test.log.info)
     if not mice_info["current"]:
         test.fail("%s does not worked currently" % mice_name)
 
@@ -239,14 +259,13 @@ def run(test, params, env):
 
     if not params.get("target_pos", None):
         width, height = console.screen_size
-        x_max, y_max = width-1, height-1
+        x_max, y_max = width - 1, height - 1
         target_pos = [(1, 0), (x_max, 0), (1, y_max), (x_max, y_max)]
     else:
         # suggest set target_pos if want to test one target position.
         target_pos = [tuple([int(i) for i in params.objects("target_pos")])]
     for end_pos in target_pos:
-        mouse_move_test(test, params, console, listener, wait_time,
-                        end_pos, absolute)
+        mouse_move_test(test, params, console, listener, wait_time, end_pos, absolute)
 
     listener.clear_events()
     listener.cleanup()

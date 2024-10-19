@@ -1,10 +1,9 @@
 from virttest import data_dir
 
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
-from provider.virt_storage.storage_admin import sp_admin
 from provider.qsd import QsdDaemonDev, add_vubp_into_boot
-from provider import backup_utils
-from provider import job_utils
+from provider.virt_storage.storage_admin import sp_admin
 
 
 class QSDCommitTest(BlockDevCommitTest):
@@ -24,8 +23,7 @@ class QSDCommitTest(BlockDevCommitTest):
             return "drive_%s" % tag
 
     def prepare_snapshot_file(self, snapshot_tags):
-        self.snapshot_images = list(
-            map(self.get_image_by_tag, snapshot_tags))
+        self.snapshot_images = list(map(self.get_image_by_tag, snapshot_tags))
         params = self.params.copy()
         params.setdefault("target_path", data_dir.get_data_dir())
         for tag in snapshot_tags:
@@ -42,8 +40,7 @@ class QSDCommitTest(BlockDevCommitTest):
             if idx == 0:
                 arguments["node"] = self.device_node
             else:
-                arguments["node"] = self.get_node_name(
-                    snapshot_tags[idx - 1])
+                arguments["node"] = self.get_node_name(snapshot_tags[idx - 1])
             self.qsd.monitor.cmd(cmd, dict(arguments))
             for info in self.disks_info:
                 if device in info:
@@ -75,7 +72,8 @@ class QSDCommitTest(BlockDevCommitTest):
     def pre_test(self):
         self.start_qsd()
         self.main_vm.params["extra_params"] = add_vubp_into_boot(
-                self.params["device_tag"], self.params)
+            self.params["device_tag"], self.params
+        )
         super(QSDCommitTest, self).pre_test()
 
     def post_test(self):

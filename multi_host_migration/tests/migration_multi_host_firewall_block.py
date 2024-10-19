@@ -1,14 +1,13 @@
 import logging
 import os
-import six
 import time
-from autotest.client.shared import error
+
+import six
 from autotest.client import utils
-from virttest import utils_test
-from virttest import virt_vm
-from virttest import utils_misc
-from virttest import qemu_monitor
+from autotest.client.shared import error
+from virttest import qemu_monitor, utils_misc, utils_test, virt_vm
 from virttest.utils_test.qemu import migration
+
 from provider import cpuflags
 
 
@@ -37,8 +36,10 @@ def run(test, params, env):
     def wait_for_migration(vm, timeout):
         def mig_finished():
             ret = True
-            if (vm.params["display"] == "spice" and
-                    vm.get_spice_var("spice_seamless_migration") == "on"):
+            if (
+                vm.params["display"] == "spice"
+                and vm.get_spice_var("spice_seamless_migration") == "on"
+            ):
                 s = vm.monitor.info("spice")
                 if isinstance(s, six.string_types):
                     ret = "migrated: true" in s
@@ -50,16 +51,16 @@ def run(test, params, env):
             else:
                 return ret and (o.get("status") != "active")
 
-        if not utils_misc.wait_for(mig_finished, timeout, 2, 2,
-                                   "Waiting for migration to complete"):
-            raise virt_vm.VMMigrateTimeoutError("Timeout expired while waiting "
-                                                "for migration to finish")
+        if not utils_misc.wait_for(
+            mig_finished, timeout, 2, 2, "Waiting for migration to complete"
+        ):
+            raise virt_vm.VMMigrateTimeoutError(
+                "Timeout expired while waiting " "for migration to finish"
+            )
 
     class TestMultihostMigrationLongWait(base_class):
-
         def __init__(self, test, params, env):
-            super(TestMultihostMigrationLongWait, self).__init__(
-                test, params, env)
+            super(TestMultihostMigrationLongWait, self).__init__(test, params, env)
             self.install_path = params.get("cpuflags_install_path", "/tmp")
             self.vm_mem = int(params.get("mem", "512"))
 
@@ -71,20 +72,23 @@ def run(test, params, env):
             self.vms = params.get("vms").split()
 
         def firewall_block_port(self, port):
-            utils.run("iptables -A INPUT -p tcp --dport %s"
-                      " -j REJECT" % (port), ignore_status=True)
+            utils.run(
+                "iptables -A INPUT -p tcp --dport %s" " -j REJECT" % (port),
+                ignore_status=True,
+            )
 
         def clean_firewall(self):
             utils.run("iptables -F", ignore_status=True)
 
         def migrate_vms_src(self, mig_data):
-            super(TestMultihostMigrationLongWait,
-                  self).migrate_vms_src(mig_data)
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
-                                self.mig_timeout)
+            super(TestMultihostMigrationLongWait, self).migrate_vms_src(mig_data)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_started", self.mig_timeout
+            )
             vm = mig_data.vms[0]
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_interrupted',
-                                self.mig_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_interrupted", self.mig_timeout
+            )
 
             session = vm.wait_for_login(timeout=self.login_timeout)
             session.cmd("killall cpuflags-test")
@@ -102,14 +106,16 @@ def run(test, params, env):
                             break
                     time.sleep(1)
                 else:
-                    raise error.TestWarn("Firewall block migraiton timeout"
-                                         " is too short: %s. For completing"
-                                         " the test increase mig_timeout in"
-                                         " variant dest-problem-test." %
-                                         (self.mig_fir_timeout))
+                    raise error.TestWarn(
+                        "Firewall block migraiton timeout"
+                        " is too short: %s. For completing"
+                        " the test increase mig_timeout in"
+                        " variant dest-problem-test." % (self.mig_fir_timeout)
+                    )
 
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_interfynish',
-                                self.mig_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_interfynish", self.mig_timeout
+            )
 
         def migrate_vms_dest(self, mig_data):
             """
@@ -118,22 +124,27 @@ def run(test, params, env):
 
             :param mig_Data: Data for migration.
             """
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
-                                self.mig_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_started", self.mig_timeout
+            )
 
             time.sleep(3)
             for vm in mig_data.vms:
                 self.firewall_block_port(mig_data.vm_ports[vm.name])
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_interrupted',
-                                self.mig_timeout)
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_interfynish',
-                                self.mig_fir_timeout + 10)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_interrupted", self.mig_timeout
+            )
+            self._hosts_barrier(
+                self.hosts,
+                mig_data.mig_id,
+                "mig_interfynish",
+                self.mig_fir_timeout + 10,
+            )
             try:
                 stat = []
                 for vm in mig_data.vms:
                     stat.append(vm.monitor.get_status())
-            except (qemu_monitor.MonitorProtocolError,
-                    qemu_monitor.QMPCmdError):
+            except (qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError):
                 logging.debug("Guest %s not working", vm)
 
         def check_vms_src(self, mig_data):
@@ -167,29 +178,36 @@ def run(test, params, env):
                 try:
                     vm.resume()
                     if utils_test.qemu.guest_active(vm):
-                        raise error.TestFail("Guest can't be active after"
-                                             " interrupted migration.")
-                except (qemu_monitor.MonitorProtocolError,
-                        qemu_monitor.MonitorLockError,
-                        qemu_monitor.QMPCmdError):
+                        raise error.TestFail(
+                            "Guest can't be active after" " interrupted migration."
+                        )
+                except (
+                    qemu_monitor.MonitorProtocolError,
+                    qemu_monitor.MonitorLockError,
+                    qemu_monitor.QMPCmdError,
+                ):
                     pass
 
         def migration_scenario(self, worker=None):
-            error.context("Migration from %s to %s over protocol %s." %
-                          (self.srchost, self.dsthost, mig_protocol),
-                          logging.info)
+            error.context(
+                "Migration from %s to %s over protocol %s."
+                % (self.srchost, self.dsthost, mig_protocol),
+                logging.info,
+            )
 
             def worker_func(mig_data):
                 vm = mig_data.vms[0]
                 session = vm.wait_for_login(timeout=self.login_timeout)
 
-                cpuflags.install_cpuflags_util_on_vm(test, vm,
-                                                     self.install_path,
-                                                     extra_flags="-msse3 -msse2")
+                cpuflags.install_cpuflags_util_on_vm(
+                    test, vm, self.install_path, extra_flags="-msse3 -msse2"
+                )
 
-                cmd = ("nohup %s/cpuflags-test --stressmem %d,%d &" %
-                       (os.path.join(self.install_path, "cpu_flags"),
-                        self.vm_mem * 100, self.vm_mem / 2))
+                cmd = "nohup %s/cpuflags-test --stressmem %d,%d &" % (
+                    os.path.join(self.install_path, "cpu_flags"),
+                    self.vm_mem * 100,
+                    self.vm_mem / 2,
+                )
                 logging.debug("Sending command: %s", cmd)
                 session.sendline(cmd)
                 time.sleep(3)
@@ -198,33 +216,36 @@ def run(test, params, env):
                 worker = worker_func
 
             try:
-                self.migrate_wait(self.vms, self.srchost, self.dsthost,
-                                  start_work=worker)
+                self.migrate_wait(
+                    self.vms, self.srchost, self.dsthost, start_work=worker
+                )
             finally:
                 self.clean_firewall()
 
     class TestMultihostMigrationShortInterrupt(TestMultihostMigrationLongWait):
-
         def __init__(self, test, params, env):
             super(TestMultihostMigrationShortInterrupt, self).__init__(
-                test, params, env)
+                test, params, env
+            )
 
         def migrate_vms_src(self, mig_data):
-            super(TestMultihostMigrationShortInterrupt,
-                  self).migrate_vms_src(mig_data)
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
-                                self.mig_timeout)
+            super(TestMultihostMigrationShortInterrupt, self).migrate_vms_src(mig_data)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_started", self.mig_timeout
+            )
             vm = mig_data.vms[0]
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_interrupted',
-                                self.mig_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_interrupted", self.mig_timeout
+            )
 
             session = vm.wait_for_login(timeout=self.login_timeout)
             session.cmd("killall cpuflags-test")
 
             wait_for_migration(vm, self.mig_timeout)
 
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_done',
-                                self.mig_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_done", self.mig_timeout
+            )
 
         def migrate_vms_dest(self, mig_data):
             """
@@ -233,22 +254,24 @@ def run(test, params, env):
 
             :param mig_Data: Data for migration.
             """
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_started',
-                                self.mig_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_started", self.mig_timeout
+            )
 
             time.sleep(3)
             for vm in mig_data.vms:
                 self.firewall_block_port(mig_data.vm_ports[vm.name])
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_interrupted',
-                                self.mig_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_interrupted", self.mig_timeout
+            )
             self.clean_firewall()
-            self._hosts_barrier(self.hosts, mig_data.mig_id, 'mig_done',
-                                self.mig_fir_timeout)
+            self._hosts_barrier(
+                self.hosts, mig_data.mig_id, "mig_done", self.mig_fir_timeout
+            )
             try:
                 for vm in mig_data.vms:
                     vm.monitor.get_status()
-            except (qemu_monitor.MonitorProtocolError,
-                    qemu_monitor.QMPCmdError):
+            except (qemu_monitor.MonitorProtocolError, qemu_monitor.QMPCmdError):
                 logging.debug("Guest %s not working", vm)
 
         def check_vms_dst(self, mig_data):

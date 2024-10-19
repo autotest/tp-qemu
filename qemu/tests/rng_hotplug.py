@@ -1,9 +1,9 @@
 import time
 
-from virttest import error_context
-from virttest.qemu_devices import qdevices
-from virttest import utils_test
 from avocado.core import exceptions
+from virttest import error_context, utils_test
+from virttest.qemu_devices import qdevices
+
 from provider import win_driver_utils
 
 
@@ -64,8 +64,7 @@ def run(test, params, env):
     def stop_rngd(vm):
         if params.get("stop_rngd"):
             session = vm.wait_for_login()
-            error_context.context("Disable rngd service before unplug",
-                                  test.log.info)
+            error_context.context("Disable rngd service before unplug", test.log.info)
             status, output = session.cmd_status_output(params.get("stop_rngd"))
             if status != 0:
                 raise exceptions.TestError(output)
@@ -106,13 +105,13 @@ def run(test, params, env):
 
     for i in range(repeat_times):
         dev_list = []
-        error_context.context("Hotplug/unplug rng devices the %s time"
-                              % (i+1), test.log.info)
+        error_context.context(
+            "Hotplug/unplug rng devices the %s time" % (i + 1), test.log.info
+        )
 
         for num in range(rng_num):
             vm.devices.set_dirty()
-            new_dev = qdevices.QDevice(rng_driver,
-                                       {'id': '%s-%d' % (rng_driver, num)})
+            new_dev = qdevices.QDevice(rng_driver, {"id": "%s-%d" % (rng_driver, num)})
             hotplug_rng(vm, new_dev)
             dev_list.append(new_dev)
 

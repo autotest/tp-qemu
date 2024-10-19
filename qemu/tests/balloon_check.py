@@ -1,21 +1,17 @@
-import time
-import re
 import random
+import re
+import time
 
 from avocado.core import exceptions
 from avocado.utils import process
-
-from virttest import qemu_monitor
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import error_context
+from virttest import error_context, qemu_monitor, utils_misc, utils_test
 from virttest.utils_numeric import normalize_data_size
 from virttest.utils_test.qemu import MemoryBaseTest
+
 from provider import win_driver_utils
 
 
 class BallooningTest(MemoryBaseTest):
-
     """
     Provide basic functions for memory ballooning test cases
     """
@@ -27,12 +23,13 @@ class BallooningTest(MemoryBaseTest):
         self.vm = env.get_vm(params["main_vm"])
         if params.get("paused_after_start_vm") != "yes":
             self.params["balloon_test_setup_ready"] = False
-            if self.params.get('os_type') == 'windows':
+            if self.params.get("os_type") == "windows":
                 sleep_time = 180
             else:
                 sleep_time = 90
-            self.test.log.info("Waiting %d seconds for guest's "
-                               "applications up", sleep_time)
+            self.test.log.info(
+                "Waiting %d seconds for guest's " "applications up", sleep_time
+            )
             time.sleep(sleep_time)
             self.params["balloon_test_setup_ready"] = True
             # ori_mem/gmem is original memory
@@ -56,10 +53,11 @@ class BallooningTest(MemoryBaseTest):
                 output = self.vm.monitor.info("balloon")
                 ballooned_mem = int(re.findall(r"\d+", str(output))[0])
                 if self.vm.monitor.protocol == "qmp":
-                    ballooned_mem = ballooned_mem / (1024 ** 2)
+                    ballooned_mem = ballooned_mem / (1024**2)
             else:
-                self.test.log.info('could not get balloon_memory, cause '
-                                   'vm.monitor is None')
+                self.test.log.info(
+                    "could not get balloon_memory, cause " "vm.monitor is None"
+                )
                 return 0
         except qemu_monitor.MonitorError as emsg:
             self.test.log.error(emsg)
@@ -81,12 +79,12 @@ class BallooningTest(MemoryBaseTest):
         error_context.context("Check memory status %s" % step, self.test.log.info)
         mmem = self.get_ballooned_memory()
         gmem = self.get_memory_status()
-        gcompare_threshold = int(self.params.get("guest_compare_threshold",
-                                                 100))
+        gcompare_threshold = int(self.params.get("guest_compare_threshold", 100))
         guest_mem_ratio = self.params.get("guest_mem_ratio")
         if guest_mem_ratio:
-            gcompare_threshold = max(gcompare_threshold,
-                                     float(guest_mem_ratio) * self.pre_mem)
+            gcompare_threshold = max(
+                gcompare_threshold, float(guest_mem_ratio) * self.pre_mem
+            )
         # if set windows guest balloon in (1,100),free
         # memory of the OS should be as small as possible.
         if self.pre_mem + ballooned_mem <= 100:
@@ -101,15 +99,17 @@ class BallooningTest(MemoryBaseTest):
             # for rhel guest, the gmem is total memory in guest;
             # for windows guest or balloon_opt_deflate_on_oom condition, the gmem is
             # used memory in guest.
-            if self.params['os_type'] == 'windows' or \
-                            self.params.get("balloon_opt_deflate_on_oom") == "yes":
+            if (
+                self.params["os_type"] == "windows"
+                or self.params.get("balloon_opt_deflate_on_oom") == "yes"
+            ):
                 guest_ballooned_mem = self.pre_gmem - gmem
             else:
                 guest_ballooned_mem = gmem - self.pre_gmem
-            if (mmem - self.pre_mem != ballooned_mem or
-                    (abs(guest_ballooned_mem - ballooned_mem) > gcompare_threshold)):
-                self.error_report(step, self.pre_mem + ballooned_mem, mmem,
-                                  gmem)
+            if mmem - self.pre_mem != ballooned_mem or (
+                abs(guest_ballooned_mem - ballooned_mem) > gcompare_threshold
+            ):
+                self.error_report(step, self.pre_mem + ballooned_mem, mmem, gmem)
                 raise exceptions.TestFail("Balloon test failed %s" % step)
         return mmem, gmem
 
@@ -122,8 +122,9 @@ class BallooningTest(MemoryBaseTest):
         polling_interval = int(self.params.get("polling_interval", 2))
         sleep_time = int(self.params.get("polling_sleep_time", 20))
         error_context.context("Enable polling", self.test.log.info)
-        self.vm.monitor.qom_set(device_path, "guest-stats-polling-interval",
-                                polling_interval)
+        self.vm.monitor.qom_set(
+            device_path, "guest-stats-polling-interval", polling_interval
+        )
         time.sleep(sleep_time)
 
     def get_memory_stat(self, device_path):
@@ -143,8 +144,9 @@ class BallooningTest(MemoryBaseTest):
         """
         check_mem_ratio = float(self.params.get("check_mem_ratio", 0.1))
         check_mem_diff = float(self.params.get("check_mem_diff", 150))
-        error_context.context("Get memory from guest aligned"
-                              " with %s." % keyname, self.test.log.info)
+        error_context.context(
+            "Get memory from guest aligned" " with %s." % keyname, self.test.log.info
+        )
         if keyname == "stat-free-memory":
             guest_mem = self.get_guest_free_mem(self.vm)
         elif keyname == "stat-total-memory":
@@ -155,17 +157,17 @@ class BallooningTest(MemoryBaseTest):
             raise ValueError(f"unexpected keyname: {keyname}")
 
         memory_stat_qmp = "%sB" % memory_stat_qmp
-        memory_stat_qmp = int(float(utils_misc.normalize_data_size(
-            memory_stat_qmp, order_magnitude="M")))
+        memory_stat_qmp = int(
+            float(utils_misc.normalize_data_size(memory_stat_qmp, order_magnitude="M"))
+        )
         mem_diff = float(abs(guest_mem - memory_stat_qmp))
         if mem_diff > guest_mem * check_mem_ratio and mem_diff > check_mem_diff:
-            self.test.fail("%s of guest %s is not equal to %s"
-                           " in qmp,the acceptable ratio/diff"
-                           " is %s/%s" % (keyname,
-                                          guest_mem,
-                                          memory_stat_qmp,
-                                          check_mem_ratio,
-                                          check_mem_diff))
+            self.test.fail(
+                "%s of guest %s is not equal to %s"
+                " in qmp,the acceptable ratio/diff"
+                " is %s/%s"
+                % (keyname, guest_mem, memory_stat_qmp, check_mem_ratio, check_mem_diff)
+            )
 
     def memory_stats_check(self, keyname, enabled):
         """
@@ -178,15 +180,14 @@ class BallooningTest(MemoryBaseTest):
         base_path = self.params.get("base_path", "/machine/peripheral/")
         device = self.params["balloon"]
         device_path = base_path + device
-        mem_stat_disabled = 0xffffffffffffffff
+        mem_stat_disabled = 0xFFFFFFFFFFFFFFFF
 
         self.enable_polling(device_path)
-        memory_stat_qmp = self.get_memory_stat(device_path)['stats'][keyname]
+        memory_stat_qmp = self.get_memory_stat(device_path)["stats"][keyname]
 
-        stat_enabled = (memory_stat_qmp != mem_stat_disabled)
+        stat_enabled = memory_stat_qmp != mem_stat_disabled
         if stat_enabled != enabled:
-            self.test.fail("Memory statistics reporting is not working as"
-                           " expected")
+            self.test.fail("Memory statistics reporting is not working as" " expected")
         elif enabled:
             self._memory_stats_compare(keyname, memory_stat_qmp)
 
@@ -205,10 +206,13 @@ class BallooningTest(MemoryBaseTest):
             self.vm.balloon(new_mem)
             self.env["balloon_test"] = 1
         except Exception as e:
-            if (self.params.get('illegal_value_check', 'no') == 'no'
-                    and new_mem != self.get_ballooned_memory()):
-                raise exceptions.TestFail("Balloon memory fail with error"
-                                          " message: %s" % e)
+            if (
+                self.params.get("illegal_value_check", "no") == "no"
+                and new_mem != self.get_ballooned_memory()
+            ):
+                raise exceptions.TestFail(
+                    "Balloon memory fail with error" " message: %s" % e
+                )
         if new_mem > self.ori_mem:
             compare_mem = self.ori_mem
         elif new_mem == 0:
@@ -220,12 +224,14 @@ class BallooningTest(MemoryBaseTest):
             compare_mem = new_mem
 
         balloon_timeout = float(self.params.get("balloon_timeout", 480))
-        status = utils_misc.wait_for((
-            lambda: compare_mem == self.get_ballooned_memory()),
-            balloon_timeout)
+        status = utils_misc.wait_for(
+            (lambda: compare_mem == self.get_ballooned_memory()), balloon_timeout
+        )
         if status is None:
-            raise exceptions.TestFail("Failed to balloon memory to expect"
-                                      " value during %ss" % balloon_timeout)
+            raise exceptions.TestFail(
+                "Failed to balloon memory to expect"
+                " value during %ss" % balloon_timeout
+            )
 
     def run_balloon_sub_test(self, test, params, env, test_tag):
         """
@@ -244,8 +250,7 @@ class BallooningTest(MemoryBaseTest):
                  1 means the process quit after sub test.
         :rtype: int
         """
-        utils_test.run_virt_sub_test(test, params, env,
-                                     sub_type=test_tag)
+        utils_test.run_virt_sub_test(test, params, env, sub_type=test_tag)
         qemu_quit_after_test = -1
         if "shutdown" in test_tag:
             self.test.log.info("Guest shutdown normally after balloon")
@@ -278,13 +283,15 @@ class BallooningTest(MemoryBaseTest):
         self.test.log.info("Wait until guest memory don't change")
         threshold = int(self.params.get("guest_stable_threshold", 100))
         is_stable = self._mem_state(threshold)
-        ret = utils_misc.wait_for(lambda: next(is_stable), timeout,
-                                  step=float(self.params.get("guest_check_step",
-                                                             10.0)))
+        ret = utils_misc.wait_for(
+            lambda: next(is_stable),
+            timeout,
+            step=float(self.params.get("guest_check_step", 10.0)),
+        )
         if not ret:
             self.test.log.warning("guest memory is not stable after %ss", timeout)
 
-    def get_memory_boundary(self, balloon_type=''):
+    def get_memory_boundary(self, balloon_type=""):
         """
         Get the legal memory boundary for balloon operation.
 
@@ -297,21 +304,19 @@ class BallooningTest(MemoryBaseTest):
         min_size = self.params.get("minmem", "512M")
         min_size = int(float(utils_misc.normalize_data_size(min_size)))
         balloon_buffer = int(self.params.get("balloon_buffer", 300))
-        if self.params.get('os_type') == 'windows':
+        if self.params.get("os_type") == "windows":
             self.test.log.info("Get windows miminum balloon value:")
             self.vm.balloon(1)
             balloon_timeout = self.params.get("balloon_timeout", 900)
             self.wait_for_balloon_complete(balloon_timeout)
-            used_size = min((self.get_ballooned_memory() + balloon_buffer),
-                            max_size)
+            used_size = min((self.get_ballooned_memory() + balloon_buffer), max_size)
             self.vm.balloon(max_size)
             self.wait_for_balloon_complete(balloon_timeout)
             self.ori_gmem = self.get_memory_status()
         else:
-            vm_total = self.get_memory_status()
+            self.get_memory_status()
             vm_mem_free = self.get_free_mem()
-            used_size = min((self.ori_mem - vm_mem_free + balloon_buffer),
-                            max_size)
+            used_size = min((self.ori_mem - vm_mem_free + balloon_buffer), max_size)
         current_mem = self.get_ballooned_memory()
         if balloon_type == "enlarge":
             min_size = current_mem
@@ -332,6 +337,7 @@ class BallooningTest(MemoryBaseTest):
         :return: If test should quit after test
         :rtype: bool
         """
+
         def _memory_check_after_sub_test():
             try:
                 output = self.memory_check("after subtest", ballooned_mem)  # pylint: disable=E0606
@@ -351,13 +357,14 @@ class BallooningTest(MemoryBaseTest):
         # for illegal enlarge test
         if expect_mem > self.ori_mem:
             ballooned_memory = self.ori_mem - self.pre_mem
-        self.memory_check("after %s memory" % tag,
-                          ballooned_memory)
-        if (params_tag.get("run_sub_test_after_balloon", "no") == "yes" and
-                params_tag.get('sub_test_after_balloon')):
-            sub_type = params_tag['sub_test_after_balloon']
-            should_quit = self.run_balloon_sub_test(self.test, params_tag,
-                                                    self.env, sub_type)
+        self.memory_check("after %s memory" % tag, ballooned_memory)
+        if params_tag.get(
+            "run_sub_test_after_balloon", "no"
+        ) == "yes" and params_tag.get("sub_test_after_balloon"):
+            sub_type = params_tag["sub_test_after_balloon"]
+            should_quit = self.run_balloon_sub_test(
+                self.test, params_tag, self.env, sub_type
+            )
             if should_quit == 1:
                 return True
             # s4 after balloon test
@@ -365,13 +372,13 @@ class BallooningTest(MemoryBaseTest):
                 expect_mem = self.ori_mem
 
             sleep_before_check = int(self.params.get("sleep_before_check", 0))
-            timeout = (int(self.params.get("balloon_timeout", 100)) +
-                       sleep_before_check)
+            timeout = int(self.params.get("balloon_timeout", 100)) + sleep_before_check
             ballooned_mem = expect_mem - self.pre_mem
             msg = "Wait memory balloon back after "
-            msg += params_tag['sub_test_after_balloon']
-            ret = utils_misc.wait_for(_memory_check_after_sub_test,
-                                      timeout, sleep_before_check, 5, msg)
+            msg += params_tag["sub_test_after_balloon"]
+            ret = utils_misc.wait_for(
+                _memory_check_after_sub_test, timeout, sleep_before_check, 5, msg
+            )
             if not ret:
                 self.test.fail("After sub test, memory check failed")
         return False
@@ -428,7 +435,6 @@ class BallooningTest(MemoryBaseTest):
 
 
 class BallooningTestWin(BallooningTest):
-
     """
     Windows memory ballooning test
     """
@@ -454,8 +460,7 @@ class BallooningTestWin(BallooningTest):
         self.test.log.error("Memory size mismatch %s:\n", step)
         error_msg = "Wanted to be changed: %s\n" % (expect_value - self.pre_mem)
         if monitor_value:
-            error_msg += "Changed in monitor: %s\n" % (monitor_value
-                                                       - self.pre_mem)
+            error_msg += "Changed in monitor: %s\n" % (monitor_value - self.pre_mem)
         error_msg += "Changed in guest: %s\n" % (guest_value - self.pre_gmem)
         self.test.log.error(error_msg)
 
@@ -479,8 +484,7 @@ class BallooningTestWin(BallooningTest):
         status, output = session.cmd_status_output(cmd)
         if status == 0:
             free = "%s" % re.findall(r"\d+\.\d+", output)[2]
-            free = float(utils_misc.normalize_data_size(free,
-                                                        order_magnitude="M"))
+            free = float(utils_misc.normalize_data_size(free, order_magnitude="M"))
             return int(free)
         else:
             self.test.fail("Failed to get windows guest free memory")
@@ -493,8 +497,7 @@ class BallooningTestWin(BallooningTest):
         """
         key = "VolumeName like 'virtio-win%'"
         try:
-            return utils_misc.get_win_disk_vol(session,
-                                               condition=key)
+            return utils_misc.get_win_disk_vol(session, condition=key)
         except Exception:
             self.test.error("Could not get virtio-win disk vol!")
 
@@ -508,19 +511,20 @@ class BallooningTestWin(BallooningTest):
                           uninstall/stop
         :return: cmd execution output
         """
-        error_context.context("%s Balloon Service in guest." % operation,
-                              self.test.log.info)
+        error_context.context(
+            "%s Balloon Service in guest." % operation, self.test.log.info
+        )
         drive_letter = self.get_disk_vol(session)
         try:
-            operate_cmd = self.params["%s_balloon_service"
-                                      % operation] % drive_letter
+            operate_cmd = self.params["%s_balloon_service" % operation] % drive_letter
             if operation == "status":
                 output = session.cmd_output(operate_cmd)
             else:
                 output = session.cmd(operate_cmd)
         except Exception as err:
-            self.test.error("%s balloon service failed! Error msg is:\n%s"
-                            % (operation, err))
+            self.test.error(
+                "%s balloon service failed! Error msg is:\n%s" % (operation, err)
+            )
         return output
 
     @error_context.context_aware
@@ -532,8 +536,9 @@ class BallooningTestWin(BallooningTest):
         :param operation: operation against balloon serive, e.g. run/status/
                           uninstall/stop
         """
-        error_context.context("Check Balloon Service status before install"
-                              "service", self.test.log.info)
+        error_context.context(
+            "Check Balloon Service status before install" "service", self.test.log.info
+        )
         output = self.operate_balloon_service(session, "status")
         if re.search("running", output.lower(), re.M):
             self.test.log.info("Balloon service is already running !")
@@ -546,7 +551,6 @@ class BallooningTestWin(BallooningTest):
 
 
 class BallooningTestLinux(BallooningTest):
-
     """
     Linux memory ballooning test
     """
@@ -592,7 +596,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    if params['os_type'] == 'windows':
+    if params["os_type"] == "windows":
         balloon_test = BallooningTestWin(test, params, env)
     else:
         balloon_test = BallooningTestLinux(test, params, env)
@@ -600,38 +604,43 @@ def run(test, params, env):
     if params.get("balloon_opt_deflate_on_oom") == "yes":
         guest_ori_mem = balloon_test.get_total_mem()
 
-    for tag in params.objects('test_tags'):
+    for tag in params.objects("test_tags"):
         error_context.context("Running %s test" % tag, test.log.info)
         params_tag = params.object_params(tag)
-        if params_tag.get('expect_memory'):
-            expect_mem = int(params_tag.get('expect_memory'))
-        elif params_tag.get('expect_memory_ratio'):
-            expect_mem = int(balloon_test.ori_mem *
-                             float(params_tag.get('expect_memory_ratio')))
+        if params_tag.get("expect_memory"):
+            expect_mem = int(params_tag.get("expect_memory"))
+        elif params_tag.get("expect_memory_ratio"):
+            expect_mem = int(
+                balloon_test.ori_mem * float(params_tag.get("expect_memory_ratio"))
+            )
         # set evict illegal value to "0" for both linux and windows
-        elif params_tag.get('illegal_value_check', 'no') == 'yes' and tag == 'enlarge':
+        elif params_tag.get("illegal_value_check", "no") == "yes" and tag == "enlarge":
             expect_mem = int(balloon_test.ori_mem + random.uniform(1, 1000))
         else:
-            balloon_type = params_tag['balloon_type']
+            balloon_type = params_tag["balloon_type"]
             min_sz, max_sz = balloon_test.get_memory_boundary(balloon_type)
             expect_mem = int(random.uniform(min_sz, max_sz))
-            if params_tag.get('minimum_value_check', 'no') == 'yes':
+            if params_tag.get("minimum_value_check", "no") == "yes":
                 expect_mem = int(min_sz)
 
         quit_after_test = balloon_test.run_ballooning_test(expect_mem, tag)
         if params.get("balloon_opt_deflate_on_oom") == "yes":
             guest_curr_mem = balloon_test.get_total_mem()
             if guest_ori_mem != guest_curr_mem:
-                balloon_test.error_report("after %s memory" % tag,
-                                          expect_value=guest_ori_mem,
-                                          guest_value=guest_curr_mem)
+                balloon_test.error_report(
+                    "after %s memory" % tag,
+                    expect_value=guest_ori_mem,
+                    guest_value=guest_curr_mem,
+                )
                 test.fail("Balloon test failed %s" % tag)
         if quit_after_test:
             return
     try:
         balloon_test.reset_memory()
-        if params.get("balloon_opt_free_page_reporting") == "yes" and \
-                params.get("os_type") == "linux":
+        if (
+            params.get("balloon_opt_free_page_reporting") == "yes"
+            and params.get("os_type") == "linux"
+        ):
             get_res_cmd = params["get_res_cmd"] % balloon_test.vm.get_pid()
             memhog_cmd = params["memhog_cmd"]
             consumed_mem = float(normalize_data_size(params["consumed_mem"]))
@@ -641,8 +650,9 @@ def run(test, params, env):
             res2 = float(normalize_data_size(process.getoutput(get_res_cmd)))
             time.sleep(30)
             res3 = float(normalize_data_size(process.getoutput(get_res_cmd)))
-            test.log.info("The RES values are %sM, %sM, and %sM sequentially",
-                          res1, res2, res3)
+            test.log.info(
+                "The RES values are %sM, %sM, and %sM sequentially", res1, res2, res3
+            )
             if res2 - res1 < consumed_mem * 0.5:
                 test.error("QEMU should consume more memory")
             if res3 - res1 > res1 * 0.1:

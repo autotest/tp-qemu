@@ -4,9 +4,7 @@ import time
 
 import aexpect
 from avocado.utils import download
-from virttest import error_context
-from virttest import utils_misc
-from virttest import data_dir
+from virttest import data_dir, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -98,34 +96,35 @@ def run(test, params, env):
         free_mem = utils_misc.get_free_mem(session, "windows")
         free_disk = utils_misc.get_free_disk(session, "C:")
         start_cmd = r'"%s\heavyload.exe"' % params["install_path"]
-        start_cmd = add_option(start_cmd, 'CPU', vm.cpuinfo.smp)
-        start_cmd = add_option(start_cmd, 'MEMORY', free_mem)
-        start_cmd = add_option(start_cmd, 'FILE', free_disk)
+        start_cmd = add_option(start_cmd, "CPU", vm.cpuinfo.smp)
+        start_cmd = add_option(start_cmd, "MEMORY", free_mem)
+        start_cmd = add_option(start_cmd, "FILE", free_disk)
     else:
         start_cmd = params["start_cmd"]
     # reformat command to ensure heavyload started as except
     test_timeout = int(params.get("timeout", "60"))
     steping = 60
     if test_timeout < 60:
-        test.log.warn("Heavyload use mins as unit of timeout, given timeout "
-                      "is too small (%ss), force set to 60s", test_timeout)
+        test.log.warning(
+            "Heavyload use mins as unit of timeout, given timeout "
+            "is too small (%ss), force set to 60s",
+            test_timeout,
+        )
         test_timeout = 60
         steping = 30
-    start_cmd = add_option(start_cmd, 'DURATION', test_timeout / 60)
-    start_cmd = add_option(start_cmd, 'START', '')
-    start_cmd = add_option(start_cmd, 'AUTOEXIT', '')
+    start_cmd = add_option(start_cmd, "DURATION", test_timeout / 60)
+    start_cmd = add_option(start_cmd, "START", "")
+    start_cmd = add_option(start_cmd, "AUTOEXIT", "")
     test.log.info("heavyload cmd: %s", start_cmd)
     session.sendline(start_cmd)
     if not loop_session_cmd(session, check_running_cmd):
         test.error("heavyload process is not started")
 
-    sleep_before_migration = int(params.get("sleep_before_migration",
-                                            "0"))
+    sleep_before_migration = int(params.get("sleep_before_migration", "0"))
     time.sleep(sleep_before_migration)
 
     error_context.context("Verify vm is alive", test.log.info)
-    utils_misc.wait_for(vm.verify_alive,
-                        timeout=test_timeout * 1.2, step=steping)
+    utils_misc.wait_for(vm.verify_alive, timeout=test_timeout * 1.2, step=steping)
 
     if not session.cmd_status(check_running_cmd):
         test.fail("heavyload doesn't exist normally")

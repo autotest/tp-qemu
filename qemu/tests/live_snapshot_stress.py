@@ -1,16 +1,13 @@
 import logging
 
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import error_context
+from virttest import error_context, utils_misc, utils_test
 
 from qemu.tests import live_snapshot_basic
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
-
     def __init__(self, test, params, env, tag):
         super(LiveSnapshotStress, self).__init__(test, params, env, tag)
 
@@ -33,6 +30,7 @@ class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
         """
         stop stress app
         """
+
         def _unload_stress():
             session = self.get_session()
             cmd = self.params.get("stop_cmd")
@@ -40,8 +38,13 @@ class LiveSnapshotStress(live_snapshot_basic.LiveSnapshot):
             return not self.stress_app_running()
 
         error_context.context("stop stress app in guest", LOG_JOB.info)
-        utils_misc.wait_for(_unload_stress, first=2.0,
-                            text="wait stress app quit", step=1.0, timeout=120)
+        utils_misc.wait_for(
+            _unload_stress,
+            first=2.0,
+            text="wait stress app quit",
+            step=1.0,
+            timeout=120,
+        )
 
     def stress_app_running(self):
         """

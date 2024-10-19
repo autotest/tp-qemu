@@ -1,9 +1,11 @@
-from virttest import data_dir
-from virttest import env_process
-from virttest import error_context
-from virttest import virt_vm
-from virttest import utils_misc
-from virttest import utils_net
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    utils_misc,
+    utils_net,
+    virt_vm,
+)
 
 
 @error_context.context_aware

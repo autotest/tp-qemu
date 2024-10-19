@@ -1,10 +1,8 @@
-import re
 import os
+import re
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 STEP_1, STEP_2, STEP_3, STEP_4, STEP_5, STEP_6 = range(6)
 
@@ -29,6 +27,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def _do_clean_up(func, *args):
         try:
             if args:
@@ -36,8 +35,11 @@ def run(test, params, env):
             else:
                 func()
         except Exception as e:
-            test.log.warn("Failed to execute function '%s'."
-                          " error message:\n%s", func.__name__, e)
+            test.log.warning(
+                "Failed to execute function '%s'." " error message:\n%s",
+                func.__name__,
+                e,
+            )
 
     def _clean_up(step_cnt):
         error_context.context("Clean up", test.log.info)
@@ -64,8 +66,11 @@ def run(test, params, env):
         # Clean up caches
         session.cmd("echo 3 >/proc/sys/vm/drop_caches")
 
-        error_context.context("test %s size block write performance in guest"
-                              " using dd commands" % blk_size, test.log.info)
+        error_context.context(
+            "test %s size block write performance in guest"
+            " using dd commands" % blk_size,
+            test.log.info,
+        )
         dd_cmd = "dd"
         dd_cmd += " if=/dev/zero"
         dd_cmd += " of=%s" % test_file
@@ -84,8 +89,11 @@ def run(test, params, env):
         # Clean up caches
         session.cmd("echo 3 >/proc/sys/vm/drop_caches")
 
-        error_context.context("test %s size block read performance in guest"
-                              " using dd commands" % blk_size, test.log.info)
+        error_context.context(
+            "test %s size block read performance in guest"
+            " using dd commands" % blk_size,
+            test.log.info,
+        )
         dd_cmd = "dd"
         dd_cmd += " if=%s" % test_file
         dd_cmd += " of=/dev/null"
@@ -101,8 +109,9 @@ def run(test, params, env):
         return out
 
     if not hasattr(test, "write_perf_keyval"):
-        test.cancel("There is no 'write_perf_keyval' method in"
-                    " test object, skip this test")
+        test.cancel(
+            "There is no 'write_perf_keyval' method in" " test object, skip this test"
+        )
 
     error_context.context("boot guest over virtio driver", test.log.info)
     vm = env.get_vm(params["main_vm"])
@@ -122,8 +131,9 @@ def run(test, params, env):
             qemu_version = "Unknown"
     else:
         qemu_path = utils_misc.get_qemu_binary(params)
-        version_line = process.system_output("%s -help | head -n 1"
-                                             % qemu_path, shell=True)
+        version_line = process.system_output(
+            "%s -help | head -n 1" % qemu_path, shell=True
+        )
         matches = re.findall("version .*?,", version_line, re.I)
         if matches:
             qemu_version = " ".join(matches[0].split()[1:]).strip(",")
@@ -134,28 +144,29 @@ def run(test, params, env):
     try:
         result_name = params.get("result_name", "nfs-perf.RHS")
         result_file_path = utils_misc.get_path(test.resultsdir, result_name)
-        result_file = open(result_file_path, 'w')
+        result_file = open(result_file_path, "w")
     except Exception:
         _clean_up(STEP_1)
         raise
     # After STEP 2
 
-    error_context.context("mount nfs server in guest with tcp protocol",
-                          test.log.info)
+    error_context.context("mount nfs server in guest with tcp protocol", test.log.info)
     nfs_server = params.get("nfs_server")
     nfs_path = params.get("nfs_path")
     mnt_option = params.get("mnt_option")
     mnt_point = "/tmp/nfs_perf_%s" % utils_misc.generate_random_string(4)
-    test_file_prefix = os.path.join(mnt_point, "test_%si_" %
-                                    utils_misc.generate_random_string(4))
+    test_file_prefix = os.path.join(
+        mnt_point, "test_%si_" % utils_misc.generate_random_string(4)
+    )
 
     blk_size_list = params.get("blk_size_list", "8k").split()
     test_file_list = list(map(lambda x: test_file_prefix + x, blk_size_list))
 
     if (not nfs_server) or (not nfs_path) or (not mnt_point):
         _clean_up(STEP_2)
-        test.error("Missing configuration for nfs partition."
-                   " Check your config files")
+        test.error(
+            "Missing configuration for nfs partition." " Check your config files"
+        )
 
     try:
         session.cmd("mkdir -p %s" % mnt_point)
@@ -186,8 +197,7 @@ def run(test, params, env):
         result_file.write("### %s\n" % mnt_cmd_out)
         result_file.write("Category:ALL\n")
     except (IOError, ValueError) as e:
-        test.log.error("Failed to write to result file,"
-                       " error message:\n%s", e)
+        test.log.error("Failed to write to result file," " error message:\n%s", e)
 
     result_list = ["%s|%016s|%016s" % ("blk_size", "Write", "Read")]
     speed_pattern = r"(\d+ bytes).*?([\d\.]+ s).*?([\d\.]+ [KkMmGgTt])B/s"
@@ -202,8 +212,9 @@ def run(test, params, env):
             tmp_list = re.findall(speed_pattern, out)
             if not tmp_list:
                 _clean_up(STEP_5)
-                test.error("Could not get correct write result."
-                           " dd cmd output:\n%s" % out)
+                test.error(
+                    "Could not get correct write result." " dd cmd output:\n%s" % out
+                )
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
             result += "%016s|" % speed
@@ -214,8 +225,9 @@ def run(test, params, env):
             tmp_list = re.findall(speed_pattern, out)
             if not tmp_list:
                 _clean_up(STEP_6)
-                test.error("Could not get correct read result."
-                           " dd cmd output:\n%s" % out)
+                test.error(
+                    "Could not get correct read result." " dd cmd output:\n%s" % out
+                )
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
             result += "%016s" % speed
@@ -226,7 +238,6 @@ def run(test, params, env):
         try:
             result_file.write("\n".join(result_list))
         except (IOError, ValueError) as e:
-            test.log.error("Failed to write to result file,"
-                           " error message:\n%s", e)
+            test.log.error("Failed to write to result file," " error message:\n%s", e)
 
     _clean_up(STEP_6)

@@ -1,11 +1,12 @@
 """blockdev detect-zeroes option test"""
+
 import time
 
-from provider.block_devices_plug import BlockDevicesPlug
-from virttest import utils_misc, utils_disk, storage, data_dir
-
+from virttest import data_dir, storage, utils_disk, utils_misc
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
+
+from provider.block_devices_plug import BlockDevicesPlug
 
 
 def run(test, params, env):
@@ -37,16 +38,16 @@ def run(test, params, env):
         os_type = params["os_type"]
         pre_guest_cmd = params.get("pre_guest_cmd")
         post_guest_cmd = params.get("post_guest_cmd")
-        logger.debug("Check disk %s in guest" % img)
-        if os_type == 'windows':
+        logger.debug("Check disk %s in guest", img)
+        if os_type == "windows":
             img_size = params.get("image_size_%s" % img)
             cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             disk = _get_window_disk_index_by_serial(img)
             utils_disk.update_windows_disk_attributes(session, disk)
             logger.info("Formatting disk:%s", disk)
-            driver = \
-                utils_disk.configure_empty_disk(session, disk, img_size,
-                                                os_type)[0]
+            driver = utils_disk.configure_empty_disk(session, disk, img_size, os_type)[
+                0
+            ]
             output_path = driver + ":\\test.dat"
             guest_cmd = cmd.format(output_path)
         else:
@@ -63,7 +64,7 @@ def run(test, params, env):
             output_path = "/home/{}/test.dat".format(driver)
             guest_cmd = guest_cmd.format(output_path)
 
-        logger.debug("Ready execute cmd:" + guest_cmd)
+        logger.debug("Ready execute cmd: %s", guest_cmd)
         session.cmd(guest_cmd)
         if post_guest_cmd:
             logger.debug(post_guest_cmd)
@@ -81,9 +82,10 @@ def run(test, params, env):
     def block_resize_test():
         image_params = params.object_params(data_img)
         image_size = params.get_numeric("new_image_size_stg1")
-        image_filename = storage.get_image_filename(image_params,
-                                                    data_dir.get_data_dir())
-        image_dev = vm.get_block({'file': image_filename})
+        image_filename = storage.get_image_filename(
+            image_params, data_dir.get_data_dir()
+        )
+        image_dev = vm.get_block({"file": image_filename})
         if not image_dev:
             blocks_info = vm.monitor.human_monitor_cmd("info block")
             logger.debug(blocks_info)
@@ -111,7 +113,7 @@ def run(test, params, env):
 
     locals_var = locals()
     if guest_operation:
-        logger.debug("Execute guest operation %s" % guest_operation)
+        logger.debug("Execute guest operation %s", guest_operation)
         locals_var[guest_operation]()
 
     vm.destroy()

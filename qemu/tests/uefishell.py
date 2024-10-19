@@ -1,16 +1,12 @@
+import logging
 import os
 import re
 import time
-import logging
 
 from avocado.utils import process
+from virttest import data_dir, env_process, utils_misc, utils_net
 
-from virttest import data_dir
-from virttest import utils_net
-from virttest import utils_misc
-from virttest import env_process
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class UEFIShellTest(object):
@@ -51,14 +47,19 @@ class UEFIShellTest(object):
         params["bootindex_uefishell"] = "0"
         if params.get("secureboot_pk_kek"):
             params["secureboot_pk_kek"] %= self.copy_secureboot_pk_kek(
-                    params["pk_kek_filename"])
+                params["pk_kek_filename"]
+            )
             params["extra_params"] %= params["secureboot_pk_kek"]
         params["start_vm"] = "yes"
         params["shell_prompt"] = r"(Shell|FS\d:\\.*)>"
         params["shell_linesep"] = r"\r\n"
-        env_process.process(self.test, params, self.env,
-                            env_process.preprocess_image,
-                            env_process.preprocess_vm)
+        env_process.process(
+            self.test,
+            params,
+            self.env,
+            env_process.preprocess_image,
+            env_process.preprocess_vm,
+        )
         vm = self.env.get_vm(params["main_vm"])
         self.session = vm.wait_for_serial_login()
         if under_fs0 == "yes":
@@ -72,13 +73,12 @@ class UEFIShellTest(object):
         ovmf_path = self.params["ovmf_path"]
         uefishell_filename = "UefiShell.iso"
         uefishell_dst_path = "images/%s" % uefishell_filename
-        uefishell_src_path = utils_misc.get_path(
-            ovmf_path, uefishell_filename)
+        uefishell_src_path = utils_misc.get_path(ovmf_path, uefishell_filename)
         uefishell_dst_path = utils_misc.get_path(
-            data_dir.get_data_dir(), uefishell_dst_path)
+            data_dir.get_data_dir(), uefishell_dst_path
+        )
         if not os.path.exists(uefishell_dst_path):
-            cp_command = "cp -f %s %s" % (
-                uefishell_src_path, uefishell_dst_path)
+            cp_command = "cp -f %s %s" % (uefishell_src_path, uefishell_dst_path)
             process.system(cp_command)
         return uefishell_dst_path
 
@@ -88,11 +88,9 @@ class UEFIShellTest(object):
         :return SecureBootPkKek1.oemstr path
         """
         pk_kek_filepath = data_dir.get_deps_dir("edk2")
-        pk_kek_src_path = utils_misc.get_path(pk_kek_filepath,
-                                              pk_kek_filename)
+        pk_kek_src_path = utils_misc.get_path(pk_kek_filepath, pk_kek_filename)
         pk_kek_dst_path = "images/%s" % pk_kek_filename
-        pk_kek_dst_path = utils_misc.get_path(data_dir.get_data_dir(),
-                                              pk_kek_dst_path)
+        pk_kek_dst_path = utils_misc.get_path(data_dir.get_data_dir(), pk_kek_dst_path)
         cp_command = "cp -f %s %s" % (pk_kek_src_path, pk_kek_dst_path)
         process.system(cp_command)
         return pk_kek_dst_path
@@ -115,15 +113,17 @@ class UEFIShellTest(object):
         last_error = self.params["last_error"]
         env_var = self.session.cmd_output_safe("set")
         if not re.search(last_error, env_var, re.S):
-            self.test.fail("Following errors appear %s when running command %s"
-                           % (output, command))
+            self.test.fail(
+                "Following errors appear %s when running command %s" % (output, command)
+            )
         if check_result:
             value = []
             for result in check_result.split(", "):
                 if not re.findall(result, output, re.S):
-                    self.test.fail("The command result is: %s, which does not"
-                                   " match the expectation: %s"
-                                   % (output, result))
+                    self.test.fail(
+                        "The command result is: %s, which does not"
+                        " match the expectation: %s" % (output, result)
+                    )
                 else:
                     result = re.findall(result, output, re.S)[0]
                     value.append(result)
@@ -175,11 +175,10 @@ def run(test, params, env):
         """
         get source ip address and target ip address ver6
         """
-        src_ipv6 = uefishell_test.send_command(params["command_show6"],
-                                               params["check_result_show6"],
-                                               time_interval)
-        target_ipv6 = utils_net.get_host_ip_address(
-                params, "ipv6", True).split("%")[0]
+        src_ipv6 = uefishell_test.send_command(
+            params["command_show6"], params["check_result_show6"], time_interval
+        )
+        target_ipv6 = utils_net.get_host_ip_address(params, "ipv6", True).split("%")[0]
         return " ".join([src_ipv6[0], target_ipv6])
 
     def handle_memory_map(output):
@@ -191,13 +190,17 @@ def run(test, params, env):
         attribute_values = re.findall(params["rt_code_lines"], output[0], re.M)
         for value in attribute_values:
             if params["attribute_value"] != value:
-                test.fail("The last column should be '%s' for all "
-                          "RT_Code entries. The actual value is '%s'"
-                          % (params["attribute_value"], value))
+                test.fail(
+                    "The last column should be '%s' for all "
+                    "RT_Code entries. The actual value is '%s'"
+                    % (params["attribute_value"], value)
+                )
         if re.search(params["adjacent_rt_code_lines"], output[0], re.M):
-            test.fail("Found two adjacent RT_Code lines in command output. "
-                      "The range of 'RT_Code' should be covered by just one"
-                      " entry. The command output is %s" % output[0])
+            test.fail(
+                "Found two adjacent RT_Code lines in command output. "
+                "The range of 'RT_Code' should be covered by just one"
+                " entry. The command output is %s" % output[0]
+            )
 
     def handle_smbiosview(output):
         """
@@ -214,26 +217,34 @@ def run(test, params, env):
         """
         smbios_version = re.findall(params["smbios_version"], output[0], re.S)
         if not smbios_version:
-            test.fail("Failed to find smbios version. "
-                      "The command output is %s" % output[0])
+            test.fail(
+                "Failed to find smbios version. " "The command output is %s" % output[0]
+            )
         bios_version = re.findall(params["bios_version"], output[0], re.S)
         if not bios_version:
-            test.fail("Failed to find bios version. "
-                      "The command output is %s" % output[0])
+            test.fail(
+                "Failed to find bios version. " "The command output is %s" % output[0]
+            )
         bios_release_date = re.search(params["bios_release_date"], output[0], re.S)
         if not bios_release_date:
-            test.fail("Failed to find bios_release_date. "
-                      "The command output is %s" % output[0])
+            test.fail(
+                "Failed to find bios_release_date. "
+                "The command output is %s" % output[0]
+            )
         date_year = bios_version[0][:4]
         date_month = bios_version[0][4:6]
         date_day = bios_version[0][6:]
-        if date_year != bios_release_date.group("year") or date_month != \
-                bios_release_date.group("month") or date_day != \
-                bios_release_date.group("day"):
-            test.fail("The bios release dates are not equal between "
-                      "bios_version and bios_release_date. The date from "
-                      "bios_version is %s, the date from bios_release_date "
-                      "is %s." % (bios_version[0], bios_release_date[0]))
+        if (
+            date_year != bios_release_date.group("year")
+            or date_month != bios_release_date.group("month")
+            or date_day != bios_release_date.group("day")
+        ):
+            test.fail(
+                "The bios release dates are not equal between "
+                "bios_version and bios_release_date. The date from "
+                "bios_version is %s, the date from bios_release_date "
+                "is %s." % (bios_version[0], bios_release_date[0])
+            )
 
     uefishell_test = UEFIShellTest(test, params, env)
     time_interval = float(params["time_interval"])
@@ -246,9 +257,7 @@ def run(test, params, env):
             func_name = params["command_%s_%s" % (scenario, "args")]
             command += eval(func_name)
         check_result = params.get("check_result_%s" % scenario)
-        output = uefishell_test.send_command(command,
-                                             check_result,
-                                             time_interval)
+        output = uefishell_test.send_command(command, check_result, time_interval)
         if params.get("%s_output_handler" % scenario):
             func_name = params["%s_output_handler" % scenario]
             eval(func_name)(output)

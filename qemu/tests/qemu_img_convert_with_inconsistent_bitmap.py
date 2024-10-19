@@ -1,10 +1,7 @@
 import json
 
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import utils_misc
-from virttest import qemu_storage
+from virttest import data_dir, qemu_storage, utils_misc
 
 from provider.nbd_image_export import QemuNBDExportImage
 
@@ -66,8 +63,13 @@ def run(test, params, env):
 
     def convert_image_with_bitmaps(src_fmt, tar_fmt, src_name, tar_name):
         qemu_img = utils_misc.get_qemu_img_binary(params)
-        convert_cmd = params["convert_cmd"] % (qemu_img, src_fmt, tar_fmt,
-                                               src_name, tar_name)
+        convert_cmd = params["convert_cmd"] % (
+            qemu_img,
+            src_fmt,
+            tar_fmt,
+            src_name,
+            tar_name,
+        )
         try:
             process.system(convert_cmd, ignore_status=False, shell=True)
         except process.CmdError as e:
@@ -97,9 +99,9 @@ def run(test, params, env):
     add_persistent_bitmap_to_image(src_name, bitmaps[1])
     check_bitmap_in_image(src_image, bitmaps[1])
     try:
-        convert_image_with_bitmaps(src_params["image_format"],
-                                   dst_params["image_format"],
-                                   src_name, dst_name)
+        convert_image_with_bitmaps(
+            src_params["image_format"], dst_params["image_format"], src_name, dst_name
+        )
         check_bitmap_not_in_image(dst_image, bitmaps[0])
         check_bitmap_in_image(dst_image, bitmaps[1])
     finally:

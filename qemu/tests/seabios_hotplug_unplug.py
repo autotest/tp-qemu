@@ -1,9 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import utils_net
+from virttest import error_context, utils_misc, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -38,8 +35,9 @@ def run(test, params, env):
         return re.search(sgabios_info, get_output(vm.serial_console))
 
     def menu_hint_check():
-        return (len(re.findall(boot_menu_hint,
-                               get_output(seabios_session))) > reboot_times)
+        return (
+            len(re.findall(boot_menu_hint, get_output(seabios_session))) > reboot_times
+        )
 
     def get_list():
         return re.findall(r"^\d+\. .*\s", get_output(seabios_session), re.M)
@@ -49,14 +47,13 @@ def run(test, params, env):
             test.fail("Could not get boot menu message")
         vm.send_key(boot_menu_key)
         boot_list = utils_misc.wait_for(get_list, timeout, 1)
-        boot_menu = boot_list[len(boot_list_record):]
+        boot_menu = boot_list[len(boot_list_record) :]
         if not boot_menu:
             test.fail("Could not get boot menu list")
         return (boot_list, boot_menu)
 
     def check_in_guest():
-        session = vm.wait_for_serial_login(timeout=timeout,
-                                           restart_network=True)
+        session = vm.wait_for_serial_login(timeout=timeout, restart_network=True)
         error_context.context("Check kernel crash message!", test.log.info)
         vm.verify_kernel_crash()
         error_context.context("Ping guest!", test.log.info)
@@ -73,8 +70,8 @@ def run(test, params, env):
             (menu_short, menu_long) = (menu_before, menu_after)
         else:
             (menu_short, menu_long) = (menu_after, menu_before)
-        menu_short = re.findall(r"^\d+\. (.*)\s", ''.join(menu_short), re.M)
-        menu_long = re.findall(r"^\d+\. (.*)\s", ''.join(menu_long), re.M)
+        menu_short = re.findall(r"^\d+\. (.*)\s", "".join(menu_short), re.M)
+        menu_long = re.findall(r"^\d+\. (.*)\s", "".join(menu_long), re.M)
         for dev in menu_short:
             if dev in menu_long:
                 menu_long.remove(dev)
@@ -109,13 +106,13 @@ def run(test, params, env):
     image_params = params.object_params(image_name)
     image_params["drive_format"] = "virtio"
     image_hint = "Virtio disk"
-    devices = vm.devices.images_define_by_params(image_name, image_params,
-                                                 'disk', None, False, None)
+    devices = vm.devices.images_define_by_params(
+        image_name, image_params, "disk", None, False, None
+    )
     for dev in devices:
         ret = vm.devices.simple_hotplug(dev, vm.monitor)
         if ret[1] is False:
-            test.fail("Failed to hotplug device '%s'. Output:\n%s"
-                      % (dev, ret[0]))
+            test.fail("Failed to hotplug device '%s'. Output:\n%s" % (dev, ret[0]))
     disk_hotplugged.append(devices[-1])
 
     error_context.context("Hotplugging virtio nic", test.log.info)
@@ -128,7 +125,7 @@ def run(test, params, env):
     nic_hint = "iPXE"
 
     test.log.info("Disable other link(s) in guest")
-    guest_is_linux = ("linux" == params.get("os_type"))
+    guest_is_linux = "linux" == params.get("os_type")
     s_session = vm.wait_for_serial_login(timeout=timeout)
     primary_nics = [nic for nic in vm.virtnet]
     for nic in primary_nics:
@@ -154,8 +151,7 @@ def run(test, params, env):
     test.log.info("Got boot menu after hotplug: '%s'", boot_menu_after_plug)
     if not len(boot_menu_after_plug) > len(boot_menu_before_plug):
         test.fail("The boot menu is incorrect after hotplug.")
-    menu_diff = get_diff(boot_menu_before_plug,
-                         boot_menu_after_plug, plug=True)
+    menu_diff = get_diff(boot_menu_before_plug, boot_menu_after_plug, plug=True)
     if image_hint not in str(menu_diff):
         test.fail("Hotplugged virtio disk is not in boot menu list")
     if nic_hint not in str(menu_diff):
@@ -168,8 +164,7 @@ def run(test, params, env):
     for dev in disk_hotplugged:
         ret = vm.devices.simple_unplug(dev, vm.monitor)
         if ret[1] is False:
-            test.fail("Failed to unplug device '%s'. Output:\n%s"
-                      % (dev, ret[0]))
+            test.fail("Failed to unplug device '%s'. Output:\n%s" % (dev, ret[0]))
 
     vm.hotunplug_nic(hotplug_nic.nic_name)
     for nic in primary_nics:
@@ -184,8 +179,7 @@ def run(test, params, env):
     test.log.info("Got boot menu after hotunplug: '%s'", boot_menu_after_unplug)
     if not len(boot_menu_after_plug) > len(boot_menu_after_unplug):
         test.fail("The boot menu is incorrect after hotunplug.")
-    menu_diff = get_diff(boot_menu_after_plug,
-                         boot_menu_after_unplug, plug=False)
+    menu_diff = get_diff(boot_menu_after_plug, boot_menu_after_unplug, plug=False)
     if image_hint not in str(menu_diff):
         test.fail("Hotunplugged virtio disk is still in boot menu list")
     if nic_hint not in str(menu_diff):

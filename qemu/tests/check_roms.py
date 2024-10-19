@@ -31,10 +31,10 @@ def run(test, params, env):
     list_fw = []
     list_addr = []
 
-    patt = re.compile(r'%s' % fw_filter, re.M)
+    patt = re.compile(r"%s" % fw_filter, re.M)
     list_fw = patt.findall(str(o))
 
-    patt = re.compile(r'%s' % addr_filter, re.M)
+    patt = re.compile(r"%s" % addr_filter, re.M)
     list_addr = patt.findall(str(o))
 
     test.log.info("ROMS reported by firmware: '%s'", list_fw)
@@ -43,5 +43,7 @@ def run(test, params, env):
     error_context.context("check result for the roms", test.log.info)
     ret = set(list_fw).intersection(list_addr)
     if ret:
-        test.fail("ROM '%s' is intended to be loaded by the firmware, "
-                  "but is was also loaded by QEMU itself." % ret)
+        test.fail(
+            "ROM '%s' is intended to be loaded by the firmware, "
+            "but is was also loaded by QEMU itself." % ret
+        )

@@ -4,7 +4,7 @@ import time
 from avocado import fail_on
 from virttest import utils_misc
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 BLOCK_JOB_COMPLETED_EVENT = "BLOCK_JOB_COMPLETED"
 BLOCK_JOB_CANCELLED_EVENT = "BLOCK_JOB_CANCELLED"
@@ -36,15 +36,15 @@ def wait_until_job_status_match(vm, status, device, timeout):
     :param timeout: blocked timeout
     """
     matched = utils_misc.wait_for(
-        lambda: get_job_status(vm, device) == status,
-        timeout=timeout)
-    assert matched, "wait job status to '%s' timeout in %s seconds" % (
-        status, timeout)
+        lambda: get_job_status(vm, device) == status, timeout=timeout
+    )
+    assert matched, "wait job status to '%s' timeout in %s seconds" % (status, timeout)
 
 
 @fail_on
 def wait_until_block_job_completed(vm, job_id, timeout=900):
     """Block until block job completed"""
+
     def _wait_until_block_job_completed():
         finished = False
         status = get_job_status(vm, job_id)
@@ -73,9 +73,8 @@ def wait_until_block_job_completed(vm, job_id, timeout=900):
         return finished
 
     finished = utils_misc.wait_for(
-        _wait_until_block_job_completed,
-        first=0.1,
-        timeout=timeout)
+        _wait_until_block_job_completed, first=0.1, timeout=timeout
+    )
     assert finished, "wait for block job complete event timeout in %s seconds" % timeout
 
 
@@ -199,10 +198,14 @@ def get_event_by_condition(vm, event_name, tmo=30, **condition):
     event = None
     for i in range(tmo):
         all_events = vm.monitor.get_events()
-        events = [e for e in all_events if e.get('event') == event_name]
+        events = [e for e in all_events if e.get("event") == event_name]
         if condition:
-            events = [e for e in events if e.get('data') and all(
-                item in e['data'].items() for item in condition.items())]
+            events = [
+                e
+                for e in events
+                if e.get("data")
+                and all(item in e["data"].items() for item in condition.items())
+            ]
         if events:
             event = events[0]
             break
@@ -218,13 +221,13 @@ def is_block_job_started(vm, jobid, tmo=10):
     for i in range(tmo):
         job = get_block_job_by_id(vm, jobid)
         if not job:
-            LOG_JOB.debug('job %s was not found', jobid)
+            LOG_JOB.debug("job %s was not found", jobid)
             break
-        elif job['offset'] > 0:
+        elif job["offset"] > 0:
             return True
         time.sleep(1)
     else:
-        LOG_JOB.debug('block job %s never starts in %s', jobid, tmo)
+        LOG_JOB.debug("block job %s never starts in %s", jobid, tmo)
     return False
 
 
@@ -232,8 +235,7 @@ def check_block_jobs_started(vm, jobid_list, tmo=10):
     """
     Test failed if any block job failed to start
     """
-    started = all(list(map(lambda j: is_block_job_started(vm, j, tmo),
-                           jobid_list)))
+    started = all(list(map(lambda j: is_block_job_started(vm, j, tmo), jobid_list)))
     assert started, "Not all block jobs start successfully"
 
 
@@ -246,22 +248,21 @@ def is_block_job_running(vm, jobid, tmo=200):
     for i in range(tmo):
         job = get_block_job_by_id(vm, jobid)
         if not job:
-            LOG_JOB.debug('job %s cancelled unexpectedly', jobid)
+            LOG_JOB.debug("job %s cancelled unexpectedly", jobid)
             break
-        elif job['status'] not in ["running", "pending", "ready"]:
-            LOG_JOB.debug('job %s is not in running status', jobid)
+        elif job["status"] not in ["running", "pending", "ready"]:
+            LOG_JOB.debug("job %s is not in running status", jobid)
             return False
         elif offset is None:
-            if job['status'] in ["pending", "ready"]:
+            if job["status"] in ["pending", "ready"]:
                 return True
             else:
-                offset = job['offset']
-        elif job['offset'] > offset:
+                offset = job["offset"]
+        elif job["offset"] > offset:
             return True
         time.sleep(1)
     else:
-        LOG_JOB.debug('offset never changed for block job %s in %s',
-                      jobid, tmo)
+        LOG_JOB.debug("offset never changed for block job %s in %s", jobid, tmo)
     return False
 
 
@@ -269,8 +270,7 @@ def check_block_jobs_running(vm, jobid_list, tmo=200):
     """
     Test failed if any block job's offset never increased
     """
-    running = all(list(map(lambda j: is_block_job_running(vm, j, tmo),
-                           jobid_list)))
+    running = all(list(map(lambda j: is_block_job_running(vm, j, tmo), jobid_list)))
     assert running, "Not all block jobs are running"
 
 
@@ -285,16 +285,15 @@ def is_block_job_paused(vm, jobid, tmo=50):
     for i in range(tmo):
         job = get_block_job_by_id(vm, jobid)
         if not job:
-            LOG_JOB.debug('job %s cancelled unexpectedly', jobid)
+            LOG_JOB.debug("job %s cancelled unexpectedly", jobid)
             return False
-        elif job['status'] != "running":
-            LOG_JOB.debug('job %s is not in running status', jobid)
+        elif job["status"] != "running":
+            LOG_JOB.debug("job %s is not in running status", jobid)
             return False
         elif offset is None:
-            offset = job['offset']
-        elif offset != job['offset']:
-            LOG_JOB.debug('offset %s changed for job %s in %s',
-                          offset, jobid, tmo)
+            offset = job["offset"]
+        elif offset != job["offset"]:
+            LOG_JOB.debug("offset %s changed for job %s in %s", offset, jobid, tmo)
             return False
         time.sleep(1)
     return True
@@ -304,6 +303,5 @@ def check_block_jobs_paused(vm, jobid_list, tmo=50):
     """
     Test failed if any block job's offset changed
     """
-    paused = all(list(map(lambda j: is_block_job_paused(vm, j, tmo),
-                          jobid_list)))
+    paused = all(list(map(lambda j: is_block_job_paused(vm, j, tmo), jobid_list)))
     assert paused, "Not all block jobs are paused"

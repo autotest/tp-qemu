@@ -1,16 +1,17 @@
+import random
 import re
 import time
-import random
+
 import six
-
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import error_context
-from virttest import storage
-from virttest import qemu_storage
-from virttest import utils_misc
-from virttest import qemu_monitor
+from virttest import (
+    data_dir,
+    error_context,
+    qemu_monitor,
+    qemu_storage,
+    storage,
+    utils_misc,
+)
 
 
 def speed2byte(speed):
@@ -24,16 +25,18 @@ def speed2byte(speed):
 
 
 class BlockCopy(object):
-
     """
     Base class for block copy test;
     """
-    default_params = {"cancel_timeout": 6,
-                      "wait_timeout": 600,
-                      "login_timeout": 360,
-                      "check_timeout": 3,
-                      "max_speed": 0,
-                      "default_speed": 0}
+
+    default_params = {
+        "cancel_timeout": 6,
+        "wait_timeout": 600,
+        "login_timeout": 360,
+        "check_timeout": 3,
+        "max_speed": 0,
+        "default_speed": 0,
+    }
     trash_files = []
     opening_sessions = []
     processes = []
@@ -77,8 +80,7 @@ class BlockCopy(object):
         """
         according configuration get target device ID;
         """
-        image_file = storage.get_image_filename(self.parser_test_args(),
-                                                self.data_dir)
+        image_file = storage.get_image_filename(self.parser_test_args(), self.data_dir)
         self.test.log.info("image filename: %s", image_file)
         return self.vm.get_block({"file": image_file})
 
@@ -100,7 +102,7 @@ class BlockCopy(object):
             try:
                 return self.vm.get_job_status(self.device)
             except qemu_monitor.MonitorLockError as e:
-                self.test.log.warn(e)
+                self.test.log.warning(e)
             time.sleep(random.uniform(1, 5))
             count += 1
         return {}
@@ -115,13 +117,14 @@ class BlockCopy(object):
                 else:
                     self.test.error("undefined step %s" % step)
         except KeyError:
-            self.test.log.warn("Undefined test phase '%s'", tag)
+            self.test.log.warning("Undefined test phase '%s'", tag)
 
     @error_context.context_aware
     def cancel(self):
         """
         cancel active job on given image;
         """
+
         def is_cancelled():
             ret = not bool(self.get_status())
             ret &= bool(self.vm.monitor.get_event("BLOCK_JOB_CANCELLED"))
@@ -189,8 +192,9 @@ class BlockCopy(object):
         params = self.parser_test_args()
         max_speed = params.get("max_speed")
         expected_speed = int(params.get("expected_speed", max_speed))
-        error_context.context("set speed to %s B/s" % expected_speed,
-                              self.test.log.info)
+        error_context.context(
+            "set speed to %s B/s" % expected_speed, self.test.log.info
+        )
         self.vm.set_job_speed(self.device, expected_speed)
         status = self.get_status()
         if not status:
@@ -212,17 +216,17 @@ class BlockCopy(object):
 
         if boot_check:
             session = self.get_session()
-            return self.vm.reboot(session=session,
-                                  timeout=timeout, method=method)
+            return self.vm.reboot(session=session, timeout=timeout, method=method)
         error_context.context("reset guest via system_reset", self.test.log.info)
         self.vm.monitor.clear_event("RESET")
         self.vm.monitor.cmd("system_reset")
-        reseted = utils_misc.wait_for(lambda:
-                                      self.vm.monitor.get_event("RESET"),
-                                      timeout=timeout)
+        reseted = utils_misc.wait_for(
+            lambda: self.vm.monitor.get_event("RESET"), timeout=timeout
+        )
         if not reseted:
-            self.test.fail("No RESET event received after"
-                           "execute system_reset %ss" % timeout)
+            self.test.fail(
+                "No RESET event received after" "execute system_reset %ss" % timeout
+            )
         self.vm.monitor.clear_event("RESET")
         return None
 
@@ -263,26 +267,25 @@ class BlockCopy(object):
         try:
             if isinstance(blocks, six.string_types):
                 # ide0-hd0: removable=1 locked=0 file=/tmp/test.img
-                image_regex = r'%s.*\s+file=(\S*)' % self.device
+                image_regex = r"%s.*\s+file=(\S*)" % self.device
                 image_file = re.findall(image_regex, blocks)
                 if image_file:
                     return image_file[0]
                 # ide0-hd0 (#block184): a b c
                 # or
                 # ide0-hd0 (#block184): a b c (raw)
-                image_file = re.findall(r"%s[^:]+: ([^(]+)\(?" % self.device,
-                                        blocks)
+                image_file = re.findall(r"%s[^:]+: ([^(]+)\(?" % self.device, blocks)
                 if image_file:
-                    if image_file[0][-1] == ' ':
+                    if image_file[0][-1] == " ":
                         return image_file[0][:-1]
                     else:
                         return image_file[0]
 
             for block in blocks:
-                if block['device'] == self.device:
-                    return block['inserted']['file']
+                if block["device"] == self.device:
+                    return block["inserted"]["file"]
         except KeyError:
-            self.test.log.warn("Image file not found for device '%s'", self.device)
+            self.test.log.warning("Image file not found for device '%s'", self.device)
             self.test.log.debug("Blocks info: '%s'", blocks)
         return None
 
@@ -300,7 +303,7 @@ class BlockCopy(object):
             matched = re.search(r"backing file: +(.*)", info, re.M)
             return matched.group(1)
         except AttributeError:
-            self.test.log.warn("No backingfile found, cmd output: %s", info)
+            self.test.log.warning("No backingfile found, cmd output: %s", info)
 
     def action_before_start(self):
         """
@@ -371,8 +374,9 @@ class BlockCopy(object):
         params = self.parser_test_args()
         timeout = params.get("wait_timeout")
         self.vm.monitor.clear_event("BLOCK_JOB_READY")
-        steady = utils_misc.wait_for(self.is_steady, first=3.0,
-                                     step=3.0, timeout=timeout)
+        steady = utils_misc.wait_for(
+            self.is_steady, first=3.0, step=3.0, timeout=timeout
+        )
         if not steady:
             self.test.fail("Wait mirroring job ready timeout in %ss" % timeout)
 
@@ -435,11 +439,13 @@ class BlockCopy(object):
         :param file_name: the file need to be verified.
         """
         session = self.get_session()
-        status, output = session.cmd_status_output("md5sum -c %s.md5" % file_name,
-                                                   timeout=200)
+        status, output = session.cmd_status_output(
+            "md5sum -c %s.md5" % file_name, timeout=200
+        )
         if status != 0:
-            self.test.fail("File %s changed, md5sum check output: %s"
-                           % (file_name, output))
+            self.test.fail(
+                "File %s changed, md5sum check output: %s" % (file_name, output)
+            )
 
     def reopen(self, reopen_image):
         """

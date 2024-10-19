@@ -1,10 +1,10 @@
 import time
 
-from virttest import utils_test
-from virttest import error_context
+from virttest import error_context, utils_test
 from virttest.qemu_monitor import QMPEventError
-from qemu.tests.balloon_check import BallooningTestWin
+
 from provider import win_driver_utils
+from qemu.tests.balloon_check import BallooningTestWin
 
 
 @error_context.context_aware
@@ -26,8 +26,9 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
     driver_name = params.get("driver_name", "balloon")
-    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test, driver_name)
+    session = utils_test.qemu.windrv_check_running_verifier(
+        session, vm, test, driver_name
+    )
     balloon_test = BallooningTestWin(test, params, env)
     expect_mem = int(params["expect_memory"])
     balloon_test.pre_mem = balloon_test.get_ballooned_memory()

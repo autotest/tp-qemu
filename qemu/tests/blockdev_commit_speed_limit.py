@@ -2,13 +2,11 @@ import random
 
 from virttest.qemu_monitor import QMPCmdError
 
-from provider import backup_utils
-from provider import job_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitSpeedLimit(BlockDevCommitTest):
-
     def commit_snapshots(self):
         device = self.params.get("device_tag")
         device_params = self.params.object_params(device)
@@ -26,15 +24,15 @@ class BlockdevCommitSpeedLimit(BlockDevCommitTest):
         job_utils.check_block_jobs_started(self.main_vm, [job_id])
         small_speed = self.params.get_numeric("small_speed")
         large_speed = self.params.get_numeric("large_speed")
-        commit_speed = self.params.get("commit_speed",
-                                       random.randint(small_speed,
-                                                      large_speed))
+        commit_speed = self.params.get(
+            "commit_speed", random.randint(small_speed, large_speed)
+        )
         if self.params.get_boolean("speed_is_int", True):
             commit_speed = int(commit_speed)
         try:
-            self.main_vm.monitor.cmd("block-job-set-speed",
-                                     {'device': job_id,
-                                      'speed': commit_speed})
+            self.main_vm.monitor.cmd(
+                "block-job-set-speed", {"device": job_id, "speed": commit_speed}
+            )
         except QMPCmdError as e:
             self.test.log.info("Error message is %s", e.data)
             if self.params.get("error_msg") not in str(e.data):
@@ -43,9 +41,9 @@ class BlockdevCommitSpeedLimit(BlockDevCommitTest):
             output = job_utils.query_block_jobs(self.main_vm)
             if output[0]["speed"] != commit_speed:
                 self.test.fail("Commit speed set failed")
-            self.main_vm.monitor.cmd("block-job-set-speed",
-                                     {'device': job_id,
-                                      'speed': 0})
+            self.main_vm.monitor.cmd(
+                "block-job-set-speed", {"device": job_id, "speed": 0}
+            )
             job_utils.wait_until_block_job_completed(self.main_vm, job_id)
 
     def run_test(self):

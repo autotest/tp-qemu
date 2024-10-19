@@ -42,13 +42,13 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     vm = env.get_vm(params["main_vm"])
-    test.log.info('Start query cpu model supported by qmp')
+    test.log.info("Start query cpu model supported by qmp")
     # get cpu models for test
-    cpu_models = params.objects('cpu_models')
-    props1 = props_dict(params.get_dict('props1'))
-    props2 = props_dict(params.get_dict('props2'))
-    expected_props = params.objects('expected_props')
-    not_expected_props = params.objects('not_expected_props')
+    cpu_models = params.objects("cpu_models")
+    props1 = props_dict(params.get_dict("props1"))
+    props2 = props_dict(params.get_dict("props2"))
+    expected_props = params.objects("expected_props")
+    not_expected_props = params.objects("not_expected_props")
     test_failures = []
     for i in range(len(cpu_models)):
         newer_model = cpu_models[i]
@@ -56,36 +56,36 @@ def run(test, params, env):
             older_model = cpu_models[j]
 
             args = {
-                    'modela': {'name': older_model, 'props': props1},
-                    'modelb': {'name': newer_model, 'props': props2}
-                   }
-            test.log.debug("Test with args: %s" % args)
-            output = vm.monitor.cmd('query-cpu-model-baseline', args)
+                "modela": {"name": older_model, "props": props1},
+                "modelb": {"name": newer_model, "props": props2},
+            }
+            test.log.debug("Test with args: %s", args)
+            output = vm.monitor.cmd("query-cpu-model-baseline", args)
 
-            obtained_model = output.get('model').get('name')
+            obtained_model = output.get("model").get("name")
             expected_model = older_model + "-base"
             if obtained_model != expected_model:
-                msg = ("Expected to get older model but newer one"
-                       " was chosen:"
-                       " %s instead of expected %s."
-                       " Input model names: %s and %s" % (obtained_model,
-                                                          expected_model,
-                                                          older_model,
-                                                          newer_model))
+                msg = (
+                    "Expected to get older model but newer one"
+                    " was chosen:"
+                    " %s instead of expected %s."
+                    " Input model names: %s and %s"
+                    % (obtained_model, expected_model, older_model, newer_model)
+                )
                 test_failures.append(msg)
 
-            props = output.get('model').get('props')
+            props = output.get("model").get("props")
             found_not_expected = found_unexpected_props(not_expected_props, props)
             not_found_expected = not_found_expected_props(expected_props, props)
 
             if not_found_expected or found_not_expected:
-                msg = ("Expected to get intersection of props '%s'"
-                       " and '%s': '%s';"
-                       " but got '%s'" % (props1,
-                                          props2,
-                                          expected_props,
-                                          props))
+                msg = (
+                    "Expected to get intersection of props '%s'"
+                    " and '%s': '%s';"
+                    " but got '%s'" % (props1, props2, expected_props, props)
+                )
                 test_failures.append(msg)
     if test_failures:
-        test.fail("Some baselines didn't return as expected."
-                  " Details: %s" % test_failures)
+        test.fail(
+            "Some baselines didn't return as expected." " Details: %s" % test_failures
+        )

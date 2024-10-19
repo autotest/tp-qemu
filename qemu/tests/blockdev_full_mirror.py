@@ -1,31 +1,26 @@
 import logging
 
 from avocado.utils import memory
-
 from virttest import error_context
 
-from provider import backup_utils
-from provider import blockdev_full_backup_base
+from provider import backup_utils, blockdev_full_backup_base
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
-class BlockDevFullMirrorTest(
-        blockdev_full_backup_base.BlockdevFullBackupBaseTest):
-
+class BlockDevFullMirrorTest(blockdev_full_backup_base.BlockdevFullBackupBaseTest):
     @error_context.context_aware
     def blockdev_mirror(self):
         source = "drive_%s" % self.source_disks[0]
         target = "drive_%s" % self.target_disks[0]
         try:
             error_context.context(
-                "backup %s to %s, options: %s" %
-                (source, target, self.backup_options), LOG_JOB.info)
+                "backup %s to %s, options: %s" % (source, target, self.backup_options),
+                LOG_JOB.info,
+            )
             backup_utils.blockdev_mirror(
-                self.main_vm,
-                source,
-                target,
-                **self.backup_options)
+                self.main_vm, source, target, **self.backup_options
+            )
         finally:
             memory.drop_caches()
 

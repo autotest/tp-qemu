@@ -1,9 +1,7 @@
 import os
 import re
 
-from virttest import utils_misc
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -26,8 +24,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     unattended_file = params.get("unattended_file")
-    unattended_file_link = os.path.join(test.virtdir,
-                                        unattended_file)
+    unattended_file_link = os.path.join(test.virtdir, unattended_file)
     tmp_path = params.get("tmp_path", "c:\\")
     vm.copy_files_to(unattended_file_link, tmp_path, verbose=True)
     sysprep_cmd = params.get("sysprep_cmd")
@@ -50,17 +47,18 @@ def run(test, params, env):
     sids[sid] = ["pre_%s" % vm.name]
     file_dir = tmp_path + unattended_file
     sysprep_cmd = sysprep_cmd % file_dir
-    error_context.context("Run sysprep command in guest. %s" % sysprep_cmd,
-                          test.log.info)
+    error_context.context(
+        "Run sysprep command in guest. %s" % sysprep_cmd, test.log.info
+    )
     session.sendline(sysprep_cmd)
     error_context.context("Waiting guest power down.....", test.log.info)
     status = utils_misc.wait_for(vm.is_dead, timeout * 3, 3)
     if not status:
         test.fail("VM did not shutdown after sysprep command")
-    params['image_snapshot'] = "yes"
-    params['vms'] += extend_vm
-    restart_timeout = timeout * len(params['vms'].split()) * 2
-    for vm_i in params['vms'].split():
+    params["image_snapshot"] = "yes"
+    params["vms"] += extend_vm
+    restart_timeout = timeout * len(params["vms"].split()) * 2
+    for vm_i in params["vms"].split():
         vm_params = params.object_params(vm_i)
         env_process.preprocess_vm(test, vm_params, env, vm_i)
         vm = env.get_vm(vm_i)
@@ -80,9 +78,7 @@ def run(test, params, env):
             test.error(msg)
         test.log.info("VM:%s System ID is: %s", vm_i.name, sid)
         if sid in sids.keys():
-            test.log.error("VM: %s have duplicate System ID: %s",
-                           vm_i.name,
-                           sid)
+            test.log.error("VM: %s have duplicate System ID: %s", vm_i.name, sid)
             sid_same.append(sid)
             sids[sid].append(vm_i.name)
         else:
@@ -91,6 +87,8 @@ def run(test, params, env):
     if sid_same:
         msg = ""
         for sid in sid_same:
-            msg += "VM(s): %s have duplicate System ID: %s\n" % \
-                (" ".join(sids[sid]), sid)
+            msg += "VM(s): %s have duplicate System ID: %s\n" % (
+                " ".join(sids[sid]),
+                sid,
+            )
         test.fail(msg)

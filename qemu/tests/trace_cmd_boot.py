@@ -1,10 +1,9 @@
-import re
 import os
+import re
 import signal
 
 from avocado.utils import process
-from virttest import utils_misc
-from virttest import error_context
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -28,8 +27,7 @@ def run(test, params, env):
     """
 
     def find_trace_cmd():
-        if process.system("ps -a | grep trace-cmd", ignore_status=True,
-                          shell=True):
+        if process.system("ps -a | grep trace-cmd", ignore_status=True, shell=True):
             return False
         else:
             return True
@@ -57,21 +55,18 @@ def run(test, params, env):
         stress_job = utils_misc.BgJob(stress_cmd)
         # Reboot the VM
         for num in range(int(params.get("reboot_count", 1))):
-            error_context.context("Reboot guest '%s'. Repeat %d" %
-                                  (vm.name, num + 1), test.log.info)
+            error_context.context(
+                "Reboot guest '%s'. Repeat %d" % (vm.name, num + 1), test.log.info
+            )
             trace_job = utils_misc.BgJob(trace_cmd)
             try:
-                session = vm.reboot(session,
-                                    reboot_method,
-                                    0,
-                                    timeout)
+                session = vm.reboot(session, reboot_method, 0, timeout)
             except Exception:
                 txt = "stop the trace-cmd and generate the readable report."
                 error_context.context(txt, test.log.info)
                 os.kill(trace_job.sp.pid, signal.SIGINT)
-                if not utils_misc.wait_for(lambda: not find_trace_cmd(),
-                                           120, 60, 3):
-                    test.log.warn("trace-cmd could not finish after 120s.")
+                if not utils_misc.wait_for(lambda: not find_trace_cmd(), 120, 60, 3):
+                    test.log.warning("trace-cmd could not finish after 120s.")
                 trace_job = None
                 process.system(trace_report_cmd, shell=True)
                 with open(report_file) as report_f:
@@ -85,9 +80,8 @@ def run(test, params, env):
                 txt = "stop the trace-cmd and remove the trace.dat file."
                 error_context.context(txt, test.log.info)
                 os.kill(trace_job.sp.pid, signal.SIGINT)
-                if not utils_misc.wait_for(lambda: not find_trace_cmd(),
-                                           120, 60, 3):
-                    test.log.warn("trace-cmd could not finish after 120s.")
+                if not utils_misc.wait_for(lambda: not find_trace_cmd(), 120, 60, 3):
+                    test.log.warning("trace-cmd could not finish after 120s.")
                 trace_job = None
                 process.system("rm -rf %s" % trace_o, timeout=60)
     finally:

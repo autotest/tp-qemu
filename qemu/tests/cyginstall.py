@@ -19,8 +19,7 @@ def run(test, params, env):
     cygwin_prompt = params.get("cygwin_prompt", r"\$\s+$")
     cygwin_start = params.get("cygwin_start")
     cygwin_verify_cmd = params.get("cygwin_verify_cmd", "ls")
-    cygwin_install_timeout = float(params.get("cygwin_install_timeout",
-                                              "2400"))
+    cygwin_install_timeout = float(params.get("cygwin_install_timeout", "2400"))
     timeout = float(params.get("login_timeout", 240))
     cdrom_check_cmd = params.get("cdrom_check")
     cdrom_filter = params.get("cdrom_filter")
@@ -33,8 +32,7 @@ def run(test, params, env):
     output = session.cmd_output(cdrom_check_cmd, timeout)
     cdrom = re.findall(cdrom_filter, output)
     if cdrom:
-        cygwin_install_cmd = re.sub("WINUTILS", cdrom[0],
-                                    cygwin_install_cmd)
+        cygwin_install_cmd = re.sub("WINUTILS", cdrom[0], cygwin_install_cmd)
     else:
         test.error("Can not find tools iso in guest")
 

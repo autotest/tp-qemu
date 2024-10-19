@@ -1,8 +1,7 @@
-from virttest import data_dir
-from virttest import qemu_storage
-
 from avocado import fail_on
 from avocado.utils import process
+from virttest import data_dir, qemu_storage
+
 from provider import qemu_img_utils as img_utils
 
 
@@ -48,7 +47,8 @@ def run(test, params, env):
     vm = img_utils.boot_vm_with_images(test, params, env, (convert_target,))
     session = vm.wait_for_login()
     test.log.debug("Verify md5 value of the temporary file")
-    img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
-                           md5_value_to_check=md5_value)
+    img_utils.check_md5sum(
+        guest_temp_file, md5sum_bin, session, md5_value_to_check=md5_value
+    )
     session.close()
     target.remove()

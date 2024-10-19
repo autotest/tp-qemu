@@ -1,16 +1,13 @@
 import random
 
 from avocado.core import exceptions
-
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 from provider import win_driver_utils
 from qemu.tests.balloon_check import BallooningTest
 
 
 class BallooningTestPause(BallooningTest):
-
     """
     Basic functions of memory ballooning test for guest booted
     in paused status
@@ -47,14 +44,14 @@ class BallooningTestPause(BallooningTest):
         if self.pre_gmem:
             # for rhel guest, the gmem is total memory in guest;
             # for windows guest, the gmem is used memory in guest.
-            if self.params['os_type'] == 'windows':
+            if self.params["os_type"] == "windows":
                 guest_ballooned_mem = self.pre_gmem - gmem
             else:
                 guest_ballooned_mem = gmem - self.pre_gmem
-        if (mmem - self.pre_mem) != changed_mem or (self.pre_gmem and abs(
-                            guest_ballooned_mem - changed_mem) > 100):  # pylint: disable=E0606
-            self.error_report(step, self.pre_mem + changed_mem,
-                              mmem, gmem)
+        if (mmem - self.pre_mem) != changed_mem or (
+            self.pre_gmem and abs(guest_ballooned_mem - changed_mem) > 100
+        ):  # pylint: disable=E0606
+            self.error_report(step, self.pre_mem + changed_mem, mmem, gmem)
             self.test.fail("Balloon test failed %s" % step)
         return (mmem, gmem)
 
@@ -70,7 +67,7 @@ class BallooningTestPause(BallooningTest):
         try:
             self.vm.balloon(new_mem)
         except Exception as e:
-            if self.vm.monitor.verify_status('paused'):
+            if self.vm.monitor.verify_status("paused"):
                 # Make sure memory not changed before the guest resumed
                 if self.get_ballooned_memory() != self.pre_mem:
                     self.test.fail("Memory changed before guest resumed")
@@ -83,12 +80,14 @@ class BallooningTestPause(BallooningTest):
                 self.test.fail("Balloon memory fail with error message:%s" % e)
         compare_mem = new_mem
         balloon_timeout = float(self.params.get("balloon_timeout", 240))
-        status = utils_misc.wait_for((lambda: compare_mem ==
-                                      self.get_ballooned_memory()),
-                                     balloon_timeout)
+        status = utils_misc.wait_for(
+            (lambda: compare_mem == self.get_ballooned_memory()), balloon_timeout
+        )
         if status is None:
-            self.test.fail("Failed to balloon memory to expect value during "
-                           "%ss" % balloon_timeout)
+            self.test.fail(
+                "Failed to balloon memory to expect value during "
+                "%ss" % balloon_timeout
+            )
 
     def get_memory_boundary(self):
         """
@@ -116,8 +115,7 @@ class BallooningTestPause(BallooningTest):
         """
         self.test.log.error("Memory size mismatch %s:\n", step)
         error_msg = "Wanted to be changed: %s\n" % (expect_value - self.pre_mem)
-        error_msg += "Changed in monitor: %s\n" % (monitor_value
-                                                   - self.pre_mem)
+        error_msg += "Changed in monitor: %s\n" % (monitor_value - self.pre_mem)
         if self.pre_gmem:
             error_msg += "Changed in guest: %s\n" % (guest_value - self.pre_gmem)
         self.test.log.error(error_msg)
@@ -139,7 +137,6 @@ class BallooningTestPauseWin(BallooningTestPause):
 
 
 class BallooningTestPauseLinux(BallooningTestPause):
-
     """
     Linux memory ballooning test for guest booted in paused status
     """
@@ -176,6 +173,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _memory_check_after_sub_test():
         """
         Check memory status after subtest, the changed_mem is 0
@@ -185,56 +183,59 @@ def run(test, params, env):
         except exceptions.TestFail:
             return None
 
-    if params['os_type'] == 'windows':
+    if params["os_type"] == "windows":
         balloon_test = BallooningTestPauseWin(test, params, env)
     else:
         balloon_test = BallooningTestPauseLinux(test, params, env)
 
     min_sz, max_sz = balloon_test.get_memory_boundary()
 
-    for tag in params.objects('test_tags'):
+    for tag in params.objects("test_tags"):
         vm = env.get_vm(params["main_vm"])
-        if vm.monitor.verify_status('paused'):
-            error_context.context("Running balloon %s test when"
-                                  " the guest in paused status" % tag,
-                                  test.log.info)
+        if vm.monitor.verify_status("paused"):
+            error_context.context(
+                "Running balloon %s test when" " the guest in paused status" % tag,
+                test.log.info,
+            )
         else:
-            error_context.context("Running balloon %s test after"
-                                  " the guest turned to running status" % tag,
-                                  test.log.info)
+            error_context.context(
+                "Running balloon %s test after"
+                " the guest turned to running status" % tag,
+                test.log.info,
+            )
         params_tag = params.object_params(tag)
-        balloon_type = params_tag['balloon_type']
-        if balloon_type == 'evict':
+        balloon_type = params_tag["balloon_type"]
+        if balloon_type == "evict":
             expect_mem = int(random.uniform(min_sz, balloon_test.pre_mem))
         else:
             expect_mem = int(random.uniform(balloon_test.pre_mem, max_sz))
         balloon_test.balloon_memory(expect_mem)
         changed_memory = expect_mem - balloon_test.pre_mem
-        mmem, gmem = balloon_test.memory_check("after %s memory" % tag,
-                                               changed_memory)
+        mmem, gmem = balloon_test.memory_check("after %s memory" % tag, changed_memory)
         balloon_test.pre_mem = mmem
         balloon_test.pre_gmem = gmem
 
     subtest = params.get("sub_test_after_balloon")
     if subtest:
-        error_context.context("Running subtest after guest balloon test",
-                              test.log.info)
-        qemu_should_quit = balloon_test.run_balloon_sub_test(test, params,
-                                                             env, subtest)
+        error_context.context("Running subtest after guest balloon test", test.log.info)
+        qemu_should_quit = balloon_test.run_balloon_sub_test(test, params, env, subtest)
         if qemu_should_quit == 1:
             return
 
         sleep_before_check = int(params.get("sleep_before_check", 0))
         timeout = int(params.get("balloon_timeout", 100)) + sleep_before_check
         msg = "Wait memory balloon back after %s " % subtest
-        output = utils_misc.wait_for(_memory_check_after_sub_test, timeout,
-                                     sleep_before_check, 5, msg)
+        output = utils_misc.wait_for(
+            _memory_check_after_sub_test, timeout, sleep_before_check, 5, msg
+        )
         if output is None:
-            test.fail("Check memory status failed after subtest "
-                      "after %s seconds" % timeout)
+            test.fail(
+                "Check memory status failed after subtest " "after %s seconds" % timeout
+            )
 
-    error_context.context("Reset guest memory to original one after all the "
-                          "test", test.log.info)
+    error_context.context(
+        "Reset guest memory to original one after all the " "test", test.log.info
+    )
     balloon_test.reset_memory()
     # for windows guest, disable/uninstall driver to get memory leak based on
     # driver verifier is enabled

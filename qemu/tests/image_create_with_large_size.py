@@ -1,5 +1,4 @@
 from avocado.core import exceptions
-
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 

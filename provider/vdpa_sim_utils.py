@@ -1,26 +1,27 @@
 """
 Module for VDPA block/net device interfaces.
 """
-import logging
-import time
+
 import glob
+import logging
 import os
+import time
 
 from aexpect.utils import wait
 from avocado.utils import process
-from virttest.vdpa_blk import get_image_filename
 from virttest.utils_kernel_module import KernelModuleHandler
+from virttest.vdpa_blk import get_image_filename
 
-LOG = logging.getLogger('avocado.test')
+LOG = logging.getLogger("avocado.test")
 
 
 class VDPABlkNetSimulatorError(Exception):
-    """ General VDPA BLK/Net error"""
+    """General VDPA BLK/Net error"""
+
     pass
 
 
 class VDPABlkNetSimulatorTest(object):
-
     def __init__(self):
         self._modules = []
 
@@ -85,7 +86,7 @@ class VDPABlkNetSimulatorTest(object):
 class VhostVdpaBlkSimulatorTest(VDPABlkNetSimulatorTest):
     def __init__(self):
         super(VhostVdpaBlkSimulatorTest, self).__init__()
-        self._modules = ['vhost-vdpa', 'vdpa-sim-blk']
+        self._modules = ["vhost-vdpa", "vdpa-sim-blk"]
 
     def add_dev(self, name):
         """
@@ -103,15 +104,14 @@ class VhostVdpaBlkSimulatorTest(VDPABlkNetSimulatorTest):
         try:
             dev = get_image_filename(name).replace("vdpa://", "")
         except Exception as e:
-            raise VDPABlkNetSimulatorError(
-                "vdpa dev add %s failed:%s" % (name, str(e)))
+            raise VDPABlkNetSimulatorError("vdpa dev add %s failed:%s" % (name, str(e)))
         return dev
 
 
 class VirtioVdpaBlkSimulatorTest(VDPABlkNetSimulatorTest):
     def __init__(self):
         super(VirtioVdpaBlkSimulatorTest, self).__init__()
-        self._modules = ['virtio-vdpa', 'vdpa-sim-blk']
+        self._modules = ["virtio-vdpa", "vdpa-sim-blk"]
 
     def add_dev(self, name):
         """
@@ -139,7 +139,7 @@ class VirtioVdpaBlkSimulatorTest(VDPABlkNetSimulatorTest):
 class VhostVdpaNetSimulatorTest(VDPABlkNetSimulatorTest):
     def __init__(self):
         super(VhostVdpaNetSimulatorTest, self).__init__()
-        self._modules = ['vhost-vdpa', 'vdpa-sim', 'vdpa-sim-net']
+        self._modules = ["vhost-vdpa", "vdpa-sim", "vdpa-sim-net"]
 
     def add_dev(self, name, mac):
         """
@@ -158,15 +158,14 @@ class VhostVdpaNetSimulatorTest(VDPABlkNetSimulatorTest):
         try:
             dev = get_image_filename(name).replace("vdpa://", "")
         except Exception as e:
-            raise VDPABlkNetSimulatorError(
-                "vdpa dev add %s failed:%s" % (name, str(e)))
+            raise VDPABlkNetSimulatorError("vdpa dev add %s failed:%s" % (name, str(e)))
         return dev
 
 
 class VirtioVdpaNetSimulatorTest(VDPABlkNetSimulatorTest):
     def __init__(self):
         super(VirtioVdpaNetSimulatorTest, self).__init__()
-        self._modules = ['vdpa', 'virtio-vdpa', 'vdpa_sim', 'vdpa-sim-net']
+        self._modules = ["vdpa", "virtio-vdpa", "vdpa_sim", "vdpa-sim-net"]
 
     def add_dev(self, name, mac):
         """

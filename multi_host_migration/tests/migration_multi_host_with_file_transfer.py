@@ -2,14 +2,9 @@ import logging
 import threading
 
 from autotest.client import utils as client_utils
-from autotest.client.shared import utils
-from autotest.client.shared import error
+from autotest.client.shared import error, utils
 from autotest.client.shared.syncdata import SyncData
-
-from virttest import env_process
-from virttest import utils_test
-from virttest import remote
-from virttest import utils_misc
+from virttest import env_process, remote, utils_misc, utils_test
 from virttest.utils_test.qemu import migration
 
 
@@ -84,7 +79,6 @@ def run(test, params, env):
     migrate_count = int(params.get("migrate_count", "3"))
 
     class TestMultihostMigration(base_class):
-
         def __init__(self, test, params, env):
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.vm = None
@@ -92,9 +86,7 @@ def run(test, params, env):
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
             self.slave = self.dsthost
-            self.id = {'src': self.srchost,
-                       'dst': self.dsthost,
-                       "type": "file_trasfer"}
+            self.id = {"src": self.srchost, "dst": self.dsthost, "type": "file_trasfer"}
             self.file_check_sums = []
 
         def check_vms(self, mig_data):
@@ -124,12 +116,16 @@ def run(test, params, env):
             """
             new_params = self.params.copy()
 
-            new_params['migration_mode'] = None
-            new_params['start_vm'] = 'yes'
+            new_params["migration_mode"] = None
+            new_params["start_vm"] = "yes"
             self.vm_lock.acquire()
-            env_process.process(self.test, new_params, self.env,
-                                env_process.preprocess_image,
-                                env_process.preprocess_vm)
+            env_process.process(
+                self.test,
+                new_params,
+                self.env,
+                env_process.preprocess_image,
+                env_process.preprocess_vm,
+            )
             self.vm_lock.release()
             vm = self.env.get_vm(vm_name)
             vm.wait_for_login(timeout=self.login_timeout)
@@ -139,19 +135,33 @@ def run(test, params, env):
             # Copy until migration not end.
             while not end_event.is_set():
                 logging.info("Copy file to guest %s.", self.vm_addr)
-                remote.copy_files_to(self.vm_addr, "scp", guest_root,
-                                     guest_pass, 22, host_path,
-                                     guest_path, limit=transfer_speed,
-                                     verbose=True,
-                                     timeout=transfer_timeout)
+                remote.copy_files_to(
+                    self.vm_addr,
+                    "scp",
+                    guest_root,
+                    guest_pass,
+                    22,
+                    host_path,
+                    guest_path,
+                    limit=transfer_speed,
+                    verbose=True,
+                    timeout=transfer_timeout,
+                )
                 logging.info("Copy file to guests %s done.", self.vm_addr)
 
                 logging.info("Copy file from guest %s.", self.vm_addr)
-                remote.copy_files_from(self.vm_addr, "scp", guest_root,
-                                       guest_pass, 22, guest_path,
-                                       host_path_returned,
-                                       limit=transfer_speed, verbose=True,
-                                       timeout=transfer_timeout)
+                remote.copy_files_from(
+                    self.vm_addr,
+                    "scp",
+                    guest_root,
+                    guest_pass,
+                    22,
+                    guest_path,
+                    host_path_returned,
+                    limit=transfer_speed,
+                    verbose=True,
+                    timeout=transfer_timeout,
+                )
                 logging.info("Copy file from guests %s done.", self.vm_addr)
                 check_sum = client_utils.hash_file(host_path_returned)
                 # store checksum for later check.
@@ -161,17 +171,16 @@ def run(test, params, env):
             bg.start()
             try:
                 while bg.is_alive():
-                    logging.info("File transfer not ended, starting"
-                                 " a round of migration...")
+                    logging.info(
+                        "File transfer not ended, starting" " a round of migration..."
+                    )
                     sync.sync(True, timeout=d_transfer_timeout)
-                    self.migrate_wait([self.vm],
-                                      self.srchost,
-                                      self.dsthost)
+                    self.migrate_wait([self.vm], self.srchost, self.dsthost)
                     tmp = self.dsthost
                     self.dsthost = self.srchost
                     self.srchost = tmp
                     migrate_count -= 1
-                    if (migrate_count <= 0):
+                    if migrate_count <= 0:
                         end_event.set()
                         bg.join()
 
@@ -189,45 +198,53 @@ def run(test, params, env):
                 done = sync.sync(timeout=d_transfer_timeout)[self.master_id()]
                 if not done:
                     break
-                logging.info("File transfer not ended, starting"
-                             " a round of migration...")
-                self.migrate_wait([self.vm],
-                                  self.srchost,
-                                  self.dsthost)
+                logging.info(
+                    "File transfer not ended, starting" " a round of migration..."
+                )
+                self.migrate_wait([self.vm], self.srchost, self.dsthost)
 
                 tmp = self.dsthost
                 self.dsthost = self.srchost
                 self.srchost = tmp
 
         def migration_scenario(self):
-            sync = SyncData(self.master_id(), self.hostid, self.hosts,
-                            self.id, self.sync_server)
+            sync = SyncData(
+                self.master_id(), self.hostid, self.hosts, self.id, self.sync_server
+            )
             self.vm = params.get("vms").split()[0]
             address_cache = env.get("address_cache")
 
-            if (self.hostid == self.master_id()):
+            if self.hostid == self.master_id():
                 try:
-                    utils.run("dd if=/dev/zero of=%s bs=1M"
-                              " count=%s" % (host_path, file_size))
+                    utils.run(
+                        "dd if=/dev/zero of=%s bs=1M"
+                        " count=%s" % (host_path, file_size)
+                    )
 
                     self.vm_addr = self._prepare_vm(self.vm).get_address()
 
                     end_event = threading.Event()
-                    bg = utils.InterruptedThread(self._copy_until_end,
-                                                 (end_event,))
+                    bg = utils.InterruptedThread(self._copy_until_end, (end_event,))
 
                     self._hosts_barrier(self.hosts, self.id, "befor_mig", 120)
                     sync.sync(address_cache, timeout=120)
-                    error.context("ping-pong migration during file transfer "
-                                  "between host and guest.", logging.info)
+                    error.context(
+                        "ping-pong migration during file transfer "
+                        "between host and guest.",
+                        logging.info,
+                    )
                     self._run_and_migrate(bg, end_event, sync, migrate_count)
 
                     # Check if guest lives.
-                    remote.wait_for_login(shell_client, self.vm_addr,
-                                          shell_port, guest_root,
-                                          guest_pass, shell_prompt)
-                    self._hosts_barrier(self.hosts, self.id,
-                                        "After_check", 120)
+                    remote.wait_for_login(
+                        shell_client,
+                        self.vm_addr,
+                        shell_port,
+                        guest_root,
+                        guest_pass,
+                        shell_prompt,
+                    )
+                    self._hosts_barrier(self.hosts, self.id, "After_check", 120)
 
                     error.context("comparing hashes", logging.info)
                     orig_hash = client_utils.hash_file(host_path)
@@ -239,13 +256,15 @@ def run(test, params, env):
                         check_sum = self.file_check_sums[i]
                         if check_sum != orig_hash:
                             wrong_check_sum = True
-                            logging.error("Checksum in transfer number"
-                                          " %d if wrong.", i)
+                            logging.error(
+                                "Checksum in transfer number" " %d if wrong.", i
+                            )
 
                     if wrong_check_sum:
-                        raise error.TestFail("Returned file hash (%s) differs"
-                                             "from original one (%s)" %
-                                             (returned_hash, orig_hash))
+                        raise error.TestFail(
+                            "Returned file hash (%s) differs"
+                            "from original one (%s)" % (returned_hash, orig_hash)
+                        )
                     else:
                         # clean temp
                         utils.run("rm -rf %s" % (host_path))

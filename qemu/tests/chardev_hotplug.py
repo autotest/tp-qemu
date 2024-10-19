@@ -1,9 +1,7 @@
 import os
 
 from avocado.utils import process
-
-from virttest import arch
-from virttest import error_context
+from virttest import arch, error_context
 
 
 @error_context.context_aware
@@ -38,24 +36,24 @@ def run(test, params, env):
         return reply
 
     def pci_serial_add(vm, name, addr, chardev):
-        reply = cmd_qmp_log(vm, 'device_add', {'driver': 'pci-serial',
-                                               'id': name,
-                                               'addr': addr,
-                                               'chardev': chardev})
+        reply = cmd_qmp_log(
+            vm,
+            "device_add",
+            {"driver": "pci-serial", "id": name, "addr": addr, "chardev": chardev},
+        )
         return reply
 
     def device_del(vm, name):
-        reply = cmd_qmp_log(vm, 'device_del', {'id': name})
+        reply = cmd_qmp_log(vm, "device_del", {"id": name})
         return reply
 
     def chardev_add(vm, name, kind, args):
-        backend = {'type': kind, 'data': args}
-        reply = cmd_qmp_log(vm, 'chardev-add', {'id': name,
-                                                'backend': backend})
+        backend = {"type": kind, "data": args}
+        reply = cmd_qmp_log(vm, "chardev-add", {"id": name, "backend": backend})
         return reply
 
     def chardev_del(vm, name):
-        reply = cmd_qmp_log(vm, 'chardev-remove', {'id': name})
+        reply = cmd_qmp_log(vm, "chardev-remove", {"id": name})
         return reply
 
     def chardev_use(vm, name):
@@ -91,7 +89,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login()
     session.cmd_status("dmesg -c")
-    ppc_host = 'ppc' in params.get('vm_arch_name', arch.ARCH)
+    ppc_host = "ppc" in params.get("vm_arch_name", arch.ARCH)
 
     error_context.context("Test null chardev", test.log.info)
     chardev_add(vm, "chardev-null", "null", {})
@@ -101,7 +99,7 @@ def run(test, params, env):
 
     error_context.context("Test file chardev", test.log.info)
     filename = "/tmp/chardev-file-%s" % vm.instance
-    args = {'out': filename}
+    args = {"out": filename}
     chardev_add(vm, "chardev-file", "file", args)
     if not ppc_host:
         chardev_use(vm, "chardev-file")

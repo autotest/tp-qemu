@@ -1,9 +1,7 @@
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
 
 
 class GuestSuspendBaseTest(utils_test.qemu.GuestSuspend):
-
     def do_guest_suspend(self, **args):
         suspend_type = args.get("suspend_type", self.SUSPEND_TYPE_MEM)
 
@@ -65,7 +63,8 @@ class GuestSuspendBaseTest(utils_test.qemu.GuestSuspend):
             suspend_bg_program_chk_cmd=params.get("s3_bg_program_chk_cmd"),
             suspend_bg_program_kill_cmd=params.get("s3_bg_program_kill_cmd"),
             suspend_start_cmd=params.get("s3_start_cmd"),
-            suspend_log_chk_cmd=params.get("s3_log_chk_cmd"))
+            suspend_log_chk_cmd=params.get("s3_log_chk_cmd"),
+        )
 
     def guest_suspend_disk(self, params):
         """
@@ -91,11 +90,11 @@ class GuestSuspendBaseTest(utils_test.qemu.GuestSuspend):
             suspend_bg_program_chk_cmd=params.get("s4_bg_program_chk_cmd"),
             suspend_bg_program_kill_cmd=params.get("s4_bg_program_kill_cmd"),
             suspend_start_cmd=params.get("s4_start_cmd"),
-            suspend_log_chk_cmd=params.get("s4_log_chk_cmd"))
+            suspend_log_chk_cmd=params.get("s4_log_chk_cmd"),
+        )
 
 
 class GuestSuspendNegativeTest(GuestSuspendBaseTest):
-
     """
     This class is used to test the situation which sets 'disable_s3/s4' to '1'
     in qemu cli. Guest should disable suspend function in this case.
@@ -104,8 +103,10 @@ class GuestSuspendNegativeTest(GuestSuspendBaseTest):
     def do_guest_suspend(self, **args):
         s, o = self._check_guest_suspend_log(**args)
         if not s:
-            self.test.fail("Guest reports support Suspend even if it's"
-                           " disabled in qemu. Output:\n '%s'" % o)
+            self.test.fail(
+                "Guest reports support Suspend even if it's"
+                " disabled in qemu. Output:\n '%s'" % o
+            )
 
 
 @error_context.context_aware
@@ -131,5 +132,6 @@ def run(test, params, env):
     elif suspend_type == gs.SUSPEND_TYPE_DISK:
         gs.guest_suspend_disk(params)
     else:
-        test.error("Unknown guest suspend type, Check your"
-                   " 'guest_suspend_type' config.")
+        test.error(
+            "Unknown guest suspend type, Check your" " 'guest_suspend_type' config."
+        )

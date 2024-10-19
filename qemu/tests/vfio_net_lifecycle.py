@@ -1,7 +1,6 @@
 import json
 
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net
 
 from provider.hostdev import utils as hostdev_utils
 from provider.hostdev.dev_setup import hostdev_setup
@@ -44,7 +43,7 @@ def run(test, params, env):
         """
         Perform a life cycle operation on a VM.
 
-        :param cycle_type: The type of life cycle operation. Accepts 'shutdown' or 'reboot'.
+        :param cycle_type: Type of life cycle operation. Accepts 'shutdown' or 'reboot'.
         :type  cycle_type: str
         :param method: The method used to perform the life cycle operation.
         :type  method: str

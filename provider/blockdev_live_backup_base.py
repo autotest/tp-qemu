@@ -16,8 +16,8 @@ Note:
        granularity: granularity in BlockDirtyInfo
        persistent: persistent in BlockDirtyInfo
 """
-import json
 
+import json
 from functools import partial
 
 from provider.backup_utils import blockdev_batch_backup
@@ -60,16 +60,16 @@ class BlockdevLiveBackupBaseTest(BlockdevBaseTest):
         return options
 
     def _configure_system_disk(self, tag):
-        self.disks_info[tag] = [
-            "system", self.params.get("mnt_on_sys_dsk", "/var/tmp")]
+        self.disks_info[tag] = ["system", self.params.get("mnt_on_sys_dsk", "/var/tmp")]
 
     def _configure_data_disk(self, tag):
         self.format_data_disk(tag)
 
     def remove_files_from_system_image(self, tmo=60):
         """Remove testing files from system image"""
-        tag_dir_list = [(t, d[1])
-                        for t, d in self.disks_info.items() if d[0] == "system"]
+        tag_dir_list = [
+            (t, d[1]) for t, d in self.disks_info.items() if d[0] == "system"
+        ]
         if tag_dir_list:
             tag, root_dir = tag_dir_list[0]
             files = ["%s/%s" % (root_dir, f) for f in self.files_info[tag]]
@@ -93,9 +93,9 @@ class BlockdevLiveBackupBaseTest(BlockdevBaseTest):
             self._configure_system_disk(tag)
         else:
             self._configure_data_disk(tag)
-        self.generate_data_file(tag, filename='base')
+        self.generate_data_file(tag, filename="base")
 
-    def generate_inc_files(self, filename='inc'):
+    def generate_inc_files(self, filename="inc"):
         """Create new files on data disks"""
         f = partial(self.generate_data_file, filename=filename)
         list(map(f, self._source_images))
@@ -115,9 +115,13 @@ class BlockdevLiveBackupBaseTest(BlockdevBaseTest):
         self.env.register_vm("%s_clone" % self.clone_vm.name, self.clone_vm)
 
     def do_full_backup(self):
-        blockdev_batch_backup(self.main_vm, self._source_nodes,
-                              self._full_bk_nodes, self._bitmaps,
-                              **self._full_backup_options)
+        blockdev_batch_backup(
+            self.main_vm,
+            self._source_nodes,
+            self._full_bk_nodes,
+            self._bitmaps,
+            **self._full_backup_options,
+        )
 
     def post_test(self):
         self.remove_files_from_system_image()

@@ -1,11 +1,9 @@
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 from qemu.tests import block_copy
 
 
 class BlockStream(block_copy.BlockCopy):
-
     """
     base class for block stream tests;
     """
@@ -16,9 +14,11 @@ class BlockStream(block_copy.BlockCopy):
         self.ext_args = {}
 
     def parser_test_args(self):
-        default_params = {"wait_finished": "yes",
-                          "snapshot_format": "qcow2",
-                          "snapshot_chain": ""}
+        default_params = {
+            "wait_finished": "yes",
+            "snapshot_format": "qcow2",
+            "snapshot_chain": "",
+        }
         self.default_params.update(default_params)
         return super(BlockStream, self).parser_test_args()
 
@@ -54,8 +54,9 @@ class BlockStream(block_copy.BlockCopy):
             device = self.vm.live_snapshot(image_file, snapshot, image_format)
             if device != self.device:
                 image_file = self.get_image_file()
-                self.test.log.info("expect file: %s" % snapshot +
-                                   "opening file: %s" % image_file)
+                self.test.log.info(
+                    "expect file: %s opening file: %s", snapshot, image_file
+                )
                 self.test.fail("create snapshot '%s' fail" % snapshot)
             self.trash_files.append(snapshot)
 

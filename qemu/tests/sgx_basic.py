@@ -1,8 +1,7 @@
 from virttest import error_context
 from virttest.utils_misc import verify_dmesg
 
-from provider.sgx import SGXHostCapability
-from provider.sgx import SGXChecker
+from provider.sgx import SGXChecker, SGXHostCapability
 
 
 @error_context.context_aware
@@ -33,8 +32,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     verify_dmesg()
-    dmesg_output = session.cmd_output(params["guest_sgx_check"],
-                                      timeout=240).strip()
+    dmesg_output = session.cmd_output(params["guest_sgx_check"], timeout=240).strip()
     session.close()
 
     test_check = SGXChecker(test, params, vm)

@@ -1,9 +1,8 @@
 from avocado.utils import process
-
 from virttest.data_dir import get_data_dir
 from virttest.lvm import EmulatedLVM
-from virttest.qemu_storage import QemuImg
 from virttest.qemu_io import QemuIOSystem
+from virttest.qemu_storage import QemuImg
 
 
 def run(test, params, env):
@@ -36,8 +35,7 @@ def run(test, params, env):
         try:
             QemuIOSystem(test, params, img.image_filename).cmd_output(cmd, 120)
         except process.CmdError as err:
-            test.fail(
-                "qemu-io to '%s' failed: %s." % (img.image_filename, str(err)))
+            test.fail("qemu-io to '%s' failed: %s." % (img.image_filename, str(err)))
 
     def _clean_images(img_list):
         """Remove images from image_list."""

@@ -1,8 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_disk
-from virttest import utils_misc
+from virttest import error_context, utils_disk, utils_misc
 
 
 @error_context.context_aware
@@ -32,10 +30,10 @@ def run(test, params, env):
         drive_id = match.group(2)
         drive_path = utils_misc.get_linux_drive_path(session, drive_id)
         did = drive_path[5:]
-        test.log.info("Format %s(size=%s) with %s type.", did, stg_size,
-                      stg_fstype)
-        mnts = utils_disk.configure_empty_linux_disk(session, did, stg_size,
-                                                     fstype=stg_fstype)
+        test.log.info("Format %s(size=%s) with %s type.", did, stg_size, stg_fstype)
+        mnts = utils_disk.configure_empty_linux_disk(
+            session, did, stg_size, fstype=stg_fstype
+        )
         if not mnts:
             test.fail("Failed to create %s on disk %s." % (stg_fstype, did))
     finally:

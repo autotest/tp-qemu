@@ -1,36 +1,37 @@
-import os
 import logging
-
+import os
 from functools import partial
 
-from avocado.utils import process
-from avocado.utils import service
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import error_context
-from virttest import utils_disk
-from virttest import utils_numeric
-from virttest import virt_vm
-from virttest import qemu_monitor
+from avocado.utils import process, service
+from virttest import (
+    error_context,
+    qemu_monitor,
+    utils_disk,
+    utils_misc,
+    utils_net,
+    utils_numeric,
+    virt_vm,
+)
 from virttest.qemu_storage import QemuImg
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class NFSCorruptError(Exception):
-
     def __init__(self, *args):
         Exception.__init__(self, *args)
 
 
 class NFSCorruptConfig(object):
-
     """
     This class sets up nfs_corrupt test environment.
     """
-    iptables_template = ("iptables -t filter -{{op}} OUTPUT -d {ip} -m state"
-                         " --state NEW,RELATED,ESTABLISHED -p tcp --dport 2049"
-                         " -j REJECT")
+
+    iptables_template = (
+        "iptables -t filter -{{op}} OUTPUT -d {ip} -m state"
+        " --state NEW,RELATED,ESTABLISHED -p tcp --dport 2049"
+        " -j REJECT"
+    )
 
     def __init__(self, test, params, ip="localhost"):
         self.nfs_dir = os.path.join(test.tmpdir, "nfs_dir")
@@ -46,14 +47,18 @@ class NFSCorruptConfig(object):
                 self.service_name = name
                 break
         else:
-            msg = ("Fail to set up NFS for this host, service "
-                   "with name 'nfs' and 'nfs-server' not exist.")
+            msg = (
+                "Fail to set up NFS for this host, service "
+                "with name 'nfs' and 'nfs-server' not exist."
+            )
             raise NFSCorruptError(msg)
 
         for attrname in ["start", "stop", "restart", "status"]:
-            setattr(self, attrname,
-                    partial(getattr(self.service_manager, attrname),
-                            self.service_name))
+            setattr(
+                self,
+                attrname,
+                partial(getattr(self.service_manager, attrname), self.service_name),
+            )
 
     @error_context.context_aware
     def setup(self, force_start=False):
@@ -70,20 +75,16 @@ class NFSCorruptConfig(object):
             except OSError:
                 pass
 
-        error_context.context("Checking available space to export",
-                              LOG_JOB.info)
+        error_context.context("Checking available space to export", LOG_JOB.info)
         stat = os.statvfs(self.nfs_dir)
         free = stat.f_bsize * stat.f_bfree
         required = float(
-            utils_misc.normalize_data_size(
-                self.required_size,
-                order_magnitude="B"
-                )
-            )
+            utils_misc.normalize_data_size(self.required_size, order_magnitude="B")
+        )
         if free < required:
             msg = "Space available: %s, space needed: %s" % (
                 utils_numeric.format_size_human_readable(free),
-                self.required_size
+                self.required_size,
             )
             raise NFSCorruptError(msg)
 
@@ -93,17 +94,21 @@ class NFSCorruptConfig(object):
             if not self.status():
                 self.start()
 
-        process.run("exportfs %s:%s -o rw,no_root_squash" %
-                    (self.nfs_ip, self.nfs_dir), shell=True)
-        process.run("mount %s:%s %s -o rw,soft,timeo=30,retrans=1,vers=3" %
-                    (self.nfs_ip, self.nfs_dir, self.mnt_dir), shell=True)
+        process.run(
+            "exportfs %s:%s -o rw,no_root_squash" % (self.nfs_ip, self.nfs_dir),
+            shell=True,
+        )
+        process.run(
+            "mount %s:%s %s -o rw,soft,timeo=30,retrans=1,vers=3"
+            % (self.nfs_ip, self.nfs_dir, self.mnt_dir),
+            shell=True,
+        )
 
     @error_context.context_aware
     def cleanup(self, force_stop=False):
         error_context.context("Cleaning up test NFS share", LOG_JOB.info)
         process.run("umount -l -f %s" % self.mnt_dir, shell=True)
-        process.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir),
-                    shell=True)
+        process.run("exportfs -u %s:%s" % (self.nfs_ip, self.nfs_dir), shell=True)
         if force_stop:
             self.stop()
 
@@ -125,7 +130,7 @@ class NFSCorruptConfig(object):
             return False
         return True
 
-    def iptables_rule_gen(self, op='A'):
+    def iptables_rule_gen(self, op="A"):
         """
         Generate iptables rules to block/accept nfs connection.
         """
@@ -150,6 +155,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def get_nfs_devname(params, session):
         """
         Get the possbile name of nfs storage dev name in guest.
@@ -215,8 +221,7 @@ def run(test, params, env):
         test.error("failed to create VM")
     session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
 
-    nfs_devname = utils_misc.get_linux_drive_path(session, stg_params[
-        "nfs_serial"])
+    nfs_devname = utils_misc.get_linux_drive_path(session, stg_params["nfs_serial"])
     # Write disk on NFS server
     error_context.context("Write disk that image on NFS", test.log.info)
     write_disk_cmd = "dd if=/dev/zero of=%s oflag=direct" % nfs_devname
@@ -229,31 +234,27 @@ def run(test, params, env):
         pass
 
     try:
-        error_context.context("Make sure guest is running before test",
-                              test.log.info)
+        error_context.context("Make sure guest is running before test", test.log.info)
         vm.resume()
         vm.verify_status("running")
 
         try:
-            error_context.context("Reject NFS connection on host",
-                                  test.log.info)
-            process.system(config.iptables_rule_gen('A'))
+            error_context.context("Reject NFS connection on host", test.log.info)
+            process.system(config.iptables_rule_gen("A"))
 
-            error_context.context("Check if VM status is 'paused'",
-                                  test.log.info)
+            error_context.context("Check if VM status is 'paused'", test.log.info)
             if not utils_misc.wait_for(
                 lambda: check_vm_status(vm, "paused"),
-                    int(params.get('wait_paused_timeout', 240))):
+                int(params.get("wait_paused_timeout", 240)),
+            ):
                 test.error("Guest is not paused after stop NFS")
         finally:
-            error_context.context("Accept NFS connection on host",
-                                  test.log.info)
-            process.system(config.iptables_rule_gen('D'))
+            error_context.context("Accept NFS connection on host", test.log.info)
+            process.system(config.iptables_rule_gen("D"))
 
         error_context.context("Ensure nfs is resumed", test.log.info)
-        nfs_resume_timeout = int(params.get('nfs_resume_timeout', 240))
-        if not utils_misc.wait_for(config.is_mounted_dir_acessible,
-                                   nfs_resume_timeout):
+        nfs_resume_timeout = int(params.get("nfs_resume_timeout", 240))
+        if not utils_misc.wait_for(config.is_mounted_dir_acessible, nfs_resume_timeout):
             test.error("NFS connection does not resume")
 
         error_context.context("Continue guest", test.log.info)

@@ -1,5 +1,5 @@
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context
+
 from qemu.tests import numa_memdev_options
 
 
@@ -17,8 +17,9 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    error_context.context("Modify params to boot guest with 128 numa nodes",
-                          test.log.info)
+    error_context.context(
+        "Modify params to boot guest with 128 numa nodes", test.log.info
+    )
     node_num = int(params["numa_nodes"])
     node_size = params["node_size"]
     prealloc_mem = params.get("prealloc_mem", "no")
@@ -54,8 +55,10 @@ def run(test, params, env):
         numa_expected = params["numa_expected"]
         guest_numa = session.cmd_output(numa_cmd).strip()
         if guest_numa != numa_expected:
-            test.fail("Guest numa node is %s while expected numa node is %s"
-                      % (guest_numa, numa_expected))
+            test.fail(
+                "Guest numa node is %s while expected numa node is %s"
+                % (guest_numa, numa_expected)
+            )
     error_context.context("Check if error and calltrace in guest", test.log.info)
     vm.verify_kernel_crash()
     session.close()

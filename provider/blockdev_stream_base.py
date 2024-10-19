@@ -1,12 +1,11 @@
-import time
 import json
+import time
 
 from provider import backup_utils
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 
 
 class BlockDevStreamTest(BlockDevSnapshotTest):
-
     def __init__(self, test, params, env):
         super(BlockDevStreamTest, self).__init__(test, params, env)
         self._stream_options = {}
@@ -14,7 +13,8 @@ class BlockDevStreamTest(BlockDevSnapshotTest):
         self._init_stream_options()
         if self.base_tag == self.params.objects("images")[0]:
             self.disks_info[self.base_tag] = [
-                "system", self.params.get("mnt_on_sys_dsk", "/var/tmp")
+                "system",
+                self.params.get("mnt_on_sys_dsk", "/var/tmp"),
             ]
 
     def _init_stream_options(self):
@@ -33,8 +33,7 @@ class BlockDevStreamTest(BlockDevSnapshotTest):
         if self.params.get("backing_file"):
             self._stream_options["backing-file"] = self.params["backing_file"]
         if self.params.get("block_stream_timeout"):
-            self._stream_options["timeout"] = int(
-                self.params["block_stream_timeout"])
+            self._stream_options["timeout"] = int(self.params["block_stream_timeout"])
 
     def snapshot_test(self):
         for info in self.disks_info.values():
@@ -47,8 +46,9 @@ class BlockDevStreamTest(BlockDevSnapshotTest):
         if not self.is_blockdev_mode():
             self._stream_options["base"] = self.base_image.image_filename
             self._top_device = self.params["device"]
-        backup_utils.blockdev_stream(self.main_vm, self._top_device,
-                                     **self._stream_options)
+        backup_utils.blockdev_stream(
+            self.main_vm, self._top_device, **self._stream_options
+        )
         time.sleep(0.5)
 
     def check_backing_file(self):

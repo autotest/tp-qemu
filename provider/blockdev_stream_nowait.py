@@ -4,9 +4,7 @@ Module specified for stream test cases that don't need to wait job done
 
 from avocado.utils import memory
 
-from provider import backup_utils
-from provider import blockdev_stream_base
-from provider import job_utils
+from provider import backup_utils, blockdev_stream_base, job_utils
 
 
 class BlockdevStreamNowaitTest(blockdev_stream_base.BlockDevStreamTest):
@@ -20,9 +18,9 @@ class BlockdevStreamNowaitTest(blockdev_stream_base.BlockDevStreamTest):
 
     def blockdev_stream(self):
         """Run block-stream without waiting job completed"""
-        self._job = backup_utils.blockdev_stream_nowait(self.main_vm,
-                                                        self._top_device,
-                                                        **self._stream_options)
+        self._job = backup_utils.blockdev_stream_nowait(
+            self.main_vm, self._top_device, **self._stream_options
+        )
 
     def wait_stream_job_completed(self):
         """Wait till the stream job completed"""

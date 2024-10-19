@@ -1,8 +1,10 @@
 import logging
+
 from autotest.client.shared import error
 from autotest.client.shared.syncdata import SyncData
 from virttest import utils_test
 from virttest.utils_test.qemu import migration
+
 from generic.tests import kdump
 
 
@@ -36,46 +38,50 @@ def run(test, params, env):
         mig_type = migration.MultihostMigrationRdma
 
     class TestMultihostMigration(mig_type, migration.MigrationBase):
-
         """
         multihost migration test
         """
 
         def __init__(self, test, params, env):
-
             super(TestMultihostMigration, self).__init__(test, params, env)
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
-            super(TestMultihostMigration, self).__setup__(test, params, env,
-                                                          self.srchost,
-                                                          self.dsthost)
+            super(TestMultihostMigration, self).__setup__(
+                test, params, env, self.srchost, self.dsthost
+            )
             self.crash_timeout = float(params.get("crash_timeout", 360))
-            self.def_kernel_param_cmd = ("grubby --update-kernel=`grubby"
-                                         " --default-kernel`"
-                                         " --args=crashkernel=128M@16M")
-            self.kernel_param_cmd = params.get("kernel_param_cmd",
-                                               self.def_kernel_param_cmd)
-            def_kdump_enable_cmd = ("chkconfig kdump on &&"
-                                    " service kdump restart")
-            self.kdump_enable_cmd = params.get("kdump_enable_cmd",
-                                               def_kdump_enable_cmd)
-            def_crash_kernel_prob_cmd = ("grep -q 1 /sys/kernel/"
-                                         "kexec_crash_loaded")
-            self.crash_kernel_prob_cmd = params.get("crash_kernel_prob_cmd",
-                                                    def_crash_kernel_prob_cmd)
-            self.crash_cmd = params.get("crash_cmd",
-                                        "echo c > /proc/sysrq-trigger")
-            self.vmcore_chk_cmd = params.get("vmcore_chk_cmd",
-                                             "ls -R /var/crash | grep vmcore")
+            self.def_kernel_param_cmd = (
+                "grubby --update-kernel=`grubby"
+                " --default-kernel`"
+                " --args=crashkernel=128M@16M"
+            )
+            self.kernel_param_cmd = params.get(
+                "kernel_param_cmd", self.def_kernel_param_cmd
+            )
+            def_kdump_enable_cmd = "chkconfig kdump on &&" " service kdump restart"
+            self.kdump_enable_cmd = params.get("kdump_enable_cmd", def_kdump_enable_cmd)
+            def_crash_kernel_prob_cmd = "grep -q 1 /sys/kernel/" "kexec_crash_loaded"
+            self.crash_kernel_prob_cmd = params.get(
+                "crash_kernel_prob_cmd", def_crash_kernel_prob_cmd
+            )
+            self.crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
+            self.vmcore_chk_cmd = params.get(
+                "vmcore_chk_cmd", "ls -R /var/crash | grep vmcore"
+            )
             self.vmcore_incomplete = "vmcore-incomplete"
             self.nvcpu = 1
 
         @error.context_aware
-        def start_worker_guest_kdump(self, mig_data, login_timeout,
-                                     crash_kernel_prob_cmd,
-                                     kernel_param_cmd,
-                                     kdump_enable_cmd,
-                                     nvcpu, crash_cmd):
+        def start_worker_guest_kdump(
+            self,
+            mig_data,
+            login_timeout,
+            crash_kernel_prob_cmd,
+            kernel_param_cmd,
+            kdump_enable_cmd,
+            nvcpu,
+            crash_cmd,
+        ):
             """
             force the Linux kernel to crash before migration
 
@@ -90,11 +96,17 @@ def run(test, params, env):
 
             vm = mig_data.vms[0]
             kdump.preprocess_kdump(test, vm, login_timeout)
-            kdump.kdump_enable(vm, vm.name, crash_kernel_prob_cmd,
-                               kernel_param_cmd, kdump_enable_cmd,
-                               login_timeout)
-            error.context("Kdump Testing, force the Linux kernel to crash",
-                          logging.info)
+            kdump.kdump_enable(
+                vm,
+                vm.name,
+                crash_kernel_prob_cmd,
+                kernel_param_cmd,
+                kdump_enable_cmd,
+                login_timeout,
+            )
+            error.context(
+                "Kdump Testing, force the Linux kernel to crash", logging.info
+            )
             kdump.crash_test(test, vm, nvcpu, crash_cmd, login_timeout)
 
         @error.context_aware
@@ -112,16 +124,12 @@ def run(test, params, env):
                     if vm.is_paused():
                         vm.resume()
                     if not utils_test.qemu.guest_active(vm):
-                        raise error.TestFail("Guest not active "
-                                             "after migration")
-                    logging.info("Logging into migrated guest after "
-                                 "migration")
+                        raise error.TestFail("Guest not active " "after migration")
+                    logging.info("Logging into migrated guest after " "migration")
                     session = vm.wait_for_login(timeout=self.login_timeout)
-                    error.context("Checking vmcore file in guest",
-                                  logging.info)
+                    error.context("Checking vmcore file in guest", logging.info)
                     if session is not None:
-                        logging.info("kdump completed, no need ping-pong"
-                                     " migration")
+                        logging.info("kdump completed, no need ping-pong" " migration")
                         self.stop_migrate = True
                     output = session.cmd_output(vmcore_chk_cmd)
                     session.close()
@@ -135,12 +143,14 @@ def run(test, params, env):
 
         @error.context_aware
         def migration_scenario(self):
-
-            error.context("Migration from %s to %s over protocol %s." %
-                          (self.srchost, self.dsthost, mig_protocol),
-                          logging.info)
-            sync = SyncData(self.master_id(), self.hostid, self.hosts,
-                            self.id, self.sync_server)
+            error.context(
+                "Migration from %s to %s over protocol %s."
+                % (self.srchost, self.dsthost, mig_protocol),
+                logging.info,
+            )
+            sync = SyncData(
+                self.master_id(), self.hostid, self.hosts, self.id, self.sync_server
+            )
 
             def start_worker(mig_data):
                 """
@@ -149,12 +159,15 @@ def run(test, params, env):
                 :param mig_data: Data for migration
                 """
 
-                self.start_worker_guest_kdump(mig_data, self.login_timeout,
-                                              self.crash_kernel_prob_cmd,
-                                              self.kernel_param_cmd,
-                                              self.kdump_enable_cmd,
-                                              self.nvcpu,
-                                              self.crash_cmd)
+                self.start_worker_guest_kdump(
+                    mig_data,
+                    self.login_timeout,
+                    self.crash_kernel_prob_cmd,
+                    self.kernel_param_cmd,
+                    self.kdump_enable_cmd,
+                    self.nvcpu,
+                    self.crash_cmd,
+                )
 
             def check_worker(mig_data):
                 """
@@ -163,11 +176,13 @@ def run(test, params, env):
                 :param mig_data: Data for migration
                 """
 
-                self.check_worker_kdump(mig_data, self.vmcore_chk_cmd,
-                                        self.vmcore_incomplete)
+                self.check_worker_kdump(
+                    mig_data, self.vmcore_chk_cmd, self.vmcore_incomplete
+                )
 
             super(TestMultihostMigration, self).ping_pong_migrate(
-                mig_type, sync, start_worker, check_worker)
+                mig_type, sync, start_worker, check_worker
+            )
 
     mig = TestMultihostMigration(test, params, env)
     mig.run()

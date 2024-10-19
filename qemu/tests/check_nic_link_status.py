@@ -1,8 +1,6 @@
 import time
 
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_net
+from virttest import error_context, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -27,21 +25,22 @@ def run(test, params, env):
         """
         if params.get("os_type") == "linux":
             guest_ifname = utils_net.get_linux_ifname(session, vm.get_mac_address())
-            if_operstate = utils_net.get_net_if_operstate(guest_ifname,
-                                                          session.cmd_output_safe)
+            if_operstate = utils_net.get_net_if_operstate(
+                guest_ifname, session.cmd_output_safe
+            )
         else:
-            if_operstate = utils_net.get_windows_nic_attribute(session,
-                                                               "macaddress",
-                                                               vm.get_mac_address(),
-                                                               "netconnectionstatus")
+            if_operstate = utils_net.get_windows_nic_attribute(
+                session, "macaddress", vm.get_mac_address(), "netconnectionstatus"
+            )
 
         if if_operstate != expect_status:
             err_msg = "Guest interface %s status error, " % guest_ifname
             err_msg += "currently interface status is '%s', " % if_operstate
             err_msg += "but expect status is '%s'" % expect_status
             test.fail(err_msg)
-        test.log.info("Guest interface operstate '%s' is exactly as expected",
-                      if_operstate)
+        test.log.info(
+            "Guest interface operstate '%s' is exactly as expected", if_operstate
+        )
 
     def set_link_test(linkid, link_up):
         """
@@ -72,18 +71,23 @@ def run(test, params, env):
     error_context.context("Check guest interface operstate", test.log.info)
     guest_interface_operstate_check(session, expect_down_status)
 
-    error_context.context("Reboot guest by '%s' and recheck interface "
-                          "operstate" % reboot_method, test.log.info)
+    error_context.context(
+        "Reboot guest by '%s' and recheck interface " "operstate" % reboot_method,
+        test.log.info,
+    )
     session = vm.reboot(method=reboot_method, serial=True, timeout=360, session=session)
     guest_interface_operstate_check(session, expect_down_status)
 
-    error_context.context("Re-enable guest nic device '%s' by set_link"
-                          % device_id, test.log.info)
+    error_context.context(
+        "Re-enable guest nic device '%s' by set_link" % device_id, test.log.info
+    )
     set_link_test(device_id, True)
     guest_interface_operstate_check(session, expect_up_status)
 
-    error_context.context("Check guest network connecting by set_link to '%s'"
-                          % expect_up_status, test.log.info)
+    error_context.context(
+        "Check guest network connecting by set_link to '%s'" % expect_up_status,
+        test.log.info,
+    )
     # Windows guest need about 60s to get the ip address
     guest_ip = utils_net.get_guest_ip_addr(session, device_mac, os_type, timeout=60)
     if guest_ip is None:

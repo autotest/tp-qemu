@@ -1,10 +1,6 @@
 import os
 
-from virttest import error_context
-from virttest import data_dir
-from virttest import utils_net
-from virttest import utils_misc
-from virttest import utils_netperf
+from virttest import data_dir, error_context, utils_misc, utils_net, utils_netperf
 
 
 @error_context.context_aware
@@ -19,11 +15,12 @@ def run(test, params, env):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
     """
+
     def ping_test():
         # Ping from guest1 to guest2 for 30 counts
-        status, output = utils_net.ping(dest=addresses[1], count=30,
-                                        timeout=60,
-                                        session=sessions[0])
+        status, output = utils_net.ping(
+            dest=addresses[1], count=30, timeout=60, session=sessions[0]
+        )
         if status:
             test.fail("ping %s unexpected, output %s" % (vms[1], output))
 
@@ -32,33 +29,36 @@ def run(test, params, env):
         Netperf stress test between two guest.
         """
         n_client = utils_netperf.NetperfClient(
-            addresses[0], params["client_path"],
-            netperf_source=os.path.join(data_dir.get_deps_dir("netperf"),
-                                        params.get("netperf_client_link")),
+            addresses[0],
+            params["client_path"],
+            netperf_source=os.path.join(
+                data_dir.get_deps_dir("netperf"), params.get("netperf_client_link")
+            ),
             client=params.get("shell_client"),
             port=params.get("shell_port"),
             prompt=params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#"),
             username=params.get("username"),
             password=params.get("password"),
-            linesep=params.get("shell_linesep", "\n").encode().decode(
-                'unicode_escape'),
+            linesep=params.get("shell_linesep", "\n").encode().decode("unicode_escape"),
             status_test_command=params.get("status_test_command", ""),
-            compile_option=params.get("compile_option_client", ""))
+            compile_option=params.get("compile_option_client", ""),
+        )
 
         n_server = utils_netperf.NetperfServer(
             addresses[1],
             params["server_path"],
-            netperf_source=os.path.join(data_dir.get_deps_dir("netperf"),
-                                        params.get("netperf_server_link")),
+            netperf_source=os.path.join(
+                data_dir.get_deps_dir("netperf"), params.get("netperf_server_link")
+            ),
             username=params.get("username"),
             password=params.get("password"),
             client=params.get("shell_client"),
             port=params.get("shell_port"),
             prompt=params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#"),
-            linesep=params.get("shell_linesep", "\n").encode().decode(
-                'unicode_escape'),
+            linesep=params.get("shell_linesep", "\n").encode().decode("unicode_escape"),
             status_test_command=params.get("status_test_command", "echo $?"),
-            compile_option=params.get("compile_option_server", ""))
+            compile_option=params.get("compile_option_server", ""),
+        )
 
         try:
             n_server.start()
@@ -71,20 +71,26 @@ def run(test, params, env):
             if netperf_output_unit in "GMKgmk":
                 test_option += " -f %s" % netperf_output_unit
             t_option = "%s -t %s" % (test_option, test_protocols)
-            n_client.bg_start(addresses[1],
-                              t_option,
-                              params.get_numeric("netperf_para_sessions"),
-                              params.get("netperf_cmd_prefix", ""),
-                              package_sizes=params.get("netperf_sizes"))
-            if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 1,
-                                   "Wait netperf test start"):
+            n_client.bg_start(
+                addresses[1],
+                t_option,
+                params.get_numeric("netperf_para_sessions"),
+                params.get("netperf_cmd_prefix", ""),
+                package_sizes=params.get("netperf_sizes"),
+            )
+            if utils_misc.wait_for(
+                n_client.is_netperf_running, 10, 0, 1, "Wait netperf test start"
+            ):
                 test.log.info("Netperf test start successfully.")
             else:
                 test.error("Can not start netperf client.")
             utils_misc.wait_for(
                 lambda: not n_client.is_netperf_running(),
-                netperf_test_duration, 0, 5,
-                "Wait netperf test finish %ss" % netperf_test_duration)
+                netperf_test_duration,
+                0,
+                5,
+                "Wait netperf test finish %ss" % netperf_test_duration,
+            )
         finally:
             n_server.stop()
             n_server.cleanup(True)

@@ -1,7 +1,5 @@
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 from qemu.tests import drive_mirror
 
@@ -21,8 +19,7 @@ def run_drive_mirror_cancel(test, params, env):
     mirror_test = drive_mirror.DriveMirror(test, params, env, tag)
     try:
         mirror_test.start()
-        error_context.context("Block network connection with iptables",
-                              test.log.info)
+        error_context.context("Block network connection with iptables", test.log.info)
         process.run(params["start_firewall_cmd"], shell=True)
         bg = utils_misc.InterruptedThread(mirror_test.cancel)
         bg.start()

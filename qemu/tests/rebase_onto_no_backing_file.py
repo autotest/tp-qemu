@@ -2,9 +2,9 @@ import json
 
 from avocado import fail_on
 from avocado.utils import process
+from virttest import data_dir, qemu_storage
+
 from provider import qemu_img_utils as img_utils
-from virttest import data_dir
-from virttest import qemu_storage
 
 
 def run(test, params, env):
@@ -25,33 +25,36 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def _verify_image_backing_file(info_output, base):
         """Verify backing image filename and format."""
         backing_filename = info_output["backing-filename"]
         backing_format = info_output.get("backing-filename-format")
-        backing_filename_desired = qemu_storage.get_image_repr(base.tag,
-                                                               params,
-                                                               root_dir)
+        backing_filename_desired = qemu_storage.get_image_repr(
+            base.tag, params, root_dir
+        )
         if backing_filename != backing_filename_desired:
-            test.fail("backing image name mismatch, got %s, expect %s" % (
-                backing_filename, backing_filename_desired
-            ))
+            test.fail(
+                "backing image name mismatch, got %s, expect %s"
+                % (backing_filename, backing_filename_desired)
+            )
         if backing_format:
             backing_format_desired = base.image_format
             if backing_format != backing_format_desired:
                 test.fail(
-                    "backing image format mismatch, got %s, expect %s" % (
-                        backing_format, backing_format_desired
-                    ))
+                    "backing image format mismatch, got %s, expect %s"
+                    % (backing_format, backing_format_desired)
+                )
 
     def _verify_qcow2_compatible(info_output, image):
         """Verify qcow2 compat version."""
         compat = info_output["format-specific"]["data"]["compat"]
         compat_desired = image.params.get("qcow2_compatible", "1.1")
         if compat != compat_desired:
-            test.fail("%s image compat version mismatch, got %s, expect %s" % (
-                image.tag, compat, compat_desired
-            ))
+            test.fail(
+                "%s image compat version mismatch, got %s, expect %s"
+                % (image.tag, compat, compat_desired)
+            )
 
     def _verify_no_backing_file(info_output):
         """Verify snapshot has no backing file for this case."""
@@ -64,8 +67,9 @@ def run(test, params, env):
     params["image_name_%s" % images[0]] = params["image_name"]
     params["image_format_%s" % images[0]] = params["image_format"]
     root_dir = data_dir.get_data_dir()
-    base, sn = (qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
-                for tag in images)
+    base, sn = (
+        qemu_storage.QemuImg(params.object_params(tag), root_dir, tag) for tag in images
+    )
 
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
@@ -110,8 +114,7 @@ def run(test, params, env):
 
     test.log.info("check the md5 value of tmp file %s after rebase", guest_file)
     session = vm.wait_for_login()
-    img_utils.check_md5sum(guest_file, md5sum_bin, session,
-                           md5_value_to_check=hashval)
+    img_utils.check_md5sum(guest_file, md5sum_bin, session, md5_value_to_check=hashval)
     session.close()
     vm.destroy()
 

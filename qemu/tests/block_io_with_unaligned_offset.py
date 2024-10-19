@@ -1,4 +1,5 @@
 """qemu-io with unaligned offset"""
+
 from avocado.utils import process
 
 

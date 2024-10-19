@@ -1,14 +1,12 @@
 import os
 import re
 
-from provider.qemu_img_utils import strace
-
 from avocado import fail_on
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import utils_numeric
+from virttest import data_dir, utils_numeric
 from virttest.qemu_storage import QemuImg
+
+from provider.qemu_img_utils import strace
 
 
 def run(test, params, env):
@@ -29,18 +27,22 @@ def run(test, params, env):
         """Check whether the value is good in the output file."""
         test.log.debug("Check the output file '%s'.", strace_output)
         with open(strace_output) as fd:
-            m = re.findall(match_str + r', \d+, \d+', fd.read())
+            m = re.findall(match_str + r", \d+, \d+", fd.read())
             if not m:
-                test.fail("The result of system call '%s' is not right, "
-                          "check '%s' for more details."
-                          % (strace_event, strace_output))
-            last_lst = m[-1].split(',')
+                test.fail(
+                    "The result of system call '%s' is not right, "
+                    "check '%s' for more details." % (strace_event, strace_output)
+                )
+            last_lst = m[-1].split(",")
             sum_size = int(last_lst[-1]) + int(last_lst[-2])
             # get the source image size in byte unit
             byte_image_size = int(utils_numeric.normalize_data_size(image_size, "B"))
             if sum_size != byte_image_size:
-                test.fail("The target allocated size '%s' is different from the source image size, "
-                          "check '%s' for more details." % (str(sum_size), strace_output))
+                test.fail(
+                    "The target allocated size '%s' is different from the source image "
+                    "size, check '%s' for more details."
+                    % (str(sum_size), strace_output)
+                )
 
     src_image = params["images"]
     image_size = params["image_size_test"]
@@ -48,19 +50,24 @@ def run(test, params, env):
     source = QemuImg(params.object_params(src_image), root_dir, src_image)
     strace_event = params["strace_event"]
     strace_events = strace_event.split()
-    strace_output_file = os.path.join(test.debugdir,
-                                      "convert_to_block.log")
+    strace_output_file = os.path.join(test.debugdir, "convert_to_block.log")
 
     source.create(source.params)
     # Generate the target scsi block file.
-    tgt_disk = process.system_output("lsscsi | grep '%s' | awk '{print $NF}'"
-                                     % params["scsi_mod"], shell=True).decode()
+    tgt_disk = process.system_output(
+        "lsscsi | grep '%s' | awk '{print $NF}'" % params["scsi_mod"], shell=True
+    ).decode()
     params["image_name_target"] = tgt_disk
 
-    test.log.debug("Convert from %s to %s with cache mode none, strace log: %s.",
-                   source.image_filename, tgt_disk, strace_output_file)
+    test.log.debug(
+        "Convert from %s to %s with cache mode none, strace log: %s.",
+        source.image_filename,
+        tgt_disk,
+        strace_output_file,
+    )
     with strace(source, strace_events, strace_output_file, trace_child=True):
         fail_on((process.CmdError,))(source.convert)(
-            params.object_params(src_image), root_dir, cache_mode="none")
+            params.object_params(src_image), root_dir, cache_mode="none"
+        )
 
     _check_output(strace_event, strace_output_file, "FALLOC_FL_PUNCH_HOLE")

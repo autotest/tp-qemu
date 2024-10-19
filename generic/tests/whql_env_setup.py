@@ -1,14 +1,10 @@
-import time
 import os
 import re
+import time
 
-from avocado.utils import process
 from avocado.utils import download as utils_download
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import env_process
-from virttest import data_dir
-from virttest import error_context
+from avocado.utils import process
+from virttest import data_dir, env_process, error_context, utils_misc, utils_test
 
 
 @error_context.context_aware
@@ -59,8 +55,7 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 240))
     session = vm.wait_for_login(timeout=timeout)
     error_log = utils_misc.get_path(log_path, "whql_setup_error_log")
-    run_guest_log = params.get(
-        "run_guest_log", "%s/whql_qemu_comman" % test.tmpdir)
+    run_guest_log = params.get("run_guest_log", "%s/whql_qemu_comman" % test.tmpdir)
 
     # Record qmmu command line in a log file
     error_context.context("Record qemu command line", test.log.info)
@@ -91,29 +86,36 @@ def run(test, params, env):
     disk_driver_install = params.get("disk_driver_install", "")
 
     vm_ma_cmd = "wmic computersystem set AutomaticManagedPagefile=False"
-    vm_cmd = "wmic pagefileset where name=\"C:\\\\pagefile.sys\" set "
+    vm_cmd = 'wmic pagefileset where name="C:\\\\pagefile.sys" set '
     vm_cmd += "InitialSize=%s,MaximumSize=%s" % (vm_size, vm_size)
     vm_ma_cmd = ""
     vm_cmd = ""
     if symbol_files:
         symbol_cmd = "del  C:\\\\symbols &&"
-        symbol_cmd += "git clone %s C:\\\\symbol_files C:\\\\symbols" % \
-                      symbol_files
+        symbol_cmd += "git clone %s C:\\\\symbol_files C:\\\\symbols" % symbol_files
     else:
         symbol_cmd = ""
     wmic_prepare_cmd = "echo exit > cmd && cmd /s wmic"
 
     error_context.context("Configure guest system", test.log.info)
-    cmd_list = [wmic_prepare_cmd, auto_restart, disable_uas, symbol_cmd,
-                vm_ma_cmd, vm_cmd, dbgview_cmd, qxl_install, disable_firewall,
-                timezone_cmd]
+    cmd_list = [
+        wmic_prepare_cmd,
+        auto_restart,
+        disable_uas,
+        symbol_cmd,
+        vm_ma_cmd,
+        vm_cmd,
+        dbgview_cmd,
+        qxl_install,
+        disable_firewall,
+        timezone_cmd,
+    ]
     if nic_cmd:
         for index, nic in enumerate(re.split(r"\s+", params.get("nics"))):
             setup_params = params.get("nic_setup_params_%s" % nic, "")
             if params.get("vm_arch_name", "") == "x86_64":
                 nic_cmd = re.sub("set", "set_64", nic_cmd)
-            cmd_list.append("%s %s %s" % (nic_cmd, str(index + 1),
-                                          setup_params))
+            cmd_list.append("%s %s %s" % (nic_cmd, str(index + 1), setup_params))
     if disk_init_cmd:
         disk_num = len(re.split(r"\s+", params.get("images")))
         if disk_driver_install:
@@ -121,13 +123,13 @@ def run(test, params, env):
         labels = "IJKLMNOPQRSTUVWXYZ"
         for index, images in enumerate(re.split(r"\s+", params.get("images"))):
             if index > 0:
-                cmd_list.append(disk_init_cmd % (str(index),
-                                                 labels[index - 1]))
-                format_cmd_image = format_cmd % (labels[index - 1],
-                                                 params.get("win_format_%s" % images))
+                cmd_list.append(disk_init_cmd % (str(index), labels[index - 1]))
+                format_cmd_image = format_cmd % (
+                    labels[index - 1],
+                    params.get("win_format_%s" % images),
+                )
                 if params.get("win_extra_%s" % images):
-                    format_cmd_image += " %s" % params.get(
-                        "win_extra_%s" % images)
+                    format_cmd_image += " %s" % params.get("win_extra_%s" % images)
                 cmd_list.append(format_cmd_image)
 
     cmd_list += [update_cmd, disable_update]
@@ -138,8 +140,7 @@ def run(test, params, env):
     if symbol_files:
         error_context.context("Update symbol files", test.log.info)
         install_check_tool = False
-        check_tool_chk = params.get("check_tool_chk",
-                                    "C:\\debuggers\\symchk.exe")
+        check_tool_chk = params.get("check_tool_chk", "C:\\debuggers\\symchk.exe")
         output = session.cmd_output(check_tool_chk)
         if "cannot find" in output:
             install_check_tool = True
@@ -151,9 +152,9 @@ def run(test, params, env):
 
         symbol_check_pattern = params.get("symbol_check_pattern")
         symbol_pid_pattern = params.get("symbol_pid_pattern")
-        download = utils_test.BackgroundTest(session.cmd,
-                                             (symbol_file_download,
-                                              setup_timeout))
+        download = utils_test.BackgroundTest(
+            session.cmd, (symbol_file_download, setup_timeout)
+        )
 
         sessioncheck = vm.wait_for_login(timeout=timeout)
         download.start()
@@ -182,8 +183,7 @@ def run(test, params, env):
                 s, o = session.cmd_status_output(cmd, timeout=setup_timeout)
             except Exception as err:
                 failed_flag += 1
-                utils_misc.log_line(
-                    error_log, "Unexpected exception: %s" % err)
+                utils_misc.log_line(error_log, "Unexpected exception: %s" % err)
             if s != 0:
                 failed_flag += 1
                 utils_misc.log_line(error_log, o)

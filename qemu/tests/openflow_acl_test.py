@@ -1,19 +1,14 @@
 import functools
-import re
 import os
+import re
 
 import aexpect
-
 from avocado.utils import process
+from virttest import data_dir, error_context, remote, utils_net
 
-from virttest import error_context
-from virttest import utils_net
-from virttest import remote
-from virttest import data_dir
-
-
-_system_statusoutput = functools.partial(process.getstatusoutput, shell=True,
-                                         ignore_status=False)
+_system_statusoutput = functools.partial(
+    process.getstatusoutput, shell=True, ignore_status=False
+)
 
 
 @error_context.context_aware
@@ -35,8 +30,8 @@ def run(test, params, env):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
     """
-    def access_service(access_sys, access_targets, disabled, host_ip,
-                       ref=False):
+
+    def access_service(access_sys, access_targets, disabled, host_ip, ref=False):
         err_msg = ""
         err_type = ""
         for asys in access_sys:
@@ -44,7 +39,7 @@ def run(test, params, env):
                 test.log.debug("Try to access target %s from %s", atgt, asys)
 
                 access_params = access_sys[asys]
-                atgt_disabled = access_params['disabled_%s' % atgt]
+                atgt_disabled = access_params["disabled_%s" % atgt]
                 if asys in vms_tags:
                     vm = env.get_vm(asys)
                     session = vm.wait_for_login(timeout=timeout)
@@ -61,10 +56,12 @@ def run(test, params, env):
                 else:
                     access_re_sub_string = host_ip
 
-                access_cmd = re.sub("ACCESS_TARGET", access_re_sub_string,
-                                    access_params['access_cmd'])
-                ref_cmd = re.sub("ACCESS_TARGET", access_re_sub_string,
-                                 access_params['ref_cmd'])
+                access_cmd = re.sub(
+                    "ACCESS_TARGET", access_re_sub_string, access_params["access_cmd"]
+                )
+                ref_cmd = re.sub(
+                    "ACCESS_TARGET", access_re_sub_string, access_params["ref_cmd"]
+                )
 
                 if access_cmd in ["ssh", "telnet"]:
                     if atgt in vms_tags:
@@ -76,8 +73,9 @@ def run(test, params, env):
                     out = ""
                     out_err = ""
                     try:
-                        out = remote_login(access_cmd, target_ip,
-                                           remote_src, params, host_ip)
+                        out = remote_login(
+                            access_cmd, target_ip, remote_src, params, host_ip
+                        )
                         stat = 0
                     except remote.LoginError as err:
                         stat = 1
@@ -85,8 +83,9 @@ def run(test, params, env):
                         out_err += "from %s, err: %s" % (asys, err.output)
                     if "TelnetServer" in params.get("setup_cmd_windows", ""):
                         try:
-                            out += remote_login(access_cmd, ssh_src_ip,
-                                                target_vm, params, host_ip)
+                            out += remote_login(
+                                access_cmd, ssh_src_ip, target_vm, params, host_ip
+                            )
                         except remote.LoginError as err:
                             stat += 1
                             out_err += "Failed to login %s " % asys
@@ -108,7 +107,7 @@ def run(test, params, env):
 
                     if access_params.get("clean_cmd"):
                         try:
-                            run_func(access_params['clean_cmd'])
+                            run_func(access_params["clean_cmd"])
                         except Exception:
                             pass
 
@@ -205,10 +204,12 @@ def run(test, params, env):
 
         if client == "ssh":
             # We only support ssh for Linux in this test
-            cmd = ("ssh -o UserKnownHostsFile=/dev/null "
-                   "-o StrictHostKeyChecking=no "
-                   "-o PreferredAuthentications=password -p %s %s@%s" %
-                   (port, username, host))
+            cmd = (
+                "ssh -o UserKnownHostsFile=/dev/null "
+                "-o StrictHostKeyChecking=no "
+                "-o PreferredAuthentications=password -p %s %s@%s"
+                % (port, username, host)
+            )
         elif client == "telnet":
             cmd = "telnet -l %s %s %s" % (username, host, port)
         else:
@@ -221,7 +222,7 @@ def run(test, params, env):
             if params_login.get("os_type") == "windows":
                 if client == "telnet":
                     cmd = "C:\\telnet.py %s %s " % (host, username)
-                    cmd += "%s \"%s\" && " % (password, prompt)
+                    cmd += '%s "%s" && ' % (password, prompt)
                     cmd += "C:\\wait_for_quit.py"
                 cmd = "%s || ping 127.0.0.1 -n 5 -w 1000 > nul" % cmd
             else:
@@ -230,8 +231,9 @@ def run(test, params, env):
             test.log.debug("Sending login command: %s", cmd)
             session.sendline(cmd)
         try:
-            out = remote.handle_prompts(session, username, password,
-                                        prompt, timeout, debug=True)
+            out = remote.handle_prompts(
+                session, username, password, prompt, timeout, debug=True
+            )
         except Exception as err:
             session.close()
             raise err
@@ -256,22 +258,24 @@ def run(test, params, env):
         setup_params = params.object_params(os_type)
         setup_cmd = setup_params.get("setup_cmd", "service SERVICE restart")
         prepare_cmd = setup_params.get("prepare_cmd")
-        setup_cmd = re.sub("SERVICE", setup_params.get("service", ""),
-                           setup_cmd)
+        setup_cmd = re.sub("SERVICE", setup_params.get("service", ""), setup_cmd)
 
-        error_context.context("Set up %s service in %s"
-                              % (setup_params.get("service"), setup_target),
-                              test.log.info)
+        error_context.context(
+            "Set up %s service in %s" % (setup_params.get("service"), setup_target),
+            test.log.info,
+        )
         if params.get("copy_ftp_site") and setup_target != "localhost":
-            ftp_site = os.path.join(data_dir.get_deps_dir(),
-                                    params.get("copy_ftp_site"))
+            ftp_site = os.path.join(
+                data_dir.get_deps_dir(), params.get("copy_ftp_site")
+            )
             ftp_dir = params.get("ftp_dir")
             setup_vm.copy_files_to(ftp_site, ftp_dir)
         access_param = setup_params.object_params(setup_target)
         if "ftp" in access_param.get("access_cmd") and os_type == "linux":
             setup_func(
                 "sed -i 's/anonymous_enable=NO/anonymous_enable=YES/g' %s"
-                % params["vsftpd_conf"])
+                % params["vsftpd_conf"]
+            )
         if prepare_cmd:
             setup_func(prepare_cmd, timeout=setup_timeout)
         setup_func(setup_cmd, timeout=setup_timeout)
@@ -292,12 +296,12 @@ def run(test, params, env):
         setup_params = params.object_params(os_type)
         stop_cmd = setup_params.get("stop_cmd", "service SERVICE stop")
         cleanup_cmd = setup_params.get("cleanup_cmd")
-        stop_cmd = re.sub("SERVICE", setup_params.get("service", ""),
-                          stop_cmd)
+        stop_cmd = re.sub("SERVICE", setup_params.get("service", ""), stop_cmd)
 
-        error_context.context("Stop %s service in %s"
-                              % (setup_params.get("service"), setup_target),
-                              test.log.info)
+        error_context.context(
+            "Stop %s service in %s" % (setup_params.get("service"), setup_target),
+            test.log.info,
+        )
         if stop_cmd:
             setup_func(stop_cmd, timeout=setup_timeout)
 
@@ -307,9 +311,9 @@ def run(test, params, env):
         if setup_target != "localhost":
             setup_session.close()
 
-    timeout = int(params.get("login_timeout", '360'))
+    timeout = int(params.get("login_timeout", "360"))
     op_timeout = int(params.get("op_timeout", "360"))
-    acl_protocol = params['acl_protocol']
+    acl_protocol = params["acl_protocol"]
     acl_extra_options = params.get("acl_extra_options", "")
 
     for vm in env.get_all_vms():
@@ -334,7 +338,7 @@ def run(test, params, env):
     vms_tags = params.objects("vms")
     br_name = params.get("netdst")
     if br_name == "private":
-        br_name = params.get("priv_brname", 'atbr0')
+        br_name = params.get("priv_brname", "atbr0")
 
     for setup_target in params.get("setup_targets", "").split():
         setup_service(setup_target)
@@ -371,19 +375,17 @@ def run(test, params, env):
             check_from_output = access_param.get("check_from_output")
 
             access_sys[target] = {}
-            access_sys[target]['access_cmd'] = access_param['access_cmd']
-            access_sys[target]['ref_cmd'] = access_param.get('ref_cmd', "")
-            access_sys[target]['clean_cmd'] = access_param.get('clean_guest',
-                                                               "")
+            access_sys[target]["access_cmd"] = access_param["access_cmd"]
+            access_sys[target]["ref_cmd"] = access_param.get("ref_cmd", "")
+            access_sys[target]["clean_cmd"] = access_param.get("clean_guest", "")
             if check_from_output:
-                access_sys[target]['check_from_output'] = check_from_output
+                access_sys[target]["check_from_output"] = check_from_output
             for tgt in access_targets:
                 tgt_param = access_param.object_params(tgt)
                 acl_disabled = tgt_param.get("acl_disabled") == "yes"
-                access_sys[target]['disabled_%s' % tgt] = acl_disabled
+                access_sys[target]["disabled_%s" % tgt] = acl_disabled
 
-    error_context.context("Try to access target before setup the rules",
-                          test.log.info)
+    error_context.context("Try to access target before setup the rules", test.log.info)
     access_service(access_sys, access_targets, False, host_ip, ref=True)
     error_context.context("Disable the access in ovs", test.log.info)
     br_infos = utils_net.openflow_manager(br_name, "show").stdout.decode()
@@ -394,34 +396,32 @@ def run(test, params, env):
 
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "drop", acl_extra_options)
     utils_net.openflow_manager(br_name, "add-flow", acl_cmd)
-    acl_rules = utils_net.openflow_manager(
-        br_name, "dump-flows").stdout.decode()
+    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
-    error_context.context("Try to acess target to exam the disable rules",
-                          test.log.info)
+    error_context.context(
+        "Try to acess target to exam the disable rules", test.log.info
+    )
     access_service(access_sys, access_targets, True, host_ip)
     error_context.context("Enable the access in ovs", test.log.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "normal", acl_extra_options)
     utils_net.openflow_manager(br_name, "mod-flows", acl_cmd)
-    acl_rules = utils_net.openflow_manager(
-        br_name, "dump-flows").stdout.decode()
+    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout.decode()
     if not acl_rules_check(acl_rules, acl_cmd):
         test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
-    error_context.context("Try to acess target to exam the enable rules",
-                          test.log.info)
+    error_context.context("Try to acess target to exam the enable rules", test.log.info)
     access_service(access_sys, access_targets, False, host_ip)
     error_context.context("Delete the access rules in ovs", test.log.info)
     acl_cmd = get_acl_cmd(acl_protocol, if_port, "", acl_extra_options)
     utils_net.openflow_manager(br_name, "del-flows", acl_cmd)
-    acl_rules = utils_net.openflow_manager(
-        br_name, "dump-flows").stdout.decode()
+    acl_rules = utils_net.openflow_manager(br_name, "dump-flows").stdout.decode()
     if acl_rules_check(acl_rules, acl_cmd):
         test.fail("Still can find the rules from ovs-ofctl: %s" % acl_rules)
-    error_context.context("Try to acess target to exam after delete the rules",
-                          test.log.info)
+    error_context.context(
+        "Try to acess target to exam after delete the rules", test.log.info
+    )
     access_service(access_sys, access_targets, False, host_ip)
 
     for setup_target in params.get("setup_targets", "").split():

@@ -1,4 +1,5 @@
 from virttest import error_context
+
 from qemu.tests import live_snapshot_basic
 
 

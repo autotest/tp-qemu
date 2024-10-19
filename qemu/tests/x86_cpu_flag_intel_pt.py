@@ -1,8 +1,5 @@
 from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context, utils_misc
 
 from provider.cpu_utils import check_cpu_flags
 
@@ -34,10 +31,10 @@ def run(test, params, env):
     origin_value = process.getoutput(get_pt_mode).strip()
 
     try:
-        if origin_value != '1':
-            process.system(set_pt_mode % '1', shell=True)
+        if origin_value != "1":
+            process.system(set_pt_mode % "1", shell=True)
         pt_mode = process.getoutput(get_pt_mode).strip()
-        if pt_mode != '1':
+        if pt_mode != "1":
             test.cancel("pt_mode can't be set to 1")
 
         params["start_vm"] = "yes"

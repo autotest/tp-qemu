@@ -1,9 +1,7 @@
-import time
 import os
+import time
 
-from virttest import test_setup
-from virttest import error_context
-from virttest import kernel_interface
+from virttest import error_context, kernel_interface, test_setup
 
 from provider import thp_fragment_tool
 
@@ -74,14 +72,14 @@ def run(test, params, env):
     change_feature_status("off", "defrag", test_config)
 
     thps_defrag_off = int(thp_fragment_tool.get_tool_output().split()[1])
-    test.log.debug("THPs allocated with defrag off: %d" % thps_defrag_off)
+    test.log.debug("THPs allocated with defrag off: %d", thps_defrag_off)
 
     error_context.context("activating khugepaged defrag functionality", test.log.info)
     change_feature_status("on", "khugepaged/defrag", test_config)
     change_feature_status("on", "defrag", test_config)
 
     thps_defrag_on = int(thp_fragment_tool.get_tool_output().split()[1])
-    test.log.debug("THPs allocated with defrag on: %d" % thps_defrag_on)
+    test.log.debug("THPs allocated with defrag on: %d", thps_defrag_on)
 
     if thps_defrag_off >= thps_defrag_on:
         test.fail(

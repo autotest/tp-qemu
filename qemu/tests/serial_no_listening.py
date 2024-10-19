@@ -1,11 +1,9 @@
 import aexpect
-
 from avocado.utils import process
+from virttest import error_context, utils_test
 
-from virttest import error_context
-from virttest import utils_test
-from qemu.tests.virtio_serial_file_transfer import get_virtio_port_property
 from provider import win_driver_utils
+from qemu.tests.virtio_serial_file_transfer import get_virtio_port_property
 
 
 @error_context.context_aware
@@ -29,10 +27,10 @@ def run(test, params, env):
 
     session = vm.wait_for_login()
     if os_type == "windows":
-        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test, driver_name)
-    port_path = get_virtio_port_property(vm,
-                                         params["file_transfer_serial_port"])[1]
+        session = utils_test.qemu.windrv_check_running_verifier(
+            session, vm, test, driver_name
+        )
+    port_path = get_virtio_port_property(vm, params["file_transfer_serial_port"])[1]
 
     error_context.context("host send while no listening side", test.log.info)
     host_send_cmd = 'echo "hi" | nc -U %s' % port_path
@@ -50,8 +48,10 @@ def run(test, params, env):
         if os_type != "linux":
             test.error("timeout when guest send command:  %s" % guest_send_cmd)
     else:
-        if not (os_type == "windows" and
-                ("The system cannot write to the specified device" in output)):
+        if not (
+            os_type == "windows"
+            and ("The system cannot write to the specified device" in output)
+        ):
             test.fail("Guest send should fail while no listening side")
 
     vm.verify_kernel_crash()

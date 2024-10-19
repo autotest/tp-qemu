@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import qemu_monitor
+from virttest import error_context, qemu_monitor
 
 
 @error_context.context_aware
@@ -30,8 +29,10 @@ def run(test, params, env):
     protocol = vm.monitor.protocol
 
     black_cmds = params.get("black_cmds", "").split()
-    error_context.context("Verify black commands are unavaliable in "
-                          "'%s' monitor" % protocol, test.log.info)
+    error_context.context(
+        "Verify black commands are unavaliable in " "'%s' monitor" % protocol,
+        test.log.info,
+    )
     test.log.info("Black commands: %s", black_cmds)
     cmds = [cmd for cmd in black_cmds if is_supported(cmd)]
     if cmds:

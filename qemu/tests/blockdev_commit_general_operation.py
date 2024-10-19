@@ -1,10 +1,8 @@
-from provider import job_utils
-from provider import backup_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitGeneralOperation(BlockDevCommitTest):
-
     def commit_op(self, cmd, args=None):
         self.main_vm.monitor.cmd(cmd, args)
         job_status = job_utils.query_block_jobs(self.main_vm)
@@ -26,25 +24,26 @@ class BlockdevCommitGeneralOperation(BlockDevCommitTest):
         backup_utils.set_default_block_job_options(self.main_vm, args)
         self.main_vm.monitor.cmd(cmd, args)
         job_id = args.get("job-id", device)
-        self.main_vm.monitor.cmd("block-job-set-speed",
-                                 {'device': job_id, 'speed': 10240})
+        self.main_vm.monitor.cmd(
+            "block-job-set-speed", {"device": job_id, "speed": 10240}
+        )
         self.commit_op("stop")
         self.commit_op("cont")
-        self.commit_op("job-pause", {'id': job_id})
-        self.commit_op("job-resume", {'id': job_id})
-        self.commit_op("job-cancel", {'id': job_id})
+        self.commit_op("job-pause", {"id": job_id})
+        self.commit_op("job-resume", {"id": job_id})
+        self.commit_op("job-cancel", {"id": job_id})
         event = job_utils.get_event_by_condition(
-            self.main_vm, 'BLOCK_JOB_CANCELLED',
-            self.params.get_numeric('job_cancelled_timeout', 60),
-            device=job_id
+            self.main_vm,
+            "BLOCK_JOB_CANCELLED",
+            self.params.get_numeric("job_cancelled_timeout", 60),
+            device=job_id,
         )
         if event is None:
-            self.test.fail('Job failed to cancel')
+            self.test.fail("Job failed to cancel")
         if not self.params.get_boolean("dismiss"):
-            self.commit_op("job-dismiss", {'id': job_id})
+            self.commit_op("job-dismiss", {"id": job_id})
         self.main_vm.monitor.cmd(cmd, args)
-        self.main_vm.monitor.cmd("block-job-set-speed",
-                                 {'device': job_id, 'speed': 0})
+        self.main_vm.monitor.cmd("block-job-set-speed", {"device": job_id, "speed": 0})
         job_utils.wait_until_block_job_completed(self.main_vm, job_id)
 
 

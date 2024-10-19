@@ -1,5 +1,5 @@
-import re
 import json
+import re
 from random import randrange
 
 from provider import backup_utils
@@ -7,13 +7,11 @@ from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 
 
 class BlkFullBackupXperf(BlockdevLiveBackupBaseTest):
-
     def get_image_cluster_size(self):
         csize_parttern = self.params.get("cluster_size_pattern")
         image_name = self._source_images[0]
         image_params = self.params.object_params(image_name)
-        image = self.source_disk_define_by_params(image_params,
-                                                  image_name)
+        image = self.source_disk_define_by_params(image_params, image_name)
         output = image.info(force_share=True)
         match = re.findall(csize_parttern, output)
         if match:
@@ -28,9 +26,9 @@ class BlkFullBackupXperf(BlockdevLiveBackupBaseTest):
             extra_options = {"max-workers": max_workers, "max-chunk": max_chunk}
         else:
             extra_options = {"max-workers": max_workers}
-        backup_utils.blockdev_backup(self.main_vm, self._source_nodes[0],
-                                     self._full_bk_nodes[0],
-                                     **extra_options)
+        backup_utils.blockdev_backup(
+            self.main_vm, self._source_nodes[0], self._full_bk_nodes[0], **extra_options
+        )
 
     def do_test(self):
         self.do_full_backup()

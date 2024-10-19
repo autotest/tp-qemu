@@ -1,8 +1,8 @@
 import logging
-import time
 import random
-from autotest.client.shared import error
-from autotest.client.shared import utils
+import time
+
+from autotest.client.shared import error, utils
 from virttest import utils_misc
 from virttest.utils_test.qemu import migration
 
@@ -35,10 +35,10 @@ def run(test, params, env):
         mig_type = migration.MultihostMigrationRdma
 
     class TestMultihostMigration(mig_type):
-
         def __init__(self, test, params, env):
-            super(TestMultihostMigration, self).__init__(test, params, env,
-                                                         preprocess_env)
+            super(TestMultihostMigration, self).__init__(
+                test, params, env, preprocess_env
+            )
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
             self.is_src = params["hostid"] == self.srchost
@@ -50,8 +50,7 @@ def run(test, params, env):
         @error.context_aware
         def before_migration(self, mig_data):
             def do_reboot(vm):
-                reboot_method = mig_data.params.get("reboot_method",
-                                                    "system_reset")
+                reboot_method = mig_data.params.get("reboot_method", "system_reset")
                 reboot_timeout = float(mig_data.params.get("reboot_timeout", 30))
                 if self.is_src:
                     logging.info("Do '%s' before migraion...", reboot_method)
@@ -60,12 +59,14 @@ def run(test, params, env):
                     while time.time() < end_time:
                         vm.monitor.clear_event("RESET")
                         vm.monitor.cmd(reboot_method)
-                        reseted = utils_misc.wait_for(lambda:
-                                                      vm.monitor.get_event("RESET"),
-                                                      timeout=self.login_timeout)
+                        reseted = utils_misc.wait_for(
+                            lambda: vm.monitor.get_event("RESET"),
+                            timeout=self.login_timeout,
+                        )
                         if not reseted:
-                            raise error.TestFail("Not found RESET event after "
-                                                 "execute 'system_reset'")
+                            raise error.TestFail(
+                                "Not found RESET event after " "execute 'system_reset'"
+                            )
                         vm.monitor.clear_event("RESET")
 
                         time.sleep(self.random_timeout)
@@ -86,8 +87,10 @@ def run(test, params, env):
                 max_t = int(params.get("max_random_timeout", 5))
                 self.random_timeout = random.randint(min_t, max_t)
                 params["start_migration_timeout"] = self.random_timeout
-                error.context("Start migration after %d seconds" %
-                              self.random_timeout, logging.info)
+                error.context(
+                    "Start migration after %d seconds" % self.random_timeout,
+                    logging.info,
+                )
 
             self.migrate_wait([self.vm], self.srchost, self.dsthost)
 

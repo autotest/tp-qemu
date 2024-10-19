@@ -1,41 +1,49 @@
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
-from provider.job_utils import check_block_jobs_started
-from provider.job_utils import wait_until_block_job_completed
+from provider.job_utils import check_block_jobs_started, wait_until_block_job_completed
 
 
 class BlockdevIncbkFilterNodeTest(BlockdevLiveBackupBaseTest):
-    """ live backup with filter-node-name test """
+    """live backup with filter-node-name test"""
 
     def __init__(self, test, params, env):
         super(BlockdevIncbkFilterNodeTest, self).__init__(test, params, env)
-        self._jobid = 'backup_%s_job' % self._source_nodes[0]
-        self._full_backup_options.update({
-            'device': self._source_nodes[0], 'target': self._full_bk_nodes[0],
-            'filter-node-name': self.params['filter_node_name'],
-            'job-id': self._jobid})
+        self._jobid = "backup_%s_job" % self._source_nodes[0]
+        self._full_backup_options.update(
+            {
+                "device": self._source_nodes[0],
+                "target": self._full_bk_nodes[0],
+                "filter-node-name": self.params["filter_node_name"],
+                "job-id": self._jobid,
+            }
+        )
 
     def check_node_attached(self, node):
         """The filter node name should be set when doing backup"""
-        for item in self.main_vm.monitor.query('block'):
-            if (self._source_images[0] in item['qdev']
-                    and item['inserted'].get('node-name') == node):
+        for item in self.main_vm.monitor.query("block"):
+            if (
+                self._source_images[0] in item["qdev"]
+                and item["inserted"].get("node-name") == node
+            ):
                 break
         else:
-            self.test.fail('Filter node (%s) is not attached' % node)
+            self.test.fail("Filter node (%s) is not attached" % node)
 
     def do_full_backup(self):
-        self.main_vm.monitor.cmd('blockdev-backup', self._full_backup_options)
+        self.main_vm.monitor.cmd("blockdev-backup", self._full_backup_options)
 
     def set_max_job_speed(self):
         self.main_vm.monitor.cmd(
-            "block-job-set-speed", {'device': self._jobid, 'speed': 0})
+            "block-job-set-speed", {"device": self._jobid, "speed": 0}
+        )
 
     def do_test(self):
         self.do_full_backup()
         check_block_jobs_started(
-            self.main_vm, [self._jobid],
-            self.params.get_numeric('job_started_timeout', 30))
-        self.check_node_attached(self.params['filter_node_name'])
+            self.main_vm,
+            [self._jobid],
+            self.params.get_numeric("job_started_timeout", 30),
+        )
+        self.check_node_attached(self.params["filter_node_name"])
         self.set_max_job_speed()
         wait_until_block_job_completed(self.main_vm, self._jobid)
         self.check_node_attached(self._source_nodes[0])

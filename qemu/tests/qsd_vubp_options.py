@@ -1,7 +1,8 @@
 """QSD vhost-user-blk-pci device options test"""
 
-from provider.qsd import QsdDaemonDev, add_vubp_into_boot
 from virttest import env_process, utils_disk, utils_misc
+
+from provider.qsd import QsdDaemonDev, add_vubp_into_boot
 
 
 def run(test, params, env):
@@ -16,7 +17,7 @@ def run(test, params, env):
     def _get_disk_by_size(img_tag, check_exist_flag=None):
         disk_params = params.object_params(img_tag)
         disk_size = disk_params["image_size"]
-        os_type = params['os_type']
+        os_type = params["os_type"]
         disk = None
         if os_type != "windows":
             disks = utils_disk.get_linux_disks(session, True)
@@ -43,15 +44,17 @@ def run(test, params, env):
 
         os_type = params["os_type"]
         if os_type != "windows":
-            driver = utils_disk.configure_empty_linux_disk(
-                session, disk_id, disk_size)[0]
+            driver = utils_disk.configure_empty_linux_disk(session, disk_id, disk_size)[
+                0
+            ]
             logger.debug("mount_point is %s", driver)
             output_path = r"%s/test.dat" % driver
         else:
             guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             utils_disk.update_windows_disk_attributes(session, disk_id)
             driver = utils_disk.configure_empty_windows_disk(
-                session, disk_id, disk_size)[0]
+                session, disk_id, disk_size
+            )[0]
             output_path = r"%s:\\test.dat" % driver
 
         guest_cmd = guest_cmd % output_path
@@ -66,7 +69,7 @@ def run(test, params, env):
         img = params["qsd_images_%s" % qsd_name]
         add_vubp_into_boot(img, params, 6)
 
-        params["start_vm"] = 'yes'
+        params["start_vm"] = "yes"
 
         login_timeout = params.get_numeric("login_timeout", 360)
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))

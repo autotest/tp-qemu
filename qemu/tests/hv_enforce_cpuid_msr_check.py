@@ -1,4 +1,5 @@
 from virttest import error_context
+
 from provider import qemu_img_utils
 
 
@@ -43,38 +44,42 @@ def run(test, params, env):
         return res
 
     error_context.context("The case starts...", test.log.info)
-    error_context.context("Boot the guest with 'hv-enforce-cpuid ",
-                          test.log.info)
+    error_context.context("Boot the guest with 'hv-enforce-cpuid ", test.log.info)
     session = None
     origin_flags = params["cpu_model_flags"]
     try:
-        params["cpu_model_flags"] = origin_flags + "," \
-                                   + params.get("cpu_model_flags_with_enforce")
+        params["cpu_model_flags"] = (
+            origin_flags + "," + params.get("cpu_model_flags_with_enforce")
+        )
         vm = qemu_img_utils.boot_vm_with_images(test, params, env)
         session = vm.wait_for_login(timeout=360)
         _set_env(session)
         res_with_hv = _run_msr_tools(session)
         res_with_hv = res_with_hv.split("\n")[0]
         if res_with_hv != params.get("expect_result_with_enforce"):
-            test.fail("The output from the case of cpu with hv-enforce-cpuid "
-                      "was NOT expected."
-                      + " The tuple in return is : %s" % res_with_hv)
+            test.fail(
+                "The output from the case of cpu with hv-enforce-cpuid "
+                "was NOT expected." + " The tuple in return is : %s" % res_with_hv
+            )
     finally:
         vm.destroy()
 
-    error_context.context("Boot the guest without 'hv-enforce-cpuid ",
-                          test.log.info)
+    error_context.context("Boot the guest without 'hv-enforce-cpuid ", test.log.info)
     try:
-        params["cpu_model_flags"] = origin_flags + "," \
-                                + params.get("cpu_model_flags_without_enforce")
+        params["cpu_model_flags"] = (
+            origin_flags + "," + params.get("cpu_model_flags_without_enforce")
+        )
         vm = qemu_img_utils.boot_vm_with_images(test, params, env)
         session = vm.wait_for_login(timeout=360)
         _set_env(session)
         res_without_hv = _run_msr_tools(session)
         res_without_hv = res_without_hv.split("\n")[0]
         if res_without_hv != params.get("expect_result_without_enforce"):
-            test.fail("The output from the case of cpu without "
-                      "hv-enforce-cpuid was NOT expected."
-                      + " The tuple in return is : %s" % res_without_hv)
+            test.fail(
+                "The output from the case of cpu without "
+                "hv-enforce-cpuid was NOT expected."
+                + " The tuple in return is : %s"
+                % res_without_hv
+            )
     finally:
         vm.destroy()

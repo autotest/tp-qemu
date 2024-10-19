@@ -5,17 +5,11 @@ import logging
 import os
 import re
 
-from avocado import TestCancel
-from avocado import TestFail
+from avocado import TestCancel, TestFail
+from avocado.utils import cpu, path, process
+from virttest import data_dir, utils_misc
 
-from avocado.utils import cpu
-from avocado.utils import path
-from avocado.utils import process
-
-from virttest import data_dir
-from virttest import utils_misc
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def which(cmd):
@@ -29,11 +23,13 @@ def which(cmd):
 
 def coroutine(func):
     """Start coroutine."""
+
     @functools.wraps(func)
     def start(*args, **kargs):
         cr = func(*args, **kargs)
         cr.send(None)
         return cr
+
     return start
 
 
@@ -71,7 +67,8 @@ def brew_download_build(target):
         if not os.path.isfile(save_path):
             with chcwd(root_dir):
                 cmd = "brew download-build -q --rpm {filename}".format(
-                    filename=filename)
+                    filename=filename
+                )
                 process.run(cmd)
         target.send(save_path)
 
@@ -100,7 +97,8 @@ def run_aio_tests(target):
             cpu_count = cpu.online_count()
             aio_path = "tests/test-aio"
             make_cmd = "make {aio_path} -j{cpu_count}".format(
-                aio_path=aio_path, cpu_count=cpu_count)
+                aio_path=aio_path, cpu_count=cpu_count
+            )
             process.run(make_cmd)
             LOG_JOB.debug("run aio tests")
             result = process.run(aio_path)
@@ -137,8 +135,6 @@ def run(test, params, env):
     # check if command brew and rpmbuild is presented
     which("brew")
     which("rpmbuild")
-    get_qemu_version(params,
-                     brew_download_build(
-                         unpack_source(
-                             run_aio_tests(
-                                 parse_result()))))
+    get_qemu_version(
+        params, brew_download_build(unpack_source(run_aio_tests(parse_result())))
+    )

@@ -3,15 +3,12 @@ Collection of virtio_console and virtio_serialport tests.
 
 :copyright: 2010-2012 Red Hat Inc.
 """
+
 import aexpect
-from virttest import utils_misc
-from virttest import remote
-from virttest import utils_virtio_port
-from virttest import error_context
+from virttest import error_context, remote, utils_misc, utils_virtio_port
 
 
 class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
-
     __sessions__ = []
 
     def __init__(self, test, env, params):
@@ -28,19 +25,18 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
         self.__sessions__.append(session)
 
     @error_context.context_aware
-    def virtio_console_login(self, port='vc1'):
+    def virtio_console_login(self, port="vc1"):
         error_context.context("Login guest via '%s'" % port, self.test.log.info)
         session = self.vm.wait_for_serial_login(timeout=180, virtio=port)
         self.__sessions__.append(session)
         return session
 
-    def console_login(self, port='vc1'):
+    def console_login(self, port="vc1"):
         return self.virtio_console_login(port=port)
 
     @error_context.context_aware
-    def virtio_serial_login(self, port='vs1'):
-        error_context.context("Try to login guest via '%s'" % port,
-                              self.test.log.info)
+    def virtio_serial_login(self, port="vs1"):
+        error_context.context("Try to login guest via '%s'" % port, self.test.log.info)
         username = self.params.get("username")
         password = self.params.get("password")
         prompt = self.params.get("shell_prompt", "[#$]")
@@ -54,17 +50,19 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
 
         logfile = "serial-%s-%s.log" % (vport.name, self.vm.name)
         socat_cmd = "nc -U %s" % vport.hostfile
-        session = aexpect.ShellSession(socat_cmd, auto_close=False,
-                                       output_func=utils_misc.log_line,
-                                       output_params=(logfile,),
-                                       prompt=prompt)
+        session = aexpect.ShellSession(
+            socat_cmd,
+            auto_close=False,
+            output_func=utils_misc.log_line,
+            output_params=(logfile,),
+            prompt=prompt,
+        )
         session.set_linesep(linesep)
         session.sendline()
         self.__sessions__.append(session)
         try:
             remote.handle_prompts(session, username, password, prompt, 180)
-            self.test.fail("virtio serial '%s' should no " % port +
-                           "channel to login")
+            self.test.fail("virtio serial '%s' should no " % port + "channel to login")
         except remote.LoginTimeoutError:
             self.__sessions__.append(session)
             self.test.log.info("Can't login via %s", port)
@@ -75,8 +73,9 @@ class ConsoleLoginTest(utils_virtio_port.VirtioPortTest):
 
     @error_context.context_aware
     def cleanup(self):
-        error_context.context("Close open connection and destroy vm",
-                              self.test.log.info)
+        error_context.context(
+            "Close open connection and destroy vm", self.test.log.info
+        )
         for session in self.__sessions__:
             if session:
                 session.close()

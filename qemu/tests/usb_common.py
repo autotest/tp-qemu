@@ -3,12 +3,11 @@ try:
 except ImportError:
     import json
 import logging
-
 from collections import OrderedDict
 
 from virttest import utils_misc
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def parse_usb_topology(params):
@@ -21,8 +20,7 @@ def parse_usb_topology(params):
     """
     params["usb_devices"] = ""
     # usb topology
-    usb_topology = json.loads(params["usb_topology"],
-                              object_pairs_hook=OrderedDict)
+    usb_topology = json.loads(params["usb_topology"], object_pairs_hook=OrderedDict)
     parsed_devs = []
     for key, value in usb_topology.items():
         for i in range(value):
@@ -46,6 +44,7 @@ def collect_usb_dev(params, vm, parsed_devs, suffix):
              verification,[id(eg.d0), info(eg.usb-hub), port(eg.1)]
              the info will change based on suffix.
     """
+
     def _change_dev_info_key(parsed_type, suffix):
         info_key = parsed_type.replace("-", "_")
         return "_".join([info_key, suffix])
@@ -76,8 +75,7 @@ def verify_usb_device_in_monitor(vm, devs):
     output = str(vm.monitor.info("usb")).splitlines()
     for dev in devs:
         for chk_str in dev:
-            result = next((True for info in output if chk_str in info),
-                          False)
+            result = next((True for info in output if chk_str in info), False)
             if result is False:
                 return (False, "[%s] is not in the monitor info" % chk_str)
     return (True, "all given devices in the monitor info")
@@ -111,16 +109,17 @@ def verify_usb_device_in_guest(params, session, devs):
     :return: A tuple (status, output) where status is the verification result
              and output is the detail information
     """
+
     def _verify_guest_usb():
-        output = session.cmd_output(params["chk_usb_info_cmd"],
-                                    float(params["cmd_timeout"]))
+        output = session.cmd_output(
+            params["chk_usb_info_cmd"], float(params["cmd_timeout"])
+        )
         # For usb-hub, '-v' must be used to get the expected usb info.
         # For non usb-hub, refer to 'chk_usb_info_cmd', two situations:
         # '-v' must be used to get expected info
-        # '-v' must not be used to avoid duplicate info in output and affect the device count.
+        # '-v' must not be used to avoid duplicate info in output and affect the device count.  # noqa: E501
         if "Hub" in str(devs) and os_type == "linux":
-            hub_output = session.cmd_output("lsusb -v",
-                                            float(params["cmd_timeout"]))
+            hub_output = session.cmd_output("lsusb -v", float(params["cmd_timeout"]))
         # each dev must in the output
         for dev in devs:
             if "Hub" in dev[1] and os_type == "linux":
@@ -141,25 +140,24 @@ def verify_usb_device_in_guest(params, session, devs):
                 o = output
             count = o.count(k)
             if count != v:
-                LOG_JOB.info("expected %s %s, got %s in the guest",
-                             v, k, count)
+                LOG_JOB.info("expected %s %s, got %s in the guest", v, k, count)
                 return False
         return True
 
     os_type = params.get("os_type")
     if os_type == "linux":
         LOG_JOB.info("checking if there is I/O error in dmesg")
-        output = session.cmd_output("dmesg | grep -i usb",
-                                    float(params["cmd_timeout"]))
+        output = session.cmd_output("dmesg | grep -i usb", float(params["cmd_timeout"]))
         for line in output.splitlines():
             if "error" in line or "ERROR" in line:
                 return (False, "error found in guest's dmesg: %s " % line)
 
-    res = utils_misc.wait_for(_verify_guest_usb,
-                              float(params["cmd_timeout"]),
-                              step=5.0,
-                              text="wait for getting guest usb devices info"
-                              )
+    res = utils_misc.wait_for(
+        _verify_guest_usb,
+        float(params["cmd_timeout"]),
+        step=5.0,
+        text="wait for getting guest usb devices info",
+    )
 
     if res:
         return (True, "all given devices are verified in the guest")

@@ -1,14 +1,16 @@
-import time
 import datetime
 import os
+import time
 
-from virttest import error_context
-from virttest import env_process
-from virttest import utils_misc
-from virttest import utils_numeric
-from virttest import data_dir
-from virttest import utils_test
 from avocado.utils import cpu
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    utils_misc,
+    utils_numeric,
+    utils_test,
+)
 
 
 @error_context.context_aware
@@ -47,14 +49,16 @@ def run(test, params, env):
         test.log.info("Copy tlbflush tool related files")
         for f in tlbflush_filenames:
             copy_file_cmd = utils_misc.set_winutils_letter(
-                session, copy_tlbflush_cmd % f)
+                session, copy_tlbflush_cmd % f
+            )
             session.cmd(copy_file_cmd)
 
         test.log.info("Create a large file for test")
         create_test_file_cmd = params["create_test_file_cmd"]
         test_file_size = params["test_file_size"]
         test_file_size = utils_numeric.normalize_data_size(
-            test_file_size, order_magnitude="B")
+            test_file_size, order_magnitude="B"
+        )
         session.cmd(create_test_file_cmd % test_file_size)
         vm.graceful_shutdown(timeout=timeout)
 
@@ -65,10 +69,12 @@ def run(test, params, env):
         host_cpu_count = cpu.total_cpus_count()
 
         host_stress = utils_test.HostStress(
-            stress_type, params,
+            stress_type,
+            params,
             download_type="tarball",
             downloaded_file_path=downloaded_file_path,
-            stress_args="--cpu %s > /dev/null 2>&1& " % host_cpu_count)
+            stress_args="--cpu %s > /dev/null 2>&1& " % host_cpu_count,
+        )
         return host_stress
 
     def _clean_test_environment(host_stress):
@@ -147,20 +153,18 @@ def run(test, params, env):
         _start_host_stress(host_stress)
 
         test.log.info("Start run hv_tlbflush.exe on guest")
-        s, o = session.cmd_status_output(run_tlbflush_cmd,
-                                         run_tlbflush_timeout)
+        s, o = session.cmd_status_output(run_tlbflush_cmd, run_tlbflush_timeout)
         test.log.info("Stop stress on host")
         _stop_host_stress(host_stress)
 
         if s:
-            test.error("Run tlbflush error: status = %s, output = %s",
-                       (s, o))
-        time_str = o.strip().split('\n')[-1]
+            test.error("Run tlbflush error: status = %s, output = %s", (s, o))
+        time_str = o.strip().split("\n")[-1]
         time_str = time_str.split(".")[0]
         s_t = time.strptime(time_str, "%H:%M:%S")
-        total_time = datetime.timedelta(hours=s_t.tm_hour,
-                                        minutes=s_t.tm_min,
-                                        seconds=s_t.tm_sec).total_seconds()
+        total_time = datetime.timedelta(
+            hours=s_t.tm_hour, minutes=s_t.tm_min, seconds=s_t.tm_sec
+        ).total_seconds()
         test.log.info("Running result: %f", total_time)
         return total_time
 
@@ -174,9 +178,9 @@ def run(test, params, env):
 
     try:
         error_context.context("Boot guest with hv_tlbflush related flags")
-        hv_flag_without_tlbflush = ','.join(
-            [_ for _ in cpu_model_flags.split(',')
-                if _ not in hv_flags_to_ignore])
+        hv_flag_without_tlbflush = ",".join(
+            [_ for _ in cpu_model_flags.split(",") if _ not in hv_flags_to_ignore]
+        )
         vm, session = _boot_guest_with_cpu_flag(hv_flag_without_tlbflush)
 
         error_context.context("Run tlbflush without hv_tlbflush", test.log.info)
@@ -192,10 +196,11 @@ def run(test, params, env):
         factor = time_with_flag / time_without_flag
         vm_arch = params.get("vm_arch_name")
         if factor >= 0.5 if vm_arch == "x86_64" else factor >= 1.0:
-            test.fail("The improvement factor=%d is not enough. "
-                      "Time WITHOUT flag: %s, "
-                      "Time WITH flag: %s" %
-                      (factor, time_without_flag, time_with_flag))
+            test.fail(
+                "The improvement factor=%d is not enough. "
+                "Time WITHOUT flag: %s, "
+                "Time WITH flag: %s" % (factor, time_without_flag, time_with_flag)
+            )
 
     finally:
         _clean_test_environment(host_stress)

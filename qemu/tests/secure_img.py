@@ -1,5 +1,5 @@
-from virttest import error_context
 from avocado.utils import cpu
+from virttest import error_context
 
 
 @error_context.context_aware
@@ -38,40 +38,40 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=60)
 
     # create the secure boot params
-    secure_params_cmd = params.get('secure_params_cmd')
+    secure_params_cmd = params.get("secure_params_cmd")
     run_cmd_in_guest(session, secure_params_cmd, test)
 
     # check LPAR type(Z15/Z16) and download HKD
     cpu_family = cpu.get_family()
     if cpu_family:
-        download_hkd = params.get('download_hkd_%s' % cpu_family)
+        download_hkd = params.get("download_hkd_%s" % cpu_family)
     else:
         test.fail("Failed to retrieve CPU family.")
-    run_cmd_in_guest(session, download_hkd, test)   # pylint: disable=E0606
+    run_cmd_in_guest(session, download_hkd, test)  # pylint: disable=E0606
 
     # Create the boot image file
-    kernel_version = run_cmd_in_guest(session, 'uname -r', test)
+    kernel_version = run_cmd_in_guest(session, "uname -r", test)
     kernel_version = kernel_version.strip()
-    boot_kernel = '/boot/vmlinuz-%s' % kernel_version
-    boot_initrd = '/boot/initramfs-%s%s' % (kernel_version, '.img')
-    boot_img_cmd = params.get('boot_img_cmd') % (boot_kernel, boot_initrd)
+    boot_kernel = "/boot/vmlinuz-%s" % kernel_version
+    boot_initrd = "/boot/initramfs-%s%s" % (kernel_version, ".img")
+    boot_img_cmd = params.get("boot_img_cmd") % (boot_kernel, boot_initrd)
     run_cmd_in_guest(session, boot_img_cmd, test)
 
     # update the zipl config
-    zipl_config_cmd = params.get('zipl_config_cmd')
+    zipl_config_cmd = params.get("zipl_config_cmd")
     run_cmd_in_guest(session, zipl_config_cmd, test)
 
     # update the kernel command and reboot the guest
-    zipl_cmd = params.get('zipl_cmd')
+    zipl_cmd = params.get("zipl_cmd")
     run_cmd_in_guest(session, zipl_cmd, test)
     session.close()
     vm.reboot()
 
     # Check if the vm is secured
     session = vm.wait_for_login(timeout=60)
-    check_se_cmd = params.get('check_se_cmd')
+    check_se_cmd = params.get("check_se_cmd")
     se_output = run_cmd_in_guest(session, check_se_cmd, test).strip()
-    if '1' == se_output:
+    if "1" == se_output:
         test.log.info("Image is secured")
     else:
         test.fail("Image failed to secured")

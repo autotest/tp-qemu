@@ -1,12 +1,9 @@
 from virttest.qemu_devices.qdevices import QBlockdevFormatNode
 
-from provider import backup_utils
-from provider import blockdev_base
-from provider import block_dirty_bitmap
+from provider import backup_utils, block_dirty_bitmap, blockdev_base
 
 
 class BlockdevIncbkAfterCommitTest(blockdev_base.BlockdevBaseTest):
-
     def __init__(self, test, params, env):
         super(BlockdevIncbkAfterCommitTest, self).__init__(test, params, env)
         self._source_nodes = []
@@ -36,8 +33,7 @@ class BlockdevIncbkAfterCommitTest(blockdev_base.BlockdevBaseTest):
     def add_images_for_incremental_backup(self):
         """add incremental backup images with qmp command"""
         for idx, tag in enumerate(self._source_images):
-            self.params["image_backup_chain_%s" %
-                        tag] = self._inc_bk_images[idx]
+            self.params["image_backup_chain_%s" % tag] = self._inc_bk_images[idx]
         self.add_target_data_disks()
 
     def add_images_for_data_image_snapshots(self):
@@ -50,20 +46,16 @@ class BlockdevIncbkAfterCommitTest(blockdev_base.BlockdevBaseTest):
 
             # hotplug image with blockdev-add(format and protocol only)
             params = self.params.object_params(tag)
-            devices = self.main_vm.devices.images_define_by_params(tag,
-                                                                   params,
-                                                                   'disk')
+            devices = self.main_vm.devices.images_define_by_params(tag, params, "disk")
             devices.pop()
             for dev in devices:
                 if self.main_vm.devices.get_by_qid(dev.get_qid()):
                     continue
                 if isinstance(dev, QBlockdevFormatNode):
                     dev.params["backing"] = None
-                ret = self.main_vm.devices.simple_hotplug(dev,
-                                                          self.main_vm.monitor)
+                ret = self.main_vm.devices.simple_hotplug(dev, self.main_vm.monitor)
                 if not ret[1]:
-                    self.test.fail("Failed to hotplug '%s': %s."
-                                   % (dev, ret[0]))
+                    self.test.fail("Failed to hotplug '%s': %s." % (dev, ret[0]))
 
     def do_full_backup(self):
         """full backup: data->base"""
@@ -73,7 +65,8 @@ class BlockdevIncbkAfterCommitTest(blockdev_base.BlockdevBaseTest):
             self._source_nodes,
             self._full_bk_nodes,
             self._bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def generate_new_files(self):
         return list(map(self.generate_data_file, self._source_images))
@@ -86,7 +79,8 @@ class BlockdevIncbkAfterCommitTest(blockdev_base.BlockdevBaseTest):
             self._source_nodes,
             self._inc_bk_nodes,
             self._bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def clone_vm_with_incremental_images(self):
         """clone VM with incremental backup images as vm's data images"""
@@ -107,21 +101,21 @@ class BlockdevIncbkAfterCommitTest(blockdev_base.BlockdevBaseTest):
         """take snapshots on data images"""
         snapshot_options = {}
         for idx, source_node in enumerate(self._source_nodes):
-            backup_utils.blockdev_snapshot(self.main_vm, source_node,
-                                           self._snap_nodes[idx],
-                                           **snapshot_options)
+            backup_utils.blockdev_snapshot(
+                self.main_vm, source_node, self._snap_nodes[idx], **snapshot_options
+            )
 
     def commit_snapshots_on_data_images(self):
         """commit snapshots onto data images"""
         commit_options = {}
         for idx, snap_node in enumerate(self._snap_nodes):
-            backup_utils.block_commit(self.main_vm, snap_node,
-                                      **commit_options)
+            backup_utils.block_commit(self.main_vm, snap_node, **commit_options)
 
     def check_bitmaps(self):
         for idx, bitmap in enumerate(self._bitmaps):
             info = block_dirty_bitmap.get_bitmap_by_name(
-                self.main_vm, self._source_nodes[idx], bitmap)
+                self.main_vm, self._source_nodes[idx], bitmap
+            )
             if info:
                 if info["count"] <= 0:
                     self.test.fail("count in bitmap must be greater than 0")

@@ -1,11 +1,10 @@
-import time
 import random
+import time
 
 from qemu.tests import blk_commit
 
 
 class BlockCommitReboot(blk_commit.BlockCommit):
-
     def reboot(self):
         """
         Reset guest with system_reset;
@@ -17,8 +16,10 @@ class BlockCommitReboot(blk_commit.BlockCommit):
         start pre-action in new threads;
         """
         super(BlockCommitReboot, self).action_when_start()
-        self.test.log.info("sleep for random time between 0 to 20, to perform "
-                           "the block job during different stage of rebooting")
+        self.test.log.info(
+            "sleep for random time between 0 to 20, to perform "
+            "the block job during different stage of rebooting"
+        )
         time.sleep(random.randint(0, 20))
 
 
@@ -44,4 +45,4 @@ def run(test, params, env):
         try:
             reboot_test.clean()
         except Exception as e:
-            test.log.warn(e)
+            test.log.warning(e)

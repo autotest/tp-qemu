@@ -1,9 +1,7 @@
 import os
 import time
 
-from virttest import data_dir
-from virttest import error_context
-from virttest import env_process
+from virttest import data_dir, env_process, error_context
 
 
 @error_context.context_aware
@@ -23,7 +21,7 @@ def run(test, params, env):
     params["kernel"] = src_test_binary
 
     params["start_vm"] = "yes"
-    vm_name = params['main_vm']
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
     time.sleep(10)

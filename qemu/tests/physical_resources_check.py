@@ -1,16 +1,17 @@
-import re
 import random
+import re
 import string
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import qemu_monitor
-from virttest import storage
-from virttest import utils_misc
-from virttest import env_process
-from virttest import data_dir
-from virttest import qemu_qtree
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    qemu_monitor,
+    qemu_qtree,
+    storage,
+    utils_misc,
+)
 
 
 @error_context.context_aware
@@ -28,6 +29,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     # Define a function for checking number of hard drivers & NICs
     def check_num(devices, info_cmd, check_str):
         f_fail = []
@@ -41,7 +43,7 @@ def run(test, params, env):
             f_fail.append(fail_log)
             test.log.error(fail_log)
 
-        ovmf_fd_num = o.count('%s.fd' % check_str)  # Exclude ovmf fd drive
+        ovmf_fd_num = o.count("%s.fd" % check_str)  # Exclude ovmf fd drive
         actual_num = o.count(check_str) - ovmf_fd_num
         if expected_num != actual_num:
             fail_log = "%s number mismatch:\n" % str(devices)
@@ -158,8 +160,12 @@ def run(test, params, env):
             test.log.error(fail_log)
             return f_fail
 
-        test.log.debug("%s check pass. Expected: '%s', Actual: '%s'",
-                       chk_type.capitalize(), expected_n, actual_n)
+        test.log.debug(
+            "%s check pass. Expected: '%s', Actual: '%s'",
+            chk_type.capitalize(),
+            expected_n,
+            actual_n,
+        )
         return f_fail
 
     def verify_machine_type():
@@ -176,8 +182,9 @@ def run(test, params, env):
 
         machine_type_cmd = "%s -M ?" % utils_misc.get_qemu_binary(params)
         machine_types = process.system_output(
-            machine_type_cmd, ignore_status=True).decode()
-        machine_types = machine_types.split(':')[-1]
+            machine_type_cmd, ignore_status=True
+        ).decode()
+        machine_types = machine_types.split(":")[-1]
         machine_type_map = {}
         for machine_type in machine_types.splitlines():
             if not machine_type:
@@ -186,13 +193,17 @@ def run(test, params, env):
             if len(type_pair) == 1 and len(type_pair[0]) == 2:
                 machine_type_map[type_pair[0][0]] = type_pair[0][1]
             else:
-                test.log.warn("Unexpect output from qemu-kvm -M "
-                              "?: '%s'", machine_type)
+                test.log.warning(
+                    "Unexpect output from qemu-kvm -M " "?: '%s'", machine_type
+                )
         try:
-            expect_mtype = machine_type_map[params['machine_type']].strip()
+            expect_mtype = machine_type_map[params["machine_type"]].strip()
         except KeyError:
-            test.log.warn("Can not find machine type '%s' from qemu-kvm -M ?"
-                          " output. Skip this test.", params['machine_type'])
+            test.log.warning(
+                "Can not find machine type '%s' from qemu-kvm -M ?"
+                " output. Skip this test.",
+                params["machine_type"],
+            )
             return f_fail
 
         if expect_mtype not in actual_mtype:
@@ -201,8 +212,11 @@ def run(test, params, env):
             f_fail.append(fail_log)
             test.log.error(fail_log)
         else:
-            test.log.info("MachineType check pass. Expected: %s, Actual: %s",
-                          expect_mtype, actual_mtype)
+            test.log.info(
+                "MachineType check pass. Expected: %s, Actual: %s",
+                expect_mtype,
+                actual_mtype,
+            )
         return f_fail
 
     if params.get("catch_serial_cmd") is not None:
@@ -229,13 +243,15 @@ def run(test, params, env):
 
     qtree = qemu_qtree.QtreeContainer()
     try:
-        qtree.parse_info_qtree(vm.monitor.info('qtree'))
+        qtree.parse_info_qtree(vm.monitor.info("qtree"))
     except AttributeError:  # monitor doesn't support info qtree
         qtree = None
 
     test.log.info("Starting physical resources check test")
-    test.log.info("Values assigned to VM are the values we expect "
-                  "to see reported by the Operating System")
+    test.log.info(
+        "Values assigned to VM are the values we expect "
+        "to see reported by the Operating System"
+    )
     # Define a failure counter, as we want to check all physical
     # resources to know which checks passed and which ones failed
     n_fail = []
@@ -251,8 +267,12 @@ def run(test, params, env):
     cpu_threads_num = get_cpu_number("threads", chk_timeout)
     cpu_sockets_num = get_cpu_number("sockets", chk_timeout)
 
-    if ((params.get("os_type") == 'windows') and cpu_cores_num > 0 and
-            cpu_lp_num > 0 and cpu_sockets_num > 0):
+    if (
+        (params.get("os_type") == "windows")
+        and cpu_cores_num > 0
+        and cpu_lp_num > 0
+        and cpu_sockets_num > 0
+    ):
         actual_cpu_nr = cpu_lp_num * cpu_sockets_num
         cpu_threads_num = cpu_lp_num / cpu_cores_num
 
@@ -265,11 +285,9 @@ def run(test, params, env):
 
     n_fail.extend(check_cpu_number("cores", cpu_cores_num, vm.cpuinfo.cores))
 
-    n_fail.extend(check_cpu_number("threads",
-                                   cpu_threads_num, vm.cpuinfo.threads))
+    n_fail.extend(check_cpu_number("threads", cpu_threads_num, vm.cpuinfo.threads))
 
-    n_fail.extend(check_cpu_number("sockets",
-                                   cpu_sockets_num, vm.cpuinfo.sockets))
+    n_fail.extend(check_cpu_number("sockets", cpu_sockets_num, vm.cpuinfo.sockets))
 
     # Check the cpu vendor_id
     expected_vendor_id = params.get("cpu_model_vendor")
@@ -312,20 +330,22 @@ def run(test, params, env):
 
     if qtree is not None:
         error_context.context("Images params check", test.log.info)
-        test.log.debug("Found devices: %s", params.objects('images'))
+        test.log.debug("Found devices: %s", params.objects("images"))
         qdisks = qemu_qtree.QtreeDisksContainer(qtree.get_nodes())
-        disk_errors = sum(qdisks.parse_info_block(
-            vm.monitor.info_block()))
+        disk_errors = sum(qdisks.parse_info_block(vm.monitor.info_block()))
         disk_errors += qdisks.generate_params()
         disk_errors += qdisks.check_disk_params(params)
         if disk_errors:
-            disk_errors = ("Images check failed with %s errors, "
-                           "check the log for details" % disk_errors)
+            disk_errors = (
+                "Images check failed with %s errors, "
+                "check the log for details" % disk_errors
+            )
             test.log.error(disk_errors)
             n_fail.append("\n".join(qdisks.errors))
     else:
-        test.log.info("Images check param skipped (qemu monitor doesn't "
-                      "support 'info qtree')")
+        test.log.info(
+            "Images check param skipped (qemu monitor doesn't " "support 'info qtree')"
+        )
 
     error_context.context("Network card MAC check", test.log.info)
     o = ""
@@ -350,14 +370,12 @@ def run(test, params, env):
 
     error_context.context("UUID check", test.log.info)
     if vm.get_uuid():
-        f_fail = verify_device(vm.get_uuid(), "UUID",
-                               params.get("catch_uuid_cmd"))
+        f_fail = verify_device(vm.get_uuid(), "UUID", params.get("catch_uuid_cmd"))
         n_fail.extend(f_fail)
 
     error_context.context("Hard Disk serial number check", test.log.info)
     catch_serial_cmd = params.get("catch_serial_cmd")
-    f_fail = verify_device(params.get("drive_serial"), "Serial",
-                           catch_serial_cmd)
+    f_fail = verify_device(params.get("drive_serial"), "Serial", catch_serial_cmd)
     n_fail.extend(f_fail)
 
     error_context.context("Machine Type Check", test.log.info)
@@ -366,8 +384,9 @@ def run(test, params, env):
 
     if n_fail:
         session.close()
-        test.fail("Physical resources check test "
-                  "reported %s failures:\n%s" %
-                  (len(n_fail), "\n".join(n_fail)))
+        test.fail(
+            "Physical resources check test "
+            "reported %s failures:\n%s" % (len(n_fail), "\n".join(n_fail))
+        )
 
     session.close()

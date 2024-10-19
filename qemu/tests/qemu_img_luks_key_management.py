@@ -1,8 +1,7 @@
-import re
 import json
+import re
 
-from virttest import data_dir
-from virttest import qemu_storage
+from virttest import data_dir, qemu_storage
 
 
 def run(test, params, env):
@@ -73,22 +72,27 @@ def run(test, params, env):
     cmd_result = stg_img.amend(stg_params, ignore_status=True)
     if err_info:
         if not re.search(err_info, cmd_result.stderr.decode(), re.I):
-            test.fail("Failed to get error information. The actual error "
-                      "information is %s." % cmd_result.stderr.decode())
+            test.fail(
+                "Failed to get error information. The actual error "
+                "information is %s." % cmd_result.stderr.decode()
+            )
     elif cmd_result.exit_status != 0:
-        test.fail("Failed to amend image %s. The error information is "
-                  "%s." % (stg_img.image_filename, cmd_result.stderr.decode()))
+        test.fail(
+            "Failed to amend image %s. The error information is "
+            "%s." % (stg_img.image_filename, cmd_result.stderr.decode())
+        )
     else:
         info = json.loads(stg_img.info(output="json"))
         if stg_img.image_format == "qcow2":
             key_state = stg_params["amend_encrypt.state"]
             key_slot = params.get_numeric("amend_encrypt.keyslot", 1)
-            state = info["format-specific"]["data"]["encrypt"]["slots"][key_slot]["active"]
+            state = info["format-specific"]["data"]["encrypt"]["slots"][key_slot][
+                "active"
+            ]
         else:
             key_state = stg_params["amend_state"]
             key_slot = params.get_numeric("amend_keyslot", 1)
             state = info["format-specific"]["data"]["slots"][key_slot]["active"]
         key_state = True if key_state == "active" else False
         if key_state != state:
-            test.fail("The key state is %s, it should be %s."
-                      % (state, key_state))
+            test.fail("The key state is %s, it should be %s." % (state, key_state))

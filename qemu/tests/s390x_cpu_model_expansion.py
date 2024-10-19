@@ -13,36 +13,43 @@ def run(test, params, env):
     :params props: expected cpu model properties
     """
     vm = env.get_vm(params["main_vm"])
-    test.log.info('Start query cpu model supported by qmp')
+    test.log.info("Start query cpu model supported by qmp")
     # get cpu models for test
-    cpu_models = params.objects('cpu_models')
+    cpu_models = params.objects("cpu_models")
     for cpu_model in cpu_models:
-        args = {'type': 'static', 'model': {'name': cpu_model}}
-        output = vm.monitor.cmd('query-cpu-model-expansion', args)
+        args = {"type": "static", "model": {"name": cpu_model}}
+        output = vm.monitor.cmd("query-cpu-model-expansion", args)
         try:
-            model = output.get('model')
-            model_name = model.get('name')
-            model_props = model.get('props')
-            if model_name != cpu_model+'-base':
-                test.fail('Command query-cpu-model-expansion return'
-                          ' wrong model: %s with %s' % (cpu_model+'-base',
-                                                        model_name))
+            model = output.get("model")
+            model_name = model.get("name")
+            model_props = model.get("props")
+            if model_name != cpu_model + "-base":
+                test.fail(
+                    "Command query-cpu-model-expansion return"
+                    " wrong model: %s with %s" % (cpu_model + "-base", model_name)
+                )
             if model_name[:-5] in cpu_models:
-                props = params.get_dict('props')
+                props = params.get_dict("props")
                 keys = props.keys()
                 for key in keys:
-                    if props[key] == 'True':
+                    if props[key] == "True":
                         props[key] = True
-                    elif props[key] == 'False':
+                    elif props[key] == "False":
                         props[key] = False
                     else:
-                        test.fail('unexpected values in configuration,'
-                                  'key: %s, value：%s' % (key, props[key]))
+                        test.fail(
+                            "unexpected values in configuration,"
+                            "key: %s, value：%s" % (key, props[key])
+                        )
                 if model_props != props:
-                    test.fail('Properties %s was not same as expected,%s' %
-                              (model_props, props))
+                    test.fail(
+                        "Properties %s was not same as expected,%s"
+                        % (model_props, props)
+                    )
             else:
-                test.fail('There is no suitable cpu model searched by expansion'
-                          'guest: %s, expected: %s' % (model_name, cpu_models))
+                test.fail(
+                    "There is no suitable cpu model searched by expansion"
+                    "guest: %s, expected: %s" % (model_name, cpu_models)
+                )
         except Exception as info:
             test.fail(info)

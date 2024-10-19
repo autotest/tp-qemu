@@ -1,14 +1,14 @@
-import socket
 import logging
+import socket
 import time
 
-from provider.nbd_image_export import QemuNBDExportImage
-from provider.blockdev_base import BlockdevBaseTest
+from avocado.utils import process
 from virttest import error_context
 
-from avocado.utils import process
+from provider.blockdev_base import BlockdevBaseTest
+from provider.nbd_image_export import QemuNBDExportImage
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockReconnectTest(BlockdevBaseTest):
@@ -21,8 +21,9 @@ class BlockReconnectTest(BlockdevBaseTest):
         self.disk_op_cmd = params["disk_op_cmd"]
         self.disk_op_timeout = int(params.get("disk_op_timeout", 360))
         localhost = socket.gethostname()
-        params['nbd_server_%s' % params['nbd_image_tag']] = localhost \
-            if localhost else 'localhost'
+        params["nbd_server_%s" % params["nbd_image_tag"]] = (
+            localhost if localhost else "localhost"
+        )
         self.timeout = int(params.get("login_timeout", 360))
         self.repeat_times = int(params["repeat_times"])
         self.reconnect_time_wait = int(params["reconnect_time_wait"])
@@ -39,16 +40,17 @@ class BlockReconnectTest(BlockdevBaseTest):
             raise
 
     def create_local_image(self):
-        image_params = self.params.object_params(
-            self.params["local_image_tag"])
+        image_params = self.params.object_params(self.params["local_image_tag"])
         local_image = self.source_disk_define_by_params(
-            image_params, self.params["local_image_tag"])
+            image_params, self.params["local_image_tag"]
+        )
         local_image.create(image_params)
         self.trash.append(local_image)
 
     def export_local_image_with_nbd(self):
         self.nbd_export = QemuNBDExportImage(
-            self.params, self.params["local_image_tag"])
+            self.params, self.params["local_image_tag"]
+        )
         self.nbd_export.export_image()
 
     def get_disk_storage_name(self, system_disk_cmd, data_disk_cmd):
@@ -57,21 +59,22 @@ class BlockReconnectTest(BlockdevBaseTest):
         return: data disk name e.g. /dev/sdb
         """
         error_context.context("Identify data disk.", LOG_JOB.info)
-        LOG_JOB.info('Identify data disk')
+        LOG_JOB.info("Identify data disk")
         session = self.vm.wait_for_login(timeout=self.timeout)
-        system_disk_name = session.cmd(system_disk_cmd,
-                                       timeout=self.disk_op_timeout).strip()
+        system_disk_name = session.cmd(
+            system_disk_cmd, timeout=self.disk_op_timeout
+        ).strip()
         find_disk_cmd = data_disk_cmd % system_disk_name
-        data_disk_name = session.cmd(find_disk_cmd,
-                                     timeout=self.disk_op_timeout).strip()
-        LOG_JOB.info('The data disk is %s', data_disk_name)
+        data_disk_name = session.cmd(
+            find_disk_cmd, timeout=self.disk_op_timeout
+        ).strip()
+        LOG_JOB.info("The data disk is %s", data_disk_name)
         session.close()
         return system_disk_name, data_disk_name
 
     def run_io_test(self, test_disk):
-        """ Run io test on given disks. """
-        error_context.context(
-            "Run io test on %s." % test_disk, LOG_JOB.info)
+        """Run io test on given disks."""
+        error_context.context("Run io test on %s." % test_disk, LOG_JOB.info)
         session = self.vm.wait_for_login(timeout=self.timeout)
         test_cmd = self.disk_op_cmd % (test_disk, test_disk)
         session.cmd(test_cmd, timeout=self.disk_op_timeout)
@@ -80,28 +83,27 @@ class BlockReconnectTest(BlockdevBaseTest):
     def run_iptables(self, cmd):
         result = process.run(cmd, ignore_status=True, shell=True)
         if result.exit_status != 0:
-            LOG_JOB.error('command error: %s', result.stderr.decode())
+            LOG_JOB.error("command error: %s", result.stderr.decode())
 
     def break_net_with_iptables(self):
-        self.run_iptables(self.params['net_break_cmd'])
+        self.run_iptables(self.params["net_break_cmd"])
         self.net_down = True
 
     def resume_net_with_iptables(self):
-        self.run_iptables(self.params['net_resume_cmd'])
+        self.run_iptables(self.params["net_resume_cmd"])
         self.net_down = False
 
     def reconnect_loop_io(self):
-        error_context.context(
-            "Run IO test when in reconnecting loop", LOG_JOB.info)
+        error_context.context("Run IO test when in reconnecting loop", LOG_JOB.info)
         for iteration in range(self.repeat_times):
-            error_context.context("Wait %s seconds" % self.reconnect_time_wait,
-                                  LOG_JOB.info)
+            error_context.context(
+                "Wait %s seconds" % self.reconnect_time_wait, LOG_JOB.info
+            )
             time.sleep(self.reconnect_time_wait)
             self.run_io_test("test_file")
 
     def check_data_disk_resume(self, test_disk):
-        error_context.context(
-            "check data disk resumed", LOG_JOB.info)
+        error_context.context("check data disk resumed", LOG_JOB.info)
         for iteration in range(self.repeat_times):
             LOG_JOB.info("Wait %s seconds", self.reconnect_time_wait)
             time.sleep(self.reconnect_time_wait)
@@ -124,8 +126,8 @@ class BlockReconnectTest(BlockdevBaseTest):
 
     def do_test(self):
         disk_storage_name = self.get_disk_storage_name(
-            self.params["find_system_disk_cmd"],
-            self.params["find_data_disk_cmd"])
+            self.params["find_system_disk_cmd"], self.params["find_data_disk_cmd"]
+        )
         data_disk = disk_storage_name[1]
         self.run_io_test(data_disk)
         self.stop_export_local_image_with_nbd()

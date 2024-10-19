@@ -3,20 +3,15 @@ import re
 import time
 
 from avocado.utils import process
-
-from virttest import env_process
-from virttest import error_context
-from virttest import utils_misc
-from virttest import data_dir
+from virttest import data_dir, env_process, error_context, utils_misc
 from virttest.utils_windows import wmic
 
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheckWin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
-
     @error_context.context_aware
     def gagent_check_pkg_update(self, test, params, env):
         """
@@ -43,8 +38,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
             :param cdrom_virtio: iso file
             """
             LOG_JOB.info("Change cdrom to %s", cdrom_virtio)
-            virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
-                                             cdrom_virtio)
+            virtio_iso = utils_misc.get_path(data_dir.get_data_dir(), cdrom_virtio)
             vm.change_media("drive_virtio", virtio_iso)
 
             LOG_JOB.info("Wait until device is ready")
@@ -53,8 +47,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
             end_time = time.time() + timeout
             while time.time() < end_time:
                 time.sleep(2)
-                virtio_win_letter = utils_misc.get_win_disk_vol(session,
-                                                                vol_virtio_key)
+                virtio_win_letter = utils_misc.get_win_disk_vol(session, vol_virtio_key)
                 if virtio_win_letter:
                     break
             if not virtio_win_letter:
@@ -68,8 +61,9 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
             qga_html = "/tmp/qemu-ga.html"
             qga_url = params["qga_url"]
             qga_html_download_cmd = "wget %s -O %s" % (qga_url, qga_html)
-            process.system(qga_html_download_cmd,
-                           float(params.get("login_timeout", 360)))
+            process.system(
+                qga_html_download_cmd, float(params.get("login_timeout", 360))
+            )
 
             with open(qga_html, "r") as f:
                 lines = f.readlines()
@@ -85,20 +79,21 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
             # https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/
             #   archive-qemu-ga/qemu-ga-win-7.5.0-2.el7ev/
-            qga_url_pre = r"%s/%s/%s" % (qga_url, qga_pre_pkg,
-                                         self.qemu_ga_pkg)
+            qga_url_pre = r"%s/%s/%s" % (qga_url, qga_pre_pkg, self.qemu_ga_pkg)
             qga_host_path = params["gagent_host_path"]
-            params["gagent_download_cmd"] = "wget %s -O %s" % (qga_url_pre,
-                                                               qga_host_path)
+            params["gagent_download_cmd"] = "wget %s -O %s" % (
+                qga_url_pre,
+                qga_host_path,
+            )
 
         def _qga_install():
             """
             Install qemu-ga pkg.
             """
             qga_pkg_path = self.get_qga_pkg_path(
-                self.qemu_ga_pkg, test, session, params, vm)
-            self.gagent_install_cmd = params.get("gagent_install_cmd"
-                                                 ) % qga_pkg_path
+                self.qemu_ga_pkg, test, session, params, vm
+            )
+            self.gagent_install_cmd = params.get("gagent_install_cmd") % qga_pkg_path
             self.gagent_install(session, vm)
 
         error_context.context("Boot up vm.", LOG_JOB.info)
@@ -109,30 +104,29 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
         session = self._get_session(params, vm)
 
         if params.get("driver_uninstall", "no") == "yes":
-            error_context.context("Uninstall vioser driver in guest.",
-                                  LOG_JOB.info)
+            error_context.context("Uninstall vioser driver in guest.", LOG_JOB.info)
             device_name = params["device_name"]
             driver_name = params["driver_name"]
-            inf_names_get_cmd = wmic.make_query("path win32_pnpsigneddriver",
-                                                "DeviceName like '%s'" %
-                                                device_name,
-                                                props=["InfName"],
-                                                get_swch=wmic.FMT_TYPE_LIST)
-            inf_names = wmic.parse_list(session.cmd(inf_names_get_cmd,
-                                                    timeout=360))
+            inf_names_get_cmd = wmic.make_query(
+                "path win32_pnpsigneddriver",
+                "DeviceName like '%s'" % device_name,
+                props=["InfName"],
+                get_swch=wmic.FMT_TYPE_LIST,
+            )
+            inf_names = wmic.parse_list(session.cmd(inf_names_get_cmd, timeout=360))
             for inf_name in inf_names:
                 pnp_cmd = "pnputil /delete-driver %s /uninstall /force"
-                uninst_store_cmd = params.get("uninst_store_cmd",
-                                              pnp_cmd) % inf_name
+                uninst_store_cmd = params.get("uninst_store_cmd", pnp_cmd) % inf_name
                 s, o = session.cmd_status_output(uninst_store_cmd, 360)
                 if s not in (0, 3010):
                     # for vioser, they need system reboot
                     # acceptable status: OK(0), REBOOT(3010)
-                    test.error("Failed to uninstall driver '%s' from store, "
-                               "details:\n%s" % (driver_name, o))
+                    test.error(
+                        "Failed to uninstall driver '%s' from store, "
+                        "details:\n%s" % (driver_name, o)
+                    )
 
-        error_context.context("Install the previous qemu-ga in guest.",
-                              LOG_JOB.info)
+        error_context.context("Install the previous qemu-ga in guest.", LOG_JOB.info)
         gagent_download_url = params["gagent_download_url"]
         rpm_install = "rpm_install" in gagent_download_url
         if self._check_ga_pkg(session, params["gagent_pkg_check_cmd"]):
@@ -148,8 +142,7 @@ class QemuGuestAgentUpdateTest(QemuGuestAgentBasicCheckWin):
 
         _qga_install()
 
-        error_context.context("Update qemu-ga to the latest one.",
-                              LOG_JOB.info)
+        error_context.context("Update qemu-ga to the latest one.", LOG_JOB.info)
         if self.gagent_src_type == "virtio-win" or rpm_install:
             _change_agent_media(params["cdrom_virtio"])
         else:

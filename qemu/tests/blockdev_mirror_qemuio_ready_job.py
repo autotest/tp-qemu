@@ -1,5 +1,4 @@
 from avocado.utils import process
-
 from virttest import utils_misc
 
 from provider.blockdev_mirror_nowait import BlockdevMirrorNowaitTest
@@ -29,12 +28,13 @@ class BlockdevMirrorQemuioReadyjob(BlockdevMirrorNowaitTest):
 
     def wait_till_job_ready(self):
         event = get_event_by_condition(
-            self.main_vm, 'BLOCK_JOB_READY',
-            self.params.get_numeric('job_ready_timeout', 120),
-            device=self._jobs[0]
+            self.main_vm,
+            "BLOCK_JOB_READY",
+            self.params.get_numeric("job_ready_timeout", 120),
+            device=self._jobs[0],
         )
         if event is None:
-            self.test.fail('Job failed to reach ready state')
+            self.test.fail("Job failed to reach ready state")
 
     def do_test(self):
         self.blockdev_mirror()

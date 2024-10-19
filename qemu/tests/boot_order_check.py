@@ -2,9 +2,7 @@ import re
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -25,29 +23,30 @@ def run(test, params, env):
     def _get_device(devices, dev_id):
         device_found = {}
         for dev in devices:
-            if dev['qdev_id'] == dev_id:
+            if dev["qdev_id"] == dev_id:
                 device_found = dev
                 break
-            elif dev['class_info'].get('desc') == 'PCI bridge':
-                pci_bridge_devices = dev['pci_bridge'].get('devices')
+            elif dev["class_info"].get("desc") == "PCI bridge":
+                pci_bridge_devices = dev["pci_bridge"].get("devices")
                 if not pci_bridge_devices:
                     continue
-                device_found = _get_device(pci_bridge_devices,
-                                           dev_id)
+                device_found = _get_device(pci_bridge_devices, dev_id)
                 if device_found:
                     break
         return device_found
 
     def _get_pci_addr_by_devid(dev_id):
-        dev_addr = ''
-        dev_addr_fmt = '%02d:%02d.%d'
-        pci_info = vm.monitor.info('pci', debug=False)
+        dev_addr = ""
+        dev_addr_fmt = "%02d:%02d.%d"
+        pci_info = vm.monitor.info("pci", debug=False)
         if isinstance(pci_info, list):
-            device = _get_device(pci_info[0]['devices'], dev_id)
+            device = _get_device(pci_info[0]["devices"], dev_id)
             if device:
-                dev_addr = dev_addr_fmt % (device['bus'],
-                                           device['slot'],
-                                           device['function'])
+                dev_addr = dev_addr_fmt % (
+                    device["bus"],
+                    device["slot"],
+                    device["function"],
+                )
         else:
             # As device id in the last line of info pci output
             # We need reverse the pci information to get the pci addr which is in the
@@ -61,15 +60,14 @@ def run(test, params, env):
                 dev_addr = dev_addr_fmt % tuple(bus_slot_func)
         return dev_addr
 
-    error_context.context("Boot vm by passing boot order decided",
-                          test.log.info)
+    error_context.context("Boot vm by passing boot order decided", test.log.info)
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     vm.pause()
 
     # Disable nic device, boot fail from nic device except user model
-    if params['nettype'] != 'user':
+    if params["nettype"] != "user":
         for nic in vm.virtnet:
             process.system("ifconfig %s down" % nic.ifname)
 
@@ -77,7 +75,7 @@ def run(test, params, env):
     devices_load_timeout = int(params.get("devices_load_timeout", 10))
 
     timeout = int(params.get("login_timeout", 240))
-    bootorder_type = params.get("bootorder_type")
+    params.get("bootorder_type")
     boot_fail_infos = params.get("boot_fail_infos")
     bootorder = params.get("bootorder")
     nic_addr_filter = params.get("nic_addr_filter")
@@ -86,18 +84,21 @@ def run(test, params, env):
     list_nic_addr = []
 
     for nic in vm.virtnet:
-        boot_index = params['bootindex_%s' % nic.nic_name]
-        pci_addr = utils_misc.wait_for(lambda: _get_pci_addr_by_devid(nic.device_id),
-                                       timeout=devices_load_timeout)
+        boot_index = params["bootindex_%s" % nic.nic_name]
+        pci_addr = utils_misc.wait_for(
+            lambda: _get_pci_addr_by_devid(nic.device_id), timeout=devices_load_timeout
+        )
         if not pci_addr:
             test.fail("Cannot get the pci address of %s." % nic.nic_name)
         list_nic_addr.append((pci_addr, boot_index))
 
     list_nic_addr.sort(key=lambda x: x[1])
 
-    boot_fail_infos = boot_fail_infos % (list_nic_addr[0][0],
-                                         list_nic_addr[1][0],
-                                         list_nic_addr[2][0])
+    boot_fail_infos = boot_fail_infos % (
+        list_nic_addr[0][0],
+        list_nic_addr[1][0],
+        list_nic_addr[2][0],
+    )
 
     error_context.context("Check the guest boot result", test.log.info)
     start = time.time()
@@ -111,5 +112,7 @@ def run(test, params, env):
             break
         time.sleep(1)
     if not result:
-        test.fail("Timeout when try to get expected boot order: "
-                  "'%s', actual result: '%s'" % (bootorder, output))
+        test.fail(
+            "Timeout when try to get expected boot order: "
+            "'%s', actual result: '%s'" % (bootorder, output)
+        )

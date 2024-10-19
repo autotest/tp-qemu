@@ -32,6 +32,7 @@ def run(test, params, env):
         try:
             # pylint: disable=E0611
             from qemu.tests import rh_kernel_update
+
             rh_kernel_update.run_rh_kernel_update(test, params, env)
         except Exception as detail:
             test.error("Failed to install a new kernel in guest: %s" % detail)
@@ -68,8 +69,7 @@ def run(test, params, env):
         if cur_kernel_version not in kernel:
             new_kernel = kernel[7:]
     if not new_kernel:
-        test.error("Could not find new kernel, "
-                   "command line output: %s" % output)
+        test.error("Could not find new kernel, " "command line output: %s" % output)
     msg = "Reboot to kernel %s through kexec" % new_kernel
     error_context.context(msg, test.log.info)
     cmd = params.get("get_kernel_image") % new_kernel
@@ -84,8 +84,9 @@ def run(test, params, env):
     kernel = session.cmd_output(check_cur_kernel_cmd).strip()
     test.log.info("Current kernel is: %s", kernel)
     if kernel.strip() != new_kernel.strip():
-        test.fail("Fail to boot to kernel %s, current kernel is %s"
-                  % (new_kernel, kernel))
+        test.fail(
+            "Fail to boot to kernel %s, current kernel is %s" % (new_kernel, kernel)
+        )
     if "yes" in check_x2apic:
         check_x2apic_flag()
     session.close()

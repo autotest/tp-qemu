@@ -1,10 +1,8 @@
-import os
 import json
+import os
 
 from avocado.utils import process
-
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context
 
 from provider import ansible
 
@@ -38,13 +36,14 @@ def run(test, params, env):
     custom_extra_vars = params.objects("custom_extra_vars")
     playbook_repo = params["playbook_repo"]
     playbook_timeout = params.get_numeric("playbook_timeout")
-    playbook_dir = params.get("playbook_dir",
-                              os.path.join(test.workdir, "ansible_playbook"))
+    playbook_dir = params.get(
+        "playbook_dir", os.path.join(test.workdir, "ansible_playbook")
+    )
     toplevel_playbook = os.path.join(playbook_dir, params["toplevel_playbook"])
     # Use this directory to copy some logs back from the guest
     test_harness_log_dir = test.logdir
 
-    params['start_vm'] = 'yes'
+    params["start_vm"] = "yes"
     env_process.preprocess(test, params, env)
     vms = env.get_all_vms()
     guest_ip_list = []
@@ -54,13 +53,16 @@ def run(test, params, env):
         guest_ip_list.append(vm.get_address())
 
     test.log.info("Cloning %s", playbook_repo)
-    process.run("git clone {src} {dst}".format(src=playbook_repo,
-                                               dst=playbook_dir), verbose=False)
+    process.run(
+        "git clone {src} {dst}".format(src=playbook_repo, dst=playbook_dir),
+        verbose=False,
+    )
 
-    error_context.base_context("Generate playbook related options.",
-                               test.log.info)
-    extra_vars = {"ansible_ssh_pass": guest_passwd,
-                  "test_harness_log_dir": test_harness_log_dir}
+    error_context.base_context("Generate playbook related options.", test.log.info)
+    extra_vars = {
+        "ansible_ssh_pass": guest_passwd,
+        "test_harness_log_dir": test_harness_log_dir,
+    }
     extra_vars.update(json.loads(ansible_extra_vars))
     custom_params = params.object_params("extra_vars")
     for cev in custom_extra_vars:
@@ -74,7 +76,7 @@ def run(test, params, env):
         extra_vars=json.dumps(extra_vars),
         callback_plugin=ansible_callback_plugin,
         connection_plugin=ansible_connection_plugin,
-        addl_opts=ansible_addl_opts
+        addl_opts=ansible_addl_opts,
     )
 
     ansible_log = "ansible_playbook.log"
@@ -84,8 +86,10 @@ def run(test, params, env):
         test.error(str(err))
     else:
         if playbook_executor.get_status() != 0:
-            test.fail("Ansible playbook execution failed, please check the {} "
-                      "for details.".format(ansible_log))
+            test.fail(
+                "Ansible playbook execution failed, please check the {} "
+                "for details.".format(ansible_log)
+            )
         test.log.info("Ansible playbook execution passed.")
     finally:
         playbook_executor.store_playbook_log(test_harness_log_dir, ansible_log)

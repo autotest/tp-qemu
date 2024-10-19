@@ -1,6 +1,7 @@
 import logging
-import time
 import random
+import time
+
 from autotest.client.shared import error
 from virttest import utils_test
 from virttest.utils_test.qemu import migration
@@ -34,10 +35,10 @@ def run(test, params, env):
         mig_type = migration.MultihostMigrationRdma
 
     class TestMultihostMigration(mig_type):
-
         def __init__(self, test, params, env):
-            super(TestMultihostMigration, self).__init__(test, params, env,
-                                                         preprocess_env)
+            super(TestMultihostMigration, self).__init__(
+                test, params, env, preprocess_env
+            )
             self.srchost = self.params.get("hosts")[0]
             self.dsthost = self.params.get("hosts")[1]
             self.is_src = params["hostid"] == self.srchost
@@ -47,12 +48,15 @@ def run(test, params, env):
             self.pre_sub_test = params.get("pre_sub_test")
             self.post_sub_test = params.get("post_sub_test")
             self.login_before_pre_tests = params.get("login_before_pre_tests", "no")
-            self.mig_bg_command = params.get("migration_bg_command",
-                                             "cd /tmp; nohup ping localhost &")
-            self.mig_bg_check_command = params.get("migration_bg_check_command",
-                                                   "pgrep ping")
-            self.mig_bg_kill_command = params.get("migration_bg_kill_command",
-                                                  "pkill -9 ping")
+            self.mig_bg_command = params.get(
+                "migration_bg_command", "cd /tmp; nohup ping localhost &"
+            )
+            self.mig_bg_check_command = params.get(
+                "migration_bg_check_command", "pgrep ping"
+            )
+            self.mig_bg_kill_command = params.get(
+                "migration_bg_kill_command", "pkill -9 ping"
+            )
             self.need_to_login = params.get("need_to_login", "no")
 
         def run_pre_sub_test(self):
@@ -62,19 +66,21 @@ def run(test, params, env):
                     if self.login_before_pre_tests == "yes":
                         vm = env.get_vm(params["main_vm"])
                         vm.wait_for_login(timeout=self.login_timeout)
-                    error.context("Run sub test '%s' before migration on src"
-                                  % self.pre_sub_test, logging.info)
-                    utils_test.run_virt_sub_test(test, params, env,
-                                                 self.pre_sub_test)
+                    error.context(
+                        "Run sub test '%s' before migration on src" % self.pre_sub_test,
+                        logging.info,
+                    )
+                    utils_test.run_virt_sub_test(test, params, env, self.pre_sub_test)
 
         def run_post_sub_test(self):
             # is destination host
             if not self.is_src:
                 if self.post_sub_test:
-                    error.context("Run sub test '%s' after migration on dst"
-                                  % self.post_sub_test, logging.info)
-                    utils_test.run_virt_sub_test(test, params, env,
-                                                 self.post_sub_test)
+                    error.context(
+                        "Run sub test '%s' after migration on dst" % self.post_sub_test,
+                        logging.info,
+                    )
+                    utils_test.run_virt_sub_test(test, params, env, self.post_sub_test)
 
         def migration_scenario(self, worker=None):
             def start_worker(mig_data):
@@ -85,8 +91,9 @@ def run(test, params, env):
                 logging.debug("Sending command: '%s'", self.mig_bg_command)
                 s, o = session.cmd_status_output(self.mig_bg_command)
                 if s != 0:
-                    raise error.TestError("Failed to run bg cmd in guest,"
-                                          " Output is '%s'." % o)
+                    raise error.TestError(
+                        "Failed to run bg cmd in guest," " Output is '%s'." % o
+                    )
                 time.sleep(5)
 
             def check_worker(mig_data):
@@ -102,8 +109,9 @@ def run(test, params, env):
                     logging.info("Check the background command in the guest.")
                     s, o = session.cmd_status_output(self.mig_bg_check_command)
                     if s:
-                        raise error.TestFail("Background command not found,"
-                                             " Output is '%s'." % o)
+                        raise error.TestFail(
+                            "Background command not found," " Output is '%s'." % o
+                        )
 
                     logging.info("Kill the background command in the guest.")
                     session.sendline(self.mig_bg_kill_command)
@@ -117,15 +125,21 @@ def run(test, params, env):
                 max_t = int(params.get("max_random_timeout", 5))
                 random_timeout = random.randint(min_t, max_t)
                 params["start_migration_timeout"] = random_timeout
-                error.context("Wait for %d seconds, then do migration."
-                              % random_timeout, logging.info)
+                error.context(
+                    "Wait for %d seconds, then do migration." % random_timeout,
+                    logging.info,
+                )
 
             self.run_pre_sub_test()
 
             if self.need_to_login == "yes":
-                self.migrate_wait([self.vm], self.srchost, self.dsthost,
-                                  start_work=start_worker,
-                                  check_work=check_worker)
+                self.migrate_wait(
+                    [self.vm],
+                    self.srchost,
+                    self.dsthost,
+                    start_work=start_worker,
+                    check_work=check_worker,
+                )
             else:
                 self.migrate_wait([self.vm], self.srchost, self.dsthost)
 

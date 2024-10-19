@@ -1,10 +1,9 @@
 import json
 
 from avocado.utils import process
+from virttest import data_dir, error_context, qemu_storage
+
 from provider import qemu_img_utils as img_utils
-from virttest import data_dir
-from virttest import error_context
-from virttest import qemu_storage
 
 
 @error_context.context_aware
@@ -26,8 +25,10 @@ def run(test, params, env):
 
     root_dir = data_dir.get_data_dir()
     image_chain = params["image_chain"].split()
-    base, sn = (qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
-                for tag in image_chain)
+    base, sn = (
+        qemu_storage.QemuImg(params.object_params(tag), root_dir, tag)
+        for tag in image_chain
+    )
 
     error_context.context("create snapshot %s" % sn.tag, test.log.info)
     sn.create(sn.params)
@@ -55,11 +56,10 @@ def run(test, params, env):
     test.log.debug("sync host cache after commit")
     process.system("sync")
 
-    error_context.context("verify snapshot is emptied after commit",
-                          test.log.info)
+    error_context.context("verify snapshot is emptied after commit", test.log.info)
     size_after_commit = json.loads(sn.info(output="json"))["actual-size"]
     test.log.debug("%s size after commit: %s", sn.tag, size_after_commit)
-    guest_file_size = dd_blkcnt * 512   # tmp file size in bytes
+    guest_file_size = dd_blkcnt * 512  # tmp file size in bytes
     if size_before_commit - size_after_commit >= guest_file_size:
         test.log.debug("the snapshot file was emptied.")
     else:
@@ -68,8 +68,7 @@ def run(test, params, env):
     error_context.context("boot vm from base %s" % base.tag, test.log.info)
     vm = img_utils.boot_vm_with_images(test, params, env, (base.tag,))
     session = vm.wait_for_login()
-    img_utils.check_md5sum(guest_file, md5sum_bin, session,
-                           md5_value_to_check=md5val)
+    img_utils.check_md5sum(guest_file, md5sum_bin, session, md5_value_to_check=md5val)
     vm.destroy()
     # remove snapshot
     params["remove_image_%s" % sn.tag] = "yes"

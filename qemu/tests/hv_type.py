@@ -1,7 +1,6 @@
 import os
 
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context
 
 
 @error_context.context_aware
@@ -36,8 +35,7 @@ def run(test, params, env):
         if status:
             test.error("Fail to uninstall existing virt-what")
     test.log.info("Copy target virt-what pkg to guest")
-    virt_what_pkg = os.path.join(data_dir.get_deps_dir("virt_what"),
-                                 virt_what_pkg)
+    virt_what_pkg = os.path.join(data_dir.get_deps_dir("virt_what"), virt_what_pkg)
     try:
         vm.copy_files_to(virt_what_pkg, virt_what_guest_dir)
         status = session.cmd_status(virt_what_install_cmd)

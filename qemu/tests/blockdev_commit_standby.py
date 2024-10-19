@@ -1,6 +1,4 @@
-from provider import backup_utils
-from provider import job_utils
-
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
@@ -16,9 +14,13 @@ class BlockdevCommitStandby(BlockDevCommitTest):
         backup_utils.set_default_block_job_options(self.main_vm, args)
         self.main_vm.monitor.cmd(cmd, args)
         job_id = args.get("job-id", device)
-        job_utils.wait_until_job_status_match(self.main_vm, "ready", job_id, timeout=120)
+        job_utils.wait_until_job_status_match(
+            self.main_vm, "ready", job_id, timeout=120
+        )
         self.main_vm.monitor.cmd("job-pause", {"id": job_id})
-        job_utils.wait_until_job_status_match(self.main_vm, "standby", job_id, timeout=120)
+        job_utils.wait_until_job_status_match(
+            self.main_vm, "standby", job_id, timeout=120
+        )
         self.main_vm.monitor.cmd("job-complete", {"id": job_id})
         self.main_vm.monitor.cmd("job-resume", {"id": job_id})
         if not job_utils.get_event_by_condition(self.main_vm, "BLOCK_JOB_COMPLETED"):

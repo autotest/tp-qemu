@@ -1,10 +1,7 @@
 import os
 
 from avocado.utils import process
-from virttest import data_dir
-from virttest import qemu_virtio_port
-from virttest import error_context
-from virttest import utils_misc
+from virttest import data_dir, error_context, qemu_virtio_port, utils_misc
 
 
 # This decorator makes the test function aware of context strings
@@ -52,8 +49,7 @@ def run(test, params, env):
             test.log.info("Data transfer repeat %s/%s.", num + 1, n_time)
             try:
                 args = (test, session, receive_cmd, data_file)
-                guest_receive = utils_misc.InterruptedThread(receive_data,
-                                                             args)
+                guest_receive = utils_misc.InterruptedThread(receive_data, args)
                 guest_receive.daemon = True
                 guest_receive.start()
                 process.system(send_cmd, timeout=30, shell=True)
@@ -66,14 +62,15 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    check_cmd = params.get("check_vioser_status_cmd",
-                           "verifier /querysettings")
+    check_cmd = params.get("check_vioser_status_cmd", "verifier /querysettings")
     output = session.cmd(check_cmd, timeout=360)
-    error_context.context("Make sure vioser.sys verifier enabled in guest.",
-                          test.log.info)
+    error_context.context(
+        "Make sure vioser.sys verifier enabled in guest.", test.log.info
+    )
     if "vioser.sys" not in output:
-        verify_cmd = params.get("vioser_verify_cmd",
-                                "verifier.exe /standard /driver vioser.sys")
+        verify_cmd = params.get(
+            "vioser_verify_cmd", "verifier.exe /standard /driver vioser.sys"
+        )
         session.cmd(verify_cmd, timeout=360, ok_status=[0, 2])
         session = vm.reboot(session=session, timeout=timeout)
         output = session.cmd(check_cmd, timeout=360)
@@ -88,27 +85,26 @@ def run(test, params, env):
     port_name = vm.virtio_ports[0].qemu_id
     host_file = get_virtio_port_host_file(vm, port_name)
     data_file = params["data_file"]
-    data_file = os.path.join(data_dir.get_deps_dir("win_serial"),
-                             data_file)
+    data_file = os.path.join(data_dir.get_deps_dir("win_serial"), data_file)
     send_script = params.get("host_send_script", "serial-host-send.py")
-    send_script = os.path.join(data_dir.get_deps_dir("win_serial"),
-                               send_script)
-    serial_send_cmd = "`command -v python python3 | head -1` %s %s %s" % (send_script, host_file, data_file)
-    receive_script = params.get("guest_receive_script",
-                                "VirtIoChannel_guest_recieve.py")
+    send_script = os.path.join(data_dir.get_deps_dir("win_serial"), send_script)
+    serial_send_cmd = "`command -v python python3 | head -1` %s %s %s" % (
+        send_script,
+        host_file,
+        data_file,
+    )
+    receive_script = params.get(
+        "guest_receive_script", "VirtIoChannel_guest_recieve.py"
+    )
     receive_script = "%s%s" % (guest_path, receive_script)
     serial_receive_cmd = "python %s %s " % (receive_script, port_name)
     n_time = int(params.get("repeat_times", 20))
 
-    transfer_data(test, session, serial_receive_cmd, serial_send_cmd,
-                  data_file, n_time)
+    transfer_data(test, session, serial_receive_cmd, serial_send_cmd, data_file, n_time)
     error_context.context("Reboot guest.", test.log.info)
     session = vm.reboot(session=session, timeout=timeout)
-    transfer_data(test, session, serial_receive_cmd, serial_send_cmd,
-                  data_file, n_time)
-    error_context.context("Reboot guest by system_reset qmp command.",
-                          test.log.info)
-    session = vm.reboot(session=session, method="system_reset",
-                        timeout=timeout)
+    transfer_data(test, session, serial_receive_cmd, serial_send_cmd, data_file, n_time)
+    error_context.context("Reboot guest by system_reset qmp command.", test.log.info)
+    session = vm.reboot(session=session, method="system_reset", timeout=timeout)
     if session:
         session.close()

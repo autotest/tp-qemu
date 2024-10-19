@@ -1,17 +1,16 @@
 import json
 import time
 
-from virttest import data_dir
-from virttest import qemu_storage
+from virttest import data_dir, qemu_storage
 from virttest.qemu_capabilities import Flags
 
+from provider import backup_utils
 from provider.blockdev_stream_base import BlockDevStreamTest
 from provider.virt_storage.storage_admin import sp_admin
-from provider import backup_utils
 
 
 class BlockdevStreamCORBase(BlockDevStreamTest):
-    """Do block-stream with copy-on-read filter as base """
+    """Do block-stream with copy-on-read filter as base"""
 
     def __init__(self, test, params, env):
         super(BlockdevStreamCORBase, self).__init__(test, params, env)
@@ -27,8 +26,12 @@ class BlockdevStreamCORBase(BlockDevStreamTest):
             self.trash.append(image)
 
     def _is_same_file(self, file_params, file_opts):
-        mapping = {"gluster": "path", "iscsi": "lun",
-                   "nbd": "server.port", "rbd": "image"}
+        mapping = {
+            "gluster": "path",
+            "iscsi": "lun",
+            "nbd": "server.port",
+            "rbd": "image",
+        }
         option = mapping.get(file_params["driver"], "filename")
         return file_params[option] == file_opts[option]
 
@@ -45,11 +48,13 @@ class BlockdevStreamCORBase(BlockDevStreamTest):
         filename = image.image_filename
         is_cor = backing["driver"] == "copy-on-read"
         backing_mask = self.main_vm.check_capability(
-                Flags.BLOCKJOB_BACKING_MASK_PROTOCOL)
+            Flags.BLOCKJOB_BACKING_MASK_PROTOCOL
+        )
         raw_format = image.image_format == "raw"
         raw_elimi = backing_mask and raw_format
-        opts = backing["file"]["file"] if (
-                is_cor and not raw_elimi) else backing["file"]
+        opts = (
+            backing["file"]["file"] if (is_cor and not raw_elimi) else backing["file"]
+        )
         file_opts = qemu_storage.filename_to_file_opts(filename)
         if not self._is_same_file(opts, file_opts):
             self.test.fail("file %s not in backing" % filename)
@@ -60,8 +65,9 @@ class BlockdevStreamCORBase(BlockDevStreamTest):
             if self.base_tag in item["qdev"]:
                 backing = item["inserted"].get("backing_file")
                 if not backing:
-                    self.test.fail("Failed to get backing_file for qdev %s"
-                                   % self.base_tag)
+                    self.test.fail(
+                        "Failed to get backing_file for qdev %s" % self.base_tag
+                    )
                 backing_dict = json.loads(backing[5:])
                 backing_depth = len(self.backing_chain)
                 for image_tag in self.backing_chain:
@@ -87,11 +93,12 @@ class BlockdevStreamCORBase(BlockDevStreamTest):
         self.check_backing_chain()
 
     def blockdev_stream(self):
-        backup_utils.blockdev_stream(self.main_vm, self._top_device,
-                                     **self._stream_options)
+        backup_utils.blockdev_stream(
+            self.main_vm, self._top_device, **self._stream_options
+        )
         time.sleep(0.5)
         index = self.backing_chain.index(self.params["base_tag"])
-        del self.backing_chain[index+1:]
+        del self.backing_chain[index + 1 :]
         self.check_backing_chain()
 
     def do_test(self):

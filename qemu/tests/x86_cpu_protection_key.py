@@ -1,6 +1,4 @@
-from virttest import cpu
-from virttest import env_process
-from virttest import error_context
+from virttest import cpu, env_process, error_context
 
 
 @error_context.context_aware
@@ -23,7 +21,7 @@ def run(test, params, env):
         test.cancel("'%s' doesn't support this test case" % cpu_model)
 
     params["start_vm"] = "yes"
-    vm_name = params['main_vm']
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)
@@ -33,15 +31,15 @@ def run(test, params, env):
     guest_dir = params["guest_dir"]
     timeout = params.get_numeric("timeout")
     kernel_v = session.cmd_output("uname -r").strip()
-    mkdir_cmd = session.cmd('mkdir -p %s' % guest_dir)
+    mkdir_cmd = session.cmd("mkdir -p %s" % guest_dir)
     src_rpm = "kernel-" + kernel_v.rsplit(".", 1)[0] + ".src.rpm"
     linux_name = "linux-" + kernel_v.rsplit(".", 1)[0]
-    download_rpm_cmd = 'cd %s && ' % guest_dir + params["download_rpm_cmd"] % src_rpm
-    uncompress_cmd_src = 'cd %s && ' % guest_dir + params["uncompress_cmd_src"]
-    uncompress_cmd = 'cd %s && ' % guest_dir + params["uncompress_cmd"]
+    download_rpm_cmd = "cd %s && " % guest_dir + params["download_rpm_cmd"] % src_rpm
+    uncompress_cmd_src = "cd %s && " % guest_dir + params["uncompress_cmd_src"]
+    uncompress_cmd = "cd %s && " % guest_dir + params["uncompress_cmd"]
     test_dir = guest_dir + linux_name + params["test_dir"]
-    compile_cmd = 'cd %s && ' % test_dir + params["compile_cmd"]
-    run_cmd = 'cd %s && ' % test_dir + params["run_cmd"]
+    compile_cmd = "cd %s && " % test_dir + params["compile_cmd"]
+    run_cmd = "cd %s && " % test_dir + params["run_cmd"]
 
     try:
         session.cmd(mkdir_cmd)
@@ -51,7 +49,7 @@ def run(test, params, env):
         session.cmd(uncompress_cmd, timeout)
         session.cmd(compile_cmd, timeout)
         s, output = session.cmd_status_output(run_cmd, safe=True)
-        if 'done (all tests OK)' not in output:
+        if "done (all tests OK)" not in output:
             test.fail("Protection key test runs failed.")
 
         vm.verify_kernel_crash()

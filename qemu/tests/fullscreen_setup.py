@@ -28,23 +28,24 @@ def run(test, params, env):
     utils_spice.wait_timeout(20)
 
     for vm in params.get("vms").split():
-        utils_spice.clear_interface(env.get_vm(vm),
-                                    int(params.get("login_timeout", "360")))
+        utils_spice.clear_interface(
+            env.get_vm(vm), int(params.get("login_timeout", "360"))
+        )
 
     utils_spice.wait_timeout(20)
 
     guest_vm = env.get_vm(params["guest_vm"])
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
-    guest_root_session = guest_vm.wait_for_login(username="root",
-                                                 password="123456")
+        timeout=int(params.get("login_timeout", 360))
+    )
+    guest_root_session = guest_vm.wait_for_login(username="root", password="123456")
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
     client_session = client_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
-    client_root_session = client_vm.wait_for_login(username="root",
-                                                   password="123456")
+        timeout=int(params.get("login_timeout", 360))
+    )
+    client_vm.wait_for_login(username="root", password="123456")
 
     test.log.debug("Exporting client display")
     client_session.cmd("export DISPLAY=:0.0")
@@ -71,8 +72,11 @@ def run(test, params, env):
 
     # Changing the guest resolution
     client_session.cmd("xrandr -s " + newClientResolution)
-    test.log.info("The resolution on the client has been changed from %s to: %s",
-                  current, newClientResolution)
+    test.log.info(
+        "The resolution on the client has been changed from %s to: %s",
+        current,
+        newClientResolution,
+    )
 
     test.log.debug("Exporting guest display")
     guest_session.cmd("export DISPLAY=:0.0")

@@ -1,9 +1,6 @@
 from avocado.utils import path as utils_path
 from avocado.utils import process
-
-from virttest import env_process
-from virttest import error_context
-from virttest import guest_agent
+from virttest import env_process, error_context, guest_agent
 from virttest.utils_misc import get_linux_drive_path
 
 
@@ -28,7 +25,7 @@ def run(test, params, env):
     """
 
     def get_scsi_debug_disk(guest_session=None):
-        """"
+        """ "
         Get scsi debug disk on host or on guest which created as scsi-block.
         """
         cmd = "lsblk -S -n -p|grep scsi_debug"
@@ -62,10 +59,13 @@ def run(test, params, env):
         filename = vm.get_serial_console_filename(guest_agent_name)
         guest_agent_params = params.object_params(guest_agent_name)
         guest_agent_params["monitor_filename"] = filename
-        return guest_agent.QemuAgent(vm, guest_agent_name,
-                                     guest_agent_serial_type,
-                                     guest_agent_params,
-                                     get_supported_cmds=True)
+        return guest_agent.QemuAgent(
+            vm,
+            guest_agent_name,
+            guest_agent_serial_type,
+            guest_agent_params,
+            get_supported_cmds=True,
+        )
 
     def get_blocks():
         """
@@ -84,8 +84,7 @@ def run(test, params, env):
     params["start_vm"] = "yes"
     params["image_name_%s" % data_tag] = disk_name
 
-    error_context.context("Boot guest with disk '%s'" % disk_name,
-                          test.log.info)
+    error_context.context("Boot guest with disk '%s'" % disk_name, test.log.info)
     # boot guest with scsi_debug disk
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)

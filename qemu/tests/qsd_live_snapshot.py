@@ -1,10 +1,10 @@
 """Live snpashot test with qsd exposed image"""
-from provider.qsd import QsdDaemonDev, add_vubp_into_boot
-from provider.blockdev_snapshot_base import BlockDevSnapshotTest
-from provider.virt_storage.storage_admin import sp_admin
 
-from virttest import error_context
-from virttest import data_dir
+from virttest import data_dir, error_context
+
+from provider.blockdev_snapshot_base import BlockDevSnapshotTest
+from provider.qsd import QsdDaemonDev, add_vubp_into_boot
+from provider.virt_storage.storage_admin import sp_admin
 
 
 class QSDSnapshotTest(BlockDevSnapshotTest):
@@ -35,7 +35,8 @@ class QSDSnapshotTest(BlockDevSnapshotTest):
         self.params.update({"qsd_images_qsd1": self.snapshot_tag})
         self.start_qsd()
         self.clone_vm.params["extra_params"] = add_vubp_into_boot(
-                self.snapshot_tag, self.params)
+            self.snapshot_tag, self.params
+        )
         self.clone_vm.create()
         self.clone_vm.verify_alive()
         if self.base_tag != "image1":
@@ -45,7 +46,8 @@ class QSDSnapshotTest(BlockDevSnapshotTest):
     def pre_test(self):
         self.start_qsd()
         self.main_vm.params["extra_params"] = add_vubp_into_boot(
-                self.base_tag, self.params)
+            self.base_tag, self.params
+        )
         self.main_vm.create()
         super(QSDSnapshotTest, self).pre_test()
 

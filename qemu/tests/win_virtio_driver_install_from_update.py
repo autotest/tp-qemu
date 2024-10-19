@@ -1,7 +1,6 @@
 import time
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 from provider import win_driver_utils
 
@@ -39,8 +38,9 @@ def run(test, params, env):
             status = session.cmd_status(wuauserv_start_cmd)
             if status != 0:
                 test.fail("Fail to start wuauserv service")
-            if not utils_misc.wait_for(lambda: not session.cmd_status(wuauserv_status_cmd),
-                                       60, 0, 2):
+            if not utils_misc.wait_for(
+                lambda: not session.cmd_status(wuauserv_status_cmd), 60, 0, 2
+            ):
                 test.fail("wuauserv service not running")
 
     driver_name = params["driver_name"]
@@ -59,24 +59,25 @@ def run(test, params, env):
     start_wuauserv_service(session)
 
     error_context.context("Uninstall %s driver" % driver_name, test.log.info)
-    win_driver_utils.uninstall_driver(session, test, devcon_path, driver_name,
-                                      device_name, device_hwid)
+    win_driver_utils.uninstall_driver(
+        session, test, devcon_path, driver_name, device_name, device_hwid
+    )
     session = vm.reboot(session)
 
     error_context.context("Install drivers from windows update", test.log.info)
-    install_driver_cmd = utils_misc.set_winutils_letter(session,
-                                                        install_driver_cmd)
-    vm.send_key('meta_l-d')
+    install_driver_cmd = utils_misc.set_winutils_letter(session, install_driver_cmd)
+    vm.send_key("meta_l-d")
     time.sleep(30)
     session.cmd(install_driver_cmd)
     # workaround for viostor and vioscsi as driver status still be running
     # after uninstall
-    if driver_name in ('viostor', 'vioscsi'):
+    if driver_name in ("viostor", "vioscsi"):
         time.sleep(120)
-    if not utils_misc.wait_for(lambda: not session.cmd_status(check_stat),
-                               600, 0, 10):
-        test.fail("%s Driver can not be installed correctly from "
-                  "windows update" % driver_name)
+    if not utils_misc.wait_for(lambda: not session.cmd_status(check_stat), 600, 0, 10):
+        test.fail(
+            "%s Driver can not be installed correctly from "
+            "windows update" % driver_name
+        )
 
     error_context.context("%s Driver Check" % driver_name, test.log.info)
     session = vm.reboot(session)

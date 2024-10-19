@@ -1,10 +1,7 @@
-from virttest import error_context
-from virttest import utils_misc
-from virttest import data_dir
-from virttest import utils_test
+from virttest import data_dir, error_context, utils_misc, utils_test
 
-from qemu.tests import single_driver_install
 from provider import win_driver_utils
+from qemu.tests import single_driver_install
 
 
 @error_context.context_aware
@@ -32,8 +29,7 @@ def run(test, params, env):
         change iso for virtio-win
         :param cdrom_virtio: iso file
         """
-        virtio_iso = utils_misc.get_path(data_dir.get_data_dir(),
-                                         cdrom_virtio)
+        virtio_iso = utils_misc.get_path(data_dir.get_data_dir(), cdrom_virtio)
         test.log.info("Changing virtio iso image to '%s'", virtio_iso)
         vm.change_media("drive_virtio", virtio_iso)
 
@@ -43,17 +39,16 @@ def run(test, params, env):
     driver_verifier = params.get("driver_verifier", driver)
     error_context.context("Enable driver verifier in guest.", test.log.info)
     session = vm.wait_for_login(timeout=timeout)
-    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test, driver_verifier,
-                                                            timeout)
+    session = utils_test.qemu.windrv_check_running_verifier(
+        session, vm, test, driver_verifier, timeout
+    )
     session.close()
     if params.get("need_uninstall") != "yes":
         error_context.context("Downgrade virtio driver", test.log.info)
         change_virtio_media(params["cdrom_virtio_downgrade"])
         single_driver_install.run(test, params, env)
         # vm is rebooted in single driver install function
-        error_context.context("Upgrade virtio driver to original",
-                              test.log.info)
+        error_context.context("Upgrade virtio driver to original", test.log.info)
         change_virtio_media(params["cdrom_virtio"])
 
     single_driver_install.run(test, params, env)

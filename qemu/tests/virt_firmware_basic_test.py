@@ -1,11 +1,10 @@
 import os
 import re
-import six
-import sys
 import shutil
+import sys
 
-from avocado.utils import git
-from avocado.utils import process
+import six
+from avocado.utils import git, process
 from virttest import error_context
 
 
@@ -40,27 +39,29 @@ def run(test, params, env):
     """
 
     query_cmd = params["cmd_queried_test_package"]
-    status = process.getstatusoutput(query_cmd,
-                                     ignore_status=True,
-                                     shell=True)[0]
+    status = process.getstatusoutput(query_cmd, ignore_status=True, shell=True)[0]
     if status:
-        test.log.info("Package 'python3-virt-firmware-tests' "
-                      "has not been installed. "
-                      "Run the test with virt firmware repo.")
+        test.log.info(
+            "Package 'python3-virt-firmware-tests' "
+            "has not been installed. "
+            "Run the test with virt firmware repo."
+        )
         virt_firmware_dirname = params["virt_firmware_repo_dst_dir"]
         virt_firmware_repo_addr = params["virt_firmware_repo_addr"]
         test_file_black_list = params["test_file_black_list"].split()
         if os.path.exists(virt_firmware_dirname):
             shutil.rmtree(virt_firmware_dirname, ignore_errors=True)
         try:
-            git.get_repo(uri=virt_firmware_repo_addr,
-                         destination_dir=virt_firmware_dirname)
+            git.get_repo(
+                uri=virt_firmware_repo_addr, destination_dir=virt_firmware_dirname
+            )
         except Exception as e:
-            test.error("Failed to clone the virt-firmware repo,"
-                       "the error message is '%s'." % six.text_type(e))
+            test.error(
+                "Failed to clone the virt-firmware repo,"
+                "the error message is '%s'." % six.text_type(e)
+            )
     else:
-        test.log.info("Run the test with package "
-                      "'python3-virt-firmware-tests'.")
+        test.log.info("Run the test with package " "'python3-virt-firmware-tests'.")
         virt_firmware_dirname = params["virt_firmware_test_package_dir"]
         test_file_black_list = []
     test_file_pattern = params["test_file_pattern"]
@@ -74,16 +75,18 @@ def run(test, params, env):
                 test_cmd = sys.executable + " " + test_file + " 2>&1"
             else:
                 test_cmd = params["shell_cmd"] % test_file
-            error_context.context("Test check with command '%s'."
-                                  % test_cmd, test.log.info)
-            status, output = process.getstatusoutput(test_cmd,
-                                                     ignore_status=True,
-                                                     shell=True)
+            error_context.context(
+                "Test check with command '%s'." % test_cmd, test.log.info
+            )
+            status, output = process.getstatusoutput(
+                test_cmd, ignore_status=True, shell=True
+            )
             if status:
-                test.fail("Failed to run '%s', the error message is '%s'"
-                          % (test_cmd, output))
-            error_context.context("The output of command '%s':\n%s"
-                                  % (test_cmd, output), test.log.info)
+                test.fail(
+                    "Failed to run '%s', the error message is '%s'" % (test_cmd, output)
+                )
+            error_context.context(
+                "The output of command '%s':\n%s" % (test_cmd, output), test.log.info
+            )
     if "test_file" not in locals():
-        test.error("Not found test file in '%s', please check it."
-                   % test_dirname)
+        test.error("Not found test file in '%s', please check it." % test_dirname)

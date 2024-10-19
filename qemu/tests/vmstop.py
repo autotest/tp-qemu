@@ -1,5 +1,5 @@
-import time
 import os
+import time
 
 from avocado.utils import crypto, process
 from virttest import utils_misc
@@ -36,9 +36,9 @@ def run(test, params, env):
         process.run("dd if=/dev/zero of=/tmp/file bs=1M count=%s" % file_size)
         # Transfer file from host to guest, we didn't expect the finish of
         # transfer, we just let it to be a kind of stress in guest.
-        bg = utils_misc.InterruptedThread(vm.copy_files_to,
-                                          ("/tmp/file", guest_path),
-                                          dict(verbose=True, timeout=60))
+        bg = utils_misc.InterruptedThread(
+            vm.copy_files_to, ("/tmp/file", guest_path), dict(verbose=True, timeout=60)
+        )
         test.log.info("Start the background transfer")
         bg.start()
 
@@ -52,8 +52,10 @@ def run(test, params, env):
             test.log.info("Check the status through monitor")
             if not vm.monitor.verify_status("paused"):
                 status = str(vm.monitor.info("status"))
-                test.fail("Guest did not pause after sending stop,"
-                          " guest status is %s" % status)
+                test.fail(
+                    "Guest did not pause after sending stop,"
+                    " guest status is %s" % status
+                )
 
             # check through session
             test.log.info("Check the session")

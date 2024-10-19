@@ -1,15 +1,14 @@
 import logging
+import math
 import re
 import time
-import math
-
 from decimal import Decimal
 
 from virttest import utils_test
 from virttest.utils_misc import NumaInfo
 from virttest.utils_test.qemu import MemoryHotplugTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def run(test, params, env):
@@ -27,21 +26,24 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _check_online_mem(session):
         mem_device = session.cmd_output(cmd_check_online_mem, timeout=10)
         LOG_JOB.info(mem_device)
-        online_mem = re.search(r'online memory:\s+\d+(\.\d*)?G', mem_device).group()
-        online_mem = re.search(r'\d+(\.\d*)?', online_mem).group()
+        online_mem = re.search(r"online memory:\s+\d+(\.\d*)?G", mem_device).group()
+        online_mem = re.search(r"\d+(\.\d*)?", online_mem).group()
         return Decimal(online_mem)
 
     def _compare_mem_size(online_mem, expect_mem_size):
         if Decimal(online_mem) != expect_mem_size:
-            test.fail("The online mem size is %sG not match expected memory"
-                      " %sG" % (online_mem, expect_mem_size))
+            test.fail(
+                "The online mem size is %sG not match expected memory"
+                " %sG" % (online_mem, expect_mem_size)
+            )
 
-    cmd_check_online_mem = params.get('cmd_check_online_mem')
-    cmd_new_folder = params.get('cmd_new_folder')
-    numa_test = params.get('numa_test')
+    cmd_check_online_mem = params.get("cmd_check_online_mem")
+    cmd_new_folder = params.get("cmd_new_folder")
+    numa_test = params.get("numa_test")
     mem_plug_size = params.get("size_mem")
     target_mems = params["target_mems"]
 
@@ -50,7 +52,7 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     numa_info = NumaInfo(session=session)
-    mem_plug_size = Decimal(re.search(r'\d+', mem_plug_size).group())
+    mem_plug_size = Decimal(re.search(r"\d+", mem_plug_size).group())
     expect_mem_size = _check_online_mem(session)
     hotplug_test = MemoryHotplugTest(test, params, env)
     for target_mem in target_mems.split():
@@ -63,12 +65,11 @@ def run(test, params, env):
     for node in numa_info.get_online_nodes():
         LOG_JOB.info("Use the hotplug memory by numa %s.", node)
         session.cmd(cmd_new_folder)
-        free_size = float(numa_info.read_from_node_meminfo(node, 'MemFree'))
+        free_size = float(numa_info.read_from_node_meminfo(node, "MemFree"))
         session.cmd(numa_test % (node, math.floor(free_size * 0.9)), timeout=600)
     try:
         stress_args = params.get("stress_args")
-        stress_test = utils_test.VMStress(vm, "stress", params,
-                                          stress_args=stress_args)
+        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
         stress_test.load_stress_tool()
     except utils_test.StressError as info:
         test.error(info)

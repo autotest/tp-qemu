@@ -2,12 +2,8 @@ import sys
 import time
 
 import aexpect
-
-from avocado.utils import process
-from avocado.utils import cpu
-
-from virttest import utils_test
-from virttest import utils_time
+from avocado.utils import cpu, process
+from virttest import utils_test, utils_time
 
 
 def run(test, params, env):
@@ -29,6 +25,7 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+
     # Helper functions
     def set_cpu_affinity(pid, mask):
         """
@@ -39,18 +36,19 @@ def run(test, params, env):
         :param mask: The CPU affinity mask.
         :return: A dict containing the previous mask for each thread.
         """
-        tids = process.run("ps -L --pid=%s -o lwp=" % pid,
-                           verbose=False,
-                           ignore_status=True).stdout_text.split()
+        tids = process.run(
+            "ps -L --pid=%s -o lwp=" % pid, verbose=False, ignore_status=True
+        ).stdout_text.split()
         prev_masks = {}
         for tid in tids:
             prev_mask = process.run(
-                "taskset -p %s" % tid, verbose=False).stdout_text.split()[-1]
+                "taskset -p %s" % tid, verbose=False
+            ).stdout_text.split()[-1]
             prev_masks[tid] = prev_mask
             process.system("taskset -p %s %s" % (mask, tid), verbose=False)
-        children = process.run("ps --ppid=%s -o pid=" % pid,
-                               verbose=False,
-                               ignore_status=True).stdout_text.split()
+        children = process.run(
+            "ps --ppid=%s -o pid=" % pid, verbose=False, ignore_status=True
+        ).stdout_text.split()
         for child in children:
             prev_masks.update(set_cpu_affinity(child, mask))
         return prev_masks
@@ -62,13 +60,15 @@ def run(test, params, env):
         :param prev_masks: A dict containing TIDs as keys and masks as values.
         """
         for tid, mask in prev_masks.items():
-            process.system("taskset -p %s %s" % (mask, tid), verbose=False,
-                           ignore_status=True)
+            process.system(
+                "taskset -p %s %s" % (mask, tid), verbose=False, ignore_status=True
+            )
 
     # Taking this as a workaround to avoid getting errors during
     # pickling with Python versions prior to 3.7.
     global _picklable_logger
     if sys.version_info < (3, 7):
+
         def _picklable_logger(*args, **kwargs):
             return test.log.debug(*args, **kwargs)
     else:
@@ -80,9 +80,9 @@ def run(test, params, env):
     boot_option_added = params.get("boot_option_added")
     boot_option_removed = params.get("boot_option_removed")
     if boot_option_added or boot_option_removed:
-        utils_test.update_boot_option(vm,
-                                      args_removed=boot_option_removed,
-                                      args_added=boot_option_added)
+        utils_test.update_boot_option(
+            vm, args_removed=boot_option_removed, args_added=boot_option_added
+        )
 
     if params["os_type"] == "windows":
         utils_time.sync_timezone_win(vm)
@@ -113,8 +113,7 @@ def run(test, params, env):
     load_duration = float(params.get("load_duration", "30"))
     rest_duration = float(params.get("rest_duration", "10"))
     drift_threshold = float(params.get("drift_threshold", "200"))
-    drift_threshold_after_rest = float(params.get("drift_threshold_after_rest",
-                                                  "200"))
+    drift_threshold_after_rest = float(params.get("drift_threshold_after_rest", "200"))
     test_duration = float(params.get("test_duration", "60"))
     interval_gettime = float(params.get("interval_gettime", "20"))
     guest_load_sessions = []
@@ -140,10 +139,9 @@ def run(test, params, env):
 
             # Get time before load
             # (ht stands for host time, gt stands for guest time)
-            (ht0, gt0) = utils_test.get_time(session,
-                                             time_command,
-                                             time_filter_re,
-                                             time_format)
+            (ht0, gt0) = utils_test.get_time(
+                session, time_command, time_filter_re, time_format
+            )
 
             # Run some load on the guest
             if params["os_type"] == "linux":
@@ -156,10 +154,12 @@ def run(test, params, env):
             # Run some load on the host
             test.log.info("Starting load on host...")
             for i in range(host_load_instances):
-                load_cmd = aexpect.run_bg(host_load_command,
-                                          output_func=_picklable_logger,
-                                          output_prefix="(host load %d) " % i,
-                                          timeout=0.5)
+                load_cmd = aexpect.run_bg(
+                    host_load_command,
+                    output_func=_picklable_logger,
+                    output_prefix="(host load %d) " % i,
+                    timeout=0.5,
+                )
                 host_load_sessions.append(load_cmd)
                 # Set the CPU affinity of the load process
                 pid = load_cmd.get_pid()
@@ -172,10 +172,9 @@ def run(test, params, env):
             start_time = time.time()
             while (time.time() - start_time) < test_duration:
                 # Get time delta after load
-                (ht1, gt1) = utils_test.get_time(session,
-                                                 time_command,
-                                                 time_filter_re,
-                                                 time_format)
+                (ht1, gt1) = utils_test.get_time(
+                    session, time_command, time_filter_re, time_format
+                )
 
                 # Report results
                 host_delta = ht1 - ht0
@@ -204,31 +203,28 @@ def run(test, params, env):
         time.sleep(rest_duration)
 
         # Get time after rest
-        (ht2, gt2) = utils_test.get_time(session,
-                                         time_command,
-                                         time_filter_re,
-                                         time_format)
+        (ht2, gt2) = utils_test.get_time(
+            session, time_command, time_filter_re, time_format
+        )
 
     finally:
         session.close()
         # remove flags add for this test.
         if boot_option_added or boot_option_removed:
-            utils_test.update_boot_option(vm,
-                                          args_removed=boot_option_added,
-                                          args_added=boot_option_removed)
+            utils_test.update_boot_option(
+                vm, args_removed=boot_option_added, args_added=boot_option_removed
+            )
 
     # Report results
     host_delta_total = ht2 - ht0
     guest_delta_total = gt2 - gt0
     drift_total = 100.0 * (host_delta_total - guest_delta_total) / host_delta
     test.log.info("Total host duration including rest: %.2f", host_delta_total)
-    test.log.info(
-        "Total guest duration including rest: %.2f", guest_delta_total)
+    test.log.info("Total guest duration including rest: %.2f", guest_delta_total)
     test.log.info("Total drift after rest: %.2f%%", drift_total)
 
     # Fail the test if necessary
     if abs(drift) > drift_threshold:
         test.fail("Time drift too large: %.2f%%" % drift)
     if abs(drift_total) > drift_threshold_after_rest:
-        test.fail("Time drift too large after rest period: %.2f%%"
-                  % drift_total)
+        test.fail("Time drift too large after rest period: %.2f%%" % drift_total)

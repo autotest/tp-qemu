@@ -2,9 +2,9 @@ import re
 import time
 
 from virttest import error_context
-
 from virttest.qemu_monitor import QMPCmdError
 from virttest.utils_misc import normalize_data_size
+
 from provider import virtio_mem_utils
 
 

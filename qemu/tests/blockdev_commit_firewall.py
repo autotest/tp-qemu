@@ -2,27 +2,25 @@ import socket
 
 from avocado.utils import process
 
-from provider.nbd_image_export import QemuNBDExportImage
-from provider import backup_utils
-from provider import job_utils
-from provider import qemu_img_utils
-
+from provider import backup_utils, job_utils, qemu_img_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
+from provider.nbd_image_export import QemuNBDExportImage
 
 
 class BlockdevCommitFirewall(BlockDevCommitTest):
-
     def __init__(self, test, params, env):
         localhost = socket.gethostname()
-        params['nbd_server_%s' % params['nbd_image_tag']] = localhost \
-            if localhost else 'localhost'
+        params["nbd_server_%s" % params["nbd_image_tag"]] = (
+            localhost if localhost else "localhost"
+        )
         self._offset = None
         self._net_down = False
         super(BlockdevCommitFirewall, self).__init__(test, params, env)
 
     def _export_local_image_with_nbd(self):
-        self._nbd_export = QemuNBDExportImage(self.params,
-                                              self.params["local_image_tag"])
+        self._nbd_export = QemuNBDExportImage(
+            self.params, self.params["local_image_tag"]
+        )
         self._nbd_export.create_image()
         self._nbd_export.export_image()
 
@@ -36,18 +34,17 @@ class BlockdevCommitFirewall(BlockDevCommitTest):
             self.clean_images()
 
     def _run_iptables(self, cmd):
-        cmd = cmd.format(
-            s=self.params['nbd_server_%s' % self.params['nbd_image_tag']])
+        cmd = cmd.format(s=self.params["nbd_server_%s" % self.params["nbd_image_tag"]])
         result = process.run(cmd, ignore_status=True, shell=True)
         if result.exit_status != 0:
-            self.test.error('command error: %s' % result.stderr.decode())
+            self.test.error("command error: %s" % result.stderr.decode())
 
     def break_net_with_iptables(self):
-        self._run_iptables(self.params['net_break_cmd'])
+        self._run_iptables(self.params["net_break_cmd"])
         self._net_down = True
 
     def resume_net_with_iptables(self):
-        self._run_iptables(self.params['net_resume_cmd'])
+        self._run_iptables(self.params["net_resume_cmd"])
         self._net_down = False
 
     def clean_images(self):
@@ -62,10 +59,8 @@ class BlockdevCommitFirewall(BlockDevCommitTest):
         nbd_image = self.get_image_by_tag(self.params["local_image_tag"])
         nbd_image.remove()
 
-    def generate_tempfile(self, root_dir, filename="data",
-                          size="1000M", timeout=360):
-        backup_utils.generate_tempfile(
-            self.main_vm, root_dir, filename, size, timeout)
+    def generate_tempfile(self, root_dir, filename="data", size="1000M", timeout=360):
+        backup_utils.generate_tempfile(self.main_vm, root_dir, filename, size, timeout)
         self.files_info.append([root_dir, filename])
 
     def commit_snapshots(self):

@@ -32,14 +32,18 @@ def run(test, params, env):
     guest_vm.verify_alive()
     guest_session = guest_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)),
-        username="root", password="123456")
+        username="root",
+        password="123456",
+    )
 
     client_vm = env.get_vm(params["client_vm"])
     client_vm.verify_alive()
 
     client_session = client_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)),
-        username="root", password="123456")
+        username="root",
+        password="123456",
+    )
     # Verify remote-viewer is running
     try:
         pid = client_session.cmd("pgrep remote-viewer")
@@ -66,20 +70,21 @@ def run(test, params, env):
                 # Send a carriage return for PIN for token
                 listcerts_output = guest_session.cmd("")
             except:
-                test.fail("Test failed trying to get the output"
-                          " of pkcs11_listcerts")
+                test.fail("Test failed trying to get the output" " of pkcs11_listcerts")
 
-        test.log.info("Listing Certs available on the guest:  %s",
-                      listcerts_output)
+        test.log.info("Listing Certs available on the guest:  %s", listcerts_output)
 
         for cert in cert_list:
             subj_string = "CN=" + cert
             if subj_string in listcerts_output:
-                test.log.debug("%s has been found as a listed cert in the guest",
-                               subj_string)
+                test.log.debug(
+                    "%s has been found as a listed cert in the guest", subj_string
+                )
             else:
-                test.fail("Certificate %s was not found as a listed"
-                          " cert in the guest" % subj_string)
+                test.fail(
+                    "Certificate %s was not found as a listed"
+                    " cert in the guest" % subj_string
+                )
     elif smartcard_testtype == "pklogin_finder":
         # pkcs11_listcerts not installed until
         # Smart Card Support is installed
@@ -92,8 +97,7 @@ def run(test, params, env):
                 # Send a carriage return for PIN for token
                 certsinfo_output = guest_session.cmd("", ok_status=[0, 1])
             except:
-                test.fail("Test failed trying to get the output"
-                          " of pklogin_finder")
+                test.fail("Test failed trying to get the output" " of pklogin_finder")
         testindex = certsinfo_output.find(searchstr)
         if testindex >= 0:
             string_aftercheck = certsinfo_output[testindex:]
@@ -109,55 +113,58 @@ def run(test, params, env):
                     string_aftercheck = string_aftercheck[testindex:]
                     testindex2 = string_aftercheck.find(subj_string)
                     if testindex >= 0:
-                        test.log.debug("Found %s in output of pklogin",
-                                       subj_string)
+                        test.log.debug("Found %s in output of pklogin", subj_string)
                         string_aftercheck = string_aftercheck[testindex2:]
                         testindex3 = string_aftercheck.find(certcheck1)
                         if testindex3 >= 0:
-                            test.log.debug("Found %s in output of pklogin",
-                                           certcheck1)
+                            test.log.debug("Found %s in output of pklogin", certcheck1)
                             string_aftercheck = string_aftercheck[testindex3:]
                             testindex4 = string_aftercheck.find(certcheck2)
                             if testindex4 >= 0:
-                                test.log.debug("Found %s in output of pklogin",
-                                               certcheck2)
+                                test.log.debug(
+                                    "Found %s in output of pklogin", certcheck2
+                                )
                             else:
-                                test.fail(certcheck2 + " not found"
-                                          " in output of pklogin "
-                                          "on the guest")
+                                test.fail(
+                                    certcheck2 + " not found"
+                                    " in output of pklogin "
+                                    "on the guest"
+                                )
                         else:
-                            test.fail(certcheck1 + " not found in "
-                                      "output of pklogin on the guest")
+                            test.fail(
+                                certcheck1 + " not found in "
+                                "output of pklogin on the guest"
+                            )
                     else:
-                        test.fail("Common name %s, not found "
-                                  "in pkogin_finder after software "
-                                  "smartcard was inserted into the "
-                                  "guest" % subj_string)
+                        test.fail(
+                            "Common name %s, not found "
+                            "in pkogin_finder after software "
+                            "smartcard was inserted into the "
+                            "guest" % subj_string
+                        )
 
                 else:
-                    test.fail(checkstr + " not found in output of "
-                              "pklogin on the guest")
+                    test.fail(
+                        checkstr + " not found in output of " "pklogin on the guest"
+                    )
 
         else:
-            test.fail(searchstr + " not found in output of pklogin"
-                      " on the guest")
+            test.fail(searchstr + " not found in output of pklogin" " on the guest")
 
         test.log.info("Certs Info on the guest:  %s", certsinfo_output)
     else:
         test.fail("Please specify a valid smartcard testype")
 
     # Do some cleanup, remove the certs on the client
-        # for each cert listed by the test, create it on the client
+    # for each cert listed by the test, create it on the client
     for cert in cert_list:
         cmd = "certutil "
         cmd += "-D -n '" + cert + "' -d " + cert_db
         try:
             output = client_session.cmd(cmd)
         except:
-            test.log.warning(
-                "Deleting of %s certificate from the client failed",
-                cert)
-        test.log.debug("Output of " + cmd + ": " + output)
+            test.log.warning("Deleting of %s certificate from the client failed", cert)
+        test.log.debug("Output of %s: %s", cmd, output)
 
     client_session.close()
     guest_session.close()

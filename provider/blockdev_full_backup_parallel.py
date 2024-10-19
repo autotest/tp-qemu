@@ -3,5 +3,6 @@ from provider.blockdev_full_backup_base import BlockdevFullBackupBaseTest
 
 
 class BlockdevFullBackupParallelTest(
-        BlockdevFullBackupBaseTest, BlockdevBackupParallelTest):
+    BlockdevFullBackupBaseTest, BlockdevBackupParallelTest
+):
     pass

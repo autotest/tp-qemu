@@ -1,11 +1,12 @@
-import time
 import random
+import time
+
 from virttest import error_context
+
 from qemu.tests import blk_stream
 
 
 class BlockStreamReboot(blk_stream.BlockStream):
-
     @error_context.context_aware
     def reboot(self):
         """

@@ -1,6 +1,6 @@
-import os
 import ipaddress
 import json
+import os
 
 from avocado.utils import process
 
@@ -26,14 +26,20 @@ def run(test, params, env):
             test.cancel("2 remote servers at least are required.")
         for h in hosts:
             if os.path.exists(h) or _is_ipv6_addr(h):
-                test.cancel("Neither ipv6 nor unix domain"
-                            " socket is supported by now.")
+                test.cancel(
+                    "Neither ipv6 nor unix domain" " socket is supported by now."
+                )
 
     hosts = []
     if params.get_boolean("enable_gluster"):
         hosts.append(params["gluster_server"])
-        hosts.extend([peer['host'] for peer in json.loads(
-            params.get('gluster_peers', '[]')) if 'host' in peer])
+        hosts.extend(
+            [
+                peer["host"]
+                for peer in json.loads(params.get("gluster_peers", "[]"))
+                if "host" in peer
+            ]
+        )
 
     _check_hosts(hosts)
     hosts.pop()  # The last server should be accessible
@@ -54,10 +60,15 @@ def run(test, params, env):
     try:
         for host in hosts:
             test.log.info("Disconnect to %s", host)
-            process.system(disconn_cmd.format(source=host),
-                           ignore_status=True, shell=True)
-            if process.system(conn_check_cmd.format(source=host),
-                              ignore_status=True, shell=True) == 0:
+            process.system(
+                disconn_cmd.format(source=host), ignore_status=True, shell=True
+            )
+            if (
+                process.system(
+                    conn_check_cmd.format(source=host), ignore_status=True, shell=True
+                )
+                == 0
+            ):
                 test.error("Failed to disconnect to remote server")
             disconn_hosts.append(host)
 
@@ -68,11 +79,16 @@ def run(test, params, env):
     finally:
         for host in disconn_hosts:
             test.log.info("Recover connection to %s", host)
-            process.system(recover_cmd.format(source=host),
-                           ignore_status=True, shell=True)
-            if process.system(conn_check_cmd.format(source=host),
-                              ignore_status=True, shell=True) != 0:
-                test.log.warn("Failed to recover connection to %s", host)
+            process.system(
+                recover_cmd.format(source=host), ignore_status=True, shell=True
+            )
+            if (
+                process.system(
+                    conn_check_cmd.format(source=host), ignore_status=True, shell=True
+                )
+                != 0
+            ):
+                test.log.warning("Failed to recover connection to %s", host)
         if session:
             session.close()
         vm.destroy()

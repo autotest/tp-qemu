@@ -12,11 +12,9 @@ import logging
 import os
 
 from aexpect import ShellCmdError
+from virttest import data_dir, utils_spice
 
-from virttest import utils_spice
-from virttest import data_dir
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def install_pygtk(guest_session, params):
@@ -32,8 +30,7 @@ def install_pygtk(guest_session, params):
         guest_session.cmd(cmd)
     except ShellCmdError:
         cmd = "yum -y install pygtk2 --nogpgcheck > /dev/null"
-        LOG_JOB.info("Installing pygtk2 package to %s",
-                     params.get("guest_vm"))
+        LOG_JOB.info("Installing pygtk2 package to %s", params.get("guest_vm"))
         guest_session.cmd(cmd, timeout=60)
 
 
@@ -49,8 +46,9 @@ def deploy_test_form(test, guest_vm, params):
 
     script = params.get("guest_script")
     script_path = os.path.join(data_dir.get_deps_dir(), "spice", script)
-    guest_vm.copy_files_to(script_path, "/tmp/%s" % params.get("guest_script"),
-                           timeout=60)
+    guest_vm.copy_files_to(
+        script_path, "/tmp/%s" % params.get("guest_script"), timeout=60
+    )
 
 
 def run_test_form(guest_session, params):
@@ -97,7 +95,7 @@ def test_type_and_func_keys(client_vm, guest_session, params):
     LOG_JOB.info("Sending typewriter and functional keys to client machine")
     for i in range(1, 69):
         # Avoid Ctrl, RSH, LSH, PtScr, Alt, CpsLk
-        if (i not in [29, 42, 54, 55, 56, 58]):
+        if i not in [29, 42, 54, 55, 56, 58]:
             client_vm.send_key(str(hex(i)))
             utils_spice.wait_timeout(0.3)
 
@@ -117,12 +115,20 @@ def test_leds_and_esc_keys(client_vm, guest_session, params):
     utils_spice.wait_timeout(3)
 
     # Prepare lists with the keys to be sent to client machine
-    leds = ['a', 'caps_lock', 'a', 'caps_lock', 'num_lock', 'kp_1', 'num_lock',
-            'kp_1']
-    shortcuts = ['a', 'shift-a', 'shift_r-a', 'ctrl-a', 'ctrl-c', 'ctrl-v',
-                 'alt-x']
-    escaped = ['insert', 'delete', 'home', 'end', 'pgup', 'pgdn', 'up',
-               'down', 'right', 'left']
+    leds = ["a", "caps_lock", "a", "caps_lock", "num_lock", "kp_1", "num_lock", "kp_1"]
+    shortcuts = ["a", "shift-a", "shift_r-a", "ctrl-a", "ctrl-c", "ctrl-v", "alt-x"]
+    escaped = [
+        "insert",
+        "delete",
+        "home",
+        "end",
+        "pgup",
+        "pgdn",
+        "up",
+        "down",
+        "right",
+        "left",
+    ]
 
     test_keys = leds + shortcuts + escaped
 
@@ -150,7 +156,7 @@ def test_nonus_layout(client_vm, guest_session, params):
     # Czech layout - test some special keys
     cmd = "setxkbmap cz"
     guest_session.cmd(cmd)
-    test_keys = ['7', '8', '9', '0', 'alt_r-x', 'alt_r-c', 'alt_r-v']
+    test_keys = ["7", "8", "9", "0", "alt_r-x", "alt_r-c", "alt_r-v"]
     LOG_JOB.info("Sending czech keys to client machine")
     for key in test_keys:
         client_vm.send_key(key)
@@ -159,7 +165,7 @@ def test_nonus_layout(client_vm, guest_session, params):
     # German layout - test some special keys
     cmd = "setxkbmap de"
     guest_session.cmd(cmd)
-    test_keys = ['minus', '0x1a', 'alt_r-q', 'alt_r-m']
+    test_keys = ["minus", "0x1a", "alt_r-q", "alt_r-m"]
     LOG_JOB.info("Sending german keys to client machine")
     for key in test_keys:
         client_vm.send_key(key)
@@ -185,17 +191,17 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     grep_ver_cmd = "grep -o 'release [[:digit:]]' /etc/redhat-release"
     rhel_ver = guest_session.cmd(grep_ver_cmd).strip()
 
-    LOG_JOB.info("RHEL version: #{0}#".format(rhel_ver))
+    LOG_JOB.info("RHEL version: #%s#", rhel_ver)
 
     if rhel_ver == "release 6":
-        client_vm.send_key('num_lock')
+        client_vm.send_key("num_lock")
 
     # Run PyGTK form catching KeyEvents on guest
     run_test_form(guest_session, params)
     utils_spice.wait_timeout(3)
 
     # Tested keys before migration
-    test_keys = ['a', 'kp_1', 'caps_lock', 'num_lock', 'a', 'kp_1']
+    test_keys = ["a", "kp_1", "caps_lock", "num_lock", "a", "kp_1"]
     LOG_JOB.info("Sending leds keys to client machine before migration")
     for key in test_keys:
         client_vm.send_key(key)
@@ -205,7 +211,7 @@ def test_leds_migration(client_vm, guest_vm, guest_session, params):
     utils_spice.wait_timeout(8)
 
     # Tested keys after migration
-    test_keys = ['a', 'kp_1', 'caps_lock', 'num_lock']
+    test_keys = ["a", "kp_1", "caps_lock", "num_lock"]
     LOG_JOB.info("Sending leds keys to client machine after migration")
     for key in test_keys:
         client_vm.send_key(key)
@@ -223,29 +229,136 @@ def analyze_results(file_path, test_type):
 
     if test_type == "type_and_func_keys":
         # List of expected keycodes from guest machine
-        correct_keycodes = ['65307', '49', '50', '51', '52', '53', '54', '55',
-                            '56', '57', '48', '45', '61', '65288', '65289',
-                            '113', '119', '101', '114', '116', '121', '117',
-                            '105', '111', '112', '91', '93', '65293', '97',
-                            '115', '100', '102', '103', '104', '106', '107',
-                            '108', '59', '39', '96', '92', '122', '120', '99',
-                            '118', '98', '110', '109', '44', '46', '47', '32',
-                            '65470', '65471', '65472', '65473', '65474',
-                            '65475', '65476', '65477', '65478', '65479']
+        correct_keycodes = [
+            "65307",
+            "49",
+            "50",
+            "51",
+            "52",
+            "53",
+            "54",
+            "55",
+            "56",
+            "57",
+            "48",
+            "45",
+            "61",
+            "65288",
+            "65289",
+            "113",
+            "119",
+            "101",
+            "114",
+            "116",
+            "121",
+            "117",
+            "105",
+            "111",
+            "112",
+            "91",
+            "93",
+            "65293",
+            "97",
+            "115",
+            "100",
+            "102",
+            "103",
+            "104",
+            "106",
+            "107",
+            "108",
+            "59",
+            "39",
+            "96",
+            "92",
+            "122",
+            "120",
+            "99",
+            "118",
+            "98",
+            "110",
+            "109",
+            "44",
+            "46",
+            "47",
+            "32",
+            "65470",
+            "65471",
+            "65472",
+            "65473",
+            "65474",
+            "65475",
+            "65476",
+            "65477",
+            "65478",
+            "65479",
+        ]
     elif test_type == "leds_and_esc_keys":
-        correct_keycodes = ['97', '65509', '65', '65509', '65407', '65457',
-                            '65407', '65436', '97', '65505', '65', '65506',
-                            '65', '65507', '97', '65507', '99', '65507', '118',
-                            '65513', '120', '65379', '65535', '65360', '65367',
-                            '65365', '65366', '65362', '65364', '65363',
-                            '65361']
+        correct_keycodes = [
+            "97",
+            "65509",
+            "65",
+            "65509",
+            "65407",
+            "65457",
+            "65407",
+            "65436",
+            "97",
+            "65505",
+            "65",
+            "65506",
+            "65",
+            "65507",
+            "97",
+            "65507",
+            "99",
+            "65507",
+            "118",
+            "65513",
+            "120",
+            "65379",
+            "65535",
+            "65360",
+            "65367",
+            "65365",
+            "65366",
+            "65362",
+            "65364",
+            "65363",
+            "65361",
+        ]
     elif test_type == "nonus_layout":
-        correct_keycodes = ['253', '225', '237', '233', '65027', '35', '65027',
-                            '38', '65027', '64', '223', '252', '65027', '64',
-                            '65027', '181']
+        correct_keycodes = [
+            "253",
+            "225",
+            "237",
+            "233",
+            "65027",
+            "35",
+            "65027",
+            "38",
+            "65027",
+            "64",
+            "223",
+            "252",
+            "65027",
+            "64",
+            "65027",
+            "181",
+        ]
     elif test_type == "leds_migration":
-        correct_keycodes = ['97', '65457', '65509', '65407', '65', '65436',
-                            '65', '65436', '65509', '65407']
+        correct_keycodes = [
+            "97",
+            "65457",
+            "65509",
+            "65407",
+            "65",
+            "65436",
+            "65",
+            "65436",
+            "65509",
+            "65407",
+        ]
     else:
         raise ValueError(f"unexpected test type: {test_type}")
 
@@ -281,10 +394,13 @@ def run(test, params, env):
     client_vm.verify_alive()
 
     guest_session = guest_vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
+        timeout=int(params.get("login_timeout", 360))
+    )
     guest_root_session = guest_vm.wait_for_login(
         timeout=int(params.get("login_timeout", 360)),
-        username="root", password="123456")
+        username="root",
+        password="123456",
+    )
 
     # Verify that gnome is now running on the guest
     try:
@@ -300,15 +416,18 @@ def run(test, params, env):
 
     # Get test type and perform proper test
     test_type = params.get("config_test")
-    test_mapping = {'type_and_func_keys': test_type_and_func_keys,
-                    'leds_and_esc_keys': test_leds_and_esc_keys,
-                    'nonus_layout': test_nonus_layout,
-                    'leds_migration': test_leds_migration}
+    test_mapping = {
+        "type_and_func_keys": test_type_and_func_keys,
+        "leds_and_esc_keys": test_leds_and_esc_keys,
+        "nonus_layout": test_nonus_layout,
+        "leds_migration": test_leds_migration,
+    }
     test_parameters = {
-        'type_and_func_keys': (client_vm, guest_session, params),
-        'leds_and_esc_keys': (client_vm, guest_session, params),
-        'nonus_layout': (client_vm, guest_session, params),
-        'leds_migration': (client_vm, guest_vm, guest_session, params)}
+        "type_and_func_keys": (client_vm, guest_session, params),
+        "leds_and_esc_keys": (client_vm, guest_session, params),
+        "nonus_layout": (client_vm, guest_session, params),
+        "leds_migration": (client_vm, guest_vm, guest_session, params),
+    }
 
     try:
         func = test_mapping[test_type]
@@ -324,7 +443,6 @@ def run(test, params, env):
     # do not match with expected keycodes
     result = analyze_results(result_path, test_type)
     if result is not None:
-        test.fail("Testing of sending keys failed:"
-                  "  Expected keycode = %s" % result)
+        test.fail("Testing of sending keys failed:" "  Expected keycode = %s" % result)
 
     guest_session.close()

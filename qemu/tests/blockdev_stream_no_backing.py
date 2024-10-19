@@ -1,5 +1,4 @@
 from provider import job_utils
-
 from provider.blockdev_stream_nowait import BlockdevStreamNowaitTest
 
 
@@ -15,18 +14,18 @@ class BlockdevStreamNoBacking(BlockdevStreamNowaitTest):
         pass
 
     def verify_job_status(self):
-        tmo = self.params.get_numeric('job_completed_timeout', 30)
+        tmo = self.params.get_numeric("job_completed_timeout", 30)
 
         # check offset/len in BLOCK_JOB_COMPLETED event
-        cond = {'device': self._job}
+        cond = {"device": self._job}
         event = job_utils.get_event_by_condition(
-            self.main_vm, job_utils.BLOCK_JOB_COMPLETED_EVENT, tmo, **cond)
+            self.main_vm, job_utils.BLOCK_JOB_COMPLETED_EVENT, tmo, **cond
+        )
         if event:
-            if event['data'].get('offset') != 0 or event['data'].get('len') != 0:
-                self.test.fail('offset and len should always be 0')
+            if event["data"].get("offset") != 0 or event["data"].get("len") != 0:
+                self.test.fail("offset and len should always be 0")
         else:
-            self.test.fail('Failed to get BLOCK_JOB_COMPLETED event for %s'
-                           % self._job)
+            self.test.fail("Failed to get BLOCK_JOB_COMPLETED event for %s" % self._job)
 
     def do_test(self):
         self.blockdev_stream()

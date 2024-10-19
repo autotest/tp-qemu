@@ -2,9 +2,7 @@ import os
 import socket
 import time
 
-from avocado.utils import cpu
-from avocado.utils import process
-
+from avocado.utils import cpu, process
 from virttest import data_dir
 
 
@@ -38,8 +36,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     login_timeout = int(params.get("login_timeout", 360))
     stress_dir = data_dir.get_deps_dir("stress")
-    monitor_dir = params.get("monitor_dir",
-                             data_dir.get_deps_dir("softlockup"))
+    monitor_dir = params.get("monitor_dir", data_dir.get_deps_dir("softlockup"))
 
     def _kill_guest_programs(session, kill_stress_cmd, kill_monitor_cmd):
         test.log.info("Kill stress and monitor on guest")
@@ -71,7 +68,8 @@ def run(test, params, env):
         process.run(
             server_setup_cmd
             % (monitor_dir, threshold, monitor_log_file_server, monitor_port),
-            shell=True)
+            shell=True,
+        )
 
         if stress_setup_cmd is not None:
             test.log.info("Build stress on host")
@@ -82,7 +80,11 @@ def run(test, params, env):
         # stress_threads = 2 * n_cpus
         threads_host = 2 * cpu.online_count()
         # Run stress test on host
-        process.run(stress_cmd % (stress_dir, threads_host), ignore_bg_processes=True, shell=True)
+        process.run(
+            stress_cmd % (stress_dir, threads_host),
+            ignore_bg_processes=True,
+            shell=True,
+        )
 
     def guest():
         try:
@@ -114,14 +116,17 @@ def run(test, params, env):
             pass
 
         # Get monitor files and copy them from host to guest
-        monitor_path = os.path.join(data_dir.get_deps_dir(), 'softlockup',
-                                    'heartbeat_slu.py')
+        monitor_path = os.path.join(
+            data_dir.get_deps_dir(), "softlockup", "heartbeat_slu.py"
+        )
         vm.copy_files_to(monitor_path, "/tmp")
 
         test.log.info("Setup monitor client on guest")
         # Start heartbeat on guest
-        session.cmd(params.get("client_setup_cmd") %
-                    ("/tmp", host_ip, monitor_log_file_client, monitor_port))
+        session.cmd(
+            params.get("client_setup_cmd")
+            % ("/tmp", host_ip, monitor_log_file_client, monitor_port)
+        )
 
         if stress_setup_cmd is not None:
             # Copy, uncompress and build stress on guest
@@ -146,8 +151,7 @@ def run(test, params, env):
         _kill_host_programs(kill_stress_cmd, kill_monitor_cmd)
 
         # Collect drift
-        drift = process.system_output(drift_cmd % monitor_log_file_server,
-                                      shell=True)
+        drift = process.system_output(drift_cmd % monitor_log_file_server, shell=True)
         test.log.info("Drift noticed: %s", drift)
 
     host()

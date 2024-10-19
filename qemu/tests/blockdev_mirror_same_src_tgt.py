@@ -18,15 +18,15 @@ class BlockdevMirrorSameSrcTgt(BlockdevMirrorBaseTest):
 
     def blockdev_mirror(self):
         try:
-            cmd, args = blockdev_mirror_qmp_cmd(self._source_nodes[0],
-                                                self._source_nodes[0],
-                                                **self._backup_options[0])
+            cmd, args = blockdev_mirror_qmp_cmd(
+                self._source_nodes[0], self._source_nodes[0], **self._backup_options[0]
+            )
             self.main_vm.monitor.cmd(cmd, args)
         except QMPCmdError as e:
-            if self.params['error_msg'] not in str(e):
-                self.test.fail('Unexpected error: %s' % str(e))
+            if self.params["error_msg"] not in str(e):
+                self.test.fail("Unexpected error: %s" % str(e))
         else:
-            self.test.fail('Unexpectedly succeeded')
+            self.test.fail("Unexpectedly succeeded")
 
     def do_test(self):
         self.blockdev_mirror()

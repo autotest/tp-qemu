@@ -1,10 +1,8 @@
-from provider import job_utils
-from provider import backup_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitFilter(BlockDevCommitTest):
-
     def commit_snapshots(self):
         device = self.params.get("device_tag")
         device_params = self.params.object_params(device)
@@ -23,15 +21,17 @@ class BlockdevCommitFilter(BlockDevCommitTest):
         job_id = args.get("job-id", device)
         block_info = self.main_vm.monitor.info_block()
         if filter_node_name not in block_info:
-            self.test.fail("Block info not correct,node-name should be '%s'"
-                           % filter_node_name)
-        self.main_vm.monitor.cmd("block-job-set-speed",
-                                 {'device': job_id, 'speed': 0})
+            self.test.fail(
+                "Block info not correct,node-name should be '%s'" % filter_node_name
+            )
+        self.main_vm.monitor.cmd("block-job-set-speed", {"device": job_id, "speed": 0})
         job_utils.wait_until_block_job_completed(self.main_vm, job_id)
         block_info = self.main_vm.monitor.info_block()
         if filter_node_name in block_info:
-            self.test.fail("Block info not correct,node-name should not"
-                           "be '%s'" % filter_node_name)
+            self.test.fail(
+                "Block info not correct,node-name should not"
+                "be '%s'" % filter_node_name
+            )
 
 
 def run(test, params, env):

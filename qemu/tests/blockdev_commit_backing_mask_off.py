@@ -1,9 +1,8 @@
-from provider.blockdev_commit_base import BlockDevCommitTest
 from provider import backup_utils
+from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockDevCommitBackingMaskOff(BlockDevCommitTest):
-
     def commit_snapshots(self):
         self.base_device = self.params["device_tag"].split()[0]
         device_params = self.params.object_params(self.base_device)
@@ -18,15 +17,16 @@ class BlockDevCommitBackingMaskOff(BlockDevCommitTest):
         backup_utils.block_commit(self.main_vm, device, **arguments)
 
     def check_backing_format(self):
-        base_fmt_node = self.main_vm.devices.get_by_qid(
-                self.device_node)[0]
+        base_fmt_node = self.main_vm.devices.get_by_qid(self.device_node)[0]
         base_format = base_fmt_node.get_param("driver")
         output = self.snapshot_images[-1].info(force_share=True).split("\n")
         for item in output:
             if "backing file format" in item:
                 if base_format not in item:
-                    self.test.fail("Expected format: %s, current format: %s"
-                                   % (item.split(":")[1], base_format))
+                    self.test.fail(
+                        "Expected format: %s, current format: %s"
+                        % (item.split(":")[1], base_format)
+                    )
 
     def run_test(self):
         self.pre_test()

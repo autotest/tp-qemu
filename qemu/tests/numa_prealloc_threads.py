@@ -1,11 +1,8 @@
 import re
 
-from avocado.utils import cpu
-
-from virttest import env_process
-from virttest import error_context
+from avocado.utils import cpu, process
+from virttest import env_process, error_context
 from virttest.qemu_monitor import QMPCmdError
-from avocado.utils import process
 
 
 def check_affinity(affinity, cmd_taskset, stage, test):
@@ -16,11 +13,14 @@ def check_affinity(affinity, cmd_taskset, stage, test):
     :param test: QEMU test object
     """
     output = process.getoutput(cmd_taskset)
-    actual_affinity = re.search("%s affinity list: (%s)" % (stage, affinity),
-                                output).group(1)
+    actual_affinity = re.search(
+        "%s affinity list: (%s)" % (stage, affinity), output
+    ).group(1)
     if actual_affinity != affinity:
-        test.fail("Expect %s cpu affinity '%s', but get '%s'"
-                  % (stage, affinity, actual_affinity))
+        test.fail(
+            "Expect %s cpu affinity '%s', but get '%s'"
+            % (stage, affinity, actual_affinity)
+        )
 
 
 def convert_affinity(affinity):
@@ -29,7 +29,7 @@ def convert_affinity(affinity):
     and qemu-kvm command line style (ex: 1-3)
     """
     if isinstance(affinity, str):
-        start, end = affinity.split('-')
+        start, end = affinity.split("-")
         output = list(range(int(start), int(end) + 1))
     elif isinstance(affinity, list):
         if len(affinity) == 1:
@@ -62,10 +62,11 @@ def run(test, params, env):
     host_cpus = int(cpu.online_count())
     smp_fixed = params.get_numeric("smp_fixed")
     if host_cpus < smp_fixed:
-        test.cancel("The host only has %d CPUs, it needs at least %d!"
-                    % (host_cpus, smp_fixed))
+        test.cancel(
+            "The host only has %d CPUs, it needs at least %d!" % (host_cpus, smp_fixed)
+        )
 
-    params['not_preprocess'] = "no"
+    params["not_preprocess"] = "no"
     first_cpu_affinity = params.get("first_cpu-affinity")
     second_cpu_affinity = params.get("second_cpu-affinity")
     operation_type = params.get("operation")
@@ -88,8 +89,9 @@ def run(test, params, env):
     qemu_cpu_affinity = thread_context_device.get_param("cpu-affinity", "0")
     cpu_affinity = vm.monitor.qom_get(thread_context_device_id, "cpu-affinity")
     affinity = convert_affinity(cpu_affinity)
-    test.log.debug("The affinity: %s and the qemu_cpu_affinity: %s"
-                   % (affinity, qemu_cpu_affinity))
+    test.log.debug(
+        "The affinity: %s and the qemu_cpu_affinity: %s", affinity, qemu_cpu_affinity
+    )
     if qemu_cpu_affinity != affinity:
         test.fail("Test and QEMU cpu-affinity does not match!")
 
@@ -98,19 +100,24 @@ def run(test, params, env):
 
     sandbox = params.get("qemu_sandbox", "on")
 
-    error_context.base_context("Setting cpu-affinity: %s" % first_cpu_affinity,
-                               test.log.info)
+    error_context.base_context(
+        "Setting cpu-affinity: %s" % first_cpu_affinity, test.log.info
+    )
     try:
-        vm.monitor.qom_set(thread_context_device_id,
-                           "cpu-affinity",
-                           convert_affinity(first_cpu_affinity))
+        vm.monitor.qom_set(
+            thread_context_device_id,
+            "cpu-affinity",
+            convert_affinity(first_cpu_affinity),
+        )
     except QMPCmdError as e:
         if sandbox == "off":
-            test.fail("Set cpu-affinity '%s' failed as: %s"
-                      % (first_cpu_affinity, str(e.data)))
+            test.fail(
+                "Set cpu-affinity '%s' failed as: %s"
+                % (first_cpu_affinity, str(e.data))
+            )
         if not re.search(error_msg, str(e.data)):
             test.fail("Cannot get expected error message: %s" % error_msg)
-        test.log.debug("Get the expected error message: %s" % error_msg)
+        test.log.debug("Get the expected error message: %s", error_msg)
     else:
         if sandbox == "on":
             test.fail("Set cpu-affinity should fail when sandbox=on")
@@ -118,14 +125,13 @@ def run(test, params, env):
     check_affinity(affinity, cmd_taskset, "current", test)
 
     if operation_type != "boot_cpu_affinity":
-        error_context.base_context("Set externally a new CPU affinity",
-                                   test.log.info)
-        cmd_taskset = "taskset -c -p %s %s" % (second_cpu_affinity,
-                                               str(thread_id))
+        error_context.base_context("Set externally a new CPU affinity", test.log.info)
+        cmd_taskset = "taskset -c -p %s %s" % (second_cpu_affinity, str(thread_id))
         error_context.context("Verify the new cpu-affinity", test.log.info)
         check_affinity(second_cpu_affinity, cmd_taskset, "new", test)
 
-        error_context.context("Checking QEMU main thread remains untouched",
-                              test.log.info)
+        error_context.context(
+            "Checking QEMU main thread remains untouched", test.log.info
+        )
         cmd_taskset = "taskset -c -p %s" % vm.get_pid()
         check_affinity(qemu_cpu_affinity, cmd_taskset, "current", test)

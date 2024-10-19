@@ -1,7 +1,6 @@
 import re
 
-from virttest import utils_net
-from virttest import error_context
+from virttest import error_context, utils_net
 
 
 @error_context.context_aware
@@ -22,9 +21,8 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_serial_login(timeout=login_timeout)
-    ifname = utils_net.get_linux_ifname(session,
-                                        vm.get_mac_address())
-    pattern = int(re.findall(r'\d+', ifname)[-1])
+    ifname = utils_net.get_linux_ifname(session, vm.get_mac_address())
+    pattern = int(re.findall(r"\d+", ifname)[-1])
     nic_name_number = params.get_numeric("nic_name_number")
     if pattern == nic_name_number:
         test.log.info("nic name match")

@@ -1,5 +1,4 @@
-from virttest import utils_sriov
-from virttest import error_context
+from virttest import error_context, utils_sriov
 
 
 @error_context.context_aware
@@ -24,7 +23,9 @@ def run(test, params, env):
     nic_pci = session.cmd_output(pci_id).strip()
     check_vf_num = params.get("get_vf_num")
     sriov_numvfs = int(session.cmd_output(check_vf_num % nic_pci))
-    utils_sriov.set_vf(f'/sys/bus/pci/devices/{nic_pci}', vf_no=sriov_numvfs, session=session)
+    utils_sriov.set_vf(
+        f"/sys/bus/pci/devices/{nic_pci}", vf_no=sriov_numvfs, session=session
+    )
     session = vm.reboot(session, params["reboot_method"])
     error_context.context("Guest works well after create vf then reboot", test.log.info)
     session.close()

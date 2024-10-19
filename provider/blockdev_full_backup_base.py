@@ -2,11 +2,10 @@ from provider.blockdev_backup_base import BlockdevBackupBaseTest
 
 
 class BlockdevFullBackupBaseTest(BlockdevBackupBaseTest):
-
     def get_backup_options(self, params):
-        extra_options = super(
-            BlockdevFullBackupBaseTest,
-            self).get_backup_options(params)
+        extra_options = super(BlockdevFullBackupBaseTest, self).get_backup_options(
+            params
+        )
         extra_options["sync"] = "full"
         return extra_options
 

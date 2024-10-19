@@ -9,35 +9,39 @@ class BlockdevIncbkAddPersistentBitmapVMPaused(BlockdevLiveBackupBaseTest):
 
     def __init__(self, test, params, env):
         super(BlockdevIncbkAddPersistentBitmapVMPaused, self).__init__(
-            test, params, env)
+            test, params, env
+        )
         self._data_image_obj = self.source_disk_define_by_params(
-            self.params, self._source_images[0])
+            self.params, self._source_images[0]
+        )
 
     def prepare_test(self):
         self.prepare_main_vm()
 
     def add_persistent_bitmap(self):
-        kargs = {'bitmap_name': self._bitmaps[0],
-                 'target_device': self._source_nodes[0],
-                 'persistent': 'on'}
+        kargs = {
+            "bitmap_name": self._bitmaps[0],
+            "target_device": self._source_nodes[0],
+            "persistent": "on",
+        }
         block_dirty_bitmap_add(self.main_vm, kargs)
 
     def _get_image_bitmap_info(self):
         try:
-            out = json.loads(self._data_image_obj.info(True, 'json'))
-            return out['format-specific']['data']['bitmaps'][0]
+            out = json.loads(self._data_image_obj.info(True, "json"))
+            return out["format-specific"]["data"]["bitmaps"][0]
         except Exception as e:
-            self.test.fail('Failed to get bitmap info: %s' % str(e))
+            self.test.fail("Failed to get bitmap info: %s" % str(e))
 
     def check_image_bitmap_existed(self):
         bitmap = self._get_image_bitmap_info()
-        if bitmap['name'] != self._bitmaps[0]:
-            self.test.fail('Persistent bitmap should exist in image')
+        if bitmap["name"] != self._bitmaps[0]:
+            self.test.fail("Persistent bitmap should exist in image")
 
     def check_image_bitmap_in_use(self):
         bitmap = self._get_image_bitmap_info()
-        if 'in-use' not in bitmap['flags']:
-            self.test.fail('Failed to check bitmap in-use flag')
+        if "in-use" not in bitmap["flags"]:
+            self.test.fail("Failed to check bitmap in-use flag")
 
     def do_test(self):
         self.main_vm.pause()

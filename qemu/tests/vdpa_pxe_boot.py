@@ -19,7 +19,7 @@ def run(test, params, env):
     error_context.context("Try to boot from vdpa NIC", test.log.info)
     vm = env.get_vm(params["main_vm"])
     timeout = params.get_numeric("pxe_timeout")
-    test.log.info("Waiting %ss" % timeout)
+    test.log.info("Waiting %ss", timeout)
     time.sleep(timeout)
     vm.verify_status("running")
     match_str = params["match_string"]

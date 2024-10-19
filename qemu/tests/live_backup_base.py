@@ -1,20 +1,17 @@
+import logging
 import re
 import time
-import logging
 
 from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import qemu_storage
+from virttest import qemu_storage, utils_misc
 from virttest.staging import utils_memory
 
 from qemu.tests import block_copy
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class LiveBackup(block_copy.BlockCopy):
-
     """
     Provide basic functions for live backup test cases.
     """
@@ -60,8 +57,7 @@ class LiveBackup(block_copy.BlockCopy):
         backup_image = self.image_chain[self.backup_index]
         backup_params = self.params.object_params(backup_image)
         backup_params["base_format"] = self.params.get("format")
-        qemu_image = qemu_storage.QemuImg(backup_params,
-                                          self.data_dir, backup_image)
+        qemu_image = qemu_storage.QemuImg(backup_params, self.data_dir, backup_image)
         LOG_JOB.info("create backup image for %s", backup_image)
         backup_image_name, _ = qemu_image.create(backup_params)
         self.backup_index += 1
@@ -81,38 +77,45 @@ class LiveBackup(block_copy.BlockCopy):
         if sync == "full":
             mode = "absolute-paths"
             granularity = int(self.params.get("granularity", 65536))
-            backup_image_name = "images/%s.%s" % (self.image_chain[0],
-                                                  backup_format)
+            backup_image_name = "images/%s.%s" % (self.image_chain[0], backup_format)
             backup_image_name = utils_misc.get_path(self.data_dir, backup_image_name)
             self.trash_files.append(backup_image_name)
             if transaction == "yes":
                 args_list = []
-                bitmap_args = {"node": drive_name,
-                               "name": bitmap_name,
-                               "granularity": granularity}
-                self.transaction_add(args_list, "block-dirty-bitmap-add",
-                                     bitmap_args)
-                backup_args = {"device": drive_name,
-                               "target": backup_image_name,
-                               "format": backup_format,
-                               "sync": sync,
-                               "mode": mode,
-                               "speed": speed}
+                bitmap_args = {
+                    "node": drive_name,
+                    "name": bitmap_name,
+                    "granularity": granularity,
+                }
+                self.transaction_add(args_list, "block-dirty-bitmap-add", bitmap_args)
+                backup_args = {
+                    "device": drive_name,
+                    "target": backup_image_name,
+                    "format": backup_format,
+                    "sync": sync,
+                    "mode": mode,
+                    "speed": speed,
+                }
                 self.transaction_add(args_list, "drive-backup", backup_args)
-                LOG_JOB.info("Create bitmap and drive-backup with transaction "
-                             "for %s", drive_name)
+                LOG_JOB.info(
+                    "Create bitmap and drive-backup with transaction " "for %s",
+                    drive_name,
+                )
                 self.vm.monitor.transaction(args_list)
                 if not self.get_status():
                     self.test.fail("full backup job not found")
                 return None
 
             LOG_JOB.info("Create bitmap for %s", drive_name)
-            self.vm.monitor.operate_dirty_bitmap("add", drive_name, bitmap_name, granularity)
+            self.vm.monitor.operate_dirty_bitmap(
+                "add", drive_name, bitmap_name, granularity
+            )
         if not backup_image_name:
             self.test.error("No backup target provided.")
         LOG_JOB.info("Create %s backup for %s", sync, drive_name)
-        self.vm.monitor.drive_backup(drive_name, backup_image_name, backup_format,
-                                     sync, speed, mode, bitmap_name)
+        self.vm.monitor.drive_backup(
+            drive_name, backup_image_name, backup_format, sync, speed, mode, bitmap_name
+        )
         if not self.get_status():
             self.test.fail("%s backup job not found" % sync)
         utils_memory.drop_caches()
@@ -157,7 +160,8 @@ class LiveBackup(block_copy.BlockCopy):
         qemu_image = qemu_storage.QemuImg(params, self.data_dir, image)
         if self.vm:
             pids = process.getoutput(
-                "lsof %s |grep -v PID|awk '{print $2}'" % qemu_image.image_filename)
+                "lsof %s |grep -v PID|awk '{print $2}'" % qemu_image.image_filename
+            )
             force_share = str(self.vm.get_pid()) in pids
             if force_share and not self.vm.is_paused():
                 self.vm.pause()
@@ -177,8 +181,7 @@ class LiveBackup(block_copy.BlockCopy):
         Closing the vm and reboot it with the backup image.
         """
         image_chain = self.image_chain
-        image_name = self.params.get("image_name_%s" %
-                                     image_chain[-1])
+        image_name = self.params.get("image_name_%s" % image_chain[-1])
         super(LiveBackup, self).reopen(image_name)
 
     def before_full_backup(self):
@@ -228,8 +231,9 @@ class LiveBackup(block_copy.BlockCopy):
                 value = info.get(check_param, "")
             if str(value) != target_value:
                 self.test.fail(
-                    "%s unmatched. Target is %s, result is %s" %
-                    (check_param, target_value, value))
+                    "%s unmatched. Target is %s, result is %s"
+                    % (check_param, target_value, value)
+                )
 
     def create_files(self):
         """
@@ -250,15 +254,17 @@ class LiveBackup(block_copy.BlockCopy):
         Verify time and space efficiency for incremental backup.
         """
         if not self.incremental_backup_time < self.full_backup_time:
-            self.test.fail("incremental backup time %s, "
-                           "larger than full backup time %s " %
-                           (self.incremental_backup_time,
-                            self.full_backup_time))
+            self.test.fail(
+                "incremental backup time %s, "
+                "larger than full backup time %s "
+                % (self.incremental_backup_time, self.full_backup_time)
+            )
         LOG_JOB.info("Incremental backup time efficiency check passed.")
         full_size = self.get_image_size(self.image_chain[0])
         incre_size = self.get_image_size(self.image_chain[1])
         if incre_size > full_size:
-            self.test.fail("incremental backup image size %s, "
-                           "larger than full backup image size %s " %
-                           (incre_size, full_size))
+            self.test.fail(
+                "incremental backup image size %s, "
+                "larger than full backup image size %s " % (incre_size, full_size)
+            )
         LOG_JOB.info("Incremental backup space efficiency check passed.")

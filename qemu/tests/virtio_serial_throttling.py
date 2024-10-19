@@ -1,4 +1,4 @@
-from virttest import error_context, env_process
+from virttest import env_process, error_context
 from virttest.utils_virtio_port import VirtioPortTest
 
 
@@ -21,11 +21,11 @@ def run(test, params, env):
         session = vm.wait_for_login()
         port.open()
         error_context.context("send data from guest to host", test.log.info)
-        if params['os_type'] == 'windows':
-            vport_name = '\\\\.\\Global\\' + port.name
-            cmd = 'dd if=/dev/zero of=%s bs=1024 count=1' % vport_name
+        if params["os_type"] == "windows":
+            vport_name = "\\\\.\\Global\\" + port.name
+            cmd = "dd if=/dev/zero of=%s bs=1024 count=1" % vport_name
         else:
-            cmd = 'dd if=/dev/zero of=/dev/virtio-ports/%s bs=1024 count=1' % port.name
+            cmd = "dd if=/dev/zero of=/dev/virtio-ports/%s bs=1024 count=1" % port.name
         session.cmd(cmd)
         session.close()
 
@@ -33,12 +33,12 @@ def run(test, params, env):
     def send_data_from_host_to_guest():
         port.open()
         error_context.context("send data from host to guest", test.log.info)
-        data = 'Hello world \n' * 100
+        data = "Hello world \n" * 100
         data = data.encode()
         port.sock.send(data)
         guest_worker.cmd("virt.open('%s')" % port.name)
 
-    serial_id = params.objects('serials')[-1]
+    serial_id = params.objects("serials")[-1]
     try:
         virtio_test = VirtioPortTest(test, env, params)
         (vm, guest_worker, port) = virtio_test.get_vm_with_single_port()
@@ -49,8 +49,8 @@ def run(test, params, env):
     finally:
         virtio_test.cleanup()
     vm.destroy()
-    params['chardev_backend_%s' % serial_id] = 'tcp_socket'
-    vm_name = params['main_vm']
+    params["chardev_backend_%s" % serial_id] = "tcp_socket"
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
     try:
         virtio_test = VirtioPortTest(test, env, params)

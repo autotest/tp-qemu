@@ -1,7 +1,6 @@
 import time
 
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
 
 
 @error_context.context_aware
@@ -22,8 +21,7 @@ def run(test, params, env):
     serial_login = params.get("serial_login", "no") == "yes"
     vms = env.get_all_vms()
     for vm in vms:
-        error_context.context("Try to log into guest '%s'." % vm.name,
-                              test.log.info)
+        error_context.context("Try to log into guest '%s'." % vm.name, test.log.info)
         if serial_login:
             session = vm.wait_for_serial_login(timeout=timeout)
         else:
@@ -40,8 +38,7 @@ def run(test, params, env):
             session.close()
     if params.get("reboot_method"):
         for vm in vms:
-            error_context.context("Reboot guest '%s'." % vm.name,
-                                  test.log.info)
+            error_context.context("Reboot guest '%s'." % vm.name, test.log.info)
             if params["reboot_method"] == "system_reset":
                 time.sleep(int(params.get("sleep_before_reset", 10)))
             # Reboot the VM
@@ -50,9 +47,7 @@ def run(test, params, env):
             else:
                 session = vm.wait_for_login(timeout=timeout)
             for i in range(int(params.get("reboot_count", 1))):
-                session = vm.reboot(session,
-                                    params["reboot_method"],
-                                    0,
-                                    timeout,
-                                    serial_login)
+                session = vm.reboot(
+                    session, params["reboot_method"], 0, timeout, serial_login
+                )
             session.close()

@@ -1,7 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import env_process
+from virttest import env_process, error_context
 
 
 @error_context.context_aware
@@ -38,16 +37,18 @@ def run(test, params, env):
             extra_params = orig_extra_params
             for index, value in enumerate(properties):
                 if value != default_value[index]:
-                    extra_params += ",%s=%s" % (options[index],
-                                                option_add[index])
+                    extra_params += ",%s=%s" % (options[index], option_add[index])
             params[dev_param_name] = extra_params.lstrip(",")
         else:
             properties = default_value
 
-        error_context.context("Boot up guest with properites: %s value as: %s"
-                              % (str(options), properties), test.log.info)
+        error_context.context(
+            "Boot up guest with properites: %s value as: %s"
+            % (str(options), properties),
+            test.log.info,
+        )
         vm_name = params["main_vm"]
-        params["start_vm"] = 'yes'
+        params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, vm_name)
 
         vm = env.get_vm(vm_name)
@@ -72,11 +73,16 @@ def run(test, params, env):
 
             test.log.info("Properity bit in qtree is right for %s.", option)
             if params.get("check_in_guest", "yes") == "yes":
-                if params.get('machine_type').startswith("s390"):
-                    id_pattern = \
-                        ccw_id_pattern + re.findall(
-                            'dev:virtio-scsi-ccw.*\n''.*\n.*\n.*\ndev_id=\"'
-                            'fe.0.(.*?)\"', qtree_info.replace(' ', ''))[0]
+                if params.get("machine_type").startswith("s390"):
+                    id_pattern = (
+                        ccw_id_pattern
+                        + re.findall(
+                            "dev:virtio-scsi-ccw.*\n"
+                            '.*\n.*\n.*\ndev_id="'
+                            'fe.0.(.*?)"',
+                            qtree_info.replace(" ", ""),
+                        )[0]
+                    )
                     ccw_info = session.cmd_output("lscss")
                     ccw_n = re.findall(id_pattern, ccw_info)
                     if not ccw_n:
@@ -96,9 +102,7 @@ def run(test, params, env):
                     msg = "bit string in guest: %s" % bitstr
                     msg += "expect bit string: %s" % properties[index]
                     test.log.debug(msg)
-                    test.fail("Properity bit for %s is wrong"
-                              " inside guest." % option)
-            test.log.info("Properity bit in qtree is right for %s"
-                          " in guest.", option)
+                    test.fail("Properity bit for %s is wrong" " inside guest." % option)
+            test.log.info("Properity bit in qtree is right for %s" " in guest.", option)
         session.close()
         vm.destroy()

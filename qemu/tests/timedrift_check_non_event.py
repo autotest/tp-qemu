@@ -2,7 +2,6 @@ import re
 import time
 
 from avocado.utils import process
-
 from virttest import error_context
 
 
@@ -22,25 +21,26 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+
     def get_hwtime(session):
         """
         Get guest's hardware clock in epoch.
 
         :param session: VM session.
         """
-        hwclock_time_command = params.get("hwclock_time_command",
-                                          "hwclock -u")
-        hwclock_time_filter_re = params.get("hwclock_time_filter_re",
-                                            r"(\d+-\d+-\d+ \d+:\d+:\d+).*")
-        hwclock_time_format = params.get("hwclock_time_format",
-                                         "%Y-%m-%d %H:%M:%S")
+        hwclock_time_command = params.get("hwclock_time_command", "hwclock -u")
+        hwclock_time_filter_re = params.get(
+            "hwclock_time_filter_re", r"(\d+-\d+-\d+ \d+:\d+:\d+).*"
+        )
+        hwclock_time_format = params.get("hwclock_time_format", "%Y-%m-%d %H:%M:%S")
         output = session.cmd_output_safe(hwclock_time_command)
         try:
             str_time = re.findall(hwclock_time_filter_re, output)[0]
             guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
         except Exception as err:
             test.log.debug(
-                "(time_format, output): (%s, %s)", hwclock_time_format, output)
+                "(time_format, output): (%s, %s)", hwclock_time_format, output
+            )
             raise err
         return guest_time
 
@@ -71,15 +71,17 @@ def run(test, params, env):
 
     qom_gap = int(qom_st2["tm_hour"]) - int(qom_st1["tm_hour"])
     if (qom_gap < 1) or (qom_gap > 2):
-        test.fail("Unexpected offset in qom-get, "
-                  "qom-get result before change guest's RTC time: %s, "
-                  "qom-get result after change guest's RTC time: %s"
-                  % (qom_st1, qom_st2))
+        test.fail(
+            "Unexpected offset in qom-get, "
+            "qom-get result before change guest's RTC time: %s, "
+            "qom-get result after change guest's RTC time: %s" % (qom_st1, qom_st2)
+        )
 
     error_context.context("Verify guest hardware time", test.log.info)
     hwclock_st2 = get_hwtime(session)
     test.log.debug("hwclock: guest time=%ss", hwclock_st2)
     session.close()
     if (hwclock_st1 - hwclock_st2 - float(time_forward)) > float(drift_threshold):
-        test.fail("Unexpected hwclock drift, "
-                  "hwclock: current guest time=%ss" % hwclock_st2)
+        test.fail(
+            "Unexpected hwclock drift, " "hwclock: current guest time=%ss" % hwclock_st2
+        )

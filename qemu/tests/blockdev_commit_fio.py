@@ -1,12 +1,11 @@
-import time
 import random
+import time
 
 from virttest import utils_test
 
-from provider import job_utils
-from provider import backup_utils
-from provider.storage_benchmark import generate_instance
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
+from provider.storage_benchmark import generate_instance
 
 
 class BlockdevCommitFio(BlockDevCommitTest):
@@ -14,7 +13,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
         fio_options = self.params.get("fio_options")
         if fio_options:
             self.test.log.info("Start to run fio")
-            self.fio = generate_instance(self.params, self.main_vm, 'fio')
+            self.fio = generate_instance(self.params, self.main_vm, "fio")
             fio_run_timeout = self.params.get_numeric("fio_timeout", 2400)
             self.fio.run(fio_options, fio_run_timeout)
 
@@ -30,9 +29,7 @@ class BlockdevCommitFio(BlockDevCommitTest):
             job_id = args.get("job-id", device)
             self.main_vm.monitor.cmd(cmd, args)
             job_timeout = self.params.get_numeric("commit_job_timeout", 1800)
-            job_utils.wait_until_block_job_completed(self.main_vm,
-                                                     job_id,
-                                                     job_timeout)
+            job_utils.wait_until_block_job_completed(self.main_vm, job_id, job_timeout)
 
     def run_test(self):
         self.pre_test()

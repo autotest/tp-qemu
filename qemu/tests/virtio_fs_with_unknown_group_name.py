@@ -1,11 +1,9 @@
 import os
-import shutil
 import re
+import shutil
 
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context
 
 
 @error_context.context_aware
@@ -23,8 +21,8 @@ def run(test, params, env):
     result_pattern = params.get("result_pattern", "unable to find group")
 
     # set fs daemon path
-    fs_source = params.get('fs_source_dir')
-    base_dir = params.get('fs_source_base_dir', data_dir.get_data_dir())
+    fs_source = params.get("fs_source_dir")
+    base_dir = params.get("fs_source_base_dir", data_dir.get_data_dir())
 
     if not os.path.isabs(fs_source):
         fs_source = os.path.join(base_dir, fs_source)
@@ -33,22 +31,30 @@ def run(test, params, env):
     test.log.info("Create filesystem source %s.", fs_source)
     os.makedirs(fs_source)
     try:
-        sock_path = os.path.join(data_dir.get_tmp_dir(),
-                                 '-'.join(('avocado-vt-vm1', 'viofs', 'virtiofsd.sock')))
+        sock_path = os.path.join(
+            data_dir.get_tmp_dir(),
+            "-".join(("avocado-vt-vm1", "viofs", "virtiofsd.sock")),
+        )
         # run daemon
-        process.system(params.get('cmd_create_fs_source'), shell=True)
-        cmd_run_virtiofsd = params.get('cmd_run_virtiofsd') % sock_path
-        cmd_run_virtiofsd += ' -o source=%s' % fs_source
-        cmd_run_virtiofsd += params.get('fs_binary_extra_options')
+        process.system(params.get("cmd_create_fs_source"), shell=True)
+        cmd_run_virtiofsd = params.get("cmd_run_virtiofsd") % sock_path
+        cmd_run_virtiofsd += " -o source=%s" % fs_source
+        cmd_run_virtiofsd += params.get("fs_binary_extra_options")
 
-        error_context.context('Running daemon command %s.' % cmd_run_virtiofsd, test.log.info)
-        output = process.system_output(cmd_run_virtiofsd,
-                                       ignore_status=True,
-                                       shell=True).strip().decode()
+        error_context.context(
+            "Running daemon command %s." % cmd_run_virtiofsd, test.log.info
+        )
+        output = (
+            process.system_output(cmd_run_virtiofsd, ignore_status=True, shell=True)
+            .strip()
+            .decode()
+        )
 
         match = re.search(result_pattern, output, re.I | re.M)
         if match:
-            test.fail("Virtiofsd started with an unknown socket group name which isn't expected,"
-                      " the output is %s" % output)
+            test.fail(
+                "Virtiofsd started with an unknown socket group name which isn't "
+                "expected, output is %s" % output
+            )
     finally:
         os.removedirs(fs_source)

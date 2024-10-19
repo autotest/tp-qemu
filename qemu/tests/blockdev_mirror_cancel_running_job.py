@@ -8,19 +8,21 @@ class BlockdevMirrorCancelRunningJob(BlockdevMirrorNowaitTest):
     """
 
     def cancel_job(self):
-        self.main_vm.monitor.cmd("block-job-cancel", {'device': self._jobs[0]})
+        self.main_vm.monitor.cmd("block-job-cancel", {"device": self._jobs[0]})
         event = get_event_by_condition(
-            self.main_vm, 'BLOCK_JOB_CANCELLED',
-            self.params.get_numeric('job_cancelled_timeout', 60),
-            device=self._jobs[0]
+            self.main_vm,
+            "BLOCK_JOB_CANCELLED",
+            self.params.get_numeric("job_cancelled_timeout", 60),
+            device=self._jobs[0],
         )
         if event is None:
-            self.test.fail('Job failed to cancel')
+            self.test.fail("Job failed to cancel")
 
     def do_test(self):
         self.blockdev_mirror()
         self.check_block_jobs_started(
-            self._jobs, self.params.get_numeric('job_started_timeout', 10))
+            self._jobs, self.params.get_numeric("job_started_timeout", 10)
+        )
         self.cancel_job()
 
 

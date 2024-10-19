@@ -1,16 +1,14 @@
 import logging
 
-from virttest import error_context
-from virttest import guest_agent
+from virttest import error_context, guest_agent
 
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 from qemu.tests.qemu_guest_agent import QemuGuestAgentTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class SuspendViaGA(GuestSuspendBaseTest):
-
     guest_agent = None
     suspend_mode = ""
 
@@ -25,7 +23,6 @@ class SuspendViaGA(GuestSuspendBaseTest):
 
 
 class QemuGASuspendTest(QemuGuestAgentTest):
-
     """
     Test qemu guest agent, this case will:
     1) Start VM with virtio serial port.

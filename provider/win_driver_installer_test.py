@@ -1,51 +1,60 @@
 import logging
+import os
 import random
 import re
 import time
-import os
 
 from avocado.utils import process
+from virttest import error_context, utils_disk, utils_misc, utils_net
 
-from virttest import utils_net
-from virttest import error_context
-from virttest import utils_disk
-from virttest import utils_misc
-
-from provider import win_driver_utils
-from provider import virtio_fs_utils
+from provider import virtio_fs_utils, win_driver_utils
 from provider.storage_benchmark import generate_instance
 from qemu.tests.virtio_serial_file_transfer import transfer_data
-from provider.vioinput_basic import key_tap_test as vioinput_test  # pylint: disable=W0611
 
-LOG_JOB = logging.getLogger('avocado.test')
-
-
-driver_name_list = ['balloon', 'viostor', 'vioscsi',
-                    'viorng', 'viofs', 'vioser',
-                    'pvpanic', 'netkvm', 'vioinput',
-                    'fwcfg']
-
-device_hwid_list = ['"PCI\\VEN_1AF4&DEV_1002" "PCI\\VEN_1AF4&DEV_1045"',
-                    '"PCI\\VEN_1AF4&DEV_1001" "PCI\\VEN_1AF4&DEV_1042"',
-                    '"PCI\\VEN_1AF4&DEV_1004" "PCI\\VEN_1AF4&DEV_1048"',
-                    '"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
-                    '"PCI\\VEN_1AF4&DEV_105A"',
-                    '"PCI\\VEN_1AF4&DEV_1003" "PCI\\VEN_1AF4&DEV_1043"',
-                    '"ACPI\\QEMU0001"',
-                    '"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&DEV_1041"',
-                    '"PCI\\VEN_1AF4&DEV_1052"',
-                    '"ACPI\\VEN_QEMU&DEV_0002"']
-
-device_name_list = ["VirtIO Balloon Driver", "Red Hat VirtIO SCSI controller",
-                    "Red Hat VirtIO SCSI pass-through controller",
-                    "VirtIO RNG Device", "VirtIO FS Device",
-                    "VirtIO Serial Driver", "QEMU PVPanic Device",
-                    "Red Hat VirtIO Ethernet Adapter", "VirtIO Input Driver",
-                    "QEMU FwCfg Device"]
+LOG_JOB = logging.getLogger("avocado.test")
 
 
-def install_gagent(session, test, qemu_ga_pkg, gagent_install_cmd,
-                   gagent_pkg_info_cmd):
+driver_name_list = [
+    "balloon",
+    "viostor",
+    "vioscsi",
+    "viorng",
+    "viofs",
+    "vioser",
+    "pvpanic",
+    "netkvm",
+    "vioinput",
+    "fwcfg",
+]
+
+device_hwid_list = [
+    '"PCI\\VEN_1AF4&DEV_1002" "PCI\\VEN_1AF4&DEV_1045"',
+    '"PCI\\VEN_1AF4&DEV_1001" "PCI\\VEN_1AF4&DEV_1042"',
+    '"PCI\\VEN_1AF4&DEV_1004" "PCI\\VEN_1AF4&DEV_1048"',
+    '"PCI\\VEN_1AF4&DEV_1005" "PCI\\VEN_1AF4&DEV_1044"',
+    '"PCI\\VEN_1AF4&DEV_105A"',
+    '"PCI\\VEN_1AF4&DEV_1003" "PCI\\VEN_1AF4&DEV_1043"',
+    '"ACPI\\QEMU0001"',
+    '"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&DEV_1041"',
+    '"PCI\\VEN_1AF4&DEV_1052"',
+    '"ACPI\\VEN_QEMU&DEV_0002"',
+]
+
+device_name_list = [
+    "VirtIO Balloon Driver",
+    "Red Hat VirtIO SCSI controller",
+    "Red Hat VirtIO SCSI pass-through controller",
+    "VirtIO RNG Device",
+    "VirtIO FS Device",
+    "VirtIO Serial Driver",
+    "QEMU PVPanic Device",
+    "Red Hat VirtIO Ethernet Adapter",
+    "VirtIO Input Driver",
+    "QEMU FwCfg Device",
+]
+
+
+def install_gagent(session, test, qemu_ga_pkg, gagent_install_cmd, gagent_pkg_info_cmd):
     """
     Install guest agent.
 
@@ -62,8 +71,9 @@ def install_gagent(session, test, qemu_ga_pkg, gagent_install_cmd,
     gagent_install_cmd = gagent_install_cmd % qemu_ga_pkg_path
     s_inst, o_inst = session.cmd_status_output(gagent_install_cmd)
     if s_inst != 0:
-        test.fail("qemu-guest-agent install failed,"
-                  " the detailed info:\n%s." % o_inst)
+        test.fail(
+            "qemu-guest-agent install failed," " the detailed info:\n%s." % o_inst
+        )
     gagent_version = session.cmd_output(gagent_pkg_info_cmd).split()[-2]
     return gagent_version
 
@@ -91,18 +101,18 @@ def win_uninstall_all_drivers(session, test, params):
     :param params: the dict used for parameters.
     """
     devcon_path = params["devcon_path"]
-    for driver_name, device_name, device_hwid in zip(driver_name_list,
-                                                     device_name_list,
-                                                     device_hwid_list):
-        win_driver_utils.uninstall_driver(session, test, devcon_path,
-                                          driver_name, device_name,
-                                          device_hwid)
+    for driver_name, device_name, device_hwid in zip(
+        driver_name_list, device_name_list, device_hwid_list
+    ):
+        win_driver_utils.uninstall_driver(
+            session, test, devcon_path, driver_name, device_name, device_hwid
+        )
 
 
 @error_context.context_aware
-def run_installer_with_interaction(vm, session, test, params,
-                                   run_installer_cmd,
-                                   copy_files_params=None):
+def run_installer_with_interaction(
+    vm, session, test, params, run_installer_cmd, copy_files_params=None
+):
     """
     Install/uninstall/repair virtio-win drivers and qxl,spice and
     qemu-ga-win by installer.
@@ -115,16 +125,16 @@ def run_installer_with_interaction(vm, session, test, params,
     :param copy_files_params: copy files params.
     :return session: a new session after restart of installer
     """
-    error_context.context("Run virtio-win-guest-tools.exe by %s."
-                          % run_installer_cmd, LOG_JOB.info)
-    vm.send_key('meta_l-d')
+    error_context.context(
+        "Run virtio-win-guest-tools.exe by %s." % run_installer_cmd, LOG_JOB.info
+    )
+    vm.send_key("meta_l-d")
     time.sleep(30)
     if copy_files_params:
-        win_driver_utils.copy_file_to_samepath(session, test,
-                                               copy_files_params)
-    session = win_driver_utils.run_installer(vm, session,
-                                             test, params,
-                                             run_installer_cmd)
+        win_driver_utils.copy_file_to_samepath(session, test, copy_files_params)
+    session = win_driver_utils.run_installer(
+        vm, session, test, params, run_installer_cmd
+    )
     return session
 
 
@@ -137,11 +147,12 @@ def win_installer_test(session, test, params):
     :param test: kvm test object
     :param params: the dict used for parameters.
     """
-    error_context.context("Check if virtio-win-guest-too.exe "
-                          "is signed by redhat", LOG_JOB.info)
+    error_context.context(
+        "Check if virtio-win-guest-too.exe " "is signed by redhat", LOG_JOB.info
+    )
     status = session.cmd_status(params["signed_check_cmd"])
     if status != 0:
-        test.fail('Installer not signed by redhat.')
+        test.fail("Installer not signed by redhat.")
 
 
 @error_context.context_aware
@@ -163,17 +174,19 @@ def driver_check(session, test, params):
         device_name_list = [params["device_name"]]
     for driver_name, device_name in zip(driver_name_list, device_name_list):
         error_context.context("%s Driver Check" % driver_name, LOG_JOB.info)
-        inf_path = win_driver_utils.get_driver_inf_path(session, test,
-                                                        media_type,
-                                                        driver_name)
-        expected_ver = session.cmd("type %s | findstr /i /r DriverVer.*=" %
-                                   inf_path, timeout=360)
+        inf_path = win_driver_utils.get_driver_inf_path(
+            session, test, media_type, driver_name
+        )
+        expected_ver = session.cmd(
+            "type %s | findstr /i /r DriverVer.*=" % inf_path, timeout=360
+        )
         expected_ver = expected_ver.strip().split(",", 1)[-1]
         if not expected_ver:
             test.error("Failed to find driver version from inf file")
         LOG_JOB.info("Target version is '%s'", expected_ver)
-        ver_list = win_driver_utils._pnpdrv_info(session, device_name,
-                                                 ["DriverVersion"])
+        ver_list = win_driver_utils._pnpdrv_info(
+            session, device_name, ["DriverVersion"]
+        )
         if expected_ver not in ver_list:
             wrong_ver_driver.append(driver_name)
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
@@ -189,8 +202,7 @@ def driver_check(session, test, params):
 
 
 @error_context.context_aware
-def check_gagent_version(session, test, gagent_pkg_info_cmd,
-                         expected_gagent_version):
+def check_gagent_version(session, test, gagent_pkg_info_cmd, expected_gagent_version):
     """
     Check whether guest agent version is right.
 
@@ -199,12 +211,13 @@ def check_gagent_version(session, test, gagent_pkg_info_cmd,
     :param gagent_pkg_info_cmd: guest-agent pkg info check command.
     :param expected_gagent_version: expected gagent version.
     """
-    error_context.context("Check if gagent version is correct.",
-                          LOG_JOB.info)
+    error_context.context("Check if gagent version is correct.", LOG_JOB.info)
     actual_gagent_version = session.cmd_output(gagent_pkg_info_cmd).split()[-2]
     if actual_gagent_version != expected_gagent_version:
-        test.fail("gagent version is not right, expected is %s but got %s"
-                  % (expected_gagent_version, actual_gagent_version))
+        test.fail(
+            "gagent version is not right, expected is %s but got %s"
+            % (expected_gagent_version, actual_gagent_version)
+        )
 
 
 @error_context.context_aware
@@ -224,7 +237,8 @@ def get_drive_letter(test, vm, img_size):
     if not utils_disk.update_windows_disk_attributes(session, disk_index):
         test.error("Failed to enable data disk %s" % disk_index)
     drive_letter_list = utils_disk.configure_empty_windows_disk(
-        session, disk_index[0], img_size)
+        session, disk_index[0], img_size
+    )
     if not drive_letter_list:
         test.error("Failed to format the data disk")
     return drive_letter_list[0]
@@ -240,14 +254,12 @@ def rng_test(test, params, vm):
     :param vm: vm object.
     """
     session = vm.wait_for_login()
-    read_rng_cmd = params['read_rng_cmd']
+    read_rng_cmd = params["read_rng_cmd"]
     read_rng_cmd = utils_misc.set_winutils_letter(session, read_rng_cmd)
-    error_context.context("Read virtio-rng device to get random number",
-                          LOG_JOB.info)
+    error_context.context("Read virtio-rng device to get random number", LOG_JOB.info)
     output = session.cmd_output(read_rng_cmd)
-    if len(re.findall(r'0x\w', output, re.M)) < 2:
-        test.fail("Unable to read random numbers "
-                  "from guest: %s" % output)
+    if len(re.findall(r"0x\w", output, re.M)) < 2:
+        test.fail("Unable to read random numbers " "from guest: %s" % output)
 
 
 @error_context.context_aware
@@ -260,14 +272,13 @@ def iozone_test(test, params, vm, images):
     :param vm: vm object.
     :param img_size: image size.
     """
-    iozone = generate_instance(params, vm, 'iozone')
+    iozone = generate_instance(params, vm, "iozone")
 
     for img in images.split():
-        drive_letter = get_drive_letter(test, vm, params['image_size_%s' % img])
+        drive_letter = get_drive_letter(test, vm, params["image_size_%s" % img])
         try:
-            error_context.context("Running IOzone command on guest",
-                                  LOG_JOB.info)
-            iozone.run(params['iozone_cmd_opitons'] % drive_letter)
+            error_context.context("Running IOzone command on guest", LOG_JOB.info)
+            iozone.run(params["iozone_cmd_opitons"] % drive_letter)
         finally:
             iozone.clean()
 
@@ -331,8 +342,10 @@ def pvpanic_test(test, params, vm):
     set_panic_cmd = params.get("set_panic_cmd")
     status, output = session.cmd_status_output(set_panic_cmd)
     if status:
-        test.error("Command '%s' failed, status: %s, output: %s" %
-                   (set_panic_cmd, status, output))
+        test.error(
+            "Command '%s' failed, status: %s, output: %s"
+            % (set_panic_cmd, status, output)
+        )
     session = vm.reboot(session)
 
     # triger a crash in guest
@@ -356,7 +369,7 @@ def vioser_test(test, params, vm):
     """
 
     error_context.context("Transfer data between host and guest", test.log.info)
-    result = transfer_data(params, vm, sender='both')
+    result = transfer_data(params, vm, sender="both")
     if result is not True:
         test.fail("Test failed. %s" % result[1])
 
@@ -392,8 +405,7 @@ def fwcfg_test(test, params, vm):
     dump_name = utils_misc.generate_random_string(4) + "Memory.dmp"
     dump_file = tmp_dir + "/" + dump_name
 
-    output = vm.monitor.human_monitor_cmd('dump-guest-memory -w %s'
-                                          % dump_file)
+    output = vm.monitor.human_monitor_cmd("dump-guest-memory -w %s" % dump_file)
     if output and "warning" not in output:
         test.fail("Save dump file failed as: %s" % output)
     else:

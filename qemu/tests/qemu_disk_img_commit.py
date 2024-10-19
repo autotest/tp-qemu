@@ -1,20 +1,16 @@
-import logging
 import json
-
-from virttest import data_dir
-from virttest.qemu_storage import QemuImg
+import logging
 
 from avocado.utils import process
-
-from virttest import error_context
+from virttest import data_dir, error_context
+from virttest.qemu_storage import QemuImg
 
 from qemu.tests import qemu_disk_img
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class CommitTest(qemu_disk_img.QemuImgTest):
-
     def __init__(self, test, params, env):
         self.tag = params.get("image_commit", "image1")
         t_params = params.object_params(self.tag)
@@ -51,8 +47,11 @@ def run(test, params, env):
 
     base_image = params.get("images", "image1").split()[0]
     params.update(
-        {"image_name_%s" % base_image: params["image_name"],
-         "image_format_%s" % base_image: params["image_format"]})
+        {
+            "image_name_%s" % base_image: params["image_name"],
+            "image_format_%s" % base_image: params["image_format"],
+        }
+    )
     t_file = params["guest_file_name"]
     commit_test = CommitTest(test, params, env)
     n_params = commit_test.create_snapshot()

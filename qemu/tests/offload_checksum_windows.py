@@ -1,6 +1,4 @@
-from virttest import utils_test
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net, utils_test
 from virttest.utils_windows import virtio_win
 
 
@@ -26,7 +24,7 @@ def run(test, params, env):
 
         param vm: the target vm
         param is_tx: True for tx setting, False for rx setting
-        param checksum_config: the config for checksum settings, one of 'tcp' or 'disable'
+        param checksum_config: config for checksum settings, one of 'tcp' or 'disable'
         """
         param = "Offload.TxChecksum" if is_tx else "Offload.RXCS"
         value = "1" if checksum_config == "tcp" else "0"
@@ -39,8 +37,9 @@ def run(test, params, env):
 
         param config: the setting config for checksum, tcp or disable
         """
-        error_context.context("Start set tx/rx checksum offload to %s" % checksum_config,
-                              test.log.info)
+        error_context.context(
+            "Start set tx/rx checksum offload to %s" % checksum_config, test.log.info
+        )
         set_offload_checksum_windows(vm, True, checksum_config)
         set_offload_checksum_windows(vm, False, checksum_config)
 
@@ -52,13 +51,13 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=timeout)
-    error_context.context("Check if the driver is installed and "
-                          "verified", test.log.info)
+    error_context.context(
+        "Check if the driver is installed and " "verified", test.log.info
+    )
     driver_name = params.get("driver_name", "netkvm")
-    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test,
-                                                            driver_name,
-                                                            timeout)
+    session = utils_test.qemu.windrv_check_running_verifier(
+        session, vm, test, driver_name, timeout
+    )
     session.close()
 
     virtio_win.prepare_netkvmco(vm)

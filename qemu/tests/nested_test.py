@@ -1,13 +1,11 @@
-import os
 import json
+import os
 
-from avocado.utils import cpu
-from avocado.utils import process
+from avocado.utils import cpu, process
 from avocado.utils.software_manager import manager
-
-from virttest import error_context
-from virttest import data_dir as virttest_data_dir
 from virttest import cpu as virttest_cpu
+from virttest import data_dir as virttest_data_dir
+from virttest import error_context
 
 
 @error_context.context_aware
@@ -74,8 +72,7 @@ def run(test, params, env):
 
         if variant_name == "check_cpu_model_l2":
             host_cpu_models = virttest_cpu.get_host_cpu_models()
-            case_name = ','.join(["%s.%s" % (case_name, i)
-                                  for i in host_cpu_models])
+            case_name = ",".join(["%s.%s" % (case_name, i) for i in host_cpu_models])
 
         kar_cmd += " --%s=%s " % (test_type, case_name)
 
@@ -100,14 +97,16 @@ def run(test, params, env):
         kar_repo = params.get("kar_repo")
         cert_url = params.get("cert_url")
 
-        data = {"guest_password": guest_password,
-                "bootstrap_options": bootstrap_options,
-                "accept_cancel": accept_cancel,
-                "command_line": kar_cmd,
-                "setup_br_sh": setup_bridge_sh,
-                "host_log_files_dir": results_dir,
-                "kar_repo": kar_repo,
-                "cert_url": cert_url}
+        data = {
+            "guest_password": guest_password,
+            "bootstrap_options": bootstrap_options,
+            "accept_cancel": accept_cancel,
+            "command_line": kar_cmd,
+            "setup_br_sh": setup_bridge_sh,
+            "host_log_files_dir": results_dir,
+            "kar_repo": kar_repo,
+            "cert_url": cert_url,
+        }
 
         json_file = open(os.path.join(tmp_dir, file_name), "w")
         json.dump(data, json_file)
@@ -115,8 +114,7 @@ def run(test, params, env):
 
         return json_file.name
 
-    if (params.get('check_vendor', 'no') == 'yes' and
-            cpu.get_vendor() != 'intel'):
+    if params.get("check_vendor", "no") == "yes" and cpu.get_vendor() != "intel":
         test.cancel("We only test this case with Intel platform now")
 
     sm = manager.SoftwareManager()
@@ -132,14 +130,15 @@ def run(test, params, env):
 
     params_file = generate_parameter_file(params)
 
-    ansible_cmd = "export ANSIBLE_SSH_ARGS=\"-C -o ControlMaster=auto " \
-                  "-o ControlPersist=60s " \
-                  "-o StrictHostKeyChecking=no " \
-                  "-o UserKnownHostsFile=/dev/null\"; " \
-                  "ansible-playbook %s " \
-                  "--extra-vars \"@%s\" " \
-                  "-i %s " \
-                  % (playbook_file, params_file, invent_file)
+    ansible_cmd = (
+        'export ANSIBLE_SSH_ARGS="-C -o ControlMaster=auto '
+        "-o ControlPersist=60s "
+        "-o StrictHostKeyChecking=no "
+        '-o UserKnownHostsFile=/dev/null"; '
+        "ansible-playbook %s "
+        '--extra-vars "@%s" '
+        "-i %s " % (playbook_file, params_file, invent_file)
+    )
 
     test.log.debug("ansible cmd: %s", ansible_cmd)
 
@@ -147,5 +146,4 @@ def run(test, params, env):
 
     status, output = process.getstatusoutput(ansible_cmd, timeout)
     if status != 0:
-        test.fail("ansible_cmd failed, status: %s, output: %s" %
-                  (status, output))
+        test.fail("ansible_cmd failed, status: %s, output: %s" % (status, output))

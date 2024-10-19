@@ -1,9 +1,7 @@
 import time
 
 import aexpect
-from virttest import utils_test
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context, utils_test
 
 
 @error_context.context_aware
@@ -55,10 +53,14 @@ def run(test, params, env):
 
     # Run some load on the host
     test.log.info("Starting load on host.")
-    host_load_sessions.append(aexpect.run_bg(host_load_command,
-                                             output_func=test.log.debug,
-                                             output_prefix="host load ",
-                                             timeout=0.5))
+    host_load_sessions.append(
+        aexpect.run_bg(
+            host_load_command,
+            output_func=test.log.debug,
+            output_prefix="host load ",
+            timeout=0.5,
+        )
+    )
     # Boot the VMs
     try:
         while num <= int(params["max_vms"]):
@@ -75,8 +77,7 @@ def run(test, params, env):
             test.log.info("Guest #%d booted up successfully", num)
 
             # Check whether all previous shell sessions are responsive
-            error_context.context("checking responsiveness of the booted"
-                                  " guest")
+            error_context.context("checking responsiveness of the booted" " guest")
             for se in sessions:
                 se.cmd(params["alive_test_cmd"])
             num += 1
@@ -86,20 +87,21 @@ def run(test, params, env):
                 # Get the respective vm object
                 vm = env.get_vm(vmnames[vmid])
                 # Run current iteration
-                test.log.info(
-                    "Rebooting:vm%d iteration %d ", (vmid + 1), itr)
+                test.log.info("Rebooting:vm%d iteration %d ", (vmid + 1), itr)
                 se = vm.reboot(se, timeout=timeout)
                 # Remember the current changed session
                 sessions[vmid] = se
                 error_context.context("checking responsiveness of guest")
                 se.cmd(params["alive_test_cmd"])
                 if itr == 0:
-                    (ht0, gt0) = utils_test.get_time(se, time_command,
-                                                     time_filter_re, time_format)
+                    (ht0, gt0) = utils_test.get_time(
+                        se, time_command, time_filter_re, time_format
+                    )
                     prev_time.append((ht0, gt0))
                 else:
-                    (ht1, gt1) = utils_test.get_time(se, time_command,
-                                                     time_filter_re, time_format)
+                    (ht1, gt1) = utils_test.get_time(
+                        se, time_command, time_filter_re, time_format
+                    )
                     curr_time.append((ht1, gt1))
             if itr != 0:
                 for i in range(int(params["max_vms"])):
@@ -125,7 +127,11 @@ def run(test, params, env):
             # Closing all the sessions.
             se.close()
         test.log.info("killing load on host.")
-        host_load_sessions.append(aexpect.run_bg(host_load_kill_command,
-                                                 output_func=test.log.debug,
-                                                 output_prefix="host load kill",
-                                                 timeout=0.5))
+        host_load_sessions.append(
+            aexpect.run_bg(
+                host_load_kill_command,
+                output_func=test.log.debug,
+                output_prefix="host load kill",
+                timeout=0.5,
+            )
+        )

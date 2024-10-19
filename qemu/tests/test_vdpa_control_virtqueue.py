@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net
 from virttest.utils_test.qemu import MemoryHotplugTest
 
 
@@ -38,7 +37,7 @@ def run(test, params, env):
     if output:
         test.error("Qemu output error info: %s" % output)
     test.log.info("Finished change mac address 2^16-1 times")
-    test.log.info("Hotplug %s memory to update device" % size_mem)
+    test.log.info("Hotplug %s memory to update device", size_mem)
     hotplug_mem = MemoryHotplugTest(test, params, env)
     hotplug_mem.hotplug_memory(vm=vm, name=target_mem)
     test.log.info("Try to update the mac again")

@@ -1,5 +1,6 @@
-from qemu.tests import qemu_disk_img
 from avocado.core import exceptions
+
+from qemu.tests import qemu_disk_img
 
 
 def run(test, params, env):
@@ -21,8 +22,11 @@ def run(test, params, env):
 
     base_image = params.get("images", "image1").split()[0]
     params.update(
-        {"image_name_%s" % base_image: params["image_name"],
-         "image_format_%s" % base_image: params["image_format"]})
+        {
+            "image_name_%s" % base_image: params["image_name"],
+            "image_format_%s" % base_image: params["image_format"],
+        }
+    )
     t_file = params["guest_file_name"]
     snapshot_test = qemu_disk_img.QemuImgTest(test, params, env, base_image)
 
@@ -37,8 +41,9 @@ def run(test, params, env):
     snapshot_tag = snapshot_test.snapshot_create()
     output = snapshot_test.snapshot_list()
     if snapshot_tag not in output:
-        raise exceptions.TestFail("Snapshot created failed or missed;"
-                                  "snapshot list is: \n%s" % output)
+        raise exceptions.TestFail(
+            "Snapshot created failed or missed;" "snapshot list is: \n%s" % output
+        )
 
     test.log.info("Step3. change tmp file before apply snapshot")
     snapshot_test.start_vm(params)

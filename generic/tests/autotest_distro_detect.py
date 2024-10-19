@@ -1,6 +1,6 @@
 import os
-import tempfile
 import string
+import tempfile
 
 from virttest import utils_test
 
@@ -85,5 +85,4 @@ def run(test, params, env):
     control_path = generate_control_file(params)
     outputdir = test.outputdir
 
-    utils_test.run_autotest(vm, session, control_path, timeout, outputdir,
-                            params)
+    utils_test.run_autotest(vm, session, control_path, timeout, outputdir, params)

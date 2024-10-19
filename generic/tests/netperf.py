@@ -1,21 +1,15 @@
 import logging
 import os
-import threading
 import re
+import threading
 import time
 
 from avocado.utils import process
+from virttest import error_context, remote, utils_misc, utils_net, utils_test, virt_vm
 
-from virttest import virt_vm
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import utils_net
-from virttest import remote
-from virttest import error_context
-from provider import netperf_base
-from provider import win_driver_utils
+from provider import netperf_base, win_driver_utils
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 _netserver_started = False
 
@@ -24,9 +18,13 @@ def start_netserver_win(session, start_cmd, test):
     check_reg = re.compile(r"NETSERVER.*EXE", re.I)
     if not check_reg.findall(session.cmd_output("tasklist")):
         session.sendline(start_cmd)
-        if not utils_misc.wait_for(lambda: check_reg.findall(
-                                   session.cmd_output("tasklist")),
-                                   30, 5, 1, "Wait netserver start"):
+        if not utils_misc.wait_for(
+            lambda: check_reg.findall(session.cmd_output("tasklist")),
+            30,
+            5,
+            1,
+            "Wait netserver start",
+        ):
             msg = "Can not start netserver with command %s" % start_cmd
             test.fail(msg)
 
@@ -45,6 +43,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def mtu_set(mtu):
         """
         Set server/client/host's mtu
@@ -61,12 +60,14 @@ def run(test, params, env):
             netperf_base.ssh_cmd(server_ctl, server_mtu_cmd % (ethname, mtu))
         elif params.get("os_type") == "windows":
             connection_id = utils_net.get_windows_nic_attribute(
-                server_ctl, "macaddress", mac, "netconnectionid")
+                server_ctl, "macaddress", mac, "netconnectionid"
+            )
             netperf_base.ssh_cmd(server_ctl, server_mtu_cmd % (connection_id, mtu))
 
         error_context.context("Changing the MTU of client", test.log.info)
-        netperf_base.ssh_cmd(client, client_mtu_cmd
-                             % (params.get("client_physical_nic"), mtu))
+        netperf_base.ssh_cmd(
+            client, client_mtu_cmd % (params.get("client_physical_nic"), mtu)
+        )
 
         netdst = params.get("netdst", "switch")
         host_bridges = utils_net.Bridge()
@@ -75,8 +76,14 @@ def run(test, params, env):
         if netdst in br_in_use:
             ifaces_in_use = host_bridges.list_iface()
             target_ifaces = list(ifaces_in_use + br_in_use)
-        if process.system("which ovs-vsctl && systemctl status openvswitch.service",
-                          ignore_status=True, shell=True) == 0:
+        if (
+            process.system(
+                "which ovs-vsctl && systemctl status openvswitch.service",
+                ignore_status=True,
+                shell=True,
+            )
+            == 0
+        ):
             ovs_br_all = netperf_base.ssh_cmd(host, "ovs-vsctl list-br")
             ovs_br = []
             if ovs_br_all:
@@ -85,20 +92,29 @@ def run(test, params, env):
                         ovs_br.append(nic.netdst)
                     elif nic.nettype == "vdpa":
                         vf_pci = netperf_base.ssh_cmd(
-                                host,
-                                "vdpa dev show |grep %s | grep -o 'pci/[^[:space:]]*' | awk -F/ '{print $2}'"
-                                % nic.netdst)
+                            host,
+                            "vdpa dev show |grep %s | grep -o 'pci/[^[:space:]]*' | "
+                            "awk -F/ '{print $2}'" % nic.netdst,
+                        )
                         pf_pci = netperf_base.ssh_cmd(
-                                host,
-                                "grep PCI_SLOT_NAME /sys/bus/pci/devices/%s/physfn/uevent | cut -d'=' -f2"
-                                % vf_pci)
+                            host,
+                            "grep PCI_SLOT_NAME /sys/bus/pci/devices/%s/physfn/uevent |"
+                            " cut -d'=' -f2" % vf_pci,
+                        )
                         port = netperf_base.ssh_cmd(
-                                host,
-                                "ls /sys/bus/pci/devices/%s/net/ | head -n 1"
-                                % pf_pci)
-                        ovs_br_vdpa = netperf_base.ssh_cmd(host, "ovs-vsctl port-to-br %s" % port)
-                        cmd = "ovs-ofctl add-flow {} 'in_port=1,idle_timeout=0 actions=output:2'".format(ovs_br_vdpa)
-                        cmd += "&&  ovs-ofctl add-flow {} 'in_port=2,idle_timeout=0 actions=output:1'".format(ovs_br_vdpa)
+                            host, "ls /sys/bus/pci/devices/%s/net/ | head -n 1" % pf_pci
+                        )
+                        ovs_br_vdpa = netperf_base.ssh_cmd(
+                            host, "ovs-vsctl port-to-br %s" % port
+                        )
+                        cmd = (
+                            f"ovs-ofctl add-flow {ovs_br_vdpa} '"
+                            "in_port=1,idle_timeout=0 actions=output:2'"
+                        )
+                        cmd += (
+                            f"&&  ovs-ofctl add-flow {ovs_br_vdpa} '"
+                            "in_port=2,idle_timeout=0 actions=output:1'"
+                        )
                         cmd += "&&  ovs-ofctl dump-flows {}".format(ovs_br_vdpa)
                         netperf_base.ssh_cmd(host, cmd)
                         ovs_br.append(ovs_br_vdpa)
@@ -108,16 +124,17 @@ def run(test, params, env):
                     target_ifaces.extend(ovs_port.split() + [br])
         if vm.virtnet[0].nettype == "macvtap":
             target_ifaces.extend([vm.virtnet[0].netdst, vm.get_ifname(0)])
-        error_context.context("Change all Bridge NICs MTU to %s"
-                              % mtu, test.log.info)
+        error_context.context("Change all Bridge NICs MTU to %s" % mtu, test.log.info)
         for iface in target_ifaces:
             try:
-                process.run(host_mtu_cmd % (iface, mtu), ignore_status=False,
-                            shell=True)
+                process.run(
+                    host_mtu_cmd % (iface, mtu), ignore_status=False, shell=True
+                )
             except process.CmdError as err:
                 if "SIOCSIFMTU" in err.result.stderr.decode():
-                    test.cancel("The ethenet device does not support jumbo,"
-                                "cancel test")
+                    test.cancel(
+                        "The ethenet device does not support jumbo," "cancel test"
+                    )
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -167,34 +184,44 @@ def run(test, params, env):
             driver_name = params["driver_name"]
             session = vm.wait_for_login(nic_index=2, timeout=login_timeout)
             for driver_name in driver_name.split():
-                inf_path = win_driver_utils.get_driver_inf_path(session, test,
-                                                                media_type,
-                                                                driver_name)
+                inf_path = win_driver_utils.get_driver_inf_path(
+                    session, test, media_type, driver_name
+                )
                 if driver_name == "netkvm":
                     device_name = params.get("device_name")
                     device_hwid = params.get("device_hwid")
                     devcon_path = utils_misc.set_winutils_letter(
-                                  session, params.get("devcon_path"))
-                    status, output = session.cmd_status_output("dir %s" %
-                                                               devcon_path)
+                        session, params.get("devcon_path")
+                    )
+                    status, output = session.cmd_status_output("dir %s" % devcon_path)
                     if status:
                         test.error("Not found devcon.exe, details: %s" % output)
 
-                    error_context.context("Uninstall %s driver" % driver_name,
-                                          test.log.info)
-                    win_driver_utils.uninstall_driver(session, test,
-                                                      devcon_path, driver_name,
-                                                      device_name, device_hwid)
+                    error_context.context(
+                        "Uninstall %s driver" % driver_name, test.log.info
+                    )
+                    win_driver_utils.uninstall_driver(
+                        session,
+                        test,
+                        devcon_path,
+                        driver_name,
+                        device_name,
+                        device_hwid,
+                    )
                     for hwid in device_hwid.split():
-                        install_driver_cmd = "%s install %s %s" % (devcon_path,
-                                                                   inf_path,
-                                                                   hwid)
+                        install_driver_cmd = "%s install %s %s" % (
+                            devcon_path,
+                            inf_path,
+                            hwid,
+                        )
                         status, output = session.cmd_status_output(
-                                         install_driver_cmd,
-                                         timeout=login_timeout)
+                            install_driver_cmd, timeout=login_timeout
+                        )
                         if status:
-                            test.fail("Failed to install driver '%s', "
-                                      "details:\n%s" % (driver_name, output))
+                            test.fail(
+                                "Failed to install driver '%s', "
+                                "details:\n%s" % (driver_name, output)
+                            )
                 if driver_name == "VIOPROT":
                     test.log.info("Will install inf file found at '%s'", inf_path)
                     install_cmd = params.get("install_vioprot_cmd") % inf_path
@@ -205,7 +232,9 @@ def run(test, params, env):
             session.close()
     else:
         try:
-            vm.wait_for_serial_login(timeout=login_timeout, restart_network=True).close()
+            vm.wait_for_serial_login(
+                timeout=login_timeout, restart_network=True
+            ).close()
         except virt_vm.VMIPAddressMissingError:
             pass
 
@@ -220,8 +249,7 @@ def run(test, params, env):
     queues = int(params.get("queues", 1))
     if queues > 1:
         if params.get("os_type") == "linux":
-            session.cmd_status_output("ethtool -L %s combined %s" %
-                                      (ethname, queues))
+            session.cmd_status_output("ethtool -L %s combined %s" % (ethname, queues))
         else:
             test.log.info("FIXME: support to enable MQ for Windows guest!")
 
@@ -244,8 +272,7 @@ def run(test, params, env):
         utils_test.service_setup(vm, session, test.virtdir)
     session.close()
 
-    if (params.get("os_type") == "windows" and
-            params.get("use_cygwin") == "yes"):
+    if params.get("os_type") == "windows" and params.get("use_cygwin") == "yes":
         cygwin_prompt = params.get("cygwin_prompt", r"\$\s+$")
         cygwin_start = params.get("cygwin_start")
         server_cyg = vm.wait_for_login(timeout=login_timeout)
@@ -254,12 +281,16 @@ def run(test, params, env):
     else:
         server_cyg = None
 
-    test.log.debug(process.system_output("numactl --hardware",
-                                         verbose=False, ignore_status=True,
-                                         shell=True).decode())
-    test.log.debug(process.system_output("numactl --show",
-                                         verbose=False, ignore_status=True,
-                                         shell=True).decode())
+    test.log.debug(
+        process.system_output(
+            "numactl --hardware", verbose=False, ignore_status=True, shell=True
+        ).decode()
+    )
+    test.log.debug(
+        process.system_output(
+            "numactl --show", verbose=False, ignore_status=True, shell=True
+        ).decode()
+    )
     # pin guest vcpus/memory/vhost threads to last numa node of host by default
     numa_node = netperf_base.pin_vm_threads(vm, params.get("numa_node"))
 
@@ -267,12 +298,14 @@ def run(test, params, env):
     host_ip = host
     if host != "localhost":
         params_host = params.object_params("host")
-        host = remote.wait_for_login(params_host.get("shell_client"),
-                                     host_ip,
-                                     params_host.get("shell_port"),
-                                     params_host.get("username"),
-                                     params_host.get("password"),
-                                     params_host.get("shell_prompt"))
+        host = remote.wait_for_login(
+            params_host.get("shell_client"),
+            host_ip,
+            params_host.get("shell_port"),
+            params_host.get("username"),
+            params_host.get("password"),
+            params_host.get("shell_prompt"),
+        )
 
     client = params.get("client", "localhost")
     client_ip = client
@@ -285,14 +318,15 @@ def run(test, params, env):
             client_ip = vm_client.wait_for_get_address(0, timeout=5)
         elif client != "localhost" and params.get("os_type_client") == "linux":
             client_pub_ip = params.get("client_public_ip")
-            tmp = remote.wait_for_login(params.get("shell_client_client"),
-                                        client_pub_ip,
-                                        params.get("shell_port_client"),
-                                        params.get("username_client"),
-                                        params.get("password_client"),
-                                        params.get("shell_prompt_client"))
-            cmd = "ifconfig %s %s up" % (params.get("client_physical_nic"),
-                                         client_ip)
+            tmp = remote.wait_for_login(
+                params.get("shell_client_client"),
+                client_pub_ip,
+                params.get("shell_port_client"),
+                params.get("username_client"),
+                params.get("password_client"),
+                params.get("shell_prompt_client"),
+            )
+            cmd = "ifconfig %s %s up" % (params.get("client_physical_nic"), client_ip)
             netperf_base.ssh_cmd(tmp, cmd)
         else:
             tmp = "localhost"
@@ -315,19 +349,18 @@ def run(test, params, env):
     prepare_list = set([server_ctl, client, host])
     tag_dict = {server_ctl: "server", client: "client", host: "host"}
     if client_pub_ip:
-        ip_dict = {server_ctl: server_ctl_ip, client: client_pub_ip,
-                   host: host_ip}
+        ip_dict = {server_ctl: server_ctl_ip, client: client_pub_ip, host: host_ip}
     else:
-        ip_dict = {server_ctl: server_ctl_ip, client: client_ip,
-                   host: host_ip}
+        ip_dict = {server_ctl: server_ctl_ip, client: client_ip, host: host_ip}
     for i in prepare_list:
         params_tmp = params.object_params(tag_dict[i])
         if params_tmp.get("os_type") == "linux":
             shell_port = int(params_tmp["shell_port"])
             password = params_tmp["password"]
             username = params_tmp["username"]
-            netperf_base.env_setup(test, params, i, ip_dict[i],
-                                   username, shell_port, password)
+            netperf_base.env_setup(
+                test, params, i, ip_dict[i], username, shell_port, password
+            )
         elif params_tmp.get("os_type") == "windows":
             windows_disable_firewall = params.get("windows_disable_firewall")
             netperf_base.ssh_cmd(i, windows_disable_firewall)
@@ -339,21 +372,30 @@ def run(test, params, env):
 
     try:
         error_context.context("Start netperf testing", test.log.info)
-        start_test(server_ip, server_ctl, host, clients, test.resultsdir,
-                   test_duration=int(params.get('l')),
-                   sessions_rr=params.get('sessions_rr'),
-                   sessions=params.get('sessions'),
-                   sizes_rr=params.get('sizes_rr'),
-                   sizes=params.get('sizes'),
-                   protocols=params.get('protocols'),
-                   netserver_port=params.get('netserver_port', "12865"),
-                   params=params, server_cyg=server_cyg, test=test)
+        start_test(
+            server_ip,
+            server_ctl,
+            host,
+            clients,
+            test.resultsdir,
+            test_duration=int(params.get("l")),
+            sessions_rr=params.get("sessions_rr"),
+            sessions=params.get("sessions"),
+            sizes_rr=params.get("sizes_rr"),
+            sizes=params.get("sizes"),
+            protocols=params.get("protocols"),
+            netserver_port=params.get("netserver_port", "12865"),
+            params=params,
+            server_cyg=server_cyg,
+            test=test,
+        )
 
         if params.get("log_hostinfo_script"):
             src = os.path.join(test.virtdir, params.get("log_hostinfo_script"))
             path = os.path.join(test.resultsdir, "systeminfo")
-            process.system_output("bash %s %s &> %s" % (
-                                  src, test.resultsdir, path), shell=True)
+            process.system_output(
+                "bash %s %s &> %s" % (src, test.resultsdir, path), shell=True
+            )
 
         if params.get("log_guestinfo_script") and params.get("log_guestinfo_exec"):
             src = os.path.join(test.virtdir, params.get("log_guestinfo_script"))
@@ -368,24 +410,37 @@ def run(test, params, env):
     finally:
         if mtu != 1500:
             mtu_default = 1500
-            error_context.context("Change back server, client and host's mtu to %s"
-                                  % mtu_default)
+            error_context.context(
+                "Change back server, client and host's mtu to %s" % mtu_default
+            )
             mtu_set(mtu_default)
-        if params.get("client_physical_nic") and params.get(
-                                                    "os_type_client") == "linux":
-            cmd = 'ifconfig %s 0.0.0.0' % params.get("client_physical_nic")
+        if (
+            params.get("client_physical_nic")
+            and params.get("os_type_client") == "linux"
+        ):
+            cmd = "ifconfig %s 0.0.0.0" % params.get("client_physical_nic")
             netperf_base.ssh_cmd(client, cmd)
 
 
 # FIXME: `test` should be a mandatory argument here
 @error_context.context_aware
-def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
-               sessions_rr="50 100 250 500",
-               sessions="1 2 4",
-               sizes_rr="64 256 512 1024 2048",
-               sizes="64 256 512 1024 2048 4096",
-               protocols="TCP_STREAM TCP_MAERTS TCP_RR TCP_CRR",
-               netserver_port=None, params=None, server_cyg=None, test=None):
+def start_test(
+    server,
+    server_ctl,
+    host,
+    clients,
+    resultsdir,
+    test_duration=60,
+    sessions_rr="50 100 250 500",
+    sessions="1 2 4",
+    sizes_rr="64 256 512 1024 2048",
+    sizes="64 256 512 1024 2048 4096",
+    protocols="TCP_STREAM TCP_MAERTS TCP_RR TCP_CRR",
+    netserver_port=None,
+    params=None,
+    server_cyg=None,
+    test=None,
+):
     """
     Start to test with different kind of configurations
 
@@ -408,19 +463,30 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
         params = {}
 
     fd = open("%s/netperf-result.%s.RHS" % (resultsdir, time.time()), "w")
-    netperf_base.record_env_version(test, params, host, server_ctl,
-                                    fd, test_duration)
+    netperf_base.record_env_version(test, params, host, server_ctl, fd, test_duration)
 
-    record_list = ['size', 'sessions', 'throughput', 'trans.rate', 'CPU',
-                   'thr_per_CPU', 'rx_pkts', 'tx_pkts', 'rx_byts', 'tx_byts',
-                   're_pkts', 'exits', 'tpkt_per_exit']
+    record_list = [
+        "size",
+        "sessions",
+        "throughput",
+        "trans.rate",
+        "CPU",
+        "thr_per_CPU",
+        "rx_pkts",
+        "tx_pkts",
+        "rx_byts",
+        "tx_byts",
+        "re_pkts",
+        "exits",
+        "tpkt_per_exit",
+    ]
 
     for i in range(int(params.get("queues", 0))):
-        record_list.append('rx_intr_%s' % i)
-    record_list.append('rx_intr_sum')
+        record_list.append("rx_intr_%s" % i)
+    record_list.append("rx_intr_sum")
     for i in range(int(params.get("queues", 0))):
-        record_list.append('tx_intr_%s' % i)
-    record_list.append('tx_intr_sum')
+        record_list.append("tx_intr_%s" % i)
+    record_list.append("tx_intr_sum")
     base = params.get("format_base", "12")
     fbase = params.get("format_fbase", "2")
 
@@ -453,45 +519,53 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
             for j in sessions_test:
                 if protocol in ("TCP_RR", "TCP_CRR"):
                     nf_args = "-t %s -v 1 -- -r %s,%s" % (protocol, i, i)
-                elif (protocol == "TCP_MAERTS"):
+                elif protocol == "TCP_MAERTS":
                     nf_args = "-C -c -t %s -- -m ,%s" % (protocol, i)
                 else:
                     nf_args = "-C -c -t %s -- -m %s" % (protocol, i)
 
-                ret = launch_client(j, server, server_ctl, host, clients,
-                                    test_duration, nf_args, netserver_port,
-                                    params, server_cyg, test)
+                ret = launch_client(
+                    j,
+                    server,
+                    server_ctl,
+                    host,
+                    clients,
+                    test_duration,
+                    nf_args,
+                    netserver_port,
+                    params,
+                    server_cyg,
+                    test,
+                )
                 if ret:
-                    thu = float(ret['thu'])
-                    cpu = 100 - float(ret['mpstat'].split()[mpstat_index])
+                    thu = float(ret["thu"])
+                    cpu = 100 - float(ret["mpstat"].split()[mpstat_index])
                     normal = thu / cpu
-                    if ret.get('tx_pkt') and ret.get('exits'):
-                        ret['tpkt_per_exit'] = float(
-                                ret['tx_pkts']) / float(ret['exits'])
+                    if ret.get("tx_pkt") and ret.get("exits"):
+                        ret["tpkt_per_exit"] = float(ret["tx_pkts"]) / float(
+                            ret["exits"]
+                        )
 
-                    ret['size'] = int(i)
-                    ret['sessions'] = int(j)
+                    ret["size"] = int(i)
+                    ret["sessions"] = int(j)
                     if protocol in ("TCP_RR", "TCP_CRR"):
-                        ret['trans.rate'] = thu
+                        ret["trans.rate"] = thu
                     else:
-                        ret['throughput'] = thu
-                    ret['CPU'] = cpu
-                    ret['thr_per_CPU'] = normal
+                        ret["throughput"] = thu
+                    ret["CPU"] = cpu
+                    ret["thr_per_CPU"] = normal
                     row, key_list = netperf_base.netperf_record(
-                                                    ret, record_list,
-                                                    header=record_header,
-                                                    base=base,
-                                                    fbase=fbase)
+                        ret, record_list, header=record_header, base=base, fbase=fbase
+                    )
                     category = ""
                     if record_header:
                         record_header = False
-                        category = row.split('\n')[0]
+                        category = row.split("\n")[0]
 
-                    test.write_test_keyval({'category': category})
-                    prefix = '%s--%s--%s' % (protocol, i, j)
+                    test.write_test_keyval({"category": category})
+                    prefix = "%s--%s--%s" % (protocol, i, j)
                     for key in key_list:
-                        test.write_test_keyval(
-                            {'%s--%s' % (prefix, key): ret[key]})
+                        test.write_test_keyval({"%s--%s" % (prefix, key): ret[key]})
 
                     test.log.info(row)
                     fd.write(row + "\n")
@@ -499,22 +573,38 @@ def start_test(server, server_ctl, host, clients, resultsdir, test_duration=60,
                     fd.flush()
 
                     test.log.debug("Remove temporary files")
-                    process.system_output("rm -f /tmp/netperf.%s.nf" % ret['pid'],
-                                          verbose=False, ignore_status=True,
-                                          shell=True)
+                    process.system_output(
+                        "rm -f /tmp/netperf.%s.nf" % ret["pid"],
+                        verbose=False,
+                        ignore_status=True,
+                        shell=True,
+                    )
                     test.log.info("Netperf thread completed successfully")
                 else:
                     test.log.debug(
                         "Not all netperf clients start to work, please enlarge"
-                        " '%s' number or skip this tests", int(j))
+                        " '%s' number or skip this tests",
+                        int(j),
+                    )
                     continue
     fd.close()
 
 
 @error_context.context_aware
-def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
-                  port, params, server_cyg, test):
-    """ Launch netperf clients """
+def launch_client(
+    sessions,
+    server,
+    server_ctl,
+    host,
+    clients,
+    l,
+    nf_args,
+    port,
+    params,
+    server_cyg,
+    test,
+):
+    """Launch netperf clients"""
 
     netperf_version = params.get("netperf_version", "2.6.0")
     client_path = "/tmp/netperf-%s/src/netperf" % netperf_version
@@ -536,42 +626,43 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                 netserver_path = params.get("netserver_path")
                 netperf_install_cmd = params.get("netperf_install_cmd")
                 start_session = server_cyg
-                test.log.info("Start netserver with cygwin, cmd is: %s",
-                              netserv_start_cmd)
+                test.log.info(
+                    "Start netserver with cygwin, cmd is: %s", netserv_start_cmd
+                )
                 if "netserver" not in server_ctl.cmd_output("tasklist"):
                     netperf_pack = "netperf-%s" % params.get("netperf_version")
                     s_check_cmd = "dir %s" % netserver_path
                     p_check_cmd = "dir %s" % cygwin_root
-                    if not ("netserver.exe" in server_ctl.cmd(s_check_cmd) and
-                            netperf_pack in server_ctl.cmd(p_check_cmd)):
+                    if not (
+                        "netserver.exe" in server_ctl.cmd(s_check_cmd)
+                        and netperf_pack in server_ctl.cmd(p_check_cmd)
+                    ):
                         error_context.context(
-                            "Install netserver in Windows guest cygwin",
-                            test.log.info)
-                        cmd = "xcopy %s %s /S /I /Y" % (
-                            netperf_src, cygwin_root)
+                            "Install netserver in Windows guest cygwin", test.log.info
+                        )
+                        cmd = "xcopy %s %s /S /I /Y" % (netperf_src, cygwin_root)
                         server_ctl.cmd(cmd)
-                        server_cyg.cmd_output(
-                            netperf_install_cmd, timeout=timeout)
+                        server_cyg.cmd_output(netperf_install_cmd, timeout=timeout)
                         if "netserver.exe" not in server_ctl.cmd(s_check_cmd):
                             err_msg = "Install netserver cygwin failed"
                             test.error(err_msg)
-                        test.log.info(
-                            "Install netserver in cygwin successfully")
+                        test.log.info("Install netserver in cygwin successfully")
             else:
                 start_session = server_ctl
                 netserv_start_cmd = params.get("netserv_start_cmd") % cdrom_drv
-                test.log.info("Start netserver without cygwin, cmd is: %s",
-                              netserv_start_cmd)
+                test.log.info(
+                    "Start netserver without cygwin, cmd is: %s", netserv_start_cmd
+                )
 
-            error_context.context("Start netserver on windows guest",
-                                  test.log.info)
+            error_context.context("Start netserver on windows guest", test.log.info)
             start_netserver_win(start_session, netserv_start_cmd, test)
 
         else:
             test.log.info("Netserver start cmd is '%s'", server_path)
             netperf_base.ssh_cmd(server_ctl, "pidof netserver || %s" % server_path)
             ncpu = netperf_base.ssh_cmd(
-                    server_ctl, "cat /proc/cpuinfo |grep processor |wc -l")
+                server_ctl, "cat /proc/cpuinfo |grep processor |wc -l"
+            )
             ncpu = re.findall(r"\d+", ncpu)[-1]
 
         test.log.info("Netserver start successfully")
@@ -601,9 +692,10 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
             raise RuntimeError(f"no available iface associated with {server}")
 
         path = "find /sys/devices|grep net/%s/statistics" % ifname
-        cmd = "%s/rx_packets|xargs cat;%s/tx_packets|xargs cat;" \
-            "%s/rx_bytes|xargs cat;%s/tx_bytes|xargs cat" % (path,
-                                                             path, path, path)
+        cmd = (
+            "%s/rx_packets|xargs cat;%s/tx_packets|xargs cat;"
+            "%s/rx_bytes|xargs cat;%s/tx_bytes|xargs cat" % (path, path, path, path)
+        )
         output = netperf_base.ssh_cmd(server_ctl, cmd).split()[-4:]
 
         nrx = int(output[0])
@@ -611,36 +703,49 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         nrxb = int(output[2])
         ntxb = int(output[3])
 
-        nre = int(netperf_base.ssh_cmd(
-                server_ctl, "grep Tcp /proc/net/snmp|tail -1").split()[12])
-        state_list = ['rx_pkts', nrx, 'tx_pkts', ntx, 'rx_byts', nrxb,
-                      'tx_byts', ntxb, 're_pkts', nre]
+        nre = int(
+            netperf_base.ssh_cmd(server_ctl, "grep Tcp /proc/net/snmp|tail -1").split()[
+                12
+            ]
+        )
+        state_list = [
+            "rx_pkts",
+            nrx,
+            "tx_pkts",
+            ntx,
+            "rx_byts",
+            nrxb,
+            "tx_byts",
+            ntxb,
+            "re_pkts",
+            nre,
+        ]
         try:
             nrx_intr = count_interrupt("virtio.-input")
             ntx_intr = count_interrupt("virtio.-output")
             sum = 0
             for i in range(len(nrx_intr)):
-                state_list.append('rx_intr_%s' % i)
+                state_list.append("rx_intr_%s" % i)
                 state_list.append(nrx_intr[i])
                 sum += nrx_intr[i]
-            state_list.append('rx_intr_sum')
+            state_list.append("rx_intr_sum")
             state_list.append(sum)
 
             sum = 0
             for i in range(len(ntx_intr)):
-                state_list.append('tx_intr_%s' % i)
+                state_list.append("tx_intr_%s" % i)
                 state_list.append(ntx_intr[i])
                 sum += ntx_intr[i]
-            state_list.append('tx_intr_sum')
+            state_list.append("tx_intr_sum")
             state_list.append(sum)
 
         except IndexError:
             ninit = count_interrupt("virtio.")
-            state_list.append('intr')
+            state_list.append("intr")
             state_list.append(ninit)
 
         exits = int(netperf_base.ssh_cmd(host, "cat /sys/kernel/debug/kvm/exits"))
-        state_list.append('exits')
+        state_list.append("exits")
         state_list.append(exits)
 
         return state_list
@@ -649,7 +754,12 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         fname = "/tmp/netperf.%s.nf" % pid
         option = "`command -v python python3 | head -1 ` "
         option += "/tmp/netperf_agent.py %d %s -D 1 -H %s -l %s %s" % (
-                 i, client_path, server, int(l) * 1.5, nf_args)
+            i,
+            client_path,
+            server,
+            int(l) * 1.5,
+            nf_args,
+        )
         option += " >> %s" % fname
         netperf_base.netperf_thread(params, numa_enable, client_s, option, fname)
 
@@ -665,11 +775,13 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
 
     def stop_netperf_clients():
         if params.get("os_type_client") == "linux":
-            netperf_base.ssh_cmd(clients[-1], params.get("client_kill_linux"),
-                                 ignore_status=True)
+            netperf_base.ssh_cmd(
+                clients[-1], params.get("client_kill_linux"), ignore_status=True
+            )
         else:
-            netperf_base.ssh_cmd(clients[-1], params.get("client_kill_windows"),
-                                 ignore_status=True)
+            netperf_base.ssh_cmd(
+                clients[-1], params.get("client_kill_windows"), ignore_status=True
+            )
 
     def parse_demo_result(fname, sessions):
         """
@@ -688,12 +800,14 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                 break
         nresult = i - 1
         if nresult < int(sessions):
-            test.error("We couldn't expect this parallism, expect %s get %s"
-                       % (sessions, nresult))
+            test.error(
+                "We couldn't expect this parallism, expect %s get %s"
+                % (sessions, nresult)
+            )
 
         niteration = nresult // sessions
         result = 0.0
-        for this in lines[-sessions * niteration:]:
+        for this in lines[-sessions * niteration :]:
             if "Interim" in this:
                 result += float(re.findall(r"Interim result: *(\S+)", this)[0])
         result = result / niteration
@@ -709,25 +823,35 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
         numa_enable = params.get("netperf_with_numa", "yes") == "yes"
         timeout_netperf_start = int(l) * 0.5
         client_thread = threading.Thread(
-                target=thread_cmd,
-                kwargs={"params": params,
-                        "i": int(sessions),
-                        "numa_enable": numa_enable,
-                        "client_s": clients[0],
-                        "timeout": timeout_netperf_start})
+            target=thread_cmd,
+            kwargs={
+                "params": params,
+                "i": int(sessions),
+                "numa_enable": numa_enable,
+                "client_s": clients[0],
+                "timeout": timeout_netperf_start,
+            },
+        )
         client_thread.start()
 
         ret = {}
-        ret['pid'] = pid
+        ret["pid"] = pid
 
-        if utils_misc.wait_for(all_clients_up, timeout_netperf_start, 0.0, 0.2,
-                               "Wait until all netperf clients start to work"):
+        if utils_misc.wait_for(
+            all_clients_up,
+            timeout_netperf_start,
+            0.0,
+            0.2,
+            "Wait until all netperf clients start to work",
+        ):
             test.log.debug("All netperf clients start to work.")
 
             # real & effective test starts
             if get_status_flag:
                 start_state = get_state()
-            ret['mpstat'] = netperf_base.ssh_cmd(host, "mpstat 1 %d |tail -n 1" % (l - 1))
+            ret["mpstat"] = netperf_base.ssh_cmd(
+                host, "mpstat 1 %d |tail -n 1" % (l - 1)
+            )
             finished_result = netperf_base.ssh_cmd(clients[-1], "cat %s" % fname)
 
             # stop netperf clients
@@ -740,20 +864,20 @@ def launch_client(sessions, server, server_ctl, host, clients, l, nf_args,
                     msg = "Initial state not match end state:\n"
                     msg += "  start state: %s\n" % start_state
                     msg += "  end state: %s\n" % end_state
-                    test.log.warn(msg)
+                    test.log.warning(msg)
                 else:
                     for i in range(len(end_state) // 2):
-                        ret[end_state[i * 2]] = (end_state[i * 2 + 1] -
-                                                 start_state[i * 2 + 1])
+                        ret[end_state[i * 2]] = (
+                            end_state[i * 2 + 1] - start_state[i * 2 + 1]
+                        )
 
             client_thread.join()
 
-            error_context.context("Testing Results Treatment and Report",
-                                  test.log.info)
+            error_context.context("Testing Results Treatment and Report", test.log.info)
             f = open(fname, "w")
             f.write(finished_result)
             f.close()
-            ret['thu'] = parse_demo_result(fname, int(sessions))
+            ret["thu"] = parse_demo_result(fname, int(sessions))
             return ret
             break
         else:

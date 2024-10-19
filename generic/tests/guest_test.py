@@ -1,11 +1,11 @@
-import os
 import logging
+import os
 import sys
 
 from avocado.core import exceptions
 from virttest import utils_misc
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def run(test, params, env):
@@ -35,8 +35,7 @@ def run(test, params, env):
 
     if reboot_before_test:
         test.log.debug("Rebooting guest before test ...")
-        session = vm.reboot(session, timeout=login_timeout,
-                            serial=serial_login)
+        session = vm.reboot(session, timeout=login_timeout, serial=serial_login)
 
     try:
         test.log.info("Starting script...")
@@ -58,19 +57,23 @@ def run(test, params, env):
             dst_rsc_dir = params.get("dst_rsc_dir")
 
             # Change dir to dst_rsc_dir, and remove the guest script dir there
-            rm_cmd = "cd %s && (rmdir /s /q %s || del /s /q %s)" % \
-                     (dst_rsc_dir, rsc_dir, rsc_dir)
+            rm_cmd = "cd %s && (rmdir /s /q %s || del /s /q %s)" % (
+                dst_rsc_dir,
+                rsc_dir,
+                rsc_dir,
+            )
             session.cmd(rm_cmd, timeout=test_timeout)
             test.log.debug("Clean directory succeeded.")
 
             # then download the resource.
-            rsc_cmd = "cd %s && %s %s" % (
-                dst_rsc_dir, download_cmd, rsc_server)
+            rsc_cmd = "cd %s && %s %s" % (dst_rsc_dir, download_cmd, rsc_server)
             session.cmd(rsc_cmd, timeout=test_timeout)
             test.log.info("Download resource finished.")
         else:
-            session.cmd_output("del /f %s || rm -r %s" % (dst_rsc_path, dst_rsc_path),
-                               internal_timeout=0)
+            session.cmd_output(
+                "del /f %s || rm -r %s" % (dst_rsc_path, dst_rsc_path),
+                internal_timeout=0,
+            )
             script_path = utils_misc.get_path(test.virtdir, script)
             vm.copy_files_to(script_path, dst_rsc_path, timeout=60)
 
@@ -78,8 +81,9 @@ def run(test, params, env):
 
         try:
             test.log.info("------------ Script output ------------")
-            s, o = session.cmd_status_output(cmd, print_func=test.log.info,
-                                             timeout=test_timeout, safe=True)
+            s, o = session.cmd_status_output(
+                cmd, print_func=test.log.info, timeout=test_timeout, safe=True
+            )
             if s != 0:
                 test.fail("Run script '%s' failed, script output is: %s" % (cmd, o))
         finally:
@@ -87,8 +91,7 @@ def run(test, params, env):
 
         if reboot_after_test:
             test.log.debug("Rebooting guest after test ...")
-            session = vm.reboot(session, timeout=login_timeout,
-                                serial=serial_login)
+            session = vm.reboot(session, timeout=login_timeout, serial=serial_login)
 
         test.log.debug("guest test PASSED.")
     finally:
@@ -124,7 +127,7 @@ def run_guest_test_background(test, params, env):
         return pid
 
     flag_fname = "/tmp/guest_test-flag-file-pid-" + str(os.getpid())
-    open(flag_fname, 'w').close()
+    open(flag_fname, "w").close()
     try:
         # Launch guest_test
         run(test, params, env)

@@ -1,16 +1,13 @@
 import os
 import re
+
 try:
     from configparser import ConfigParser
 except ImportError:
     from ConfigParser import ConfigParser
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import qemu_io
-from virttest import data_dir
-from virttest import utils_misc
+from virttest import data_dir, error_context, qemu_io, utils_misc
 from virttest.qemu_storage import QemuImg
 
 
@@ -28,13 +25,14 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env:    Dictionary with test environment.
     """
-    if params.get("blkdebug_event_name_separator") == 'underscore':
-        blkdebug_event = params.get('err_event')
+    if params.get("blkdebug_event_name_separator") == "underscore":
+        blkdebug_event = params.get("err_event")
         if "." in blkdebug_event:
-            params['err_event'] = blkdebug_event.replace(".", "_")
+            params["err_event"] = blkdebug_event.replace(".", "_")
     tmp_dir = params.get("tmp_dir", "/tmp")
-    blkdebug_cfg = utils_misc.get_path(tmp_dir, params.get("blkdebug_cfg",
-                                                           "blkdebug.cfg"))
+    blkdebug_cfg = utils_misc.get_path(
+        tmp_dir, params.get("blkdebug_cfg", "blkdebug.cfg")
+    )
     err_command = params["err_command"]
     err_event = params["err_event"]
     errn_list = re.split(r"\s+", params["errn_list"].strip())
@@ -47,8 +45,7 @@ def run(test, params, env):
     del_snapshot = params.get("del_snapshot", "no") == "yes"
 
     error_context.context("Create image", test.log.info)
-    image_io = QemuImg(
-        params.object_params(image), data_dir.get_data_dir(), image)
+    image_io = QemuImg(params.object_params(image), data_dir.get_data_dir(), image)
     image_name, _ = image_io.create(params.object_params(image))
 
     template_name = utils_misc.get_path(test.virtdir, blkdebug_default)
@@ -56,8 +53,7 @@ def run(test, params, env):
     template.read(template_name)
 
     for errn in errn_list:
-        log_filename = utils_misc.get_path(test.outputdir,
-                                           "qemu-io-log-%s" % errn)
+        log_filename = utils_misc.get_path(test.outputdir, "qemu-io-log-%s" % errn)
         error_context.context("Write the blkdebug config file", test.log.info)
         template.set("inject-error", "event", '"%s"' % err_event)
         template.set("inject-error", "errno", '"%s"' % errn)
@@ -65,22 +61,24 @@ def run(test, params, env):
         error_context.context("Write blkdebug config file", test.log.info)
         blkdebug = None
         try:
-            blkdebug = open(blkdebug_cfg, 'w')
+            blkdebug = open(blkdebug_cfg, "w")
             template.write(blkdebug)
         finally:
             if blkdebug is not None:
                 blkdebug.close()
 
         error_context.context("Create image", test.log.info)
-        image_io = QemuImg(params.object_params(
-            image), data_dir.get_data_dir(), image)
+        image_io = QemuImg(params.object_params(image), data_dir.get_data_dir(), image)
         image_name = image_io.create(params.object_params(image))[0]
 
-        error_context.context("Operate in qemu-io to trigger the error",
-                              test.log.info)
-        session = qemu_io.QemuIOShellSession(test, params, image_name,
-                                             blkdebug_cfg=blkdebug_cfg,
-                                             log_filename=log_filename)
+        error_context.context("Operate in qemu-io to trigger the error", test.log.info)
+        session = qemu_io.QemuIOShellSession(
+            test,
+            params,
+            image_name,
+            blkdebug_cfg=blkdebug_cfg,
+            log_filename=log_filename,
+        )
         if pre_err_commands:
             for cmd in re.split(",", pre_err_commands.strip()):
                 session.cmd_output(cmd, timeout=test_timeout)
@@ -89,9 +87,13 @@ def run(test, params, env):
             if pre_snapshot:
                 image_io.snapshot_create()
                 image_sn = image_io.snapshot_tag
-            session = qemu_io.QemuIOShellSession(test, params, image_name,
-                                                 blkdebug_cfg=blkdebug_cfg,
-                                                 log_filename=log_filename)
+            session = qemu_io.QemuIOShellSession(
+                test,
+                params,
+                image_name,
+                blkdebug_cfg=blkdebug_cfg,
+                log_filename=log_filename,
+            )
 
         if not del_snapshot:
             output = session.cmd_output(err_command, timeout=test_timeout)
@@ -108,16 +110,14 @@ def run(test, params, env):
         image_io.remove()
         if pre_snapshot and not del_snapshot:
             params_sn = params.object_params(image_sn)
-            image_snapshot = QemuImg(
-                params_sn, data_dir.get_data_dir(), image_sn)
+            image_snapshot = QemuImg(params_sn, data_dir.get_data_dir(), image_sn)
             image_snapshot.remove()
 
         error_context.context("Get error message", test.log.info)
         try:
             std_msg = os.strerror(int(errn))
         except ValueError:
-            test.error("Can not find error message:\n"
-                       "    error code is %s" % errn)
+            test.error("Can not find error message:\n" "    error code is %s" % errn)
 
         session.close()
         error_context.context("Compare the error message", test.log.info)

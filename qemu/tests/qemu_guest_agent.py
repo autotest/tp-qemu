@@ -1277,6 +1277,26 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         test.fail("Disk %s partition is different "
                                   "between guest and qga." % diskname)
 
+                    if (not disk_info_qga['partition'] and
+                            'alias' not in disk_info_qga.keys()):
+                        error_context.context("Check bus-type of disk %s"
+                                              % diskname, LOG_JOB.info)
+                        bt_qga = disk_info_qga['address']['bus-type']
+                        cmd_bt_guest = (params["cmd_bustype_guest"] %
+                                        disk_info_qga['name'].replace("/dev/", ""))
+                        bt_guest = session.cmd_output(cmd_bt_guest).strip()
+                        if bt_guest != bt_qga:
+                            test.fail("Disk %s bus-type is different between"
+                                      " guest and qga; bt_guest is %s; bt_qga"
+                                      " is %s" % (diskname, bt_guest, bt_qga))
+
+                        if 'nvme' in disk_info_qga["name"]:
+                            error_context.context("Check param 'smart' of disk"
+                                                  "%s" % diskname, LOG_JOB.info)
+                            if 'smart' not in disk_info_qga.keys():
+                                test.fail("There should be parameter 'smart'"
+                                          "for disk's info here, but not.")
+
                     if disk_info_guest['type'] == 'lvm':
                         error_context.context("Check alias of disk %s"
                                               % diskname, LOG_JOB.info)
@@ -4069,6 +4089,15 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         :param env: Dictionary with test environment.
         """
 
+        def _process_guest_bustype(deviceid, session, params):
+            pattern = r'(\d+)$'
+            deviceid = re.search(pattern, deviceid).group(1)
+            bt_guest_num = session.cmd_output(params['cmd_bustype_guest']
+                                              % deviceid).strip().split()[0]
+            bt_guest_match_dic = eval(params['bus_type_list'])
+            bt_guest = bt_guest_match_dic[bt_guest_num]
+            return bt_guest
+
         session = self._get_session(params, None)
         self._open_session_list.append(session)
 
@@ -4086,6 +4115,15 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             if diskname.upper() != disk_info_guest[0].replace("\\", r"\\"):
                 test.fail("Disk %s name is different "
                           "between guest and qga." % diskname)
+
+            error_context.context("Check disk bus type", LOG_JOB.info)
+            deviceid_text = disk_info['name']
+            bt_guest = _process_guest_bustype(deviceid_text, session, params)
+            bt_qga = disk_info['address']['bus-type']
+            if bt_qga != bt_guest:
+                test.fail("Disk %s bus-type is different between guest "
+                          "and qga; bt_guest is: %s; bt_qga "
+                          "is %s" % (diskname, bt_guest, bt_qga))
 
     @error_context.context_aware
     def gagent_check_fsfreeze_vss_test(self, test, params, env):

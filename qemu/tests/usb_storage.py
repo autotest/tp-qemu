@@ -229,7 +229,7 @@ def run(test, params, env):
         # this part is linux only
         if params.get("check_serial_option") == "yes":
             error_context.context("Check usb serial option", test.log.info)
-            serial = uuid.uuid4().hex
+            serial = uuid.uuid4().hex[:20]
             regex_str = r'usb-storage.*?serial = "(.*?)"\s'
             _check_serial_option(serial, regex_str, serial)
 

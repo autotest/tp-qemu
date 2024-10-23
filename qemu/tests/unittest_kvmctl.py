@@ -27,5 +27,5 @@ def run(test, params, env):
         test.fail("Unit test %s failed" % case)
 
     result_file = os.path.join(test.resultsdir, case)
-    with open(result_file, 'w') as file:
+    with open(result_file, "w") as file:
         file.write(results)

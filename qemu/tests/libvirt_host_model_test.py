@@ -2,12 +2,7 @@ import os
 import uuid
 
 from avocado.utils import path
-from virttest import cpu
-from virttest import virsh
-from virttest import data_dir
-from virttest import libvirt_xml
-from virttest import env_process
-from virttest import error_context
+from virttest import cpu, data_dir, env_process, error_context, libvirt_xml, virsh
 
 
 def extend_flags_patterns(flags_dict):
@@ -16,7 +11,7 @@ def extend_flags_patterns(flags_dict):
     :param flags_dict: The original dict of flags
     """
     tmp_dict = {}
-    replace_char = [('_', ''), ('_', '-'), ('-', '_'), ('-', '')]
+    replace_char = [("_", ""), ("_", "-"), ("-", "_"), ("-", "")]
     for flag in flags_dict.keys():
         tmp_list = []
         tmp_list.extend(set(map(lambda x: flag.replace(*x), replace_char)))
@@ -36,8 +31,8 @@ def get_cpu_info_from_dumpxml(name):
     cpu_model = cpu_xml.model
     cpu_features = {}
     for i in range(0, len(feature_list)):
-        feature_name = cpu_xml.get_feature(i).get('name')
-        feature_policy = cpu_xml.get_feature(i).get('policy')
+        feature_name = cpu_xml.get_feature(i).get("name")
+        feature_policy = cpu_xml.get_feature(i).get("policy")
         if feature_policy == "require":
             feature_policy = "on"
         elif feature_policy == "disable":
@@ -92,14 +87,17 @@ def compare_cpu_info(test, params):
         cpu_model_libvirt = libvirt_cpu_info["model"]
         qemu_proc_cpu_flags = qemu_cpu_info["flags"]
         if cpu_model_qemu != cpu_model_libvirt:
-            test.log.error("mismatch cpu model bwteen qemu %s and libvirt %s",
-                           cpu_model_qemu, cpu_model_libvirt)
+            test.log.error(
+                "mismatch cpu model bwteen qemu %s and libvirt %s",
+                cpu_model_qemu,
+                cpu_model_libvirt,
+            )
             return False
         params["cpu_model"] = cpu_model_qemu
-        qemu_cpu_flags = cpu.parse_qemu_cpu_flags(qemu_cpu_info['flags'])
-        libvirt_cpu_flags = libvirt_cpu_info['features']
+        qemu_cpu_flags = cpu.parse_qemu_cpu_flags(qemu_cpu_info["flags"])
+        libvirt_cpu_flags = libvirt_cpu_info["features"]
         qemu_cpu_flags = extend_flags_patterns(qemu_cpu_flags)
-        exclude_map = eval(params.get('exclude_map', '{}'))
+        exclude_map = eval(params.get("exclude_map", "{}"))
         check_exclude = False
         exclude_map_flags = []
         if cpu_model_qemu in exclude_map.keys():
@@ -110,7 +108,7 @@ def compare_cpu_info(test, params):
         result_bool = True
         for flag in libvirt_cpu_flags.keys():
             if flag not in qemu_cpu_flags.keys():
-                if libvirt_cpu_flags[flag] == 'on':
+                if libvirt_cpu_flags[flag] == "on":
                     miss_flags.append(flag)
             elif libvirt_cpu_flags[flag] != qemu_cpu_flags[flag]:
                 mismatch_flags.append(flag)
@@ -124,8 +122,9 @@ def compare_cpu_info(test, params):
                         result_bool = False
                         break
         if mismatch_flags:
-            test.log.error("\nmismatch flags %s between libvirt and qemu\n",
-                           mismatch_flags)
+            test.log.error(
+                "\nmismatch flags %s between libvirt and qemu\n", mismatch_flags
+            )
             if not check_exclude:
                 result_bool = False
             else:
@@ -162,9 +161,10 @@ def run(test, params, env):
 
     cpu_flags = params.get("cpu_model_flags")
     params["cpu_model_flags"] = cpu.recombine_qemu_cpu_flags(
-        qemu_proc_cpu_flags, cpu_flags)
+        qemu_proc_cpu_flags, cpu_flags
+    )
     params["start_vm"] = "yes"
-    vm_name = params['main_vm']
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)

@@ -7,11 +7,9 @@ till all block jobs done.
 from functools import partial
 
 from avocado.utils import memory
-
 from virttest import utils_misc
 
-from provider import backup_utils
-from provider import blockdev_stream_base
+from provider import backup_utils, blockdev_stream_base
 
 
 class BlockdevStreamParallelTest(blockdev_stream_base.BlockDevStreamTest):
@@ -28,11 +26,14 @@ class BlockdevStreamParallelTest(blockdev_stream_base.BlockDevStreamTest):
         function with no argument
         """
         parallel_tests = self.params.objects("parallel_tests")
-        targets = list([getattr(self, t)
-                        for t in parallel_tests if hasattr(self, t)])
+        targets = list([getattr(self, t) for t in parallel_tests if hasattr(self, t)])
         targets.append(
-            partial(backup_utils.blockdev_stream, vm=self.main_vm,
-                    device=self._top_device, **self._stream_options)
+            partial(
+                backup_utils.blockdev_stream,
+                vm=self.main_vm,
+                device=self._top_device,
+                **self._stream_options,
+            )
         )
 
         try:

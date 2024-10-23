@@ -1,12 +1,8 @@
 import os
 import re
 
-from virttest import error_context
-from virttest import utils_misc
-from virttest import data_dir
-from virttest import env_process
-
 from avocado.utils import process
+from virttest import data_dir, env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -28,7 +24,7 @@ def run(test, params, env):
         Create 'test' cdrom
         """
         test.log.info("creating test cdrom")
-        cdrom_test = params.get("cdrom_test", '/tmp/test.iso')
+        cdrom_test = params.get("cdrom_test", "/tmp/test.iso")
         cdrom_test = utils_misc.get_path(data_dir.get_data_dir(), cdrom_test)
         process.run("dd if=/dev/urandom of=test bs=10M count=1")
         process.run("mkisofs -o %s test" % cdrom_test)
@@ -39,8 +35,9 @@ def run(test, params, env):
         Remove 'test' cdrom
         """
         test.log.info("cleaning up test cdrom")
-        cdrom_test = utils_misc.get_path(data_dir.get_data_dir(),
-                                         params.get("cdrom_test"))
+        cdrom_test = utils_misc.get_path(
+            data_dir.get_data_dir(), params.get("cdrom_test")
+        )
         os.remove(cdrom_test)
 
     def boot_check(info):
@@ -63,15 +60,15 @@ def run(test, params, env):
     vm.pause()
 
     # Disable nic device, boot fail from nic device except user model
-    if params['nettype'] != 'user':
+    if params["nettype"] != "user":
         for nic in vm.virtnet:
             process.system("ifconfig %s down" % nic.ifname)
     vm.resume()
 
     timeout = float(params.get("login_timeout", 240))
-    fail_infos = params['boot_fail_infos']
-    fail_infos_ex = params['boot_fail_infos_extra']
-    boot_strict = (params['boot_strict'] == 'on')
+    fail_infos = params["boot_fail_infos"]
+    fail_infos_ex = params["boot_fail_infos_extra"]
+    boot_strict = params["boot_strict"] == "on"
 
     try:
         error_context.context("Check guest boot result", test.log.info)

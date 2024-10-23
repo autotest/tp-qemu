@@ -1,5 +1,5 @@
-import re
 import json
+import re
 
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
@@ -32,16 +32,14 @@ def run(test, params, env):
     report.create(report.params)
 
     # 'qemu-img check' the image and check the output info.
-    check_result = report.check(report.params, root_dir,
-                                output="human").stdout.decode()
+    check_result = report.check(report.params, root_dir, output="human").stdout.decode()
     if not check_result:
         test.error("There is no output of check command, check please.")
     test.log.debug("The check output with human output format: %s", check_result)
-    result_dict = dict(re.findall(r'(.+):\s(.+)', check_result))
+    result_dict = dict(re.findall(r"(.+):\s(.+)", check_result))
     _check_result(human_key, offset, result_dict)
 
-    check_result = report.check(report.params, root_dir,
-                                output="json").stdout.decode()
+    check_result = report.check(report.params, root_dir, output="json").stdout.decode()
     if not check_result:
         test.error("There is no output of check command, check please.")
     test.log.debug("The check output with json output format: %s", check_result)

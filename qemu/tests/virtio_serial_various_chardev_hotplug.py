@@ -1,4 +1,5 @@
 from virttest import error_context
+
 from qemu.tests.virtio_console import add_chardev
 
 
@@ -28,6 +29,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def cmd_qmp_log(vm, cmd, args):
         reply = vm.monitor.cmd_qmp(cmd, args)
         if "error" in reply:
@@ -44,27 +46,36 @@ def run(test, params, env):
         vm.devices.simple_hotplug(char_device, vm.monitor)
         chardev_id = char_device.get_qid()
         chardev_param = params.object_params(chardev_id)
-        backend = chardev_param.get('chardev_backend',
-                                    'unix_socket')
-        if backend == 'ringbuf':
-            ringbuf_write_size = int(params.get('ringbuf_write_size'))
-            ringbuf_read_size = int(params.get('ringbuf_read_size'))
+        backend = chardev_param.get("chardev_backend", "unix_socket")
+        if backend == "ringbuf":
+            ringbuf_write_size = int(params.get("ringbuf_write_size"))
+            ringbuf_read_size = int(params.get("ringbuf_read_size"))
             if ringbuf_write_size < ringbuf_read_size:
-                test.error("data error:write_size %d must above read_size %d"
-                           % (ringbuf_write_size, ringbuf_read_size))
-            ringbuf_data = params.get('ringbuf_data')
-            ringbuf_format = params.get('ringbuf_format')
-            ringbuf_write = cmd_qmp_log(vm, "ringbuf-write",
-                                        {'device': chardev_id,
-                                         'data': ringbuf_data,
-                                         'format': ringbuf_format})
-            ringbuf_read = cmd_qmp_log(vm, "ringbuf-read",
-                                       {'device': chardev_id,
-                                        'size': ringbuf_read_size,
-                                        'format': ringbuf_format})
+                test.error(
+                    "data error:write_size %d must above read_size %d"
+                    % (ringbuf_write_size, ringbuf_read_size)
+                )
+            ringbuf_data = params.get("ringbuf_data")
+            ringbuf_format = params.get("ringbuf_format")
+            cmd_qmp_log(
+                vm,
+                "ringbuf-write",
+                {"device": chardev_id, "data": ringbuf_data, "format": ringbuf_format},
+            )
+            ringbuf_read = cmd_qmp_log(
+                vm,
+                "ringbuf-read",
+                {
+                    "device": chardev_id,
+                    "size": ringbuf_read_size,
+                    "format": ringbuf_format,
+                },
+            )
             if ringbuf_data[:ringbuf_read_size] != ringbuf_read["return"]:
-                test.fail("qmp error: can't find data \'%s\' in %s"
-                          % (ringbuf_data[:ringbuf_read_size], ringbuf_read))
+                test.fail(
+                    "qmp error: can't find data '%s' in %s"
+                    % (ringbuf_data[:ringbuf_read_size], ringbuf_read)
+                )
     for char_device in char_devices:
         vm.devices.simple_unplug(char_device, vm.monitor)
     vm.reboot()

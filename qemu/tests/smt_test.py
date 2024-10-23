@@ -1,12 +1,9 @@
 import re
 import time
 
-from virttest import env_process
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_test
-
+from virttest import env_process, error_context, utils_misc, utils_test
 from virttest.utils_test import BackgroundTest
+
 from provider.cpu_utils import check_cpu_flags
 
 
@@ -22,6 +19,7 @@ def run(test, params, env):
     :params params: Dictionary with the test parameters.
     :params env: Dictionary with test environment.
     """
+
     def run_guest_cmd(cmd, retry=False):
         """
         Run cmd inside guest
@@ -48,7 +46,7 @@ def run(test, params, env):
             cmd = params["get_sockets_cmd"]
             output = run_guest_cmd(cmd)
             sockets = len(re.findall(r"SocketDesignation=", output))
-            threads = int(vm.cpuinfo.smp/sockets/cores)
+            threads = int(vm.cpuinfo.smp / sockets / cores)
         return threads
 
     def heavyload_install(install_path):
@@ -57,8 +55,10 @@ def run(test, params, env):
         """
         test_installed_cmd = 'dir "%s" | findstr /I heavyload' % install_path
         if session.cmd_status(test_installed_cmd) != 0:
-            test.log.warning("Could not find installed heavyload in guest, will"
-                             " install it via winutils.iso ")
+            test.log.warning(
+                "Could not find installed heavyload in guest, will"
+                " install it via winutils.iso "
+            )
             winutil_drive = utils_misc.get_winutils_vol(session)
             if not winutil_drive:
                 test.cancel("WIN_UTILS CDROM not found.")
@@ -69,12 +69,12 @@ def run(test, params, env):
         """
         Run stress inside guest, return guest cpu usage
         """
-        error_context.context("Run stress in guest and get cpu usage",
-                              test.log.info)
+        error_context.context("Run stress in guest and get cpu usage", test.log.info)
         if os_type == "linux":
             stress_args = params["stress_args"]
-            stress_test = utils_test.VMStress(vm, "stress",
-                                              params, stress_args=stress_args)
+            stress_test = utils_test.VMStress(
+                vm, "stress", params, stress_args=stress_args
+            )
             try:
                 stress_test.load_stress_tool()
                 time.sleep(stress_duration / 2)
@@ -94,14 +94,16 @@ def run(test, params, env):
             heavyload_install(install_path)
             error_context.context("Run heavyload inside guest.", test.log.info)
             heavyload_bin = r'"%s\heavyload.exe" ' % install_path
-            heavyload_options = ["/CPU %d" % vm.cpuinfo.smp,
-                                 "/DURATION %d" % (stress_duration // 60),
-                                 "/AUTOEXIT",
-                                 "/START"]
+            heavyload_options = [
+                "/CPU %d" % vm.cpuinfo.smp,
+                "/DURATION %d" % (stress_duration // 60),
+                "/AUTOEXIT",
+                "/START",
+            ]
             start_cmd = heavyload_bin + " ".join(heavyload_options)
-            stress_tool = BackgroundTest(session.cmd, (start_cmd,
-                                                       stress_duration,
-                                                       stress_duration))
+            stress_tool = BackgroundTest(
+                session.cmd, (start_cmd, stress_duration, stress_duration)
+            )
             stress_tool.start()
             if not utils_misc.wait_for(stress_tool.is_alive, stress_duration):
                 test.error("Failed to start heavyload process.")

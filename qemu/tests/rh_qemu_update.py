@@ -1,5 +1,6 @@
-from avocado.utils import process, distro
 from distutils.version import LooseVersion
+
+from avocado.utils import distro, process
 from virttest import error_context
 
 QUERY_TIMEOUT = 360
@@ -22,26 +23,18 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
-    qemu_package = params['qemu_package_install']
-    pm_tool = params['pm_tool']
+    qemu_package = params["qemu_package_install"]
+    pm_tool = params["pm_tool"]
 
     def install_qemu(session):
         """
         Install compose version of qemu-kvm pkg by the name provided in cfg
         """
-        cmd = "{} install -y {}".format(
-            pm_tool, qemu_package
-        )
+        cmd = "{} install -y {}".format(pm_tool, qemu_package)
         s, o = session.cmd_status_output(cmd, timeout=OPERATION_TIMEOUT)
         if s != 0:
-            test.error("Installation of '{}' failed with: {}".format(
-                qemu_package, o
-                )
-            )
-        test.log.info("Installation of '{}' succeeded".format(
-            qemu_package
-            )
-        )
+            test.error("Installation of '{}' failed with: {}".format(qemu_package, o))
+        test.log.info("Installation of '%s' succeeded", qemu_package)
 
     def install_component_management(session):
         """
@@ -49,22 +42,16 @@ def run(test, params, env):
         repositories containing qemu-kvm build or whole virt module
         """
         cmd_clone = "git clone --depth=1 {} -b {} {}".format(
-            params['cm_repo'],
-            params['cm_branch'],
-            params['cm_path']
+            params["cm_repo"], params["cm_branch"], params["cm_path"]
         )
         s_clone, o_clone = session.cmd_status_output(
             cmd_clone, timeout=OPERATION_TIMEOUT
-            )
-        if s_clone != 0:
-            test.error("Clonning of '{}' failed with: {}".format(
-                params['cm_repo'], o_clone
-                )
-            )
-        test.log.info("Clonning of '{}' succeeded".format(
-            params['cm_repo']
-            )
         )
+        if s_clone != 0:
+            test.error(
+                "Clonning of '{}' failed with: {}".format(params["cm_repo"], o_clone)
+            )
+        test.log.info("Clonning of '%s' succeeded", params["cm_repo"])
 
     def _get_installed_qemu_info(session=None):
         """
@@ -74,16 +61,19 @@ def run(test, params, env):
         cmd = f"rpm -q {qemu_package}"
         if session is not None:
             out = session.cmd(cmd, timeout=QUERY_TIMEOUT)
-            tgt = process.run(
-                "cat /etc/os-release | grep VERSION_ID | cut -d'=' -f2",
-                shell=True
-            ).stdout_text.strip().replace("\"", "")
+            tgt = (
+                process.run(
+                    "cat /etc/os-release | grep VERSION_ID | cut -d'=' -f2", shell=True
+                )
+                .stdout_text.strip()
+                .replace('"', "")
+            )
         else:
             out = process.run(cmd, shell=True).stdout_text.strip()
             distro_details = distro.detect()
             tgt = f"{distro_details.version}.{distro_details.release}"
         # Drop arch information from NVR e.g. '.x86_64'
-        nvr = out.rsplit('.', 1)[0]
+        nvr = out.rsplit(".", 1)[0]
         return {
             "nvr": nvr,
             "target": tgt,
@@ -98,26 +88,22 @@ def run(test, params, env):
         if host_qemu["target"] != guest_qemu["target"]:
             test.cancel(
                 "Guest target target '{}' differs from host '{}'".format(
-                    guest_qemu['target'],
-                    host_qemu['target']
+                    guest_qemu["target"], host_qemu["target"]
                 )
             )
         # Check if qemu-versions in the available and guest one differs
         if LooseVersion(host_qemu["nvr"]) > LooseVersion(guest_qemu["nvr"]):
             test.log.info(
-                "Available qemu-kvm '{}' is newer compared to guest's '{}'".format(
-                    host_qemu["nvr"],
-                    guest_qemu["nvr"]
-                )
+                "Available qemu-kvm '%s' is newer compared to guest's '%s'",
+                host_qemu["nvr"],
+                guest_qemu["nvr"],
             )
         else:
             test.cancel(
-                "Available qemu-kvm '{}' is older or same compared to guest's '{}'".format(
-                    host_qemu["nvr"],
-                    guest_qemu["nvr"]
-                )
+                "Available qemu-kvm '{}' is older or same compared to guest's "
+                "'{}'".format(host_qemu["nvr"], guest_qemu["nvr"])
             )
-        return host_qemu['nvr']
+        return host_qemu["nvr"]
 
     def update_guest_qemu(session, install_id):
         """
@@ -126,69 +112,49 @@ def run(test, params, env):
         """
         # Prepare module or build repo containing newer version of qemu-kvm
         cmd = f"python3 {params['cm_path']}{params['cm_cmd']} {install_id}"
-        test.log.info(f"Running: {cmd}")
+        test.log.info("Running: %s", cmd)
         try:
             session.cmd(cmd, timeout=OPERATION_TIMEOUT)
-            test.log.info("Creation of repo '{}' succeeded".format(
-                install_id
-                )
-            )
+            test.log.info("Creation of repo '%s' succeeded", install_id)
         except Exception as e:
-            test.error("Creation of repo '{}' failed with: {}".format(
-                install_id, e
-                )
-            )
+            test.error("Creation of repo '{}' failed with: {}".format(install_id, e))
         # Disable and enable new module if module is used
         if "+" in install_id:
             # Get virt module stream ('rhel' or 'av') on the host
             stream = process.run(
-                f"{pm_tool} module list --enabled | grep virt" +
-                "| awk -F ' ' '{{print $2}}' | head -1",
-                shell=True
+                f"{pm_tool} module list --enabled | grep virt"
+                + "| awk -F ' ' '{{print $2}}' | head -1",
+                shell=True,
             ).stdout_text.strip()
             disable_cmd = f"{pm_tool} module disable -y virt"
             s_disable, o_disable = session.cmd_status_output(
                 disable_cmd, timeout=QUERY_TIMEOUT
-                )
+            )
             if s_disable != 0:
-                test.fail("Disable of module virt failed with: {}".format(
-                    o_disable
-                    )
-                )
+                test.fail("Disable of module virt failed with: {}".format(o_disable))
             else:
                 test.log.info("Disable of module virt succeeded")
             enable_cmd = f"{pm_tool} module enable -y virt:{stream}"
             s_enable, o_enable = session.cmd_status_output(
                 enable_cmd, timeout=QUERY_TIMEOUT
-                )
+            )
             if s_enable != 0:
-                test.fail("Enable of module virt:{} failed with: {}".format(
-                    stream, o_enable
-                    )
+                test.fail(
+                    "Enable of module virt:{} failed with: {}".format(stream, o_enable)
                 )
             else:
-                test.log.info("Enable of module virt:{} succeeded".format(
-                    stream
-                    )
-                )
+                test.log.info("Enable of module virt:%s succeeded", stream)
         # Run upgrade to newer qemu-kvm version
         if "+" in install_id:
             cmd_upgrade = f"{pm_tool} module update -y virt:{stream}"
         else:
-            cmd_upgrade = "{} upgrade -y {}".format(
-                pm_tool, qemu_package
-            )
+            cmd_upgrade = "{} upgrade -y {}".format(pm_tool, qemu_package)
         s_upgrade, o_upgrade = session.cmd_status_output(
-            cmd_upgrade, timeout=INSTALL_TIMEOUT)
-        if s_upgrade != 0:
-            test.fail("Upgrade of '{}' failed with: {}".format(
-                qemu_package, o_upgrade
-                )
-            )
-        test.log.info("Upgrade of '{}' succeeded".format(
-            qemu_package
-            )
+            cmd_upgrade, timeout=INSTALL_TIMEOUT
         )
+        if s_upgrade != 0:
+            test.fail("Upgrade of '{}' failed with: {}".format(qemu_package, o_upgrade))
+        test.log.info("Upgrade of '%s' succeeded", qemu_package)
 
     def verify_installed_qemu(host_qemu, guest_qemu):
         """
@@ -197,11 +163,7 @@ def run(test, params, env):
         expected_nvr = host_qemu["nvr"]
         installed_nvr = guest_qemu["nvr"]
         if installed_nvr == expected_nvr:
-            test.log.info(
-                "NVR of installed pkg '{}' is correct".format(
-                    installed_nvr
-                )
-            )
+            test.log.info("NVR of installed pkg '%s' is correct", installed_nvr)
         else:
             test.fail(
                 "NVR of installed pkg '{}' differs from expected '{}'".format(

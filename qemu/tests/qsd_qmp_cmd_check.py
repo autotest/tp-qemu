@@ -1,8 +1,10 @@
 """QSD QMP commands test"""
+
 import json
 
-from provider.qsd import QsdDaemonDev
 from virttest.qemu_monitor import QMPCmdError
+
+from provider.qsd import QsdDaemonDev
 
 
 def run(test, params, env):
@@ -34,8 +36,7 @@ def run(test, params, env):
         export_opts = img_attrs["export"]
         logger.debug("Check the export list")
         out = monitor.cmd("query-block-exports")
-        test.assertTrue(out[0]["id"] == export_opts["id"],
-                        "Can not find export")
+        test.assertTrue(out[0]["id"] == export_opts["id"], "Can not find export")
 
         logger.debug("Delete the export,blockdev and object")
         monitor.block_export_del(export_opts["id"])
@@ -50,17 +51,19 @@ def run(test, params, env):
         monitor.cmd("object-add", obj_throttle)
         monitor.blockdev_add(prot_opts)
         monitor.blockdev_add(fmt_opts)
-        filter_opts = {"driver": "throttle", "node-name": "filter_node",
-                       "throttle-group": obj_throttle["id"],
-                       "file": fmt_opts["node-name"]}
+        filter_opts = {
+            "driver": "throttle",
+            "node-name": "filter_node",
+            "throttle-group": obj_throttle["id"],
+            "file": fmt_opts["node-name"],
+        }
         monitor.blockdev_add(filter_opts)
         out = monitor.query_named_block_nodes()
         test.assertTrue(len(out) == 3, "Can not find blockdev")
         export_opts["node-name"] = filter_opts["node-name"]
         monitor.cmd("block-export-add", export_opts)
         out = monitor.query_block_exports()
-        test.assertTrue(out[0]["id"] == export_opts["id"],
-                        "Can not find export")
+        test.assertTrue(out[0]["id"] == export_opts["id"], "Can not find export")
 
         logger.debug("Re-Delete the export,blockdev and object")
         monitor.block_export_del(export_opts["id"])

@@ -1,5 +1,4 @@
 class PoolTarget(object):
-
     def __init__(self):
         self.path = None
         self.format = None

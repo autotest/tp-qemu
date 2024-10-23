@@ -1,7 +1,5 @@
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -21,13 +19,11 @@ def run(test, params, env):
     cmd = qemu_binary + qcmd
     output = process.system_output(cmd, shell=True)
 
-    error_context.context("check if expected info is included in output of %s"
-                          % cmd)
+    error_context.context("check if expected info is included in output of %s" % cmd)
     cpuinfos = params.get("cpu_info", "Conroe").split(",")
     missing = []
     for cpuinfo in cpuinfos:
         if cpuinfo not in output:
             missing.append(cpuinfo)
     if missing:
-        test.fail("%s is missing in the output\n %s" %
-                  (", ".join(missing), output))
+        test.fail("%s is missing in the output\n %s" % (", ".join(missing), output))

@@ -1,8 +1,12 @@
 from avocado.utils import process
-
-from virttest import env_process, utils_misc, utils_test
-from virttest import error_context, data_dir
-from virttest import utils_disk
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    utils_disk,
+    utils_misc,
+    utils_test,
+)
 from virttest.qemu_storage import QemuImg
 from virttest.utils_misc import get_linux_drive_path
 
@@ -33,16 +37,14 @@ def run(test, params, env):
     """
 
     def cleanup_test_env(dirname, loop_device_name):
-        cmd = "if losetup -l {0};then losetup -d {0};fi;".format(
-            loop_device_name)
+        cmd = "if losetup -l {0};then losetup -d {0};fi;".format(loop_device_name)
         cmd += "umount -l {0};rm -rf {0};".format(dirname)
         process.system_output(cmd, shell=True)
 
     def prepare_tmpfs_folder(dirname):
         cmd = "umount -l {0};rm -rf {0};mkdir -p {0};".format(dirname)
         process.system_output(cmd, ignore_status=True, shell=True)
-        cmd = "mount -t tmpfs -o rw,nosuid,nodev,seclabel tmpfs {}".format(
-            dirname)
+        cmd = "mount -t tmpfs -o rw,nosuid,nodev,seclabel tmpfs {}".format(dirname)
         process.system_output(cmd, shell=True)
 
     def create_image_on_loop_device(backend_img, device_img):
@@ -51,14 +53,18 @@ def run(test, params, env):
         loop_device_name = device_img.image_filename
         cmd = "losetup -d {}".format(loop_device_name)
         process.system_output(cmd, ignore_status=True, shell=True)
-        cmd = "losetup {0} {1} && chmod 666 {0}".format(loop_device_name,
-                                                        backend_filename)
+        cmd = "losetup {0} {1} && chmod 666 {0}".format(
+            loop_device_name, backend_filename
+        )
         process.system_output(cmd, shell=True)
         device_img.create(device_img.params)
 
     def update_loop_device_backend_size(backend_img, device_img, size):
         cmd = "qemu-img resize -f raw %s %s && losetup -c %s" % (
-            backend_img.image_filename, size, device_img.image_filename)
+            backend_img.image_filename,
+            size,
+            device_img.image_filename,
+        )
         process.system_output(cmd, shell=True)
 
     current_size = int(params["begin_size"][0:-1])
@@ -74,8 +80,7 @@ def run(test, params, env):
     loop_device_backend_img_tag = params["loop_device_backend_img_tag"]
     loop_device_img_tag = params["loop_device_img_tag"]
 
-    loop_device_backend_img_param = params.object_params(
-        loop_device_backend_img_tag)
+    loop_device_backend_img_param = params.object_params(loop_device_backend_img_tag)
     loop_device_img_param = params.object_params(loop_device_img_tag)
     tmpfs_folder = params.get("tmpfs_folder", "/tmp/xtmpfs")
 
@@ -86,11 +91,14 @@ def run(test, params, env):
     prepare_tmpfs_folder(tmpfs_folder)
 
     error_context.context("Start to create image on loop device", test.log.info)
-    loop_device_backend_img = QemuImg(loop_device_backend_img_param,
-                                      data_dir.get_data_dir(),
-                                      loop_device_backend_img_tag)
-    loop_device_img = QemuImg(loop_device_img_param, data_dir.get_data_dir(),
-                              loop_device_img_tag)
+    loop_device_backend_img = QemuImg(
+        loop_device_backend_img_param,
+        data_dir.get_data_dir(),
+        loop_device_backend_img_tag,
+    )
+    loop_device_img = QemuImg(
+        loop_device_img_param, data_dir.get_data_dir(), loop_device_img_tag
+    )
     create_image_on_loop_device(loop_device_backend_img, loop_device_img)
 
     try:
@@ -107,21 +115,20 @@ def run(test, params, env):
         vm.verify_alive()
 
         session = vm.wait_for_login(timeout=timeout)
-        if os_type == 'windows' and driver_name:
-            session = utils_test.qemu.windrv_check_running_verifier(session,
-                                                                    vm,
-                                                                    test,
-                                                                    driver_name,
-                                                                    timeout)
+        if os_type == "windows" and driver_name:
+            session = utils_test.qemu.windrv_check_running_verifier(
+                session, vm, test, driver_name, timeout
+            )
 
-        if os_type == 'windows':
+        if os_type == "windows":
             img_size = loop_device_img_param["image_size"]
             guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             disk = utils_disk.get_windows_disks_index(session, img_size)[0]
             utils_disk.update_windows_disk_attributes(session, disk)
             test.log.info("Formatting disk:%s", disk)
-            driver = utils_disk.configure_empty_disk(session, disk, img_size,
-                                                     os_type)[0]
+            driver = utils_disk.configure_empty_disk(session, disk, img_size, os_type)[
+                0
+            ]
             output_path = driver + ":\\test.dat"
 
         else:
@@ -144,11 +151,11 @@ def run(test, params, env):
             current_size_string = str(current_size) + size_unit
 
             error_context.context(
-                "Update backend image size to %s" % current_size_string,
-                test.log.info)
-            update_loop_device_backend_size(loop_device_backend_img,
-                                            loop_device_img,
-                                            current_size_string)
+                "Update backend image size to %s" % current_size_string, test.log.info
+            )
+            update_loop_device_backend_size(
+                loop_device_backend_img, loop_device_img, current_size_string
+            )
 
             vm.monitor.cmd("cont")
 

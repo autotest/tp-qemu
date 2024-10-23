@@ -1,8 +1,7 @@
-from virttest import error_context
+from virttest import env_process, error_context
 
 from qemu.tests import numa_memdev_options
 from qemu.tests.mlock_basic import MlockBasic
-from virttest import env_process
 
 
 @error_context.context_aware
@@ -24,13 +23,15 @@ def run(test, params, env):
     error_context.context("Check host's numa node(s)!", test.log.info)
     valid_nodes = numa_memdev_options.get_host_numa_node()
     if len(valid_nodes) < 2:
-        test.cancel("The host numa nodes that whose size is not zero should be "
-                    "at least 2! But there is %d." % len(valid_nodes))
+        test.cancel(
+            "The host numa nodes that whose size is not zero should be "
+            "at least 2! But there is %d." % len(valid_nodes)
+        )
 
-    if params.get('policy_mem') != 'default':
+    if params.get("policy_mem") != "default":
         error_context.context("Assign host's numa node(s)!", test.log.info)
-        params['host-nodes_mem0'] = valid_nodes[0]
-        params['host-nodes_mem1'] = valid_nodes[1]
+        params["host-nodes_mem0"] = valid_nodes[0]
+        params["host-nodes_mem1"] = valid_nodes[1]
 
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     numa_mlock_test = MlockBasic(test, params, env)

@@ -1,11 +1,8 @@
 import time
 
 import aexpect
-
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net
 
 
 @error_context.context_aware
@@ -19,6 +16,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def kill_and_check(vm):
         """
         Kill the vm and check vm is dead
@@ -61,7 +59,7 @@ def run(test, params, env):
         else return False
         """
         os_type = params.get("os_type")
-        if os_type == 'linux':
+        if os_type == "linux":
             return not session.cmd_status("pidof ping")
         else:
             return not session.cmd_status("tasklist | findstr /I ping.exe")
@@ -104,18 +102,17 @@ def run(test, params, env):
         error_context.context("Ping dst guest", test.log.info)
         guest_ping(session, dst_ip, count=4)
 
-        error_context.context("Disable the dst guest nic interface",
-                              test.log.info)
+        error_context.context("Disable the dst guest nic interface", test.log.info)
         macaddress = dst_vm.get_mac_address()
         if params.get("os_type") == "linux":
             ifname = utils_net.get_linux_ifname(session_serial, macaddress)
         else:
-            ifname = utils_net.get_windows_nic_attribute(session_serial,
-                                                         "macaddress", macaddress, "netconnectionid")
+            ifname = utils_net.get_windows_nic_attribute(
+                session_serial, "macaddress", macaddress, "netconnectionid"
+            )
         manage_guest_nic(session_serial, ifname)
 
-        error_context.context("Ping dst guest after disabling it's nic",
-                              test.log.info)
+        error_context.context("Ping dst guest after disabling it's nic", test.log.info)
         ping_timeout = float(params.get("ping_timeout", 21600))
         guest_ping(session, dst_ip)
         # This test need do infinite ping for a long time(6h)

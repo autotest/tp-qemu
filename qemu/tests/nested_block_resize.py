@@ -3,11 +3,9 @@ import os
 import time
 
 from avocado.utils import process
+from virttest import data_dir, error_context, storage
 
-from virttest import error_context
-from provider import message_queuing, ansible
-from virttest import storage
-from virttest import data_dir
+from provider import ansible, message_queuing
 
 
 # This decorator makes the test function aware of context strings
@@ -43,9 +41,10 @@ def run(test, params, env):
         test.log.info("Receive resize msg:%s", msg)
         data_image_params = params.object_params("stg0")
         data_image_size = params.get_numeric("new_image_size_stg0")
-        data_image_filename = storage.get_image_filename(data_image_params,
-                                                         data_dir.get_data_dir())
-        data_image_dev = vm.get_block({'file': data_image_filename})
+        data_image_filename = storage.get_image_filename(
+            data_image_params, data_dir.get_data_dir()
+        )
+        data_image_dev = vm.get_block({"file": data_image_filename})
         args = (None, data_image_size, data_image_dev)
 
         vm.monitor.block_resize(*args)
@@ -81,8 +80,9 @@ def run(test, params, env):
     ansible_extra_vars = params.get("ansible_extra_vars", "{}")
     playbook_repo = params["playbook_repo"]
     playbook_timeout = params.get_numeric("playbook_timeout")
-    playbook_dir = params.get("playbook_dir",
-                              os.path.join(test.workdir, "ansible_playbook"))
+    playbook_dir = params.get(
+        "playbook_dir", os.path.join(test.workdir, "ansible_playbook")
+    )
     toplevel_playbook = os.path.join(playbook_dir, params["toplevel_playbook"])
     # Use this directory to copy some logs back from the guest
     test_harness_log_dir = test.logdir
@@ -91,15 +91,17 @@ def run(test, params, env):
     guest_ip_list = [vm.get_address()]
 
     test.log.info("Cloning %s", playbook_repo)
-    process.run("git clone {src} {dst}".format(src=playbook_repo,
-                                               dst=playbook_dir),
-                verbose=False)
+    process.run(
+        "git clone {src} {dst}".format(src=playbook_repo, dst=playbook_dir),
+        verbose=False,
+    )
 
-    error_context.base_context("Generate playbook related options.",
-                               test.log.info)
-    extra_vars = {"ansible_ssh_pass": guest_passwd,
-                  "mq_port": mq_listen_port,
-                  "test_harness_log_dir": test_harness_log_dir}
+    error_context.base_context("Generate playbook related options.", test.log.info)
+    extra_vars = {
+        "ansible_ssh_pass": guest_passwd,
+        "mq_port": mq_listen_port,
+        "test_harness_log_dir": test_harness_log_dir,
+    }
     extra_vars.update(json.loads(ansible_extra_vars))
 
     error_context.context("Execute the ansible playbook.", test.log.info)
@@ -110,7 +112,7 @@ def run(test, params, env):
         extra_vars=json.dumps(extra_vars),
         callback_plugin=ansible_callback_plugin,
         connection_plugin=ansible_connection_plugin,
-        addl_opts=ansible_addl_opts
+        addl_opts=ansible_addl_opts,
     )
 
     # Handle cases
@@ -118,12 +120,11 @@ def run(test, params, env):
     mq_port = params.get("mq_port", 5000)
     wait_response_timeout = params.get_numeric("wait_response_timeout", 1800)
 
-    mq_publisher = message_queuing.MQPublisher(mq_port,
-                                               other_options="--broker")
+    mq_publisher = message_queuing.MQPublisher(mq_port, other_options="--broker")
 
     host = "127.0.0.1"
 
-    test.log.info("host:{} port:{}".format(host, mq_port))
+    test.log.info("host:%s port:%s", host, mq_port)
     client = message_queuing.MQClient(host, mq_port)
     time.sleep(2)
 
@@ -144,11 +145,11 @@ def run(test, params, env):
             if playbook_executor.get_status() != 0:
                 test.fail(
                     "Ansible playbook execution failed, please check the "
-                    "{} for details.".format(ansible_log))
+                    "{} for details.".format(ansible_log)
+                )
             test.log.info("Ansible playbook execution passed.")
         finally:
-            playbook_executor.store_playbook_log(test_harness_log_dir,
-                                                 ansible_log)
+            playbook_executor.store_playbook_log(test_harness_log_dir, ansible_log)
             playbook_executor.close()
             client.close()
             mq_publisher.close()

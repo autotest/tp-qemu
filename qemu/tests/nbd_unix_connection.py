@@ -18,8 +18,10 @@ def run(test, params, env):
     def run_nbd_connect_cmd(cmd):
         result = process.run(cmd, timeout=5, ignore_status=True, shell=True)
         if result.exit_status != -15:
-            test.fail('Failed to connect nbd by unix socket,'
-                      'command error: %s' % result.stderr.decode())
+            test.fail(
+                "Failed to connect nbd by unix socket,"
+                "command error: %s" % result.stderr.decode()
+            )
 
     # local image to be exported
     nbd_export = QemuNBDExportImage(params, params["local_image_tag"])
@@ -33,5 +35,5 @@ def run(test, params, env):
         for iteration in range(5):
             run_nbd_connect_cmd(nbd_connect_cmd)
     finally:
-        test.log.info('Stop export test image.')
+        test.log.info("Stop export test image.")
         nbd_export.stop_export()

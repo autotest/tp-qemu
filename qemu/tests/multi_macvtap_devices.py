@@ -2,18 +2,15 @@ import logging
 import time
 
 import aexpect
-
 from avocado.utils import process
+from virttest import env_process, error_context, utils_net
 
-from virttest import error_context
-from virttest import utils_net
-from virttest import env_process
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
-def guest_ping(test, session, dst_ip, count=None, os_type="linux",
-               p_size=1472, timeout=360):
+def guest_ping(
+    test, session, dst_ip, count=None, os_type="linux", p_size=1472, timeout=360
+):
     """
     Do ping test in guest
     """
@@ -76,9 +73,11 @@ def run(test, params, env):
     try:
         ext_host = process.system_output(ext_host_get_cmd, shell=True)
     except process.CmdError:
-        test.log.warn("Can't get specified host with cmd '%s',"
-                      " Fallback to default host '%s'",
-                      ext_host_get_cmd, default_host)
+        test.log.warning(
+            "Can't get specified host with cmd '%s'," " Fallback to default host '%s'",
+            ext_host_get_cmd,
+            default_host,
+        )
         ext_host = default_host
     try:
         txt = "Create and up %s macvtap devices in setting mode." % macvtap_num
@@ -86,8 +85,7 @@ def run(test, params, env):
         for num in range(macvtap_num):
             mac = utils_net.generate_mac_address_simple()
             ifname = "%s_%s" % (macvtap_mode, num)
-            tapfd = utils_net.create_and_open_macvtap(ifname, macvtap_mode,
-                                                      1, netdst, mac)
+            utils_net.create_and_open_macvtap(ifname, macvtap_mode, 1, netdst, mac)
             check_cmd = "ip -d link show %s" % ifname
             output = process.system_output(check_cmd)
             test.log.debug(output)
@@ -102,8 +100,7 @@ def run(test, params, env):
             vm.verify_alive()
             session = vm.wait_for_serial_login(timeout=timeout)
             if wait_guest_network_up(test, session, ext_host, timeout=timeout):
-                txt = " Ping from guests to %s for %s counts." % (ext_host,
-                                                                  ping_count)
+                txt = " Ping from guests to %s for %s counts." % (ext_host, ping_count)
                 error_context.context(txt, test.log.info)
                 guest_ping(test, session, ext_host, 100)
             else:

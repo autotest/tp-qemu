@@ -1,11 +1,9 @@
-import re
 import os
+import re
 import shutil
 
-from virttest import error_context
-from virttest import data_dir
-from avocado.utils import process
-from avocado.utils import archive
+from avocado.utils import archive, process
+from virttest import data_dir, error_context
 
 
 @error_context.context_aware
@@ -44,8 +42,7 @@ def run(test, params, env):
         param sub_dir: sub directory that contain the file
         param dst_dir: the target directory the file copied to
         """
-        src_full_path = os.path.join(
-            data_dir.get_deps_dir(sub_dir), file_name)
+        src_full_path = os.path.join(data_dir.get_deps_dir(sub_dir), file_name)
         dst_full_path = os.path.join(dst_dir, file_name)
         shutil.copyfile(src_full_path, dst_full_path)
         return dst_full_path
@@ -61,10 +58,12 @@ def run(test, params, env):
     uncompress_dir = params.get("uncompress_dir")
     timeout = params.get_numeric("timeout", 60)
 
-    error_context.context("Copy %s to %s" % (tcpreplay_file_name, tmp_dir),
-                          test.log.info)
-    tcpreplay_full_path = copy_file_from_deps(tcpreplay_file_name,
-                                              tcpreplay_dir, tmp_dir)
+    error_context.context(
+        "Copy %s to %s" % (tcpreplay_file_name, tmp_dir), test.log.info
+    )
+    tcpreplay_full_path = copy_file_from_deps(
+        tcpreplay_file_name, tcpreplay_dir, tmp_dir
+    )
 
     error_context.context("Compile tcpreplay", test.log.info)
     uncompress_full_path = os.path.join(tmp_dir, uncompress_dir)
@@ -72,23 +71,20 @@ def run(test, params, env):
     test.log.info("Remove old uncompress directory")
     shutil.rmtree(uncompress_full_path, ignore_errors=True)
 
-    test.log.info(
-        "Uncompress %s to %s", tcpreplay_full_path, uncompress_full_path)
-    uncompress_dir = archive.uncompress(
-        tcpreplay_full_path, tmp_dir)
+    test.log.info("Uncompress %s to %s", tcpreplay_full_path, uncompress_full_path)
+    uncompress_dir = archive.uncompress(tcpreplay_full_path, tmp_dir)
     if not uncompress_dir:
         test.error("Can't uncompress %s" % tcpreplay_full_path)
 
     test.log.info("Compile files at %s", uncompress_full_path)
     execute_host_cmd(tcpreplay_compile_cmd % uncompress_full_path, timeout)
 
-    error_context.context("Copy %s to %s" % (pcap_file_name, tmp_dir),
-                          test.log.info)
+    error_context.context("Copy %s to %s" % (pcap_file_name, tmp_dir), test.log.info)
     copy_file_from_deps(pcap_file_name, tcpreplay_dir, tmp_dir)
 
     error_context.context("Run tcpreplay with pcap file", test.log.info)
     output = execute_host_cmd(run_tcpreplay_cmd)
-    result = re.search(r'Successful packets:\s+(\d+)', output)
+    result = re.search(r"Successful packets:\s+(\d+)", output)
     success_packet = 0
     if result:
         success_packet = int(result.group(1))

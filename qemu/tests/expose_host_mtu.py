@@ -2,11 +2,7 @@ import re
 
 from avocado.utils.network.hosts import LocalHost
 from avocado.utils.network.interfaces import NetworkInterface
-
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_test
-from virttest import env_process
+from virttest import env_process, error_context, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -49,8 +45,9 @@ def run(test, params, env):
             host_hw_interface = utils_net.Bridge().list_iface(netdst)[0]
         else:
             host_hw_interface = host_bridge.list_ports(netdst)
-            tmp_ports = re.findall(r"t[0-9]{1,}-[a-zA-Z0-9]{6}",
-                                   ' '.join(host_hw_interface))
+            tmp_ports = re.findall(
+                r"t[0-9]{1,}-[a-zA-Z0-9]{6}", " ".join(host_hw_interface)
+            )
             if tmp_ports:
                 for p in tmp_ports:
                     host_bridge.del_port(netdst, p)
@@ -69,7 +66,7 @@ def run(test, params, env):
     if netdst in utils_net.Bridge().list_br():
         host_hw_iface = NetworkInterface(host_hw_interface, localhost)
     elif utils_net.ovs_br_exists(netdst) is True:
-        host_hw_iface = NetworkInterface(' '.join(host_hw_interface), localhost)
+        host_hw_iface = NetworkInterface(" ".join(host_hw_interface), localhost)
     else:
         raise OSError(f"invalid host iface {netdst}")
     host_mtu_origin = host_hw_iface.get_mtu()
@@ -84,29 +81,27 @@ def run(test, params, env):
     host_ip = utils_net.get_ip_address_by_interface(params["netdst"])
     if os_type == "linux":
         session.cmd_output_safe(params["nm_stop_cmd"])
-        guest_ifname = utils_net.get_linux_ifname(session,
-                                                  vm.get_mac_address())
-        output = session.cmd_output_safe(
-            params["check_linux_mtu_cmd"] % guest_ifname)
+        guest_ifname = utils_net.get_linux_ifname(session, vm.get_mac_address())
+        output = session.cmd_output_safe(params["check_linux_mtu_cmd"] % guest_ifname)
         error_context.context(output, test.log.info)
         match_string = "mtu %s" % params["mtu_value"]
         if match_string not in output:
             test.fail("host mtu %s not exposed to guest" % params["mtu_value"])
     elif os_type == "windows":
         connection_id = utils_net.get_windows_nic_attribute(
-            session, "macaddress", vm.get_mac_address(), "netconnectionid")
-        output = session.cmd_output_safe(
-            params["check_win_mtu_cmd"] % connection_id)
+            session, "macaddress", vm.get_mac_address(), "netconnectionid"
+        )
+        output = session.cmd_output_safe(params["check_win_mtu_cmd"] % connection_id)
         error_context.context(output, test.log.info)
         lines = output.strip().splitlines()
-        lines_len = len(lines)
+        len(lines)
 
-        line_table = lines[0].split('  ')
-        line_value = lines[2].split('  ')
-        while '' in line_table:
-            line_table.remove('')
-        while '' in line_value:
-            line_value.remove('')
+        line_table = lines[0].split("  ")
+        line_value = lines[2].split("  ")
+        while "" in line_table:
+            line_table.remove("")
+        while "" in line_value:
+            line_value.remove("")
         index = 0
         for name in line_table:
             if re.findall("MTU", name):
@@ -115,12 +110,12 @@ def run(test, params, env):
         guest_mtu_value = line_value[index]
         test.log.info("MTU is %s", guest_mtu_value)
         if not int(guest_mtu_value) == mtu_value:
-            test.fail("Host mtu %s is not exposed to "
-                      "guest!" % params["mtu_value"])
+            test.fail("Host mtu %s is not exposed to " "guest!" % params["mtu_value"])
 
     test.log.info("Ping from guest to host with packet size 3972")
-    status, output = utils_test.ping(host_ip, 10, packetsize=3972,
-                                     timeout=30, session=session)
+    status, output = utils_test.ping(
+        host_ip, 10, packetsize=3972, timeout=30, session=session
+    )
     ratio = utils_test.get_loss_ratio(output)
     if ratio != 0:
         test.fail("Loss ratio is %s", ratio)

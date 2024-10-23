@@ -1,20 +1,16 @@
+import logging
 import re
 import time
-import logging
 
 from avocado.utils import process
-from virttest import env_process
-from virttest import test_setup
-from virttest import error_context
-from virttest import utils_time
+from virttest import env_process, error_context, test_setup, utils_time
 
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class TimedriftTest(object):
-
     """
     Base class for time drift test, include common steps for time drift test;
     """
@@ -119,17 +115,15 @@ class TimedriftTest(object):
         host_epoch_time_cmd = self.params["host_epoch_time_cmd"]
         guest_epoch_time_cmd = self.params["guest_epoch_time_cmd"]
         try:
-            guest_timestr = session.cmd_output(
-                guest_epoch_time_cmd,
-                timeout=240)
-            host_timestr = process.system_output(host_epoch_time_cmd,
-                                                 shell=True).decode()
+            guest_timestr = session.cmd_output(guest_epoch_time_cmd, timeout=240)
+            host_timestr = process.system_output(
+                host_epoch_time_cmd, shell=True
+            ).decode()
             epoch_host, epoch_guest = list(
-                map(lambda x: re.findall(regex, x)[0],
-                    [host_timestr, guest_timestr]))
+                map(lambda x: re.findall(regex, x)[0], [host_timestr, guest_timestr])
+            )
         except IndexError:
-            LOG_JOB.debug("Host Time: %s," % guest_timestr +
-                          "Guest Time: %s" % guest_timestr)
+            LOG_JOB.debug("Host Time: %s, Guest Time: %s", host_timestr, guest_timestr)
         return list(map(float, [epoch_host, epoch_guest]))
 
     def get_hwtime(self, session):
@@ -138,19 +132,21 @@ class TimedriftTest(object):
 
         :param session: VM session.
         """
-        hwclock_time_command = self.params.get("hwclock_time_command",
-                                               "hwclock -u")
-        hwclock_time_filter_re = self.params.get("hwclock_time_filter_re",
-                                                 r"(\d+-\d+-\d+ \d+:\d+:\d+).*")
-        hwclock_time_format = self.params.get("hwclock_time_format",
-                                              "%Y-%m-%d %H:%M:%S")
+        hwclock_time_command = self.params.get("hwclock_time_command", "hwclock -u")
+        hwclock_time_filter_re = self.params.get(
+            "hwclock_time_filter_re", r"(\d+-\d+-\d+ \d+:\d+:\d+).*"
+        )
+        hwclock_time_format = self.params.get(
+            "hwclock_time_format", "%Y-%m-%d %H:%M:%S"
+        )
         output = session.cmd_output_safe(hwclock_time_command)
         try:
             str_time = re.findall(hwclock_time_filter_re, output)[0]
             guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
         except Exception as err:
             LOG_JOB.debug(
-                "(time_format, output): (%s, %s)", hwclock_time_format, output)
+                "(time_format, output): (%s, %s)", hwclock_time_format, output
+            )
             raise err
         return guest_time
 
@@ -167,9 +163,11 @@ class TimedriftTest(object):
         real_clock_source = session.cmd_output(read_clock_source_cmd)
         expect_clock_source = self.params["clock_source"]
         if expect_clock_source not in real_clock_source:
-            self.test.fail("Expect clock source: " +
-                           expect_clock_source +
-                           "Real clock source: %s" % real_clock_source)
+            self.test.fail(
+                "Expect clock source: "
+                + expect_clock_source
+                + "Real clock source: %s" % real_clock_source
+            )
 
     @error_context.context_aware
     def cleanup(self):
@@ -179,7 +177,6 @@ class TimedriftTest(object):
 
 
 class BackwardtimeTest(TimedriftTest):
-
     """
     Base class for test time drift after backward host/guest system clock;
     """
@@ -222,23 +219,29 @@ class BackwardtimeTest(TimedriftTest):
         while time.time() < start_time + timeout:
             host_epoch_time, guest_epoch_time = self.get_epoch_seconds(session)
             real_difference = abs(host_epoch_time - guest_epoch_time)
-            if self.params["os_type"] == 'linux':
-                expect_difference_hwclock = float(self.params["time_difference_hwclock"])
+            if self.params["os_type"] == "linux":
+                expect_difference_hwclock = float(
+                    self.params["time_difference_hwclock"]
+                )
                 guest_hwtime = self.get_hwtime(session)
                 real_difference_hw = abs(host_epoch_time - guest_hwtime)
-                if abs(real_difference - expect_difference) < tolerance and \
-                   abs(real_difference_hw - expect_difference_hwclock) < tolerance:
+                if (
+                    abs(real_difference - expect_difference) < tolerance
+                    and abs(real_difference_hw - expect_difference_hwclock) < tolerance
+                ):
                     return
             else:
                 if abs(real_difference - expect_difference) < tolerance:
                     return
         LOG_JOB.info("Host epoch time: %s", host_epoch_time)
         LOG_JOB.info("Guest epoch time: %s", guest_epoch_time)
-        if self.params["os_type"] == 'linux':
+        if self.params["os_type"] == "linux":
             LOG_JOB.info("Guest hardware time: %s", guest_hwtime)
-            err_msg = "Unexpected sys and hardware time difference (%s %s)\
-            between host and guest after adjusting time." \
-            % (real_difference, real_difference_hw)
+            err_msg = (
+                "Unexpected sys and hardware time difference (%s %s)\
+            between host and guest after adjusting time."
+                % (real_difference, real_difference_hw)
+            )
         else:
             err_msg = "Unexpected time difference between host and guest after"
             err_msg += " testing.(actual difference: %s)" % real_difference
@@ -261,16 +264,18 @@ class BackwardtimeTest(TimedriftTest):
         tolerance = float(self.params.get("tolerance", 6))
         host_epoch_time, guest_epoch_time = self.get_epoch_seconds(session)
         real_difference = abs(host_epoch_time - guest_epoch_time)
-        if self.params["os_type"] == 'linux':
+        if self.params["os_type"] == "linux":
             guest_hwtime = self.get_hwtime(session)
             real_difference_hw = abs(host_epoch_time - guest_hwtime)
             if real_difference > tolerance or real_difference_hw > tolerance:
                 LOG_JOB.info("Host epoch time: %s", host_epoch_time)
                 LOG_JOB.info("Guest epoch time: %s", guest_epoch_time)
                 LOG_JOB.info("Guest hardware time: %s", guest_hwtime)
-                err_msg = "Unexpected sys and hardware time difference (%s %s) \
-                between host and guest before testing."\
-                % (real_difference, real_difference_hw)
+                err_msg = (
+                    "Unexpected sys and hardware time difference (%s %s) \
+                between host and guest before testing."
+                    % (real_difference, real_difference_hw)
+                )
                 self.test.fail(err_msg)
         else:
             if real_difference > tolerance:
@@ -291,7 +296,7 @@ class BackwardtimeTest(TimedriftTest):
         self.setup_private_network()
         self.sync_host_time()
         vm = self.get_vm(create=True)
-        if self.params["os_type"] == 'windows':
+        if self.params["os_type"] == "windows":
             utils_time.sync_timezone_win(vm)
         else:
             utils_time.sync_timezone_linux(vm)
@@ -337,8 +342,8 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    class TestReboot(BackwardtimeTest):
 
+    class TestReboot(BackwardtimeTest):
         """
         Test Steps:
             5) Forward host/guest system time 30 mins
@@ -365,7 +370,6 @@ def run(test, params, env):
             return super(TestReboot, self).run(fuc)
 
     class TestPauseresume(BackwardtimeTest):
-
         """
         Test Steps:
             5) Forward host system time 30mins
@@ -379,8 +383,9 @@ def run(test, params, env):
         def pause_resume(self):
             vm = self.get_vm()
             sleep_seconds = float(params.get("sleep_seconds", 1800))
-            error_context.context("Pause guest %s seconds" % sleep_seconds,
-                                  test.log.info)
+            error_context.context(
+                "Pause guest %s seconds" % sleep_seconds, test.log.info
+            )
             vm.pause()
             seconds_to_forward = int(self.params.get("seconds_to_forward", 0))
             if seconds_to_forward:
@@ -394,7 +399,6 @@ def run(test, params, env):
             return super(TestPauseresume, self).run(fuc)
 
     class TestSuspendresume(BackwardtimeTest, GuestSuspendBaseTest):
-
         """
         Test Steps:
             5) Suspend guest 30 mins, then resume it;
@@ -423,8 +427,9 @@ def run(test, params, env):
         @error_context.context_aware
         def action_during_suspend(self, **args):
             sleep_seconds = float(self.params.get("sleep_seconds", 1800))
-            error_context.context("Sleep %s seconds before resume" %
-                                  sleep_seconds, test.log.info)
+            error_context.context(
+                "Sleep %s seconds before resume" % sleep_seconds, test.log.info
+            )
             seconds_to_forward = int(self.params.get("seconds_to_forward", 0))
             if seconds_to_forward:
                 self.set_time(seconds_to_forward)

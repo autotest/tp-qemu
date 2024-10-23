@@ -1,8 +1,5 @@
-from aexpect.exceptions import ExpectProcessTerminatedError
-from aexpect.exceptions import ExpectTimeoutError
-
-from virttest import error_context
-from virttest import utils_package
+from aexpect.exceptions import ExpectProcessTerminatedError, ExpectTimeoutError
+from virttest import error_context, utils_package
 
 
 @error_context.context_aware
@@ -26,16 +23,16 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    error_context.context("Check TPM pattern in the serial output",
-                          test.log.info)
+    error_context.context("Check TPM pattern in the serial output", test.log.info)
     try:
         vm.serial_console.read_until_output_matches(tpm_pattern)
     except (ExpectProcessTerminatedError, ExpectTimeoutError) as err:
         test.log.error(err)
         test.fail("Failed to get the expected tpm pattern.")
 
-    error_context.context("Execute tpm2_selftest command for a basic check",
-                          test.log.info)
+    error_context.context(
+        "Execute tpm2_selftest command for a basic check", test.log.info
+    )
     session = vm.wait_for_login()
     if not utils_package.package_install("tpm2-tools", session):
         test.error("Cannot install tpm2-tools to execute tpm2_selftest")

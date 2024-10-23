@@ -39,36 +39,38 @@ qsd.stop_daemon()
 import copy
 import json
 import logging
+import os
 import re
 import signal
 import subprocess
-import os
-
 from enum import Enum, auto
+
 from avocado.utils import process
-from virttest.utils_params import Params
+from virttest import data_dir, qemu_monitor, qemu_storage, utils_misc
+from virttest.qemu_capabilities import Capabilities
 from virttest.qemu_devices import qdevices
 from virttest.qemu_devices.qdevices import QDaemonDev, QUnixSocketBus
-from virttest import data_dir, utils_misc, qemu_monitor, qemu_storage
-from virttest.qemu_capabilities import Capabilities
 from virttest.storage import get_image_filename
+from virttest.utils_params import Params
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class Flags(Enum):
-    """ Enumerate the flags of QSD capabilities. """
+    """Enumerate the flags of QSD capabilities."""
+
     DAEMONIZE = auto()
     PIDFILE = auto()
 
 
 class QsdError(Exception):
     """Generic QSD Error."""
+
     pass
 
 
 def add_vubp_into_boot(img_name, params, addr=15, opts=""):
-    """ Add vhost-user-blk-pci device into boot command line """
+    """Add vhost-user-blk-pci device into boot command line"""
     devs = create_vubp_devices(None, img_name, params)
     cmd = ""
     for dev in devs:
@@ -77,8 +79,7 @@ def add_vubp_into_boot(img_name, params, addr=15, opts=""):
         machine_type = params.get("machine_type", "")
         if machine_type.startswith("q35") or machine_type.startswith("arm64"):
             busid = "pcie_vubp_root_port_%d" % addr
-            bus = "-device pcie-root-port,id=%s,bus=pcie.0,addr=%d " % (
-                busid, addr)
+            bus = "-device pcie-root-port,id=%s,bus=pcie.0,addr=%d " % (busid, addr)
             cmd = bus + cmd + ",bus=%s" % busid
         elif "i440fx" in machine_type or machine_type == "pc":
             cmd += ",bus=pci.0,addr=%d" % addr
@@ -91,7 +92,7 @@ def add_vubp_into_boot(img_name, params, addr=15, opts=""):
 
 
 def get_qsd_name_by_image(img_name, params):
-    """Get QSD name by image """
+    """Get QSD name by image"""
     if params.get("drive_format_%s" % img_name) != "vhost-user-blk-pci":
         return
     qsd_name = ""
@@ -111,17 +112,20 @@ def create_vubp_devices(vm, img_name, params, bus=None):
         raise QsdError("Can not find QSD")
 
     qsd_params = params.object_params(qsd_name)
-    qsd_basedir = qsd_params.get("qsd_basedir",
-                                 data_dir.get_data_dir() + "/qsd/%s" % qsd_name)
+    qsd_basedir = qsd_params.get(
+        "qsd_basedir", data_dir.get_data_dir() + "/qsd/%s" % qsd_name
+    )
 
     qid = "qsd_%s" % qsd_name
     img_sock = "%s/%s_vhost_user_%s.sock" % (qsd_basedir, qsd_name, img_name)
     devices = []
     if vm and not vm.devices.get_by_qid(qid):
         # Declare virtual QSD daemon
-        qsd = qdevices.QDaemonDev("qsd", aobject=qsd_name,
-                                  child_bus=qdevices.QUnixSocketBus(img_sock,
-                                                                    qsd_name))
+        qsd = qdevices.QDaemonDev(
+            "qsd",
+            aobject=qsd_name,
+            child_bus=qdevices.QUnixSocketBus(img_sock, qsd_name),
+        )
         vm.devices.insert(qsd)
 
     machine_type = params.get("machine_type", "")
@@ -131,9 +135,9 @@ def create_vubp_devices(vm, img_name, params, bus=None):
 
     char_params = Params()
     char_params["backend"] = "socket"
-    char_params["id"] = 'char_qsd_%s' % qsd_name
+    char_params["id"] = "char_qsd_%s" % qsd_name
     char_params["path"] = img_sock
-    sock_bus = {'busid': img_sock}
+    sock_bus = {"busid": img_sock}
     char = qdevices.CharDevice(char_params, parent_bus=sock_bus)
     char.set_param("server", "off")
     char.set_aid(char_params["id"])
@@ -144,11 +148,8 @@ def create_vubp_devices(vm, img_name, params, bus=None):
     if bus is None:
         bus = {"type": qbus_type}
 
-    dev_params = {"id": "vubp_%s" % img_name,
-                  "chardev": char.get_qid()
-                  }
-    vubp_driver_props = json.loads(
-        params.get("image_vubp_props_%s" % img_name, "{}"))
+    dev_params = {"id": "vubp_%s" % img_name, "chardev": char.get_qid()}
+    vubp_driver_props = json.loads(params.get("image_vubp_props_%s" % img_name, "{}"))
     dev_params.update(vubp_driver_props)
     vubp = qdevices.QDevice(qdriver, params=dev_params, parent_bus=bus)
     vubp.set_aid(dev_params["id"])
@@ -158,7 +159,7 @@ def create_vubp_devices(vm, img_name, params, bus=None):
 
 
 def plug_vubp_devices(vm, img_name, params, bus=None):
-    """Hotplug vhost-user-blk-pci into VM """
+    """Hotplug vhost-user-blk-pci into VM"""
     LOG_JOB.info("Ready plug vubp image:%s", img_name)
 
     devs = create_vubp_devices(vm, img_name, params, bus)
@@ -167,7 +168,7 @@ def plug_vubp_devices(vm, img_name, params, bus=None):
 
 
 def unplug_vubp_devices(vm, img_name, params, bus=None):
-    """Unplug vhost-user-blk-pci from VM """
+    """Unplug vhost-user-blk-pci from VM"""
     LOG_JOB.info("Ready unplug vubp image:%s", img_name)
     devs = create_vubp_devices(vm, img_name, params, bus)
     devs = devs[::-1]
@@ -180,8 +181,11 @@ def unplug_vubp_devices(vm, img_name, params, bus=None):
             if not dev.verify_unplug(None, vm.monitor):
                 out = dev.unplug(vm.monitor)
                 utils_misc.wait_for(
-                    lambda: dev.verify_unplug(out, vm.monitor) is True, first=1,
-                    step=5, timeout=20)
+                    lambda: dev.verify_unplug(out, vm.monitor) is True,
+                    first=1,
+                    step=5,
+                    timeout=20,
+                )
             else:
                 LOG_JOB.info("Ignore device %s Can not be found", dev.get_qid())
 
@@ -189,8 +193,13 @@ def unplug_vubp_devices(vm, img_name, params, bus=None):
 class QsdDaemonDev(QDaemonDev):
     # Default data struct of raw image data.
     raw_image_data = {
-        "protocol": {"driver": "file", "node-name": "tbd", "filename": "tbd",
-                     "auto-read-only": True, "discard": "unmap"},
+        "protocol": {
+            "driver": "file",
+            "node-name": "tbd",
+            "filename": "tbd",
+            "auto-read-only": True,
+            "discard": "unmap",
+        },
         "format": {"driver": "raw", "node-name": "tbd", "file": "tbd"},
         "filter": {"driver": None, "node-name": "tbd", "file": "tbd"},
         "name": "",
@@ -198,24 +207,27 @@ class QsdDaemonDev(QDaemonDev):
         "inet": {"type": "inet", "host": "0.0.0.0"},
         "nbd-server": {"addr": {}},
         "export": {"type": "", "id": "", "node-name": "", "writable": True},
-        "image_object": None
+        "image_object": None,
     }
 
     def __init__(self, name, params):
         qsd_params = params.object_params(name)
-        basedir = qsd_params.get("qsd_basedir",
-                                 data_dir.get_data_dir() + "/qsd/%s" % name)
+        basedir = qsd_params.get(
+            "qsd_basedir", data_dir.get_data_dir() + "/qsd/%s" % name
+        )
         if not os.path.exists(basedir):
             LOG_JOB.info("Create QSD basedir %s", basedir)
             os.makedirs(basedir)
 
         binary = qsd_params.get("qsd_binary", "/usr/bin/qemu-storage-daemon")
-        sock_path = qsd_params.get("qsd_sock_path",
-                                   "%s/%s_monitor.sock" % (basedir, name))
+        sock_path = qsd_params.get(
+            "qsd_sock_path", "%s/%s_monitor.sock" % (basedir, name)
+        )
         qsd_monitor_id = "qsd_monitor_%s" % name
         qid = "qsd_%s" % name
-        super(QsdDaemonDev, self).__init__('QSD', aobject=name,
-                                           child_bus=QUnixSocketBus(qid, qid))
+        super(QsdDaemonDev, self).__init__(
+            "QSD", aobject=name, child_bus=QUnixSocketBus(qid, qid)
+        )
         self.name = name
         self.basedir = basedir
         self.monitor = None
@@ -224,14 +236,12 @@ class QsdDaemonDev(QDaemonDev):
         self.binary = binary
         self.sock_path = sock_path
         self.qsd_monitor_id = qsd_monitor_id
-        self.qsd_version = process.run("%s -V" % binary,
-                                       verbose=False,
-                                       ignore_status=True,
-                                       shell=True).stdout_text.split()[2]
-        self.__qsd_help = process.run("%s -h" % binary,
-                                      verbose=False,
-                                      ignore_status=True,
-                                      shell=True).stdout_text
+        self.qsd_version = process.run(
+            "%s -V" % binary, verbose=False, ignore_status=True, shell=True
+        ).stdout_text.split()[2]
+        self.__qsd_help = process.run(
+            "%s -h" % binary, verbose=False, ignore_status=True, shell=True
+        ).stdout_text
 
         LOG_JOB.info(self.qsd_version)
         self.caps = Capabilities()
@@ -252,7 +262,7 @@ class QsdDaemonDev(QDaemonDev):
                     img["image_object"].remove()
 
     def _fulfil_image_props(self, name, params):
-        """Fulfil image property and prepare image file """
+        """Fulfil image property and prepare image file"""
         img = copy.deepcopy(QsdDaemonDev.raw_image_data)
         img["name"] = name
         img["protocol"]["node-name"] = "prot_" + name
@@ -264,32 +274,39 @@ class QsdDaemonDev(QDaemonDev):
         img["filter"]["node-name"] = "flt_" + name
         img["filter"]["file"] = img["format"]["node-name"]
 
-        img["protocol"].update(
-            json.loads(params.get("qsd_image_protocol", "{}")))
+        img["protocol"].update(json.loads(params.get("qsd_image_protocol", "{}")))
         img["format"].update(json.loads(params.get("qsd_image_format", "{}")))
         img["filter"].update(json.loads(params.get("qsd_image_filter", "{}")))
 
         img["export"]["id"] = "id_" + name
-        img["export"]["node-name"] = img["filter"]["node-name"] if \
-            img["filter"]["driver"] else img["format"]["node-name"]
+        img["export"]["node-name"] = (
+            img["filter"]["node-name"]
+            if img["filter"]["driver"]
+            else img["format"]["node-name"]
+        )
         img["export"].update(json.loads(params.get("qsd_image_export", "{}")))
 
         if img["export"]["type"] == "nbd":
             # The name is necessary. empty value to simply setting in nbd client
             img["export"]["name"] = ""
-            addr = json.loads(
-                params.get("qsd_image_export_nbd", '{"type":"unix"'))
+            addr = json.loads(params.get("qsd_image_export_nbd", '{"type":"unix"'))
 
             img[addr["type"]].update(addr)
             if addr["type"] == "unix":
                 if not img[addr["type"]]["path"]:
                     img[addr["type"]]["path"] = "%s/%s_nbd_%s.sock" % (
-                        self.basedir, self.name, name)
+                        self.basedir,
+                        self.name,
+                        name,
+                    )
             img["nbd-server"]["addr"].update(img[addr["type"]])
 
         elif img["export"]["type"] == "vhost-user-blk":
             img["unix"]["path"] = "%s/%s_vhost_user_%s.sock" % (
-                self.basedir, self.name, name)
+                self.basedir,
+                self.name,
+                name,
+            )
             img["export"]["addr"] = img["unix"]
         else:
             raise QsdError("Unknown export type %s " % img["export"]["type"])
@@ -298,8 +315,10 @@ class QsdDaemonDev(QDaemonDev):
         image_created = False
 
         if name in params.get("images").split():
-            if params.get("force_create_image") == "yes" or params.get(
-                    "create_image") == "yes":
+            if (
+                params.get("force_create_image") == "yes"
+                or params.get("create_image") == "yes"
+            ):
                 image_created = True
 
         if image_created:
@@ -322,21 +341,20 @@ class QsdDaemonDev(QDaemonDev):
         :param option: Desired option
         :return: Is the desired option supported by current qemu?
         """
-        return bool(re.search(r"%s" % option, self.__qsd_help,
-                              re.MULTILINE))
+        return bool(re.search(r"%s" % option, self.__qsd_help, re.MULTILINE))
 
     def _probe_capabilities(self):
-        """ Probe capabilities. """
+        """Probe capabilities."""
 
-        if self.has_option('--daemonize'):
+        if self.has_option("--daemonize"):
             LOG_JOB.info("--daemonize")
             self.caps.set_flag(Flags.DAEMONIZE)
-        if self.has_option('--pidfile'):
+        if self.has_option("--pidfile"):
             LOG_JOB.info("--pidfile")
             self.caps.set_flag(Flags.PIDFILE)
 
     def get_pid(self):
-        """ Get QSD pid"""
+        """Get QSD pid"""
         if self.daemonize:
             return self.pid
         if self.daemon_process:
@@ -359,11 +377,12 @@ class QsdDaemonDev(QDaemonDev):
                 raise QsdError("Find running QSD:%s" % pid)
 
         # QSD monitor
-        qsd_cmd = '%s --chardev socket,server=on,wait=off,path=%s,id=%s' % (
+        qsd_cmd = "%s --chardev socket,server=on,wait=off,path=%s,id=%s" % (
             self.binary,
             self.sock_path,
-            self.qsd_monitor_id)
-        qsd_cmd += ' --monitor chardev=%s,mode=control ' % self.qsd_monitor_id
+            self.qsd_monitor_id,
+        )
+        qsd_cmd += " --monitor chardev=%s,mode=control " % self.qsd_monitor_id
 
         # QSD raw command lines
         cmds = self.qsd_params.get("qsd_cmd_lines", "")
@@ -381,8 +400,7 @@ class QsdDaemonDev(QDaemonDev):
             if img_info["filter"]["driver"]:
                 qsd_cmd += " --blockdev '%s'" % json.dumps(img_info["filter"])
             if img_info["nbd-server"]["addr"]:
-                qsd_cmd += " --nbd-server '%s'" % json.dumps(
-                    img_info["nbd-server"])
+                qsd_cmd += " --nbd-server '%s'" % json.dumps(img_info["nbd-server"])
             qsd_cmd += " --export '%s'" % json.dumps(img_info["export"])
 
         # QSD daemonize
@@ -404,7 +422,7 @@ class QsdDaemonDev(QDaemonDev):
                 LOG_JOB.info("Ignore option --pidfile ")
 
         LOG_JOB.info(qsd_cmd.replace(" --", " \\\n --"))
-        self.set_param('cmd', qsd_cmd)
+        self.set_param("cmd", qsd_cmd)
 
         # run QSD
         if self.daemonize:
@@ -419,8 +437,10 @@ class QsdDaemonDev(QDaemonDev):
                 output = self.daemon_process.get_output()
                 self.close_daemon_process()
                 raise QsdError("Failed to run QSD daemon: %s" % output)
-            LOG_JOB.info("Created QSD daemon process with parent PID %d.",
-                         self.daemon_process.get_pid())
+            LOG_JOB.info(
+                "Created QSD daemon process with parent PID %d.",
+                self.daemon_process.get_pid(),
+            )
 
         pid = process.system_output(get_pid_cmd, shell=True).decode()
 
@@ -428,8 +448,9 @@ class QsdDaemonDev(QDaemonDev):
             LOG_JOB.info("Can not Find running QSD %s ", self.name)
 
         if self.pidfile:
-            file_pid = process.system_output("cat %s" % self.pidfile,
-                                             shell=True).decode()
+            file_pid = process.system_output(
+                "cat %s" % self.pidfile, shell=True
+            ).decode()
             if file_pid != pid:
                 raise QsdError("Find mismatch pid: %s %s" % (pid, file_pid))
 
@@ -443,8 +464,9 @@ class QsdDaemonDev(QDaemonDev):
         if self.daemonize:
             check_pid_cmd = "ps -q %s" % self.pid
             if self.pid:
-                return process.system(check_pid_cmd, shell=True,
-                                      ignore_status=True) == 0
+                return (
+                    process.system(check_pid_cmd, shell=True, ignore_status=True) == 0
+                )
             return False
 
         return super(QsdDaemonDev, self).is_daemon_alive()
@@ -466,18 +488,17 @@ class QsdDaemonDev(QDaemonDev):
             except Exception as e:
                 LOG_JOB.warning(e)
                 if not self.is_daemon_alive():
-                    LOG_JOB.warning("QSD %s down during try to kill it "
-                                    "by monitor", self.name)
+                    LOG_JOB.warning(
+                        "QSD %s down during try to kill it " "by monitor", self.name
+                    )
                     return
             else:
                 # Wait for the QSD to be really dead
-                if utils_misc.wait_for(lambda: not self.is_daemon_alive(),
-                                       timeout=10):
+                if utils_misc.wait_for(lambda: not self.is_daemon_alive(), timeout=10):
                     LOG_JOB.debug("QSD %s down (monitor)", self.name)
                     return
                 else:
-                    LOG_JOB.debug("QSD %s failed to go down (monitor)",
-                                  self.name)
+                    LOG_JOB.debug("QSD %s failed to go down (monitor)", self.name)
 
         LOG_JOB.debug("Killing QSD %s process (killing PID %s)", self.name, pid)
         try:
@@ -485,8 +506,7 @@ class QsdDaemonDev(QDaemonDev):
             utils_misc.kill_process_tree(int(pid), signal.SIGTERM, timeout=60)
             if self.is_daemon_alive():
                 LOG_JOB.debug("Ready to kill qsd:%s", pid)
-                utils_misc.kill_process_tree(int(pid), signal.SIGKILL,
-                                             timeout=60)
+                utils_misc.kill_process_tree(int(pid), signal.SIGKILL, timeout=60)
             LOG_JOB.debug("VM %s down (process killed)", self.name)
         except RuntimeError:
             # If all else fails, we've got a zombie...

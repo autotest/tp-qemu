@@ -19,6 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _image_create():
         """Create an image."""
         image_name = params.get("images")
@@ -35,8 +36,9 @@ def run(test, params, env):
         es_hint = re.findall(parttern, output)
         if es_hint:
             if es_hint[0] != expect:
-                test.fail("Extent_size_hint %s is not expected value %s"
-                          % (es_hint, expect))
+                test.fail(
+                    "Extent_size_hint %s is not expected value %s" % (es_hint, expect)
+                )
         elif expect != "0":
             test.fail("Failed to get extent_size_hint info")
 
@@ -47,11 +49,10 @@ def run(test, params, env):
         else:
             params["image_extent_size_hint"] = es_hint
             esh = es_hint
-        esh_tmp = utils_misc.normalize_data_size(esh, 'B')
+        esh_tmp = utils_misc.normalize_data_size(esh, "B")
         esh_expect = esh_tmp.split(".")[0]
 
         image = _image_create()
 
-        test.log.info("Check extent size hint when it sets to %s"
-                      % es_hint)
+        test.log.info("Check extent size hint when it sets to %s", es_hint)
         ck_extent_size_hint(image, esh_expect)

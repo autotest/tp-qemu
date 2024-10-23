@@ -1,5 +1,4 @@
 from provider import job_utils
-
 from provider.blockdev_stream_nowait import BlockdevStreamNowaitTest
 
 
@@ -13,19 +12,18 @@ class BlockdevStreamNospaceTest(BlockdevStreamNowaitTest):
         pass
 
     def check_no_space_error(self):
-        tmo = self.params.get_numeric('block_io_error_timeout', 60)
+        tmo = self.params.get_numeric("block_io_error_timeout", 60)
 
         # check 'error' message in BLOCK_JOB_COMPLETED event
-        cond = {'device': self._job}
+        cond = {"device": self._job}
         event = job_utils.get_event_by_condition(
-            self.main_vm, job_utils.BLOCK_JOB_COMPLETED_EVENT, tmo, **cond)
+            self.main_vm, job_utils.BLOCK_JOB_COMPLETED_EVENT, tmo, **cond
+        )
         if event:
-            if event['data'].get('error') != self.params['error_msg']:
-                self.test.fail('Unexpected error: %s'
-                               % event['data'].get('error'))
+            if event["data"].get("error") != self.params["error_msg"]:
+                self.test.fail("Unexpected error: %s" % event["data"].get("error"))
         else:
-            self.test.fail('Failed to get BLOCK_JOB_COMPLETED event for %s'
-                           % self._job)
+            self.test.fail("Failed to get BLOCK_JOB_COMPLETED event for %s" % self._job)
 
     def do_test(self):
         self.create_snapshot()

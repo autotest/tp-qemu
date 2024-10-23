@@ -1,17 +1,11 @@
 import logging
 import os
+
 import six
-
 from avocado.utils import process
+from virttest import data_dir, error_context, remote, utils_misc, utils_test
 
-
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import remote
-from virttest import data_dir
-from virttest import error_context
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def pin_vm_threads(vm, node):
@@ -36,17 +30,15 @@ def record_env_version(test, params, host, server_ctl, fd, test_duration):
     ver_cmd = params.get("ver_cmd", "rpm -q qemu-kvm")
     guest_ver_cmd = params.get("guest_ver_cmd", "uname -r")
 
-    test.write_test_keyval({'kvm-userspace-ver': ssh_cmd(
-                            host, ver_cmd).strip()})
-    test.write_test_keyval({'guest-kernel-ver': ssh_cmd(
-                            server_ctl, guest_ver_cmd).strip()})
-    test.write_test_keyval({'session-length': test_duration})
-    fd.write('### kvm-userspace-ver : %s\n' % ssh_cmd(
-                                            host, ver_cmd).strip())
-    fd.write('### guest-kernel-ver : %s\n' % ssh_cmd(
-                                server_ctl, guest_ver_cmd).strip())
-    fd.write('### kvm_version : %s\n' % os.uname()[2])
-    fd.write('### session-length : %s\n' % test_duration)
+    test.write_test_keyval({"kvm-userspace-ver": ssh_cmd(host, ver_cmd).strip()})
+    test.write_test_keyval(
+        {"guest-kernel-ver": ssh_cmd(server_ctl, guest_ver_cmd).strip()}
+    )
+    test.write_test_keyval({"session-length": test_duration})
+    fd.write("### kvm-userspace-ver : %s\n" % ssh_cmd(host, ver_cmd).strip())
+    fd.write("### guest-kernel-ver : %s\n" % ssh_cmd(server_ctl, guest_ver_cmd).strip())
+    fd.write("### kvm_version : %s\n" % os.uname()[2])
+    fd.write("### session-length : %s\n" % test_duration)
 
 
 def env_setup(test, params, session, ip, username, shell_port, password):
@@ -64,8 +56,7 @@ def env_setup(test, params, session, ip, username, shell_port, password):
     ssh_cmd(session, params.get("setup_cmd"))
 
     agent_path = os.path.join(test.virtdir, "scripts/netperf_agent.py")
-    remote.scp_to_remote(ip, shell_port, username, password,
-                         agent_path, "/tmp")
+    remote.scp_to_remote(ip, shell_port, username, password, agent_path, "/tmp")
 
 
 def tweak_tuned_profile(params, server_ctl, client, host):
@@ -82,8 +73,7 @@ def tweak_tuned_profile(params, server_ctl, client, host):
     if server_tuned_profile:
         ssh_cmd(server_ctl, server_tuned_profile)
 
-    error_context.context("Changing tune profile of client/host",
-                          LOG_JOB.info)
+    error_context.context("Changing tune profile of client/host", LOG_JOB.info)
     if client_tuned_profile:
         ssh_cmd(client, client_tuned_profile)
     if host_tuned_profile:
@@ -99,9 +89,9 @@ def ssh_cmd(session, cmd, timeout=120, ignore_status=False):
     :param timeout: timeout for the command
     """
     if session == "localhost":
-        o = process.system_output(cmd, timeout=timeout,
-                                  ignore_status=ignore_status,
-                                  shell=True).decode()
+        o = process.system_output(
+            cmd, timeout=timeout, ignore_status=ignore_status, shell=True
+        ).decode()
     else:
         o = session.cmd(cmd, timeout=timeout, ignore_all_errors=ignore_status)
     return o
@@ -141,8 +131,7 @@ def format_result(result, base="17", fbase="2"):
     return value % result
 
 
-def netperf_record(results, filter_list, header=False,
-                   base="17", fbase="2"):
+def netperf_record(results, filter_list, header=False, base="17", fbase="2"):
     """
     Record the results in a certain format.
 

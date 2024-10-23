@@ -1,8 +1,7 @@
-import re
 import random
+import re
 
-from virttest import utils_misc
-from virttest import error_context
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -20,21 +19,44 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    change_prefered = ["640 x 480", "800 x 480", "800 x 600", "832 x 624",
-                       "960 x 640", "1024 x 600", "1024 x 768", "1152 x 864",
-                       "1152 x 870", "1280 x 720", "1280 x 760", "1280 x 768",
-                       "1280 x 800", "1280 x 960", "1280 x 1024", "1360 x 768",
-                       "1366 x 768", "1400 x 1050", "1440 x 900", "1600 x 900",
-                       "1600 x 1200", "1680 x 1050", "1920 x 1080",
-                       "1920 x 1200", "1920 x 1440", "2000 x 2000",
-                       "2048 x 1536", "2048 x 2048", "2560 x 1440",
-                       "2560 x 1600"]
+    change_prefered = [
+        "640 x 480",
+        "800 x 480",
+        "800 x 600",
+        "832 x 624",
+        "960 x 640",
+        "1024 x 600",
+        "1024 x 768",
+        "1152 x 864",
+        "1152 x 870",
+        "1280 x 720",
+        "1280 x 760",
+        "1280 x 768",
+        "1280 x 800",
+        "1280 x 960",
+        "1280 x 1024",
+        "1360 x 768",
+        "1366 x 768",
+        "1400 x 1050",
+        "1440 x 900",
+        "1600 x 900",
+        "1600 x 1200",
+        "1680 x 1050",
+        "1920 x 1080",
+        "1920 x 1200",
+        "1920 x 1440",
+        "2000 x 2000",
+        "2048 x 1536",
+        "2048 x 2048",
+        "2560 x 1440",
+        "2560 x 1600",
+    ]
 
     def boot_check(info):
         """
         boot info check
         """
-        logs = vm.logsessions['seabios'].get_output()
+        logs = vm.logsessions["seabios"].get_output()
         result = re.search(info, logs, re.S)
         return result
 
@@ -64,8 +86,7 @@ def run(test, params, env):
             del change_prefered[index]
             change_prefered = [default_resolution] + change_prefered
     change_resolution_key, check_info, resolution = choose_resolution()
-    if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint),
-                               timeout, 1):
+    if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint), timeout, 1):
         test.fail("Could not get boot menu message")
     key = []
     key += enter_change_preferred

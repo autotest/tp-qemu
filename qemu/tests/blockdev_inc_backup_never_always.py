@@ -1,14 +1,11 @@
 from virttest.qemu_monitor import QMPCmdError
 
-from provider import backup_utils
-from provider import blockdev_base
+from provider import backup_utils, blockdev_base
 
 
 class BlkdevIncNA(blockdev_base.BlockdevBaseTest):
-
     def __init__(self, test, params, env):
-        super(BlkdevIncNA, self).__init__(
-            test, params, env)
+        super(BlkdevIncNA, self).__init__(test, params, env)
         self.source_images = []
         self.full_backups = []
         self.inc_backups = []
@@ -33,19 +30,23 @@ class BlkdevIncNA(blockdev_base.BlockdevBaseTest):
             self.source_images,
             self.full_backups,
             self.bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def generate_inc_files(self):
         return list(map(self.generate_data_file, self.src_img_tags))
 
     def do_incremental_backup(self):
-        extra_options = {"sync": self.inc_sync_mode,
-                         "bitmap": self.bitmaps[0],
-                         "bitmap-mode": self.inc_bitmap_mode,
-                         "auto_disable_bitmap": False}
+        extra_options = {
+            "sync": self.inc_sync_mode,
+            "bitmap": self.bitmaps[0],
+            "bitmap-mode": self.inc_bitmap_mode,
+            "auto_disable_bitmap": False,
+        }
         inc_backup = backup_utils.blockdev_backup_qmp_cmd
-        cmd, arguments = inc_backup(self.source_images[0], self.inc_backups[0],
-                                    **extra_options)
+        cmd, arguments = inc_backup(
+            self.source_images[0], self.inc_backups[0], **extra_options
+        )
         try:
             self.main_vm.monitor.cmd(cmd, arguments)
         except QMPCmdError as e:
@@ -53,8 +54,9 @@ class BlkdevIncNA(blockdev_base.BlockdevBaseTest):
             if qmp_error_msg not in str(e.data):
                 self.test.fail(str(e))
         else:
-            self.test.fail("Inc backup with invalid bitmap mode:%s"
-                           % self.inc_bitmap_mode)
+            self.test.fail(
+                "Inc backup with invalid bitmap mode:%s" % self.inc_bitmap_mode
+            )
 
     def do_test(self):
         self.do_full_backup()

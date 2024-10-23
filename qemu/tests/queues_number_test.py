@@ -1,9 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import error_context, utils_misc, utils_net, utils_test
 
 from provider import netperf_test
 
@@ -22,6 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def change_queues_number(ifname, q_number, queues_status=None):
         """
         change queues number
@@ -35,8 +33,10 @@ def run(test, params, env):
         err_msg = ""
         expect_q_number = q_number
         if q_number != queues_status[1] and q_number <= queues_status[0]:
-            if (cur_queues_status[1] != q_number
-                    or cur_queues_status[0] != queues_status[0]):
+            if (
+                cur_queues_status[1] != q_number
+                or cur_queues_status[0] != queues_status[0]
+            ):
                 err_msg = "Param is valid, but change queues failed, "
         elif cur_queues_status != queues_status:
             if q_number != queues_status[1]:
@@ -79,8 +79,7 @@ def run(test, params, env):
         packets_lost = utils_test.get_loss_ratio(output)
         if packets_lost > ping_lost_ratio:
             err = " %s%% packages lost during ping. " % packets_lost
-            err += "Ping command log:\n %s" % "\n".join(
-                output.splitlines()[-3:])
+            err += "Ping command log:\n %s" % "\n".join(output.splitlines()[-3:])
             test.fail(err)
 
     login_timeout = params.get_numeric("login_timeout", 360)
@@ -102,10 +101,12 @@ def run(test, params, env):
                 ifname = utils_net.get_linux_ifname(session_serial, nic.mac)
                 queues = int(nic.queues)
                 change_queues_number(ifname, queues)
-            error_context.context("Run test %s background" % netperf_stress,
-                                  test.log.info)
+            error_context.context(
+                "Run test %s background" % netperf_stress, test.log.info
+            )
             stress_thread = utils_misc.InterruptedThread(
-                netperf_test.netperf_stress, (test, params, vm))
+                netperf_test.netperf_stress, (test, params, vm)
+            )
             stress_thread.start()
 
             # ping test
@@ -114,8 +115,7 @@ def run(test, params, env):
             bg_ping = utils_misc.InterruptedThread(ping_test, args)
             bg_ping.start()
 
-            error_context.context("Change queues number repeatedly",
-                                  test.log.info)
+            error_context.context("Change queues number repeatedly", test.log.info)
             repeat_counts = params.get_numeric("repeat_counts")
             for nic in vm.virtnet:
                 queues = int(nic.queues)
@@ -125,13 +125,14 @@ def run(test, params, env):
                 ifname = utils_net.get_linux_ifname(session_serial, nic.mac)
                 change_list = params.get("change_list").split(",")
                 for repeat_num in range(repeat_counts):
-                    error_context.context("Change queues number -- %sth"
-                                          % repeat_num, test.log.info)
+                    error_context.context(
+                        "Change queues number -- %sth" % repeat_num, test.log.info
+                    )
                     queues_status = get_queues_status(ifname)
                     for q_number in change_list:
-                        queues_status = change_queues_number(ifname,
-                                                             int(q_number),
-                                                             queues_status)
+                        queues_status = change_queues_number(
+                            ifname, int(q_number), queues_status
+                        )
 
             test.log.info("wait for background test finish")
             try:

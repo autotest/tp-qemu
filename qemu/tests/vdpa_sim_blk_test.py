@@ -1,12 +1,12 @@
 """VDPA simulator blk test"""
 
 from avocado.utils import process
-
-from provider.block_devices_plug import BlockDevicesPlug
-from provider.vdpa_sim_utils import VirtioVdpaBlkSimulatorTest
 from virttest import env_process, utils_disk, utils_misc
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
+
+from provider.block_devices_plug import BlockDevicesPlug
+from provider.vdpa_sim_utils import VirtioVdpaBlkSimulatorTest
 
 
 def run(test, params, env):
@@ -59,16 +59,16 @@ def run(test, params, env):
 
     def _check_disk_in_guest(img):
         os_type = params["os_type"]
-        logger.debug("Check disk %s in guest" % img)
-        if os_type == 'windows':
+        logger.debug("Check disk %s in guest", img)
+        if os_type == "windows":
             img_size = params.get("image_size_%s" % img)
             cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             disk = _get_window_disk_index_by_serial(img)
             utils_disk.update_windows_disk_attributes(session, disk)
             logger.info("Formatting disk:%s", disk)
-            driver = \
-                utils_disk.configure_empty_disk(session, disk, img_size,
-                                                os_type)[0]
+            driver = utils_disk.configure_empty_disk(session, disk, img_size, os_type)[
+                0
+            ]
             output_path = driver + ":\\test.dat"
             cmd = cmd.format(output_path)
         else:
@@ -116,12 +116,12 @@ def run(test, params, env):
 
         locals_var = locals()
         if host_operation:
-            logger.debug("Execute operation %s" % host_operation)
+            logger.debug("Execute operation %s", host_operation)
             locals_var[host_operation]()
 
         if test_vm == "yes":
             logger.debug("Ready boot VM...")
-            params["start_vm"] = 'yes'
+            params["start_vm"] = "yes"
             login_timeout = params.get_numeric("login_timeout", 360)
             env_process.preprocess_vm(test, params, env, params.get("main_vm"))
             vm = env.get_vm(params["main_vm"])
@@ -129,7 +129,7 @@ def run(test, params, env):
             session = vm.wait_for_login(timeout=login_timeout)
 
         if guest_operation:
-            logger.debug("Execute guest operation %s" % guest_operation)
+            logger.debug("Execute guest operation %s", guest_operation)
             locals_var[guest_operation]()
 
         if test_vm == "yes":

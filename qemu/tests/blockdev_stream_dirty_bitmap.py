@@ -8,17 +8,16 @@ class BlkStreamWithDirtybitmap(BlockDevStreamTest):
     """Do block-stream with active layer attached a bitmap"""
 
     def check_bitmap_info(self):
-        bitmap = block_bitmap.get_bitmap_by_name(self.main_vm,
-                                                 self._top_device,
-                                                 self.bitmap_name)
+        bitmap = block_bitmap.get_bitmap_by_name(
+            self.main_vm, self._top_device, self.bitmap_name
+        )
         if bitmap:
             count = bitmap["count"]
             return count
 
     def add_bitmap(self):
         self.bitmap_name = "bitmap_%s" % self.snapshot_tag
-        kargs = {'bitmap_name': self.bitmap_name,
-                 'target_device':  self._top_device}
+        kargs = {"bitmap_name": self.bitmap_name, "target_device": self._top_device}
         block_bitmap.block_dirty_bitmap_add(self.main_vm, kargs)
 
     def umount_data_disk(self):
@@ -46,8 +45,10 @@ class BlkStreamWithDirtybitmap(BlockDevStreamTest):
         self.blockdev_stream()
         bcount_astream = self.check_bitmap_info()
         if bcount_bstream != bcount_astream:
-            self.test.fail("bitmap count changed after stream with actual:%d "
-                           "expected:%d" % (bcount_astream, bcount_bstream))
+            self.test.fail(
+                "bitmap count changed after stream with actual:%d "
+                "expected:%d" % (bcount_astream, bcount_bstream)
+            )
 
 
 def run(test, params, env):

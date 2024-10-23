@@ -1,5 +1,4 @@
-from virttest import utils_package
-from virttest import error_context
+from virttest import error_context, utils_package
 
 
 @error_context.context_aware
@@ -27,7 +26,7 @@ def run(test, params, env):
         output = session.cmd_output(params["ndctl_check_cmd"])
         output = eval(output)
         for item in output:
-            if item['mode'] != 'devdax':
+            if item["mode"] != "devdax":
                 test.fail("Change both nvdimm to dax mode failed")
     finally:
         utils_package.package_remove("ndctl", session)

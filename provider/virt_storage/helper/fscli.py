@@ -5,7 +5,6 @@ from avocado.utils import process
 
 
 class FsCli(object):
-
     def __init__(self, dir_path):
         self.dir_path = dir_path
         self._is_export = None
@@ -61,7 +60,7 @@ class FsCli(object):
         return "%s%s" % (self._protocol, os.path.realpath(path))
 
     def url_to_path(self, url):
-        return url[len(self._protocol):]
+        return url[len(self._protocol) :]
 
     @property
     def is_exists(self):

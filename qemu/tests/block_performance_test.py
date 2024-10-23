@@ -1,15 +1,16 @@
 import copy
+import itertools
 import json
-import time
 import re
 import statistics as st
-import itertools
+import time
 
 from avocado.utils import process
-from provider.storage_benchmark import generate_instance
-from virttest import utils_disk, env_process
+from virttest import env_process, utils_disk
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
+
+from provider.storage_benchmark import generate_instance
 
 
 def run(test, params, env):
@@ -32,7 +33,7 @@ def run(test, params, env):
         test.fail("Not find expected disk %s" % serial)
 
     def preprocess_fio_opts(results):
-        """expand fio options """
+        """expand fio options"""
         fio_rw = params.get("fio_rw", "null").split()
         fio_bs = params.get("fio_bs", "null").split()
         fio_iodepth = params.get("fio_iodepth", "null-").split()
@@ -65,7 +66,7 @@ def run(test, params, env):
         return fio_opts
 
     def preprcess_fio_filename(img):
-        """get filename for img """
+        """get filename for img"""
 
         disk_size = params["image_size_%s" % img]
         fio_raw_device = params.get("fio_raw_device_%s" % img, "no")
@@ -82,9 +83,9 @@ def run(test, params, env):
             if fio_raw_device == "yes":
                 return r"\\.\PHYSICALDRIVE%s" % disk_id
 
-            disk_letter = utils_disk.configure_empty_windows_disk(session,
-                                                                  disk_id,
-                                                                  disk_size)[0]
+            disk_letter = utils_disk.configure_empty_windows_disk(
+                session, disk_id, disk_size
+            )[0]
             fio_filename = disk_letter + ":\\test.dat"
         else:
             dev = get_linux_drive_path(session, img)
@@ -92,8 +93,7 @@ def run(test, params, env):
             if fio_raw_device == "yes":
                 return dev
             mount_dir = "/home/%s" % (dev.replace("/dev/", ""))
-            cmd = "mkfs.xfs {0} && mkdir -p {1} && mount {0} {1}".format(dev,
-                                                                         mount_dir)
+            cmd = "mkfs.xfs {0} && mkdir -p {1} && mount {0} {1}".format(dev, mount_dir)
             session.cmd_output(cmd)
             fio_filename = "%s/test.img" % mount_dir
 
@@ -138,11 +138,16 @@ def run(test, params, env):
         results["images"] = params["compare_images"].split()
         opts = preprocess_fio_opts(results)
         for img in results["images"]:
-            results[img] = {"filename": "", "global_options": {}, "jobs": {},
-                            "cmd": "", "cmds": [], "location": "",
-                            "results": []}
-            results[img]["location"] = params.get("fio_cmd_location_%s" % img,
-                                                  "vm")
+            results[img] = {
+                "filename": "",
+                "global_options": {},
+                "jobs": {},
+                "cmd": "",
+                "cmds": [],
+                "location": "",
+                "results": [],
+            }
+            results[img]["location"] = params.get("fio_cmd_location_%s" % img, "vm")
             # guest fio
             if results[img]["location"] == "vm":
                 fio_bin = fio.cfg.fio_path
@@ -183,7 +188,7 @@ def run(test, params, env):
                 if results[img]["cmds"]:
                     cmd_num = len(results[img]["cmds"])
                     for idx, cmd in enumerate(results[img]["cmds"]):
-                        logger.debug(f"Run sub-cmd {idx}/{cmd_num}:{cmd}")
+                        logger.debug("Run sub-cmd %s/%s:%s", idx, cmd_num, cmd)
                         img_output = runner(cmd, cmd_timeout)
                         if i > 0:
                             # discard first result
@@ -210,10 +215,9 @@ def run(test, params, env):
                 filename = json_output["global options"]["directory"]
             else:
                 filename = json_output["global options"]["filename"]
-            if img_result.get('filename'):
+            if img_result.get("filename"):
                 if filename != img_result["filename"]:
-                    test.fail(
-                        "Wrong data %s %s" % (filename, img_result["filename"]))
+                    test.fail("Wrong data %s %s" % (filename, img_result["filename"]))
             else:
                 # init global info
                 global_options = copy.deepcopy(json_output["global options"])
@@ -232,19 +236,31 @@ def run(test, params, env):
                 if jobname not in jobs:
                     # init job info
                     logger.debug("Add job: %s %s", filename, jobname)
-                    jobs[jobname] = {"options": job["job options"].copy(),
-                                     "iops": [], "iops_avg": 0, "lat": [],
-                                     "lat_avg": 0,
-                                     "job_runtime": 0, "bw": []}
+                    jobs[jobname] = {
+                        "options": job["job options"].copy(),
+                        "iops": [],
+                        "iops_avg": 0,
+                        "lat": [],
+                        "lat_avg": 0,
+                        "job_runtime": 0,
+                        "bw": [],
+                    }
                 read = int(job["read"]["iops"])
                 write = int(job["write"]["iops"])
                 iops = read + write
                 bw = int(job["read"]["bw"]) + int(job["write"]["bw"])
                 lat = int(job["read"]["lat_ns"]["mean"]) + int(
-                    job["write"]["lat_ns"]["mean"])
+                    job["write"]["lat_ns"]["mean"]
+                )
                 logger.debug(
                     "Get %s %s  runtime:%s IOPS read:%s write:%s sum:%s",
-                    filename, jobname, job["job_runtime"], read, write, iops)
+                    filename,
+                    jobname,
+                    job["job_runtime"],
+                    read,
+                    write,
+                    iops,
+                )
                 img_result["jobs"][jobname]["iops"].append(iops)
                 img_result["jobs"][jobname]["lat"].append(lat)
                 img_result["jobs"][jobname]["bw"].append(bw)
@@ -295,9 +311,15 @@ def run(test, params, env):
                 job["iops_std"] = 0 if sample_num == 1 else st.stdev(iops)
                 job["iops_dispersion"] = round(job["iops_std"] / iops_avg, 6)
                 job["lat_avg"] = int(sum(lat) / sample_num)
-                logger.debug("%s smooth %s iops:%s AVG:%s lat:%s V:%s%%", img,
-                             key, iops, iops_avg, job["lat_avg"],
-                             job["iops_dispersion"] * 100)
+                logger.debug(
+                    "%s smooth %s iops:%s AVG:%s lat:%s V:%s%%",
+                    img,
+                    key,
+                    iops,
+                    iops_avg,
+                    job["lat_avg"],
+                    job["iops_dispersion"] * 100,
+                )
         # compare data
         unexpected_result = {}
         warning_result = {}
@@ -316,13 +338,26 @@ def run(test, params, env):
                 obj2_v = obj2_job["iops_dispersion"]
                 if (obj1_v > dispersion) or (obj2_v > dispersion):
                     logger.warning(
-                        "Test result %s is unstable(>%s) %s:%s %s:%s", key,
-                        dispersion, obj1_name, obj1_v, obj2_name, obj2_v)
+                        "Test result %s is unstable(>%s) %s:%s %s:%s",
+                        key,
+                        dispersion,
+                        obj1_name,
+                        obj1_v,
+                        obj2_name,
+                        obj2_v,
+                    )
                 gap = round(((obj2_avg - obj1_avg) / obj1_avg * 100), 1)
                 ratio = round((obj1_avg / obj2_avg * 100), 1)
                 logger.debug(
                     "%s-%s: %-20s: %-10s %-10s (ratio: %-5s%%) (gap: %-5s%%)",
-                    obj1_name, obj2_name, key, obj1_avg, obj2_avg, ratio, gap)
+                    obj1_name,
+                    obj2_name,
+                    key,
+                    obj1_avg,
+                    obj2_avg,
+                    ratio,
+                    gap,
+                )
 
                 if obj1_avg > obj2_avg:
                     r = (obj1_name, obj2_name, obj1_avg, obj2_avg)
@@ -362,7 +397,7 @@ def run(test, params, env):
             raise err
 
     def choose_fastest_disk(disks):
-        logger.debug("Choose disk in: %s" % disks)
+        logger.debug("Choose disk in: %s", disks)
         if len(disks) < 2:
             return disks[0]
 
@@ -384,8 +419,7 @@ def run(test, params, env):
             test.cancel("IO Performance is too low %s < %s" % (iops, iops_req))
 
     def process_selected_disk(disk):
-        """ format and mount disk
-        """
+        """format and mount disk"""
         out = process.getoutput("lsblk -s -p %s -O -J" % disk)
         out = json.loads(out)
 
@@ -400,7 +434,7 @@ def run(test, params, env):
         params["post_command"] = umount_cmd + params.get("post_command", "")
 
     def auto_select_disk():
-        """select empty disk """
+        """select empty disk"""
         if select_disk_request != "yes":
             return
         disks = []
@@ -409,8 +443,7 @@ def run(test, params, env):
 
         if select_disk_name:
             logger.debug("Checking specified disk:%s", select_disk_name)
-            status_out = process.getstatusoutput(
-                "lsblk -p -O -J %s" % select_disk_name)
+            status_out = process.getstatusoutput("lsblk -p -O -J %s" % select_disk_name)
             if status_out[0] == 0:
                 out = json.loads(status_out[1])
                 disk = out["blockdevices"][0] if out["blockdevices"] else None
@@ -420,10 +453,12 @@ def run(test, params, env):
                         process_disk = False
                         test.cancel("Please use mpath instead of raw device")
                     if disk.get("mountpoint") or (
-                            disk.get("children") and disk["type"] != "mpath"):
+                        disk.get("children") and disk["type"] != "mpath"
+                    ):
                         process_disk = False
-                        logger.debug("Skip %s due to mounted or not empty",
-                                     select_disk_name)
+                        logger.debug(
+                            "Skip %s due to mounted or not empty", select_disk_name
+                        )
                     if process_disk:
                         return process_selected_disk(select_disk_name)
             else:
@@ -433,11 +468,11 @@ def run(test, params, env):
         out = json.loads(process.getoutput("lsblk -p -b -O -J "))
         for disk in out["blockdevices"]:
             name = disk["name"]
-            logger.debug("Checking %s: type:%s fstype:%s", name, disk["type"],
-                         disk["fstype"])
+            logger.debug(
+                "Checking %s: type:%s fstype:%s", name, disk["type"], disk["fstype"]
+            )
             if disk["type"] != "disk" and disk["type"] != "mpath":
-                logger.debug("Skip %s the type:%s is not support", name,
-                             disk["type"])
+                logger.debug("Skip %s the type:%s is not support", name, disk["type"])
                 continue
             if disk.get("mountpoint"):
                 logger.debug("Skip %s due to mounted or not empty", name)
@@ -487,12 +522,14 @@ def run(test, params, env):
         check_default_mq_cmd %= dev
         output = session.cmd_output(check_default_mq_cmd)
         logger.debug(output)
-        output = output.split('\n')[0]
+        output = output.split("\n")[0]
 
         default_mq_nums = len(re.split(r"[ ]+", output))
         if default_mq_nums != int(params["vcpu_maxcpus"]):
-            test.fail("Default num-queue value(%s) not equal vcpu nums(%s)"
-                      % (default_mq_nums, int(params["vcpu_maxcpus"])))
+            test.fail(
+                "Default num-queue value(%s) not equal vcpu nums(%s)"
+                % (default_mq_nums, int(params["vcpu_maxcpus"]))
+            )
 
     def execute_operation(where, cmd):
         # function
@@ -531,14 +568,13 @@ def run(test, params, env):
     boot_wait_time = params.get_numeric("boot_wait_time", 60)
     select_disk_request = params.get("select_disk_request")
     select_disk_name = params.get("select_disk_name", "")
-    select_disk_minimum_size = params.get_numeric("select_disk_minimum_size",
-                                                  20)
+    select_disk_minimum_size = params.get_numeric("select_disk_minimum_size", 20)
     vm = None
 
     locals_var = locals()
 
     if host_init_operation:
-        logger.debug("Execute host init :  %s" % host_init_operation)
+        logger.debug("Execute host init :  %s", host_init_operation)
         execute_operation("host", host_init_operation)
 
     auto_select_disk()
@@ -546,10 +582,11 @@ def run(test, params, env):
     if check_host_iops_req > 0:
         check_host_iops(host_test_file, check_host_iops_req)
 
-    if params["not_preprocess"] != 'no':
-        logger.debug("Ready boot VM : %s", params['images'])
-        env_process.process(test, params, env, env_process.preprocess_image,
-                            env_process.preprocess_vm)
+    if params["not_preprocess"] != "no":
+        logger.debug("Ready boot VM : %s", params["images"])
+        env_process.process(
+            test, params, env, env_process.preprocess_image, env_process.preprocess_vm
+        )
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -557,24 +594,24 @@ def run(test, params, env):
     # Wait system init
     time.sleep(boot_wait_time)
 
-    fio = generate_instance(params, vm, 'fio')
+    fio = generate_instance(params, vm, "fio")
 
     if guest_init_operation:
-        logger.debug("Execute guest init: %s" % guest_init_operation)
+        logger.debug("Execute guest init: %s", guest_init_operation)
         execute_operation("guest", guest_init_operation)
 
     if guest_operation:
-        logger.debug("Execute guest: %s" % guest_operation)
+        logger.debug("Execute guest: %s", guest_operation)
         execute_operation("guest", guest_operation)
 
     preprocess_fio_data(test_results)
     run_fio_test(test_results)
 
     if guest_deinit_operation:
-        logger.debug("Execute guest deinit : %s" % guest_deinit_operation)
+        logger.debug("Execute guest deinit : %s", guest_deinit_operation)
         execute_operation("guest", guest_deinit_operation)
     if host_deinit_operation:
-        logger.debug("Execute host deinit: %s" % host_deinit_operation)
+        logger.debug("Execute host deinit: %s", host_deinit_operation)
         execute_operation("host", host_deinit_operation)
 
     compare_fio_result(test_results)

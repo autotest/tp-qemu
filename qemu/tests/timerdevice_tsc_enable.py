@@ -30,11 +30,15 @@ def run(test, params, env):
     expect_tsc_flag = params["expect_tsc_flag"]
 
     if expect_cur_clk not in current_clksrc:
-        test.fail("Current clocksource is %s, the expected is %s." %
-                  (current_clksrc, expect_cur_clk))
+        test.fail(
+            "Current clocksource is %s, the expected is %s."
+            % (current_clksrc, expect_cur_clk)
+        )
     if tsc_flag:
         test.fail("Can not get expected flag: %s." % expect_tsc_flag)
 
     if expect_avl_clk not in avl_clksrc:
-        test.fail("Available clocksources are %s, the exected are %s."
-                  % (avl_clksrc, expect_avl_clk))
+        test.fail(
+            "Available clocksources are %s, the exected are %s."
+            % (avl_clksrc, expect_avl_clk)
+        )

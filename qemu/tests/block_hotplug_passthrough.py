@@ -1,9 +1,8 @@
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_disk
 from avocado.utils import process
-from provider.storage_benchmark import generate_instance
+from virttest import error_context, utils_disk, utils_test
+
 from provider.block_devices_plug import BlockDevicesPlug
+from provider.storage_benchmark import generate_instance
 
 
 @error_context.context_aware
@@ -24,11 +23,12 @@ def run(test, params, env):
     """
 
     def create_path_disk():
-        """Create a passthrough disk with scsi_debug """
+        """Create a passthrough disk with scsi_debug"""
         process.getoutput(params["pre_command"], shell=True)
         disks_old = process.getoutput("ls -1d /dev/sd*", shell=True).split()
-        process.system_output(params["create_command"], timeout=300,
-                              shell=True, verbose=False)
+        process.system_output(
+            params["create_command"], timeout=300, shell=True, verbose=False
+        )
         disks_new = process.getoutput("ls -1d /dev/sd*", shell=True).split()
         return list(set(disks_new) - set(disks_old))[0]
 
@@ -46,26 +46,26 @@ def run(test, params, env):
         ostype = params["os_type"]
         if ostype == "windows":
             if not utils_disk.update_windows_disk_attributes(session, did):
-                test.fail("Failed to clear readonly for all disks and online "
-                          "them in guest")
-        partition = utils_disk.configure_empty_disk(session, did,
-                                                    stg_image_size, ostype)
+                test.fail(
+                    "Failed to clear readonly for all disks and online " "them in guest"
+                )
+        partition = utils_disk.configure_empty_disk(
+            session, did, stg_image_size, ostype
+        )
         if not partition:
             test.fail("Fail to format disks.")
         return partition[0]
 
     def run_io_test(session, partition):
-        """ Run io test on the hot plugged disk. """
-        iozone_options = params.get('iozone_options')
-        dd_test = params.get('dd_test')
+        """Run io test on the hot plugged disk."""
+        iozone_options = params.get("iozone_options")
+        dd_test = params.get("dd_test")
         if iozone_options:
-            error_context.context(
-                "Run iozone test on the plugged disk.", test.log.info)
-            iozone = generate_instance(params, vm, 'iozone')
+            error_context.context("Run iozone test on the plugged disk.", test.log.info)
+            iozone = generate_instance(params, vm, "iozone")
             iozone.run(iozone_options.format(partition[0]))
         if dd_test:
-            error_context.context(
-                "Do dd test on the plugged disk", test.log.info)
+            error_context.context("Do dd test on the plugged disk", test.log.info)
             partition = partition.split("/")[-1]
             session.cmd(dd_test.format(partition))
 
@@ -81,7 +81,8 @@ def run(test, params, env):
 
     if params["os_type"] == "windows":
         session = utils_test.qemu.windrv_check_running_verifier(
-            session, vm, test, params["driver_name"])
+            session, vm, test, params["driver_name"]
+        )
 
     drive_index = hotplug_path_disk(vm, create_path_disk())
     run_io_test(session, format_plug_disk(session, drive_index))

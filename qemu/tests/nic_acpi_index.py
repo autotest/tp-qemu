@@ -2,11 +2,7 @@ import random
 import re
 
 from avocado.utils import process
-
-from virttest import utils_net
-from virttest import virt_vm
-from virttest import utils_misc
-from virttest import error_context
+from virttest import error_context, utils_misc, utils_net, virt_vm
 
 
 @error_context.context_aware
@@ -29,8 +25,10 @@ def run(test, params, env):
 
     def renew_ip_address(session, mac):
         ifname = utils_net.get_linux_ifname(session, mac)
-        make_conf = "nmcli connection add type ethernet con-name %s ifname " \
-                    "%s autoconnect yes" % (ifname, ifname)
+        make_conf = (
+            "nmcli connection add type ethernet con-name %s ifname "
+            "%s autoconnect yes" % (ifname, ifname)
+        )
         arp_clean = "arp -n|awk '/^[1-9]/{print \"arp -d \" $1}'|sh"
         session.cmd_output_safe(make_conf)
         session.cmd_output_safe("ip link set dev %s up" % ifname)
@@ -39,9 +37,8 @@ def run(test, params, env):
         session.cmd_output_safe(arp_clean)
 
     def verified_nic_name():
-        ifname = utils_net.get_linux_ifname(session,
-                                            vm.get_mac_address())
-        pattern = int(re.findall(r'\d+', ifname)[-1])
+        ifname = utils_net.get_linux_ifname(session, vm.get_mac_address())
+        pattern = int(re.findall(r"\d+", ifname)[-1])
         nic_name_number = params.get_numeric("nic_name_number")
         if pattern == nic_name_number:
             test.log.info("nic name match")
@@ -52,20 +49,21 @@ def run(test, params, env):
         host_ip = utils_net.get_host_ip_address(params)
         status, output = utils_net.ping(host_ip, 10, timeout=30)
         if status:
-            test.fail(
-                "%s ping %s unexpected, output %s" % (vm.name, host_ip, output))
+            test.fail("%s ping %s unexpected, output %s" % (vm.name, host_ip, output))
 
     def get_hotplug_nic_ip(vm, nic, session):
         def _get_address():
             try:
-                index = [_idx for _idx, _nic in enumerate(vm.virtnet)
-                         if _nic == nic][0]
+                index = [_idx for _idx, _nic in enumerate(vm.virtnet) if _nic == nic][0]
                 return vm.wait_for_get_address(index, timeout=90)
             except IndexError:
-                test.error("Nic '%s' not exists in VM '%s'"
-                           % (nic["nic_name"], vm.name))
-            except (virt_vm.VMIPAddressMissingError,
-                    virt_vm.VMAddressVerificationError):
+                test.error(
+                    "Nic '%s' not exists in VM '%s'" % (nic["nic_name"], vm.name)
+                )
+            except (
+                virt_vm.VMIPAddressMissingError,
+                virt_vm.VMAddressVerificationError,
+            ):
                 renew_ip_address(session, nic["mac"])
             return
 
@@ -86,8 +84,9 @@ def run(test, params, env):
     session = vm.wait_for_serial_login(timeout=login_timeout)
 
     for iteration in range(repeat_times):
-        error_context.context("Start test iteration %s" % (iteration + 1),
-                              test.log.info)
+        error_context.context(
+            "Start test iteration %s" % (iteration + 1), test.log.info
+        )
         nic_hotplug_count = int(params.get("nic_hotplug_count", 1))
         nic_hotplugged = []
         for nic_index in range(1, nic_hotplug_count + 1):

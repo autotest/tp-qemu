@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import utils_net
+from virttest import error_context, utils_net
 
 
 @error_context.context_aware
@@ -28,8 +27,9 @@ def run(test, params, env):
         session_serial.cmd(bcdedit_debug)
         session_serial.cmd(bcdedit_cmd)
         vm.reboot(timeout=login_timeout)
-        status, output = utils_net.ping(dest=ext_host, count=10,
-                                        session=session_serial, timeout=30)
+        status, output = utils_net.ping(
+            dest=ext_host, count=10, session=session_serial, timeout=30
+        )
         if status:
             test.fail("ping is failed, output %s" % output)
     finally:

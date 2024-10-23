@@ -1,19 +1,15 @@
 import logging
 
-from virttest import qemu_storage
-from virttest import data_dir
-from virttest import utils_disk
+from virttest import data_dir, qemu_storage, utils_disk
 from virttest.qemu_capabilities import Flags
 
 from provider import backup_utils
-
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockDevSnapshotTest(object):
-
     def __init__(self, test, params, env):
         self.env = env
         self.test = test
@@ -35,8 +31,7 @@ class BlockDevSnapshotTest(object):
 
     def prepare_clone_vm(self):
         vm_params = self.main_vm.params.copy()
-        images = self.main_vm.params["images"].replace(
-            self.base_tag, self.snapshot_tag)
+        images = self.main_vm.params["images"].replace(self.base_tag, self.snapshot_tag)
         vm_params["images"] = images
         return self.main_vm.clone(params=vm_params)
 
@@ -120,23 +115,21 @@ class BlockDevSnapshotTest(object):
                 disk_id = self.get_linux_disk_path(session, disk_size)
                 assert disk_id, "Disk not found in guest!"
                 mount_point = utils_disk.configure_empty_linux_disk(
-                    session, disk_id, disk_size)[0]
-                self.disks_info[self.base_tag] = [r"/dev/%s1" % disk_id,
-                                                  mount_point]
+                    session, disk_id, disk_size
+                )[0]
+                self.disks_info[self.base_tag] = [r"/dev/%s1" % disk_id, mount_point]
             else:
-                disk_id = utils_disk.get_windows_disks_index(
-                    session, disk_size)
+                disk_id = utils_disk.get_windows_disks_index(session, disk_size)
                 driver_letter = utils_disk.configure_empty_windows_disk(
-                    session, disk_id, disk_size)[0]
+                    session, disk_id, disk_size
+                )[0]
                 mount_point = r"%s:\\" % driver_letter
                 self.disks_info[self.base_tag] = [disk_id, mount_point]
         finally:
             session.close()
 
-    def generate_tempfile(self, root_dir, filename="data",
-                          size="10M", timeout=360):
-        backup_utils.generate_tempfile(
-            self.main_vm, root_dir, filename, size, timeout)
+    def generate_tempfile(self, root_dir, filename="data", size="10M", timeout=360):
+        backup_utils.generate_tempfile(self.main_vm, root_dir, filename, size, timeout)
         self.files_info.append([root_dir, filename])
 
     def snapshot_test(self):

@@ -23,15 +23,18 @@ def run(test, params, env):
     get_nmi_cmd = params["get_nmi_cmd"]
     kernel_version = session.cmd_output("uname -r").strip()
     nmi_watchdog_type = int(params["nmi_watchdog_type"])
-    update_kernel_cmd = ("grubby --update-kernel=/boot/vmlinuz-%s "
-                         "--args='nmi_watchdog=%d'" %
-                         (kernel_version, nmi_watchdog_type))
+    update_kernel_cmd = (
+        "grubby --update-kernel=/boot/vmlinuz-%s "
+        "--args='nmi_watchdog=%d'" % (kernel_version, nmi_watchdog_type)
+    )
 
-    error_context.context("Add 'nmi_watchdog=%d' to guest kernel "
-                          "cmdline and reboot" % nmi_watchdog_type)
+    error_context.context(
+        "Add 'nmi_watchdog=%d' to guest kernel "
+        "cmdline and reboot" % nmi_watchdog_type
+    )
     session.cmd(update_kernel_cmd)
     time.sleep(int(params.get("sleep_before_reset", 10)))
-    session = vm.reboot(session, method='shell', timeout=timeout)
+    session = vm.reboot(session, method="shell", timeout=timeout)
     try:
         error_context.context("Getting guest's number of vcpus")
         guest_cpu_num = session.cmd(params["cpu_chk_cmd"])
@@ -41,8 +44,7 @@ def run(test, params, env):
         test.log.debug(output.strip())
         nmi_counter1 = output.split()[1:]
 
-        test.log.info("Waiting 60 seconds to see if guest's NMI counter "
-                      "increases")
+        test.log.info("Waiting 60 seconds to see if guest's NMI counter " "increases")
         time.sleep(60)
 
         error_context.context("Getting guest's NMI counter 2nd time")
@@ -52,10 +54,13 @@ def run(test, params, env):
 
         error_context.context("")
         for i in range(int(guest_cpu_num)):
-            test.log.info("vcpu: %s, nmi_counter1: %s, nmi_counter2: %s",
-                          i, nmi_counter1[i], nmi_counter2[i])
+            test.log.info(
+                "vcpu: %s, nmi_counter1: %s, nmi_counter2: %s",
+                i,
+                nmi_counter1[i],
+                nmi_counter2[i],
+            )
             if int(nmi_counter2[i]) <= int(nmi_counter1[i]):
-                test.fail("Guest's NMI counter did not increase "
-                          "after 60 seconds")
+                test.fail("Guest's NMI counter did not increase " "after 60 seconds")
     finally:
         session.close()

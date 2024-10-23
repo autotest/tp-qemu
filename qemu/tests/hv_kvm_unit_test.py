@@ -1,10 +1,8 @@
-import re
 import json
+import re
 
-from virttest import error_context
-from virttest import data_dir
-from virttest import cpu
 from avocado.utils import process
+from virttest import cpu, data_dir, error_context
 
 
 @error_context.context_aware
@@ -43,8 +41,9 @@ def run(test, params, env):
         unit_test_cmd = test_cmd % (tmp_dir, unit_test, cpu_param)
         result_output = process.system_output(unit_test_cmd, shell=True)
         result_output = result_output.decode()
-        find_result = re.findall('^%s' % unit_test_result[0], result_output, re.M)
+        find_result = re.findall("^%s" % unit_test_result[0], result_output, re.M)
         if len(find_result) != int(unit_test_result[1]):
-            test.fail("Unit test result mismatch target, "
-                      "target=%s, output=%s" %
-                      (unit_test_result[1], result_output))
+            test.fail(
+                "Unit test result mismatch target, "
+                "target=%s, output=%s" % (unit_test_result[1], result_output)
+            )

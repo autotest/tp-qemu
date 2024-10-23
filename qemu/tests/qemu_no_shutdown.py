@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -30,27 +29,28 @@ def run(test, params, env):
     test.log.info("The guest bootup successfully.")
 
     for i in range(repeat_times):
-        error_context.context("Round %s : Send monitor cmd system_powerdown."
-                              % str(i + 1), test.log.info)
+        error_context.context(
+            "Round %s : Send monitor cmd system_powerdown." % str(i + 1), test.log.info
+        )
         # Send a system_powerdown monitor command
         vm.monitor.system_powerdown()
         # Wait for the session to become unresponsive and close it
-        if not utils_misc.wait_for(lambda: not session.is_responsive(),
-                                   timeout, 0, 1):
+        if not utils_misc.wait_for(lambda: not session.is_responsive(), timeout, 0, 1):
             test.fail("Oops, Guest refuses to go down!")
         if session:
             session.close()
         # Check the qemu id is not change
         if not utils_misc.wait_for(lambda: vm.is_alive(), 5, 0, 1):
-            test.fail("VM not responsive after system_powerdown "
-                      "with -no-shutdown!")
+            test.fail("VM not responsive after system_powerdown " "with -no-shutdown!")
         if vm.get_pid() != qemu_process_id:
             test.fail("Qemu pid changed after system_powerdown!")
         test.log.info("Round %s -> System_powerdown successfully.", str(i + 1))
 
         # Send monitor command system_reset and cont
-        error_context.context("Round %s : Send monitor command system_reset "
-                              "and cont." % str(i + 1), test.log.info)
+        error_context.context(
+            "Round %s : Send monitor command system_reset " "and cont." % str(i + 1),
+            test.log.info,
+        )
         vm.monitor.cmd("system_reset")
         vm.resume()
 

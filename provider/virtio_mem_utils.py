@@ -4,10 +4,10 @@ virtio_mem useful functions.
 This module is meant to reduce code size on virtio_mem cases avoiding
 repeat functions implementation.
 """
+
 import re
 
 from avocado.utils.wait import wait_for
-
 from virttest import error_context
 from virttest.utils_misc import normalize_data_size
 
@@ -56,7 +56,7 @@ def get_node_size(node, vm, test):
 
 def check_numa_plugged_mem(node_id, requested_size, threshold, vm, test):
     """
-    Compares numa node plugged memory with the memory requested size from virtio_mem device
+    Compares numa node plugged memory with memory requested size from virtio_mem device
     allowing a little difference defined by mem_limit
     :param node_id: id of the node to be checked
     :param requested_size: requested-size configuration parameter

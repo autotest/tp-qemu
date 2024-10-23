@@ -1,7 +1,7 @@
+from virttest.utils_misc import wait_for
+
 from provider.blockdev_mirror_nowait import BlockdevMirrorNowaitTest
 from provider.job_utils import get_event_by_condition
-
-from virttest.utils_misc import wait_for
 
 
 class BlockdevMirrorCancelReadyIOJobTest(BlockdevMirrorNowaitTest):
@@ -15,31 +15,34 @@ class BlockdevMirrorCancelReadyIOJobTest(BlockdevMirrorNowaitTest):
 
         session = self.main_vm.wait_for_login()
         try:
-            session.sendline(self.params['write_file_cmd'])
-            if not wait_for(lambda: _is_dd_running(), 30, 0, 1,
-                            "Waiting dd start..."):
+            session.sendline(self.params["write_file_cmd"])
+            if not wait_for(lambda: _is_dd_running(), 30, 0, 1, "Waiting dd start..."):
                 self.test.error("Failed to start dd in vm")
         finally:
             session.close()
 
     def cancel_job(self):
-        self.main_vm.monitor.cmd("block-job-cancel", {'device': self._jobs[0], 'force': True})
+        self.main_vm.monitor.cmd(
+            "block-job-cancel", {"device": self._jobs[0], "force": True}
+        )
         event = get_event_by_condition(
-            self.main_vm, 'BLOCK_JOB_CANCELLED',
-            self.params.get_numeric('job_cancelled_timeout', 60),
-            device=self._jobs[0]
+            self.main_vm,
+            "BLOCK_JOB_CANCELLED",
+            self.params.get_numeric("job_cancelled_timeout", 60),
+            device=self._jobs[0],
         )
         if event is None:
-            self.test.fail('Job failed to cancel')
+            self.test.fail("Job failed to cancel")
 
     def wait_till_job_ready(self):
         event = get_event_by_condition(
-            self.main_vm, 'BLOCK_JOB_READY',
-            self.params.get_numeric('job_ready_timeout', 120),
-            device=self._jobs[0]
+            self.main_vm,
+            "BLOCK_JOB_READY",
+            self.params.get_numeric("job_ready_timeout", 120),
+            device=self._jobs[0],
         )
         if event is None:
-            self.test.fail('Job failed to reach ready state')
+            self.test.fail("Job failed to reach ready state")
 
     def do_test(self):
         self.blockdev_mirror()

@@ -8,10 +8,11 @@ could be closed during migration or for any unwanted reason. This test checks
 if application is running when it should .
 
 """
+
 import logging
 import os
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def run(test, params, env):
@@ -26,7 +27,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     kill_on_vms = params.get("kill_on_vms", "")
-    vms = kill_on_vms.split(',')
+    vms = kill_on_vms.split(",")
     app_name = params.get("kill_app_name", None)
     test.log.debug("vms %s", vms)
     if not vms:
@@ -48,14 +49,12 @@ def kill_app(vm_name, app_name, params, env):
     vm = env.get_vm(params[vm_name])
 
     vm.verify_alive()
-    vm_session = vm.wait_for_login(
-        timeout=int(params.get("login_timeout", 360)))
+    vm_session = vm.wait_for_login(timeout=int(params.get("login_timeout", 360)))
     # get PID of remote-viewer and kill it
     LOG_JOB.info("Get PID of %s", app_name)
     vm_session.cmd("pgrep %s" % app_name)
 
     LOG_JOB.info("Try to kill %s", app_name)
-    vm_session.cmd("pkill %s" % app_name
-                   .split(os.path.sep)[-1])
+    vm_session.cmd("pkill %s" % app_name.split(os.path.sep)[-1])
     vm.verify_alive()
     vm_session.close()

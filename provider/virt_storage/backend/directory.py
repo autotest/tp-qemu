@@ -1,9 +1,8 @@
 import os
 
-from provider.virt_storage.helper import fscli
-
 from provider.virt_storage import storage_volume
 from provider.virt_storage.backend import base
+from provider.virt_storage.helper import fscli
 from provider.virt_storage.utils import storage_util
 
 
@@ -30,9 +29,7 @@ class DirectoryPool(base.BaseStoragePool):
         self.helper.remove()
 
     def refresh(self):
-        files = filter(
-            lambda x: not self.find_volume_by_path,
-            self.find_sources())
+        files = filter(lambda x: not self.find_volume_by_path, self.find_sources())
         return map(self.create_volume_from_local, files)
 
     def create_volume_from_local(self, path):

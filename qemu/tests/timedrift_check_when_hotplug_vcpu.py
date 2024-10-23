@@ -2,10 +2,7 @@ import re
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_time
+from virttest import error_context, utils_test, utils_time
 
 
 @error_context.context_aware
@@ -32,7 +29,7 @@ def run(test, params, env):
     process.system(ntp_host_cmd, shell=True)
 
     vm = env.get_vm(params["main_vm"])
-    if params["os_type"] == 'windows':
+    if params["os_type"] == "windows":
         utils_time.sync_timezone_win(vm)
     session = vm.wait_for_login()
 
@@ -53,8 +50,10 @@ def run(test, params, env):
         vm.hotplug_vcpu_device(params["vcpu_devices"])
         time.sleep(1)
     else:
-        test.error("Invalid operation, valid index range 0:%d, used range 0:%d"
-                   % (int(params["vcpus_maxcpus"])-1, int(params["smp"]) - 1))
+        test.error(
+            "Invalid operation, valid index range 0:%d, used range 0:%d"
+            % (int(params["vcpus_maxcpus"]) - 1, int(params["smp"]) - 1)
+        )
 
     error_context.context("Check time offset via ntp server", test.log.info)
     for query in range(query_times):
@@ -64,7 +63,9 @@ def run(test, params, env):
         except IndexError:
             test.error("Failed to get time offset")
         if float(offset) >= drift_threshold:
-            test.fail("Uacceptable offset '%s', " % offset +
-                      "threshold '%s'" % drift_threshold)
+            test.fail(
+                "Uacceptable offset '%s', " % offset
+                + "threshold '%s'" % drift_threshold
+            )
         time.sleep(query_internal)
     session.close()

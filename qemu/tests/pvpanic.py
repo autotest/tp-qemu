@@ -2,13 +2,10 @@ import logging
 import random
 
 import aexpect
-
-from virttest import error_context
-from virttest import utils_test
-from virttest import utils_misc
 from avocado.utils.wait import wait_for
+from virttest import error_context, utils_misc, utils_test
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def setup_test_environment(test, params, vm, session):
@@ -27,16 +24,16 @@ def setup_test_environment(test, params, vm, session):
     timeout = int(params.get("timeout", 360))
     if params.get("os_type") == "linux":
         # stop kdump service and enable unknown_nmi_panic
-        setup_cmds = [params.get("set_kdump_cmd"),
-                      params.get("set_panic_cmd")]
+        setup_cmds = [params.get("set_kdump_cmd"), params.get("set_panic_cmd")]
     else:
         # modify the register for windows
         setup_cmds = [params.get("set_panic_cmd")]
     for cmd in setup_cmds:
         status, output = session.cmd_status_output(cmd, timeout)
         if status:
-            test.error("Command '%s' failed, status: %s, output: %s" %
-                       (cmd, status, output))
+            test.error(
+                "Command '%s' failed, status: %s, output: %s" % (cmd, status, output)
+            )
     if params.get("os_type") == "windows":
         vm.reboot(session, timeout=timeout)
 
@@ -52,6 +49,7 @@ def check_qmp_events(vm, event_names, timeout=360):
     :return: True if one of the events given by `event_names` appeared,
         otherwise None
     """
+
     def _do_check(vm, event_names):
         for name in event_names:
             if vm.monitor.get_event(name):
@@ -60,8 +58,7 @@ def check_qmp_events(vm, event_names, timeout=360):
                 return True
         return False
 
-    LOG_JOB.info("Try to get qmp events %s in %s seconds!",
-                 event_names, timeout)
+    LOG_JOB.info("Try to get qmp events %s in %s seconds!", event_names, timeout)
     return wait_for(lambda: _do_check(vm, event_names), timeout, 5, 5)
 
 
@@ -87,20 +84,27 @@ def trigger_crash(test, vm, params):
         cmd = params["notmyfault_cmd"] % random.randint(1, 8)
         notmyfault_cmd = utils_misc.set_winutils_letter(session, cmd)
         try:
-            status, output = session.cmd_status_output(cmd=notmyfault_cmd,
-                                                       timeout=timeout)
+            status, output = session.cmd_status_output(
+                cmd=notmyfault_cmd, timeout=timeout
+            )
             if status:
-                test.error("Command '%s' failed, status: %s, output: %s" %
-                           (cmd, status, output))
+                test.error(
+                    "Command '%s' failed, status: %s, output: %s"
+                    % (cmd, status, output)
+                )
         # notmyfault_app triggers BSOD of the guest, and it terminates
         # qemu process, so sometimes, it can not get the status of the cmd.
-        except (aexpect.ShellTimeoutError,
-                aexpect.ShellProcessTerminatedError,
-                aexpect.ShellStatusError):
+        except (
+            aexpect.ShellTimeoutError,
+            aexpect.ShellProcessTerminatedError,
+            aexpect.ShellStatusError,
+        ):
             pass
     else:
-        test.cancel("Crash trigger method %s not supported, "
-                    "please check cfg file for mistake." % crash_method)
+        test.cancel(
+            "Crash trigger method %s not supported, "
+            "please check cfg file for mistake." % crash_method
+        )
 
 
 PVPANIC_PANICKED = 1
@@ -135,13 +139,13 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     if params.get("os_type") == "windows":
-        error_context.context("Check if the driver is installed and "
-                              "verified", test.log.info)
+        error_context.context(
+            "Check if the driver is installed and " "verified", test.log.info
+        )
         driver_name = params.get("driver_name", "pvpanic")
-        session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                                test,
-                                                                driver_name,
-                                                                timeout)
+        session = utils_test.qemu.windrv_check_running_verifier(
+            session, vm, test, driver_name, timeout
+        )
     check_empty = False
     if with_events:
         if debug_type == 2:

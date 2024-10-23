@@ -2,9 +2,7 @@ import os
 import time
 
 from avocado.utils import process
-from virttest import error_context
-from virttest import data_dir
-from virttest import utils_net
+from virttest import data_dir, error_context, utils_net
 
 
 @error_context.context_aware
@@ -24,7 +22,7 @@ def run(test, params, env):
     vm.wait_for_login(timeout=login_timeout)
     exp_path = params["exp_path"]
     test_path = os.path.join(data_dir.get_deps_dir(), exp_path)
-    vm.copy_files_to(test_path, '~')
+    vm.copy_files_to(test_path, "~")
     vm.destroy()
 
     params["nettype"] = "user"
@@ -36,17 +34,14 @@ def run(test, params, env):
     def mtu_test():
         test.log.info("Set mtu value and verfied")
         serial_session.cmd(params["fw_stop_cmd"], ignore_all_errors=True)
-        guest_ifname = utils_net.get_linux_ifname(serial_session,
-                                                  vm.get_mac_address(0))
-        if guest_ifname != 'eth0':
+        guest_ifname = utils_net.get_linux_ifname(serial_session, vm.get_mac_address(0))
+        if guest_ifname != "eth0":
             test.cancel("Guest device name is not expected")
         serial_session.cmd(params["set_mtu_cmd"] % guest_ifname)
-        output = serial_session.cmd_output(params["check_mtu_cmd"] %
-                                           guest_ifname)
+        output = serial_session.cmd_output(params["check_mtu_cmd"] % guest_ifname)
         match_string = "mtu %s" % params["mtu_value"]
         if match_string not in output:
-            test.fail("Guest mtu is not the expected value %s" %
-                      params["mtu_value"])
+            test.fail("Guest mtu is not the expected value %s" % params["mtu_value"])
 
     def pkg_buffer_test():
         test.log.info("Compile the script and execute")
@@ -55,7 +50,9 @@ def run(test, params, env):
         time.sleep(60)
         s = process.getstatusoutput(
             "ps -aux|grep /usr/bin/gnome-calculator |grep -v grep",
-            timeout=60, shell=True)[0]
+            timeout=60,
+            shell=True,
+        )[0]
         if s == 0:
             test.fail("Virtual machine has security issues")
         serial_session.send_ctrl("^c")
@@ -66,6 +63,7 @@ def run(test, params, env):
         mtu_test()
         pkg_buffer_test()
     finally:
-        serial_session.cmd("rm -rf ~/exp ~/exp.c",
-                           timeout=login_timeout, ignore_all_errors=True)
+        serial_session.cmd(
+            "rm -rf ~/exp ~/exp.c", timeout=login_timeout, ignore_all_errors=True
+        )
         serial_session.close()

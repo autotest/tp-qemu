@@ -1,9 +1,7 @@
-from virttest import data_dir
-from virttest import qemu_storage
-from virttest import storage
-
 from avocado import fail_on
 from avocado.utils import process
+from virttest import data_dir, qemu_storage, storage
+
 from provider import qemu_img_utils as img_utils
 
 
@@ -22,8 +20,9 @@ def run(test, params, env):
         session = vm.wait_for_login()
         guest_temp_file = params["guest_temp_file"]
         md5sum_bin = params.get("md5sum_bin", "md5sum")
-        img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
-                               md5_value_to_check=md5_value)
+        img_utils.check_md5sum(
+            guest_temp_file, md5sum_bin, session, md5_value_to_check=md5_value
+        )
         session.close()
         vm.destroy()
 
@@ -34,8 +33,7 @@ def run(test, params, env):
     sync_bin = params.get("sync_bin", "sync")
 
     test.log.info("Create temporary file on guest: %s", guest_temp_file)
-    img_utils.save_random_file_to_vm(vm, guest_temp_file, 2048 * 512,
-                                     sync_bin)
+    img_utils.save_random_file_to_vm(vm, guest_temp_file, 2048 * 512, sync_bin)
 
     md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
     test.log.info("Get md5 value of the temporary file: %s", md5_value)
@@ -49,8 +47,7 @@ def run(test, params, env):
     img_pairs = [(params["convert_source"], params["convert_target"])]
     if params.get("convert_target_remote"):
         # local -> remote
-        img_pairs.append((params["convert_target"],
-                          params["convert_target_remote"]))
+        img_pairs.append((params["convert_target"], params["convert_target_remote"]))
 
     # Convert images
     for source, target in img_pairs:
@@ -75,9 +72,12 @@ def run(test, params, env):
         source_cache_mode = params.get("source_cache_mode")
         test.log.info("Convert %s to %s", source, target)
         fail_on((process.CmdError,))(source_image.convert)(
-            params, root_dir, cache_mode=cache_mode,
+            params,
+            root_dir,
+            cache_mode=cache_mode,
             source_cache_mode=source_cache_mode,
-            skip_target_creation=skip_target_creation)
+            skip_target_creation=skip_target_creation,
+        )
 
         _check_file(target, md5_value)
 

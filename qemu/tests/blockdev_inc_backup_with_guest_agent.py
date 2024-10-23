@@ -1,14 +1,11 @@
 from functools import partial
 
-from provider import backup_utils
-from provider import blockdev_base
+from virttest import guest_agent, utils_misc
 
-from virttest import utils_misc
-from virttest import guest_agent
+from provider import backup_utils, blockdev_base
 
 
 class BlockdevIncbkFSFreezeTest(blockdev_base.BlockdevBaseTest):
-
     def __init__(self, test, params, env):
         super(BlockdevIncbkFSFreezeTest, self).__init__(test, params, env)
         self.source_images = []
@@ -31,11 +28,9 @@ class BlockdevIncbkFSFreezeTest(blockdev_base.BlockdevBaseTest):
 
         # rebase 'inc' image onto 'base' image, so inc's backing is base
         inc_img_params = self.params.object_params(image_chain[1])
-        inc_img_params['image_chain'] = image_params['image_backup_chain']
-        inc_img = self.source_disk_define_by_params(inc_img_params,
-                                                    image_chain[1])
-        self.rebase_funcs.append(partial(inc_img.rebase,
-                                         params=inc_img_params))
+        inc_img_params["image_chain"] = image_params["image_backup_chain"]
+        inc_img = self.source_disk_define_by_params(inc_img_params, image_chain[1])
+        self.rebase_funcs.append(partial(inc_img.rebase, params=inc_img_params))
 
     def do_full_backup(self):
         extra_options = {"sync": "full", "auto_disable_bitmap": False}
@@ -44,7 +39,8 @@ class BlockdevIncbkFSFreezeTest(blockdev_base.BlockdevBaseTest):
             self.source_images,
             self.full_backups,
             self.bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def generate_inc_files(self):
         return list(map(self.generate_data_file, self.src_img_tags))
@@ -56,24 +52,27 @@ class BlockdevIncbkFSFreezeTest(blockdev_base.BlockdevBaseTest):
             self.source_images,
             self.inc_backups,
             self.bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def restart_vm_with_inc(self):
-        images = self.params['images']
-        self.params['images'] = ' '.join(
-            [images.split()[0]] + self.inc_backup_tags)
+        images = self.params["images"]
+        self.params["images"] = " ".join([images.split()[0]] + self.inc_backup_tags)
         self.prepare_main_vm()
         self.clone_vm = self.main_vm
-        self.params['images'] = images
+        self.params["images"] = images
 
     def prepare_test(self):
         super(BlockdevIncbkFSFreezeTest, self).prepare_test()
-        params = self.params.object_params(self.params['agent_name'])
+        params = self.params.object_params(self.params["agent_name"])
         params["monitor_filename"] = self.main_vm.get_serial_console_filename(
-            self.params['agent_name'])
+            self.params["agent_name"]
+        )
         self.guest_agent = guest_agent.QemuAgent(
-            self.main_vm, self.params['agent_name'],
-            self.params['agent_serial_type'], params
+            self.main_vm,
+            self.params["agent_name"],
+            self.params["agent_serial_type"],
+            params,
         )
 
         # bz1747960, enable virt_qemu_ga_read_nonsecurity_files before freeze,
@@ -81,8 +80,8 @@ class BlockdevIncbkFSFreezeTest(blockdev_base.BlockdevBaseTest):
         # no need to restore the setting for a VM reboot can restore it
         s = self.main_vm.wait_for_login()
         try:
-            if s.cmd_status(self.params['enable_nonsecurity_files_cmd']) != 0:
-                s.cmd_status(self.params['enable_permissive_cmd'])
+            if s.cmd_status(self.params["enable_nonsecurity_files_cmd"]) != 0:
+                s.cmd_status(self.params["enable_permissive_cmd"])
         finally:
             s.close()
 

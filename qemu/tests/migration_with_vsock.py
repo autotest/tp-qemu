@@ -1,16 +1,15 @@
-import random
 import ast
+import random
 
-from avocado.utils import path
-from avocado.utils import process
-from virttest import error_context
-from virttest import utils_misc
+from avocado.utils import path, process
+from virttest import error_context, utils_misc
+
 from qemu.tests.vsock_test import (
-    compile_nc_vsock,
-    vsock_listen,
-    send_data_from_guest_to_host,
     check_received_data,
-    vsock_connect
+    compile_nc_vsock,
+    send_data_from_guest_to_host,
+    vsock_connect,
+    vsock_listen,
 )
 
 
@@ -39,13 +38,12 @@ def run(test, params, env):
     """
 
     def ping_pong_migration(repeat_times):
-        """ Do ping pong migration. """
+        """Do ping pong migration."""
         mig_timeout = float(params.get("mig_timeout", "3600"))
         mig_protocol = params.get("migration_protocol", "tcp")
         mig_cancel_delay = int(params.get("mig_cancel") == "yes") * 2
         inner_funcs = ast.literal_eval(params.get("migrate_inner_funcs", "[]"))
-        capabilities = ast.literal_eval(
-            params.get("migrate_capabilities", "{}"))
+        capabilities = ast.literal_eval(params.get("migrate_capabilities", "{}"))
         for i in range(repeat_times):
             if i % 2 == 0:
                 test.log.info("Round %s ping...", str(i / 2))
@@ -98,20 +96,15 @@ def run(test, params, env):
     ping_pong_migration(1)
     session = vm.wait_for_login(timeout=360)
     if session.cmd_output("ss --vsock | grep %s" % port):
-        test.fail(
-            "vsock listening process inside guest does not exit after migrate")
+        test.fail("vsock listening process inside guest does not exit after migrate")
     host_vsock_session.close()
     # send data from guest to host
     tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
-    rec_session = send_data_from_guest_to_host(
-        session, tool_bin, guest_cid, tmp_file
-    )
+    rec_session = send_data_from_guest_to_host(session, tool_bin, guest_cid, tmp_file)
     utils_misc.wait_for(lambda: not rec_session.is_alive(), timeout=20)
     cmd_chksum = "md5sum %s" % tmp_file
-    md5_origin = session.cmd_output(
-        cmd_chksum, timeout=180, safe=True).split()[0]
-    md5_received = process.system_output(
-        cmd_chksum, timeout=180).split()[0].decode()
+    md5_origin = session.cmd_output(cmd_chksum, timeout=180, safe=True).split()[0]
+    md5_received = process.system_output(cmd_chksum, timeout=180).split()[0].decode()
     host_vsock_session = input_character_vsock()
     ping_pong_migration(3)
     cmd_rm = "rm -rf %s" % tmp_file

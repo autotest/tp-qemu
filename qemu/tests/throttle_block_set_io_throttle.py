@@ -1,11 +1,10 @@
 """block_set_io_throttle testing on iothread enabled disk"""
-import time
-import json
 
-from virttest import utils_misc
-from virttest import utils_disk
+import json
+import time
+
+from virttest import error_context, utils_disk, utils_misc
 from virttest.utils_misc import get_linux_drive_path
-from virttest import error_context
 
 
 # This decorator makes the test function aware of context strings
@@ -58,17 +57,16 @@ def run(test, params, env):
     if qmp_monitor:
         qmp_monitor = qmp_monitor[0]
     else:
-        test.error('Could not find a QMP monitor, aborting test')
+        test.error("Could not find a QMP monitor, aborting test")
 
     logger.info("Execute io in guest...")
-    if os_type == 'windows':
+    if os_type == "windows":
         img_size = params.get("image_size_stg1")
         guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
         disk = _get_window_disk_index_by_serail(disk_serial)
         utils_disk.update_windows_disk_attributes(session, disk)
         test.log.info("Formatting disk:%s", disk)
-        driver = utils_disk.configure_empty_disk(session, disk, img_size,
-                                                 os_type)[0]
+        driver = utils_disk.configure_empty_disk(session, disk, img_size, os_type)[0]
         output_path = driver + ":\\test.dat"
     else:
         output_path = get_linux_drive_path(session, disk_serial)

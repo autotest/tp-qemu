@@ -1,9 +1,8 @@
-import time
 import re
+import time
 
 import aexpect
-from virttest import utils_misc
-from virttest import error_context
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -17,8 +16,10 @@ def check_usb_device_monitor(test, params, env):
         o = o.get("return")
     info_usb_name = params.get("info_usb_name")
     if info_usb_name and (info_usb_name not in o):
-        test.fail("Could not find '%s' device, monitor "
-                  "returns: \n%s" % (params.get("product"), o))
+        test.fail(
+            "Could not find '%s' device, monitor "
+            "returns: \n%s" % (params.get("product"), o)
+        )
 
 
 def check_usb_device_guest(session, item, cmd, timeout):

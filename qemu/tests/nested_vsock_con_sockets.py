@@ -2,13 +2,10 @@ import json
 import os
 import time
 
-from avocado.utils import path
-from avocado.utils import process
+from avocado.utils import path, process
+from virttest import error_context, utils_misc
 
-from virttest import error_context
-from virttest import utils_misc
-from provider import message_queuing, ansible
-
+from provider import ansible, message_queuing
 from qemu.tests import vsock_test
 
 
@@ -33,25 +30,28 @@ def run(test, params, env):
 
     def _send_file_from_host_to_l1(obj, msg):
         test.log.info("Received message: %s", msg)
-        test.log.info("vm.address: %s" % vm.get_address(timeout=120))
+        test.log.info("vm.address: %s", vm.get_address(timeout=120))
 
         vsock_port = params.get_numeric("vsock_port", 2345)
-        dd_cmd = 'dd if=/dev/urandom of=%s count=10240 bs=1024' % tmp_file
+        dd_cmd = "dd if=/dev/urandom of=%s count=10240 bs=1024" % tmp_file
         process.system(dd_cmd, shell=True)
         md5_origin = process.system_output("md5sum %s" % tmp_file).split()[0]
 
         cmd_transfer = None
         if vsock_test_tool == "ncat":
             tool_bin = path.find_command("ncat")
-            cmd_transfer = '%s --vsock --send-only -l %s < %s &' % (
-                tool_bin, vsock_port, tmp_file)
+            cmd_transfer = "%s --vsock --send-only -l %s < %s &" % (
+                tool_bin,
+                vsock_port,
+                tmp_file,
+            )
         if vsock_test_tool == "nc_vsock":
             tool_bin = vsock_test.compile_nc_vsock(test, vm, session)
-            cmd_transfer = '%s -l %s < %s &' % (tool_bin, vsock_port, tmp_file)
+            cmd_transfer = "%s -l %s < %s &" % (tool_bin, vsock_port, tmp_file)
         if cmd_transfer is None:
             raise ValueError(f"unsupported test tool: {vsock_test_tool}")
 
-        test.log.info("cmd_transfer: %s" % cmd_transfer)
+        test.log.info("cmd_transfer: %s", cmd_transfer)
         process.run(cmd_transfer, ignore_bg_processes=True, shell=True)
 
         md5_origin = "md5_origin:" + md5_origin.decode()
@@ -80,8 +80,9 @@ def run(test, params, env):
     ansible_extra_vars = params.get("ansible_extra_vars", "{}")
     playbook_repo = params["playbook_repo"]
     playbook_timeout = params.get_numeric("playbook_timeout")
-    playbook_dir = params.get("playbook_dir",
-                              os.path.join(test.workdir, "ansible_playbook"))
+    playbook_dir = params.get(
+        "playbook_dir", os.path.join(test.workdir, "ansible_playbook")
+    )
     toplevel_playbook = os.path.join(playbook_dir, params["toplevel_playbook"])
     # Use this directory to copy some logs back from the guest
     test_harness_log_dir = test.logdir
@@ -90,15 +91,17 @@ def run(test, params, env):
     guest_ip = vm.get_address()
 
     test.log.info("Cloning %s", playbook_repo)
-    process.run("git clone {src} {dst}".format(src=playbook_repo,
-                                               dst=playbook_dir),
-                verbose=False)
+    process.run(
+        "git clone {src} {dst}".format(src=playbook_repo, dst=playbook_dir),
+        verbose=False,
+    )
 
-    error_context.base_context("Generate playbook related options.",
-                               test.log.info)
-    extra_vars = {"ansible_ssh_pass": guest_passwd,
-                  "mq_port": mq_port,
-                  "test_harness_log_dir": test_harness_log_dir}
+    error_context.base_context("Generate playbook related options.", test.log.info)
+    extra_vars = {
+        "ansible_ssh_pass": guest_passwd,
+        "mq_port": mq_port,
+        "test_harness_log_dir": test_harness_log_dir,
+    }
     extra_vars.update(json.loads(ansible_extra_vars))
 
     error_context.context("Execute the ansible playbook.", test.log.info)
@@ -109,22 +112,21 @@ def run(test, params, env):
         extra_vars=json.dumps(extra_vars),
         callback_plugin=ansible_callback_plugin,
         connection_plugin=ansible_connection_plugin,
-        addl_opts=ansible_addl_opts
+        addl_opts=ansible_addl_opts,
     )
 
     # Handle test cases
     wait_response_timeout = params.get_numeric("wait_response_timeout", 600)
 
-    mq_publisher = message_queuing.MQPublisher(mq_port,
-                                               other_options="--broker")
+    mq_publisher = message_queuing.MQPublisher(mq_port, other_options="--broker")
 
     host = "127.0.0.1"
 
-    test.log.info("host:{} port:{}".format(host, mq_port))
+    test.log.info("host:%s port:%s", host, mq_port)
     client = message_queuing.MQClient(host, mq_port)
     time.sleep(2)
 
-    test.log.info("vm.address: %s" % vm.get_address())
+    test.log.info("vm.address: %s", vm.get_address())
     client.register_msg("L1_up", _send_file_from_host_to_l1)
     client.register_msg("exit", _on_exit)
 
@@ -141,11 +143,11 @@ def run(test, params, env):
             if playbook_executor.get_status() != 0:
                 test.fail(
                     "Ansible playbook execution failed, please check the "
-                    "{} for details.".format(ansible_log))
+                    "{} for details.".format(ansible_log)
+                )
             test.log.info("Ansible playbook execution passed.")
         finally:
-            playbook_executor.store_playbook_log(test_harness_log_dir,
-                                                 ansible_log)
+            playbook_executor.store_playbook_log(test_harness_log_dir, ansible_log)
             playbook_executor.close()
             client.close()
             mq_publisher.close()

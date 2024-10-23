@@ -3,10 +3,7 @@ import re
 import time
 
 from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -29,21 +26,26 @@ def run(test, params, env):
     test_cmd = params["test_cmd"] % src_test_binary
 
     qemu_bin = utils_misc.get_qemu_binary(params)
-    qemu_cmd = '%s %s' % (qemu_bin, test_cmd)
-    test.log.info("Send host command: %s" % qemu_cmd)
+    qemu_cmd = "%s %s" % (qemu_bin, test_cmd)
+    test.log.info("Send host command: %s", qemu_cmd)
     process.run(cmd=qemu_cmd, verbose=True, ignore_status=True, shell=True)
     qemu_pid = process.getoutput("pgrep -f %s" % src_test_binary, shell=True)
     if not qemu_pid:
         test.fail("QEMU start failed!")
 
     time.sleep(5)
-    process.run('echo -e \'{"execute":"qmp_capabilities"}'
-                '{"execute":"system_reset"}\'|nc -U /tmp/mm',
-                shell=True, verbose=True)
+    process.run(
+        'echo -e \'{"execute":"qmp_capabilities"}'
+        '{"execute":"system_reset"}\'|nc -U /tmp/mm',
+        shell=True,
+        verbose=True,
+    )
     time.sleep(5)
-    process.run('echo -e \'{"execute":"qmp_capabilities"}'
-                '{"execute":"quit"}\'|nc -U /tmp/mm',
-                shell=True, verbose=True)
+    process.run(
+        'echo -e \'{"execute":"qmp_capabilities"}' '{"execute":"quit"}\'|nc -U /tmp/mm',
+        shell=True,
+        verbose=True,
+    )
 
     qemu_pid = process.getoutput("pgrep -f %s" % src_test_binary, shell=True)
     if qemu_pid:
@@ -59,12 +61,12 @@ def run(test, params, env):
         f = open(log_file)
         lines = f.readlines()
         for line in lines[2:]:
-            if not reset and line.startswith('rdtsc'):
+            if not reset and line.startswith("rdtsc"):
                 rdtsc = int(re.findall(r"\d+", line)[0])
                 value_a.append(rdtsc)
             elif line.startswith("PM"):
                 reset = True
-            elif reset and line.startswith('rdtsc'):
+            elif reset and line.startswith("rdtsc"):
                 rdtsc = int(re.findall(r"\d+", line)[0])
                 value_b.append(rdtsc)
 
@@ -76,7 +78,7 @@ def run(test, params, env):
             test.fail("rdtsc isn't increasing order after system_reset.")
         if value_a[-1] <= value_b[0]:
             test.fail("rdtsc doesn't decrease at first after system_reset.")
-        test.log.info('Test passed as rdtsc behaviour is same!')
+        test.log.info("Test passed as rdtsc behaviour is same!")
     finally:
         f.close()
         process.run("rm -rf %s" % log_file)

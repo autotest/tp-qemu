@@ -1,9 +1,7 @@
-import time
 import re
+import time
 
-from virttest import utils_test
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context, utils_test
 
 
 @error_context.context_aware
@@ -30,8 +28,9 @@ def run(test, params, env):
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
-        error_context.base_context("shutting down the VM %s/%s" %
-                                   (i + 1, shutdown_count), test.log.info)
+        error_context.base_context(
+            "shutting down the VM %s/%s" % (i + 1, shutdown_count), test.log.info
+        )
         if params.get("setup_runlevel") == "yes":
             error_context.context("Setup the runlevel for guest", test.log.info)
             utils_test.qemu.setup_runlevel(params, session)
@@ -39,16 +38,17 @@ def run(test, params, env):
         if shutdown_method == "shell":
             # Send a shutdown command to the guest's shell
             session.sendline(shutdown_command)
-            error_context.context("waiting VM to go down (shutdown shell cmd)",
-                                  test.log.info)
+            error_context.context(
+                "waiting VM to go down (shutdown shell cmd)", test.log.info
+            )
         elif shutdown_method == "system_powerdown":
             # Sleep for a while -- give the guest a chance to finish booting
             time.sleep(sleep_time)
             # Send a system_powerdown monitor command
             vm.monitor.system_powerdown()
-            error_context.context("waiting VM to go down "
-                                  "(system_powerdown monitor cmd)",
-                                  test.log.info)
+            error_context.context(
+                "waiting VM to go down " "(system_powerdown monitor cmd)", test.log.info
+            )
 
         if not vm.wait_for_shutdown(360):
             test.fail("Guest refuses to go down")
@@ -57,7 +57,7 @@ def run(test, params, env):
             check_failed = False
             vm_status = vm.monitor.get_status()
             if vm.monitor.protocol == "qmp":
-                if vm_status['status'] != "shutdown":
+                if vm_status["status"] != "shutdown":
                     check_failed = True
             else:
                 if not re.findall(r"paused\s+\(shutdown\)", vm_status):

@@ -1,17 +1,14 @@
 import logging
 import os
-import six
 import time
 
+import six
 from avocado.utils import process
+from virttest import remote, utils_misc, utils_net, utils_sriov
 
-from virttest import remote
-from virttest import utils_net
-from virttest import utils_misc
-from virttest import utils_sriov
 from provider import dpdk_utils
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 def format_result(result, base, fbase):
@@ -55,8 +52,8 @@ def run(test, params, env):
     # get parameter from dictionary
     login_timeout = int(params.get("login_timeout", 360))
     forward_mode = params.get("forward_mode")
-    device_type_guest = params.get("device_type_guest")
-    device_type_host = params.get("device_type_host")
+    params.get("device_type_guest")
+    params.get("device_type_host")
     dpdk_pkts = params.get("dpdk_pkts")
     dpdk_queues = params.get("dpdk_queues")
     dpdk_tool_path = params.get("dpdk_tool_path")
@@ -79,7 +76,7 @@ def run(test, params, env):
     result_file.write("### guest-kernel-ver :%s" % guest_ver)
 
     dpdk_utils.install_dpdk(params, session)
-    dpdk_ver = session.cmd_output('rpm -qa |grep dpdk | head -n 1')
+    dpdk_ver = session.cmd_output("rpm -qa |grep dpdk | head -n 1")
     result_file.write("### guest-dpdk-ver :%s" % dpdk_ver)
     dpdk_utils.load_vfio_modules(session)
 
@@ -95,28 +92,34 @@ def run(test, params, env):
             pci_id = utils_sriov.get_pci_from_iface(ethname, session).strip()
     dpdk_utils.bind_pci_device_to_vfio(session, pci_id)  # pylint: disable=E0606
 
-    guest = {"host": vm.get_address(),
-             "username": params.get("username"),
-             "password": params.get("password"),
-             "cpu": session.cmd_output("nproc").strip(),
-             "pci": pci_id}
+    guest = {
+        "host": vm.get_address(),
+        "username": params.get("username"),
+        "password": params.get("password"),
+        "cpu": session.cmd_output("nproc").strip(),
+        "pci": pci_id,
+    }
 
     host = None
     if "rxonly" in forward_mode.split():
         dsthost = params.get("dsthost")
         params_host = params.object_params("dsthost")
-        dst_ses = remote.wait_for_login(params_host.get("shell_client"),
-                                        dsthost,
-                                        params_host.get("shell_port"),
-                                        params_host.get("username"),
-                                        params_host.get("password"),
-                                        params_host.get("shell_prompt"),
-                                        timeout=login_timeout)
-        host = {"host": dsthost,
-                "username": params_host.get("unsername"),
-                "password": params_host.get("password"),
-                "cpu": dst_ses.cmd_output(("nproc").strip()),
-                "pci": params_host.get("dsthost_pci")}
+        dst_ses = remote.wait_for_login(
+            params_host.get("shell_client"),
+            dsthost,
+            params_host.get("shell_port"),
+            params_host.get("username"),
+            params_host.get("password"),
+            params_host.get("shell_prompt"),
+            timeout=login_timeout,
+        )
+        host = {
+            "host": dsthost,
+            "username": params_host.get("unsername"),
+            "password": params_host.get("password"),
+            "cpu": dst_ses.cmd_output(("nproc").strip()),
+            "pci": params_host.get("dsthost_pci"),
+        }
         dpdk_utils.install_dpdk(params, dst_ses)
 
     for forward in forward_mode.split():
@@ -125,9 +128,20 @@ def run(test, params, env):
         for pkts in dpdk_pkts.split():
             for queue in dpdk_queues.split():
                 LOG_JOB.info(
-                            'Processing dpdk test with forward mode: %s, pkts: %s, queue: %s',
-                            forward, pkts, queue)
-                pps = run_test(forward, guest, host if forward == "rxonly" else None, dpdk_tool_path, queue, pkts, mac if forward == "rxonly" else None)    # pylint: disable=E0606
+                    "Processing dpdk test with forward mode: %s, pkts: %s, queue: %s",
+                    forward,
+                    pkts,
+                    queue,
+                )
+                pps = run_test(
+                    forward,
+                    guest,
+                    host if forward == "rxonly" else None,
+                    dpdk_tool_path,
+                    queue,
+                    pkts,
+                    mac if forward == "rxonly" else None,  # pylint: disable=E0606
+                )
                 time.sleep(2)
                 mpps = "%.2f" % (float(pps) / (10**6))
                 line = "%s|" % format_result(pkts, base, fbase)
@@ -155,20 +169,30 @@ def run_test(forward_mode, guest, host, dpdk_tool_path, queue, pkts, mac=None):
     """
 
     if forward_mode == "txonly":
-        testpmd_guest = dpdk_utils.TestPMD(guest["host"], guest["username"], guest["password"])
+        testpmd_guest = dpdk_utils.TestPMD(
+            guest["host"], guest["username"], guest["password"]
+        )
 
     elif forward_mode == "rxonly":
-        testpmd_host = dpdk_utils.TestPMD(host["host"], host["username"], host["password"])
+        testpmd_host = dpdk_utils.TestPMD(
+            host["host"], host["username"], host["password"]
+        )
         testpmd_host.login()
-        testpmd_host.launch_testpmd(dpdk_tool_path, host["cpu"], host["pci"], "txonly", 16, pkts, mac=mac)
+        testpmd_host.launch_testpmd(
+            dpdk_tool_path, host["cpu"], host["pci"], "txonly", 16, pkts, mac=mac
+        )
         testpmd_host.show_port_stats_all()
         testpmd_host.show_port_stats_all()
         time.sleep(2)
 
-    testpmd_guest = dpdk_utils.TestPMD(guest["host"], guest["username"], guest["password"])
+    testpmd_guest = dpdk_utils.TestPMD(
+        guest["host"], guest["username"], guest["password"]
+    )
 
     testpmd_guest.login()
-    testpmd_guest.launch_testpmd(dpdk_tool_path, guest["cpu"], guest["pci"], forward_mode, queue, pkts)
+    testpmd_guest.launch_testpmd(
+        dpdk_tool_path, guest["cpu"], guest["pci"], forward_mode, queue, pkts
+    )
     testpmd_guest.show_port_stats_all()
     output = testpmd_guest.show_port_stats_all()
     pps_value = testpmd_guest.extract_pps_value(output, forward_mode)

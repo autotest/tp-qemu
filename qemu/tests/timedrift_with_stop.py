@@ -1,9 +1,8 @@
-import time
 import os
 import signal
+import time
 
-from virttest import utils_test
-from virttest import utils_time
+from virttest import utils_test, utils_time
 
 
 def run(test, params, env):
@@ -30,11 +29,11 @@ def run(test, params, env):
     boot_option_added = params.get("boot_option_added")
     boot_option_removed = params.get("boot_option_removed")
     if boot_option_added or boot_option_removed:
-        utils_test.update_boot_option(vm,
-                                      args_removed=boot_option_removed,
-                                      args_added=boot_option_added)
+        utils_test.update_boot_option(
+            vm, args_removed=boot_option_removed, args_added=boot_option_added
+        )
 
-    if params["os_type"] == 'windows':
+    if params["os_type"] == "windows":
         utils_time.sync_timezone_win(vm)
 
     session = vm.wait_for_login(timeout=login_timeout)
@@ -59,17 +58,23 @@ def run(test, params, env):
     try:
         # Get initial time
         # (ht stands for host time, gt stands for guest time)
-        (ht0, gt0) = utils_test.get_time(session, time_command,
-                                         time_filter_re, time_format)
+        (ht0, gt0) = utils_test.get_time(
+            session, time_command, time_filter_re, time_format
+        )
 
         # Stop the guest
         for i in range(stop_iterations):
             # Get time before current iteration
-            (ht0_, gt0_) = utils_test.get_time(session, time_command,
-                                               time_filter_re, time_format)
+            (ht0_, gt0_) = utils_test.get_time(
+                session, time_command, time_filter_re, time_format
+            )
             # Run current iteration
-            test.log.info("Stop %s second: iteration %d of %d...",
-                          stop_time, (i + 1), stop_iterations)
+            test.log.info(
+                "Stop %s second: iteration %d of %d...",
+                stop_time,
+                (i + 1),
+                stop_iterations,
+            )
             if stop_with_signal:
                 test.log.debug("Stop guest")
                 os.kill(pid, signal.SIGSTOP)
@@ -86,8 +91,9 @@ def run(test, params, env):
             time.sleep(sleep_time)
 
             # Get time after current iteration
-            (ht1_, gt1_) = utils_test.get_time(session, time_command,
-                                               time_filter_re, time_format)
+            (ht1_, gt1_) = utils_test.get_time(
+                session, time_command, time_filter_re, time_format
+            )
             # Report iteration results
             host_delta = ht1_ - ht0_
             guest_delta = gt1_ - gt0_
@@ -98,29 +104,29 @@ def run(test, params, env):
                 drift = abs(drift - stop_time)
                 if params.get("os_type") == "windows" and rtc_clock == "host":
                     drift = abs(host_delta - guest_delta)
-            test.log.info("Host duration (iteration %d): %.2f",
-                          (i + 1), host_delta)
-            test.log.info("Guest duration (iteration %d): %.2f",
-                          (i + 1), guest_delta)
-            test.log.info("Drift at iteration %d: %.2f seconds",
-                          (i + 1), drift)
+            test.log.info("Host duration (iteration %d): %.2f", (i + 1), host_delta)
+            test.log.info("Guest duration (iteration %d): %.2f", (i + 1), guest_delta)
+            test.log.info("Drift at iteration %d: %.2f seconds", (i + 1), drift)
             # Fail if necessary
             if drift > drift_threshold_single:
-                test.fail("Time drift too large at iteration %d: "
-                          "%.2f seconds" % (i + 1, drift))
+                test.fail(
+                    "Time drift too large at iteration %d: "
+                    "%.2f seconds" % (i + 1, drift)
+                )
 
         # Get final time
-        (ht1, gt1) = utils_test.get_time(session, time_command,
-                                         time_filter_re, time_format)
+        (ht1, gt1) = utils_test.get_time(
+            session, time_command, time_filter_re, time_format
+        )
 
     finally:
         if session:
             session.close()
         # remove flags add for this test.
         if boot_option_added or boot_option_removed:
-            utils_test.update_boot_option(vm,
-                                          args_removed=boot_option_added,
-                                          args_added=boot_option_removed)
+            utils_test.update_boot_option(
+                vm, args_removed=boot_option_added, args_added=boot_option_removed
+            )
 
     # Report results
     host_delta = ht1 - ht0
@@ -132,14 +138,13 @@ def run(test, params, env):
         drift = abs(drift - stop_time)
         if params.get("os_type") == "windows" and rtc_clock == "host":
             drift = abs(host_delta - guest_delta)
-    test.log.info("Host duration (%d stops): %.2f",
-                  stop_iterations, host_delta)
-    test.log.info("Guest duration (%d stops): %.2f",
-                  stop_iterations, guest_delta)
-    test.log.info("Drift after %d stops: %.2f seconds",
-                  stop_iterations, drift)
+    test.log.info("Host duration (%d stops): %.2f", stop_iterations, host_delta)
+    test.log.info("Guest duration (%d stops): %.2f", stop_iterations, guest_delta)
+    test.log.info("Drift after %d stops: %.2f seconds", stop_iterations, drift)
 
     # Fail if necessary
     if drift > drift_threshold:
-        test.fail("Time drift too large after %d stops: "
-                  "%.2f seconds" % (stop_iterations, drift))
+        test.fail(
+            "Time drift too large after %d stops: "
+            "%.2f seconds" % (stop_iterations, drift)
+        )

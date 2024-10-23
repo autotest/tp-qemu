@@ -1,7 +1,6 @@
 import time
 
 from avocado.utils import process
-
 from virttest.data_dir import get_data_dir
 from virttest.lvm import EmulatedLVM
 
@@ -13,35 +12,36 @@ class BlockdevStreamOnErrorIgnoreTest(BlockdevStreamNowaitTest):
     """Do block-stream with on-error:ignore"""
 
     def __init__(self, test, params, env):
-        super(BlockdevStreamOnErrorIgnoreTest, self).__init__(test,
-                                                              params,
-                                                              env)
+        super(BlockdevStreamOnErrorIgnoreTest, self).__init__(test, params, env)
         # TODO: Workaound lvm setup till VT enhances emulated image creation
-        self.lv_size = params['lv_size']
-        params['lv_size'] = params['emulated_image_size']
+        self.lv_size = params["lv_size"]
+        params["lv_size"] = params["emulated_image_size"]
         self._lvm = EmulatedLVM(params, get_data_dir())
 
     def _create_snapshot_dir(self):
         self._lvm.setup()
         self._lvm.lvs[-1].resize(self.lv_size)
-        process.system(self.params['storage_prepare_cmd'],
-                       ignore_status=False, shell=True)
+        process.system(
+            self.params["storage_prepare_cmd"], ignore_status=False, shell=True
+        )
 
     def _clean_snapshot_dir(self):
-        process.system(self.params['storage_clean_cmd'],
-                       ignore_status=False, shell=True)
+        process.system(
+            self.params["storage_clean_cmd"], ignore_status=False, shell=True
+        )
         self._lvm.cleanup()
 
-    def generate_tempfile(self, root_dir, filename, size='10M', timeout=360):
+    def generate_tempfile(self, root_dir, filename, size="10M", timeout=360):
         super(BlockdevStreamOnErrorIgnoreTest, self).generate_tempfile(
-            root_dir, filename, self.params['tempfile_size'], timeout)
+            root_dir, filename, self.params["tempfile_size"], timeout
+        )
 
     def pre_test(self):
         try:
             self._create_snapshot_dir()
         except Exception:
             self._clean_snapshot_dir()
-            self.test.error('Failed to setup lvm env')
+            self.test.error("Failed to setup lvm env")
         super(BlockdevStreamOnErrorIgnoreTest, self).pre_test()
 
     def post_test(self):
@@ -54,20 +54,23 @@ class BlockdevStreamOnErrorIgnoreTest(BlockdevStreamNowaitTest):
         """
         Check if BLOCK_JOB_ERROR can be received, then clear all
         """
-        tmo = self.params.get_numeric('job_error_timeout', 120)
+        tmo = self.params.get_numeric("job_error_timeout", 120)
         event = job_utils.get_event_by_condition(
-            self.main_vm, job_utils.BLOCK_JOB_ERROR_EVENT,
-            tmo, device=self._job, action='ignore'
+            self.main_vm,
+            job_utils.BLOCK_JOB_ERROR_EVENT,
+            tmo,
+            device=self._job,
+            action="ignore",
         )
 
         if not event:
-            self.test.fail('Failed to get BLOCK_JOB_ERROR event for %s in %s'
-                           % (self._job, tmo))
+            self.test.fail(
+                "Failed to get BLOCK_JOB_ERROR event for %s in %s" % (self._job, tmo)
+            )
         self.main_vm.monitor.clear_event(job_utils.BLOCK_JOB_ERROR_EVENT)
 
     def extend_lv_size(self):
-        process.system(self.params['lv_extend_cmd'],
-                       ignore_status=False, shell=True)
+        process.system(self.params["lv_extend_cmd"], ignore_status=False, shell=True)
         time.sleep(5)
 
     def wait_until_job_complete_with_error(self):

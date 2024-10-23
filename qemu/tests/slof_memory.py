@@ -3,10 +3,9 @@ slof_memory.py include following case:
  1. CAS(client-architecture-support) response with large maxmem.
 """
 
-from virttest import error_context
+from virttest import env_process, error_context, utils_net
+
 from provider import slof
-from virttest import env_process
-from virttest import utils_net
 
 
 @error_context.context_aware
@@ -29,8 +28,8 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     start_pos = 0
-    for mem in params['maxmem_mem_list'].split():
-        params['maxmem_mem'] = mem
+    for mem in params["maxmem_mem_list"].split():
+        params["maxmem_mem"] = mem
 
         env_process.preprocess_vm(test, params, env, params["main_vm"])
         vm = env.get_vm(params["main_vm"])
@@ -40,15 +39,14 @@ def run(test, params, env):
         error_context.context("Check the output of SLOF.", test.log.info)
         slof.check_error(test, content)
 
-        error_context.context("Try to log into guest '%s'." % vm.name,
-                              test.log.info)
+        error_context.context("Try to log into guest '%s'." % vm.name, test.log.info)
         timeout = float(params.get("login_timeout", 240))
         session = vm.wait_for_login(timeout=timeout)
         test.log.info("log into guest '%s' successfully.", vm.name)
 
         error_context.context("Try to ping external host.", test.log.info)
         extra_host_ip = utils_net.get_host_ip_address(params)
-        session.cmd('ping %s -c 5' % extra_host_ip)
+        session.cmd("ping %s -c 5" % extra_host_ip)
         test.log.info("Ping host(%s) successfully.", extra_host_ip)
 
         session.close()

@@ -2,11 +2,8 @@ import os
 import time
 
 from avocado.utils import process
-from virttest import utils_test
-from virttest import error_context
-from virttest import data_dir
-from virttest import utils_disk
-from virttest import utils_misc
+from virttest import data_dir, error_context, utils_disk, utils_misc, utils_test
+
 from provider import win_driver_utils
 
 
@@ -56,7 +53,7 @@ def run(test, params, env):
         return params.get("searched_keywords") in session.cmd(cmd).strip()
 
     host_check_cmd = params.get("host_check_cmd")
-    image_dir = os.path.join(data_dir.get_data_dir(), 'images')
+    image_dir = os.path.join(data_dir.get_data_dir(), "images")
     host_check_cmd = host_check_cmd % (image_dir, params["image_format"])
     image_name = params["stg_name"]
     stg_param = params.object_params(image_name)
@@ -71,21 +68,24 @@ def run(test, params, env):
     vm.verify_alive()
 
     session = vm.wait_for_login(timeout=timeout)
-    error_context.context("Check if the driver is installed and verified",
-                          test.log.info)
+    error_context.context(
+        "Check if the driver is installed and verified", test.log.info
+    )
     session = utils_test.qemu.windrv_check_running_verifier(
-        session, vm, test, driver_verifier, timeout)
+        session, vm, test, driver_verifier, timeout
+    )
 
     error_context.context("Format data disk", test.log.info)
     disk_index = utils_misc.wait_for(
-        lambda: utils_disk.get_windows_disks_index(session, image_size_str),
-        120)
+        lambda: utils_disk.get_windows_disks_index(session, image_size_str), 120
+    )
     if not disk_index:
         test.error("Failed to get the disk index of size %s" % image_size_str)
     if not utils_disk.update_windows_disk_attributes(session, disk_index):
         test.error("Failed to enable data disk %s" % disk_index)
     drive_letter_list = utils_disk.configure_empty_windows_disk(
-        session, disk_index[0], image_size_str, quick_format=False)
+        session, disk_index[0], image_size_str, quick_format=False
+    )
     if not drive_letter_list:
         test.error("Failed to format the data disk")
     drive_letter = drive_letter_list[0]
@@ -96,22 +96,22 @@ def run(test, params, env):
     test.log.info("Data disk size: %sMB", ori_size)
 
     error_context.context("Trim data disk in guest")
-    status, output = session.cmd_status_output(guest_trim_cmd % drive_letter,
-                                               timeout=defrag_timeout)
+    status, output = session.cmd_status_output(
+        guest_trim_cmd % drive_letter, timeout=defrag_timeout
+    )
     if status:
-        test.error("Error when trim the volume, status=%s, output=%s" %
-                   (status, output))
+        test.error(
+            "Error when trim the volume, status=%s, output=%s" % (status, output)
+        )
     if event_id:
         time.sleep(10)
         session = vm.reboot(session)
-        if query_system_events(params['filter_options']):
-            test.fail("Disk corruption after trim for %s"
-                      % params.get("block_size"))
+        if query_system_events(params["filter_options"]):
+            test.fail("Disk corruption after trim for %s" % params.get("block_size"))
 
     if params["retrim_size_check"] == "yes":
         error_context.context("Check size from host after disk trimming")
-        new_size = utils_misc.wait_for(
-            lambda: _disk_size_smaller(ori_size), 20, 10, 1)
+        new_size = utils_misc.wait_for(lambda: _disk_size_smaller(ori_size), 20, 10, 1)
 
         if new_size is None:
             test.error("Data disk size is not smaller than: %sMB" % ori_size)

@@ -5,8 +5,7 @@ from provider.blockdev_commit_base import BlockDevCommitTest
 
 class BlockdevCommitStress(BlockDevCommitTest):
     def run_stress_test(self):
-        self.stress_test = utils_test.VMStress(self.main_vm, "stress",
-                                               self.params)
+        self.stress_test = utils_test.VMStress(self.main_vm, "stress", self.params)
         self.stress_test.load_stress_tool()
 
     def stress_running_check(self):

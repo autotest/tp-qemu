@@ -1,16 +1,10 @@
 import time
 
-from virttest import utils_test
-from virttest import utils_net
-from virttest import funcatexit
-from virttest import error_context
-
-from avocado.utils import process
-from avocado.utils import linux_modules
+from avocado.utils import linux_modules, process
+from virttest import error_context, funcatexit, utils_net, utils_test
 
 
 class NetPingError(utils_net.NetError):
-
     def __init__(self, src, dst, details):
         utils_net.NetError.__init__(self, src, details)
         self.dst = dst
@@ -57,10 +51,11 @@ def run(test, params, env):
         :params v_id: Vlan id.
         :params session: VM session or none.
         """
-        vlan_if = '%s.%s' % (interface, v_id)
+        vlan_if = "%s.%s" % (interface, v_id)
         add_cmd = params["add_vlan_cmd"] % (interface, vlan_if, v_id)
-        error_context.context("Create vlan interface '%s' on %s" %
-                              (vlan_if, interface), test.log.info)
+        error_context.context(
+            "Create vlan interface '%s' on %s" % (vlan_if, interface), test.log.info
+        )
         if session:
             session.cmd_output_safe(add_cmd)
         else:
@@ -74,8 +69,9 @@ def run(test, params, env):
         :params vlan_ip: Vlan internal ip.
         :params session: VM session or none.
         """
-        error_context.context("Assign IP '%s' to vlan interface '%s'" %
-                              (vlan_ip, vlan_if), test.log.info)
+        error_context.context(
+            "Assign IP '%s' to vlan interface '%s'" % (vlan_ip, vlan_if), test.log.info
+        )
         if session:
             disable_firewall = params.get("disable_firewall", "")
             session.cmd_output_safe(disable_firewall)
@@ -95,16 +91,20 @@ def run(test, params, env):
         :params: session: VM session.
         """
         mac_cmd = "ip link set %s add %s up" % (vlan_if, mac_str)
-        error_context.context("Give a new mac address '%s' for vlan interface "
-                              "'%s'" % (mac_str, vlan_if), test.log.info)
+        error_context.context(
+            "Give a new mac address '%s' for vlan interface "
+            "'%s'" % (mac_str, vlan_if),
+            test.log.info,
+        )
         session.cmd_output_safe(mac_cmd)
 
     def set_arp_ignore(session):
         """
         Enable arp_ignore for all ipv4 device in guest
         """
-        error_context.context("Enable arp_ignore for all ipv4 device in guest",
-                              test.log.info)
+        error_context.context(
+            "Enable arp_ignore for all ipv4 device in guest", test.log.info
+        )
         ignore_cmd = "echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore"
         session.cmd_output_safe(ignore_cmd)
 
@@ -116,17 +116,16 @@ def run(test, params, env):
         :params vlan_if: Vlan interface.
         :params session: VM session.
         """
-        error_context.context("Test ping from '%s' to '%s' on guest '%s'" %
-                              (vlan_if, dest, vm.name))
-        status, output = utils_test.ping(dest=dest, count=10,
-                                         interface=vlan_if,
-                                         session=session,
-                                         timeout=30)
+        error_context.context(
+            "Test ping from '%s' to '%s' on guest '%s'" % (vlan_if, dest, vm.name)
+        )
+        status, output = utils_test.ping(
+            dest=dest, count=10, interface=vlan_if, session=session, timeout=30
+        )
         if status:
             raise NetPingError(vlan_if, dest, output)
 
-    def netperf_vlan(client='main_vm', server='localhost',
-                     sub_type='netperf_stress'):
+    def netperf_vlan(client="main_vm", server="localhost", sub_type="netperf_stress"):
         """
         Test netperf stress among guests and host.
         :params client: Netperf client.
@@ -135,9 +134,11 @@ def run(test, params, env):
         """
         params["netperf_client"] = client
         params["netperf_server"] = server
-        error_context.context("Run netperf stress test among guests and host, "
-                              "server: %s, client: %s" % (server, client),
-                              test.log.info)
+        error_context.context(
+            "Run netperf stress test among guests and host, "
+            "server: %s, client: %s" % (server, client),
+            test.log.info,
+        )
         session.cmd_output_safe("systemctl restart NetworkManager")
         utils_test.run_virt_sub_test(test, params, env, sub_type)
 
@@ -152,7 +153,7 @@ def run(test, params, env):
     host_vlan_id = params.get("host_vlan_id", "10")
     host_vlan_ip = params.get("host_vlan_ip", "192.168.10.10")
     subnet = params.get("subnet", "192.168")
-    mac_str = params.get("mac_str").split(',')
+    mac_str = params.get("mac_str").split(",")
 
     br_backend = utils_net.find_bridge_manager(host_br)
     if not isinstance(br_backend, utils_net.Bridge):
@@ -166,8 +167,7 @@ def run(test, params, env):
         if host_vlan_if in utils_net.get_net_if():
             set_ip_vlan(vlan_if=host_vlan_if, vlan_ip=host_vlan_ip)
             rm_host_vlan_cmd = params["rm_host_vlan_cmd"] % host_vlan_if
-            funcatexit.register(env, params["type"], _system,
-                                rm_host_vlan_cmd)
+            funcatexit.register(env, params["type"], _system, rm_host_vlan_cmd)
         else:
             test.cancel("Fail to set up vlan over bridge interface in host!")
 
@@ -180,7 +180,7 @@ def run(test, params, env):
         vms.append(vm2)
     else:
         vms.append(env.get_vm([params["main_vm"]]))
-        vms.append(env.get_vm('vm2'))
+        vms.append(env.get_vm("vm2"))
 
     for vm_ in vms:
         vm_.verify_alive()
@@ -194,35 +194,39 @@ def run(test, params, env):
 
         interface = utils_net.get_linux_ifname(session, vm.get_mac_address())
 
-        error_context.context("Load 8021q module in guest %s" % vm.name,
-                              test.log.info)
+        error_context.context("Load 8021q module in guest %s" % vm.name, test.log.info)
         session.cmd_output_safe("modprobe 8021q")
 
-        error_context.context("Setup vlan environment in guest %s" % vm.name,
-                              test.log.info)
+        error_context.context(
+            "Setup vlan environment in guest %s" % vm.name, test.log.info
+        )
         inter_ip = "%s.%s.%d" % (subnet, host_vlan_id, vm_index + 1)
         set_ip_vlan(interface, inter_ip, session=session)
         set_arp_ignore(session)
         params["vlan_nic"] = "%s.%s" % (interface, host_vlan_id)
-        error_context.context("Test ping from guest '%s' to host with "
-                              "interface '%s'" %
-                              (vm.name, interface), test.log.info)
+        error_context.context(
+            "Test ping from guest '%s' to host with "
+            "interface '%s'" % (vm.name, interface),
+            test.log.info,
+        )
         try:
-            ping_vlan(vm, dest=host_vlan_ip, vlan_if=interface,
-                      session=session)
+            ping_vlan(vm, dest=host_vlan_ip, vlan_if=interface, session=session)
         except NetPingError:
-            test.log.info("Guest ping fail to host as expected with "
-                          "interface '%s'", interface)
+            test.log.info(
+                "Guest ping fail to host as expected with " "interface '%s'", interface
+            )
         else:
-            test.fail("Guest ping to host should fail with interface"
-                      " '%s'" % interface)
+            test.fail(
+                "Guest ping to host should fail with interface" " '%s'" % interface
+            )
         ifname.append(interface)
         vm_ip.append(inter_ip)
         sessions.append(session)
 
     # Ping succeed between guests
-    error_context.context("Test ping between guests with interface %s"
-                          % ifname[0], test.log.info)
+    error_context.context(
+        "Test ping between guests with interface %s" % ifname[0], test.log.info
+    )
     ping_vlan(vms[0], dest=vm_ip[1], vlan_if=ifname[0], session=sessions[0])
 
     # set vlan tag for guest
@@ -230,28 +234,31 @@ def run(test, params, env):
         session = sessions[vm_index]
         error_context.context("Add vlan interface on guest '%s'" % vm.name)
         session.cmd_output("ifconfig %s 0.0.0.0" % ifname[vm_index], safe=True)
-        vlan_if = add_vlan(interface=ifname[vm_index], v_id=host_vlan_id,
-                           session=session)
+        vlan_if = add_vlan(
+            interface=ifname[vm_index], v_id=host_vlan_id, session=session
+        )
         vm_vlan_if.append(vlan_if)
         set_mac_vlan(vlan_if, mac_str[vm_index], session=session)
         vlan_ip = "%s.%s.%d" % (subnet, host_vlan_id, vm_index + 11)
         set_ip_vlan(vlan_if, vlan_ip, session=session)
         vm_vlan_ip.append(vlan_ip)
 
-        error_context.context("Test ping from interface '%s' on guest "
-                              "'%s' to host." %
-                              (vm_vlan_if[vm_index], vm.name), test.log.info)
+        error_context.context(
+            "Test ping from interface '%s' on guest "
+            "'%s' to host." % (vm_vlan_if[vm_index], vm.name),
+            test.log.info,
+        )
         utils_net.restart_guest_network(session)
-        ping_vlan(vm, dest=host_vlan_ip, vlan_if=vm_vlan_if[vm_index],
-                  session=session)
+        ping_vlan(vm, dest=host_vlan_ip, vlan_if=vm_vlan_if[vm_index], session=session)
         netperf_vlan(client=vm.name, server="localhost")
 
-    error_context.context("Test ping and netperf between guests with "
-                          "interface '%s'" %
-                          vm_vlan_if[vm_index], test.log.info)
-    ping_vlan(vms[0], dest=vm_vlan_ip[1], vlan_if=vm_vlan_if[0],
-              session=sessions[0])
-    netperf_vlan(client=params["main_vm"], server='vm2')
+    error_context.context(
+        "Test ping and netperf between guests with "
+        "interface '%s'" % vm_vlan_if[vm_index],
+        test.log.info,
+    )
+    ping_vlan(vms[0], dest=vm_vlan_ip[1], vlan_if=vm_vlan_if[0], session=sessions[0])
+    netperf_vlan(client=params["main_vm"], server="vm2")
 
     exithandlers = "exithandlers__%s" % sub_type
     sub_exit_timeout = int(params.get("sub_exit_timeout", 10))
@@ -259,8 +266,9 @@ def run(test, params, env):
     end_time = start_time + float(sub_exit_timeout)
 
     while time.time() < end_time:
-        test.log.debug("%s (%f secs)", sub_type + " is running",
-                       (time.time() - start_time))
+        test.log.debug(
+            "%s (%f secs)", sub_type + " is running", (time.time() - start_time)
+        )
         if env.data.get(exithandlers):
             break
         time.sleep(1)

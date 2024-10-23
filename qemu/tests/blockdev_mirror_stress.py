@@ -1,9 +1,10 @@
-import six
-import time
 import random
+import time
 
-from provider.storage_benchmark import generate_instance
+import six
+
 from provider.blockdev_mirror_wait import BlockdevMirrorWaitTest
+from provider.storage_benchmark import generate_instance
 
 
 class BlockdevMirrorStressTest(BlockdevMirrorWaitTest):
@@ -13,17 +14,21 @@ class BlockdevMirrorStressTest(BlockdevMirrorWaitTest):
         fio_options = self.params.get("fio_options")
         if fio_options:
             self.test.log.info("Start to run fio")
-            self.fio = generate_instance(self.params, self.main_vm, 'fio')
+            self.fio = generate_instance(self.params, self.main_vm, "fio")
             fio_run_timeout = self.params.get_numeric("fio_timeout", 2400)
             self.fio.run(fio_options, fio_run_timeout)
 
     def remove_files_from_system_image(self, tmo=60):
         """Remove testing files from system image"""
-        tag_dir_list = [(t, d[1]) for t, d in six.iteritems(self.disks_info) if d[0] == "system"]
+        tag_dir_list = [
+            (t, d[1]) for t, d in six.iteritems(self.disks_info) if d[0] == "system"
+        ]
         if tag_dir_list:
             tag, root_dir = tag_dir_list[0]
             files = ["%s/%s" % (root_dir, f) for f in self.files_info[tag]]
-            files.append("%s/%s" % (self.params["mnt_on_sys_dsk"], self.params["file_fio"]))
+            files.append(
+                "%s/%s" % (self.params["mnt_on_sys_dsk"], self.params["file_fio"])
+            )
             rm_cmd = "rm -f %s" % " ".join(files)
 
             # restart main vm for the original system image is offlined

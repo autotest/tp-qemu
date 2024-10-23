@@ -9,20 +9,24 @@ class BlockdevIncbkIncWithCompleteModeNeg(BlockdevLiveBackupBaseTest):
     """
 
     def __init__(self, test, params, env):
-        super(BlockdevIncbkIncWithCompleteModeNeg, self).__init__(test,
-                                                                  params,
-                                                                  env)
+        super(BlockdevIncbkIncWithCompleteModeNeg, self).__init__(test, params, env)
         self._inc_bk_nodes = ["drive_%s" % t for t in self._target_images]
         self._job_ids = ["job_%s" % n for n in self._inc_bk_nodes]
 
     def do_incremental_backup(self):
-        job_list = [{'type': 'blockdev-backup',
-                     'data': {'device': self._source_nodes[i],
-                              'target': self._inc_bk_nodes[i],
-                              'sync': 'incremental',
-                              'job-id': self._job_ids[i],
-                              'bitmap': self._bitmaps[i]}}
-                    for i, _ in enumerate(self._source_nodes)]
+        job_list = [
+            {
+                "type": "blockdev-backup",
+                "data": {
+                    "device": self._source_nodes[i],
+                    "target": self._inc_bk_nodes[i],
+                    "sync": "incremental",
+                    "job-id": self._job_ids[i],
+                    "bitmap": self._bitmaps[i],
+                },
+            }
+            for i, _ in enumerate(self._source_nodes)
+        ]
         arguments = {"actions": job_list}
         if self.params.get("completion_mode"):
             arguments["properties"] = {
@@ -36,33 +40,33 @@ class BlockdevIncbkIncWithCompleteModeNeg(BlockdevLiveBackupBaseTest):
             grouped: the 1st job should be cancelled
             default: the 1st job should complete without any error
         """
-        job_event = 'BLOCK_JOB_CANCELLED' if self.params.get(
-            "completion_mode") == "grouped" else 'BLOCK_JOB_COMPLETED'
-        tmo = self.params.get_numeric('job_completed_timeout', 360)
-        cond = {'device': self._job_ids[0]}
+        job_event = (
+            "BLOCK_JOB_CANCELLED"
+            if self.params.get("completion_mode") == "grouped"
+            else "BLOCK_JOB_COMPLETED"
+        )
+        tmo = self.params.get_numeric("job_completed_timeout", 360)
+        cond = {"device": self._job_ids[0]}
         event = get_event_by_condition(self.main_vm, job_event, tmo, **cond)
 
         if event:
-            if event['data'].get('error'):
-                self.test.fail('Unexpected error: %s' % event['data']['error'])
+            if event["data"].get("error"):
+                self.test.fail("Unexpected error: %s" % event["data"]["error"])
         else:
-            self.test.fail('Failed to get %s for the first job' % job_event)
+            self.test.fail("Failed to get %s for the first job" % job_event)
 
     def check_second_job_no_space_error(self):
         """
         We always get the 'no enough space' error for the 2nd job
         """
-        tmo = self.params.get_numeric('job_completed_timeout', 360)
-        cond = {'device': self._job_ids[1]}
-        event = get_event_by_condition(self.main_vm,
-                                       'BLOCK_JOB_COMPLETED',
-                                       tmo, **cond)
+        tmo = self.params.get_numeric("job_completed_timeout", 360)
+        cond = {"device": self._job_ids[1]}
+        event = get_event_by_condition(self.main_vm, "BLOCK_JOB_COMPLETED", tmo, **cond)
         if event:
-            if event['data'].get('error') != self.params['error_msg']:
-                self.test.fail('Unexpected error: %s'
-                               % event['data']['error'])
+            if event["data"].get("error") != self.params["error_msg"]:
+                self.test.fail("Unexpected error: %s" % event["data"]["error"])
         else:
-            self.test.fail('Failed to get BLOCK_JOB_COMPLETED event')
+            self.test.fail("Failed to get BLOCK_JOB_COMPLETED event")
 
     def do_test(self):
         self.do_full_backup()

@@ -1,10 +1,8 @@
-from virttest import error_context
-from virttest import utils_disk, utils_misc
+from virttest import error_context, utils_disk, utils_misc
 from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_windows.drive import get_disk_props_by_serial_number
 
-from provider import cpu_utils
-from provider import win_wora
+from provider import cpu_utils, win_wora
 from provider.block_devices_plug import BlockDevicesPlug
 
 
@@ -34,8 +32,8 @@ def run(test, params, env):
 
     def _check_disk_in_guest(img):
         os_type = params["os_type"]
-        test.log.debug("Check disk %s in guest" % img)
-        if os_type == 'windows':
+        test.log.debug("Check disk %s in guest", img)
+        if os_type == "windows":
             img_size = params.get("image_size_%s" % img)
             cmd = utils_misc.set_winutils_letter(session, guest_cmd)
             disk = _get_window_disk_index_by_serial(img)
@@ -43,9 +41,9 @@ def run(test, params, env):
             test.log.info("Clean disk:%s", disk)
             utils_disk.clean_partition_windows(session, disk)
             test.log.info("Formatting disk:%s", disk)
-            driver = \
-                utils_disk.configure_empty_disk(session, disk, img_size,
-                                                os_type)[0]
+            driver = utils_disk.configure_empty_disk(session, disk, img_size, os_type)[
+                0
+            ]
             output_path = driver + ":\\test.dat"
             cmd = cmd.format(output_path)
         else:
@@ -70,12 +68,9 @@ def run(test, params, env):
     _check_disk_in_guest(img_name_list[1])
 
     for vcpu_dev in vcpu_devices:
-        error_context.context("Hotplug vcpu device: %s" % vcpu_dev,
-                              test.log.info)
+        error_context.context("Hotplug vcpu device: %s" % vcpu_dev, test.log.info)
         vm.hotplug_vcpu_device(vcpu_dev)
-    if not utils_misc.wait_for(
-            lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm),
-            60):
+    if not utils_misc.wait_for(lambda: cpu_utils.check_if_vm_vcpus_match_qemu(vm), 60):
         test.fail("Actual number of guest CPUs is not equal to expected")
 
     # FIXME: win2016 guest will reboot once hotplug a cpu
@@ -83,8 +78,7 @@ def run(test, params, env):
     if params.get_boolean("workaround_need"):
         session = vm.wait_for_login()
 
-    error_context.context("Plug another device",
-                          test.log.info)
+    error_context.context("Plug another device", test.log.info)
     plug.hotplug_devs_serial(img_name_list[2])
     _check_disk_in_guest(img_name_list[2])
 

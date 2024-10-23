@@ -1,5 +1,4 @@
 from avocado import TestError
-
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 
@@ -18,5 +17,4 @@ def run(test, params, env):
     try:
         test_image.create(test_image.params)
     except TestError as err:
-        test.fail(
-            "Create the vdi image failed with unexpected output: %s" % err)
+        test.fail("Create the vdi image failed with unexpected output: %s" % err)

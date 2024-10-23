@@ -2,11 +2,10 @@ import logging
 from functools import reduce
 
 from . import exception
-from .backend import rbd
-from .backend import directory
+from .backend import directory, rbd
 from .utils import state
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class StoragePoolAdmin(object):
@@ -49,14 +48,14 @@ class StoragePoolAdmin(object):
     def pools_define_by_params(cls, params):
         lst_names = params.objects("storage_pools")
         lst_params = map(params.object_params, lst_names)
-        return map(lambda x: cls.pool_define_by_params(
-            *x), zip(lst_names, lst_params))
+        return map(lambda x: cls.pool_define_by_params(*x), zip(lst_names, lst_params))
 
     @classmethod
     def list_volumes(cls):
         """List all volumes in host"""
-        out = reduce(lambda x, y: x.union(
-            y), [p.get_volumes() for p in sp_admin.list_pools()])
+        out = reduce(
+            lambda x, y: x.union(y), [p.get_volumes() for p in sp_admin.list_pools()]
+        )
         return list(out)
 
     @classmethod
@@ -77,10 +76,7 @@ class StoragePoolAdmin(object):
     @classmethod
     def find_pool_by_path(cls, path):
         try:
-            pools = list(
-                filter(
-                    lambda x: x.target.path == path,
-                    cls.list_pools()))
+            pools = list(filter(lambda x: x.target.path == path, cls.list_pools()))
             return pools[0]
         except IndexError:
             LOG_JOB.warning("no storage pool with matching path '%s'", path)
@@ -109,8 +105,9 @@ class StoragePoolAdmin(object):
 
     @classmethod
     def volumes_define_by_params(cls, params):
-        return map(lambda x: cls.volume_define_by_params(
-            x, params), params.objects("images"))
+        return map(
+            lambda x: cls.volume_define_by_params(x, params), params.objects("images")
+        )
 
     @classmethod
     def volume_define_by_params(cls, volume_name, test_params):
@@ -130,8 +127,7 @@ class StoragePoolAdmin(object):
                 if backing_name:
                     backing_store = cls.get_volume_by_name(backing_name)
                     if not backing_store:
-                        backing_store = _volume_define_by_params(
-                            backing_name, params)
+                        backing_store = _volume_define_by_params(backing_name, params)
                     volume.backing = backing_store
             volume.refresh_with_params(volume_params)
             return volume

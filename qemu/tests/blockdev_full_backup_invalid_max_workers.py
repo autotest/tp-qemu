@@ -5,14 +5,12 @@ from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
 
 
 class BlkFullBackupInvalidMaxWorkers(BlockdevLiveBackupBaseTest):
-
     def do_full_backup(self):
         max_workers = int(self.params["invalid_max_workers"])
         extra_options = {"max-workers": max_workers}
         cmd, arguments = backup_utils.blockdev_backup_qmp_cmd(
-            self._source_nodes[0],
-            self._full_bk_nodes[0],
-            **extra_options)
+            self._source_nodes[0], self._full_bk_nodes[0], **extra_options
+        )
         try:
             self.main_vm.monitor.cmd(cmd, arguments)
         except QMPCmdError as e:

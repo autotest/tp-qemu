@@ -1,16 +1,14 @@
 import os
 import re
-import six
 import time
 
-from virttest import utils_misc
-from virttest import qemu_migration
+import six
+from virttest import qemu_migration, utils_misc
 
 from provider import cpuflags
 
 
 class Statistic(object):
-
     """
     Class to display and collect average,
     max and min values of a given data set.
@@ -76,8 +74,7 @@ def run(test, params, env):
 
     vm_mem = int(params.get("mem", "512"))
 
-    get_mig_speed = re.compile(r"^transferred ram: (\d+) kbytes$",
-                               re.MULTILINE)
+    get_mig_speed = re.compile(r"^transferred ram: (\d+) kbytes$", re.MULTILINE)
 
     mig_speed = params.get("mig_speed", "1G")
     mig_speed_accuracy = float(params.get("mig_speed_accuracy", "0.2"))
@@ -91,11 +88,15 @@ def run(test, params, env):
             pass
         for _ in range(30):
             o = vm.monitor.info("migrate")
-            warning_msg = ("Migration already ended. Migration speed is"
-                           " probably too high and will block vm while"
-                           " filling its memory.")
-            fail_msg = ("Could not determine the transferred memory from"
-                        " monitor data: %s" % o)
+            warning_msg = (
+                "Migration already ended. Migration speed is"
+                " probably too high and will block vm while"
+                " filling its memory."
+            )
+            fail_msg = (
+                "Could not determine the transferred memory from"
+                " monitor data: %s" % o
+            )
             if isinstance(o, six.string_types):
                 if "status: active" not in o:
                     test.error(warning_msg)
@@ -123,24 +124,27 @@ def run(test, params, env):
 
     try:
         # Reboot the VM in the background
-        cpuflags.install_cpuflags_util_on_vm(test, vm, install_path,
-                                             extra_flags="-msse3 -msse2")
+        cpuflags.install_cpuflags_util_on_vm(
+            test, vm, install_path, extra_flags="-msse3 -msse2"
+        )
 
         qemu_migration.set_speed(vm, mig_speed)
 
-        cmd = ("%s/cpuflags-test --stressmem %d,%d" %
-               (os.path.join(install_path, "cpu_flags", "src"),
-                vm_mem * 4, vm_mem / 2))
+        cmd = "%s/cpuflags-test --stressmem %d,%d" % (
+            os.path.join(install_path, "cpu_flags", "src"),
+            vm_mem * 4,
+            vm_mem / 2,
+        )
         test.log.debug("Sending command: %s", cmd)
         session.sendline(cmd)
 
         time.sleep(2)
 
-        clonevm = vm.migrate(mig_timeout, mig_protocol,
-                             not_wait_for_migration=True, env=env)
+        clonevm = vm.migrate(
+            mig_timeout, mig_protocol, not_wait_for_migration=True, env=env
+        )
 
-        mig_speed = int(float(
-            utils_misc.normalize_data_size(mig_speed, "M")))
+        mig_speed = int(float(utils_misc.normalize_data_size(mig_speed, "M")))
 
         mig_stat = get_migration_statistic(vm)
 
@@ -148,25 +152,27 @@ def run(test, params, env):
         ack_speed = mig_speed * mig_speed_accuracy
 
         test.log.info("Target migration speed: %d MB/s.", mig_speed)
-        test.log.info(
-            "Average migration speed: %d MB/s", mig_stat.get_average())
+        test.log.info("Average migration speed: %d MB/s", mig_stat.get_average())
         test.log.info("Minimum migration speed: %d MB/s", mig_stat.get_min())
         test.log.info("Maximum migration speed: %d MB/s", mig_stat.get_max())
 
-        test.log.info("Maximum tolerable divergence: %3.1f%%",
-                      mig_speed_accuracy * 100)
+        test.log.info("Maximum tolerable divergence: %3.1f%%", mig_speed_accuracy * 100)
 
         if real_speed < mig_speed - ack_speed:
             divergence = (1 - float(real_speed) / float(mig_speed)) * 100
-            test.error("Average migration speed (%s MB/s) "
-                       "is %3.1f%% lower than target (%s MB/s)" %
-                       (real_speed, divergence, mig_speed))
+            test.error(
+                "Average migration speed (%s MB/s) "
+                "is %3.1f%% lower than target (%s MB/s)"
+                % (real_speed, divergence, mig_speed)
+            )
 
         if real_speed > mig_speed + ack_speed:
             divergence = (1 - float(mig_speed) / float(real_speed)) * 100
-            test.error("Average migration speed (%s MB/s) "
-                       "is %3.1f%% higher than target (%s MB/s)" %
-                       (real_speed, divergence, mig_speed))
+            test.error(
+                "Average migration speed (%s MB/s) "
+                "is %3.1f%% higher than target (%s MB/s)"
+                % (real_speed, divergence, mig_speed)
+            )
 
     finally:
         session.close()

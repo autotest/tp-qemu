@@ -1,12 +1,10 @@
 from virttest.qemu_monitor import QMPCmdError
 
-from provider import job_utils
-from provider import backup_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitForbiddenActions(BlockDevCommitTest):
-
     def commit_snapshots(self):
         device = self.params.get("device_tag")
         device_params = self.params.object_params(device)
@@ -23,50 +21,45 @@ class BlockdevCommitForbiddenActions(BlockDevCommitTest):
         self.main_vm.monitor.cmd(cmd, args)
         job_id = args.get("job-id", self.active_node)
         self.do_forbidden_actions()
-        self.main_vm.monitor.cmd("block-job-set-speed",
-                                 {'device': job_id, 'speed': 0})
+        self.main_vm.monitor.cmd("block-job-set-speed", {"device": job_id, "speed": 0})
         job_utils.wait_until_block_job_completed(self.main_vm, job_id)
 
     def commit(self):
-        self.main_vm.monitor.cmd(
-            "block-commit", {'device': self.active_node}
-        )
+        self.main_vm.monitor.cmd("block-commit", {"device": self.active_node})
 
     def resize(self):
         self.main_vm.monitor.cmd(
-            "block_resize",
-            {'node-name': self.active_node, 'size': 1024*1024*1024}
+            "block_resize", {"node-name": self.active_node, "size": 1024 * 1024 * 1024}
         )
 
     def mirror(self):
         self.main_vm.monitor.cmd(
             "blockdev-mirror",
-            {'device': self.active_node,
-             'target': self.forbidden_node, 'sync': 'full'}
+            {"device": self.active_node, "target": self.forbidden_node, "sync": "full"},
         )
 
     def snapshot(self):
         self.main_vm.monitor.cmd(
             "blockdev-snapshot",
-            {'node': self.active_node, 'overlay': self.forbidden_node}
+            {"node": self.active_node, "overlay": self.forbidden_node},
         )
 
     def stream(self):
-        self.main_vm.monitor.cmd("block-stream", {'device': self.active_node})
+        self.main_vm.monitor.cmd("block-stream", {"device": self.active_node})
 
     def do_forbidden_actions(self):
         """Run the qmp commands one by one, all should fail"""
         self.prepare_snapshot_file(self.params["fnode"].split())
-        for action in self.params.objects('forbidden_actions'):
-            error_msg = self.params['error_msg_%s' % action]
+        for action in self.params.objects("forbidden_actions"):
+            error_msg = self.params["error_msg_%s" % action]
             f = getattr(self, action)
             try:
                 f()
             except QMPCmdError as e:
                 if error_msg not in str(e):
-                    self.test.fail('Unexpected error: %s' % str(e))
+                    self.test.fail("Unexpected error: %s" % str(e))
             else:
-                self.test.fail('Unexpected qmp command success')
+                self.test.fail("Unexpected qmp command success")
 
 
 def run(test, params, env):

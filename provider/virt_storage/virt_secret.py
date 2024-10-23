@@ -7,7 +7,6 @@ from virttest.qemu_devices import qdevices
 
 
 class StorageSecret(object):
-
     def __init__(self, name, data, stype=None):
         self.name = name
         self._data = data

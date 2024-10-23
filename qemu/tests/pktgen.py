@@ -1,17 +1,10 @@
+import os
 import re
 import time
-import os
 
 import aexpect
-
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import remote
-from virttest import data_dir
-from virttest import utils_net
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import data_dir, error_context, remote, utils_misc, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -57,14 +50,18 @@ def run(test, params, env):
         runner = server_session.cmd
         pktgen_ip = vm_pktgen.get_address()
         pktgen_mac = vm_pktgen.get_mac_address()
-        server_interface = utils_net.get_linux_ifname(server_session,
-                                                      pktgen_mac)
+        server_interface = utils_net.get_linux_ifname(server_session, pktgen_mac)
     # pktgen server is a external host assigned
     elif re.match(r"((\d){1,3}\.){3}(\d){1,3}", pktgen_server):
         pktgen_ip = pktgen_server
-        server_session = remote.wait_for_login(s_shell_client, pktgen_ip,
-                                               s_shell_port, s_username,
-                                               s_passwd, s_shell_prompt)
+        server_session = remote.wait_for_login(
+            s_shell_client,
+            pktgen_ip,
+            s_shell_port,
+            s_username,
+            s_passwd,
+            s_shell_prompt,
+        )
         runner = server_session.cmd
         server_interface = params.get("server_interface")
         if not server_interface:
@@ -78,18 +75,22 @@ def run(test, params, env):
         runner = process.system
 
     # copy pktgen_test scipt to the test server.
-    local_path = os.path.join(data_dir.get_root_dir(),
-                              "shared/scripts/pktgen.sh")
+    local_path = os.path.join(data_dir.get_root_dir(), "shared/scripts/pktgen.sh")
     remote_path = "/tmp/pktgen.sh"
-    remote.scp_to_remote(pktgen_ip, s_shell_port, s_username, s_passwd,
-                         local_path, remote_path)
+    remote.scp_to_remote(
+        pktgen_ip, s_shell_port, s_username, s_passwd, local_path, remote_path
+    )
 
     error_context.context("Run pktgen test", test.log.info)
     run_threads = params.get("pktgen_threads", 1)
     pktgen_stress_timeout = float(params.get("pktgen_test_timeout", 600))
-    exec_cmd = "%s %s %s %s %s" % (remote_path, vm.get_address(),
-                                   vm.get_mac_address(),
-                                   server_interface, run_threads)
+    exec_cmd = "%s %s %s %s %s" % (
+        remote_path,
+        vm.get_address(),
+        vm.get_mac_address(),
+        server_interface,
+        run_threads,
+    )
     try:
         env["pktgen_run"] = True
         try:
@@ -97,7 +98,7 @@ def run(test, params, env):
             # backgroud process, can set run flag to False to stop this case.
             start_time = time.time()
             stop_time = start_time + pktgen_stress_timeout
-            while (env["pktgen_run"] and time.time() < stop_time):
+            while env["pktgen_run"] and time.time() < stop_time:
                 runner(exec_cmd, timeout=pktgen_stress_timeout)
 
         # using ping to kill the pktgen stress
@@ -106,21 +107,24 @@ def run(test, params, env):
     finally:
         env["pktgen_run"] = False
 
-    error_context.context("Verify Host and guest kernel no error "
-                          "and call trace", test.log.info)
+    error_context.context(
+        "Verify Host and guest kernel no error " "and call trace", test.log.info
+    )
     vm.verify_kernel_crash()
     utils_misc.verify_dmesg()
 
     error_context.context("Ping external host after pktgen test", test.log.info)
     session_ping = vm.wait_for_login(timeout=login_timeout)
-    status, output = utils_test.ping(dest=external_host, session=session_ping,
-                                     timeout=240, count=20)
+    status, output = utils_test.ping(
+        dest=external_host, session=session_ping, timeout=240, count=20
+    )
     loss_ratio = utils_test.get_loss_ratio(output)
-    if (loss_ratio > int(params.get("packet_lost_ratio", 5)) or
-            loss_ratio == -1):
+    if loss_ratio > int(params.get("packet_lost_ratio", 5)) or loss_ratio == -1:
         test.log.debug("Ping %s output: %s", external_host, output)
-        test.fail("Guest network connction unusable, "
-                  "packet lost ratio is '%d%%'" % loss_ratio)
+        test.fail(
+            "Guest network connction unusable, "
+            "packet lost ratio is '%d%%'" % loss_ratio
+        )
     if server_session:
         server_session.close()
     if session:

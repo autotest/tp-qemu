@@ -1,7 +1,6 @@
 import re
 
 from avocado.core import exceptions
-
 from virttest import error_context
 
 
@@ -40,16 +39,16 @@ def run(test, params, env):
     try:
         error_context.base_context("Execute the selftests", test.log.info)
         s, o = session.cmd_status_output(tests_execution_cmd, 180)
-        test.log.info("The selftests results: %s" % o)
+        test.log.info("The selftests results: %s", o)
 
         summary = re.findall(r"\# SUMMARY.+", o)
-        num_failed_tests = int(re.findall(r"FAIL\=\d+", str(summary))[0].split('=')[1])
+        num_failed_tests = int(re.findall(r"FAIL\=\d+", str(summary))[0].split("=")[1])
         test.log.debug("Number of failed tests: %d", num_failed_tests)
 
         if num_failed_tests != 0:
             test.fail("Failed selftests found in the execution")
 
-        num_skipped_tests = int(re.findall(r"SKIP\=\d+", str(summary))[0].split('=')[1])
+        num_skipped_tests = int(re.findall(r"SKIP\=\d+", str(summary))[0].split("=")[1])
         test.log.debug("Number of skipped tests: %d", num_skipped_tests)
 
         skipped_list = []

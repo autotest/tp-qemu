@@ -12,13 +12,18 @@ class BlockdevMirrorWithIgnore(BlockdevMirrorNowaitTest):
         timeout = self.params.get("job_timeout", 600)
         for job_id in self._jobs:
             get_event = job_utils.get_event_by_condition
-            event = get_event(self.main_vm, job_utils.BLOCK_JOB_ERROR_EVENT,
-                              timeout, device=job_id, action='ignore')
+            event = get_event(
+                self.main_vm,
+                job_utils.BLOCK_JOB_ERROR_EVENT,
+                timeout,
+                device=job_id,
+                action="ignore",
+            )
             if not event:
-                self.test.fail("Mirror job can't reach error after %s seconds"
-                               % timeout)
-        process.system(self.params['lv_extend_cmd'],
-                       ignore_status=False, shell=True)
+                self.test.fail(
+                    "Mirror job can't reach error after %s seconds" % timeout
+                )
+        process.system(self.params["lv_extend_cmd"], ignore_status=False, shell=True)
         self.wait_mirror_jobs_completed()
 
 

@@ -1,12 +1,10 @@
-import os
 import logging
-
+import os
 from inspect import ismethod
 
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class TimeClientTest(object):
@@ -46,35 +44,34 @@ class MonotonicTime(TimeClientTest):
         :params threshold: Same resolution as clock source.
         """
         if not test_type:
-            self.test.error('missing test type')
+            self.test.error("missing test type")
         LOG_JOB.info("Test type: %s", test_type)
         timeout = float(duration) + 100.0
 
-        cmd = self.src_dir + '/time_test'
-        cmd += ' --duration ' + str(duration)
+        cmd = self.src_dir + "/time_test"
+        cmd += " --duration " + str(duration)
         if threshold:
-            cmd += ' --threshold ' + str(threshold)
-        cmd += ' ' + test_type
+            cmd += " --threshold " + str(threshold)
+        cmd += " " + test_type
 
         (exit_status, stdout) = self.session.cmd_status_output(cmd, timeout=timeout)
-        LOG_JOB.info('Time test command exit status: %s',
-                     exit_status)
+        LOG_JOB.info("Time test command exit status: %s", exit_status)
         if exit_status != 0:
             for line in stdout.splitlines():
-                if line.startswith('ERROR:'):
+                if line.startswith("ERROR:"):
                     self.test.error(line)
-                if line.startswith('FAIL:'):
+                if line.startswith("FAIL:"):
                     self.test.fail(line)
-            self.test.error('unknown test failure')
+            self.test.error("unknown test failure")
 
     def test_Gtod(self):
-        self._test(test_type='gtod', threshold=0)
+        self._test(test_type="gtod", threshold=0)
 
     def test_Tsc_lfence(self):
-        self._test(test_type='tsc_lfence', threshold=0)
+        self._test(test_type="tsc_lfence", threshold=0)
 
     def test_Clock(self):
-        self._test(test_type='clock', threshold=0)
+        self._test(test_type="clock", threshold=0)
 
 
 @error_context.context_aware
@@ -93,7 +90,7 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
 
-    monotonic_test = MonotonicTime(test, params, env, 'monotonic_time')
+    monotonic_test = MonotonicTime(test, params, env, "monotonic_time")
     monotonic_test.setUp()
     monotonic_test.runTest()
     monotonic_test.cleanUp()

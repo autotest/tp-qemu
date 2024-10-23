@@ -1,6 +1,5 @@
 from avocado import fail_on
 from avocado.utils import process
-
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 

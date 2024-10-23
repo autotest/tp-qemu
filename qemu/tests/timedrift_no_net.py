@@ -1,14 +1,12 @@
 import time
 
 from avocado.utils import process
-from virttest import utils_test
-from virttest import error_context
+from virttest import error_context, utils_test
 
 from generic.tests.guest_suspend import GuestSuspendBaseTest
 
 
 class GuestSuspendSerialConsole(GuestSuspendBaseTest):
-
     def __init__(self, test, params, vm, session):
         super(GuestSuspendSerialConsole, self).__init__(test, params, vm)
 
@@ -19,8 +17,7 @@ class GuestSuspendSerialConsole(GuestSuspendBaseTest):
 
     @error_context.context_aware
     def action_during_suspend(self, **args):
-        error_context.context("Sleep a while before resuming guest",
-                              self.test.log.info)
+        error_context.context("Sleep a while before resuming guest", self.test.log.info)
 
         time.sleep(float(self.params.get("wait_timeout", "1800")))
         if self.os_type == "windows":
@@ -41,24 +38,22 @@ def subw_guest_suspend(test, params, vm, session):
         error_context.context("Suspend vm to disk", test.log.info)
         gs.guest_suspend_disk(params)
     else:
-        test.error("Unknown guest suspend type, Check your"
-                   " 'guest_suspend_type' config.")
+        test.error(
+            "Unknown guest suspend type, Check your" " 'guest_suspend_type' config."
+        )
 
 
 def subw_guest_pause_resume(test, params, vm, session):
     vm.monitor.cmd("stop")
     if not vm.monitor.verify_status("paused"):
-        test.error("VM is not paused Current status: %s" %
-                   vm.monitor.get_status())
+        test.error("VM is not paused Current status: %s" % vm.monitor.get_status())
     time.sleep(float(params.get("wait_timeout", "1800")))
     vm.monitor.cmd("cont")
     if not vm.monitor.verify_status("running"):
-        test.error("VM is not running. Current status: %s" %
-                   vm.monitor.get_status())
+        test.error("VM is not running. Current status: %s" % vm.monitor.get_status())
 
 
-def time_diff(host_guest_time_before,
-              host_guest_time_after):
+def time_diff(host_guest_time_before, host_guest_time_after):
     """
     Function compares diff of host and guest time before and after.
     It allows compare time in different timezones.
@@ -87,17 +82,16 @@ def run(test, params, env):
     """
     login_timeout = int(params.get("login_timeout", "240"))
     guest_clock_source = params.get("guest_clock_source", "kvm-clock")
-    date_time_command = params.get("date_time_command",
-                                   "date -u +'TIME: %a %m/%d/%Y %H:%M:%S.%N'")
-    date_time_filter_re = params.get("date_time_filter_re",
-                                     r"(?:TIME: \w\w\w )(.{19})(.+)")
-    date_time_format = params.get("date_time_format",
-                                  "%m/%d/%Y %H:%M:%S")
+    date_time_command = params.get(
+        "date_time_command", "date -u +'TIME: %a %m/%d/%Y %H:%M:%S.%N'"
+    )
+    date_time_filter_re = params.get(
+        "date_time_filter_re", r"(?:TIME: \w\w\w )(.{19})(.+)"
+    )
+    date_time_format = params.get("date_time_format", "%m/%d/%Y %H:%M:%S")
     hwclock_time_command = params.get("hwclock_time_command")
-    hwclock_time_filter_re = params.get("hwclock_time_filter_re",
-                                        r"(.+)")
-    hwclock_time_format = params.get("hwclock_time_format",
-                                     "%a %b %d %H:%M:%S %Y")
+    hwclock_time_filter_re = params.get("hwclock_time_filter_re", r"(.+)")
+    hwclock_time_format = params.get("hwclock_time_format", "%a %b %d %H:%M:%S %Y")
     tolerance = float(params.get("time_diff_tolerance", "0.5"))
 
     sub_work = params["sub_work"]
@@ -112,80 +106,83 @@ def run(test, params, env):
 
     error_context.context("Check clock source on guest VM", test.log.info)
     session = vm.wait_for_serial_login(timeout=login_timeout)
-    out = session.cmd_output("cat /sys/devices/system/clocksource/"
-                             "clocksource0/current_clocksource")
+    out = session.cmd_output(
+        "cat /sys/devices/system/clocksource/" "clocksource0/current_clocksource"
+    )
     if guest_clock_source not in out:
-        test.fail("Clock source %s missing in guest clock "
-                  "sources %s." % (guest_clock_source, out))
+        test.fail(
+            "Clock source %s missing in guest clock "
+            "sources %s." % (guest_clock_source, out)
+        )
 
-    error_context.context("Get clock from host and guest VM using `date`",
-                          test.log.info)
-    before_date = utils_test.get_time(session,
-                                      date_time_command,
-                                      date_time_filter_re,
-                                      date_time_format)
-    test.log.debug("date: host time=%ss guest time=%ss",
-                   *before_date)
+    error_context.context(
+        "Get clock from host and guest VM using `date`", test.log.info
+    )
+    before_date = utils_test.get_time(
+        session, date_time_command, date_time_filter_re, date_time_format
+    )
+    test.log.debug("date: host time=%ss guest time=%ss", *before_date)
 
-    error_context.context("Get clock from host and guest VM using `hwclock`",
-                          test.log.info)
-    before_hwclock = utils_test.get_time(session,
-                                         hwclock_time_command,
-                                         hwclock_time_filter_re,
-                                         hwclock_time_format)
-    test.log.debug("hwclock: host time=%ss guest time=%ss",
-                   *before_hwclock)
+    error_context.context(
+        "Get clock from host and guest VM using `hwclock`", test.log.info
+    )
+    before_hwclock = utils_test.get_time(
+        session, hwclock_time_command, hwclock_time_filter_re, hwclock_time_format
+    )
+    test.log.debug("hwclock: host time=%ss guest time=%ss", *before_hwclock)
 
     session.close()
 
     if sub_work in globals():  # Try to find sub work function.
         globals()[sub_work](test, params, vm, session)
     else:
-        test.cancel("Unable to found subwork %s in %s test file." %
-                    (sub_work, __file__))
+        test.cancel(
+            "Unable to found subwork %s in %s test file." % (sub_work, __file__)
+        )
 
     session = vm.wait_for_serial_login(timeout=login_timeout)
-    error_context.context("Get clock from host and guest VM using `date`",
-                          test.log.info)
-    after_date = utils_test.get_time(session,
-                                     date_time_command,
-                                     date_time_filter_re,
-                                     date_time_format)
-    test.log.debug("date: host time=%ss guest time=%ss",
-                   *after_date)
+    error_context.context(
+        "Get clock from host and guest VM using `date`", test.log.info
+    )
+    after_date = utils_test.get_time(
+        session, date_time_command, date_time_filter_re, date_time_format
+    )
+    test.log.debug("date: host time=%ss guest time=%ss", *after_date)
 
-    error_context.context("Get clock from host and guest VM using `hwclock`",
-                          test.log.info)
-    after_hwclock = utils_test.get_time(session,
-                                        hwclock_time_command,
-                                        hwclock_time_filter_re,
-                                        hwclock_time_format)
-    test.log.debug("hwclock: host time=%ss guest time=%ss",
-                   *after_hwclock)
+    error_context.context(
+        "Get clock from host and guest VM using `hwclock`", test.log.info
+    )
+    after_hwclock = utils_test.get_time(
+        session, hwclock_time_command, hwclock_time_filter_re, hwclock_time_format
+    )
+    test.log.debug("hwclock: host time=%ss guest time=%ss", *after_hwclock)
 
-    if test_type == 'guest_suspend':
+    if test_type == "guest_suspend":
         date_diff = time_diff(before_date, after_date)
         hwclock_diff = time_diff(before_hwclock, after_hwclock)
         if date_diff > tolerance and hwclock_diff > tolerance:
-            test.fail("hwclock %ss and date %ss difference is "
-                      "'guest_diff_time != host_diff_time'"
-                      " out of tolerance %ss" % (hwclock_diff,
-                                                 date_diff,
-                                                 tolerance))
+            test.fail(
+                "hwclock %ss and date %ss difference is "
+                "'guest_diff_time != host_diff_time'"
+                " out of tolerance %ss" % (hwclock_diff, date_diff, tolerance)
+            )
         elif date_diff > tolerance:
-            test.fail("date %ss difference is "
-                      "'guest_diff_time != host_diff_time'"
-                      " out of tolerance %ss" % (date_diff,
-                                                 tolerance))
+            test.fail(
+                "date %ss difference is "
+                "'guest_diff_time != host_diff_time'"
+                " out of tolerance %ss" % (date_diff, tolerance)
+            )
         elif hwclock_diff > tolerance:
-            test.fail("hwclock %ss difference is "
-                      "'guest_diff_time != host_diff_time'"
-                      " out of tolerance %ss" % (hwclock_diff,
-                                                 tolerance))
+            test.fail(
+                "hwclock %ss difference is "
+                "'guest_diff_time != host_diff_time'"
+                " out of tolerance %ss" % (hwclock_diff, tolerance)
+            )
     elif test_type == "guest_pause_resume":
         date_diff = time_diff(before_date, after_date)
         if date_diff > tolerance:
-            test.fail("date %ss difference is"
-                      "'guest_time_after-guest_time_before'"
-                      " out of tolerance %ss" % (date_diff,
-                                                 tolerance))
+            test.fail(
+                "date %ss difference is"
+                "'guest_time_after-guest_time_before'"
+                " out of tolerance %ss" % (date_diff, tolerance)
+            )

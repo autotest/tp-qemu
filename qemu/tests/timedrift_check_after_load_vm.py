@@ -2,9 +2,7 @@ import re
 import time
 
 from avocado.utils import process
-from virttest import env_process
-from virttest import error_context
-from virttest import arch
+from virttest import arch, env_process, error_context
 
 from qemu.tests.qemu_guest_agent import QemuGuestAgentTest
 
@@ -28,14 +26,17 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def _load_kvm_module_with_kvmclock_periodic_sync(module_param):
         """
-        Load kvm module with kvmclock_periodic_sync=N/Y
+         Load kvm module with kvmclock_periodic_sync=N/Y
 
-       :params module_param: the value of kvmclock_periodic_sync
-       """
-        error_context.context("Load kvm module with kvmclock_periodic_sync=%s"
-                              % module_param, test.log.info)
+        :params module_param: the value of kvmclock_periodic_sync
+        """
+        error_context.context(
+            "Load kvm module with kvmclock_periodic_sync=%s" % module_param,
+            test.log.info,
+        )
         check_modules = arch.get_kvm_module_list()
         error_context.context("check_module: '%s'" % check_modules, test.log.info)
         check_modules.reverse()
@@ -46,19 +47,23 @@ def run(test, params, env):
         for module in check_modules:
             load_mod_cmd = "modprobe %s" % module
             if module == "kvm":
-                load_mod_cmd = "%s kvmclock_periodic_sync=%s" % (load_mod_cmd, module_param)
+                load_mod_cmd = "%s kvmclock_periodic_sync=%s" % (
+                    load_mod_cmd,
+                    module_param,
+                )
             process.system(load_mod_cmd, shell=True)
         check_mod_cmd = params["check_mod_cmd"]
         if process.system_output(check_mod_cmd).decode() != module_param:
-            test.error("Cannot load kvm module with kvmclock_periodic_sync=%s"
-                       % module_param)
+            test.error(
+                "Cannot load kvm module with kvmclock_periodic_sync=%s" % module_param
+            )
 
     def setup():
         """
         On host, load kvm module with "kvmclock_periodic_sync=N"
         sync time with ntp server and boot the guest
         """
-        if arch.ARCH not in ('ppc64', 'ppc64le'):
+        if arch.ARCH not in ("ppc64", "ppc64le"):
             _load_kvm_module_with_kvmclock_periodic_sync("N")
         error_context.context("Sync host time with ntp server", test.log.info)
         ntp_cmd = params.get("ntp_cmd")
@@ -81,7 +86,7 @@ def run(test, params, env):
             session.close()
         env.unregister_vm(vm.name)
         vm.destroy(gracefully=False, free_mac_addresses=True)
-        if arch.ARCH not in ('ppc64', 'ppc64le'):
+        if arch.ARCH not in ("ppc64", "ppc64le"):
             _load_kvm_module_with_kvmclock_periodic_sync("Y")
 
     def setup_gagent():
@@ -119,17 +124,16 @@ def run(test, params, env):
     vm = setup()
     session = vm.wait_for_login()
     try:
-        error_context.context("Check the clocksource currently in use",
-                              test.log.info)
+        error_context.context("Check the clocksource currently in use", test.log.info)
         clocksource = params.get("clocksource", "kvm-clock")
         clocksource_cmd = "cat /sys/devices/system/clocksource/clocksource0"
         clocksource_cmd += "/current_clocksource"
         currentsource = session.cmd_output_safe(clocksource_cmd)
         if clocksource not in currentsource:
-            test.cancel("Mismatch clocksource, current clocksource: %s",
-                        currentsource)
-        error_context.context("Stop chronyd and sync guest time with ntp server",
-                              test.log.info)
+            test.cancel("Mismatch clocksource, current clocksource: %s", currentsource)
+        error_context.context(
+            "Stop chronyd and sync guest time with ntp server", test.log.info
+        )
         ntp_cmd = params.get("ntp_cmd")
         status, output = session.cmd_status_output(ntp_cmd)
         if status != 0:
@@ -137,7 +141,7 @@ def run(test, params, env):
         error_context.context("Setup qemu-guest-agent in guest", test.log.info)
         gagent = setup_gagent()
 
-        qmp_ports = vm.get_monitors_by_type('qmp')
+        qmp_ports = vm.get_monitors_by_type("qmp")
         qmp_port = None
         if qmp_ports:
             qmp_port = qmp_ports[0]
@@ -152,9 +156,11 @@ def run(test, params, env):
         error_context.context("Execute 'guest-set-time' in qmp monitor")
         gagent.gagent.set_time()
 
-        error_context.context("Execute 'rtc-reset-reinjection' in qmp"
-                              " monitor, not for power platform", test.log.info)
-        if arch.ARCH not in ('ppc64', 'ppc64le'):
+        error_context.context(
+            "Execute 'rtc-reset-reinjection' in qmp" " monitor, not for power platform",
+            test.log.info,
+        )
+        if arch.ARCH not in ("ppc64", "ppc64le"):
             qmp_rtc_reset_cmd = params["qmp_rtc_reset_cmd"]
             run_qmp_cmd(qmp_port, qmp_rtc_reset_cmd)
 

@@ -1,8 +1,6 @@
-from virttest import error_context
+from virttest import error_context, utils_test
 
-from virttest import utils_test
-from qemu.tests.virtio_console import add_chardev
-from qemu.tests.virtio_console import add_virtio_ports_to_vm
+from qemu.tests.virtio_console import add_chardev, add_virtio_ports_to_vm
 from qemu.tests.virtio_serial_file_transfer import transfer_data
 from qemu.tests.virtio_serial_hotplug_port_pci import get_buses_and_serial_devices
 
@@ -24,12 +22,13 @@ def run(test, params, env):
     :param env: Dictionary with test environment
     """
 
-    vm = env.get_vm(params['main_vm'])
+    vm = env.get_vm(params["main_vm"])
     os_type = params["os_type"]
     char_devices = add_chardev(vm, params)
-    serials = params.objects('extra_serials')
+    serials = params.objects("extra_serials")
     buses, serial_devices = get_buses_and_serial_devices(
-        vm, params, char_devices, serials)
+        vm, params, char_devices, serials
+    )
     vm.devices.simple_hotplug(buses[0], vm.monitor)
     vm.devices.simple_hotplug(char_devices[0], vm.monitor)
     vm.devices.simple_hotplug(serial_devices[0], vm.monitor)
@@ -39,6 +38,7 @@ def run(test, params, env):
         driver_name = params["driver_name"]
         session = vm.wait_for_login()
         session = utils_test.qemu.windrv_check_running_verifier(
-            session, vm, test, driver_name)
-    params['file_transfer_serial_port'] = serials[0]
-    transfer_data(params, vm, sender='both')
+            session, vm, test, driver_name
+        )
+    params["file_transfer_serial_port"] = serials[0]
+    transfer_data(params, vm, sender="both")

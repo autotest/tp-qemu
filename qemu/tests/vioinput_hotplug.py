@@ -1,6 +1,7 @@
 import time
 
 from virttest import error_context
+
 from provider import input_tests
 
 
@@ -51,8 +52,7 @@ def run(test, params, env):
     sub_test = params["sub_test"]
 
     # Hotplug an input device
-    new_dev = vm.devices.input_define_by_params(
-        params, params["input_name"])[0]
+    new_dev = vm.devices.input_define_by_params(params, params["input_name"])[0]
     hotplug_input_dev(vm, new_dev)
     # For virtio-mouse/tablet device, after new device added,
     # the default working device will change from ps/2 mice to new added mice,

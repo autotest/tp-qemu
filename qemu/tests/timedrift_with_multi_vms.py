@@ -1,13 +1,8 @@
-import re
 import random
+import re
 
-from avocado.utils import process
-from avocado.utils import service
-from avocado.utils import cpu
-
-from virttest import utils_time
-from virttest import env_process
-from virttest import error_context
+from avocado.utils import cpu, process, service
+from virttest import env_process, error_context, utils_time
 
 
 @error_context.context_aware
@@ -24,6 +19,7 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
+
     def verify_guest_clock_source(session, expected):
         """
         :param session: VM session
@@ -66,20 +62,22 @@ def run(test, params, env):
     for vmid, se in enumerate(sessions):
         # Get the respective vm object
         cpu_id = vmid if same_cpu == "no" else 0
-        process.system("taskset -cp %s %s" %
-                       (host_cpu_list[cpu_id], vm_obj[vmid].get_pid()),
-                       shell=True)
+        process.system(
+            "taskset -cp %s %s" % (host_cpu_list[cpu_id], vm_obj[vmid].get_pid()),
+            shell=True,
+        )
         error_context.context("Check the current clocksource", test.log.info)
         currentsource = se.cmd_output_safe(clocksource_cmd)
         if clocksource not in currentsource:
-            error_context.context("Update guest kernel cli to %s" % clocksource,
-                                  test.log.info)
+            error_context.context(
+                "Update guest kernel cli to %s" % clocksource, test.log.info
+            )
             utils_time.update_clksrc(vm_obj[vmid], clksrc=clocksource)
             verify_guest_clock_source(se, clocksource)
         error_context.context("Stop ntp service in guest", test.log.info)
         status, output = se.cmd_status_output(ntp_stop_cmd)
 
-    vmid_test = random.randint(0, len(vms)-1)
+    vmid_test = random.randint(0, len(vms) - 1)
     vm = vm_obj[vmid_test]
     se = sessions[vmid_test]
     if same_cpu == "no":
@@ -103,5 +101,6 @@ def run(test, params, env):
         if offset > float(expected_time_drift):
             fail_offset.append((vmid, offset))
     if fail_offset:
-        test.fail("The time drift of following guests %s are larger than 5s."
-                  % fail_offset)
+        test.fail(
+            "The time drift of following guests %s are larger than 5s." % fail_offset
+        )

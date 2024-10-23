@@ -2,12 +2,7 @@ import os
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_netperf
-from virttest import utils_net
-from virttest import env_process
-from virttest import data_dir
+from virttest import data_dir, env_process, error_context, utils_net, utils_netperf
 
 
 # This decorator makes the test function aware of context strings
@@ -31,6 +26,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def get_if_queues(ifname):
         """
         Query interface queues with 'ethtool -l'
@@ -59,11 +55,13 @@ def run(test, params, env):
     if "nf_conntrack" in session.cmd_output("lsmod"):
         msg = "Unload nf_conntrack module in guest."
         error_context.context(msg, test.log.info)
-        black_str = "#disable nf_conntrack\\nblacklist nf_conntrack\\n" \
-                    "blacklist nf_conntrack_ipv6\\nblacklist xt_conntrack\\n" \
-                    "blacklist nf_conntrack_ftp\\nblacklist xt_state\\n" \
-                    "blacklist iptable_nat\\nblacklist ipt_REDIRECT\\n" \
-                    "blacklist nf_nat\\nblacklist nf_conntrack_ipv4"
+        black_str = (
+            "#disable nf_conntrack\\nblacklist nf_conntrack\\n"
+            "blacklist nf_conntrack_ipv6\\nblacklist xt_conntrack\\n"
+            "blacklist nf_conntrack_ftp\\nblacklist xt_state\\n"
+            "blacklist iptable_nat\\nblacklist ipt_REDIRECT\\n"
+            "blacklist nf_nat\\nblacklist nf_conntrack_ipv4"
+        )
         cmd = "echo -e '%s' >> /etc/modprobe.d/blacklist.conf" % black_str
         session.cmd(cmd)
         session = vm.reboot(session, timeout=timeout)
@@ -73,16 +71,16 @@ def run(test, params, env):
             error_context.context(err, test.log.info)
             session.cmd(nf_conntrack_max_set_cmd)
 
-    netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                params.get("netperf_link"))
+    netperf_link = os.path.join(
+        data_dir.get_deps_dir("netperf"), params.get("netperf_link")
+    )
     md5sum = params.get("pkg_md5sum")
     client_num = params.get("netperf_client_num", 520)
     netperf_timeout = int(params.get("netperf_timeout", 600))
     disable_firewall = params.get("disable_firewall", "")
 
     if int(params.get("queues", 1)) > 1 and params.get("os_type") == "linux":
-        error_context.context("Enable multi queues support in guest.",
-                              test.log.info)
+        error_context.context("Enable multi queues support in guest.", test.log.info)
         guest_mac = vm.get_mac_address()
         ifname = utils_net.get_linux_ifname(session, guest_mac)
         get_if_queues(ifname)
@@ -110,20 +108,23 @@ def run(test, params, env):
     client = params.get("shell_client", "ssh")
     port = params.get("shell_port", "22")
     prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
-    linesep = params.get(
-        "shell_linesep", "\n").encode().decode('unicode_escape')
+    linesep = params.get("shell_linesep", "\n").encode().decode("unicode_escape")
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
-    netperf_client = utils_netperf.NetperfClient(netperf_client_ip,
-                                                 g_client_path,
-                                                 md5sum, g_client_link,
-                                                 client, port,
-                                                 username=username,
-                                                 password=password,
-                                                 prompt=prompt,
-                                                 linesep=linesep,
-                                                 status_test_command=status_test_command,
-                                                 compile_option=compile_option_client)
+    netperf_client = utils_netperf.NetperfClient(
+        netperf_client_ip,
+        g_client_path,
+        md5sum,
+        g_client_link,
+        client,
+        port,
+        username=username,
+        password=password,
+        prompt=prompt,
+        linesep=linesep,
+        status_test_command=status_test_command,
+        compile_option=compile_option_client,
+    )
 
     error_context.context("Setup netperf in host", test.log.info)
     host_ip = utils_net.get_host_ip_address(params)
@@ -133,24 +134,28 @@ def run(test, params, env):
     server_passwd = params["hostpasswd"]
     server_username = params.get("host_username", "root")
     compile_option_server = params.get("compile_option_server", "")
-    netperf_server = utils_netperf.NetperfServer(host_ip,
-                                                 server_path,
-                                                 md5sum,
-                                                 netperf_link,
-                                                 server_shell_client, server_shell_port,
-                                                 username=server_username,
-                                                 password=server_passwd,
-                                                 prompt=prompt,
-                                                 linesep=linesep,
-                                                 status_test_command=status_test_command,
-                                                 compile_option=compile_option_server)
+    netperf_server = utils_netperf.NetperfServer(
+        host_ip,
+        server_path,
+        md5sum,
+        netperf_link,
+        server_shell_client,
+        server_shell_port,
+        username=server_username,
+        password=server_passwd,
+        prompt=prompt,
+        linesep=linesep,
+        status_test_command=status_test_command,
+        compile_option=compile_option_server,
+    )
     try:
         error_context.base_context("Run netperf test between host and guest.")
         error_context.context("Start netserver in host.", test.log.info)
         netperf_server.start()
 
-        error_context.context("Start Netperf in guest for %ss."
-                              % netperf_timeout, test.log.info)
+        error_context.context(
+            "Start Netperf in guest for %ss." % netperf_timeout, test.log.info
+        )
         test_option = "-t TCP_CRR -l %s -- -b 10 -D" % netperf_timeout
         netperf_client.bg_start(host_ip, test_option, client_num)
         start_time = time.time()

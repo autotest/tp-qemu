@@ -1,12 +1,8 @@
-import time
 import re
+import time
 
 from avocado.utils import process
-from virttest import utils_test
-from virttest import utils_time
-from virttest import env_process
-from virttest import funcatexit
-from virttest import error_context
+from virttest import env_process, error_context, funcatexit, utils_test, utils_time
 
 
 def _system(*args, **kwargs):
@@ -43,19 +39,19 @@ def run(test, params, env):
 
         :param session: VM session.
         """
-        hwclock_time_command = params.get("hwclock_time_command",
-                                          "hwclock -u")
-        hwclock_time_filter_re = params.get("hwclock_time_filter_re",
-                                            r"(\d+-\d+-\d+ \d+:\d+:\d+)")
-        hwclock_time_format = params.get("hwclock_time_format",
-                                         "%Y-%m-%d %H:%M:%S")
+        hwclock_time_command = params.get("hwclock_time_command", "hwclock -u")
+        hwclock_time_filter_re = params.get(
+            "hwclock_time_filter_re", r"(\d+-\d+-\d+ \d+:\d+:\d+)"
+        )
+        hwclock_time_format = params.get("hwclock_time_format", "%Y-%m-%d %H:%M:%S")
         output = session.cmd_output_safe(hwclock_time_command)
         try:
             str_time = re.findall(hwclock_time_filter_re, output)[0]
             guest_time = time.mktime(time.strptime(str_time, hwclock_time_format))
         except Exception as err:
             test.log.debug(
-                "(time_format, time_string): (%s, %s)", hwclock_time_format, str_time)
+                "(time_format, time_string): (%s, %s)", hwclock_time_format, str_time
+            )
             raise err
         return guest_time
 
@@ -72,22 +68,24 @@ def run(test, params, env):
         time_filter_re = params["time_filter_re"]
         # Time format for time.strptime()
         time_format = params["time_format"]
-        timerdevice_drift_threshold = float(params.get(
-            "timerdevice_drift_threshold", 3))
+        timerdevice_drift_threshold = float(
+            params.get("timerdevice_drift_threshold", 3)
+        )
 
         time_type = "system" if not is_hardware else "harware"
-        error_context.context("Check the %s time on guest" % time_type,
-                              test.log.info)
-        host_time, guest_time = utils_test.get_time(session, time_command,
-                                                    time_filter_re,
-                                                    time_format)
+        error_context.context("Check the %s time on guest" % time_type, test.log.info)
+        host_time, guest_time = utils_test.get_time(
+            session, time_command, time_filter_re, time_format
+        )
         if is_hardware:
             guest_time = get_hwtime(session)
         drift = abs(float(host_time) - float(guest_time))
         if drift > timerdevice_drift_threshold:
-            test.fail("The guest's %s time is different with"
-                      " host's system time. Host time: '%s', guest time:"
-                      " '%s'" % (time_type, host_time, guest_time))
+            test.fail(
+                "The guest's %s time is different with"
+                " host's system time. Host time: '%s', guest time:"
+                " '%s'" % (time_type, host_time, guest_time)
+            )
 
     def get_current_clksrc(session):
         cmd = "cat /sys/devices/system/clocksource/"
@@ -119,15 +117,18 @@ def run(test, params, env):
             clksrc_cmd += "clocksource0/current_clocksource"
             status, output = session.cmd_status_output(clksrc_cmd, safe=True)
             if status:
-                test.fail("fail to update guest's clocksource to %s,"
-                          "details: %s" % clksrc, output)
+                test.fail(
+                    "fail to update guest's clocksource to %s," "details: %s" % clksrc,
+                    output,
+                )
         else:
-            test.error("please check the clocksource you want to set, "
-                       "it's not supported by current guest, current "
-                       "available clocksources: %s" % avail_clksrc)
+            test.error(
+                "please check the clocksource you want to set, "
+                "it's not supported by current guest, current "
+                "available clocksources: %s" % avail_clksrc
+            )
 
-    error_context.context("sync host time with NTP server",
-                          test.log.info)
+    error_context.context("sync host time with NTP server", test.log.info)
     clock_sync_command = params["clock_sync_command"]
     process.system(clock_sync_command, shell=True)
 
@@ -136,18 +137,20 @@ def run(test, params, env):
         error_context.context("Add some load on host", test.log.info)
         host_cpu_cnt_cmd = params["host_cpu_cnt_cmd"]
         host_cpu_cnt = int(process.system_output(host_cpu_cnt_cmd, shell=True).strip())
-        timerdevice_host_load_cmd = timerdevice_host_load_cmd % int(host_cpu_cnt/2)
+        timerdevice_host_load_cmd = timerdevice_host_load_cmd % int(host_cpu_cnt / 2)
         if params["os_type"] == "linux":
-            process.system(timerdevice_host_load_cmd, shell=True,
-                           ignore_bg_processes=True)
+            process.system(
+                timerdevice_host_load_cmd, shell=True, ignore_bg_processes=True
+            )
         else:
-            stress_bg = utils_test.HostStress("stress", params,
-                                              stress_args=timerdevice_host_load_cmd)
+            stress_bg = utils_test.HostStress(
+                "stress", params, stress_args=timerdevice_host_load_cmd
+            )
             stress_bg.load_stress_tool()
-        host_load_stop_cmd = params.get("timerdevice_host_load_stop_cmd",
-                                        "pkill -f 'do X=1'")
-        funcatexit.register(env, params["type"], _system,
-                            host_load_stop_cmd)
+        host_load_stop_cmd = params.get(
+            "timerdevice_host_load_stop_cmd", "pkill -f 'do X=1'"
+        )
+        funcatexit.register(env, params["type"], _system, host_load_stop_cmd)
 
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
@@ -157,7 +160,7 @@ def run(test, params, env):
 
     error_context.context("Sync guest timezone before test", test.log.info)
     timeout = int(params.get("login_timeout", 360))
-    if params["os_type"] == 'linux':
+    if params["os_type"] == "linux":
         utils_time.sync_timezone_linux(vm, timeout)
     else:
         utils_time.sync_timezone_win(vm, timeout)
@@ -174,8 +177,7 @@ def run(test, params, env):
             update_clksrc(session, timerdevice_clksource)
             need_restore_clksrc = True
 
-    error_context.context("check timedrift between guest and host.",
-                          test.log.info)
+    error_context.context("check timedrift between guest and host.", test.log.info)
     verify_timedrift(session)
     if params["os_type"] == "linux":
         verify_timedrift(session, is_hardware=True)
@@ -192,13 +194,15 @@ def run(test, params, env):
     if params.get("timerdevice_reboot_test") == "yes":
         sleep_time = params.get("timerdevice_sleep_time")
         if sleep_time:
-            error_context.context("Sleep '%s' secs before reboot" % sleep_time,
-                                  test.log.info)
+            error_context.context(
+                "Sleep '%s' secs before reboot" % sleep_time, test.log.info
+            )
             sleep_time = int(sleep_time)
             time.sleep(sleep_time)
 
-        error_context.context("Check timedrift between guest and host "
-                              "after reboot.", test.log.info)
+        error_context.context(
+            "Check timedrift between guest and host " "after reboot.", test.log.info
+        )
         vm.reboot(timeout=timeout, serial=True)
         verify_timedrift(session)
         if params["os_type"] == "linux":

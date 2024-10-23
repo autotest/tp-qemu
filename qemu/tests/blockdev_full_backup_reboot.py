@@ -2,7 +2,6 @@ from provider.blockdev_full_backup_parallel import BlockdevFullBackupParallelTes
 
 
 class BlockdevFullBackupRebootTest(BlockdevFullBackupParallelTest):
-
     def vm_reset(self):
         self.main_vm.reboot(method="system_reset")
 

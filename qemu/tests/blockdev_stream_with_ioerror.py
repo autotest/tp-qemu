@@ -1,5 +1,4 @@
 from aexpect import ShellTimeoutError
-
 from virttest import error_context
 
 from provider.blockdev_stream_base import BlockDevStreamTest
@@ -15,11 +14,12 @@ class BlockdevStreamWithIoerror(BlockDevStreamTest):
         ori_file_path = "%s/%s" % (root_dir, ori_filename)
         tar_file_path = "%s/%s" % (root_dir, tar_filename)
         dd_cmd = self.main_vm.params.get(
-            "dd_cmd", "dd if=%s of=%s bs=1M count=60 oflag=direct")
+            "dd_cmd", "dd if=%s of=%s bs=1M count=60 oflag=direct"
+        )
         mk_file_cmd = dd_cmd % (ori_file_path, tar_file_path)
         try:
             self.session.cmd(mk_file_cmd, timeout=timeout)
-        except ShellTimeoutError as e:
+        except ShellTimeoutError:
             self.main_vm.verify_status("io-error")
             self.file_info.append(tar_filename)
         else:
@@ -34,7 +34,7 @@ class BlockdevStreamWithIoerror(BlockDevStreamTest):
     def md5_io_error_file(self):
         if not self.session:
             self.session = self.main_vm.wait_for_login()
-        output = self.session.cmd_output('\n', timeout=120)
+        output = self.session.cmd_output("\n", timeout=120)
         if self.params["dd_done"] not in output:
             self.test.fail("dd not continue to run after vm resume")
         tar_file_path = "%s/%s" % (self.file_info[0], self.file_info[2])

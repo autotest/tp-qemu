@@ -1,13 +1,9 @@
-import re
 import os
+import re
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
-from virttest import env_process
-from virttest import data_dir
+from virttest import data_dir, env_process, error_context, utils_misc
 
 
 @error_context.context_aware
@@ -45,7 +41,7 @@ def run(test, params, env):
     if params.get("extra_params"):
         params["extra_params"] = params.get("extra_params")
 
-    if params.get("boot_with_cdrom") == 'yes':
+    if params.get("boot_with_cdrom") == "yes":
         iso_path = "%s/test.iso" % data_dir.get_tmp_dir()
         create_cmd = "dd if=/dev/zero of=%s bs=1M count=10" % iso_path
         if process.system(create_cmd, ignore_status=True) != 0:
@@ -82,7 +78,7 @@ def run(test, params, env):
     start_time = time.time()
     while (time.time() - start_time) < capdata_timeout:
         if os.path.isfile(stap_log_file):
-            fd = open(stap_log_file, 'r')
+            fd = open(stap_log_file, "r")
             data = fd.read()
             if (not data) or (not re.findall(checking_pattern_re, data)):
                 time.sleep(time_inter)
@@ -90,8 +86,10 @@ def run(test, params, env):
                 continue
             elif data and re.findall(checking_pattern_re, data):
                 test.log.info("Capture the data successfully")
-                test.log.info("The capture data is like: %s",
-                              re.findall(checking_pattern_re, data)[-1])
+                test.log.info(
+                    "The capture data is like: %s",
+                    re.findall(checking_pattern_re, data)[-1],
+                )
                 fd.close()
                 break
         else:

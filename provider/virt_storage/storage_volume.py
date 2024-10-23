@@ -1,14 +1,12 @@
-from virttest import utils_misc
-from virttest import utils_qemu
-from virttest import utils_version
+from virttest import utils_misc, utils_qemu, utils_version
 from virttest.qemu_devices import qdevices
 
 from provider import backup_utils
+
 from . import virt_encryption
 
 
 class StorageVolume(object):
-
     def __init__(self, pool):
         self.name = None
         self.pool = pool
@@ -103,9 +101,7 @@ class StorageVolume(object):
 
     @capacity.setter
     def capacity(self, size):
-        self._capacity = float(
-            utils_misc.normalize_data_size(
-                str(size), 'B', '1024'))
+        self._capacity = float(utils_misc.normalize_data_size(str(size), "B", "1024"))
 
     @property
     def auth(self):
@@ -127,7 +123,7 @@ class StorageVolume(object):
             qemu_binary = utils_misc.get_qemu_binary(params)
             qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
             if qemu_version in utils_version.VersionInterval(
-                    backup_utils.BACKING_MASK_PROTOCOL_VERSION_SCOPE
+                backup_utils.BACKING_MASK_PROTOCOL_VERSION_SCOPE
             ):
                 self.raw_format_node_eliminated = True
 
@@ -153,11 +149,10 @@ class StorageVolume(object):
         if self.format.TYPE == "qcow2":
             encrypt = params.get("image_encryption")
             if encrypt and encrypt != "off":
-                self.encrypt = virt_encryption.VolumeEncryption.encryption_define_by_params(
-                    params)
-                self.format.set_param(
-                    "encrypt.key-secret",
-                    self.encrypt.secret.name)
+                self.encrypt = (
+                    virt_encryption.VolumeEncryption.encryption_define_by_params(params)
+                )
+                self.format.set_param("encrypt.key-secret", self.encrypt.secret.name)
                 self.format.set_param("encrypt.format", self.encrypt.format)
 
             backing = params.get("backing")
@@ -205,7 +200,9 @@ class StorageVolume(object):
         out["path"] = self.path
         out["key"] = self.key
         # __hash__ uses it when adding a volume object
-        out["format"] = self._params.get("image_format", "qcow2") if self._params else None
+        out["format"] = (
+            self._params.get("image_format", "qcow2") if self._params else None
+        )
         out["auth"] = str(self.auth)
         out["capacity"] = self.capacity
         out["preallocation"] = self.preallocation
@@ -225,7 +222,9 @@ class StorageVolume(object):
                 secret = encrypt.secret
                 options += " -%s " % secret.as_qobject().cmdline()
                 options += " -o encrypt.format=%s,encrypt.key-secret=%s" % (
-                    encrypt.format, secret.name)
+                    encrypt.format,
+                    secret.name,
+                )
         return options
 
     def hotplug(self, vm):
@@ -260,17 +259,16 @@ class StorageVolume(object):
             options["size"] = self.capacity
         else:
             raise NotImplementedError
-        arguments = {
-            "options": options,
-            "job-id": node_name,
-            "timeout": timeout}
+        arguments = {"options": options, "job-id": node_name, "timeout": timeout}
         return backup_utils.blockdev_create(vm, **arguments)
 
     def format_protocol_by_qmp(self, vm, timeout=120):
         node_name = self.format.get_param("node-name")
-        options = {"driver": self.format.TYPE,
-                   "file": self.protocol.get_param("node-name"),
-                   "size": self.capacity}
+        options = {
+            "driver": self.format.TYPE,
+            "file": self.protocol.get_param("node-name"),
+            "size": self.capacity,
+        }
         if self.format.TYPE == "qcow2":
             if self.backing:
                 options["backing-fmt"] = self.backing.format.TYPE
@@ -284,22 +282,17 @@ class StorageVolume(object):
                 if encrypt_format:
                     options["encrypt"]["format"] = encrypt_format
             if self._params and self._params.get("image_cluster_size"):
-                options["cluster-size"] = int(
-                    self._params["image_cluster_size"])
+                options["cluster-size"] = int(self._params["image_cluster_size"])
             if self._params.get("image_data_file"):
                 options["data-file"] = self.format.get_param("data-file")
                 data_file_raw_set = self._params.get("image_data_file_raw")
                 data_file_raw = data_file_raw_set in ("on", "yes", "true")
                 options["data-file-raw"] = data_file_raw
-        arguments = {
-            "options": options,
-            "job-id": node_name,
-            "timeout": timeout}
+        arguments = {"options": options, "job-id": node_name, "timeout": timeout}
         backup_utils.blockdev_create(vm, **arguments)
 
     def __str__(self):
-        return "%s-%s(%s)" % (self.__class__.__name__,
-                              self.name, str(self.key))
+        return "%s-%s(%s)" % (self.__class__.__name__, self.name, str(self.key))
 
     def __eq__(self, vol):
         if not isinstance(vol, StorageVolume):

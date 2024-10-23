@@ -1,12 +1,14 @@
 import os
 import time
 
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_netperf
-from virttest import utils_misc
-from virttest import data_dir
-from virttest import env_process
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    utils_misc,
+    utils_net,
+    utils_netperf,
+)
 
 
 @error_context.context_aware
@@ -23,6 +25,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def netperf_test(duration):
         while duration < max_run_time:
             time.sleep(10)
@@ -50,14 +53,12 @@ def run(test, params, env):
     shell_port = params.get("shell_port")
     os_type = params.get("os_type")
     shell_prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
-    linesep = params.get(
-        "shell_linesep", "\n").encode().decode('unicode_escape')
+    linesep = params.get("shell_linesep", "\n").encode().decode("unicode_escape")
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
     disable_firewall = params.get("disable_firewall", "")
-    if (params.get("netperf_vlan_test", "no") == "yes" and
-            params.get("host_vlan_ip")):
+    if params.get("netperf_vlan_test", "no") == "yes" and params.get("host_vlan_ip"):
         host_ip = params.get("host_vlan_ip")
     else:
         host_ip = utils_net.get_host_ip_address(params)
@@ -69,15 +70,17 @@ def run(test, params, env):
         s_info = {}
         if server in vms:
             if params.get("os_type") == "windows":
-                if params.get_numeric("smp") > 32 or params.get_numeric("vcpu_maxcpus") > 32:
+                if (
+                    params.get_numeric("smp") > 32
+                    or params.get_numeric("vcpu_maxcpus") > 32
+                ):
                     params["smp"] = params["vcpu_maxcpus"] = 32
                 params["start_vm"] = "yes"
                 env_process.preprocess_vm(test, params, env, server)
             server_vm = env.get_vm(server)
             server_vm.verify_alive()
             session = server_vm.wait_for_login(timeout=login_timeout)
-            session.cmd(disable_firewall,
-                        ignore_all_errors=True)
+            session.cmd(disable_firewall, ignore_all_errors=True)
             if params.get("netperf_vlan_test", "no") == "yes":
                 vlan_nic = params.get("vlan_nic")
                 server_ip = utils_net.get_linux_ipaddr(session, vlan_nic)[0]
@@ -86,42 +89,37 @@ def run(test, params, env):
 
             s_info["ip"] = server_ip
             s_info["os_type"] = params.get("os_type_%s" % server, os_type)
-            s_info["username"] = params.get("username_%s" % server,
-                                            guest_username)
-            s_info["password"] = params.get("password_%s" % server,
-                                            guest_password)
-            s_info["shell_client"] = params.get("shell_client_%s" % server,
-                                                shell_client)
-            s_info["shell_port"] = params.get("shell_port_%s" % server,
-                                              shell_port)
-            s_info["shell_prompt"] = params.get("shell_prompt_%s" % server,
-                                                shell_prompt)
-            s_info["linesep"] = params.get("linesep_%s" % server,
-                                           linesep)
-            s_info["status_test_command"] = params.get("status_test_command_%s" % server,
-                                                       status_test_command)
+            s_info["username"] = params.get("username_%s" % server, guest_username)
+            s_info["password"] = params.get("password_%s" % server, guest_password)
+            s_info["shell_client"] = params.get(
+                "shell_client_%s" % server, shell_client
+            )
+            s_info["shell_port"] = params.get("shell_port_%s" % server, shell_port)
+            s_info["shell_prompt"] = params.get(
+                "shell_prompt_%s" % server, shell_prompt
+            )
+            s_info["linesep"] = params.get("linesep_%s" % server, linesep)
+            s_info["status_test_command"] = params.get(
+                "status_test_command_%s" % server, status_test_command
+            )
         else:
             if server == "localhost":
                 s_info["ip"] = host_ip
-                s_info["password"] = params.get("password_%s" % server,
-                                                host_password)
+                s_info["password"] = params.get("password_%s" % server, host_password)
             else:
                 s_info["ip"] = server
-                s_info["password"] = params.get("password_%s" % server,
-                                                "redhat")
+                s_info["password"] = params.get("password_%s" % server, "redhat")
             s_info["os_type"] = params.get("os_type_%s" % server, "linux")
-            s_info["username"] = params.get("username_%s" % server,
-                                            "root")
-            s_info["shell_client"] = params.get("shell_client_%s" % server,
-                                                "ssh")
-            s_info["shell_port"] = params.get("shell_port_%s" % server,
-                                              "22")
-            s_info["shell_prompt"] = params.get("shell_prompt_%s" % server,
-                                                r"^\[.*\][\#\$]\s*$")
-            s_info["linesep"] = params.get("linesep_%s" % server,
-                                           "\n")
-            s_info["status_test_command"] = params.get("status_test_command_%s" % server,
-                                                       "echo $?")
+            s_info["username"] = params.get("username_%s" % server, "root")
+            s_info["shell_client"] = params.get("shell_client_%s" % server, "ssh")
+            s_info["shell_port"] = params.get("shell_port_%s" % server, "22")
+            s_info["shell_prompt"] = params.get(
+                "shell_prompt_%s" % server, r"^\[.*\][\#\$]\s*$"
+            )
+            s_info["linesep"] = params.get("linesep_%s" % server, "\n")
+            s_info["status_test_command"] = params.get(
+                "status_test_command_%s" % server, "echo $?"
+            )
         server_infos.append(s_info)
 
     for client in netperf_client:
@@ -130,8 +128,7 @@ def run(test, params, env):
             client_vm = env.get_vm(client)
             client_vm.verify_alive()
             session = client_vm.wait_for_login(timeout=login_timeout)
-            session.cmd(disable_firewall,
-                        ignore_all_errors=True)
+            session.cmd(disable_firewall, ignore_all_errors=True)
             if params.get("netperf_vlan_test", "no") == "yes":
                 vlan_nic = params.get("vlan_nic")
                 client_ip = utils_net.get_linux_ipaddr(session, vlan_nic)[0]
@@ -139,54 +136,51 @@ def run(test, params, env):
                 client_ip = client_vm.get_address()
             c_info["ip"] = client_ip
             c_info["os_type"] = params.get("os_type_%s" % client, os_type)
-            c_info["username"] = params.get("username_%s" % client,
-                                            guest_username)
-            c_info["password"] = params.get("password_%s" % client,
-                                            guest_password)
-            c_info["shell_client"] = params.get("shell_client_%s" % client,
-                                                shell_client)
-            c_info["shell_port"] = params.get("shell_port_%s" % client,
-                                              shell_port)
-            c_info["shell_prompt"] = params.get("shell_prompt_%s" % client,
-                                                shell_prompt)
-            c_info["linesep"] = params.get("linesep_%s" % client,
-                                           linesep)
-            c_info["status_test_command"] = params.get("status_test_command_%s" % client,
-                                                       status_test_command)
+            c_info["username"] = params.get("username_%s" % client, guest_username)
+            c_info["password"] = params.get("password_%s" % client, guest_password)
+            c_info["shell_client"] = params.get(
+                "shell_client_%s" % client, shell_client
+            )
+            c_info["shell_port"] = params.get("shell_port_%s" % client, shell_port)
+            c_info["shell_prompt"] = params.get(
+                "shell_prompt_%s" % client, shell_prompt
+            )
+            c_info["linesep"] = params.get("linesep_%s" % client, linesep)
+            c_info["status_test_command"] = params.get(
+                "status_test_command_%s" % client, status_test_command
+            )
         else:
             if client == "localhost":
                 c_info["ip"] = host_ip
-                c_info["password"] = params.get("password_%s" % client,
-                                                host_password)
+                c_info["password"] = params.get("password_%s" % client, host_password)
             else:
                 c_info["ip"] = client
-                c_info["password"] = params.get("password_%s" % client,
-                                                "redhat")
+                c_info["password"] = params.get("password_%s" % client, "redhat")
             c_info["os_type"] = params.get("os_type_%s" % client, "linux")
-            c_info["username"] = params.get("username_%s" % client,
-                                            "root")
-            c_info["shell_client"] = params.get("shell_client_%s" % client,
-                                                "ssh")
-            c_info["shell_port"] = params.get("shell_port_%s" % client,
-                                              "23")
-            c_info["shell_prompt"] = params.get("shell_prompt_%s" % client,
-                                                r"^\[.*\][\#\$]\s*$")
-            c_info["linesep"] = params.get("linesep_%s" % client,
-                                           "\n")
-            c_info["status_test_command"] = params.get("status_test_command_%s" % client,
-                                                       "echo $?")
+            c_info["username"] = params.get("username_%s" % client, "root")
+            c_info["shell_client"] = params.get("shell_client_%s" % client, "ssh")
+            c_info["shell_port"] = params.get("shell_port_%s" % client, "23")
+            c_info["shell_prompt"] = params.get(
+                "shell_prompt_%s" % client, r"^\[.*\][\#\$]\s*$"
+            )
+            c_info["linesep"] = params.get("linesep_%s" % client, "\n")
+            c_info["status_test_command"] = params.get(
+                "status_test_command_%s" % client, "echo $?"
+            )
         client_infos.append(c_info)
 
     netperf_link = params.get("netperf_link")
     netperf_link = os.path.join(data_dir.get_deps_dir("netperf"), netperf_link)
     md5sum = params.get("pkg_md5sum")
     netperf_server_link = params.get("netperf_server_link_win", netperf_link)
-    netperf_server_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                       netperf_server_link)
+    netperf_server_link = os.path.join(
+        data_dir.get_deps_dir("netperf"), netperf_server_link
+    )
     server_md5sum = params.get("server_md5sum")
     netperf_client_link = params.get("netperf_client_link_win", netperf_link)
-    netperf_client_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                       netperf_client_link)
+    netperf_client_link = os.path.join(
+        data_dir.get_deps_dir("netperf"), netperf_client_link
+    )
     client_md5sum = params.get("client_md5sum")
 
     server_path_linux = params.get("server_path", "/var/tmp")
@@ -204,17 +198,20 @@ def run(test, params, env):
         else:
             netperf_link_c = netperf_link
             client_path = client_path_linux
-        n_client = utils_netperf.NetperfClient(c_info["ip"],
-                                               client_path,
-                                               md5sum, netperf_link_c,
-                                               client=c_info["shell_client"],
-                                               port=c_info["shell_port"],
-                                               username=c_info["username"],
-                                               password=c_info["password"],
-                                               prompt=c_info["shell_prompt"],
-                                               linesep=c_info["linesep"],
-                                               status_test_command=c_info["status_test_command"],
-                                               compile_option=compile_option_client)
+        n_client = utils_netperf.NetperfClient(
+            c_info["ip"],
+            client_path,
+            md5sum,
+            netperf_link_c,
+            client=c_info["shell_client"],
+            port=c_info["shell_port"],
+            username=c_info["username"],
+            password=c_info["password"],
+            prompt=c_info["shell_prompt"],
+            linesep=c_info["linesep"],
+            status_test_command=c_info["status_test_command"],
+            compile_option=compile_option_client,
+        )
         netperf_clients.append(n_client)
 
     for s_info in server_infos:
@@ -225,17 +222,20 @@ def run(test, params, env):
         else:
             netperf_link_s = netperf_link
             server_path = server_path_linux
-        n_server = utils_netperf.NetperfServer(s_info["ip"],
-                                               server_path,
-                                               md5sum, netperf_link_s,
-                                               client=s_info["shell_client"],
-                                               port=s_info["shell_port"],
-                                               username=s_info["username"],
-                                               password=s_info["password"],
-                                               prompt=s_info["shell_prompt"],
-                                               linesep=s_info["linesep"],
-                                               status_test_command=s_info["status_test_command"],
-                                               compile_option=compile_option_server)
+        n_server = utils_netperf.NetperfServer(
+            s_info["ip"],
+            server_path,
+            md5sum,
+            netperf_link_s,
+            client=s_info["shell_client"],
+            port=s_info["shell_port"],
+            username=s_info["username"],
+            password=s_info["password"],
+            prompt=s_info["shell_prompt"],
+            linesep=s_info["linesep"],
+            status_test_command=s_info["status_test_command"],
+            compile_option=compile_option_server,
+        )
         netperf_servers.append(n_server)
 
     # Get range of message size.
@@ -261,17 +261,21 @@ def run(test, params, env):
         num = 0
         s_len = len(server_infos)
         for protocol in test_protocols.split():
-            error_context.context("Testing %s protocol" % protocol,
-                                  test.log.info)
+            error_context.context("Testing %s protocol" % protocol, test.log.info)
             t_option = "%s -t %s" % (test_option, protocol)
             for n_client in netperf_clients:
                 index = num % s_len
                 server_ip = server_infos[index]["ip"]
-                n_client.bg_start(server_ip, t_option,
-                                  netperf_para_sess, netperf_cmd_prefix,
-                                  package_sizes=netperf_package_sizes)
-                if utils_misc.wait_for(n_client.is_netperf_running, 10, 0, 3,
-                                       "Wait netperf test start"):
+                n_client.bg_start(
+                    server_ip,
+                    t_option,
+                    netperf_para_sess,
+                    netperf_cmd_prefix,
+                    package_sizes=netperf_package_sizes,
+                )
+                if utils_misc.wait_for(
+                    n_client.is_netperf_running, 10, 0, 3, "Wait netperf test start"
+                ):
                     test.log.info("Netperf test start successfully.")
                 else:
                     test.error("Can not start netperf client.")

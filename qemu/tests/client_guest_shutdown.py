@@ -1,7 +1,6 @@
 import time
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -27,23 +26,24 @@ def run(test, params, env):
 
     # shutdown both of the sessions
     for vm in [client_vm, guest_vm]:
-        vm_session = vm.wait_for_login(timeout=timeout, username="root",
-                                       password="123456")
+        vm_session = vm.wait_for_login(
+            timeout=timeout, username="root", password="123456"
+        )
         try:
             error_context.base_context("shutting down the VM")
             if params.get("shutdown_method") == "shell":
                 # Send a shutdown command to the guest's shell
                 vm_session.sendline(vm.get_params().get("shutdown_command"))
-                error_context.context("waiting VM to go down "
-                                      "(shutdown shell cmd)")
+                error_context.context("waiting VM to go down " "(shutdown shell cmd)")
             elif params.get("shutdown_method") == "system_powerdown":
                 # Sleep for a while -- give the guest a chance to finish
                 # booting
                 time.sleep(float(params.get("sleep_before_powerdown", 10)))
                 # Send a system_powerdown monitor command
                 vm.monitor.system_powerdown()
-                error_context.context("waiting VM to go down "
-                                      "(system_powerdown monitor cmd)")
+                error_context.context(
+                    "waiting VM to go down " "(system_powerdown monitor cmd)"
+                )
 
             if not utils_misc.wait_for(vm.is_dead, 240, 0, 1):
                 vm.destroy(gracefully=False, free_mac_addresses=True)

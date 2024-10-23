@@ -2,10 +2,9 @@ import logging
 import os
 
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
-from provider.job_utils import BLOCK_JOB_COMPLETED_EVENT
-from provider.job_utils import get_event_by_condition
+from provider.job_utils import BLOCK_JOB_COMPLETED_EVENT, get_event_by_condition
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevIncbkNoSpaceTest(BlockdevLiveBackupBaseTest):
@@ -16,26 +15,24 @@ class BlockdevIncbkNoSpaceTest(BlockdevLiveBackupBaseTest):
         self._bitmaps = []
 
     def release_target_space(self):
-        LOG_JOB.info('Release space to extend target image size')
-        os.unlink(self.params['dummy_image_file'])
+        LOG_JOB.info("Release space to extend target image size")
+        os.unlink(self.params["dummy_image_file"])
 
     def check_no_space_error(self):
         # check 'error' message in BLOCK_JOB_COMPLETED event
-        tmo = self.params.get_numeric('job_complete_timeout', 900)
-        event = get_event_by_condition(self.main_vm,
-                                       BLOCK_JOB_COMPLETED_EVENT, tmo)
+        tmo = self.params.get_numeric("job_complete_timeout", 900)
+        event = get_event_by_condition(self.main_vm, BLOCK_JOB_COMPLETED_EVENT, tmo)
         if event:
-            if event['data'].get('error') != self.params['error_msg']:
-                self.test.fail('Unexpected error: %s'
-                               % event['data'].get('error'))
+            if event["data"].get("error") != self.params["error_msg"]:
+                self.test.fail("Unexpected error: %s" % event["data"].get("error"))
         else:
-            self.test.fail('Failed to get BLOCK_JOB_COMPLETED event')
+            self.test.fail("Failed to get BLOCK_JOB_COMPLETED event")
 
     def do_test(self):
         self.do_full_backup()
         self.check_no_space_error()
         self.release_target_space()
-        self._full_backup_options['wait_job_complete'] = True
+        self._full_backup_options["wait_job_complete"] = True
         self.do_full_backup()
         self.prepare_clone_vm()
         self.verify_data_files()

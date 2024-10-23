@@ -6,6 +6,7 @@ its existence after system reboot.
 """
 
 from virttest import error_context
+
 from provider import block_dirty_bitmap
 
 
@@ -22,6 +23,7 @@ def run(test, params, env):
     :param params: test parameters dictionary
     :param env: test environment
     """
+
     def check_bitmap_existence_as_expected(bitmaps, existence_param):
         """Check bitmaps' existence."""
         bitmap_dict = block_dirty_bitmap.get_bitmaps(vm.monitor.info("block"))
@@ -30,11 +32,10 @@ def run(test, params, env):
         for bitmap_params in bitmaps:
             bitmap = bitmap_params.get("bitmap_name")
             existence = bitmap_params.get(existence_param, "yes") == "yes"
-            if not block_dirty_bitmap.check_bitmap_existence(bitmap_dict,
-                                                             bitmap_params,
-                                                             existence):
-                msg = "bitmap %s %s exists" % (bitmap,
-                                               "not" if existence else "")
+            if not block_dirty_bitmap.check_bitmap_existence(
+                bitmap_dict, bitmap_params, existence
+            ):
+                msg = "bitmap %s %s exists" % (bitmap, "not" if existence else "")
                 msgs.append(msg)
         if msgs:
             test.fail("\n".join(msgs))
@@ -63,6 +64,5 @@ def run(test, params, env):
     # wait till boot finishes
     vm.wait_for_login(timeout=int(params.get("login_timeout", 360))).close()
 
-    error_context.context("check bitmap exsitence after shutdown",
-                          test.log.info)
+    error_context.context("check bitmap exsitence after shutdown", test.log.info)
     check_bitmap_existence_as_expected(bitmaps, "existence_after_shutdown")

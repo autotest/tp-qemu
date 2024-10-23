@@ -1,9 +1,11 @@
 """QSD pidfile option test"""
+
 import os
 
 from avocado.utils import process
-from provider.qsd import QsdDaemonDev
 from virttest import error_context
+
+from provider.qsd import QsdDaemonDev
 
 
 # This decorator makes the test function aware of context strings
@@ -27,7 +29,7 @@ def run(test, params, env):
         logger.info("Check pidfile %s", pidfile)
         test.assertTrue(os.path.exists(pidfile), "QSD pidfile is nonexistent")
 
-        pid_check_cmd = params['pid_check_cmd'] % (pidfile, qsd.sock_path)
+        pid_check_cmd = params["pid_check_cmd"] % (pidfile, qsd.sock_path)
         process.system(pid_check_cmd, shell=True)
 
         qsd.monitor = None

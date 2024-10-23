@@ -1,8 +1,6 @@
 import os
 
-from virttest import error_context
-from virttest import utils_test
-from virttest import data_dir
+from virttest import data_dir, error_context, utils_test
 
 
 @error_context.context_aware
@@ -39,6 +37,8 @@ def run(test, params, env):
     test.log.info("PASS: Guest reported appropriate clock resolution")
     sub_test = params.get("sub_test")
     if sub_test:
-        error_context.context("Run sub test '%s' after checking"
-                              " clock resolution" % sub_test, test.log.info)
+        error_context.context(
+            "Run sub test '%s' after checking" " clock resolution" % sub_test,
+            test.log.info,
+        )
         utils_test.run_virt_sub_test(test, params, env, sub_test)

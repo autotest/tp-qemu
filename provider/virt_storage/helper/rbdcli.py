@@ -4,7 +4,6 @@ from avocado.utils import process
 
 
 class RBDCli(object):
-
     def __init__(self, pool_name):
         self.pool_name = pool_name
         self._protocol = r"rbd:"
@@ -33,4 +32,4 @@ class RBDCli(object):
         return "%s%s" % (self._protocol, path)
 
     def url_to_path(self, url):
-        return url[len(self._protocol):]
+        return url[len(self._protocol) :]

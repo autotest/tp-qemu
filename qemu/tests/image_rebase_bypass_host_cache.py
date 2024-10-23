@@ -3,18 +3,20 @@ import os
 
 from avocado import fail_on
 from avocado.utils import process
+from virttest import data_dir, qemu_storage
+
 from provider import qemu_img_utils as img_utils
-from virttest import data_dir
-from virttest import qemu_storage
 
 
 def coroutine(func):
     """Start coroutine."""
+
     @functools.wraps(func)
     def start(*args, **kargs):
         cr = func(*args, **kargs)
         cr.send(None)
         return cr
+
     return start
 
 
@@ -27,6 +29,7 @@ def run(test, params, env):
     4) rebase sn2 to image1 with cache mode 'none' and check flag O_DIRECT
     is on.
     """
+
     def remove_snapshots():
         """Remove snapshots created."""
         while snapshots:
@@ -58,9 +61,13 @@ def run(test, params, env):
         while True:
             snapshot = yield
             test.log.debug("boot vm from image %s", snapshot.tag)
-            vm = img_utils.boot_vm_with_images(test, params, env,
-                                               images=(snapshot.tag,),
-                                               vm_name="VM_%s" % snapshot.tag)
+            vm = img_utils.boot_vm_with_images(
+                test,
+                params,
+                env,
+                images=(snapshot.tag,),
+                vm_name="VM_%s" % snapshot.tag,
+            )
             guest_file = params["guest_tmp_filename"] % snapshot.tag
             test.log.debug("create tmp file %s in %s", guest_file, snapshot.tag)
             img_utils.save_random_file_to_vm(vm, guest_file, 2048, sync_bin)
@@ -94,18 +101,16 @@ def run(test, params, env):
 
     strace_log = os.path.join(test.debugdir, "rebase_bypass.log")
     top = snapshots[-1]
-    test.log.debug("rebase snapshot %s to %s in cache mode 'none'",
-                   top.tag, base.tag)
+    test.log.debug("rebase snapshot %s to %s in cache mode 'none'", top.tag, base.tag)
     with img_utils.strace(top, trace_events, strace_log):
         top.base_tag = base.tag
-        fail_on((process.CmdError))(top.rebase)(params,
-                                                cache_mode="none",
-                                                source_cache_mode="none")
+        fail_on((process.CmdError))(top.rebase)(
+            params, cache_mode="none", source_cache_mode="none"
+        )
 
     fail_msg = "'O_DIRECT' is missing in %s with file %s"
     for image in [base] + snapshots:
-        if not img_utils.check_flag(strace_log,
-                                    image.image_filename, "O_DIRECT"):
+        if not img_utils.check_flag(strace_log, image.image_filename, "O_DIRECT"):
             test.fail(fail_msg % (trace_events, image.image_filename))
 
     remove_snapshots()

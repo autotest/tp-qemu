@@ -1,9 +1,6 @@
 import os
 
-from virttest import utils_test
-from virttest import utils_misc
-from virttest import error_context
-from virttest import qemu_migration
+from virttest import error_context, qemu_migration, utils_misc, utils_test
 
 from qemu.tests.virtio_serial_file_transfer import transfer_data
 
@@ -30,9 +27,9 @@ def run(test, params, env):
 
         for port in params.objects("serials"):
             port_params = params.object_params(port)
-            if not port_params['serial_type'].startswith('virt'):
+            if not port_params["serial_type"].startswith("virt"):
                 continue
-            params['file_transfer_serial_port'] = port
+            params["file_transfer_serial_port"] = port
             transfer_data(params, vm)
 
     vm = env.get_vm(params["main_vm"])
@@ -41,7 +38,8 @@ def run(test, params, env):
         session = vm.wait_for_login()
         driver_name = params["driver_name"]
         session = utils_test.qemu.windrv_check_running_verifier(
-            session, vm, test, driver_name)
+            session, vm, test, driver_name
+        )
         session.close()
     error_context.context("transferring data on source guest", test.log.info)
     run_serial_data_transfer()
@@ -54,11 +52,13 @@ def run(test, params, env):
     mig_exec_cmd_dst = mig_exec_cmd_dst % mig_exec_file
     qemu_migration.set_speed(vm, params.get("mig_speed", "1G"))
     try:
-        vm.migrate(protocol=mig_protocol, offline=True,
-                   migration_exec_cmd_src=mig_exec_cmd_src,
-                   migration_exec_cmd_dst=mig_exec_cmd_dst)
-        error_context.context("transferring data on destination guest",
-                              test.log.info)
+        vm.migrate(
+            protocol=mig_protocol,
+            offline=True,
+            migration_exec_cmd_src=mig_exec_cmd_src,
+            migration_exec_cmd_dst=mig_exec_cmd_dst,
+        )
+        error_context.context("transferring data on destination guest", test.log.info)
         run_serial_data_transfer()
         vm.verify_kernel_crash()
     finally:

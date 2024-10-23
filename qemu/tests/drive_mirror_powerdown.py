@@ -1,15 +1,13 @@
 import logging
 
-from virttest import env_process
-from virttest import error_context
+from virttest import env_process, error_context
 
 from qemu.tests import drive_mirror_stress
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
-
     def __init__(self, test, params, env, tag):
         super(DriveMirrorPowerdown, self).__init__(test, params, env, tag)
 
@@ -27,7 +25,7 @@ class DriveMirrorPowerdown(drive_mirror_stress.DriveMirrorStress):
         bootup guest with target image;
         """
         params = self.parser_test_args()
-        vm_name = params['main_vm']
+        vm_name = params["main_vm"]
         LOG_JOB.info("Target image: %s", self.target_image)
         error_context.context("powerup vm with target image", LOG_JOB.info)
         env_process.preprocess_vm(self.test, params, self.env, vm_name)

@@ -1,10 +1,7 @@
 import os
 import re
 
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_netperf
-from virttest import data_dir
+from virttest import data_dir, error_context, utils_net, utils_netperf
 
 
 @error_context.context_aware
@@ -40,17 +37,18 @@ def run(test, params, env):
     error_context.context("Test env prepare", test.log.info)
     netperf_link = params.get("netperf_link")
     if netperf_link:
-        netperf_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                    netperf_link)
+        netperf_link = os.path.join(data_dir.get_deps_dir("netperf"), netperf_link)
     md5sum = params.get("pkg_md5sum")
     netperf_server_link = params.get("netperf_server_link_win")
     if netperf_server_link:
-        netperf_server_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                           netperf_server_link)
+        netperf_server_link = os.path.join(
+            data_dir.get_deps_dir("netperf"), netperf_server_link
+        )
     netperf_client_link = params.get("netperf_client_link_win")
     if netperf_client_link:
-        netperf_client_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                           netperf_client_link)
+        netperf_client_link = os.path.join(
+            data_dir.get_deps_dir("netperf"), netperf_client_link
+        )
 
     server_md5sum = params.get("server_md5sum")
     client_md5sum = params.get("client_md5sum")
@@ -61,12 +59,11 @@ def run(test, params, env):
     client_path_win = params.get("client_path_win", "c:\\")
     guest_username = params.get("username", "")
     guest_password = params.get("password", "")
-    host_password = params.get("hostpassword")
+    params.get("hostpassword")
     client = params.get("shell_client")
     port = params.get("shell_port")
     prompt = params.get("shell_prompt", r"^root@.*[\#\$]\s*$|#")
-    linesep = params.get(
-        "shell_linesep", "\n").encode().decode('unicode_escape')
+    linesep = params.get("shell_linesep", "\n").encode().decode("unicode_escape")
     status_test_command = params.get("status_test_command", "echo $?")
     compile_option_client = params.get("compile_option_client", "")
     compile_option_server = params.get("compile_option_server", "")
@@ -114,28 +111,35 @@ def run(test, params, env):
         c_md5sum = md5sum
         c_link = netperf_link
 
-    netperf_client = utils_netperf.NetperfClient(main_vm_ip,
-                                                 c_path,
-                                                 c_md5sum, c_link,
-                                                 client, port,
-                                                 username=guest_username,
-                                                 password=guest_password,
-                                                 prompt=prompt,
-                                                 linesep=linesep,
-                                                 status_test_command=status_test_command,
-                                                 compile_option=compile_option_client)
+    netperf_client = utils_netperf.NetperfClient(
+        main_vm_ip,
+        c_path,
+        c_md5sum,
+        c_link,
+        client,
+        port,
+        username=guest_username,
+        password=guest_password,
+        prompt=prompt,
+        linesep=linesep,
+        status_test_command=status_test_command,
+        compile_option=compile_option_client,
+    )
 
-    netperf_server = utils_netperf.NetperfServer(netserver_ip,
-                                                 s_path,
-                                                 s_md5sum,
-                                                 s_link,
-                                                 s_client, s_port,
-                                                 username=s_username,
-                                                 password=s_password,
-                                                 prompt=prompt,
-                                                 linesep=linesep,
-                                                 status_test_command=status_test_command,
-                                                 compile_option=compile_option_server)
+    netperf_server = utils_netperf.NetperfServer(
+        netserver_ip,
+        s_path,
+        s_md5sum,
+        s_link,
+        s_client,
+        s_port,
+        username=s_username,
+        password=s_password,
+        prompt=prompt,
+        linesep=linesep,
+        status_test_command=status_test_command,
+        compile_option=compile_option_server,
+    )
 
     # Get range of message size.
     message_size = params.get("message_size_range", "580 590 1").split()
@@ -176,7 +180,7 @@ def run(test, params, env):
             netperf_server.cleanup()
             netperf_client.cleanup()
         except Exception as e:
-            test.log.warn("Cleanup failed:\n%s\n", e)
+            test.log.warning("Cleanup failed:\n%s\n", e)
 
     with open(os.path.join(test.debugdir, "udp_results"), "w") as result_file:
         result_file.write(msg)

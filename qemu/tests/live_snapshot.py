@@ -1,11 +1,7 @@
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import data_dir
+from virttest import data_dir, error_context, utils_misc, utils_test
 
 
 def run(test, params, env):
@@ -31,7 +27,7 @@ def run(test, params, env):
         """
         error_context.context("Creating live snapshot ...", test.log.info)
         block_info = vm.monitor.info("block")
-        if vm.monitor.protocol == 'qmp':
+        if vm.monitor.protocol == "qmp":
             device = block_info[0]["device"]
         else:
             device = "".join(block_info).split(":")[0]
@@ -97,8 +93,8 @@ def run(test, params, env):
     def installation_test():
         args = (test, params, env)
         bg = utils_misc.InterruptedThread(
-            utils_test.run_virt_sub_test, args,
-            {"sub_type": "unattended_install"})
+            utils_test.run_virt_sub_test, args, {"sub_type": "unattended_install"}
+        )
         bg.start()
         if bg.is_alive():
             sleep_time = int(params.get("sleep_time", 60))
@@ -108,6 +104,7 @@ def run(test, params, env):
                 bg.join()
             except Exception:
                 raise
+
     try:
         subcommand = params.get("subcommand")
         eval("%s_test()" % subcommand)

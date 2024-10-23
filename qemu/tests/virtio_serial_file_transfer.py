@@ -1,17 +1,14 @@
-import re
-import os
-import time
 import logging
+import os
+import re
+import time
 
 from avocado.utils import process
+from virttest import data_dir, error_context, qemu_virtio_port, utils_misc
 
-from virttest import data_dir
-from virttest import error_context
-from virttest import utils_misc
-from virttest import qemu_virtio_port
 from provider import win_driver_utils
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 @error_context.context_aware
@@ -23,7 +20,7 @@ def get_abstract_address(hostfile):
     :return: Abstract hostfile address for unix socket
     """
     find_cmd = "cat /proc/net/unix | grep '%s'" % hostfile
-    abstract_hostfile = process.getoutput(find_cmd).strip().split(' ')[-1]
+    abstract_hostfile = process.getoutput(find_cmd).strip().split(" ")[-1]
     return abstract_hostfile
 
 
@@ -38,8 +35,7 @@ def copy_scripts(guest_scripts, guest_path, vm):
     """
     error_context.context("Copy test scripts to guest.", LOG_JOB.info)
     for script in guest_scripts.split(";"):
-        link = os.path.join(data_dir.get_root_dir(), "shared", "deps",
-                            "serial", script)
+        link = os.path.join(data_dir.get_root_dir(), "shared", "deps", "serial", script)
         vm.copy_files_to(link, guest_path, timeout=60)
 
 
@@ -51,27 +47,29 @@ def get_virtio_port_property(vm, port_name):
     :param port_name: the port name to be processed
     :return: port type and port hostfile
     """
-    chardev_info = vm.monitor.human_monitor_cmd('info chardev')
+    chardev_info = vm.monitor.human_monitor_cmd("info chardev")
     for port in vm.virtio_ports:
         if isinstance(port, qemu_virtio_port.VirtioSerial):
             if port.name == port_name:
                 hostfile = port.hostfile
                 # support abstract namespace Unix domain sockets
-                if port.port_type == 'unix_socket':
-                    char_info = [m for m in chardev_info.split('\n')
-                                 if hostfile in m][0]
-                    if 'abstract=on' in char_info:
+                if port.port_type == "unix_socket":
+                    char_info = [m for m in chardev_info.split("\n") if hostfile in m][
+                        0
+                    ]
+                    if "abstract=on" in char_info:
                         hostfile = get_abstract_address(hostfile)
-                elif port.port_type in ('tcp_socket', 'udp'):
-                    hostfile = '%s:%s' % (port.hostfile[0], port.hostfile[1])
-                elif port.port_type == 'pty':
-                    hostfile = re.findall('%s: filename=pty:(/dev/pts/\\d)?' %
-                                          port_name, chardev_info)[0]
+                elif port.port_type in ("tcp_socket", "udp"):
+                    hostfile = "%s:%s" % (port.hostfile[0], port.hostfile[1])
+                elif port.port_type == "pty":
+                    hostfile = re.findall(
+                        "%s: filename=pty:(/dev/pts/\\d)?" % port_name, chardev_info
+                    )[0]
                 return port.port_type, hostfile
 
 
 @error_context.context_aware
-def get_command_options(sender='host', file_size=0):
+def get_command_options(sender="host", file_size=0):
     """
     Get the options of host and guest command, per different sender
 
@@ -79,12 +77,12 @@ def get_command_options(sender='host', file_size=0):
     :param file_size: the size of the file to be sent
     :return: host file size, guest file size, host action, guest action
     """
-    if sender == 'host':
-        return file_size, 0, 'send', 'receive'
-    elif sender == 'guest':
-        return 0, file_size, 'receive', 'send'
+    if sender == "host":
+        return file_size, 0, "send", "receive"
+    elif sender == "guest":
+        return 0, file_size, "receive", "send"
     else:
-        return file_size, file_size, 'both', 'both'
+        return file_size, file_size, "both", "both"
 
 
 @error_context.context_aware
@@ -98,16 +96,13 @@ def generate_data_file(dir_name, file_size=0, session=None):
     :param session: guest session if have one, perform on host if None
     :return: the full file path
     """
-    data_file = os.path.join(dir_name,
-                             "tmp-%s" % utils_misc.generate_random_string(8))
+    data_file = os.path.join(dir_name, "tmp-%s" % utils_misc.generate_random_string(8))
     cmd = "dd if=/dev/zero of=%s bs=1M count=%d" % (data_file, int(file_size))
     if not session:
-        error_context.context(
-            "Creating %dMB file on host" % file_size, LOG_JOB.info)
+        error_context.context("Creating %dMB file on host" % file_size, LOG_JOB.info)
         process.run(cmd)
     else:
-        error_context.context(
-            "Creating %dMB file on guest" % file_size, LOG_JOB.info)
+        error_context.context("Creating %dMB file on guest" % file_size, LOG_JOB.info)
         session.cmd(cmd, timeout=600)
     return data_file
 
@@ -145,13 +140,9 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
             return True, md5
 
     try:
-        kwargs = {'cmd': host_cmd,
-                  'shell': True,
-                  'timeout': timeout}
-        error_context.context("Send host command: %s"
-                              % host_cmd, LOG_JOB.info)
-        host_thread = utils_misc.InterruptedThread(process.getoutput,
-                                                   kwargs=kwargs)
+        kwargs = {"cmd": host_cmd, "shell": True, "timeout": timeout}
+        error_context.context("Send host command: %s" % host_cmd, LOG_JOB.info)
+        host_thread = utils_misc.InterruptedThread(process.getoutput, kwargs=kwargs)
         host_thread.daemon = True
         host_thread.start()
         time.sleep(3)
@@ -178,8 +169,14 @@ def _transfer_data(session, host_cmd, guest_cmd, timeout, sender):
 
 
 @error_context.context_aware
-def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
-                  sender='both', clean_file=True):
+def transfer_data(
+    params,
+    vm,
+    host_file_name=None,
+    guest_file_name=None,
+    sender="both",
+    clean_file=True,
+):
     """
     Transfer data file between guest and host, and check result via output;
     Generate random file first if not provided
@@ -196,43 +193,53 @@ def transfer_data(params, vm, host_file_name=None, guest_file_name=None,
     os_type = params["os_type"]
     try:
         guest_path = params.get("guest_script_folder", "C:\\")
-        guest_scripts = params.get("guest_scripts",
-                                   "VirtIoChannel_guest_send_receive.py")
+        guest_scripts = params.get(
+            "guest_scripts", "VirtIoChannel_guest_send_receive.py"
+        )
         copy_scripts(guest_scripts, guest_path, vm)
         port_name = params["file_transfer_serial_port"]
         port_type, port_path = get_virtio_port_property(vm, port_name)
         file_size = int(params.get("filesize", 10))
         transfer_timeout = int(params.get("transfer_timeout", 720))
         host_dir = data_dir.get_tmp_dir()
-        guest_dir = params.get("tmp_dir", '/var/tmp/')
-        host_file_size, guest_file_size, host_action, guest_action \
-            = get_command_options(sender, file_size)
+        guest_dir = params.get("tmp_dir", "/var/tmp/")
+        host_file_size, guest_file_size, host_action, guest_action = (
+            get_command_options(sender, file_size)
+        )
         if not host_file_name:
             host_file_name = generate_data_file(host_dir, host_file_size)
         if not guest_file_name:
-            guest_file_name = generate_data_file(
-                guest_dir, guest_file_size, session)
+            guest_file_name = generate_data_file(guest_dir, guest_file_size, session)
         host_script = params.get("host_script", "serial_host_send_receive.py")
-        host_script = os.path.join(data_dir.get_root_dir(), "shared", "deps",
-                                   "serial", host_script)
-        python_bin = '`command -v python python3 | head -1`'
-        host_cmd = ("%s %s -t %s -s %s -f %s -a %s" %
-                    (python_bin, host_script, port_type, port_path,
-                     host_file_name, host_action))
-        guest_script = os.path.join(guest_path, params['guest_script'])
-        python_bin = params.get('python_bin', python_bin)
-        guest_cmd = ("%s %s -d %s -f %s -a %s" %
-                     (python_bin, guest_script,
-                      port_name, guest_file_name, guest_action))
-        result = _transfer_data(
-            session, host_cmd, guest_cmd, transfer_timeout, sender)
+        host_script = os.path.join(
+            data_dir.get_root_dir(), "shared", "deps", "serial", host_script
+        )
+        python_bin = "`command -v python python3 | head -1`"
+        host_cmd = "%s %s -t %s -s %s -f %s -a %s" % (
+            python_bin,
+            host_script,
+            port_type,
+            port_path,
+            host_file_name,
+            host_action,
+        )
+        guest_script = os.path.join(guest_path, params["guest_script"])
+        python_bin = params.get("python_bin", python_bin)
+        guest_cmd = "%s %s -d %s -f %s -a %s" % (
+            python_bin,
+            guest_script,
+            port_name,
+            guest_file_name,
+            guest_action,
+        )
+        result = _transfer_data(session, host_cmd, guest_cmd, transfer_timeout, sender)
     finally:
         if os_type == "windows":
             guest_file_name = guest_file_name.replace("/", "\\")
         if clean_file:
-            clean_cmd = params['clean_cmd']
+            clean_cmd = params["clean_cmd"]
             os.remove(host_file_name)
-            session.cmd('%s %s' % (clean_cmd, guest_file_name))
+            session.cmd("%s %s" % (clean_cmd, guest_file_name))
         session.close()
     return result
 
@@ -252,10 +259,10 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    sender = params['file_sender']
+    sender = params["file_sender"]
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    test.log.info('Transfer data from %s', sender)
+    test.log.info("Transfer data from %s", sender)
     result = transfer_data(params, vm, sender=sender)
     if params.get("memory_leak_check", "no") == "yes":
         # for windows guest, disable/uninstall driver to get memory leak based on

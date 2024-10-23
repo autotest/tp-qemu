@@ -1,16 +1,14 @@
 import logging
 
-from virttest import data_dir
-from virttest import error_context
+from virttest import data_dir, error_context
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
-
     def __init__(self, test, params, env):
         self.snapshot_num = int(params.get("snapshot_num", 1))
         self.snapshot_chains = []
@@ -56,8 +54,7 @@ class BlockdevSnapshotChainsTest(BlockDevSnapshotTest):
             snapshot_tag = self.snapshot_tag
         else:
             snapshot_tag = self.snapshot_chains[-1]
-        images = self.params["images"].replace(
-            self.base_tag, snapshot_tag)
+        images = self.params["images"].replace(self.base_tag, snapshot_tag)
         vm_params["images"] = images
         return self.main_vm.clone(params=vm_params)
 

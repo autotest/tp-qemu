@@ -2,7 +2,6 @@ import os
 import re
 
 import aexpect
-
 from avocado.utils import process
 from virttest import utils_test
 
@@ -29,7 +28,7 @@ def run(test, params, env):
         try:
             session.cmd(cmd)
         except aexpect.ShellError as e:
-            test.log.warn(e)
+            test.log.warning(e)
 
     def run_host_guest(cmd):
         run_guest(cmd)
@@ -37,8 +36,10 @@ def run(test, params, env):
 
     # flush the firewall rules
     cmd_flush = "iptables -F"
-    cmd_selinux = ("if [ -e /selinux/enforce ]; then setenforce 0; "
-                   "else echo 'no /selinux/enforce file present'; fi")
+    cmd_selinux = (
+        "if [ -e /selinux/enforce ]; then setenforce 0; "
+        "else echo 'no /selinux/enforce file present'; fi"
+    )
     run_host_guest(cmd_flush)
     run_host_guest(cmd_selinux)
     # make sure guest replies to broadcasts
@@ -58,8 +59,9 @@ def run(test, params, env):
     # copy python script to guest for joining guest to multicast groups
     mcast_path = os.path.join(test.virtdir, "scripts/multicast_guest.py")
     vm.copy_files_to(mcast_path, "/tmp")
-    output = session.cmd_output("python /tmp/multicast_guest.py %d %s %d" %
-                                (mgroup_count, prefix, suffix))
+    output = session.cmd_output(
+        "python /tmp/multicast_guest.py %d %s %d" % (mgroup_count, prefix, suffix)
+    )
 
     # if success to join multicast, the process will be paused, and return PID.
     try:
@@ -78,8 +80,14 @@ def run(test, params, env):
                 test.fail(" Ping return non-zero value %s" % o)
 
             test.log.info("Flood ping test, mcast: %s", mcast)
-            utils_test.ping(mcast, None, interface=ifname, flood=True,
-                            output_func=None, timeout=flood_minutes * 60)
+            utils_test.ping(
+                mcast,
+                None,
+                interface=ifname,
+                flood=True,
+                output_func=None,
+                timeout=flood_minutes * 60,
+            )
 
             test.log.info("Final ping test, mcast: %s", mcast)
             s, o = utils_test.ping(mcast, 10, interface=ifname, timeout=20)

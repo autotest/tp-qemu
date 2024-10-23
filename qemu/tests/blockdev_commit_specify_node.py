@@ -5,7 +5,6 @@ from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitSpecifyNode(BlockDevCommitTest):
-
     def commit_snapshots(self):
         device = self.params.get("device_tag")
         device_params = self.params.object_params(device)
@@ -14,11 +13,11 @@ class BlockdevCommitSpecifyNode(BlockDevCommitTest):
         options = ["base-node", "top-node", "speed"]
         arguments = self.params.copy_from_keys(options)
         test_scenario = self.params["test_scenario"]
-        if test_scenario == 'base_same_with_top':
+        if test_scenario == "base_same_with_top":
             arguments["base-node"] = self.get_node_name(snapshot_tags[-2])
             arguments["top-node"] = self.get_node_name(snapshot_tags[-2])
             device = self.get_node_name(snapshot_tags[-1])
-        if test_scenario == 'parent_as_top_child_as_base':
+        if test_scenario == "parent_as_top_child_as_base":
             arguments["base-node"] = self.get_node_name(snapshot_tags[-2])
             arguments["top-node"] = self.get_node_name(snapshot_tags[0])
             device = self.get_node_name(snapshot_tags[-1])
@@ -32,9 +31,10 @@ class BlockdevCommitSpecifyNode(BlockDevCommitTest):
             if self.params.get("error_msg") not in str(e.data):
                 self.test.fail("Error message not as expected")
         else:
-            self.test.fail("Block commit should fail with %s,but "
-                           "block commit succeeded unexpectedly"
-                           % self.params.get("error_msg"))
+            self.test.fail(
+                "Block commit should fail with %s,but "
+                "block commit succeeded unexpectedly" % self.params.get("error_msg")
+            )
 
     def run_test(self):
         self.pre_test()

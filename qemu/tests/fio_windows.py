@@ -1,8 +1,8 @@
 import re
 import time
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
+
 from provider import win_driver_utils
 
 
@@ -26,17 +26,17 @@ def run(test, params, env):
     timeout = float(params.get("login_timeout", 360))
     cmd_timeout = int(params.get("cmd_timeout", "360"))
     check_installed_cmd = 'dir "%s/fio"|findstr /I fio.exe' % install_path
-    check_installed_cmd = params.get("check_installed_cmd",
-                                     check_installed_cmd)
+    check_installed_cmd = params.get("check_installed_cmd", check_installed_cmd)
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
 
-    if not params.get('image_backend') == 'nvme_direct':
+    if not params.get("image_backend") == "nvme_direct":
         error_context.context("Format disk", test.log.info)
-        utils_misc.format_windows_disk(session, params["disk_index"],
-                                       mountpoint=params["disk_letter"])
+        utils_misc.format_windows_disk(
+            session, params["disk_index"], mountpoint=params["disk_letter"]
+        )
     try:
         installed = session.cmd_status(check_installed_cmd) == 0
         if not installed:
@@ -52,7 +52,7 @@ def run(test, params, env):
                 session.cmd(config_cmd)
 
         error_context.context("Start fio in guest.", test.log.info)
-        status, output = session.cmd_status_output(fio_cmd, timeout=(cmd_timeout*2))
+        status, output = session.cmd_status_output(fio_cmd, timeout=(cmd_timeout * 2))
         if status:
             test.error("Failed to run fio, output: %s" % output)
 
@@ -61,7 +61,7 @@ def run(test, params, env):
         try:
             vm.copy_files_from(fio_log_file, test.resultsdir)
         except Exception as err:
-            test.log.warn("Log file copy failed: %s", err)
+            test.log.warning("Log file copy failed: %s", err)
         if session:
             session.close()
         win_driver_utils.memory_leak_check(vm, test, params)

@@ -1,10 +1,8 @@
-from provider import job_utils
-from provider import backup_utils
+from provider import backup_utils, job_utils
 from provider.blockdev_commit_base import BlockDevCommitTest
 
 
 class BlockdevCommitCOR(BlockDevCommitTest):
-
     def create_snapshots(self, snapshot_tags, device):
         options = ["node", "overlay"]
         cmd = "blockdev-snapshot"

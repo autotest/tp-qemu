@@ -1,6 +1,7 @@
 """
 Module for IO throttling relevant interfaces.
 """
+
 import copy
 import json
 import logging
@@ -12,19 +13,17 @@ from math import ceil
 from multiprocessing.pool import ThreadPool
 from time import sleep
 
+from virttest.qemu_devices.qdevices import QThrottleGroup
+from virttest.qemu_monitor import QMPCmdError
+from virttest.utils_misc import get_linux_drive_path
 from virttest.utils_version import VersionInterval
 
-from virttest.utils_misc import get_linux_drive_path
-
-from virttest.qemu_monitor import QMPCmdError
-
-from virttest.qemu_devices.qdevices import QThrottleGroup
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class ThrottleError(Exception):
-    """ General Throttle error"""
+    """General Throttle error"""
+
     pass
 
 
@@ -140,11 +139,16 @@ class ThrottleGroupManager(object):
         throttle_blockdev = self._vm.devices.get_by_qid(node_name)[0]
 
         old_throttle_group = self._vm.devices.get_by_qid(
-            throttle_blockdev.get_param("throttle-group"))[0]
+            throttle_blockdev.get_param("throttle-group")
+        )[0]
         new_throttle_group = self._vm.devices.get_by_qid(group_id)[0]
         file = throttle_blockdev.get_param("file")
-        args = {"driver": "throttle", "node-name": node_name, "file": file,
-                "throttle-group": group_id}
+        args = {
+            "driver": "throttle",
+            "node-name": node_name,
+            "file": file,
+            "throttle-group": group_id,
+        }
         if self._vm.devices.qemu_version in VersionInterval("[6.1.0, )"):
             self._monitor.blockdev_reopen({"options": [args]})
         else:
@@ -153,8 +157,7 @@ class ThrottleGroupManager(object):
         for bus in old_throttle_group.child_bus:
             bus.remove(throttle_blockdev)
 
-        throttle_blockdev.parent_bus = (
-            {"busid": group_id}, {"type": "ThrottleGroup"})
+        throttle_blockdev.parent_bus = ({"busid": group_id}, {"type": "ThrottleGroup"})
         throttle_blockdev.set_param("throttle-group", group_id)
 
         for bus in new_throttle_group.child_bus:
@@ -171,8 +174,7 @@ def _online_disk_windows(session, index, timeout=360):
     :return: The output of cmd
     """
 
-    disk = "disk_" + ''.join(
-        random.sample(string.ascii_letters + string.digits, 4))
+    disk = "disk_" + "".join(random.sample(string.ascii_letters + string.digits, 4))
     online_cmd = "echo select disk %s > " + disk
     online_cmd += " && echo online disk noerr >> " + disk
     online_cmd += " && echo clean >> " + disk
@@ -194,7 +196,7 @@ def _get_drive_path(session, params, image):
     """
 
     image_params = params.object_params(image)
-    os_type = params['os_type']
+    os_type = params["os_type"]
     extra_params = image_params["blk_extra_params"]
     serial = re.search(r"(serial|wwn)=(\w+)", extra_params, re.M).group(2)
     if os_type == "windows":
@@ -223,11 +225,18 @@ class ThrottleTester(object):
         tt.start()
 
     """
+
     # Default data struct of expected result.
     raw_expected = {
-        "burst": {"read": 0, "write": 0, "total": 0, "burst_time": 0,
-                  "burst_empty_time": 0},
-        "normal": {"read": 0, "write": 0, "total": 0}}
+        "burst": {
+            "read": 0,
+            "write": 0,
+            "total": 0,
+            "burst_time": 0,
+            "burst_empty_time": 0,
+        },
+        "normal": {"read": 0, "write": 0, "total": 0},
+    }
     # Default data struct of raw image data.
     raw_image_data = {"name": "", "fio_option": "", "output": {}}
 
@@ -253,9 +262,11 @@ class ThrottleTester(object):
         self._fio_option = ""
         self.images = images.copy() if images else []
         self._throttle = {
-            "images": {image: copy.deepcopy(ThrottleTester.raw_image_data) for
-                       image in images},
-            "expected": copy.deepcopy(ThrottleTester.raw_expected)}
+            "images": {
+                image: copy.deepcopy(ThrottleTester.raw_image_data) for image in images
+            },
+            "expected": copy.deepcopy(ThrottleTester.raw_expected),
+        }
         self._margin = 0.3
 
     @staticmethod
@@ -323,7 +334,7 @@ class ThrottleTester(object):
         image_info = args[0]
         fio_option = image_info["fio_option"]
         session = self._vm.wait_for_login()
-        cmd = ' '.join((self._fio.cfg.fio_path, fio_option))
+        cmd = " ".join((self._fio.cfg.fio_path, fio_option))
         burst = self._throttle["expected"]["burst"]
         expected_burst = burst["read"] + burst["write"] + burst["total"]
         if expected_burst:
@@ -361,39 +372,40 @@ class ThrottleTester(object):
             LOG_JOB.debug("Check %s in total %d images.", image, num_images)
             if expected_burst:
                 if num_samples < 2:
-                    self._test.error(
-                        "At lease 2 Data samples:%d" % num_samples)
+                    self._test.error("At lease 2 Data samples:%d" % num_samples)
                 read = output[1]["jobs"][0]["read"]["iops"]
                 write = output[1]["jobs"][0]["write"]["iops"]
                 total = read + write
                 sum_burst += total
             else:
                 if num_samples < 1:
-                    self._test.error(
-                        "At lease 1 Data samples:%d" % num_samples)
+                    self._test.error("At lease 1 Data samples:%d" % num_samples)
 
             read = output[num_samples]["jobs"][0]["read"]["iops"]
             write = output[num_samples]["jobs"][0]["write"]["iops"]
             total = read + write
             sum_normal += total
 
-        LOG_JOB.debug("expected_burst:%d %d expected_normal:%d %d",
-                      expected_burst, sum_burst, expected_normal, sum_normal)
+        LOG_JOB.debug(
+            "expected_burst:%d %d expected_normal:%d %d",
+            expected_burst,
+            sum_burst,
+            expected_normal,
+            sum_normal,
+        )
         if expected_burst:
             real_gap = abs(expected_burst - sum_burst)
             if real_gap <= expected_burst * self._margin:
-                LOG_JOB.debug(
-                    "Passed burst %d %d", expected_burst, sum_burst)
+                LOG_JOB.debug("Passed burst %d %d", expected_burst, sum_burst)
             else:
-                self._test.fail(
-                    "Failed burst %d %d", expected_burst, sum_burst)
+                self._test.fail("Failed burst %d %d", expected_burst, sum_burst)
 
         if abs(expected_normal - sum_normal) <= expected_normal * self._margin:
-            LOG_JOB.debug("Passed normal verification %d %d",
-                          expected_normal, sum_normal)
+            LOG_JOB.debug(
+                "Passed normal verification %d %d", expected_normal, sum_normal
+            )
         else:
-            self._test.fail(
-                "Failed normal %d %d" % (expected_normal, sum_normal))
+            self._test.fail("Failed normal %d %d" % (expected_normal, sum_normal))
 
         return True
 
@@ -472,8 +484,7 @@ class ThrottleTester(object):
         """
 
         if reset:
-            self._throttle["expected"] = copy.deepcopy(
-                ThrottleTester.raw_expected)
+            self._throttle["expected"] = copy.deepcopy(ThrottleTester.raw_expected)
         if expected:
             for k, v in expected.items():
                 if isinstance(v, dict):
@@ -588,18 +599,26 @@ class ThrottleTester(object):
         # count burst property
         local_vars = locals()
         burst_write_iops, burst_empty_time, burst_time = _count_burst_iops(
-            local_vars, "write")
+            local_vars, "write"
+        )
         burst_read_iops, burst_empty_time, burst_time = _count_burst_iops(
-            local_vars, "read")
+            local_vars, "read"
+        )
         burst_total_iops, burst_empty_time, burst_time = _count_burst_iops(
-            local_vars, "total")
+            local_vars, "total"
+        )
 
         runtime = self._params.get("throttle_runtime", 60)
         if burst_time:
             runtime = burst_time
-            self.set_throttle_expected({"burst": {
-                "burst_time": burst_time,
-                "burst_empty_time": burst_empty_time}})
+            self.set_throttle_expected(
+                {
+                    "burst": {
+                        "burst_time": burst_time,
+                        "burst_empty_time": burst_empty_time,
+                    }
+                }
+            )
 
         if (normal_read_iops and normal_write_iops) or normal_total_iops:
             mode = "randrw"
@@ -625,8 +644,9 @@ class ThrottleTester(object):
         """
 
         if image not in self._throttle["images"].keys():
-            self._throttle["images"].update({image: copy.deepcopy(
-                ThrottleTester.raw_image_data)})
+            self._throttle["images"].update(
+                {image: copy.deepcopy(ThrottleTester.raw_image_data)}
+            )
 
         name = _get_drive_path(self._session, self._params, image)
         image_data = self._throttle["images"][image]

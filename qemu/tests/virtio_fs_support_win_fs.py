@@ -72,12 +72,7 @@ def run(test, params, env):
     error_context.context(
         "Run autoit script to install executable in explorer.", test.log.info
     )
-    session.cmd(
-        "start /w "
-        + autoIt_path
-        + " "
-        + script_path
-    )
+    session.cmd("start /w " + autoIt_path + " " + script_path)
     exe_name = winutils_pack_path.encode("unicode_escape").decode()[4:]
     output = session.cmd_output("tasklist -v | findstr %s" % exe_name)
     test.log.info("The process found: %s", output)

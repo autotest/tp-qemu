@@ -1,6 +1,6 @@
-import time
-import tempfile
 import os.path
+import tempfile
+import time
 
 
 def run(test, params, env):
@@ -53,8 +53,7 @@ def run(test, params, env):
                 session = vm.wait_for_login(timeout=timeout)
                 result = session.is_responsive(timeout=timeout / 10.0)
                 if not result:
-                    test.log.warning(
-                        "Login session established, but non-responsive")
+                    test.log.warning("Login session established, but non-responsive")
                     # assume guest is just busy with stuff
             except:
                 test.fail("VM check timed out and/or VM non-responsive")
@@ -70,34 +69,35 @@ def run(test, params, env):
     repeat = int(params.get("save_restore_repeat", "1"))
 
     path = os.path.abspath(params.get("save_restore_path", "/tmp"))
-    file_pfx = vm.name + '-'
+    file_pfx = vm.name + "-"
     save_file = get_save_filename(path, file_pfx)
 
     save_restore_bg_command = params.get("save_restore_bg_command")
     bg_command_pid = None
     if save_restore_bg_command:
-        session.cmd(save_restore_bg_command + ' &')
+        session.cmd(save_restore_bg_command + " &")
         try:
             # assume sh-like shell, try to get background process's pid
-            bg_command_pid = int(session.cmd('jobs -rp'))
+            bg_command_pid = int(session.cmd("jobs -rp"))
         except ValueError:
-            test.log.warning(
-                "Background guest command 'job -rp' output not PID")
+            test.log.warning("Background guest command 'job -rp' output not PID")
     del session  # don't leave stray ssh session lying around over save/restore
 
     start_time = time.time()
     # 'now' needs outside scope for error.TestFail() at end
     # especially if exception thrown in loop before completion
-    now = time_to_stop = (start_time + save_restore_duration)
+    now = time_to_stop = start_time + save_restore_duration
     while True:
         try:
             vm.verify_kernel_crash()
             check_system(test, vm, 120)  # networking needs time to recover
-            test.log.info("Save/restores left: %d (or %0.4f more seconds)",
-                          repeat, (time_to_stop - time.time()))
+            test.log.info(
+                "Save/restores left: %d (or %0.4f more seconds)",
+                repeat,
+                (time_to_stop - time.time()),
+            )
             if start_delay:
-                test.log.debug("Sleeping %0.4f seconds start_delay",
-                               start_delay)
+                test.log.debug("Sleeping %0.4f seconds start_delay", start_delay)
                 time.sleep(start_delay)
             vm.pause()
             vm.verify_kernel_crash()
@@ -105,8 +105,7 @@ def run(test, params, env):
             vm.save_to_file(save_file)
             vm.verify_kernel_crash()
             if restore_delay:
-                test.log.debug("Sleeping %0.4f seconds restore_delay",
-                               restore_delay)
+                test.log.debug("Sleeping %0.4f seconds restore_delay", restore_delay)
                 time.sleep(restore_delay)
             vm.restore_from_file(save_file)
             vm.verify_kernel_crash()
@@ -127,12 +126,13 @@ def run(test, params, env):
     test.log.info("Save/Restore itteration(s) complete.")
     if save_restore_bg_command and bg_command_pid:
         session = vm.wait_for_login(timeout=120)
-        status = session.cmd_status('kill %d' % bg_command_pid)
+        status = session.cmd_status("kill %d" % bg_command_pid)
         if status != 0:
-            test.log.warning("Background guest command kill %d failed",
-                             bg_command_pid)
+            test.log.warning("Background guest command kill %d failed", bg_command_pid)
         del session
     if repeat > 0:  # time_to_stop reached but itterations didn't complete
-        test.fail("Save/Restore save_restore_duration"
-                  " exceeded by %0.4f seconds with %d itterations"
-                  " remaining." % (now - time_to_stop, repeat + 1))
+        test.fail(
+            "Save/Restore save_restore_duration"
+            " exceeded by %0.4f seconds with %d itterations"
+            " remaining." % (now - time_to_stop, repeat + 1)
+        )

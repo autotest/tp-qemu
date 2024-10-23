@@ -1,18 +1,13 @@
 """
 Group of cpuid tests for X86 CPU
 """
-import re
-import os
+
 import logging
+import os
+import re
 
-from avocado.utils import build
-from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import cpu
-from virttest import env_process
-from virttest import virt_vm
-from virttest import data_dir
+from avocado.utils import build, process
+from virttest import cpu, data_dir, env_process, utils_misc, virt_vm
 
 logger = logging.getLogger(__name__)
 dbg = logger.debug
@@ -22,6 +17,7 @@ info = logger.info
 def isprintable(c):
     try:
         import string
+
         if c in string.printable:
             return True
         return False
@@ -31,7 +27,7 @@ def isprintable(c):
 
 def run(test, params, env):
     """
-    Boot guest with different cpu_models and cpu flags and check if guest works correctly.
+    Boot guest with different cpu_models, cpu flags and check if guest works correctly.
 
     :param test: kvm test object.
     :param params: Dictionary with the test parameters.
@@ -58,12 +54,12 @@ def run(test, params, env):
         models_opt = params.get("cpu_models")
         model_opt = params.get("cpu_model")
 
-        if (models_opt is None and model_opt is None):
+        if models_opt is None and model_opt is None:
             test.error("No cpu_models or cpu_model option is set")
 
         cpu_models = set()
 
-        if models_opt == '*':
+        if models_opt == "*":
             cpu_models.update(cpu.get_qemu_cpu_models(qemu_binary))
         elif models_opt:
             cpu_models.update(models_opt.split())
@@ -84,8 +80,7 @@ def run(test, params, env):
         qemu_models = cpu.get_qemu_cpu_models(qemu_binary)
         missing = set(cpu_models) - set(qemu_models)
         if missing:
-            test.fail(
-                "Some CPU models not in QEMU CPU model list: %r" % (missing))
+            test.fail("Some CPU models not in QEMU CPU model list: %r" % (missing))
         added = set(qemu_models) - set(cpu_models)
         if added:
             test.log.info("Extra CPU models in QEMU CPU listing: %s", added)
@@ -107,17 +102,21 @@ def run(test, params, env):
     def parse_cpuid_dump(output):
         dbg("parsing cpuid dump: %r", output)
         cpuid_re = re.compile(
-            "^ *(0x[0-9a-f]+) +0x([0-9a-f]+): +eax=0x([0-9a-f]+) ebx=0x([0-9a-f]+) ecx=0x([0-9a-f]+) edx=0x([0-9a-f]+)$")
-        output_match = re.search('(==START TEST==.*==END TEST==)', output, re.M | re.DOTALL)
+            "^ *(0x[0-9a-f]+) +0x([0-9a-f]+): +eax=0x([0-9a-f]+) ebx=0x([0-9a-f]+) "
+            "ecx=0x([0-9a-f]+) edx=0x([0-9a-f]+)$"
+        )
+        output_match = re.search(
+            "(==START TEST==.*==END TEST==)", output, re.M | re.DOTALL
+        )
         if output_match is None:
             dbg("cpuid dump doesn't follow expected pattern")
             return None
         output = output_match.group(1)
         out_lines = output.splitlines()
-        if out_lines[0] != '==START TEST==' or out_lines[-1] != '==END TEST==':
+        if out_lines[0] != "==START TEST==" or out_lines[-1] != "==END TEST==":
             dbg("cpuid dump doesn't have expected delimiters")
             return None
-        if out_lines[1] != 'CPU:':
+        if out_lines[1] != "CPU:":
             dbg("cpuid dump doesn't start with 'CPU:' line")
             return None
         result = {}
@@ -128,66 +127,69 @@ def run(test, params, env):
                 return None
             in_eax = int(m.group(1), 16)
             in_ecx = int(m.group(2), 16)
-            result[in_eax, in_ecx, 'eax'] = int(m.group(3), 16)
-            result[in_eax, in_ecx, 'ebx'] = int(m.group(4), 16)
-            result[in_eax, in_ecx, 'ecx'] = int(m.group(5), 16)
-            result[in_eax, in_ecx, 'edx'] = int(m.group(6), 16)
+            result[in_eax, in_ecx, "eax"] = int(m.group(3), 16)
+            result[in_eax, in_ecx, "ebx"] = int(m.group(4), 16)
+            result[in_eax, in_ecx, "ecx"] = int(m.group(5), 16)
+            result[in_eax, in_ecx, "edx"] = int(m.group(6), 16)
         return result
 
     def get_test_kernel_cpuid(self, vm):
         vm.resume()
 
         timeout = float(params.get("login_timeout", 240))
-        test.log.debug("Will wait for CPUID serial output at %r",
-                       vm.serial_console)
-        if not utils_misc.wait_for(lambda:
-                                   re.search("==END TEST==",
-                                             vm.serial_console.get_output()),
-                                   timeout, 1):
+        test.log.debug("Will wait for CPUID serial output at %r", vm.serial_console)
+        if not utils_misc.wait_for(
+            lambda: re.search("==END TEST==", vm.serial_console.get_output()),
+            timeout,
+            1,
+        ):
             test.fail("Could not get test complete message.")
 
         test_output = parse_cpuid_dump(vm.serial_console.get_output())
         test.log.debug("Got CPUID serial output: %r", test_output)
         if test_output is None:
-            test.fail("Test output signature not found in "
-                      "output:\n %s", vm.serial_console.get_output())
+            test.fail(
+                "Test output signature not found in " "output:\n %s",
+                vm.serial_console.get_output(),
+            )
         vm.destroy(gracefully=False)
         return test_output
 
     def find_cpu_obj(vm):
         """Find path of a valid VCPU object"""
-        roots = ['/machine/icc-bridge/icc', '/machine/unattached/device']
+        roots = ["/machine/icc-bridge/icc", "/machine/unattached/device"]
         for root in roots:
-            for child in vm.monitor.cmd('qom-list', dict(path=root)):
-                test.log.debug('child: %r', child)
-                if child['type'].rstrip('>').endswith('-cpu'):
-                    return root + '/' + child['name']
+            for child in vm.monitor.cmd("qom-list", dict(path=root)):
+                test.log.debug("child: %r", child)
+                if child["type"].rstrip(">").endswith("-cpu"):
+                    return root + "/" + child["name"]
 
     def get_qom_cpuid(self, vm):
         assert vm.monitor.protocol == "qmp"
         cpu_path = find_cpu_obj(vm)
-        test.log.debug('cpu path: %r', cpu_path)
+        test.log.debug("cpu path: %r", cpu_path)
         r = {}
-        for prop in 'feature-words', 'filtered-features':
-            words = vm.monitor.cmd('qom-get', dict(path=cpu_path, property=prop))
-            test.log.debug('%s property: %r', prop, words)
+        for prop in "feature-words", "filtered-features":
+            words = vm.monitor.cmd("qom-get", dict(path=cpu_path, property=prop))
+            test.log.debug("%s property: %r", prop, words)
             for w in words:
-                reg = w['cpuid-register'].lower()
-                key = (w['cpuid-input-eax'], w.get('cpuid-input-ecx', 0), reg)
+                reg = w["cpuid-register"].lower()
+                key = (w["cpuid-input-eax"], w.get("cpuid-input-ecx", 0), reg)
                 r.setdefault(key, 0)
-                r[key] |= w['features']
+                r[key] |= w["features"]
         return r
 
-    def get_guest_cpuid(self, cpu_model, feature=None, extra_params=None, qom_mode=False):
+    def get_guest_cpuid(
+        self, cpu_model, feature=None, extra_params=None, qom_mode=False
+    ):
         if not qom_mode:
             test_kernel_dir = os.path.join(data_dir.get_deps_dir(), "cpuid", "src")
             build.make(test_kernel_dir, extra_args="cpuid_dump_kernel.bin")
 
-        vm_name = params['main_vm']
+        vm_name = params["main_vm"]
         params_b = params.copy()
         if not qom_mode:
-            params_b["kernel"] = os.path.join(
-                test_kernel_dir, "cpuid_dump_kernel.bin")
+            params_b["kernel"] = os.path.join(test_kernel_dir, "cpuid_dump_kernel.bin")
         params_b["cpu_model"] = cpu_model
         params_b["cpu_model_flags"] = feature
         del params_b["images"]
@@ -196,7 +198,7 @@ def run(test, params, env):
             params_b.update(extra_params)
         env_process.preprocess_vm(self, params_b, env, vm_name)
         vm = env.get_vm(vm_name)
-        dbg('is dead: %r', vm.is_dead())
+        dbg("is dead: %r", vm.is_dead())
         vm.create()
         self.vm = vm
         if qom_mode:
@@ -207,12 +209,12 @@ def run(test, params, env):
     def cpuid_to_vendor(cpuid_dump, idx):
         dst = []
         for i in range(0, 4):
-            dst.append((chr(cpuid_dump[idx, 0, 'ebx'] >> (8 * i) & 0xff)))
+            dst.append((chr(cpuid_dump[idx, 0, "ebx"] >> (8 * i) & 0xFF)))
         for i in range(0, 4):
-            dst.append((chr(cpuid_dump[idx, 0, 'edx'] >> (8 * i) & 0xff)))
+            dst.append((chr(cpuid_dump[idx, 0, "edx"] >> (8 * i) & 0xFF)))
         for i in range(0, 4):
-            dst.append((chr(cpuid_dump[idx, 0, 'ecx'] >> (8 * i) & 0xff)))
-        return ''.join(dst)
+            dst.append((chr(cpuid_dump[idx, 0, "ecx"] >> (8 * i) & 0xFF)))
+        return "".join(dst)
 
     def default_vendor(self):
         """
@@ -227,7 +229,7 @@ def run(test, params, env):
             cmd_result = process.run(cmd, ignore_status=True, shell=True)
             vendor = cmd_result.stdout.strip()
 
-        ignore_cpus = set(params.get("ignore_cpu_models", "").split(' '))
+        ignore_cpus = set(params.get("ignore_cpu_models", "").split(" "))
         cpu_models = cpu_models - ignore_cpus
 
         for cpu_model in cpu_models:
@@ -235,9 +237,11 @@ def run(test, params, env):
             guest_vendor = cpuid_to_vendor(out, 0x00000000)
             test.log.debug("Guest's vendor: %s", guest_vendor)
             if guest_vendor != vendor:
-                test.fail("Guest vendor [%s], doesn't match "
-                          "required vendor [%s] for CPU [%s]" %
-                          (guest_vendor, vendor, cpu_model))
+                test.fail(
+                    "Guest vendor [%s], doesn't match "
+                    "required vendor [%s] for CPU [%s]"
+                    % (guest_vendor, vendor, cpu_model)
+                )
 
     def custom_vendor(self):
         """
@@ -251,18 +255,19 @@ def run(test, params, env):
             guest_vendor0 = cpuid_to_vendor(out, 0x00000000)
             guest_vendor80000000 = cpuid_to_vendor(out, 0x80000000)
             test.log.debug("Guest's vendor[0]: %s", guest_vendor0)
-            test.log.debug("Guest's vendor[0x80000000]: %s",
-                           guest_vendor80000000)
+            test.log.debug("Guest's vendor[0x80000000]: %s", guest_vendor80000000)
             if guest_vendor0 != vendor:
-                test.fail("Guest vendor[0] [%s], doesn't match "
-                          "required vendor [%s] for CPU [%s]" %
-                          (guest_vendor0, vendor, cpu_model))
+                test.fail(
+                    "Guest vendor[0] [%s], doesn't match "
+                    "required vendor [%s] for CPU [%s]"
+                    % (guest_vendor0, vendor, cpu_model)
+                )
             if guest_vendor80000000 != vendor:
-                test.fail("Guest vendor[0x80000000] [%s], "
-                          "doesn't match required vendor "
-                          "[%s] for CPU [%s]" %
-                          (guest_vendor80000000, vendor,
-                           cpu_model))
+                test.fail(
+                    "Guest vendor[0x80000000] [%s], "
+                    "doesn't match required vendor "
+                    "[%s] for CPU [%s]" % (guest_vendor80000000, vendor, cpu_model)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -272,7 +277,7 @@ def run(test, params, env):
 
     def cpuid_to_level(cpuid_dump):
         r = cpuid_dump[0, 0]
-        return r['eax']
+        return r["eax"]
 
     def custom_level(self):
         """
@@ -284,8 +289,10 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "level=" + level)
             guest_level = str(cpuid_to_level(out))
             if guest_level != level:
-                test.fail("Guest's level [%s], doesn't match "
-                          "required level [%s]" % (guest_level, level))
+                test.fail(
+                    "Guest's level [%s], doesn't match "
+                    "required level [%s]" % (guest_level, level)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -297,11 +304,11 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_dump[1, 0]['eax']
-        family = (eax >> 8) & 0xf
-        if family == 0xf:
+        eax = cpuid_dump[1, 0]["eax"]
+        family = (eax >> 8) & 0xF
+        if family == 0xF:
             # extract extendend family
-            return family + ((eax >> 20) & 0xff)
+            return family + ((eax >> 20) & 0xFF)
         return family
 
     def custom_family(self):
@@ -314,8 +321,10 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "family=" + family)
             guest_family = str(cpuid_to_family(out))
             if guest_family != family:
-                test.fail("Guest's family [%s], doesn't match "
-                          "required family [%s]" % (guest_family, family))
+                test.fail(
+                    "Guest's family [%s], doesn't match "
+                    "required family [%s]" % (guest_family, family)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -327,10 +336,10 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_dump[1, 0]['eax']
-        model = (eax >> 4) & 0xf
+        eax = cpuid_dump[1, 0]["eax"]
+        model = (eax >> 4) & 0xF
         # extended model
-        model |= (eax >> 12) & 0xf0
+        model |= (eax >> 12) & 0xF0
         return model
 
     def custom_model(self):
@@ -343,8 +352,10 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "model=" + model)
             guest_model = str(cpuid_to_model(out))
             if guest_model != model:
-                test.fail("Guest's model [%s], doesn't match "
-                          "required model [%s]" % (guest_model, model))
+                test.fail(
+                    "Guest's model [%s], doesn't match "
+                    "required model [%s]" % (guest_model, model)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -356,8 +367,8 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.1.2 Feature Information (Function 01h)
-        eax = cpuid_dump[1, 0]['eax']
-        stepping = eax & 0xf
+        eax = cpuid_dump[1, 0]["eax"]
+        stepping = eax & 0xF
         return stepping
 
     def custom_stepping(self):
@@ -370,9 +381,10 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, "stepping=" + stepping)
             guest_stepping = str(cpuid_to_stepping(out))
             if guest_stepping != stepping:
-                test.fail("Guest's stepping [%s], doesn't match "
-                          "required stepping [%s]" %
-                          (guest_stepping, stepping))
+                test.fail(
+                    "Guest's stepping [%s], doesn't match "
+                    "required stepping [%s]" % (guest_stepping, stepping)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -384,7 +396,7 @@ def run(test, params, env):
         # Intel Processor Identification and the CPUID Instruction
         # http://www.intel.com/Assets/PDF/appnote/241618.pdf
         # 5.2.1 Largest Extendend Function # (Function 80000000h)
-        return cpuid_dump[0x80000000, 0x00]['eax']
+        return cpuid_dump[0x80000000, 0x00]["eax"]
 
     def custom_xlevel(self):
         """
@@ -396,12 +408,13 @@ def run(test, params, env):
             xlevel = params.get("expect_xlevel")
 
         try:
-            out = get_guest_cpuid(self, cpu_model, "xlevel=" +
-                                  params.get("xlevel"))
+            out = get_guest_cpuid(self, cpu_model, "xlevel=" + params.get("xlevel"))
             guest_xlevel = str(cpuid_to_xlevel(out))
             if guest_xlevel != xlevel:
-                test.fail("Guest's xlevel [%s], doesn't match "
-                          "required xlevel [%s]" % (guest_xlevel, xlevel))
+                test.fail(
+                    "Guest's xlevel [%s], doesn't match "
+                    "required xlevel [%s]" % (guest_xlevel, xlevel)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -417,9 +430,9 @@ def run(test, params, env):
         m_id = ""
         for idx in (0x80000002, 0x80000003, 0x80000004):
             regs = cpuid_dump[idx, 0]
-            for name in ('eax', 'ebx', 'ecx', 'edx'):
+            for name in ("eax", "ebx", "ecx", "edx"):
                 for shift in range(4):
-                    c = ((regs[name] >> (shift * 8)) & 0xff)
+                    c = (regs[name] >> (shift * 8)) & 0xFF
                     if c == 0:  # drop trailing \0-s
                         break
                     m_id += chr(c)
@@ -433,13 +446,13 @@ def run(test, params, env):
         model_id = params["model_id"]
 
         try:
-            out = get_guest_cpuid(self, cpu_model, "model_id='%s'" %
-                                  model_id)
+            out = get_guest_cpuid(self, cpu_model, "model_id='%s'" % model_id)
             guest_model_id = cpuid_to_model_id(out)
             if guest_model_id != model_id:
-                test.fail("Guest's model_id [%s], doesn't match "
-                          "required model_id [%s]" %
-                          (guest_model_id, model_id))
+                test.fail(
+                    "Guest's model_id [%s], doesn't match "
+                    "required model_id [%s]" % (guest_model_id, model_id)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -457,8 +470,7 @@ def run(test, params, env):
                     signature = signature + c
                 else:
                     signature = "%s\\x%02x" % (signature, ord(c))
-        test.log.debug("(%s.%s:%s: signature: %s", leaf, idx, str(regs),
-                       signature)
+        test.log.debug("(%s.%s:%s: signature: %s", leaf, idx, str(regs), signature)
         return signature
 
     def cpuid_signature(self):
@@ -475,9 +487,10 @@ def run(test, params, env):
             out = get_guest_cpuid(self, cpu_model, flags)
             _signature = cpuid_regs_to_string(out, leaf, idx, regs)
             if _signature != signature:
-                test.fail("Guest's signature [%s], doesn't"
-                          "match required signature [%s]" %
-                          (_signature, signature))
+                test.fail(
+                    "Guest's signature [%s], doesn't"
+                    "match required signature [%s]" % (_signature, signature)
+                )
         except:
             has_error = True
             if xfail is False:
@@ -501,8 +514,7 @@ def run(test, params, env):
             test.log.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
             for i in bits:
                 if (r & (1 << int(i))) == 0:
-                    test.fail("CPUID(%s.%s).%s[%s] is not set" %
-                              (leaf, idx, reg, i))
+                    test.fail("CPUID(%s.%s).%s[%s] is not set" % (leaf, idx, reg, i))
         except:
             has_error = True
             if xfail is False:
@@ -525,8 +537,7 @@ def run(test, params, env):
             r = out[leaf, idx][reg]
             test.log.debug("CPUID(%s.%s).%s=0x%08x", leaf, idx, reg, r)
             if r != val:
-                test.fail("CPUID(%s.%s).%s is not 0x%08x" %
-                          (leaf, idx, reg, val))
+                test.fail("CPUID(%s.%s).%s is not 0x%08x" % (leaf, idx, reg, val))
         except:
             has_error = True
             if xfail is False:
@@ -545,7 +556,7 @@ def run(test, params, env):
         ignore_cpuid_leaves = ignore_cpuid_leaves.split()
         whitelist = []
         for leaf in ignore_cpuid_leaves:
-            leaf = leaf.split(',')
+            leaf = leaf.split(",")
             # syntax of ignore_cpuid_leaves:
             # <in_eax>[,<in_ecx>[,<register>[ ,<bit>]]] ...
             for i in 0, 1, 3:  # integer fields:
@@ -555,67 +566,90 @@ def run(test, params, env):
 
         if not machine_type:
             test.cancel("No machine_type_to_check defined")
-        cpu_model_flags = params.get('cpu_model_flags', '')
+        cpu_model_flags = params.get("cpu_model_flags", "")
         full_cpu_model_name = cpu_model
         if cpu_model_flags:
-            full_cpu_model_name += ','
-            full_cpu_model_name += cpu_model_flags.lstrip(',')
-        ref_file = os.path.join(data_dir.get_deps_dir(), 'cpuid',
-                                "cpuid_dumps",
-                                kvm_enabled and "kvm" or "nokvm",
-                                machine_type, '%s-dump.txt' % (full_cpu_model_name))
+            full_cpu_model_name += ","
+            full_cpu_model_name += cpu_model_flags.lstrip(",")
+        ref_file = os.path.join(
+            data_dir.get_deps_dir(),
+            "cpuid",
+            "cpuid_dumps",
+            kvm_enabled and "kvm" or "nokvm",
+            machine_type,
+            "%s-dump.txt" % (full_cpu_model_name),
+        )
         if not os.path.exists(ref_file):
             test.cancel("no cpuid dump file: %s" % (ref_file))
-        reference = open(ref_file, 'r').read()
+        reference = open(ref_file, "r").read()
         if not reference:
             test.cancel("no cpuid dump data on file: %s" % (ref_file))
         reference = parse_cpuid_dump(reference)
         if reference is None:
             test.cancel(
-                "couldn't parse reference cpuid dump from file; %s" % (ref_file))
-        qom_mode = params.get('qom_mode', "no").lower() == 'yes'
+                "couldn't parse reference cpuid dump from file; %s" % (ref_file)
+            )
+        qom_mode = params.get("qom_mode", "no").lower() == "yes"
         if not qom_mode:
-            cpu_model_flags += ',enforce'
+            cpu_model_flags += ",enforce"
         try:
-
             out = get_guest_cpuid(
-                self, cpu_model, cpu_model_flags,
+                self,
+                cpu_model,
+                cpu_model_flags,
                 extra_params=dict(machine_type=machine_type, smp=1),
-                qom_mode=qom_mode)
+                qom_mode=qom_mode,
+            )
         except (virt_vm.VMStartError, virt_vm.VMCreateError) as output:
-            if "host doesn't support requested feature:" in output \
-                or ("host cpuid" in output and
-                    ("lacks requested flag" in output or
-                     "flag restricted to guest" in output)) \
-                    or ("Unable to find CPU definition:" in output):
+            if (
+                "host doesn't support requested feature:" in output
+                or (
+                    "host cpuid" in output
+                    and (
+                        "lacks requested flag" in output
+                        or "flag restricted to guest" in output
+                    )
+                )
+                or ("Unable to find CPU definition:" in output)
+            ):
                 test.cancel(
-                    "Can't run CPU model %s on this host" % (full_cpu_model_name))
+                    "Can't run CPU model %s on this host" % (full_cpu_model_name)
+                )
             else:
                 raise
-        dbg('ref_file: %r', ref_file)
-        dbg('ref: %r', reference)
-        dbg('out: %r', out)
+        dbg("ref_file: %r", ref_file)
+        dbg("ref: %r", reference)
+        dbg("out: %r", out)
         ok = True
         for k in reference.keys():
             in_eax, in_ecx, reg = k
             diffs = compare_cpuid_output(reference[k], out.get(k))
             for d in diffs:
                 bit, vreference, vout = d
-                whitelisted = (in_eax,) in whitelist \
-                    or (in_eax, in_ecx) in whitelist \
-                    or (in_eax, in_ecx, reg) in whitelist \
+                whitelisted = (
+                    (in_eax,) in whitelist
+                    or (in_eax, in_ecx) in whitelist
+                    or (in_eax, in_ecx, reg) in whitelist
                     or (in_eax, in_ecx, reg, bit) in whitelist
+                )
                 silent = False
 
-                if vout is None and params.get('ok_missing', 'no') == 'yes':
+                if vout is None and params.get("ok_missing", "no") == "yes":
                     whitelisted = True
                     silent = True
 
                 if not silent:
                     info(
-                        "Non-matching bit: CPUID[0x%x,0x%x].%s[%d]: found %s instead of %s%s",
-                        in_eax, in_ecx, reg, bit, vout, vreference,
-                        whitelisted and " (whitelisted)" or "")
+                        "Non-matching bit: CPUID[0x%x,0x%x].%s[%d]: found %s instead of"
+                        " %s%s",
+                        in_eax,
+                        in_ecx,
+                        reg,
+                        bit,
+                        vout,
+                        vreference,
+                        whitelisted and " (whitelisted)" or "",
+                    )
 
                 if not whitelisted:
                     ok = False

@@ -1,8 +1,7 @@
-import time
 import re
+import time
 
 from avocado.utils import process
-
 from virttest import utils_test
 from virttest.staging import utils_memory
 

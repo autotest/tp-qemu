@@ -1,10 +1,9 @@
-import re
 import json
+import re
 
-from avocado.utils import cpu
-from avocado.utils import process
+from avocado.utils import cpu, process
+from virttest import env_process, error_context, utils_misc
 
-from virttest import error_context, utils_misc, env_process
 from provider.cpu_utils import check_cpu_flags
 
 
@@ -24,21 +23,24 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     qemu_binary = utils_misc.get_qemu_binary(params)
-    qmp_cmds = ['{"execute": "qmp_capabilities"}',
-                '{"execute": "query-cpu-definitions", "id": "RAND91"}',
-                '{"execute": "quit"}']
-    cmd = "echo -e '{0}' | {1} -qmp stdio -vnc none -M none | grep return |"\
-          "grep RAND91".format(r"\n".join(qmp_cmds), qemu_binary)
-    output = process.run(cmd, timeout=10,
-                         ignore_status=True,
-                         shell=True,
-                         verbose=False).stdout_text
+    qmp_cmds = [
+        '{"execute": "qmp_capabilities"}',
+        '{"execute": "query-cpu-definitions", "id": "RAND91"}',
+        '{"execute": "quit"}',
+    ]
+    cmd = (
+        "echo -e '{0}' | {1} -qmp stdio -vnc none -M none | grep return |"
+        "grep RAND91".format(r"\n".join(qmp_cmds), qemu_binary)
+    )
+    output = process.run(
+        cmd, timeout=10, ignore_status=True, shell=True, verbose=False
+    ).stdout_text
     out = json.loads(output)["return"]
 
     model = params["model"]
     model_pattern = params["model_pattern"]
     flags = params["flags"]
-    if cpu.get_vendor() == 'intel':
+    if cpu.get_vendor() == "intel":
         model_ib = "%s-IBRS" % model
         flag_ib = " ibpb ibrs"
         name_ib = ", IBRS( update)?"
@@ -60,7 +62,7 @@ def run(test, params, env):
 
     params["cpu_model"] = cpu_model  # pylint: disable=E0606
     params["start_vm"] = "yes"
-    vm_name = params['main_vm']
+    vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)
 
     vm = env.get_vm(vm_name)
@@ -82,10 +84,14 @@ def run(test, params, env):
             check_items = params.get("check_items").split()
             expect_result = params.get("expect_result")
             for item in vulnerabilities:
-                h_out = re.search("Vulnerable|Mitigation|Not affected",
-                                  process.getoutput(check_cmd % item))[0]
-                g_out = re.search("Vulnerable|Mitigation|Not affected",
-                                  session.cmd_output(check_cmd % item))[0]
+                h_out = re.search(
+                    "Vulnerable|Mitigation|Not affected",
+                    process.getoutput(check_cmd % item),
+                )[0]
+                g_out = re.search(
+                    "Vulnerable|Mitigation|Not affected",
+                    session.cmd_output(check_cmd % item),
+                )[0]
                 if h_out != g_out:
                     test.fail("Guest is not equal to Host with '%s'" % item)
                 if item in check_items and g_out != expect_result:

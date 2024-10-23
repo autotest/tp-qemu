@@ -16,15 +16,14 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     vm = env.get_vm(params["main_vm"])
-    session = vm.wait_for_login()
+    vm.wait_for_login()
     mem_name = params["target_mems"]
     hotplug_test = MemoryHotplugTest(test, params, env)
     hotplug_test.hotplug_memory(vm, mem_name)
     hotplug_test.check_memory(vm)
-    if params['os_type'] == 'linux':
+    if params["os_type"] == "linux":
         stress_args = params.get("stress_args")
-        stress_test = utils_test.VMStress(vm, "stress", params,
-                                          stress_args=stress_args)
+        stress_test = utils_test.VMStress(vm, "stress", params, stress_args=stress_args)
         stress_test.load_stress_tool()
         time.sleep(60)
         stress_test.unload_stress()

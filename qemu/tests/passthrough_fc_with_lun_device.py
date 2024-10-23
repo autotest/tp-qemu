@@ -1,16 +1,15 @@
 """Pass-through fc device as lun device io test"""
-import time
-import random
-import json
+
 import copy
+import json
+import random
 import string
+import time
+
 from avocado.utils import process
-from virttest import env_process
-from virttest import utils_misc, utils_test
-from virttest import error_context
-from virttest import utils_disk
-from virttest.utils_misc import get_linux_drive_path
+from virttest import env_process, error_context, utils_disk, utils_misc, utils_test
 from virttest.utils_disk import configure_empty_disk
+from virttest.utils_misc import get_linux_drive_path
 
 
 @error_context.context_aware
@@ -27,8 +26,9 @@ def run(test, params, env):
     """
 
     def _clean_disk_windows(index):
-        tmp_file = "disk_" + ''.join(
-            random.sample(string.ascii_letters + string.digits, 4))
+        tmp_file = "disk_" + "".join(
+            random.sample(string.ascii_letters + string.digits, 4)
+        )
         online_cmd = "echo select disk %s > " + tmp_file
         online_cmd += " && echo clean >> " + tmp_file
         online_cmd += " && echo rescan >> " + tmp_file
@@ -38,7 +38,7 @@ def run(test, params, env):
         return session.cmd(online_cmd % index, timeout=timeout)
 
     def _get_window_disk_index_by_wwn(uid):
-        cmd = "powershell -command \"get-disk| Where-Object"
+        cmd = 'powershell -command "get-disk| Where-Object'
         cmd += " {$_.UniqueId -eq '%s'}|select number|FL\"" % uid
         status, output = session.cmd_status_output(cmd)
         if status != 0:
@@ -73,7 +73,7 @@ def run(test, params, env):
     fc_dev = fc_devs[0]
     test.log.debug(fc_dev)
 
-    vm = env.get_vm(params['main_vm'])
+    vm = env.get_vm(params["main_vm"])
     timeout = float(params.get("timeout", 240))
     drive_type = params.get("drive_type")
     os_type = params["os_type"]
@@ -92,22 +92,21 @@ def run(test, params, env):
     error_context.context("run clean cmd %s" % clean_cmd, test.log.info)
     process.getstatusoutput(clean_cmd)
 
-    params['start_vm'] = 'yes'
-    env_process.process(test, params, env, env_process.preprocess_image,
-                        env_process.preprocess_vm)
+    params["start_vm"] = "yes"
+    env_process.process(
+        test, params, env, env_process.preprocess_image, env_process.preprocess_vm
+    )
 
     session = vm.wait_for_login(timeout=timeout)
 
     disk_wwn = fc_dev["wwn"]
     disk_wwn = disk_wwn.replace("0x", "")
-    if os_type == 'windows' and driver_name:
-        session = utils_test.qemu.windrv_check_running_verifier(session,
-                                                                vm,
-                                                                test,
-                                                                driver_name,
-                                                                timeout)
+    if os_type == "windows" and driver_name:
+        session = utils_test.qemu.windrv_check_running_verifier(
+            session, vm, test, driver_name, timeout
+        )
 
-    if os_type == 'windows':
+    if os_type == "windows":
         part_size = params["part_size"]
         guest_cmd = utils_misc.set_winutils_letter(session, guest_cmd)
         did = _get_window_disk_index_by_wwn(disk_wwn)
@@ -132,7 +131,7 @@ def run(test, params, env):
     test.log.debug("Get output file path %s", output_path)
     guest_cmd = guest_cmd.format(output_path)
 
-    error_context.context('Start io test...', test.log.info)
+    error_context.context("Start io test...", test.log.info)
     session.cmd(guest_cmd, timeout=360)
     if not vm.monitor.verify_status("running"):
         test.fail("Guest not run after dd")

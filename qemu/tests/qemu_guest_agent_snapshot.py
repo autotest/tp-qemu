@@ -1,25 +1,19 @@
 import logging
 import re
 
-from avocado.utils import crypto
-from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
+from avocado.utils import crypto, process
+from virttest import error_context, utils_misc
 
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from qemu.tests.qemu_guest_agent import QemuGuestAgentBasicCheckWin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
-
     def __init__(self, test, params, env):
-        super(QemuGuestAgentSnapshotTest, self).__init__(test, params,
-                                                         env)
-        self.snapshot_create = BlockDevSnapshotTest(self.test, self.params,
-                                                    self.env)
+        super(QemuGuestAgentSnapshotTest, self).__init__(test, params, env)
+        self.snapshot_create = BlockDevSnapshotTest(self.test, self.params, self.env)
 
     @error_context.context_aware
     def setup(self, test, params, env):
@@ -39,15 +33,19 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
             self.guest_path = r"c:\%s" % tmp_name
 
         error_context.context("Create a file in host.")
-        process.run("dd if=/dev/urandom of=%s bs=1M count=%s"
-                    % (self.host_path, file_size))
+        process.run(
+            "dd if=/dev/urandom of=%s bs=1M count=%s" % (self.host_path, file_size)
+        )
         self.orig_hash = crypto.hash_file(self.host_path)
-        error_context.context("Transfer file from %s to %s" %
-                              (self.host_path, self.guest_path), LOG_JOB.info)
+        error_context.context(
+            "Transfer file from %s to %s" % (self.host_path, self.guest_path),
+            LOG_JOB.info,
+        )
         self.bg = utils_misc.InterruptedThread(
             self.vm.copy_files_to,
             (self.host_path, self.guest_path),
-            dict(verbose=True, timeout=copy_timeout))
+            dict(verbose=True, timeout=copy_timeout),
+        )
         self.bg.start()
 
     def check_snapshot(self):
@@ -62,9 +60,10 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
         if snapshot_node_name:
             match_string = "u?'node-name': u?'%s'" % snapshot_node_name
             if not re.search(match_string, snapshot_info):
-                self.test.fail("Can not find node name %s of"
-                               " snapshot in block info %s"
-                               % (snapshot_node_name, snapshot_info))
+                self.test.fail(
+                    "Can not find node name %s of"
+                    " snapshot in block info %s" % (snapshot_node_name, snapshot_info)
+                )
             LOG_JOB.info("Match node-name if they are same with expected")
 
     def cleanup(self, test, params, env):
@@ -75,13 +74,14 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
     def _action_after_fsfreeze(self, *args):
         if self.bg.is_alive():
             image_tag = self.params.get("image_name", "image1")
-            image_params = self.params.object_params(image_tag)
+            self.params.object_params(image_tag)
 
             error_context.context("Creating snapshot", LOG_JOB.info)
             self.snapshot_create.prepare_snapshot_file()
             self.snapshot_create.create_snapshot()
-            error_context.context("Checking snapshot created successfully",
-                                  LOG_JOB.info)
+            error_context.context(
+                "Checking snapshot created successfully", LOG_JOB.info
+            )
             self.check_snapshot()
 
     @error_context.context_aware
@@ -99,13 +99,13 @@ class QemuGuestAgentSnapshotTest(QemuGuestAgentBasicCheckWin):
             error_context.context("comparing hashes", LOG_JOB.info)
             self.curr_hash = crypto.hash_file(self.host_path_returned)
             if self.orig_hash != self.curr_hash:
-                self.test.fail("Current file hash (%s) differs from "
-                               "original one (%s)" % (self.curr_hash,
-                                                      self.orig_hash))
+                self.test.fail(
+                    "Current file hash (%s) differs from "
+                    "original one (%s)" % (self.curr_hash, self.orig_hash)
+                )
         finally:
             error_context.context("Delete the created files.", LOG_JOB.info)
-            process.run("rm -rf %s %s" % (self.host_path,
-                                          self.host_path_returned))
+            process.run("rm -rf %s %s" % (self.host_path, self.host_path_returned))
             session = self._get_session(self.params, None)
             self._open_session_list.append(session)
             cmd_del_file = "rm -rf %s" % self.guest_path

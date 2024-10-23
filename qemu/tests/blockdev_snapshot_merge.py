@@ -5,7 +5,7 @@ from virttest import data_dir
 from provider.blockdev_snapshot_base import BlockDevSnapshotTest
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
@@ -18,7 +18,7 @@ class BlockdevSnapshotMergeTest(BlockDevSnapshotTest):
 
     def prepare_snapshot_file(self):
         self.params["image_size_%s" % self.snapshot_tag] = self.base_image.size
-        self.params["image_name_%s" % self.snapshot_tag] = 'images/' + self.snapshot_tag
+        self.params["image_name_%s" % self.snapshot_tag] = "images/" + self.snapshot_tag
         snapshot_format = self.params.get("snapshot_format", "qcow2")
         self.params["image_format_%s" % self.snapshot_tag] = snapshot_format
         if self.params["image_backend"] == "iscsi_direct":

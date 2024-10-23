@@ -4,24 +4,24 @@ Utilities to perform automatic guest installation using step files.
 :copyright: Red Hat 2008-2009
 """
 
-import os
-import time
-import shutil
 import logging
+import os
+import shutil
+import time
 
-from virttest import utils_misc
-from virttest import ppm_utils
-from virttest import qemu_monitor
+from virttest import ppm_utils, qemu_monitor, utils_misc
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 try:
     import PIL.Image
 except ImportError:
-    LOG_JOB.warning('No python imaging library installed. PPM image '
-                    'conversion to JPEG disabled. In order to enable it, '
-                    'please install python-imaging or the equivalent for your '
-                    'distro.')
+    LOG_JOB.warning(
+        "No python imaging library installed. PPM image "
+        "conversion to JPEG disabled. In order to enable it, "
+        "please install python-imaging or the equivalent for your "
+        "distro."
+    )
 
 
 def handle_var(vm, params, varname):
@@ -32,8 +32,9 @@ def handle_var(vm, params, varname):
     return True
 
 
-def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
-              current_step_num):
+def barrier_2(
+    test, vm, words, params, debug_dir, data_scrdump_filename, current_step_num
+):
     if len(words) < 7:
         LOG_JOB.error("Bad barrier_2 command line")
         return False
@@ -46,8 +47,9 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
     scrdump_filename = os.path.join(debug_dir, "scrdump.ppm")
     cropped_scrdump_filename = os.path.join(debug_dir, "cropped_scrdump.ppm")
     expected_scrdump_filename = os.path.join(debug_dir, "scrdump_expected.ppm")
-    expected_cropped_scrdump_filename = os.path.join(debug_dir,
-                                                     "cropped_scrdump_expected.ppm")
+    expected_cropped_scrdump_filename = os.path.join(
+        debug_dir, "cropped_scrdump_expected.ppm"
+    )
     comparison_filename = os.path.join(debug_dir, "comparison.ppm")
     history_dir = os.path.join(debug_dir, "barrier_history")
 
@@ -98,20 +100,24 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
         try:
             vm.monitor.screendump(scrdump_filename, debug=False)
         except qemu_monitor.MonitorError as e:
-            LOG_JOB.warn(e)
+            LOG_JOB.warning(e)
             continue
 
         # Read image file
         try:
             (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
         except IOError as e:
-            LOG_JOB.warn(e)
+            LOG_JOB.warning(e)
             continue
 
         # Make sure image is valid
         if not ppm_utils.image_verify_ppm_file(scrdump_filename):
-            LOG_JOB.warn("Got invalid screendump: dimensions: %dx%d, "
-                         "data size: %d", w, h, len(data))
+            LOG_JOB.warning(
+                "Got invalid screendump: dimensions: %dx%d, " "data size: %d",
+                w,
+                h,
+                len(data),
+            )
             continue
 
         # Compute md5sum of whole image
@@ -119,25 +125,29 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
 
         # Write screendump to history_dir (as JPG) if requested
         # and if the screendump differs from the previous one
-        if (keep_screendump_history and
-                whole_image_md5sum not in prev_whole_image_md5sums[:1]):
+        if (
+            keep_screendump_history
+            and whole_image_md5sum not in prev_whole_image_md5sums[:1]
+        ):
             try:
                 os.makedirs(history_dir)
             except Exception:
                 pass
-            history_scrdump_filename = os.path.join(history_dir,
-                                                    "scrdump-step_%s-%s.jpg" % (current_step_num,
-                                                                                time.strftime("%Y%m%d-%H%M%S")))
+            history_scrdump_filename = os.path.join(
+                history_dir,
+                "scrdump-step_%s-%s.jpg"
+                % (current_step_num, time.strftime("%Y%m%d-%H%M%S")),
+            )
             try:
                 image = PIL.Image.open(scrdump_filename)
-                image.save(history_scrdump_filename, format='JPEG',
-                           quality=30)
+                image.save(history_scrdump_filename, format="JPEG", quality=30)
             except NameError:
                 pass
 
         # Compare md5sum of barrier region with the expected md5sum
-        calced_md5sum = ppm_utils.get_region_md5sum(w, h, data, x1, y1, dx, dy,
-                                                    cropped_scrdump_filename)
+        calced_md5sum = ppm_utils.get_region_md5sum(
+            w, h, data, x1, y1, dx, dy, cropped_scrdump_filename
+        )
         if calced_md5sum == md5sum:
             # Success -- remove screendump history unless requested not to
             if keep_screendump_history and not keep_all_history:
@@ -156,15 +166,17 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
         # Insert md5sum at beginning of queue
         prev_whole_image_md5sums.insert(0, whole_image_md5sum)
         # Limit queue length to stuck_detection_history
-        prev_whole_image_md5sums = \
-            prev_whole_image_md5sums[:stuck_detection_history]
+        prev_whole_image_md5sums = prev_whole_image_md5sums[:stuck_detection_history]
 
         # Sleep for a while
         time.sleep(sleep_duration)
 
     # Failure
-    message = ("Barrier failed at step %s after %.2f seconds (%s)" %
-               (current_step_num, time.time() - start_time, failure_message))
+    message = "Barrier failed at step %s after %.2f seconds (%s)" % (
+        current_step_num,
+        time.time() - start_time,
+        failure_message,
+    )
 
     # What should we do with this failure?
     if words[-1] == "optional":
@@ -174,20 +186,18 @@ def barrier_2(test, vm, words, params, debug_dir, data_scrdump_filename,
         # Collect information and put it in debug_dir
         if data_scrdump_filename and os.path.exists(data_scrdump_filename):
             # Read expected screendump image
-            (ew, eh, edata) = \
-                ppm_utils.image_read_from_ppm_file(data_scrdump_filename)
+            (ew, eh, edata) = ppm_utils.image_read_from_ppm_file(data_scrdump_filename)
             # Write it in debug_dir
-            ppm_utils.image_write_to_ppm_file(expected_scrdump_filename,
-                                              ew, eh, edata)
+            ppm_utils.image_write_to_ppm_file(expected_scrdump_filename, ew, eh, edata)
             # Write the cropped version as well
-            ppm_utils.get_region_md5sum(ew, eh, edata, x1, y1, dx, dy,
-                                        expected_cropped_scrdump_filename)
+            ppm_utils.get_region_md5sum(
+                ew, eh, edata, x1, y1, dx, dy, expected_cropped_scrdump_filename
+            )
             # Perform comparison
             (w, h, data) = ppm_utils.image_read_from_ppm_file(scrdump_filename)
             if w == ew and h == eh:
                 (w, h, data) = ppm_utils.image_comparison(w, h, data, edata)
-                ppm_utils.image_write_to_ppm_file(comparison_filename, w, h,
-                                                  data)
+                ppm_utils.image_write_to_ppm_file(comparison_filename, w, h, data)
         # Print error messages and fail the test
         long_message = message + "\n(see analysis at %s)" % debug_dir
         LOG_JOB.error(long_message)
@@ -201,7 +211,7 @@ def run(test, params, env):
     steps_filename = params.get("steps")
     if not steps_filename:
         image_name = os.path.basename(params["image_name"])
-        steps_filename = 'steps/%s.steps' % image_name
+        steps_filename = "steps/%s.steps" % image_name
 
     steps_filename = utils_misc.get_path(test.virtdir, steps_filename)
     if not os.path.exists(steps_filename):
@@ -247,12 +257,19 @@ def run(test, params, env):
         elif words[0] == "barrier_2":
             if current_screendump:
                 scrdump_filename = os.path.join(
-                    ppm_utils.get_data_dir(steps_filename),
-                    current_screendump)
+                    ppm_utils.get_data_dir(steps_filename), current_screendump
+                )
             else:
                 scrdump_filename = None
-            if not barrier_2(test, vm, words, params, test.debugdir,
-                             scrdump_filename, current_step_num):
+            if not barrier_2(
+                test,
+                vm,
+                words,
+                params,
+                test.debugdir,
+                scrdump_filename,
+                current_step_num,
+            ):
                 skip_current_step = True
         else:
             vm.send_key(words[0])

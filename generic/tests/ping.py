@@ -1,27 +1,39 @@
 from avocado.utils import process
-from virttest import utils_test
-from virttest import utils_net
-from virttest import error_context
+from virttest import error_context, utils_net, utils_test
 
 
-def _ping_with_params(test, params, dest, interface=None,
-                      packet_size=None, interval=None,
-                      count=0, session=None, flood=False):
+def _ping_with_params(
+    test,
+    params,
+    dest,
+    interface=None,
+    packet_size=None,
+    interval=None,
+    count=0,
+    session=None,
+    flood=False,
+):
     if flood:
         cmd = "ping " + dest + " -f -q"
         if interface:
             cmd += " -S %s" % interface
         flood_minutes = float(params.get("flood_minutes", 10))
-        status, output = utils_net.raw_ping(cmd, flood_minutes * 60,
-                                            session, test.log.debug)
+        status, output = utils_net.raw_ping(
+            cmd, flood_minutes * 60, session, test.log.debug
+        )
     else:
         timeout = float(count) * 1.5
-        status, output = utils_net.ping(dest, count, interval, interface,
-                                        packet_size, session=session,
-                                        timeout=timeout)
+        status, output = utils_net.ping(
+            dest,
+            count,
+            interval,
+            interface,
+            packet_size,
+            session=session,
+            timeout=timeout,
+        )
     if status != 0:
-        test.fail("Ping failed, status: %s,"
-                  " output: %s" % (status, output))
+        test.fail("Ping failed, status: %s," " output: %s" % (status, output))
     if params.get("strict_check", "no") == "yes":
         ratio = utils_test.get_loss_ratio(output)
         if ratio != 0:
@@ -72,9 +84,12 @@ def run(test, params, env):
                 ext_host = process.system_output(ext_host_get_cmd, shell=True)
                 ext_host = ext_host.decode()
             except process.CmdError:
-                test.log.warn("Can't get specified host with cmd '%s',"
-                              " Fallback to default host '%s'",
-                              ext_host_get_cmd, ext_host)
+                test.log.warning(
+                    "Can't get specified host with cmd '%s',"
+                    " Fallback to default host '%s'",
+                    ext_host_get_cmd,
+                    ext_host,
+                )
         dest_ips = [ext_host]
         sessions = [session]
         interfaces = [None]
@@ -91,33 +106,45 @@ def run(test, params, env):
                 interface = None
             nic_name = nic.get("nic_name")
             if not ip:
-                test.fail("Could not get the ip of nic index %d: %s",
-                          i, nic_name)
+                test.fail("Could not get the ip of nic index %d: %s", i, nic_name)
             dest_ips.append(ip)
             sessions.append(None)
             interfaces.append(interface)
 
-    for (ip, interface, session) in zip(dest_ips, interfaces, sessions):
+    for ip, interface, session in zip(dest_ips, interfaces, sessions):
         error_context.context("Ping test with dest: %s" % ip, test.log.info)
 
         # ping with different size & interval
         for size in packet_sizes:
             for interval in interval_times:
-                test.log.info("Ping with packet size: %s and interval: %s",
-                              size, interval)
-                _ping_with_params(test, params, ip, interface, size,
-                                  interval, session=session, count=counts)
+                test.log.info(
+                    "Ping with packet size: %s and interval: %s", size, interval
+                )
+                _ping_with_params(
+                    test,
+                    params,
+                    ip,
+                    interface,
+                    size,
+                    interval,
+                    session=session,
+                    count=counts,
+                )
 
         # ping with flood
         if params.get_boolean("flood_ping"):
             if not ping_ext_host or params.get("os_type") == "linux":
                 error_context.context("Flood ping test", test.log.info)
-                _ping_with_params(test, params, ip, interface,
-                                  session=session, flood=True)
+                _ping_with_params(
+                    test, params, ip, interface, session=session, flood=True
+                )
 
                 # ping to check whether the network is alive
-                error_context.context("Ping test after flood ping,"
-                                      " Check if the network is still alive",
-                                      test.log.info)
-                _ping_with_params(test, params, ip, interface,
-                                  session=session, count=counts)
+                error_context.context(
+                    "Ping test after flood ping,"
+                    " Check if the network is still alive",
+                    test.log.info,
+                )
+                _ping_with_params(
+                    test, params, ip, interface, session=session, count=counts
+                )

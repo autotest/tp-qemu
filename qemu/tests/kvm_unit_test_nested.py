@@ -33,5 +33,4 @@ def run(test, params, env):
     status, output = process.getstatusoutput(run_cmd, timeout)
 
     if output:
-        test.fail("kvm_unit_tests failed, status: %s, output: %s" %
-                  (status, output))
+        test.fail("kvm_unit_tests failed, status: %s, output: %s" % (status, output))

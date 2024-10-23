@@ -2,10 +2,10 @@
 windows device and driver utility functions.
 
 """
+
 import re
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -19,11 +19,12 @@ def get_hwids(session, device_name, devcon_folder, timeout=300):
     :param timeout: Timeout in seconds.
     :rtype: list
     """
+
     def _get_hwid_once():
         """
         Return a list of hardware id of specific devices according to device name.
         """
-        hwid_cmd = '%sdevcon.exe find *' % devcon_folder
+        hwid_cmd = "%sdevcon.exe find *" % devcon_folder
         output = session.cmd_output(hwid_cmd)
         return re.findall(hwid_pattern, output, re.M)
 

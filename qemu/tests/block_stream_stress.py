@@ -1,17 +1,14 @@
-import time
 import logging
+import time
 
-from virttest import utils_misc
-from virttest import utils_test
-from virttest import error_context
+from virttest import error_context, utils_misc, utils_test
 
 from qemu.tests import blk_stream
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockStreamStress(blk_stream.BlockStream):
-
     @error_context.context_aware
     def load_stress(self):
         """
@@ -34,6 +31,7 @@ class BlockStreamStress(blk_stream.BlockStream):
         """
         stop stress app
         """
+
         def _unload_stress():
             session = self.get_session()
             cmd = self.params.get("stop_cmd")
@@ -42,11 +40,15 @@ class BlockStreamStress(blk_stream.BlockStream):
             return self.app_running()
 
         error_context.context("stop stress app in guest", LOG_JOB.info)
-        stopped = utils_misc.wait_for(_unload_stress, first=2.0,
-                                      text="wait stress app quit",
-                                      step=1.0, timeout=120)
+        stopped = utils_misc.wait_for(
+            _unload_stress,
+            first=2.0,
+            text="wait stress app quit",
+            step=1.0,
+            timeout=120,
+        )
         if not stopped:
-            LOG_JOB.warn("stress app is still running")
+            LOG_JOB.warning("stress app is still running")
 
     def app_running(self):
         """

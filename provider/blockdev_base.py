@@ -2,24 +2,23 @@ import logging
 
 from avocado.core import exceptions
 from avocado.utils import memory
-
-from virttest import data_dir
-from virttest import utils_misc
-from virttest import env_process
-from virttest import qemu_storage
-from virttest import error_context
-from virttest import utils_disk
+from virttest import (
+    data_dir,
+    env_process,
+    error_context,
+    qemu_storage,
+    utils_disk,
+    utils_misc,
+)
 from virttest.qemu_capabilities import Flags
 
-from provider import backup_utils
-from provider import job_utils
+from provider import backup_utils, job_utils
 from provider.virt_storage.storage_admin import sp_admin
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevBaseTest(object):
-
     def __init__(self, test, params, env):
         self.main_vm = None
         self.params = params
@@ -45,13 +44,10 @@ class BlockdevBaseTest(object):
 
     def target_disk_define_by_params(self, params, image_name):
         if params.get("random_cluster_size") == "yes":
-            blacklist = list(
-                map(int, params.objects("cluster_size_blacklist")))
+            blacklist = list(map(int, params.objects("cluster_size_blacklist")))
             cluster_size = backup_utils.generate_random_cluster_size(blacklist)
             params["image_cluster_size"] = cluster_size
-            LOG_JOB.info(
-                "set target image cluster size to '%s'",
-                cluster_size)
+            LOG_JOB.info("set target image cluster size to '%s'", cluster_size)
         params.setdefault("target_path", data_dir.get_data_dir())
         vol = sp_admin.volume_define_by_params(image_name, params)
         return vol
@@ -60,14 +56,10 @@ class BlockdevBaseTest(object):
         for tag in self.params.objects("source_images"):
             params = self.params.object_params(tag)
             if params.get("random_cluster_size") == "yes":
-                blacklist = list(
-                    map(int, params.objects("cluster_size_blacklist")))
-                cluster_size = backup_utils.generate_random_cluster_size(
-                    blacklist)
+                blacklist = list(map(int, params.objects("cluster_size_blacklist")))
+                cluster_size = backup_utils.generate_random_cluster_size(blacklist)
                 params["image_cluster_size"] = cluster_size
-                LOG_JOB.info(
-                    "set image cluster size to '%s'",
-                    cluster_size)
+                LOG_JOB.info("set image cluster size to '%s'", cluster_size)
             disk = self.source_disk_define_by_params(params, tag)
             disk.create(params)
             self.trash.append(disk)
@@ -97,7 +89,8 @@ class BlockdevBaseTest(object):
         image_size = params.get("tempfile_size", "10M")
         timeout = params.get_numeric("create_tempfile_timeout", 720)
         backup_utils.generate_tempfile(
-            self.main_vm, self.disks_info[tag][1], filename, image_size, timeout)
+            self.main_vm, self.disks_info[tag][1], filename, image_size, timeout
+        )
 
         if tag not in self.files_info:
             self.files_info[tag] = [filename]
@@ -130,12 +123,11 @@ class BlockdevBaseTest(object):
         try:
             backup_utils.refresh_mounts(self.disks_info, self.params, session)
             for tag, info in self.disks_info.items():
-                if tag != 'image1':
+                if tag != "image1":
                     LOG_JOB.debug("mount target disk in VM!")
                     utils_disk.mount(info[0], info[1], session=session)
                 for data_file in self.files_info[tag]:
-                    backup_utils.verify_file_md5(
-                        self.clone_vm, info[1], data_file)
+                    backup_utils.verify_file_md5(self.clone_vm, info[1], data_file)
         finally:
             session.close()
 
@@ -143,13 +135,13 @@ class BlockdevBaseTest(object):
     def format_data_disk(self, tag):
         session = self.main_vm.wait_for_login()
         try:
-            info = backup_utils.get_disk_info_by_param(tag, self.params,
-                                                       session)
+            info = backup_utils.get_disk_info_by_param(tag, self.params, session)
             if info is None:
                 raise exceptions.TestFail("disk not found in guest ...")
-            disk_path = "/dev/%s1" % info['kname']
+            disk_path = "/dev/%s1" % info["kname"]
             mount_point = utils_disk.configure_empty_linux_disk(
-                session, info['kname'], info['size'])[0]
+                session, info["kname"], info["size"]
+            )[0]
             self.disks_info[tag] = [disk_path, mount_point]
         finally:
             session.close()
@@ -207,7 +199,7 @@ class BlockdevBaseTest(object):
                 # A StorageVolume object
                 sp_admin.remove_volume(img)
             except Exception as e:
-                LOG_JOB.warn(str(e))
+                LOG_JOB.warning(str(e))
 
     def check_block_jobs_started(self, jobid_list, tmo=10):
         """

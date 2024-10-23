@@ -1,8 +1,7 @@
 import os
 
 from avocado.utils import process
-from virttest import error_context
-from virttest import data_dir
+from virttest import data_dir, error_context
 
 
 @error_context.context_aware
@@ -19,8 +18,7 @@ def run(test, params, env):
     :param params: Dictionary with test parameters.
     :param env: Dictionary with the test environment.
     """
-    error_context.context("Check for an appropriate clocksource on host",
-                          test.log.info)
+    error_context.context("Check for an appropriate clocksource on host", test.log.info)
     host_cmd = "cat /sys/devices/system/clocksource/"
     host_cmd += "clocksource0/current_clocksource"
     if "tsc" not in process.getoutput(host_cmd):
@@ -33,8 +31,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
 
-    error_context.context("Download and compile the newest msr-tools",
-                          test.log.info)
+    error_context.context("Download and compile the newest msr-tools", test.log.info)
     tarball = params["tarball"]
     compile_cmd = params["compile_cmd"]
     msr_name = params["msr_name"]
@@ -50,7 +47,7 @@ def run(test, params, env):
 
     date_cmd = "strace date 2>&1 | egrep 'clock_gettime|gettimeofday' | wc -l"
     output = session.cmd(date_cmd)
-    if '0' not in output:
+    if "0" not in output:
         test.fail("Test failed before run msr tools. Output: '%s'" % output)
 
     msr_tools_cmd = params["msr_tools_cmd"]

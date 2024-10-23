@@ -1,11 +1,9 @@
-import re
 import os
+import re
 import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 from virttest.qemu_devices import qdevices
 from virttest.qemu_monitor import QMPCmdError
 from virttest.utils_test import BackgroundTest
@@ -22,6 +20,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def get_usb_host_dev():
         device_list = []
         for device in vm.devices:
@@ -66,16 +65,16 @@ def run(test, params, env):
             test.fail("kernel didn't detect unplug")
 
     def _get_usb_mount_point():
-        """ Get passthrough usb stick mount point """
+        """Get passthrough usb stick mount point"""
         dmesg_cmd = "dmesg | grep 'Attached SCSI removable disk'"
         s, o = session.cmd_status_output(dmesg_cmd)
         if s:
             test.error("Fail to get passthrough usb stick in guest.")
-        dev = re.findall(r'\[(sd\w+)\]', o)[0]
+        dev = re.findall(r"\[(sd\w+)\]", o)[0]
         mounts_cmd = "cat /proc/mounts | grep /dev/%s" % dev
         s, o = session.cmd_status_output(mounts_cmd)
         if not s:
-            s, o = session.cmd_status_output('umount /dev/%s' % dev)
+            s, o = session.cmd_status_output("umount /dev/%s" % dev)
             if s:
                 test.error("Fail to umount /dev/%s, output: %s" % (s, o))
         mkfs_cmd = "mkfs.vfat /dev/%s" % dev
@@ -93,18 +92,19 @@ def run(test, params, env):
         Do I/O operations on passthrough usb stick
         """
         error_context.context("Read and write on usb stick ", test.log.info)
-        testfile = os.path.join(mount_point, 'testfile')
+        testfile = os.path.join(mount_point, "testfile")
         if bg:
             iozone_cmd = params.get("iozone_cmd_bg", " -az -I -g 1g -f %s")
-            iozone_thread = BackgroundTest(iozone_test.run,  # pylint: disable=E0606
-                                           (iozone_cmd % testfile,))
+            iozone_thread = BackgroundTest(
+                iozone_test.run,  # pylint: disable=E0606
+                (iozone_cmd % testfile,),
+            )
             iozone_thread.start()
             if not utils_misc.wait_for(iozone_thread.is_alive, timeout=10):
                 test.fail("Fail to start the iozone background test.")
             time.sleep(10)
         else:
-            iozone_cmd = params.get("iozone_cmd",
-                                    " -a -I -r 64k -s 1m -i 0 -i 1 -f %s")
+            iozone_cmd = params.get("iozone_cmd", " -a -I -r 64k -s 1m -i 0 -i 1 -f %s")
             iozone_test.run(iozone_cmd % testfile)  # pylint: disable=E0606
 
     usb_params = {}
@@ -124,17 +124,18 @@ def run(test, params, env):
             try:
                 vm.devices.simple_hotplug(dev, vm.monitor)
             except QMPCmdError as detail:
-                test.log.warn(detail)
+                test.log.warning(detail)
                 for msg in usb_reply_msg_list:
-                    if msg in detail.data['desc']:
+                    if msg in detail.data["desc"]:
                         break
                 else:
-                    test.fail("Could not get expected warning"
-                              " msg in negative test, monitor"
-                              " returns: '%s'" % detail)
+                    test.fail(
+                        "Could not get expected warning"
+                        " msg in negative test, monitor"
+                        " returns: '%s'" % detail
+                    )
             else:
-                test.fail("Hotplug operation in negative test"
-                          " should not succeed.")
+                test.fail("Hotplug operation in negative test" " should not succeed.")
         return
 
     usb_hostdev = params["usb_devices"].split()[-1]
@@ -167,7 +168,7 @@ def run(test, params, env):
         if usb_stick:
             iozone_test = None
             mount_point = _get_usb_mount_point()
-            iozone_test = generate_instance(params, vm, 'iozone')
+            iozone_test = generate_instance(params, vm, "iozone")
             _usb_stick_io(mount_point)
         usb_devs = get_usb_host_dev()
         for dev in usb_devs:
@@ -175,11 +176,11 @@ def run(test, params, env):
 
         repeat_times = int(params.get("usb_repeat_times", "1"))
         for i in range(repeat_times):
-            msg = "Hotplug (iteration %d)" % (i+1)
+            msg = "Hotplug (iteration %d)" % (i + 1)
             usb_params["id"] = "usbhostdev%s" % i
             if params.get("usb_check_isobufs", "no") == "yes":
                 # The value of isobufs could only be in '4, 8, 16'
-                isobufs = (2 << (i % 3 + 1))
+                isobufs = 2 << (i % 3 + 1)
                 usb_params["isobufs"] = isobufs
                 msg += ", with 'isobufs' option set to %d." % isobufs
             error_context.context(msg, test.log.info)

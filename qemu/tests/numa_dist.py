@@ -13,13 +13,13 @@ def run(test, params, env):
     vm.verify_alive()
     os_type = params["os_type"]
     session = vm.wait_for_login()
-    if os_type == 'windows':
+    if os_type == "windows":
         return
 
     expected_numa_dist = {}
     guest_numa_nodes = params.objects("guest_numa_nodes")
     for numa_node in guest_numa_nodes:
-        numa_node_dist_value = ['unset' for i in range(len(guest_numa_nodes))]
+        numa_node_dist_value = ["unset" for i in range(len(guest_numa_nodes))]
         numa_params = params.object_params(numa_node)
         numa_nodeid = numa_params["numa_nodeid"]
         numa_dist = ast.literal_eval(numa_params.get("numa_dist", "[]"))
@@ -31,9 +31,9 @@ def run(test, params, env):
 
     for src_id, dist_info in expected_numa_dist.items():
         # The distance from a node to itself is always 10
-        dist_info[src_id] = '10'
+        dist_info[src_id] = "10"
         for dst_id, val in enumerate(dist_info):
-            if val == 'unset':
+            if val == "unset":
                 # when distances are only given in one direction for each pair
                 # of nodes, the distances in the opposite directions are assumed
                 # to be the same
@@ -44,5 +44,7 @@ def run(test, params, env):
 
     guest_numa_dist = numa_info_guest.distances
     if guest_numa_dist != expected_numa_dist:
-        test.fail("The actual numa distance info in guest os is: %s, but the "
-                  "expected result is: %s" % (guest_numa_dist, expected_numa_dist))
+        test.fail(
+            "The actual numa distance info in guest os is: %s, but the "
+            "expected result is: %s" % (guest_numa_dist, expected_numa_dist)
+        )

@@ -19,16 +19,16 @@ def run(test, params, env):
     """
 
     def check_qemu_output():
-        error_context.context('Check qemu outputs.', test.log.info)
+        error_context.context("Check qemu outputs.", test.log.info)
         output = vm.process.get_output()
         if re.search(check_pattern, output, re.I):
-            test.log.debug('qemu outputs: %s', output)
-            test.fail('Error message is captured in qemu output.')
-        test.log.info('No error message was found in the qemu output.')
+            test.log.debug("qemu outputs: %s", output)
+            test.fail("Error message is captured in qemu output.")
+        test.log.info("No error message was found in the qemu output.")
 
-    check_pattern = params['check_pattern']
+    check_pattern = params["check_pattern"]
 
-    vm = env.get_vm(params['main_vm'])
+    vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login()
     try:

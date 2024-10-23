@@ -3,9 +3,7 @@ import os
 
 from avocado import fail_on
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import qemu_storage
+from virttest import data_dir, qemu_storage
 
 from provider import qemu_img_utils as img_utils
 
@@ -45,8 +43,10 @@ def run(test, params, env):
             fail_on((process.CmdError,))(img_stg.create)(image_stg_params)
         with open(strace_log) as fd:
             if trace_event not in fd.read():
-                test.fail("Not invoked fallocate system call when "
-                          "creating an image with preallocation=falloc")
+                test.fail(
+                    "Not invoked fallocate system call when "
+                    "creating an image with preallocation=falloc"
+                )
 
     def check_actual_size_field():
         """
@@ -57,15 +57,18 @@ def run(test, params, env):
         info = json.loads(cmd_result)
         if params["preallocated_stg"] in ["full", "falloc"]:
             if info["actual-size"] < actual_size:
-                test.fail("The 'actual-size' field from qemu-img info "
-                          "is not greater than or equal to %s. "
-                          "The actual output is %s"
-                          % (actual_size, cmd_result))
+                test.fail(
+                    "The 'actual-size' field from qemu-img info "
+                    "is not greater than or equal to %s. "
+                    "The actual output is %s" % (actual_size, cmd_result)
+                )
         elif params["preallocated_stg"] in ["off", "metadata"]:
             if info["actual-size"] >= actual_size:
-                test.fail("The 'actual-size' field from qemu-img info "
-                          "is not less than %s. The actual output is %s"
-                          % (actual_size, cmd_result))
+                test.fail(
+                    "The 'actual-size' field from qemu-img info "
+                    "is not less than %s. The actual output is %s"
+                    % (actual_size, cmd_result)
+                )
 
     trace_event = params.get("trace_event")
     image_stg = params["images"]

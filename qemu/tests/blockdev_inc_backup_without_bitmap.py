@@ -11,17 +11,23 @@ class BlockdevIncbkWithoutBitmap(BlockdevLiveBackupBaseTest):
         self.add_target_data_disks()
 
     def do_incremental_backup(self):
-        job_list = [{'type': 'blockdev-backup',
-                     'data': {'device': self._source_nodes[0],
-                              'target': self._full_bk_nodes[0],
-                              'sync': 'incremental'}}]
+        job_list = [
+            {
+                "type": "blockdev-backup",
+                "data": {
+                    "device": self._source_nodes[0],
+                    "target": self._full_bk_nodes[0],
+                    "sync": "incremental",
+                },
+            }
+        ]
         try:
             self.main_vm.monitor.transaction(job_list)
         except QMPCmdError as e:
-            if self.params['error_msg'] not in str(e):
-                self.test.fail('Unexpected error: %s' % str(e))
+            if self.params["error_msg"] not in str(e):
+                self.test.fail("Unexpected error: %s" % str(e))
         else:
-            self.test.fail('blockdev-backup succeeded unexpectedly')
+            self.test.fail("blockdev-backup succeeded unexpectedly")
 
     def do_test(self):
         self.do_incremental_backup()

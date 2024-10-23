@@ -22,8 +22,7 @@ def run(test, params, env):
         :param vm_session: session to checked vm.
         :return: if file does not exist return None, or not, return it's value
         """
-        output = vm_session.cmd_output(
-            "echo `cat /proc/device-tree/%s`" % guest_info)
+        output = vm_session.cmd_output("echo `cat /proc/device-tree/%s`" % guest_info)
         if match_str in output:
             test.log.info(output)
             return None
@@ -41,10 +40,10 @@ def run(test, params, env):
         :param vm_session: session to checked vm.
         """
 
-        status = vm_session.cmd_status(
-            "test -f /proc/device-tree/aliases/cdrom")
+        status = vm_session.cmd_status("test -f /proc/device-tree/aliases/cdrom")
         error_context.context(
-            "Checking whether aliases file is indeed nonexisting", test.log.info)
+            "Checking whether aliases file is indeed nonexisting", test.log.info
+        )
         if status == 0:
             test.fail("Nonexist cdrom aliases check failed.")
 
@@ -53,7 +52,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 600))
 
     session = vm.wait_for_login(timeout=timeout)
-    match_str = params['match_str']
+    match_str = params["match_str"]
 
     try:
         uuid = vm.get_uuid()
@@ -61,7 +60,8 @@ def run(test, params, env):
         compare_dev_tree("vm,uuid", uuid)
         if get_info(session, "host-serial"):
             host_system_id = process.getoutput(
-                "cat /proc/device-tree/system-id", verbose=True).strip("\x00")
+                "cat /proc/device-tree/system-id", verbose=True
+            ).strip("\x00")
             compare_dev_tree("host-serial", host_system_id)
         compare_dev_tree("ibm,partition-name", params["main_vm"])
 

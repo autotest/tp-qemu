@@ -3,13 +3,12 @@ import random
 import re
 import time
 
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import utils_misc, utils_test
 from virttest.tests import unattended_install
 
 from provider.blockdev_mirror_nowait import BlockdevMirrorNowaitTest
 
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
@@ -19,9 +18,12 @@ class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
 
     def _is_install_started(self, start_msg):
         # get_output can return None
-        out = self.main_vm.serial_console.get_output() \
-            if self.main_vm.serial_console else None
-        out = '' if out is None else out
+        out = (
+            self.main_vm.serial_console.get_output()
+            if self.main_vm.serial_console
+            else None
+        )
+        out = "" if out is None else out
         return bool(re.search(start_msg, out, re.M))
 
     def _install_vm_in_background(self):
@@ -33,9 +35,11 @@ class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
 
         LOG_JOB.info("Wait till '%s'", self.params["tag_for_install_start"])
         if utils_misc.wait_for(
-                lambda: self._is_install_started(
-                    self.params["tag_for_install_start"]),
-                int(self.params.get("timeout_for_install_start", 360)), 10, 5):
+            lambda: self._is_install_started(self.params["tag_for_install_start"]),
+            int(self.params.get("timeout_for_install_start", 360)),
+            10,
+            5,
+        ):
             LOG_JOB.info("Sleep some time before block-mirror")
             time.sleep(random.randint(10, 120))
         else:
@@ -44,8 +48,7 @@ class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
     def _wait_installation_done(self):
         # Installation on remote storage may take too much time,
         # we keep the same timeout with the default used in VT
-        self._bg.join(
-            timeout=int(self.params.get("install_timeout", 4800)))
+        self._bg.join(timeout=int(self.params.get("install_timeout", 4800)))
         if self._bg.is_alive():
             self.test.fail("VM installation timed out")
 
@@ -63,12 +66,16 @@ class BlockdevMirrorVMInstallTest(BlockdevMirrorNowaitTest):
         cdrom = self.main_vm.params.objects("cdroms")[0]
         self.main_vm.params["cdroms"] = cdrom
         self.main_vm.params["boot_once"] = "c"
-        for opt in ["cdrom_%s" % cdrom, "boot_path",
-                    "kernel_params", "kernel", "initrd"]:
+        for opt in [
+            "cdrom_%s" % cdrom,
+            "boot_path",
+            "kernel_params",
+            "kernel",
+            "initrd",
+        ]:
             self.main_vm.params[opt] = ""
 
-        super(BlockdevMirrorVMInstallTest,
-              self).clone_vm_with_mirrored_images()
+        super(BlockdevMirrorVMInstallTest, self).clone_vm_with_mirrored_images()
 
     def do_test(self):
         self.blockdev_mirror()

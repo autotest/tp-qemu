@@ -1,6 +1,6 @@
-import time
-import os
 import errno
+import os
+import time
 
 from virttest import error_context
 
@@ -26,7 +26,9 @@ def run(test, params, env):
     v_path = vm.get_serial_console_filename(serials[-1])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
-    out_put = session.cmd_output("nohup cat /proc/kallsyms > /dev/virtio-ports/vs2 2>&1 &")
+    out_put = session.cmd_output(
+        "nohup cat /proc/kallsyms > /dev/virtio-ports/vs2 2>&1 &"
+    )
     time.sleep(10)
     if session.cmd_output("date") is None:
         test.fail("Guest shouldn't be blocked and a date should output!")
@@ -43,6 +45,8 @@ def run(test, params, env):
                 raise Exception("Read data in host failed as %s" % e)
 
     if not session.cmd_status("ps -p %s" % guest_pid, safe=True):
-        test.fail("send process in guest does not exit after all data are read out in host")
+        test.fail(
+            "send process in guest does not exit after all data are read out in host"
+        )
     vm.verify_alive()
     vm.verify_kernel_crash()

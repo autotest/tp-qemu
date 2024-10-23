@@ -1,9 +1,7 @@
 import os
 
 from avocado.utils import process
-
-from virttest import utils_package
-from virttest import utils_misc
+from virttest import utils_misc, utils_package
 
 
 def run(test, params, env):
@@ -27,22 +25,25 @@ def run(test, params, env):
         """
         guest_kernel_version = session.cmd("uname -r").strip()
         if host_kernel_version != guest_kernel_version:
-            test.cancel("Please update your host and guest kernel "
-                        "to same version.The host kernel version is %s"
-                        "The guest kernel version is %s"
-                        % (host_kernel_version, guest_kernel_version))
+            test.cancel(
+                "Please update your host and guest kernel "
+                "to same version.The host kernel version is %s"
+                "The guest kernel version is %s"
+                % (host_kernel_version, guest_kernel_version)
+            )
 
     def check_core_file(arch):
         """
         Use gdb to check core dump file
         """
-        arch_map = {'x86_64': 'X86_64', 'ppc64le': 'ppc64-le'}
+        arch_map = {"x86_64": "X86_64", "ppc64le": "ppc64-le"}
         arch_name = arch_map.get(arch)
         arch = arch_name if arch_name else arch
-        command = ('echo -e "source %s\nset height 0\ndump-guest-memory'
-                   ' %s %s\nbt\nquit" > %s' % (dump_guest_memory_file,
-                                               vmcore_file, arch,
-                                               gdb_command_file))
+        command = (
+            'echo -e "source %s\nset height 0\ndump-guest-memory'
+            ' %s %s\nbt\nquit" > %s'
+            % (dump_guest_memory_file, vmcore_file, arch, gdb_command_file)
+        )
         process.run(command, shell=True)
         status, output = process.getstatusoutput(gdb_command, timeout=360)
         os.remove(gdb_command_file)
@@ -58,20 +59,27 @@ def run(test, params, env):
         """
         Use crash to check vmcore file
         """
-        process.run('echo -e "bt\ntask 0\ntask 1\nquit" > %s'
-                    % crash_script, shell=True)
+        process.run(
+            'echo -e "bt\ntask 0\ntask 1\nquit" > %s' % crash_script, shell=True
+        )
         output = process.getoutput(crash_cmd, timeout=60)
         os.remove(crash_script)
         os.remove(vmcore_file)
         test.log.debug(output)
-        if "systemd" in output and 'swapper' in output:
+        if "systemd" in output and "swapper" in output:
             test.log.info("Crash command works as expected")
         else:
             test.fail("Vmcore corrupt")
 
     # install crash/gdb/kernel-debuginfo in host
-    packages = ["crash", "gdb", "kernel-debuginfo*", "qemu-kvm-debuginfo",
-                "qemu-kvm-debugsource", "qemu-kvm-core-debuginfo"]
+    packages = [
+        "crash",
+        "gdb",
+        "kernel-debuginfo*",
+        "qemu-kvm-debuginfo",
+        "qemu-kvm-debugsource",
+        "qemu-kvm-core-debuginfo",
+    ]
     utils_package.package_install(packages)
 
     trigger_core_dump_command = params["trigger_core_dump_command"]
@@ -88,7 +96,7 @@ def run(test, params, env):
     host_kernel_version = process.getoutput("uname -r").strip()
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_login()
-    if params.get('check_env', 'yes') == 'yes':
+    if params.get("check_env", "yes") == "yes":
         check_env()
 
     qemu_id = vm.get_pid()
@@ -98,9 +106,9 @@ def run(test, params, env):
     test.log.info("trigger core dump command: %s", trigger_core_dump_command)
     process.run(trigger_core_dump_command)
     utils_misc.wait_for(lambda: os.path.exists(core_file), timeout=120)
-    if params.get('check_core_file', 'yes') == 'yes':
+    if params.get("check_core_file", "yes") == "yes":
         check_core_file(arch)
-        if dump_guest_core == 'on' and check_vmcore == 'yes':
+        if dump_guest_core == "on" and check_vmcore == "yes":
             crash_cmd %= host_kernel_version
             utils_misc.wait_for(lambda: os.path.exists(vmcore_file), timeout=60)
             check_vmcore_file()

@@ -1,8 +1,6 @@
 from avocado import fail_on
 from avocado.utils import process
-
-from virttest import utils_misc
-from virttest import data_dir
+from virttest import data_dir, utils_misc
 from virttest.qemu_storage import QemuImg
 
 from provider import qemu_img_utils as img_utils
@@ -32,14 +30,12 @@ def run(test, params, env):
         :param vm: vm object
         """
         pid = vm.process.get_pid()
-        test.log.debug("Ending VM %s process (killing PID %s)",
-                       vm.name, pid)
+        test.log.debug("Ending VM %s process (killing PID %s)", vm.name, pid)
         try:
             utils_misc.kill_process_tree(pid, 9, timeout=60)
             test.log.debug("VM %s down (process killed)", vm.name)
         except RuntimeError:
-            test.error("VM %s (PID %s) is a zombie!"
-                       % (vm.name, vm.process.get_pid()))
+            test.error("VM %s (PID %s) is a zombie!" % (vm.name, vm.process.get_pid()))
 
     src_image = params["convert_source"]
     tgt_image = params["convert_target"]
@@ -57,11 +53,9 @@ def run(test, params, env):
     md5sum_bin = params.get("md5sum_bin", "md5sum")
     sync_bin = params.get("sync_bin", "sync")
     test.log.debug("Create temporary file on guest: %s", guest_temp_file)
-    img_utils.save_random_file_to_vm(vm, guest_temp_file, 2048 * 512,
-                                     sync_bin)
+    img_utils.save_random_file_to_vm(vm, guest_temp_file, 2048 * 512, sync_bin)
     test.log.debug("Get md5 value of the temporary file")
-    md5_value = img_utils.check_md5sum(guest_temp_file,
-                                       md5sum_bin, session)
+    md5_value = img_utils.check_md5sum(guest_temp_file, md5sum_bin, session)
     session.close()
     kill_vm_process(vm)
 
@@ -74,7 +68,8 @@ def run(test, params, env):
     vm = img_utils.boot_vm_with_images(test, params, env, (tgt_image,))
     session = vm.wait_for_login()
     test.log.debug("Verify md5 value of the temporary file")
-    img_utils.check_md5sum(guest_temp_file, md5sum_bin, session,
-                           md5_value_to_check=md5_value)
+    img_utils.check_md5sum(
+        guest_temp_file, md5sum_bin, session, md5_value_to_check=md5_value
+    )
     session.cmd(params["rm_testfile_cmd"] % guest_temp_file)
     session.close()

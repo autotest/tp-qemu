@@ -20,8 +20,7 @@ def run(test, params, env):
     """
 
     def _check_smt_state(value):
-        value = ("1" if value == "off" else str(threads) if value == "on"
-                 else value)
+        value = "1" if value == "off" else str(threads) if value == "on" else value
         smt_info = session.cmd_output("ppc64_cpu --smt -n")
         if not re.match(r"SMT=%s" % value, smt_info):
             test.log.info("smt info of guest: %s", smt_info)
@@ -47,18 +46,21 @@ def run(test, params, env):
     session = vm.wait_for_login()
     threads = vm.cpuinfo.threads
 
-    error_context.context("Check if the number of threads on guest is equal to"
-                          " SMP threads", test.log.info)
+    error_context.context(
+        "Check if the number of threads on guest is equal to" " SMP threads",
+        test.log.info,
+    )
     _check_smt_state(threads)
 
     for state in _smt_state(threads):
-        error_context.context("Change the guest's smt state to %s" % state,
-                              test.log.info)
+        error_context.context(
+            "Change the guest's smt state to %s" % state, test.log.info
+        )
         _change_smt_state(state)
-        cpu_count = (threads if state == "on" else 1 if state == "off"
-                     else int(state))
-        error_context.context("Check if the online CPU per core is equal to %s"
-                              % cpu_count, test.log.info)
+        cpu_count = threads if state == "on" else 1 if state == "off" else int(state)
+        error_context.context(
+            "Check if the online CPU per core is equal to %s" % cpu_count, test.log.info
+        )
         for core_info in session.cmd_output("ppc64_cpu --info").splitlines():
             if cpu_count != core_info.count("*"):
                 test.log.info("core_info:\n%s", core_info)

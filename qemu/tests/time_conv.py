@@ -2,9 +2,7 @@ import os
 import time
 
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import storage
+from virttest import data_dir, storage
 
 
 def run(test, params, env):
@@ -20,23 +18,29 @@ def run(test, params, env):
     """
     image_stg = params["images"]
     root_dir = data_dir.get_data_dir()
-    image_stg_name = storage.get_image_filename(params.object_params(image_stg),
-                                                root_dir)
+    image_stg_name = storage.get_image_filename(
+        params.object_params(image_stg), root_dir
+    )
     image_secret = params.get("image_secret")
     timeout = float(params.get("timeout", 1800))
     qemu_img_bench_cmd = params["qemu_img_bench_cmd"]
     image_format = params["image_format"]
     if image_format == "qcow2" or image_format == "raw":
-        process.run(qemu_img_bench_cmd % (image_format, image_stg_name),
-                    timeout=timeout, shell=True)
+        process.run(
+            qemu_img_bench_cmd % (image_format, image_stg_name),
+            timeout=timeout,
+            shell=True,
+        )
     time_list = []
     qemu_img_conv_cmd = params["qemu_img_conv_cmd"]
     conv_img = os.path.join(os.path.dirname(image_stg_name), "convert.img")
     for i in range(5):
         start_time = time.time()
         if image_format == "qcow2" or image_format == "raw":
-            process.run(qemu_img_conv_cmd % (image_format, image_format,
-                                             image_stg_name, conv_img))
+            process.run(
+                qemu_img_conv_cmd
+                % (image_format, image_format, image_stg_name, conv_img)
+            )
         elif image_format == "luks":
             process.run(qemu_img_conv_cmd % (image_secret, image_stg_name, conv_img))
         time_conv = time.time() - start_time

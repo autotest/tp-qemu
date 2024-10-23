@@ -2,13 +2,11 @@ import json
 import socket
 
 from avocado.utils import process
-
 from virttest.qemu_storage import filename_to_file_opts
 from virttest.utils_misc import get_qemu_img_binary
 
 from provider.blockdev_live_backup_base import BlockdevLiveBackupBaseTest
-from provider.nbd_image_export import InternalNBDExportImage
-from provider.nbd_image_export import QemuNBDExportImage
+from provider.nbd_image_export import InternalNBDExportImage, QemuNBDExportImage
 
 
 class BlockdevIncbkXptAllocDepth(BlockdevLiveBackupBaseTest):
@@ -17,27 +15,29 @@ class BlockdevIncbkXptAllocDepth(BlockdevLiveBackupBaseTest):
     def __init__(self, test, params, env):
         super(BlockdevIncbkXptAllocDepth, self).__init__(test, params, env)
         self._base_image, self._snapshot_image = self.params.objects(
-            'image_backup_chain')
+            "image_backup_chain"
+        )
         localhost = socket.gethostname()
-        self.params['nbd_server'] = localhost if localhost else 'localhost'
+        self.params["nbd_server"] = localhost if localhost else "localhost"
         self._nbd_image_obj = self.source_disk_define_by_params(
-            self.params, self.params['nbd_image_tag'])
-        self._block_export_uid = self.params.get('block_export_uid')
+            self.params, self.params["nbd_image_tag"]
+        )
+        self._block_export_uid = self.params.get("block_export_uid")
         self._nbd_export = None
         self._is_exported = False
 
     def _init_nbd_export(self, tag):
-        self._nbd_export = InternalNBDExportImage(
-            self.main_vm, self.params, tag
-        ) if self._block_export_uid else QemuNBDExportImage(
-            self.params, tag
+        self._nbd_export = (
+            InternalNBDExportImage(self.main_vm, self.params, tag)
+            if self._block_export_uid
+            else QemuNBDExportImage(self.params, tag)
         )
 
     def _start_nbd_export(self, tag):
         if self._block_export_uid is not None:
             # export local image with block-export-add
             self._nbd_export.start_nbd_server()
-            self._nbd_export.add_nbd_image('drive_%s' % tag)
+            self._nbd_export.add_nbd_image("drive_%s" % tag)
         else:
             # export local image with qemu-nbd
             # we should stop vm and rebase sn onto base
@@ -48,8 +48,7 @@ class BlockdevIncbkXptAllocDepth(BlockdevLiveBackupBaseTest):
         self._is_exported = True
 
     def _rebase_sn_onto_base(self):
-        disk = self.source_disk_define_by_params(self.params,
-                                                 self._snapshot_image)
+        disk = self.source_disk_define_by_params(self.params, self._snapshot_image)
         disk.rebase(params=self.params)
 
     def post_test(self):
@@ -74,19 +73,18 @@ class BlockdevIncbkXptAllocDepth(BlockdevLiveBackupBaseTest):
             backing(snapshot): zero: true, data: true
         """
         opts = filename_to_file_opts(self._nbd_image_obj.image_filename)
-        opts[self.params['dirty_bitmap_opt']] = 'qemu:allocation-depth'
-        map_cmd = '{qemu_img} map --output=json {args}'.format(
+        opts[self.params["dirty_bitmap_opt"]] = "qemu:allocation-depth"
+        map_cmd = "{qemu_img} map --output=json {args}".format(
             qemu_img=get_qemu_img_binary(self.params),
-            args="'json:%s'" % json.dumps(opts)
+            args="'json:%s'" % json.dumps(opts),
         )
 
         result = process.run(map_cmd, ignore_status=False, shell=True)
         for item in json.loads(result.stdout.decode().strip()):
-            if item['zero'] is zero and item['data'] is data:
+            if item["zero"] is zero and item["data"] is data:
                 break
         else:
-            self.test.fail(
-                'Failed to get "zero": %s, "data": %s' % (zero, data))
+            self.test.fail('Failed to get "zero": %s, "data": %s' % (zero, data))
 
     def do_test(self):
         self.do_full_backup()

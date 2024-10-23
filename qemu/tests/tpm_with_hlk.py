@@ -1,8 +1,10 @@
 from virttest import env_process
 
-
-from provider.win_hlk_suite import HLKServer
-from provider.win_hlk_suite import install_hlk_client, download_hlk_server_image
+from provider.win_hlk_suite import (
+    HLKServer,
+    download_hlk_server_image,
+    install_hlk_client,
+)
 
 
 def run(test, params, env):
@@ -19,13 +21,13 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
-    server_img = download_hlk_server_image(params, params.get('hlk_server_image_uri'))
-    vm_name_hlk_server = params.get('vm_name_hlk_server')
+    server_img = download_hlk_server_image(params, params.get("hlk_server_image_uri"))
+    vm_name_hlk_server = params.get("vm_name_hlk_server")
 
     params["images_%s" % vm_name_hlk_server] = "image0"
-    params["image_name_image0_%s" % vm_name_hlk_server] = server_img['image_name']
-    params["image_size_image0_%s" % vm_name_hlk_server] = server_img['image_size']
-    params["image_format_image0_%s" % vm_name_hlk_server] = server_img['image_format']
+    params["image_name_image0_%s" % vm_name_hlk_server] = server_img["image_name"]
+    params["image_size_image0_%s" % vm_name_hlk_server] = server_img["image_size"]
+    params["image_format_image0_%s" % vm_name_hlk_server] = server_img["image_format"]
 
     params["start_vm"] = "yes"
     params["not_preprocess"] = "no"
@@ -39,13 +41,14 @@ def run(test, params, env):
         else:
             vm_client = vm
 
-    install_hlk_client(vm_client, vm_server)    # pylint: disable=E0606
+    install_hlk_client(vm_client, vm_server)  # pylint: disable=E0606
 
-    pool_name = params.get('hlk_pool_name')
-    project_name = params.get('hlk_project_name')
-    target_name = params.get('hlk_target_name')
-    tests_name = [name for name in params.get('hlk_target_tests_name').split(';')]
+    pool_name = params.get("hlk_pool_name")
+    project_name = params.get("hlk_project_name")
+    target_name = params.get("hlk_target_name")
+    tests_name = [name for name in params.get("hlk_target_tests_name").split(";")]
     hlk_server = HLKServer(test, vm_server)
-    hlk_server.simple_run_test(pool_name, project_name, target_name,
-                               tests_name, timeout=24000, step=600)
+    hlk_server.simple_run_test(
+        pool_name, project_name, target_name, tests_name, timeout=24000, step=600
+    )
     hlk_server.close()

@@ -2,19 +2,14 @@ import logging
 import os.path
 
 from avocado.utils import process
+from virttest import data_dir, env_process, error_context, remote, utils_net, utils_test
 
-from virttest import error_context
-from virttest import remote
-from virttest import data_dir
-from virttest import utils_net
-from virttest import utils_test
-from virttest import env_process
-
-LOG_JOB = logging.getLogger('avocado.test')
+LOG_JOB = logging.getLogger("avocado.test")
 
 
-def create_file_in_guest(test, session, file_path, size=100,
-                         os_type="linux", timeout=360):
+def create_file_in_guest(
+    test, session, file_path, size=100, os_type="linux", timeout=360
+):
     """
     Create a file with 'dd' in guest.
 
@@ -68,17 +63,14 @@ def ping(test, os_type, match_error, dest, count, session, same_vlan):
     :param same_vlan: whether the two guests are in the same vlan
     """
     if os_type == "linux":
-        status, output = utils_test.ping(dest, count,
-                                         timeout=60,
-                                         session=session)
+        status, output = utils_test.ping(dest, count, timeout=60, session=session)
         loss_ratio = utils_test.get_loss_ratio(output)
         ping_result_check(test, loss_ratio, same_vlan)
         LOG_JOB.debug(output)
     elif os_type == "windows":  # TODO, not supported by now
-        status, output = utils_test.ping(dest, count, timeout=60,
-                                         session=session)
+        status, output = utils_test.ping(dest, count, timeout=60, session=session)
         if match_error in str(output):
-            ratio = 100
+            pass
         else:
             loss_ratio = utils_test.get_loss_ratio(output)
         ping_result_check(test, loss_ratio, same_vlan)
@@ -101,28 +93,24 @@ def netperf_setup(test, params, env):
         if params.get("os_type") == "linux":
             netperf_link = params["netperf_link"]
             netperf_path = params["netperf_path"]
-            src_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                    netperf_link)
+            src_link = os.path.join(data_dir.get_deps_dir("netperf"), netperf_link)
             vm.copy_files_to(src_link, netperf_path, timeout=60)
             setup_cmd = params.get("setup_cmd")
-            (status, output) = session.cmd_status_output(setup_cmd %
-                                                         netperf_path,
-                                                         timeout=600)
+            (status, output) = session.cmd_status_output(
+                setup_cmd % netperf_path, timeout=600
+            )
             if status != 0:
                 err = "Fail to setup netperf on guest os."
                 err += " Command output:\n%s" % output
                 test.error(err)
         elif params.get("os_type") == "windows":
             # TODO, not suppoted by now
-            s_link = params.get("netperf_server_link_win",
-                                "netserver-2.6.0.exe")
-            src_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                    s_link)
+            s_link = params.get("netperf_server_link_win", "netserver-2.6.0.exe")
+            src_link = os.path.join(data_dir.get_deps_dir("netperf"), s_link)
             netperf_path = params["netperf_path"]
             vm.copy_files_to(src_link, netperf_path, timeout=60)
             s_link = params.get("netperf_client_link_win", "netperf.exe")
-            src_link = os.path.join(data_dir.get_deps_dir("netperf"),
-                                    s_link)
+            src_link = os.path.join(data_dir.get_deps_dir("netperf"), s_link)
             vm.copy_files_to(src_link, netperf_path, timeout=60)
     finally:
         if session:
@@ -165,8 +153,7 @@ def run(test, params, env):
 
     txt = "Stop NetworkManager service in host."
     error_context.context(txt, test.log.info)
-    process.system(params["stop_network_manager"], timeout=120,
-                   ignore_status=True)
+    process.system(params["stop_network_manager"], timeout=120, ignore_status=True)
 
     txt = "Create a new private ovs bridge, which has"
     txt += " no physical nics inside."
@@ -195,8 +182,9 @@ def run(test, params, env):
             vlan = vm_params["ovs_port_vlan"]
             create_port_cmd = "ovs-vsctl set Port %s tag=%s" % (ifname, vlan)
             try:
-                output = process.system_output(create_port_cmd, timeout=120,
-                                               ignore_status=False).decode()
+                output = process.system_output(
+                    create_port_cmd, timeout=120, ignore_status=False
+                ).decode()
                 process.system_output("ovs-vsctl show")
             except process.CmdError:
                 err = "Fail to create ovs port %s " % ifname
@@ -214,30 +202,49 @@ def run(test, params, env):
             mac = vm.get_mac_address()
             txt = "Set guest %s mac %s IP to %s" % (vm_name, mac, guest_ip)
             error_context.context(txt, test.log.info)
-            utils_net.set_guest_ip_addr(session_ctl, mac, guest_ip,
-                                        os_type=os_type)
+            utils_net.set_guest_ip_addr(session_ctl, mac, guest_ip, os_type=os_type)
             utils_net.Interface(ifname).down()
             utils_net.Interface(ifname).up()
             ips.append(guest_ip)
             sessions.append(session_ctl)
 
-        txt = "Ping between two guests in same vlan. %s -> %s" % (vms[0],
-                                                                  vms[1])
+        txt = "Ping between two guests in same vlan. %s -> %s" % (vms[0], vms[1])
         error_context.context(txt, test.log.info)
-        ping(test, os_type, match_error, ips[1], count=10,
-             session=sessions[0], same_vlan=True)
+        ping(
+            test,
+            os_type,
+            match_error,
+            ips[1],
+            count=10,
+            session=sessions[0],
+            same_vlan=True,
+        )
 
         txt = "Ping between two guests in different "
         txt += "vlan. %s -> %s" % (vms[0], vms[2])
         error_context.context(txt, test.log.info)
-        ping(test, os_type, match_error, ips[2], count=10,
-             session=sessions[0], same_vlan=False)
+        ping(
+            test,
+            os_type,
+            match_error,
+            ips[2],
+            count=10,
+            session=sessions[0],
+            same_vlan=False,
+        )
 
         txt = "Ping between two guests in another "
         txt += "vlan. %s -> %s" % (vms[2], vms[3])
         error_context.context(txt, test.log.info)
-        ping(test, os_type, match_error, ips[3], count=10,
-             session=sessions[2], same_vlan=True)
+        ping(
+            test,
+            os_type,
+            match_error,
+            ips[3],
+            count=10,
+            session=sessions[2],
+            same_vlan=True,
+        )
 
         txt = "Netperf test between two guests in same vlan."
         txt += "%s -> %s" % (vms[0], vms[1])
@@ -267,11 +274,9 @@ def run(test, params, env):
         if test_protocol:
             cmd += " -t %s" % test_protocol
         cmd_timeout = test_duration + 20
-        status, output = sessions[1].cmd_status_output(cmd,
-                                                       timeout=cmd_timeout)
+        status, output = sessions[1].cmd_status_output(cmd, timeout=cmd_timeout)
         if status != 0:
-            err = "Fail to run netperf test between %s and %s." % (vms[0],
-                                                                   vms[1])
+            err = "Fail to run netperf test between %s and %s." % (vms[0], vms[1])
             err += " Command output:\n%s" % output
             test.fail(err)
 
@@ -280,14 +285,16 @@ def run(test, params, env):
             file_create_timeout = int(params.get("file_create_timeout", 720))
             file_path = params.get("file_path", "/var/tmp/src_file")
 
-            txt = "Create %s MB file %s in %s" % (filesize,
-                                                  file_path,
-                                                  vms[0])
+            txt = "Create %s MB file %s in %s" % (filesize, file_path, vms[0])
             error_context.context(txt, test.log.info)
-            create_file_in_guest(test, session=sessions[0],
-                                 file_path=file_path,
-                                 size=filesize, os_type=os_type,
-                                 timeout=file_create_timeout)
+            create_file_in_guest(
+                test,
+                session=sessions[0],
+                file_path=file_path,
+                size=filesize,
+                os_type=os_type,
+                timeout=file_create_timeout,
+            )
 
             txt = "Transfer file %s between guests in same " % file_path
             txt += "vlan. %s -> %s" % (vms[0], vms[1])
@@ -297,18 +304,25 @@ def run(test, params, env):
             f_tmout = int(params.get("file_transfer_timeout", 1200))
             shell_port = params.get("shell_port", "22")
             data_port = params.get("nc_file_transfer_port", "9000")
-            log_file = "file_transfer_from_%s_to_%s.log" % (ips[0], ips[1])
+            "file_transfer_from_%s_to_%s.log" % (ips[0], ips[1])
             if os_type == "linux":  # TODO, windows will be supported later
-                remote.nc_copy_between_remotes(ips[0], ips[1], shell_port,
-                                               password, password,
-                                               username, username,
-                                               file_path, file_path,
-                                               d_port=data_port,
-                                               timeout=2,
-                                               check_sum=True,
-                                               s_session=sessions[0],
-                                               d_session=sessions[1],
-                                               file_transfer_timeout=f_tmout)
+                remote.nc_copy_between_remotes(
+                    ips[0],
+                    ips[1],
+                    shell_port,
+                    password,
+                    password,
+                    username,
+                    username,
+                    file_path,
+                    file_path,
+                    d_port=data_port,
+                    timeout=2,
+                    check_sum=True,
+                    s_session=sessions[0],
+                    d_session=sessions[1],
+                    file_transfer_timeout=f_tmout,
+                )
     finally:
         for session in sessions:
             if session:

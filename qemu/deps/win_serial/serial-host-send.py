@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-import sys
 import socket
 import struct
+import sys
 
 WRITE_HEADER = "III"
 WRITE_HEADER_LEN = struct.calcsize(WRITE_HEADER)
@@ -12,11 +12,13 @@ READ_HEADER_LEN = struct.calcsize(READ_HEADER)
 
 def pack_message(arg):
     size = WRITE_HEADER_LEN + len(arg)
-    stream = struct.pack(WRITE_HEADER + "%ds" % len(arg),
-                         socket.htonl(1),
-                         socket.htonl(3),
-                         socket.htonl(size),
-                         arg)
+    stream = struct.pack(
+        WRITE_HEADER + "%ds" % len(arg),
+        socket.htonl(1),
+        socket.htonl(3),
+        socket.htonl(size),
+        arg,
+    )
     return stream
 
 
@@ -33,7 +35,7 @@ def main():
     vport.connect(sys.argv[1])
     data_file = sys.argv[2]
 
-    with open(data_file, 'rb') as ff:
+    with open(data_file, "rb") as ff:
         arg = ff.read(65535)
     stream = pack_message(arg)
     vport.send(stream)

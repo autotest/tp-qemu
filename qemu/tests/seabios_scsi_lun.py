@@ -1,7 +1,6 @@
 import re
 
-from virttest import error_context
-from virttest import utils_misc
+from virttest import error_context, utils_misc
 
 
 @error_context.context_aware
@@ -31,7 +30,7 @@ def run(test, params, env):
         return re.findall(r"^\d+\. (.*)\s", get_output(seabios_session), re.M)
 
     timeout = float(params.get("boot_timeout", 60))
-    boot_menu_key = params.get("boot_menu_key", 'esc')
+    boot_menu_key = params.get("boot_menu_key", "esc")
     boot_menu_hint = params.get("boot_menu_hint")
     check_pattern = params.get("check_pattern", "virtio-scsi Drive")
     img = params.objects("images")[0]
@@ -40,7 +39,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
-    seabios_session = vm.logsessions['seabios']
+    seabios_session = vm.logsessions["seabios"]
     if not (boot_menu_hint and utils_misc.wait_for(boot_menu, timeout, 1)):
         test.fail("Could not get boot menu message.")
 

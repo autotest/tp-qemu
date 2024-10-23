@@ -1,9 +1,6 @@
 import re
 
-from virttest import env_process
-from virttest import error_context
-from virttest import utils_misc
-
+from virttest import env_process, error_context, utils_misc
 from virttest.qemu_monitor import QMPCmdError
 
 
@@ -56,9 +53,9 @@ def run(test, params, env):
     except QMPCmdError as e:
         if not re.search(error_msg, str(e.data)):
             test.fail("Cannot get expected error message: %s" % error_msg)
-        test.log.debug("Get the expected error message: %s" % error_msg)
+        test.log.debug("Get the expected error message: %s", error_msg)
     else:
         test.fail(
-            "Got the node-affinity: %s however it is expected to be a non-readable property"
-            % str(node_affinity)
+            "Got the node-affinity: %s however it is expected to be a non-readable "
+            "property" % str(node_affinity)
         )

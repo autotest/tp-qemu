@@ -1,5 +1,4 @@
-from virttest import error_context
-from virttest import utils_test
+from virttest import error_context, utils_test
 
 
 @error_context.context_aware
@@ -19,8 +18,9 @@ def run(test, params, env):
 
     driver_name = params["driver_name"]
     driver_verifier = params.get("driver_verifier", driver_name)
-    session = utils_test.qemu.windrv_check_running_verifier(session, vm,
-                                                            test, driver_verifier)
+    session = utils_test.qemu.windrv_check_running_verifier(
+        session, vm, test, driver_verifier
+    )
 
     # check if Windows VirtIO driver is msft digital signed.
     device_name = params["device_name"]

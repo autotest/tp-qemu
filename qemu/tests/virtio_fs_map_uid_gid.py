@@ -1,14 +1,10 @@
 import os
 import random
 import string
+
 import aexpect
-
 from avocado.utils import process
-
-from virttest import env_process
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_disk
+from virttest import env_process, error_context, utils_disk, utils_misc
 
 
 @error_context.context_aware
@@ -42,9 +38,13 @@ def run(test, params, env):
         """
         Get the host common user's sub uid/gid and count in host.
         """
-        output = process.system_output("cat /etc/%s |grep %s" %
-                                       (id_type, user_name),
-                                       shell=True).decode().strip()
+        output = (
+            process.system_output(
+                "cat /etc/%s |grep %s" % (id_type, user_name), shell=True
+            )
+            .decode()
+            .strip()
+        )
         id_begin = output.split(":")[1]
         id_count = output.split(":")[2]
         return id_begin, id_count
@@ -55,11 +55,13 @@ def run(test, params, env):
         root user or a common user.
         only for linux guest.
         """
-        file_name = "file_" + ''.join(random.sample(string.ascii_letters +
-                                                    string.digits, 3))
+        file_name = "file_" + "".join(
+            random.sample(string.ascii_letters + string.digits, 3)
+        )
         guest_file = os.path.join(fs_dest, file_name)
-        error_context.context("Create a file in shared dir "
-                              "with %s user." % user_guest, test.log.info)
+        error_context.context(
+            "Create a file in shared dir " "with %s user." % user_guest, test.log.info
+        )
         if user_guest != "root":
             if session.cmd_status("id %s" % user_guest) == 0:
                 session.cmd(del_user_cmd % user_guest)
@@ -68,9 +70,11 @@ def run(test, params, env):
             guest_user_session.cmd("su %s" % user_guest)
             s = guest_user_session.cmd_status(create_file_cmd % guest_file)
             if map_type == "one_to_one" and s == 0:
-                test.fail("Only mapping root user to host, so the common user"
-                          " should have no permission to"
-                          " create a file in the shared dir.")
+                test.fail(
+                    "Only mapping root user to host, so the common user"
+                    " should have no permission to"
+                    " create a file in the shared dir."
+                )
             guest_user_session.close()
         else:
             session.cmd(create_file_cmd % guest_file)
@@ -86,28 +90,33 @@ def run(test, params, env):
          uid/gid should be the same with the common user in guest,
          while it's uid_begin/gid_begin + ${id_common_user} in host.
         """
-        error_context.context("Get the user %s's uid:gid from guest." %
-                              user_guest, test.log.info)
+        error_context.context(
+            "Get the user %s's uid:gid from guest." % user_guest, test.log.info
+        )
         user_uid = session.cmd_output("id %s -u" % user_guest).strip()
         user_gid = session.cmd_output("id %s -g" % user_guest).strip()
 
-        expect_id = {"guest": user_uid + ":" + user_gid,
-                     "host": "%s:%s" % (str(int(uid_begin) + int(user_uid)),
-                                        str(int(gid_begin) + int(user_gid)))}
-        test.log.info("The expected file's id is %s for %s" % (expect_id,
-                                                               user_guest))
+        expect_id = {
+            "guest": user_uid + ":" + user_gid,
+            "host": "%s:%s"
+            % (
+                str(int(uid_begin) + int(user_uid)),
+                str(int(gid_begin) + int(user_gid)),
+            ),
+        }
+        test.log.info("The expected file's id is %s for %s", expect_id, user_guest)
         return expect_id
 
     def get_file_owner_id_guest(file_name):
         """
         Get the created file's uid and gid in guest.
         """
-        error_context.context("Get the file %s's uid:gid in guest."
-                              % file_name, test.log.info)
+        error_context.context(
+            "Get the file %s's uid:gid in guest." % file_name, test.log.info
+        )
         cmd_get_file = "ls -l %s"
         guest_file = os.path.join(fs_dest, file_name)
-        output_guest = session.cmd_output(cmd_get_file %
-                                          guest_file).strip()
+        output_guest = session.cmd_output(cmd_get_file % guest_file).strip()
         owner_guest = output_guest.split()[2]
         group_guest = output_guest.split()[3]
         s, o = session.cmd_status_output("id %s -u" % owner_guest)
@@ -124,28 +133,34 @@ def run(test, params, env):
 
     def get_file_owner_id_host(file_name):
         """
-         Get the created file's uid and gid in host.
+        Get the created file's uid and gid in host.
         """
-        error_context.context("Get the file %s's uid:gid in host."
-                              % file_name, test.log.info)
+        error_context.context(
+            "Get the file %s's uid:gid in host." % file_name, test.log.info
+        )
         cmd_get_file = "ls -l %s"
         host_file = os.path.join(shared_dir, file_name)
-        output_host = process.system_output(cmd_get_file % host_file,
-                                            shell=True).decode().strip()
+        output_host = (
+            process.system_output(cmd_get_file % host_file, shell=True).decode().strip()
+        )
         owner_host = output_host.split()[2]
         group_host = output_host.split()[3]
-        if process.system("id %s -u" % owner_host, shell=True,
-                          ignore_status=True):
+        if process.system("id %s -u" % owner_host, shell=True, ignore_status=True):
             uid = owner_host
         else:
-            uid = process.system_output("id %s -u" % owner_host,
-                                        shell=True).decode().strip()
-        if process.system("id %s -g" % group_host, shell=True,
-                          ignore_status=True):
+            uid = (
+                process.system_output("id %s -u" % owner_host, shell=True)
+                .decode()
+                .strip()
+            )
+        if process.system("id %s -g" % group_host, shell=True, ignore_status=True):
             gid = group_host
         else:
-            gid = process.system_output("id %s -g" % group_host,
-                                        shell=True).decode().strip()
+            gid = (
+                process.system_output("id %s -g" % group_host, shell=True)
+                .decode()
+                .strip()
+            )
         return uid + ":" + gid
 
     fs_target = params.get("fs_target")
@@ -161,28 +176,30 @@ def run(test, params, env):
     p_vfsd = None
     try:
         # start virtiofsd with user config in host
-        error_context.context("Create a common user and a shared dir in host.",
-                              test.log.info)
+        error_context.context(
+            "Create a common user and a shared dir in host.", test.log.info
+        )
         user_name = params["new_user_host"]
-        if process.system("id %s" % user_name, shell=True,
-                          ignore_status=True) == 0:
+        if process.system("id %s" % user_name, shell=True, ignore_status=True) == 0:
             process.run(params["del_user_cmd"] % user_name)
         process.run(params["add_user_cmd"] % user_name)
 
         # config socket
-        sock_path = os.path.join("/home/" + user_name,
-                                 '-'.join(('avocado-vt-vm1', 'viofs',
-                                           'virtiofsd.sock')))
+        sock_path = os.path.join(
+            "/home/" + user_name,
+            "-".join(("avocado-vt-vm1", "viofs", "virtiofsd.sock")),
+        )
         # create the socket file before daemon running
         open(sock_path, "w")
-        params['fs_source_user_sock_path'] = sock_path
+        params["fs_source_user_sock_path"] = sock_path
 
         # create the share folder
         fs_source = params.get("fs_source_dir")
         shared_dir = os.path.join("/home/" + user_name, fs_source)
         if not os.path.exists(shared_dir):
-            process.system("runuser -l " + user_name + " -c 'mkdir -p " +
-                           shared_dir + "'")
+            process.system(
+                "runuser -l " + user_name + " -c 'mkdir -p " + shared_dir + "'"
+            )
 
         # give 'x' permission to common user home dir and give share dir
         # write permission for all the users.
@@ -200,20 +217,26 @@ def run(test, params, env):
         if map_type == "one_to_one":
             fs_binary_extra_options = fsd_map_option % (uid_begin, gid_begin)
         else:
-            fs_binary_extra_options = fsd_map_option % (uid_begin, uid_count,
-                                                        gid_begin, gid_count)
+            fs_binary_extra_options = fsd_map_option % (
+                uid_begin,
+                uid_count,
+                gid_begin,
+                gid_count,
+            )
         cmd_run_virtiofsd = params["cmd_run_virtiofsd"] % sock_path
         cmd_run_virtiofsd += " --shared-dir %s" % shared_dir
         cmd_run_virtiofsd += fs_binary_extra_options
-        error_context.context("Running daemon command %s with %s user." %
-                              (cmd_run_virtiofsd, user_name),
-                              test.log.info)
-        p_vfsd = aexpect.ShellSession("runuser -l " + user_name +
-                                      " -c '" + cmd_run_virtiofsd + "'",
-                                      auto_close=False,
-                                      output_func=utils_misc.log_line,
-                                      output_params=(vfsd_log_name,),
-                                      prompt=r"^\[.*\][\#\$]\s*$")
+        error_context.context(
+            "Running daemon command %s with %s user." % (cmd_run_virtiofsd, user_name),
+            test.log.info,
+        )
+        p_vfsd = aexpect.ShellSession(
+            "runuser -l " + user_name + " -c '" + cmd_run_virtiofsd + "'",
+            auto_close=False,
+            output_func=utils_misc.log_line,
+            output_params=(vfsd_log_name,),
+            prompt=r"^\[.*\][\#\$]\s*$",
+        )
         params["start_vm"] = "yes"
         env_process.preprocess_vm(test, params, env, params["main_vm"])
 
@@ -223,19 +246,19 @@ def run(test, params, env):
 
         if not utils_misc.make_dirs(fs_dest, session):
             test.fail("Creating directory was failed!")
-        error_context.context("Mount virtiofs target %s to %s inside"
-                              " guest." % (fs_target, fs_dest),
-                              test.log.info)
-        if not utils_disk.mount(fs_target, fs_dest, 'virtiofs', session=session):
-            test.fail('Mount virtiofs target failed.')
+        error_context.context(
+            "Mount virtiofs target %s to %s inside" " guest." % (fs_target, fs_dest),
+            test.log.info,
+        )
+        if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):
+            test.fail("Mount virtiofs target failed.")
 
         for guest_user in ["root", common_guest_user]:
             # create a new file in guest.
             file_name = create_file_in_guest(guest_user)
             # if map type is 1 to 1, then create file will fail with
             # a common user, so there is no need to check the uid/gid
-            if not (map_type == "one_to_one"
-                    and guest_user == common_guest_user):
+            if not (map_type == "one_to_one" and guest_user == common_guest_user):
                 uid_gid_guest = get_file_owner_id_guest(file_name)
                 uid_gid_host = get_file_owner_id_host(file_name)
                 expect_id = get_expect_user_id(guest_user)
@@ -246,9 +269,8 @@ def run(test, params, env):
                 if uid_gid_host != expect_id["host"]:
                     test.fail(msg % ("host", expect_id["host"], uid_gid_host))
     finally:
-        error_context.context("Clean the env, delete the user on guest.",
-                              test.log.info)
-        utils_disk.umount(fs_target, fs_dest, 'virtiofs', session=session)
+        error_context.context("Clean the env, delete the user on guest.", test.log.info)
+        utils_disk.umount(fs_target, fs_dest, "virtiofs", session=session)
         utils_misc.safe_rmdir(fs_dest, session=session)
         if session.cmd_status("id %s" % common_guest_user) == 0:
             session.cmd(del_user_cmd % common_guest_user)

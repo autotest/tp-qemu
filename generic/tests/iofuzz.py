@@ -1,13 +1,8 @@
-import re
 import random
+import re
 
 import aexpect
-
-from virttest import data_dir
-from virttest import qemu_storage
-from virttest import qemu_vm
-from virttest import storage
-from virttest import virt_vm
+from virttest import data_dir, qemu_storage, qemu_vm, storage, virt_vm
 
 
 def run(test, params, env):
@@ -28,11 +23,12 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def qemu_img_check():
         """
         Check guest disk image, and backup image when error occured
         """
-        params["backup_image_on_check_error"] = 'yes'
+        params["backup_image_on_check_error"] = "yes"
         base_dir = data_dir.get_data_dir()
         image_name = storage.get_image_filename(params, base_dir)
         image = qemu_storage.QemuImg(params, base_dir, image_name)
@@ -48,8 +44,10 @@ def run(test, params, env):
                 value will be converted to octal before its written.
         """
         test.log.debug("outb(0x%x, 0x%x)", port, data)
-        outb_cmd = ("echo -e '\\%s' | dd of=/dev/port seek=%d bs=1 count=1" %
-                    (oct(data), port))
+        outb_cmd = "echo -e '\\%s' | dd of=/dev/port seek=%d bs=1 count=1" % (
+            oct(data),
+            port,
+        )
         try:
             session.cmd(outb_cmd)
         except aexpect.ShellError as err:
@@ -81,7 +79,7 @@ def run(test, params, env):
         :raise error.TestFail: If the VM process dies in the middle of the
                 fuzzing procedure.
         """
-        for (wr_op, operand) in inst_list:
+        for wr_op, operand in inst_list:
             if wr_op == "read":
                 inb(session, operand[0])
             elif wr_op == "write":
@@ -98,7 +96,7 @@ def run(test, params, env):
                 except virt_vm.VMDeadKernelCrashError as err:
                     test.fail("Guest kernel crash, info: %s" % err)
                 else:
-                    test.log.warn("Guest is not alive during test")
+                    test.log.warning("Guest is not alive during test")
 
                 if vm.process.is_alive():
                     test.log.debug("VM is alive, try to re-login")
@@ -109,8 +107,9 @@ def run(test, params, env):
                         qemu_img_check()
                         session = vm.reboot(method="system_reset")
                 else:
-                    test.fail("VM has quit abnormally during "
-                              "%s: %s" % (wr_op, operand))
+                    test.fail(
+                        "VM has quit abnormally during " "%s: %s" % (wr_op, operand)
+                    )
 
     login_timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])
@@ -129,10 +128,10 @@ def run(test, params, env):
         skip_devices = params.get("skip_devices", "")
         fuzz_count = int(params.get("fuzz_count", 10))
 
-        for (beg, end, name) in devices:
+        for beg, end, name in devices:
             ports[(int(beg, base=16), int(end, base=16))] = name.strip()
 
-        for (beg, end) in ports.keys():
+        for beg, end in ports.keys():
             name = ports[(beg, end)]
             if name in skip_devices:
                 test.log.info("Skipping device %s", name)
@@ -151,8 +150,9 @@ def run(test, params, env):
 
             # Write random values to random ports of the range
             for _ in range(fuzz_count * (end - beg + 1)):
-                inst.append(("write", [o_random.randint(beg, end),
-                                       o_random.randint(0, 255)]))
+                inst.append(
+                    ("write", [o_random.randint(beg, end), o_random.randint(0, 255)])
+                )
 
             fuzz(test, session, inst)
         vm.verify_alive()

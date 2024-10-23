@@ -1,18 +1,12 @@
 import os
-import time
 import re
 import shutil
-import tempfile
 import signal
+import tempfile
+import time
 
 from avocado.utils import process
-
-from virttest import error_context
-from virttest import utils_misc
-from virttest import env_process
-from virttest import storage
-from virttest import data_dir
-from virttest import gluster
+from virttest import data_dir, env_process, error_context, gluster, storage, utils_misc
 from virttest.utils_numeric import normalize_data_size
 
 
@@ -43,8 +37,9 @@ def run(test, params, env):
         except OSError:
             pass
 
-    def _get_image_filename(img_name, enable_gluster=False,
-                            enable_nvme=False, img_fmt=None):
+    def _get_image_filename(
+        img_name, enable_gluster=False, enable_nvme=False, img_fmt=None
+    ):
         """
         Generate an image path.
 
@@ -63,8 +58,7 @@ def run(test, params, env):
         else:
             if img_fmt:
                 img_name = "%s.%s" % (img_name, img_fmt)
-            image_filename = utils_misc.get_path(data_dir.get_data_dir(),
-                                                 img_name)
+            image_filename = utils_misc.get_path(data_dir.get_data_dir(), img_name)
         return image_filename
 
     def _check(cmd, img):
@@ -75,8 +69,9 @@ def run(test, params, env):
         :param img: image to be checked
         """
         cmd += " check %s" % img
-        error_context.context("Checking image '%s' by command '%s'"
-                              % (img, cmd), test.log.info)
+        error_context.context(
+            "Checking image '%s' by command '%s'" % (img, cmd), test.log.info
+        )
         try:
             output = process.system_output(cmd, verbose=False).decode()
         except process.CmdError as err:
@@ -96,8 +91,7 @@ def run(test, params, env):
 
         :param cmd: qemu-img base command.
         """
-        test_image = _get_image_filename(params["image_name_dd"],
-                                         enable_gluster)
+        test_image = _get_image_filename(params["image_name_dd"], enable_gluster)
         create_image_cmd = params["create_image_cmd"]
         create_image_cmd = create_image_cmd % test_image
         msg = " Create image %s by command %s" % (test_image, create_image_cmd)
@@ -105,21 +99,27 @@ def run(test, params, env):
         process.system(create_image_cmd, verbose=False, shell=True)
         status, output = _check(cmd, test_image)
         if not status:
-            test.fail("Check image '%s' failed with error: %s" %
-                      (test_image, output))
+            test.fail("Check image '%s' failed with error: %s" % (test_image, output))
         for fmt in params["supported_image_formats"].split():
             output_image = test_image + ".%s" % fmt
             _convert(cmd, fmt, test_image, output_image)
             status, output = _check(cmd, output_image)
             if not status:
-                test.fail("Check image '%s' got error: %s" %
-                          (output_image, output))
+                test.fail("Check image '%s' got error: %s" % (output_image, output))
             remove(output_image)
         remove(test_image)
 
-    def _create(cmd, img_name, fmt, img_size=None, base_img=None,
-                base_img_fmt=None, encrypted="no",
-                preallocated="off", cluster_size=None):
+    def _create(
+        cmd,
+        img_name,
+        fmt,
+        img_size=None,
+        base_img=None,
+        base_img_fmt=None,
+        encrypted="no",
+        preallocated="off",
+        cluster_size=None,
+    ):
         """
         Simple wrapper of 'qemu-img create'
 
@@ -173,14 +173,19 @@ def run(test, params, env):
         image_large = params["image_name_large"]
         device = params.get("device")
         if not device:
-            img = _get_image_filename(image_large, enable_gluster,
-                                      enable_nvme, image_format)
+            img = _get_image_filename(
+                image_large, enable_gluster, enable_nvme, image_format
+            )
         else:
             img = device
-        _create(cmd, img_name=img, fmt=image_format,
-                img_size=params["image_size_large"],
-                preallocated=params.get("preallocated", "off"),
-                cluster_size=params.get("image_cluster_size"))
+        _create(
+            cmd,
+            img_name=img,
+            fmt=image_format,
+            img_size=params["image_size_large"],
+            preallocated=params.get("preallocated", "off"),
+            cluster_size=params.get("image_cluster_size"),
+        )
         remove(img)
 
     def send_signal(timeout=360):
@@ -191,9 +196,13 @@ def run(test, params, env):
         test.log.info("Send signal to qemu-img")
         end_time = time.time() + timeout
         while time.time() < end_time:
-            pid = process.system_output("pidof qemu-img",
-                                        ignore_status=True,
-                                        verbose=False).decode().strip()
+            pid = (
+                process.system_output(
+                    "pidof qemu-img", ignore_status=True, verbose=False
+                )
+                .decode()
+                .strip()
+            )
             if bool(pid):
                 break
             time.sleep(0.1)
@@ -224,8 +233,15 @@ def run(test, params, env):
             err_msg += "Output: %s, expected pattern: %s" % (output, pattern)
             test.fail(err_msg)
 
-    def _convert(cmd, output_fmt, img_name, output_filename,
-                 fmt=None, compressed="no", encrypted="no"):
+    def _convert(
+        cmd,
+        output_fmt,
+        img_name,
+        output_filename,
+        fmt=None,
+        compressed="no",
+        encrypted="no",
+    ):
         """
         Simple wrapper of 'qemu-img convert' function.
 
@@ -272,14 +288,23 @@ def run(test, params, env):
         :param cmd: qemu-img base command.
         """
         dest_img_fmt = params["dest_image_format"]
-        output_filename = "%s.converted_%s.%s" % (image_name,
-                                                  dest_img_fmt, dest_img_fmt)
+        output_filename = "%s.converted_%s.%s" % (
+            image_name,
+            dest_img_fmt,
+            dest_img_fmt,
+        )
 
-        _convert(cmd, dest_img_fmt, image_name, output_filename,
-                 image_format, params["compressed"], params["encrypted"])
+        _convert(
+            cmd,
+            dest_img_fmt,
+            image_name,
+            output_filename,
+            image_format,
+            params["compressed"],
+            params["encrypted"],
+        )
         orig_img_name = params.get("image_name")
-        img_name = "%s.%s.converted_%s" % (orig_img_name,
-                                           image_format, dest_img_fmt)
+        img_name = "%s.%s.converted_%s" % (orig_img_name, image_format, dest_img_fmt)
         _boot(img_name, dest_img_fmt)
 
         if dest_img_fmt == "qcow2":
@@ -287,8 +312,9 @@ def run(test, params, env):
             if status:
                 remove(output_filename)
             else:
-                test.fail("Check image '%s' failed with error: %s" %
-                          (output_filename, output))
+                test.fail(
+                    "Check image '%s' failed with error: %s" % (output_filename, output)
+                )
         else:
             remove(output_filename)
 
@@ -309,8 +335,9 @@ def run(test, params, env):
         try:
             output = process.system_output(cmd).decode()
         except process.CmdError as err:
-            test.log.error("Get info of image '%s' failed: %s",
-                           img, err.result.stderr.decode())
+            test.log.error(
+                "Get info of image '%s' failed: %s", img, err.result.stderr.decode()
+            )
             return None
 
         if not sub_info:
@@ -319,8 +346,8 @@ def run(test, params, env):
         sub_info += ": (.*)"
         matches = re.findall(sub_info, output)
         if "virtual size" in sub_info:
-            p = re.compile(r'\.0*(G|K)$')
-            return p.sub(r'\1', matches[0].split()[0])
+            p = re.compile(r"\.0*(G|K)$")
+            return p.sub(r"\1", matches[0].split()[0])
         if matches:
             return matches[0]
         return None
@@ -334,12 +361,13 @@ def run(test, params, env):
         img_info = _info(cmd, image_name)
         test.log.info("Info of image '%s':\n%s", image_name, img_info)
         if image_format not in img_info:
-            test.fail("Got unexpected format of image '%s'"
-                      " in info test" % image_name)
-        if not re.search(r'%s\s+bytes' % normalize_data_size(
-                image_size, "B"), img_info):
-            test.fail("Got unexpected size of image '%s'"
-                      " in info test" % image_name)
+            test.fail(
+                "Got unexpected format of image '%s'" " in info test" % image_name
+            )
+        if not re.search(
+            r"%s\s+bytes" % normalize_data_size(image_size, "B"), img_info
+        ):
+            test.fail("Got unexpected size of image '%s'" " in info test" % image_name)
 
     def snapshot_test(cmd):
         """
@@ -352,22 +380,27 @@ def run(test, params, env):
             crtcmd = cmd
             sn_name = "snapshot%d" % i
             crtcmd += " -c %s %s" % (sn_name, image_name)
-            msg = "Created snapshot '%s' in '%s' by command %s" % (sn_name,
-                                                                   image_name,
-                                                                   crtcmd)
+            msg = "Created snapshot '%s' in '%s' by command %s" % (
+                sn_name,
+                image_name,
+                crtcmd,
+            )
             error_context.context(msg, test.log.info)
             cmd_result = process.run(crtcmd, verbose=False, ignore_status=True)
             status, output = cmd_result.exit_status, cmd_result.stdout.decode()
             if status != 0:
-                test.fail("Create snapshot failed via command: %s;"
-                          "Output is: %s" % (crtcmd, output))
+                test.fail(
+                    "Create snapshot failed via command: %s;"
+                    "Output is: %s" % (crtcmd, output)
+                )
         listcmd = cmd
         listcmd += " -l %s" % image_name
         cmd_result = process.run(listcmd, verbose=False, ignore_status=True)
         status, out = cmd_result.exit_status, cmd_result.stdout.decode()
         if not ("snapshot0" in out and "snapshot1" in out and status == 0):
-            test.fail("Snapshot created failed or missed;"
-                      "snapshot list is: \n%s" % out)
+            test.fail(
+                "Snapshot created failed or missed;" "snapshot list is: \n%s" % out
+            )
         for i in range(2):
             sn_name = "snapshot%d" % i
             delcmd = cmd
@@ -377,8 +410,7 @@ def run(test, params, env):
             cmd_result = process.run(delcmd, verbose=False, ignore_status=True)
             status, output = cmd_result.exit_status, cmd_result.stdout.decode()
             if status != 0:
-                test.fail("Delete snapshot '%s' failed: %s" %
-                          (sn_name, output))
+                test.fail("Delete snapshot '%s' failed: %s" % (sn_name, output))
 
     def commit_test(cmd):
         """
@@ -396,19 +428,16 @@ def run(test, params, env):
         """
 
         test.log.info("Commit testing started!")
-        base_image_name = storage.get_image_filename(params,
-                                                     data_dir.get_data_dir())
-        pre_name = '.'.join(image_name.split('.')[:-1])
+        base_image_name = storage.get_image_filename(params, data_dir.get_data_dir())
+        pre_name = ".".join(image_name.split(".")[:-1])
         base_image_format = params.get("image_format", "qcow2")
         overlay_file_name = "%s_overlay.qcow2" % pre_name
-        file_create_cmd = params.get("file_create_cmd",
-                                     "touch /commit_testfile")
-        file_info_cmd = params.get("file_info_cmd",
-                                   "ls / | grep commit_testfile")
-        file_exist_chk_cmd = params.get("file_exist_chk_cmd",
-                                        "[ -e /commit_testfile ] && echo $?")
-        file_del_cmd = params.get("file_del_cmd",
-                                  "rm -f /commit_testfile")
+        file_create_cmd = params.get("file_create_cmd", "touch /commit_testfile")
+        file_info_cmd = params.get("file_info_cmd", "ls / | grep commit_testfile")
+        file_exist_chk_cmd = params.get(
+            "file_exist_chk_cmd", "[ -e /commit_testfile ] && echo $?"
+        )
+        file_del_cmd = params.get("file_del_cmd", "rm -f /commit_testfile")
         try:
             # Remove the existing overlay file
             if os.path.isfile(overlay_file_name):
@@ -416,7 +445,11 @@ def run(test, params, env):
 
             # Create the new overlay file
             create_cmd = "%s create -b %s -F %s -f qcow2 %s" % (
-                cmd, base_image_name, base_image_format, overlay_file_name)
+                cmd,
+                base_image_name,
+                base_image_format,
+                overlay_file_name,
+            )
             msg = "Create overlay file by command: %s" % create_cmd
             error_context.context(msg, test.log.info)
             try:
@@ -426,15 +459,13 @@ def run(test, params, env):
             test.log.info("overlay file (%s) created!", overlay_file_name)
 
             # Set the qemu harddisk to the overlay file
-            test.log.info(
-                "Original image_name is: %s", params.get('image_name'))
-            params['image_name'] = '.'.join(overlay_file_name.split('.')[:-1])
-            test.log.info("Param image_name changed to: %s",
-                          params.get('image_name'))
+            test.log.info("Original image_name is: %s", params.get("image_name"))
+            params["image_name"] = ".".join(overlay_file_name.split(".")[:-1])
+            test.log.info("Param image_name changed to: %s", params.get("image_name"))
 
             msg = "Start a new VM, using overlay file as its harddisk"
             error_context.context(msg, test.log.info)
-            vm_name = params['main_vm']
+            vm_name = params["main_vm"]
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
             vm.verify_alive()
@@ -448,15 +479,16 @@ def run(test, params, env):
                 output = session.cmd(file_info_cmd)
                 test.log.info("Output of %s: %s", file_info_cmd, output)
             except Exception as err:
-                test.fail("Could not create commit_testfile in the "
-                          "overlay file %s" % err)
+                test.fail(
+                    "Could not create commit_testfile in the " "overlay file %s" % err
+                )
             vm.destroy()
 
             # Execute the commit command
-            cmitcmd = "%s commit -f %s %s" % (cmd, image_format,
-                                              overlay_file_name)
-            error_context.context("Committing image by command %s" % cmitcmd,
-                                  test.log.info)
+            cmitcmd = "%s commit -f %s %s" % (cmd, image_format, overlay_file_name)
+            error_context.context(
+                "Committing image by command %s" % cmitcmd, test.log.info
+            )
             try:
                 process.system(cmitcmd, verbose=False)
             except process.CmdError:
@@ -465,8 +497,8 @@ def run(test, params, env):
 
             msg = "Start a new VM, using image_name as its harddisk"
             error_context.context(msg, test.log.info)
-            params['image_name'] = pre_name
-            vm_name = params['main_vm']
+            params["image_name"] = pre_name
+            vm_name = params["main_vm"]
             env_process.preprocess_vm(test, params, env, vm_name)
             vm = env.get_vm(vm_name)
             vm.verify_alive()
@@ -502,8 +534,7 @@ def run(test, params, env):
         if show_progress == "on":
             cmd += " -p"
         cmd += " -b %s -F %s %s" % (base_img, backing_fmt, img_name)
-        msg = "Trying to rebase '%s' to '%s' by command %s" % (img_name,
-                                                               base_img, cmd)
+        msg = "Trying to rebase '%s' to '%s' by command %s" % (img_name, base_img, cmd)
         error_context.context(msg, test.log.info)
         if show_progress == "off":
             bg = utils_misc.InterruptedThread(send_signal)
@@ -521,10 +552,13 @@ def run(test, params, env):
 
         :param cmd: qemu-img base command.
         """
-        if 'rebase' not in process.system_output(cmd + ' --help',
-                                                 ignore_status=True).decode():
-            test.cancel("Current kvm user space version does not"
-                        " support 'rebase' subcommand")
+        if (
+            "rebase"
+            not in process.system_output(cmd + " --help", ignore_status=True).decode()
+        ):
+            test.cancel(
+                "Current kvm user space version does not" " support 'rebase' subcommand"
+            )
         sn_fmt = params.get("snapshot_format", "qcow2")
         sn1 = params["image_name_snapshot1"]
         sn1 = _get_image_filename(sn1, enable_gluster, img_fmt=sn_fmt)
@@ -534,8 +568,8 @@ def run(test, params, env):
         rebase_mode = params.get("rebase_mode", "safe")
         if rebase_mode == "safe":
             # Boot snapshot1 image before create snapshot2
-            img_format = sn1.split('.')[-1]
-            img_name = ".".join(sn1.split('.')[:-1])
+            img_format = sn1.split(".")[-1]
+            img_name = ".".join(sn1.split(".")[:-1])
             _boot(img_name, img_format)
 
         # Create snapshot2 based on snapshot1
@@ -544,8 +578,8 @@ def run(test, params, env):
         _create(cmd, sn2, sn_fmt, base_img=sn1, base_img_fmt=sn_fmt)
 
         # Boot snapshot2 image before rebase
-        img_format = sn2.split('.')[-1]
-        img_name = ".".join(sn2.split('.')[:-1])
+        img_format = sn2.split(".")[-1]
+        img_name = ".".join(sn2.split(".")[:-1])
         _boot(img_name, img_format)
 
         if rebase_mode == "unsafe":
@@ -553,21 +587,23 @@ def run(test, params, env):
 
         _rebase(cmd, sn2, base_img, image_format, mode=rebase_mode)
         # Boot snapshot image after rebase
-        img_format = sn2.split('.')[-1]
-        img_name = ".".join(sn2.split('.')[:-1])
+        img_format = sn2.split(".")[-1]
+        img_name = ".".join(sn2.split(".")[:-1])
         _boot(img_name, img_format)
 
         # Check sn2's format and backing_file
         actual_base_img = _info(cmd, sn2, "backing file")
         base_img_name = os.path.basename(base_img)
         if base_img_name not in actual_base_img:
-            test.fail("After rebase the backing_file of 'sn2' is "
-                      "'%s' which is not expected as '%s'"
-                      % (actual_base_img, base_img_name))
+            test.fail(
+                "After rebase the backing_file of 'sn2' is "
+                "'%s' which is not expected as '%s'" % (actual_base_img, base_img_name)
+            )
         status, output = _check(cmd, sn2)
         if not status:
-            test.fail("Check image '%s' failed after rebase;"
-                      "got error: %s" % (sn2, output))
+            test.fail(
+                "Check image '%s' failed after rebase;" "got error: %s" % (sn2, output)
+            )
         remove(sn2)
         remove(sn1)
 
@@ -585,14 +621,14 @@ def run(test, params, env):
         cmd += " amend"
         if img_fmt:
             cmd += " -f %s" % img_fmt
-        cache = params.get("cache_mode", '')
+        cache = params.get("cache_mode", "")
         if cache:
             cmd += " -t %s" % cache
         if options:
             cmd += " -o "
             for option in options:
                 cmd += "%s=%s," % (option, params.get(option))
-            cmd = cmd.rstrip(',')
+            cmd = cmd.rstrip(",")
         cmd += " %s" % img_name
         error_context.context(msg, test.log.info)
         check_command_output(process.run(cmd, ignore_status=True))
@@ -622,8 +658,9 @@ def run(test, params, env):
                     test.fail(msg)
         status, output = _check(cmd, img)
         if not status:
-            test.fail("Check image '%s' failed after rebase;"
-                      "got error: %s" % (img, output))
+            test.fail(
+                "Check image '%s' failed after rebase;" "got error: %s" % (img, output)
+            )
 
     def _boot(img_name, img_fmt):
         """
@@ -635,15 +672,15 @@ def run(test, params, env):
         :param img_name: image name
         :param img_fmt: image format
         """
-        params['image_name'] = img_name
-        params['image_format'] = img_fmt
-        dd_file_size = params.get('dd_file_size', 1000)
+        params["image_name"] = img_name
+        params["image_format"] = img_fmt
+        dd_file_size = params.get("dd_file_size", 1000)
         image_name = "%s.%s" % (img_name, img_fmt)
         msg = "Try to boot vm with image %s" % image_name
         error_context.context(msg, test.log.info)
         vm_name = params.get("main_vm")
         dd_timeout = int(params.get("dd_timeout", 60))
-        params['vms'] = vm_name
+        params["vms"] = vm_name
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(params.get("main_vm"))
         vm.verify_alive()
@@ -651,7 +688,7 @@ def run(test, params, env):
         session = vm.wait_for_login(timeout=login_timeout)
 
         # Run dd in linux guest
-        if params.get("os_type") == 'linux':
+        if params.get("os_type") == "linux":
             cmd = "dd if=/dev/zero of=/mnt/test bs=%s count=1000" % dd_file_size
             status = session.cmd_status(cmd, timeout=dd_timeout)
             if status != 0:
@@ -661,9 +698,9 @@ def run(test, params, env):
         try:
             vm.graceful_shutdown(timeout=login_timeout)
         except Exception:
-            image_filename = _get_image_filename(img_name,
-                                                 enable_gluster,
-                                                 img_fmt=img_fmt)
+            image_filename = _get_image_filename(
+                img_name, enable_gluster, img_fmt=img_fmt
+            )
             backup_img_chain(image_filename)
             raise
         finally:
@@ -681,15 +718,13 @@ def run(test, params, env):
             gluster.glusterfs_mount(g_uri, mount_point)
             image_name = os.path.basename(image_file)
             image_file = os.path.join(mount_point, image_name)
-        test.log.warn("backup %s to %s", image_file, test.resultsdir)
+        test.log.warning("backup %s to %s", image_file, test.resultsdir)
         shutil.copy(image_file, test.resultsdir)
         backing_file = _info(qemu_img, image_file, "backing file", None)
         if backing_file:
             backup_img_chain(backing_file)
         elif enable_gluster:
-            utils_misc.umount(g_uri, mount_point,
-                              "glusterfs", False,
-                              "fuse.glusterfs")
+            utils_misc.umount(g_uri, mount_point, "glusterfs", False, "fuse.glusterfs")
             shutil.rmtree(mount_point)
         return None
 

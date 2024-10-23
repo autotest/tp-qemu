@@ -5,17 +5,15 @@ from provider.blockdev_full_backup_base import BlockdevFullBackupBaseTest
 
 
 class BlockdevFullBackupMultiDisks(BlockdevFullBackupBaseTest):
-
     def format_data_disk(self, tag):
         session = self.main_vm.wait_for_login()
         try:
-            info = backup_utils.get_disk_info_by_param(tag,
-                                                       self.params,
-                                                       session)
+            info = backup_utils.get_disk_info_by_param(tag, self.params, session)
             assert info, "Disk not found in guest!"
             disk_path = "/dev/%s1" % info["kname"]
             mount_point = utils_disk.configure_empty_linux_disk(
-                session, info["kname"], info["size"])[0]
+                session, info["kname"], info["size"]
+            )[0]
             self.disks_info[tag] = [disk_path, mount_point]
         finally:
             session.close()

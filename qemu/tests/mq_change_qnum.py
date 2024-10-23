@@ -1,11 +1,7 @@
 import re
 
 import aexpect
-
-from virttest import error_context
-from virttest import utils_net
-from virttest import utils_test
-from virttest import utils_misc
+from virttest import error_context, utils_misc, utils_net, utils_test
 
 
 @error_context.context_aware
@@ -24,6 +20,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def change_queues_number(session, ifname, q_number, queues_status=None):
         """
         Change queues number
@@ -37,10 +34,15 @@ def run(test, params, env):
 
         err_msg = ""
         expect_q_number = q_number
-        if (q_number != queues_status[1] and q_number <= queues_status[0]
-                and q_number > 0):
-            if (cur_queues_status[1] != q_number
-                    or cur_queues_status[0] != queues_status[0]):
+        if (
+            q_number != queues_status[1]
+            and q_number <= queues_status[0]
+            and q_number > 0
+        ):
+            if (
+                cur_queues_status[1] != q_number
+                or cur_queues_status[0] != queues_status[0]
+            ):
                 err_msg = "Param is valid, but change queues failed, "
         elif cur_queues_status != queues_status:
             if q_number != queues_status[1]:
@@ -84,8 +86,9 @@ def run(test, params, env):
             change_queues_number(sess, ifname, queues)
 
     def ping_test(dest_ip, ping_time, lost_raito, session=None):
-        status, output = utils_test.ping(dest=dest_ip, timeout=ping_time,
-                                         session=session)
+        status, output = utils_test.ping(
+            dest=dest_ip, timeout=ping_time, session=session
+        )
         packets_lost = utils_test.get_loss_ratio(output)
         if packets_lost > lost_raito:
             err = " %s%% packages lost during ping. " % packets_lost
@@ -116,18 +119,17 @@ def run(test, params, env):
     f_ping_time = int(params.get("final_ping_time", 60))
     bg_test = None
     try:
-
         ifnames = []
         for nic_index, nic in enumerate(vm.virtnet):
-            ifname = utils_net.get_linux_ifname(session,
-                                                vm.virtnet[nic_index].mac)
+            ifname = utils_net.get_linux_ifname(session, vm.virtnet[nic_index].mac)
             ifnames.append(ifname)
 
-        error_context.context("Run test %s background" % bg_stress_test,
-                              test.log.info)
+        error_context.context("Run test %s background" % bg_stress_test, test.log.info)
         stress_thread = utils_misc.InterruptedThread(
-            utils_test.run_virt_sub_test, (test, params, env),
-            {"sub_type": bg_stress_test})
+            utils_test.run_virt_sub_test,
+            (test, params, env),
+            {"sub_type": bg_stress_test},
+        )
         stress_thread.start()
 
         if bg_ping == "yes":
@@ -139,7 +141,7 @@ def run(test, params, env):
         error_context.context("Change queues number repeatly", test.log.info)
         repeat_counts = int(params.get("repeat_counts", 10))
         for nic_index, nic in enumerate(vm.virtnet):
-            if "virtio" not in nic['nic_model']:
+            if "virtio" not in nic["nic_model"]:
                 continue
             queues = int(vm.virtnet[nic_index].queues)
             if queues == 1:
@@ -154,32 +156,33 @@ def run(test, params, env):
                 change_list = default_change_list
 
             for repeat_num in range(1, repeat_counts + 1):
-                error_context.context("Change queues number -- %sth"
-                                      % repeat_num, test.log.info)
+                error_context.context(
+                    "Change queues number -- %sth" % repeat_num, test.log.info
+                )
                 try:
                     queues_status = get_queues_status(session, ifname)
                     for q_number in change_list:
-                        queues_status = change_queues_number(session,
-                                                             ifname,
-                                                             int(q_number),
-                                                             queues_status)
+                        queues_status = change_queues_number(
+                            session, ifname, int(q_number), queues_status
+                        )
                 except aexpect.ShellProcessTerminatedError:
                     vm = env.get_vm(params["main_vm"])
                     session = vm.wait_for_login(timeout=login_timeout)
                     queues_status = get_queues_status(session, ifname)
                     for q_number in change_list:
-                        queues_status = change_queues_number(session,
-                                                             ifname,
-                                                             int(q_number),
-                                                             queues_status)
+                        queues_status = change_queues_number(
+                            session, ifname, int(q_number), queues_status
+                        )
 
         if params.get("ping_after_changing_queues", "yes") == "yes":
             default_host = "www.redhat.com"
             ext_host = utils_net.get_default_gateway(session)
             if not ext_host:
                 # Fallback to a hardcode host, eg:
-                test.log.warn("Can't get specified host,"
-                              " Fallback to default host '%s'", default_host)
+                test.log.warning(
+                    "Can't get specified host," " Fallback to default host '%s'",
+                    default_host,
+                )
                 ext_host = default_host
             s_session = vm.wait_for_login(timeout=login_timeout)
             txt = "ping %s after changing queues in guest."
@@ -187,8 +190,7 @@ def run(test, params, env):
             ping_test(ext_host, f_ping_time, f_ping_lost_ratio, s_session)
 
         if stress_thread:
-            error_context.context("wait for background test finish",
-                                  test.log.info)
+            error_context.context("wait for background test finish", test.log.info)
             try:
                 stress_thread.join()
             except Exception as err:
@@ -202,8 +204,9 @@ def run(test, params, env):
         if s_session:
             s_session.close()
         if bg_test:
-            error_context.context("Wait for background ping test finish.",
-                                  test.log.info)
+            error_context.context(
+                "Wait for background ping test finish.", test.log.info
+            )
             try:
                 bg_test.join()
             except Exception as err:

@@ -2,11 +2,7 @@ import os
 import re
 import time
 
-from virttest import error_context
-from virttest import storage
-from virttest import qemu_storage
-from virttest import data_dir
-from virttest import utils_misc
+from virttest import data_dir, error_context, qemu_storage, storage, utils_misc
 
 
 @error_context.context_aware
@@ -25,6 +21,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def generate_snapshot_chain(snapshot_chain, snapshot_num):
         for i in range(snapshot_num):
             snapshot_tag = "sn%s" % i
@@ -70,14 +67,18 @@ def run(test, params, env):
                 image_params = params.object_params(image)
                 if index != 0:
                     image = qemu_storage.QemuImg(
-                        image_params, data_dir.get_data_dir(), image)
+                        image_params, data_dir.get_data_dir(), image
+                    )
                     if not os.path.exists(image.image_filename):
-                        errs.append("Image %s was not created during test."
-                                    % image.image_filename)
+                        errs.append(
+                            "Image %s was not created during test."
+                            % image.image_filename
+                        )
                     image.remove()
             except Exception as details:
-                errs.append("Fail to remove image %s: %s"
-                            % (image.image_filename, details))
+                errs.append(
+                    "Fail to remove image %s: %s" % (image.image_filename, details)
+                )
         return errs
 
     vm = env.get_vm(params["main_vm"])
@@ -105,12 +106,14 @@ def run(test, params, env):
             if image_params.get("file_create"):
                 session.cmd(dir_create_cmd % file_dir)
             if index > 0:
-                snapshot_file = storage.get_image_filename(image_params,
-                                                           data_dir.get_data_dir())
+                snapshot_file = storage.get_image_filename(
+                    image_params, data_dir.get_data_dir()
+                )
                 base_image = get_base_image(snapshot_chain, image)
                 base_image_params = params.object_params(base_image)
-                base_file = storage.get_image_filename(base_image_params,
-                                                       data_dir.get_data_dir())
+                base_file = storage.get_image_filename(
+                    base_image_params, data_dir.get_data_dir()
+                )
                 snapshot_format = image_params.get("image_format")
 
                 error_context.context("Do pre snapshot operates", test.log.info)
@@ -120,8 +123,7 @@ def run(test, params, env):
                 error_context.context("Do live snapshot ", test.log.info)
                 vm.live_snapshot(base_file, snapshot_file, snapshot_format)
 
-                error_context.context("Do post snapshot operates",
-                                      test.log.info)
+                error_context.context("Do post snapshot operates", test.log.info)
                 if image_params.get("post_snapshot_cmd"):
                     do_operate(image_params, "post_snapshot_cmd")
                 md5 = ""
@@ -138,8 +140,7 @@ def run(test, params, env):
                 md5_value[image] = {image: md5}
             status, output = session.cmd_status_output(sync_cmd)
             if status != 0:
-                test.error("Execute '%s' with failures('%s') " %
-                           (sync_cmd, output))
+                test.error("Execute '%s' with failures('%s') " % (sync_cmd, output))
             if image_params.get("check_alive_cmd"):
                 session.cmd(image_params.get("check_alive_cmd"))
             if image_params.get("file_create"):
@@ -168,22 +169,25 @@ def run(test, params, env):
                     for file in md5_value[image]:
                         md5 = session.cmd_output(md5_cmd % file)
                         if md5 != md5_value[image][file]:
-                            error_message = "File %s in image %s changed " %\
-                                            (file, image)
-                            error_message += "from '%s' to '%s'(md5)" %\
-                                             (md5_value[image][file], md5)
+                            error_message = "File %s in image %s changed " % (
+                                file,
+                                image,
+                            )
+                            error_message += "from '%s' to '%s'(md5)" % (
+                                md5_value[image][file],
+                                md5,
+                            )
                             test.fail(error_message)
                     files_check = session.cmd(file_check_cmd % file_dir)
                     if files_check != files_in_guest[image]:
-                        error_message = "Files in image %s is not as expect:" %\
-                                        image
-                        error_message += "Before shut down: %s" %\
-                            files_in_guest[image]
+                        error_message = "Files in image %s is not as expect:" % image
+                        error_message += "Before shut down: %s" % files_in_guest[image]
                         error_message += "Now: %s" % files_check
                         test.fail(error_message)
                 if image_params.get("image_check"):
                     image = qemu_storage.QemuImg(
-                        image_params, data_dir.get_data_dir(), image)
+                        image_params, data_dir.get_data_dir(), image
+                    )
                     image.check_image(image_params, data_dir.get_data_dir())
                 session.close()
 
@@ -191,11 +195,13 @@ def run(test, params, env):
         if vm.is_alive():
             vm.destroy()
         errs = cleanup_images(snapshot_chain, params)
-        test.assertFalse(errs, "Errors occurred while removing images:\n%s"
-                         % "\n".join(errs))
+        test.assertFalse(
+            errs, "Errors occurred while removing images:\n%s" % "\n".join(errs)
+        )
     except Exception as details:
-        error_context.context("Force-cleaning after exception: %s" % details,
-                              test.log.error)
+        error_context.context(
+            "Force-cleaning after exception: %s" % details, test.log.error
+        )
         if vm.is_alive():
             vm.destroy()
         cleanup_images(snapshot_chain, params)

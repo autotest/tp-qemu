@@ -1,24 +1,27 @@
-import os
 import logging
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_test
+import os
 
-LOG_JOB = logging.getLogger('avocado.test')
+from virttest import error_context, utils_misc, utils_test
+
+LOG_JOB = logging.getLogger("avocado.test")
 
 
 @error_context.context_aware
 def mount_lv(lv_path, session):
-    error_context.context("mounting filesystem made on logical volume %s"
-                          % os.path.basename(lv_path), LOG_JOB.info)
+    error_context.context(
+        "mounting filesystem made on logical volume %s" % os.path.basename(lv_path),
+        LOG_JOB.info,
+    )
     session.cmd("mkdir -p /mnt/kvm_test_lvm")
     session.cmd("mount %s /mnt/kvm_test_lvm" % lv_path)
 
 
 @error_context.context_aware
 def umount_lv(lv_path, session):
-    error_context.context("umounting filesystem made on logical volume "
-                          "%s" % os.path.basename(lv_path), LOG_JOB.info)
+    error_context.context(
+        "umounting filesystem made on logical volume " "%s" % os.path.basename(lv_path),
+        LOG_JOB.info,
+    )
     session.cmd("umount %s" % lv_path)
     session.cmd("rm -rf /mnt/kvm_test_lvm")
 
@@ -70,25 +73,30 @@ def run(test, params, env):
                     test.error("Failed to get '%s' drive path" % d_id)
                 disk_list.append(d_path)
             disks = " ".join(disk_list)
-            error_context.context("adding physical volumes %s" % disks,
-                                  test.log.info)
+            error_context.context("adding physical volumes %s" % disks, test.log.info)
             session.cmd("pvcreate %s" % disks)
-            error_context.context("creating a volume group out of %s" % disks,
-                                  test.log.info)
+            error_context.context(
+                "creating a volume group out of %s" % disks, test.log.info
+            )
             session.cmd("vgcreate %s %s" % (vg_name, disks))
-            error_context.context("activating volume group %s" % vg_name,
-                                  test.log.info)
+            error_context.context("activating volume group %s" % vg_name, test.log.info)
             session.cmd("vgchange -ay %s" % vg_name)
-            error_context.context("creating logical volume on volume group %s"
-                                  % vg_name, test.log.info)
+            error_context.context(
+                "creating logical volume on volume group %s" % vg_name, test.log.info
+            )
             session.cmd("lvcreate -L2000 -n %s %s" % (lv_name, vg_name))
-            error_context.context("creating %s filesystem on logical volume"
-                                  " %s" % (fs_type, lv_name), test.log.info)
+            error_context.context(
+                "creating %s filesystem on logical volume" " %s" % (fs_type, lv_name),
+                test.log.info,
+            )
             session.cmd("yes | mkfs.%s %s" % (fs_type, lv_path), timeout=int(timeout))
             mount_lv(lv_path, session)
             umount_lv(lv_path, session)
-            error_context.context("checking %s filesystem made on logical "
-                                  "volume %s" % (fs_type, lv_name), test.log.info)
+            error_context.context(
+                "checking %s filesystem made on logical "
+                "volume %s" % (fs_type, lv_name),
+                test.log.info,
+            )
             session.cmd("fsck %s" % lv_path, timeout=int(timeout))
             if clean == "no":
                 mount_lv(lv_path, session)
@@ -105,13 +113,10 @@ def run(test, params, env):
         if clean == "yes":
             if check_mount_lv(check_mount, session):
                 umount_lv(lv_path, session)
-            error_context.context("removing logical volume %s" % lv_path,
-                                  test.log.info)
+            error_context.context("removing logical volume %s" % lv_path, test.log.info)
             session.cmd("yes | lvremove %s" % lv_path)
-            error_context.context("disabling volume group %s" % vg_name,
-                                  test.log.info)
+            error_context.context("disabling volume group %s" % vg_name, test.log.info)
             session.cmd("vgchange -a n %s" % vg_name)
-            error_context.context("removing volume group %s" % vg_name,
-                                  test.log.info)
+            error_context.context("removing volume group %s" % vg_name, test.log.info)
             session.cmd("vgremove -f %s" % vg_name)
         session.close()

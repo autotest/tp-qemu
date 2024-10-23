@@ -1,5 +1,5 @@
-import re
 import os
+import re
 import shutil
 
 from avocado.utils import process
@@ -34,8 +34,9 @@ def test_setting_params(test, ksmctler, params):
             continue
         else:
             set_values[key] = default_values[key] + value_delta
-    test.log.debug("\nDefault parameters:%s\n"
-                   "Set parameters:%s", default_values, set_values)
+    test.log.debug(
+        "\nDefault parameters:%s\n" "Set parameters:%s", default_values, set_values
+    )
 
     try:
         # Setting new value
@@ -65,13 +66,14 @@ def test_ksmtuned_service(test, ksmctler, params):
     1.Set debug options for ksmtuned
     2.Check if debug log is created
     """
+
     def backup_config(ksmtuned_conf):
         shutil.copy(ksmtuned_conf, "%s.bak" % ksmtuned_conf)
         return "%s.bak" % ksmtuned_conf
 
     def debug_ksmtuned(log_path, debug, ksmtuned_conf="/etc/ksmtuned.conf"):
         try:
-            fd = open(ksmtuned_conf, 'r')
+            fd = open(ksmtuned_conf, "r")
             contents = fd.readlines()
             fd.close()
         except IOError as e:
@@ -86,7 +88,7 @@ def test_ksmtuned_service(test, ksmctler, params):
             new_contents.append(con)
         test.log.debug("\nksmtuned configures:\n%s", new_contents)
         try:
-            fd = open(ksmtuned_conf, 'w')
+            fd = open(ksmtuned_conf, "w")
             fd.writelines(new_contents)
             fd.close()
         except IOError as e:
@@ -114,7 +116,7 @@ def test_ksmtuned_service(test, ksmctler, params):
         try:
             os.remove(log_path)
         except OSError:
-            pass    # file do not exists
+            pass  # file do not exists
 
 
 def run(test, params, env):

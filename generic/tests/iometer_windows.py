@@ -2,14 +2,13 @@
 :author: Golita Yue <gyue@redhat.com>
 :author: Amos Kong <akong@redhat.com>
 """
-import time
-import re
-import os
 
-from virttest import data_dir
-from virttest import error_context
-from virttest import utils_misc
-from virttest import utils_test
+import os
+import re
+import time
+
+from virttest import data_dir, error_context, utils_misc, utils_test
+
 from provider import win_driver_utils
 
 
@@ -29,6 +28,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
+
     def install_iometer():
         error_context.context("Install Iometer", test.log.info)
         session.cmd(re.sub("WIN_UTILS", vol_utils, ins_cmd), cmd_timeout)
@@ -37,7 +37,8 @@ def run(test, params, env):
     def register_iometer():
         error_context.context("Register Iometer", test.log.info)
         session.cmd_output(
-            re.sub("WIN_UTILS", vol_utils, params["register_cmd"]), cmd_timeout)
+            re.sub("WIN_UTILS", vol_utils, params["register_cmd"]), cmd_timeout
+        )
 
     def prepare_ifc_file():
         error_context.context("Prepare icf for Iometer", test.log.info)
@@ -48,8 +49,10 @@ def run(test, params, env):
         cmd = 'TASKLIST /FI "IMAGENAME eq Iometer.exe'
         _session = vm.wait_for_login(timeout=360)
         if not utils_misc.wait_for(
-                lambda: 'Iometer.exe' in _session.cmd_output(
-                    cmd, timeout=180), 600, step=3.0):
+            lambda: "Iometer.exe" in _session.cmd_output(cmd, timeout=180),
+            600,
+            step=3.0,
+        ):
             test.fail("Iometer is not alive!")
         _session.close()
 
@@ -61,23 +64,23 @@ def run(test, params, env):
     def run_iometer():
         error_context.context("Start Iometer", test.log.info)
         args = (
-            ' && '.join((("cd %s" % ins_path), run_cmd % (icf_name, res_file))),
-            run_timeout)
-        if params.get('bg_mode', 'no') == 'yes':
+            " && ".join((("cd %s" % ins_path), run_cmd % (icf_name, res_file))),
+            run_timeout,
+        )
+        if params.get("bg_mode", "no") == "yes":
             _run_backgroud(args)
             _is_iometer_alive()
-            time.sleep(int(params.get('sleep_time', '180')))
+            time.sleep(int(params.get("sleep_time", "180")))
             _is_iometer_alive()
         else:
             session.cmd(*args)
-            error_context.context(
-                "Copy result '%s' to host" % res_file, test.log.info)
+            error_context.context("Copy result '%s' to host" % res_file, test.log.info)
             vm.copy_files_from(res_file, test.resultsdir)
 
     def change_vm_status():
-        method, command = params.get('command_opts').split(',')
-        test.log.info('Sending command(%s): %s', method, command)
-        if method == 'shell':
+        method, command = params.get("command_opts").split(",")
+        test.log.info("Sending command(%s): %s", method, command)
+        if method == "shell":
             vm.wait_for_login(timeout=360).sendline(command)
         else:
             getattr(vm.monitor, command)()
@@ -86,9 +89,9 @@ def run(test, params, env):
                 raise test.fail("Not received SHUTDOWN QMP event.")
 
     def check_vm_status(timeout=600):
-        action = 'shutdown' if shutdown_vm else 'login'
-        if not getattr(vm, 'wait_for_%s' % action)(timeout=timeout):
-            test.fail('Failed to %s vm.' % action)
+        action = "shutdown" if shutdown_vm else "login"
+        if not getattr(vm, "wait_for_%s" % action)(timeout=timeout):
+            test.fail("Failed to %s vm." % action)
 
     def format_multi_disks():
         disk_letters = params["disk_letters"].split()
@@ -105,8 +108,8 @@ def run(test, params, env):
     res_file = params["result_file"]
     run_cmd = params["run_cmd"]
     run_timeout = int(params.get("run_timeout", 1000))
-    shutdown_vm = params.get('shutdown_vm', 'no') == 'yes'
-    reboot_vm = params.get('reboot_vm', 'no') == 'yes'
+    shutdown_vm = params.get("shutdown_vm", "no") == "yes"
+    reboot_vm = params.get("reboot_vm", "no") == "yes"
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=360)
@@ -118,7 +121,7 @@ def run(test, params, env):
     # events ready, add 10s to wait events done.
     time.sleep(10)
     # format the target disk
-    if params.get('format_multi_disks', 'no') == 'yes':
+    if params.get("format_multi_disks", "no") == "yes":
         format_multi_disks()
     else:
         utils_test.run_virt_sub_test(test, params, env, "format_disk")

@@ -1,8 +1,7 @@
 from virttest import data_dir
 from virttest.qemu_storage import QemuImg
 
-from qemu.tests.qemu_disk_img import QemuImgTest
-from qemu.tests.qemu_disk_img import generate_base_snapshot_pair
+from qemu.tests.qemu_disk_img import QemuImgTest, generate_base_snapshot_pair
 
 
 def run(test, params, env):
@@ -21,6 +20,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment
     """
+
     def _get_img_obj_and_params(tag):
         """Get an QemuImg object and its params based on the tag."""
         img_param = params.object_params(tag)
@@ -31,8 +31,11 @@ def run(test, params, env):
     initial_tag = params["images"].split()[0]
     c_tag = params["convert_target"]
 
-    test.log.info("Boot a guest up with initial image: %s, and create a"
-                  " file %s on the disk.", initial_tag, file)
+    test.log.info(
+        "Boot a guest up with initial image: %s, and create a" " file %s on the disk.",
+        initial_tag,
+        file,
+    )
     base_qit = QemuImgTest(test, params, env, initial_tag)
     base_qit.start_vm()
     md5 = base_qit.save_file(file)
@@ -54,7 +57,8 @@ def run(test, params, env):
     sn_qit.create_snapshot()
     sn_qit.start_vm()
     if not sn_qit.check_file(file, md5):
-        test.fail("The file %s's md5 on initial image and"
-                  " snapshot are different." % file)
+        test.fail(
+            "The file %s's md5 on initial image and" " snapshot are different." % file
+        )
     for qit in (base_qit, sn_qit):
         qit.clean()

@@ -1,5 +1,7 @@
-""" Verify libblkio release"""
+"""Verify libblkio release"""
+
 import os
+
 from virttest import data_dir as virttest_data_dir
 
 

@@ -1,15 +1,11 @@
-from provider import backup_utils
-from provider import blockdev_base
-from provider import block_dirty_bitmap
-
 from virttest import utils_misc
+
+from provider import backup_utils, block_dirty_bitmap, blockdev_base
 
 
 class BlockdevIncbkIncSyncSuccBitmapTest(blockdev_base.BlockdevBaseTest):
-
     def __init__(self, test, params, env):
-        super(BlockdevIncbkIncSyncSuccBitmapTest, self).__init__(
-            test, params, env)
+        super(BlockdevIncbkIncSyncSuccBitmapTest, self).__init__(test, params, env)
         self.source_images = []
         self.full_backups = []
         self.inc_backups = []
@@ -36,28 +32,31 @@ class BlockdevIncbkIncSyncSuccBitmapTest(blockdev_base.BlockdevBaseTest):
             self.source_images,
             self.full_backups,
             self.bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def generate_inc_files(self):
         return list(map(self.generate_data_file, self.src_img_tags))
 
     def do_incremental_backup(self):
-        extra_options = {"sync": self.inc_sync_mode,
-                         "bitmap-mode": self.inc_bitmap_mode,
-                         "auto_disable_bitmap": False}
+        extra_options = {
+            "sync": self.inc_sync_mode,
+            "bitmap-mode": self.inc_bitmap_mode,
+            "auto_disable_bitmap": False,
+        }
         backup_utils.blockdev_batch_backup(
             self.main_vm,
             self.source_images,
             self.inc_backups,
             self.bitmaps,
-            **extra_options)
+            **extra_options,
+        )
 
     def get_bitmaps_info(self):
         out = []
         for idx, bitmap in enumerate(self.bitmaps):
             node = self.source_images[idx]
-            info = block_dirty_bitmap.get_bitmap_by_name(
-                self.main_vm, node, bitmap)
+            info = block_dirty_bitmap.get_bitmap_by_name(self.main_vm, node, bitmap)
             out.append(info)
         return out
 
@@ -81,19 +80,17 @@ class BlockdevIncbkIncSyncSuccBitmapTest(blockdev_base.BlockdevBaseTest):
             else:
                 return True
 
-        refresh_timeout = self.params.get_numeric('refresh_timeout', 10)
-        if not utils_misc.wait_for(lambda: _check_bitmaps(),
-                                   refresh_timeout, 0, 1):
-            self.test.fail('count of bitmap should be 0 '
-                           'after incremental backup')
+        refresh_timeout = self.params.get_numeric("refresh_timeout", 10)
+        if not utils_misc.wait_for(lambda: _check_bitmaps(), refresh_timeout, 0, 1):
+            self.test.fail("count of bitmap should be 0 " "after incremental backup")
 
     def check_images(self):
         self.verify_data_files()
 
     def clone_main_vm(self):
         self.main_vm.destroy()
-        imgs = [self.params['images'].split()[0]] + self.inc_backup_tags
-        self.params['images'] = ' '.join(imgs)
+        imgs = [self.params["images"].split()[0]] + self.inc_backup_tags
+        self.params["images"] = " ".join(imgs)
         self.prepare_main_vm()
         self.clone_vm = self.main_vm
 

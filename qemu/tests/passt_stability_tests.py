@@ -5,11 +5,7 @@ import time
 
 from aexpect import ShellCmdError
 from avocado.utils import process
-
-from virttest import data_dir
-from virttest import utils_net
-from virttest import utils_misc
-from virttest import error_context
+from virttest import data_dir, error_context, utils_misc, utils_net
 
 
 @error_context.context_aware
@@ -27,6 +23,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters.
     :param env: Dictionary with test environment.
     """
+
     def transfer_iperf_package():
         receive_cmd = params.get("receive_cmd")
         serial_session.sendline(receive_cmd)
@@ -38,8 +35,11 @@ def run(test, params, env):
         """Compile iperf and return its binary file path."""
         iperf_version = params["iperf_version"]
         iperf_source_path = os.path.join(dst_path, iperf_version)
-        compile_cmd = params["linux_compile_cmd"] % (src_path, dst_path,
-                                                     iperf_source_path)
+        compile_cmd = params["linux_compile_cmd"] % (
+            src_path,
+            dst_path,
+            iperf_source_path,
+        )
         try:
             if serial_session:
                 test.log.info("Compiling %s in guest...", iperf_version)
@@ -51,8 +51,8 @@ def run(test, params, env):
             test.log.error(err_msg)
             test.error("Failed to compile iperf")
         else:
-            iperf_bin_name = re.sub(r'[-2]', '', iperf_version.split('.')[0])
-            return os.path.join(iperf_source_path, 'src', iperf_bin_name)
+            iperf_bin_name = re.sub(r"[-2]", "", iperf_version.split(".")[0])
+            return os.path.join(iperf_source_path, "src", iperf_bin_name)
 
     def iperf_server_start():
         """Start iperf server"""
@@ -60,7 +60,9 @@ def run(test, params, env):
         iperf_server_cmd = iperf_server_options % host_iperf_bin
         try:
             test.log.info(info_text, "host", iperf_server_cmd)
-            server_output = process.system_output(iperf_server_cmd, timeout=300, verbose=False).decode()
+            server_output = process.system_output(
+                iperf_server_cmd, timeout=300, verbose=False
+            ).decode()
         except Exception as err_msg:
             test.log.error(str(err_msg))
             test.error("Failed to start iperf session")
@@ -72,13 +74,14 @@ def run(test, params, env):
             if not parallel_cur:
                 test.fail("iperf client not connected to server")
             elif parallel_exp and parallel_cur != parallel_exp:
-                test.fail("Number of parallel threads running(%d) is "
-                          "inconsistent with expectations(%d)"
-                          % (parallel_cur, parallel_exp))
+                test.fail(
+                    "Number of parallel threads running(%d) is "
+                    "inconsistent with expectations(%d)" % (parallel_cur, parallel_exp)
+                )
             test.log.info("iperf client successfully connected to server")
 
     def iperf_client_start():
-        """"Start iperf client"""
+        """ "Start iperf client"""
         info_text = "Start iperf client session in %s with cmd: %s"
         iperf_client_cmd = iperf_client_options % (guest_iperf_bin, client_getway)
         test.log.info(info_text, "guest", iperf_client_cmd)
@@ -89,8 +92,9 @@ def run(test, params, env):
             check_iperf_cmd = params["check_iperf_cmd"] % name_pattern
             status = serial_session.cmd_status(check_iperf_cmd, safe=True)
         else:
-            status = process.system("pgrep -f %s" % name_pattern,
-                                    ignore_status=True, verbose=False)
+            status = process.system(
+                "pgrep -f %s" % name_pattern, ignore_status=True, verbose=False
+            )
         return status == 0
 
     login_timeout = params.get_numeric("login_timeout", 360)
@@ -108,12 +112,12 @@ def run(test, params, env):
     client_getway = utils_net.get_default_gateway()
     transfer_iperf_package()
     host_iperf_bin = iperf_compile(host_iperf_src_path, tmp_dir)
-    guest_iperf_file = params.get('guest_iperf_file', host_iperf_file)
-    guest_iperf_path = params.get('guest_iperf_path', tmp_dir)
+    guest_iperf_file = params.get("guest_iperf_file", host_iperf_file)
+    guest_iperf_path = params.get("guest_iperf_path", tmp_dir)
     guest_iperf_src_path = os.path.join(guest_iperf_path, guest_iperf_file)
     guest_iperf_bin = iperf_compile(guest_iperf_src_path, tmp_dir, serial_session)
-    iperf_server_options = params.get('iperf_server_options')
-    iperf_client_options = params.get('iperf_client_options')
+    iperf_server_options = params.get("iperf_server_options")
+    iperf_client_options = params.get("iperf_client_options")
 
     try:
         bg_server = utils_misc.InterruptedThread(iperf_server_start)
@@ -125,16 +129,24 @@ def run(test, params, env):
         bg_client.start()
 
         error_context.context("iperf client has started.", test.log.info)
-        if not utils_misc.wait_for(lambda: is_iperf_running(guest_iperf_bin, serial_session), 5, 2):
+        if not utils_misc.wait_for(
+            lambda: is_iperf_running(guest_iperf_bin, serial_session), 5, 2
+        ):
             test.error("Failed to start iperf client.")
-        utils_misc.wait_for(lambda: not is_iperf_running(host_iperf_bin),
-                            330, 0, 30,
-                            "Waiting for iperf test to finish.")
+        utils_misc.wait_for(
+            lambda: not is_iperf_running(host_iperf_bin),
+            330,
+            0,
+            30,
+            "Waiting for iperf test to finish.",
+        )
         bg_server.join(timeout=60)
         bg_client.join(timeout=60)
 
     finally:
         test.log.info("Cleanup host environment...")
-        process.run('pkill -9 -f %s' % host_iperf_bin, verbose=False, ignore_status=True)
-        shutil.rmtree(host_iperf_bin.rsplit('/', 2)[0], ignore_errors=True)
+        process.run(
+            "pkill -9 -f %s" % host_iperf_bin, verbose=False, ignore_status=True
+        )
+        shutil.rmtree(host_iperf_bin.rsplit("/", 2)[0], ignore_errors=True)
         serial_session.close()

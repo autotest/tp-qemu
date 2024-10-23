@@ -1,9 +1,7 @@
-from virttest import error_context
-from virttest import env_process
+from virttest import env_process, error_context
 from virttest.utils_misc import verify_dmesg
 
-from provider.sgx import SGXHostCapability
-from provider.sgx import SGXChecker
+from provider.sgx import SGXChecker, SGXHostCapability
 
 
 @error_context.context_aware
@@ -29,7 +27,7 @@ def run(test, params, env):
     if params.get("monitor_expect_nodes"):
         sgx_cap.validate_numa_node_count()
 
-    params['start_vm'] = 'yes'
+    params["start_vm"] = "yes"
     vms = params.objects("vms")
     for vm_name in vms:
         env_process.preprocess_vm(test, params, env, vm_name)
@@ -37,8 +35,9 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
         verify_dmesg()
-        dmesg_output = session.cmd_output(params["guest_sgx_check"],
-                                          timeout=240).strip()
+        dmesg_output = session.cmd_output(
+            params["guest_sgx_check"], timeout=240
+        ).strip()
         session.close()
 
         test_check = SGXChecker(test, params, vm)

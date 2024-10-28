@@ -183,11 +183,14 @@ class PktgenRunner:
         mpps_results = "%.2f" % mpps_results
         return mpps_results
 
-    def install_package(self, ver, vm=None, session_serial=None):
+    def install_package(self, ver, pagesize=None, vm=None, session_serial=None):
         """Check module pktgen, install kernel-modules-internal package"""
 
         output_cmd = process.getoutput
-        kernel_ver = "kernel-modules-internal-%s" % ver
+        if pagesize:
+            kernel_ver = "kernel-%s-modules-internal-%s" % (pagesize, ver.split("+")[0])
+        else:
+            kernel_ver = "kernel-modules-internal-%s" % ver
         cmd_download = "cd /tmp && brew download-build %s --rpm" % kernel_ver
         cmd_install = "cd /tmp && rpm -ivh  %s.rpm --force --nodeps" % kernel_ver
         output_cmd(cmd_download)

@@ -69,10 +69,19 @@ def run(test, params, env):
         _pin_vm_threads(params.get("numa_node"))
         guest_ver = session_serial.cmd_output(guest_ver_cmd)
         result_file.write("### guest-kernel-ver :%s" % guest_ver)
+
         if pktgen_runner.is_version_lt_rhel7(session_serial.cmd("uname -r")):
-            pktgen_runner.install_package(
-                guest_ver.strip(), vm=vm, session_serial=session_serial
-            )
+            if guest_ver.count("64k"):
+                pktgen_runner.install_package(
+                    guest_ver.strip(),
+                    pagesize="64k",
+                    vm=vm,
+                    session_serial=session_serial,
+                )
+            else:
+                pktgen_runner.install_package(
+                    guest_ver.strip(), vm=vm, session_serial=session_serial
+                )
         return vm, session_serial
 
     # get parameter from dictionary
@@ -97,7 +106,10 @@ def run(test, params, env):
 
     pktgen_runner = pktgen_utils.PktgenRunner()
     if pktgen_runner.is_version_lt_rhel7(process.getoutput("uname -r")):
-        pktgen_runner.install_package(host_ver)
+        if host_ver.count("64k"):
+            pktgen_runner.install_package(host_ver, pagesize="64k")
+        else:
+            pktgen_runner.install_package(host_ver)
 
     vdpa_net_test = None
     vm = None

@@ -104,8 +104,8 @@ def run(test, params, env):
                 session_serial.cmd_output_safe(int_activate_cmd % interface)
             session_serial.cmd_output_safe("ifconfig | grep -i %s" % new_mac)
             test.log.info("Mac address change successfully, net restart...")
-            dhclient_cmd = "dhclient -r && dhclient %s" % interface
-            session_serial.sendline(dhclient_cmd)
+            dhcp_cmd = params.get("dhcp_cmd")
+            session_serial.sendline(dhcp_cmd % interface)
         else:
             mode = "netsh"
             if os_variant == "winxp":

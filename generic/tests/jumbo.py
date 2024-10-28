@@ -227,8 +227,8 @@ def run(test, params, env):
             ifname = ifnames[1]
             vf_mac = utils_net.get_linux_mac(session, ifname)
             session.cmd_output_safe("ip link set dev %s up" % ifname)
-            session.cmd_output_safe("dhclient -r")
-            session.cmd_output_safe("dhclient %s" % ifname)
+            dhcp_cmd = params.get("dhcp_cmd")
+            session.cmd_output_safe(dhcp_cmd % ifname)
             guest_ip = utils_net.get_guest_ip_addr(session, vf_mac)
             if guest_ip is None:
                 test.error("VF can no got ip address")

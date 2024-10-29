@@ -127,6 +127,8 @@ class IpuTest(object):
             error_info = self.params.get("error_info")
             if re.search(error_info, output):
                 pass
+            if self.params.get("rmmod_module"):
+                self.session.cmd(self.params.get("rmmod_module"))
         except Exception as error:
             test.fail("Failed to fix issues in advance: %s" % str(error))
 

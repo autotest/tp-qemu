@@ -3,12 +3,8 @@ import ctypes
 import json
 import os
 import sys
+import tkinter
 from ctypes import wintypes
-
-try:
-    import Tkinter as tkinter
-except ImportError:
-    import tkinter
 
 import win32api
 import win32con

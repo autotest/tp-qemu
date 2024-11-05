@@ -134,8 +134,9 @@ class StorageBenchmark(object):
         :param session: vm session
         :type session: aexpect.client.ShellSession
         """
-        LOG_JOB.info("Killing all %s processes by force.", self.name)
-        session.cmd_output(self._kill_pid % self.name, timeout=120)
+        proc_name = self.name if self.os_type == "linux" else f"{self.name}.exe"
+        LOG_JOB.info("Killing all %s processes by force.", proc_name)
+        session.cmd_output(self._kill_pid % proc_name, timeout=120)
 
     def __remove_env_files(self, session, timeout=300):
         """

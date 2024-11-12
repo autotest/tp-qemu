@@ -26,6 +26,7 @@ from virttest import (
 from virttest.utils_version import VersionInterval
 from virttest.utils_windows import virtio_win
 
+from provider.hostdev.dev_setup import hostdev_setup
 from provider.win_driver_installer_test import (
     run_installer_with_interaction,
     uninstall_gagent,
@@ -1318,66 +1319,82 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
+        with hostdev_setup(params) as params:
+            if params.get("disk_type") == "vfio_nvme":
+                params["start_vm"] = "yes"
+                self.initialize(test, params, env)
+                self.setup(test, params, env)
 
-        session = self._get_session(params, None)
-        self._open_session_list.append(session)
+            session = self._get_session(params, None)
+            self._open_session_list.append(session)
 
-        error_context.context("Check all disks info in a loop.", LOG_JOB.info)
-        disks_info_qga = self.gagent.get_disks()
-        cmd_diskinfo_guest = params["diskinfo_guest_cmd"]
-        disks_info_guest = session.cmd_output(cmd_diskinfo_guest)
-        disks_info_guest = json.loads(disks_info_guest)["blockdevices"]
+            error_context.context("Check all disks info in a loop.", LOG_JOB.info)
+            disks_info_qga = self.gagent.get_disks()
+            cmd_diskinfo_guest = params["diskinfo_guest_cmd"]
+            disks_info_guest = session.cmd_output(cmd_diskinfo_guest)
+            disks_info_guest = json.loads(disks_info_guest)["blockdevices"]
 
-        for disk_info_guest in disks_info_guest:
-            diskname = disk_info_guest["kname"]
-            error_context.context(
-                "Check properties of disk %s" % diskname, LOG_JOB.info
-            )
-            for disk_info_qga in disks_info_qga:
-                if diskname == disk_info_qga["name"]:
+            try:
+                for disk_info_guest in disks_info_guest:
+                    diskname = disk_info_guest["kname"]
                     error_context.context(
-                        "Check dependencies of disk %s" % diskname, LOG_JOB.info
+                        "Check properties of disk %s" % diskname, LOG_JOB.info
                     )
-                    dependencies = disk_info_qga["dependencies"]
-                    if disk_info_guest["type"] == "disk":
-                        if dependencies and dependencies[0] != "null":
-                            test.error(
-                                "Disk %s dependencies "
-                                "should be [] or ['null']." % diskname
+                    for disk_info_qga in disks_info_qga:
+                        if diskname == disk_info_qga["name"]:
+                            error_context.context(
+                                "Check dependencies of disk %s" % diskname, LOG_JOB.info
                             )
+                            dependencies = disk_info_qga["dependencies"]
+                            if disk_info_guest["type"] == "disk":
+                                if dependencies and dependencies[0] != "null":
+                                    test.error(
+                                        "Disk %s dependencies should be "
+                                        "[] or ['null']." % diskname
+                                    )
+                            else:
+                                if not dependencies or (
+                                    dependencies[0] != disk_info_guest["pkname"]
+                                ):
+                                    test.fail(
+                                        "Disk %s dependencies is different "
+                                        "between guest and qga." % diskname
+                                    )
+
+                            error_context.context(
+                                "Check partition of disk %s" % diskname, LOG_JOB.info
+                            )
+                            partition = (
+                                False if disk_info_guest["type"] != "part" else True
+                            )
+                            if disk_info_qga["partition"] != partition:
+                                test.fail(
+                                    "Disk %s partition is different "
+                                    "between guest and qga." % diskname
+                                )
+
+                            if disk_info_guest["type"] == "lvm":
+                                error_context.context(
+                                    "Check alias of disk %s" % diskname, LOG_JOB.info
+                                )
+                                cmd_get_disk_alias = (
+                                    params["cmd_get_disk_alias"] % diskname
+                                )
+                                disk_alias = session.cmd_output(
+                                    cmd_get_disk_alias
+                                ).strip()
+                                if disk_info_qga["alias"] != disk_alias:
+                                    test.fail(
+                                        "Disk %s alias is defferent "
+                                        "between guest and qga." % diskname
+                                    )
+                            break
                     else:
-                        if not dependencies or (
-                            dependencies[0] != disk_info_guest["pkname"]
-                        ):
-                            test.fail(
-                                "Disk %s dependencies is different "
-                                "between guest and qga." % diskname
-                            )
-
-                    error_context.context(
-                        "Check partition of disk %s" % diskname, LOG_JOB.info
-                    )
-                    partition = False if disk_info_guest["type"] != "part" else True
-                    if disk_info_qga["partition"] != partition:
-                        test.fail(
-                            "Disk %s partition is different "
-                            "between guest and qga." % diskname
-                        )
-
-                    if disk_info_guest["type"] == "lvm":
-                        error_context.context(
-                            "Check alias of disk %s" % diskname, LOG_JOB.info
-                        )
-                        cmd_get_disk_alias = params["cmd_get_disk_alias"] % diskname
-                        disk_alias = session.cmd_output(cmd_get_disk_alias).strip()
-                        if disk_info_qga["alias"] != disk_alias:
-                            test.fail(
-                                "Disk %s alias is defferent "
-                                "between guest and qga." % diskname
-                            )
-                    break
-            else:
-                test.fail("Failed to get disk %s with qga." % diskname)
+                        test.fail("Failed to get disk %s with qga." % diskname)
+            finally:
+                session.close()
+                if self.vm:
+                    self.vm.destroy()
 
     @error_context.context_aware
     def gagent_check_ssh_public_key_injection(self, test, params, env):
@@ -1582,6 +1599,11 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
+        with hostdev_setup(params) as params:
+            if params.get("disk_type") == "vfio_nvme":
+                params["start_vm"] = "yes"
+                self.initialize(test, params, env)
+                self.setup(test, params, env)
         session = self._get_session(params, self.vm)
         self._open_session_list.append(session)
 
@@ -4385,27 +4407,38 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
+        with hostdev_setup(params) as params:
+            if params.get("disk_type") == "vfio_nvme":
+                params["start_vm"] = "yes"
+                self.initialize(test, params, env)
+                self.setup(test, params, env)
 
-        session = self._get_session(params, None)
-        self._open_session_list.append(session)
+            session = self._get_session(params, None)
+            self._open_session_list.append(session)
 
-        error_context.context("Check all disks info in a loop.", LOG_JOB.info)
-        # Due Since the disk information obtained in windows does not include
-        # partition, the partition attribute is detected as always false.
-        disks_info_qga = self.gagent.get_disks()
-        for disk_info in disks_info_qga:
-            diskname = disk_info["name"].replace("\\", r"\\")
-            disk_info_guest = (
-                session.cmd_output(params["cmd_get_diskinfo"] % diskname)
-                .strip()
-                .split()
-            )
+            try:
+                error_context.context("Check all disks info in a loop.", LOG_JOB.info)
+                # Due Since the disk information obtained in windows does not include
+                # partition, the partition attribute is detected as always false.
+                disks_info_qga = self.gagent.get_disks()
+                for disk_info in disks_info_qga:
+                    diskname = disk_info["name"].replace("\\", r"\\")
+                    disk_info_guest = (
+                        session.cmd_output(params["cmd_get_diskinfo"] % diskname)
+                        .strip()
+                        .split()
+                    )
 
-            error_context.context("Check disk name", LOG_JOB.info)
-            if diskname.upper() != disk_info_guest[0].replace("\\", r"\\"):
-                test.fail(
-                    "Disk %s name is different " "between guest and qga." % diskname
-                )
+                    error_context.context("Check disk name", LOG_JOB.info)
+                    if diskname.upper() != disk_info_guest[0].replace("\\", r"\\"):
+                        test.fail(
+                            "Disk %s name is different "
+                            "between guest and qga." % diskname
+                        )
+            finally:
+                session.close()
+                if self.vm:
+                    self.vm.destroy()
 
     @error_context.context_aware
     def gagent_check_fsfreeze_vss_test(self, test, params, env):

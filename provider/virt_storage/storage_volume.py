@@ -191,6 +191,10 @@ class StorageVolume(object):
         discard = params.get("image_discard_request", "unmap")
         self.protocol.set_param("auto-read-only", auto_readonly)
         self.protocol.set_param("discard", discard)
+        # image_aio:native requires cache.direct:on
+        if params.get("image_aio") == "native":
+            self.protocol.set_param("cache.direct", "on")
+            self.protocol.set_param("cache.no-flush", "off")
 
     def info(self):
         out = dict()

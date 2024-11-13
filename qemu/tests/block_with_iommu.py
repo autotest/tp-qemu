@@ -12,7 +12,8 @@ def run(test, params, env):
         1. Add "intel_iommu=on" to kernel line of q35 guest.
         2. Boot a guest with virtio-scsi with iommu_platform=on.
         3. Verify IOMMU enabled in the guest.
-        4. Reload kernel then reboot guest.
+        4. Execute a simple I/O in the disk
+        5. Reload kernel then reboot guest.
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -60,6 +61,10 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=360)
     verify_iommu_enabled()
 
+    session.cmd(params.get("dd_cmd"))
+
     if params.get("reload_kernel_cmd"):
         reload_kernel(session)
-        vm.reboot(session)
+
+    session = vm.reboot(session, timeout=360)
+    session.cmd(params.get("dd_cmd"))

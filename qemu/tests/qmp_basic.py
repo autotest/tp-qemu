@@ -361,11 +361,18 @@ def run(test, params, env):
             resp = monitor.cmd_qmp(
                 "memsave", {"val": arg, "filename": "foo", "size": 10}
             )
-            check_error_resp(
-                resp,
-                "GenericError",
-                "Invalid parameter type for 'val', expected: integer",
-            )
+            if utils_misc.compare_qemu_version(9, 1, 0, is_rhev=False) is True:
+                check_error_resp(
+                    resp,
+                    "GenericError",
+                    "Parameter 'val' expects uint64",
+                )
+            else:
+                check_error_resp(
+                    resp,
+                    "GenericError",
+                    "Invalid parameter type for 'val', expected: integer",
+                )
 
         # value argument must be a json-number
         for arg in ({}, [], True, "foo"):

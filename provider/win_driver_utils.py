@@ -100,7 +100,9 @@ def uninstall_driver(session, test, devcon_path, driver_name, device_name, devic
     else:
         uninst_store_cmd = "pnputil /f /d %s" % inf_list[0]
     status, output = session.cmd_status_output(uninst_store_cmd, INSTALL_TIMEOUT)
-    if status:
+    # for viostor and vioscsi, they need system reboot
+    # acceptable status: OK(0), REBOOT(3010)
+    if status not in (0, 3010):
         test.error(
             "Failed to uninstall driver '%s' from store, "
             "details:\n%s" % (driver_name, output)

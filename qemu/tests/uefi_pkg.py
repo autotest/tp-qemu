@@ -95,14 +95,23 @@ def run(test, params, env):
         test.log.info("Checking the meta file '%s'", meta_file)
         with open(meta_file, "r") as f:
             content = json.load(f)
-        filename = content["mapping"]["executable"]["filename"]
+        # for inteltdx with secure boot, the device type is memory
+        # instead of flash
+        if "memory" == content["mapping"]["device"]:
+            filename = content["mapping"]["filename"]
+        else:
+            filename = content["mapping"]["executable"]["filename"]
         check_element_filename(filename, output)
-        # for amdsev and inteltdx json files, check the 'mode' element
-        # and because they don't have 'nvram-template' element,
+        # for inteltdx with secure boot, just need to check binary file,
+        # no vars file, skip the 'nvram-template' element checking
+        # for amdsev and inteltdx without secure boot, check the 'mode'
+        # element and because they don't have vars file,
         # skip the 'nvram-template' element checking
-        # for other json files, if it has 'mode' element,
-        # check its value is 'split'
-        if "amdsev" in filename or "inteltdx" in filename:
+        # for other json files, if it has 'mode' element, check its
+        # value is 'split'
+        if "inteltdx.secboot" in filename:
+            continue
+        elif "amdsev" in filename or "inteltdx" in filename:
             mode = content["mapping"]["mode"]
             check_element_mode(mode, "stateless")
             continue

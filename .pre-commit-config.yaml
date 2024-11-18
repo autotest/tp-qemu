@@ -1,3 +1,4 @@
+default_stages: [pre-commit, pre-push]
 exclude: "qemu/deps/cpuid/cpuid_dumps/kvm"
 repos:
 - repo: local
@@ -26,3 +27,7 @@ repos:
     - id: ruff
       args: ["--fix"]
     - id: ruff-format
+- repo: https://github.com/opensource-nepal/commitlint
+  rev: v1.3.0
+  hooks:
+    - id: commitlint

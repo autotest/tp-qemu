@@ -44,17 +44,21 @@ jobs:
           helpURL: https://avocado-framework.readthedocs.io/en/latest/guides/contributor/chapters/styleguides.html#commit-style-guide
 
   pr-check:
-
     name: PR title
     runs-on: ubuntu-20.04
-
     steps:
-      - name: Check title length of pull request(${{github.event.pull_request.number}})
-        run: |
-          if [ $(echo "${{ github.event.pull_request.title }}" | wc -L) -gt 72 ]; then
-            echo "Title of pull request(${{github.event.pull_request.number}}) is longer than 72 characters"
-            exit 1
-          fi
+      - name: Check title length of pull request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const prNumber = context.payload.pull_request.number;
+            const titleLength = title.length;
+
+            console.log(`Current title length for pull request(#${prNumber}): ${titleLength}`);
+            if (titleLength > 72) {
+              core.setFailed(`Title of pull request(#${prNumber}) is longer than 72 characters`);
+            }
 
   cfg-lint-check:
 

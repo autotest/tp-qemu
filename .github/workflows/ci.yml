@@ -60,52 +60,41 @@ jobs:
               core.setFailed(`Title of pull request(#${prNumber}) is longer than 72 characters`);
             }
 
-  cfg-lint-check:
-
-    name: Cfg lint
+  changed-cfg-files:
+    name: Changed cfg files
     runs-on: ubuntu-20.04
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-
+      matrix: ${{ steps.cfg-files.outputs.all_changed_files }}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Get changed files
+      - name: Detect changed cfg files
         id: cfg-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v46
         with:
-          files: |
-            */tests/cfg/*.cfg
-      - name: Set matrix
-        id: set-matrix
-        run: echo matrix=$(python3 -c 'print("${{ steps.cfg-files.outputs.all_changed_files }}".split())') >> $GITHUB_OUTPUT
-      - name: Check cfg files lint
-        if: steps.cfg-files.outputs.any_changed == 'true'
-        run: |
-          ./.ci/cfg-lint-check.py ${{ steps.cfg-files.outputs.all_changed_files }}
+          files: "*/tests/cfg/*.cfg"
+          matrix: true
 
   cartesian-syntax-check:
-
     name: Cartesian syntax
     runs-on: ubuntu-20.04
-    needs: cfg-lint-check
-    if: ${{ needs.cfg-lint-check.outputs.matrix != '[]' }}
+    if: ${{ needs.changed-cfg-files.outputs.matrix != '[]' }}
+    needs: changed-cfg-files
     strategy:
       matrix:
-        file: ${{ fromJson(needs.cfg-lint-check.outputs.matrix) }}
+        file: ${{ fromJSON(needs.changed-cfg-files.outputs.matrix) }}
       fail-fast: false
-
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Parse ${{ matrix.file }} into Cartesian configuration
+      - name: Parse file into Cartesian configuration
         env:
           CFG_FILE: ${{ matrix.file }}
         run: |
-          echo "Parse ${CFG_FILE} into Cartesian configuration"
-          sed -i '1s/^/variants:\n/' ${CFG_FILE}
-          curl -fsSL https://raw.githubusercontent.com/avocado-framework/avocado-vt/master/virttest/cartesian_config.py | python3 - -f ${CFG_FILE}
+          echo "Parsing ${CFG_FILE} into Cartesian configuration"
+          sed -i '1s/^/variants:\n/' "${CFG_FILE}"
+          curl -fsSL https://raw.githubusercontent.com/avocado-framework/avocado-vt/master/virttest/cartesian_config.py | python3 - -f "${CFG_FILE}"

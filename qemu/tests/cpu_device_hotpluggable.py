@@ -75,6 +75,9 @@ def run(test, params, env):
             test.fail("Guest refuses to go down after vcpu %s" % hotpluggable_test)
 
     def sub_migrate():
+        sub_migrate_reboot = sub_reboot  # noqa: F841
+        sub_migrate_hotunplug = sub_hotunplug  # noqa: F841
+
         error_context.context(
             "Migrate guest after vcpu %s" % hotpluggable_test, test.log.info
         )

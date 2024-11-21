@@ -8,6 +8,12 @@ from qemu.tests.virtio_console import (
     add_virtserial_device,
 )
 from qemu.tests.virtio_serial_file_transfer import transfer_data
+# These imports are used dynamically via globals().get()
+from qemu.tests.vioser_in_use import (
+    reboot_guest,
+    shutdown_guest,
+    live_migration_guest,
+)  # pylint: disable=W0611
 
 
 def get_buses_and_serial_devices(vm, params, char_devices, serials):

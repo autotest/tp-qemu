@@ -58,6 +58,7 @@ def run(test, params, env):
     """
 
     vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
     session = vm.wait_for_login()
     vsock_test_tool = params["vsock_test_tool"]
     if vsock_test_tool == "nc_vsock":

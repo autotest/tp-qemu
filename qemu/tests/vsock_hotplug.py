@@ -28,6 +28,7 @@ def run(test, params, env):
 
     linux_modules.load_module("vhost_vsock")
     vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
     session = vm.wait_for_login()
     guest_cid = utils_vsock.get_guest_cid(3)
     vsock_id = "hotplugged_vsock"

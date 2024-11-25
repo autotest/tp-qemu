@@ -48,7 +48,6 @@ def run(test, params, env):
     device_hwid = params["device_hwid"]
     devcon_path = params["devcon_path"]
     install_driver_cmd = params["install_driver_cmd"]
-    check_stat = params["check_driver_stat"] % driver_name
     chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
     chk_timeout = int(params.get("chk_timeout", 240))
 
@@ -69,11 +68,7 @@ def run(test, params, env):
     vm.send_key("meta_l-d")
     time.sleep(30)
     session.cmd(install_driver_cmd)
-    # workaround for viostor and vioscsi as driver status still be running
-    # after uninstall
-    if driver_name in ("viostor", "vioscsi"):
-        time.sleep(120)
-    if not utils_misc.wait_for(lambda: not session.cmd_status(check_stat), 600, 0, 10):
+    if not utils_misc.wait_for(lambda: not session.cmd_status(chk_cmd), 600, 60, 10):
         test.fail(
             "%s Driver can not be installed correctly from "
             "windows update" % driver_name

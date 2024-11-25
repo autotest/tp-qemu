@@ -382,6 +382,12 @@ class QemuGuestAgentTest(BaseVirtTest):
                 LOG_JOB.info("qemu-ga service is not running.")
                 self.gagent_start(session, self.vm)
 
+            error_context.context(
+                "Set selinux policy to 'Enforcing' mode in guest.", LOG_JOB.info
+            )
+            if session.cmd_output("getenforce").strip() != "Enforcing":
+                session.cmd("setenforce 1")
+
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
             self.gagent_create(params, self.vm, *args)
 
@@ -3024,8 +3030,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         4) Verify agent service is using the fsfreeze hook.
         5) Create a simple user script in hook scripts path.
         6) Get fsfreeze hook log file.
-        7) Issue freeze & thaw cmds.
-        8) Check fsfreeze hook logs.
+        7) Check if log_path is the type of 'virt_qemu_ga_log'
+        8) Issue freeze & thaw cmds and Check fsfreeze hook logs.
+        9) Check the status of hook script's execution after restorecon.
+        10) Issue freeze & thaw cmds and Check fsfreeze hook logs.
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
@@ -3124,6 +3132,33 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         )
         cmd_get_log_path = "cat %s |grep ^LOGFILE" % hook_path
         log_path = session.cmd_output(cmd_get_log_path).strip().split("=")[-1]
+
+        error_context.context(
+            "Check if log_path is the type of virt_qemu_ga_log.", LOG_JOB.info
+        )
+        dir_logpath = log_path.rsplit("/", 1)[0]
+        output = session.cmd_output(params["cmd_check_semanage"] % dir_logpath)
+        if not output:
+            test.error(
+                "%s is not the type of virt_qemu_ga_log_t "
+                "that SELinux allows." % dir_logpath
+            )
+        self.gagent.fsfreeze()
+        log_check("freeze")
+        self.gagent.fsthaw()
+        log_check("thaw")
+
+        error_context.context(
+            "Check the status of hook execution after restorecon.", LOG_JOB.info
+        )
+        output = session.cmd_output(params["cmd_restorecon"])
+        if output:
+            LOG_JOB.warning(
+                "Please check whether selinux boolean changed or update, since "
+                "there should not be any output like %s",
+                output,
+            )
+        session.cmd(params["cmd_clean_logfile"])
         self.gagent.fsfreeze()
         log_check("freeze")
         self.gagent.fsthaw()

@@ -3,14 +3,9 @@ import re
 import shelve
 import shutil
 import threading
+from queue import Queue
 
 import six
-
-try:
-    from queue import Queue
-except ImportError:
-    from Queue import Queue
-
 from avocado.utils import download, process
 from virttest import data_dir, utils_misc, utils_test
 

@@ -1,11 +1,7 @@
 import glob
 import os
 import shutil
-
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 from virttest import env_process, utils_misc
 

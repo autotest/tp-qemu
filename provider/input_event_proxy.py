@@ -1,11 +1,7 @@
 import json
 import logging
 import os
-
-try:
-    from queue import Queue
-except ImportError:
-    from Queue import Queue
+from queue import Queue
 
 from virttest import data_dir, utils_misc
 

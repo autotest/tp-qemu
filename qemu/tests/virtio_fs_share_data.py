@@ -1016,40 +1016,43 @@ def run(test, params, env):
                                 vfsd_num += len(vfsd_ps.strip().splitlines())
                         return vfsd_num
 
-                    error_context.context(
-                        "Check virtiofs daemon before reboot vm.", test.log.info
-                    )
-                    vfsd_num_bf = get_vfsd_num()
-                    error_context.context(
-                        "Reboot guest and check virtiofs daemon.", test.log.info
-                    )
-                    session = vm.reboot(session)
-                    if not vm.is_alive():
-                        test.fail("After rebooting vm quit unexpectedly.")
-                    vfsd_num_af = get_vfsd_num()
-                    if vfsd_num_bf != vfsd_num_af:
-                        test.fail(
-                            "Virtiofs daemon is different before and after reboot.\n"
-                            "Before reboot: %s\n"
-                            "After reboot: %s\n",
-                            (vfsd_num_bf, vfsd_num_af),
-                        )
-                    error_context.context(
-                        "Start IO test on virtiofs after reboot vm.", test.log.info
-                    )
-                    if os_type == "windows":
-                        virtio_fs_utils.start_viofs_service(test, params, session)
-                    else:
+                    for reboot_cmd in ["shell", "system_reset"]:
                         error_context.context(
-                            "Mount virtiofs target %s to %s inside"
-                            "guest." % (fs_target, fs_dest),
-                            test.log.info,
+                            "Check virtiofs daemon before reboot vm.", test.log.info
                         )
-                        if not utils_disk.mount(
-                            fs_target, fs_dest, "virtiofs", session=session
-                        ):
-                            test.fail("Mount virtiofs target failed.")
-                    virtio_fs_utils.basic_io_test(test, params, session)
+                        vfsd_num_bf = get_vfsd_num()
+                        error_context.context(
+                            "Reboot guest and check virtiofs daemon.", test.log.info
+                        )
+
+                        session = vm.reboot(session, reboot_cmd)
+                        if not vm.is_alive():
+                            test.fail("After rebooting vm quit unexpectedly.")
+                        vfsd_num_af = get_vfsd_num()
+                        if vfsd_num_bf != vfsd_num_af:
+                            test.fail(
+                                "Virtiofs daemon is different before "
+                                "and after reboot.\n"
+                                "Before reboot: %s\n"
+                                "After reboot: %s\n",
+                                (vfsd_num_bf, vfsd_num_af),
+                            )
+                        error_context.context(
+                            "Start IO test on virtiofs after reboot vm.", test.log.info
+                        )
+                        if os_type == "windows":
+                            virtio_fs_utils.start_viofs_service(test, params, session)
+                        else:
+                            error_context.context(
+                                "Mount virtiofs target %s to %s inside"
+                                "guest." % (fs_target, fs_dest),
+                                test.log.info,
+                            )
+                            if not utils_disk.mount(
+                                fs_target, fs_dest, "virtiofs", session=session
+                            ):
+                                test.fail("Mount virtiofs target failed.")
+                        virtio_fs_utils.basic_io_test(test, params, session)
             finally:
                 if os_type == "linux":
                     utils_disk.umount(fs_target, fs_dest, "virtiofs", session=session)

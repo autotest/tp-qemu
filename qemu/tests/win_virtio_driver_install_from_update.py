@@ -1,6 +1,7 @@
 import time
 
 from virttest import error_context, utils_misc
+from virttest.utils_windows import virtio_win
 
 from provider import win_driver_utils
 
@@ -68,7 +69,27 @@ def run(test, params, env):
     vm.send_key("meta_l-d")
     time.sleep(30)
     session.cmd(install_driver_cmd)
-    if not utils_misc.wait_for(lambda: not session.cmd_status(chk_cmd), 600, 60, 10):
+    # workaround for viostor and vioscsi as driver status still be running
+    # after uninstall
+    if driver_name in ("viostor", "vioscsi"):
+        time.sleep(120)
+
+    driver_svc_map = virtio_win.DRIVER_SVC_MAP
+    if driver_svc_map.get(driver_name):
+        driver_svc = driver_svc_map[driver_name]
+    else:
+        driver_svc = driver_name
+
+    driver_check_cmd = (
+        r"powershell -command"
+        r' "Get-WmiObject Win32_SystemDriver | Where-Object'
+        r" { $_.Name -eq '%s' }"
+        r' | Select-Object state | findstr Running"'
+    ) % driver_svc
+
+    if not utils_misc.wait_for(
+        lambda: not session.cmd_status(driver_check_cmd), 600, 60, 10
+    ):
         test.fail(
             "%s Driver can not be installed correctly from "
             "windows update" % driver_name
@@ -84,5 +105,7 @@ def run(test, params, env):
         test.fail(fail_log)
     elif "TRUE" not in chk_output:
         test.error("Device %s is not found in guest" % device_name)
+    ver_list = win_driver_utils._pnpdrv_info(session, device_name, ["DriverVersion"])
+    test.log.info(" %s driver version is %s", device_name, ver_list)
 
     session.close()

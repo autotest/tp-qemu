@@ -34,7 +34,6 @@ def run(test, params, env):
     guest_path = params.get("guest_path", "/tmp/file")
     file_size = params.get("file_size", "500")
     transfer_timeout = int(params.get("transfer_timeout", "240"))
-    migrate_between_vhost_novhost = params.get("migrate_between_vhost_novhost")
     if mig_protocol == "exec":
         mig_file = os.path.join(
             test.tmpdir, "tmp-%s" % utils_misc.generate_random_string(8)
@@ -50,12 +49,6 @@ def run(test, params, env):
                     test.log.info(
                         "File transfer not ended, starting a round of " "migration..."
                     )
-                    if migrate_between_vhost_novhost == "yes":
-                        vhost_status = vm.params.get("vhost")
-                        if vhost_status == "vhost=on":
-                            vm.params["vhost"] = "vhost=off"
-                        elif vhost_status == "vhost=off":
-                            vm.params["vhost"] = "vhost=on"
                     migration_exec_cmd_src = params.get("migration_exec_cmd_src")
                     migration_exec_cmd_dst = params.get("migration_exec_cmd_dst")
                     if mig_protocol == "exec" and migration_exec_cmd_src:

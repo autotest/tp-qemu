@@ -461,7 +461,8 @@ class BallooningTestWin(BallooningTest):
         error_msg = "Wanted to be changed: %s\n" % (expect_value - self.pre_mem)
         if monitor_value:
             error_msg += "Changed in monitor: %s\n" % (monitor_value - self.pre_mem)
-        error_msg += "Changed in guest: %s\n" % (guest_value - self.pre_gmem)
+        # guest_value and pre_gmem is the memory in use in guest.
+        error_msg += "Changed in guest: %s\n" % (self.pre_gmem - guest_value)
         self.test.log.error(error_msg)
 
     def get_memory_status(self):

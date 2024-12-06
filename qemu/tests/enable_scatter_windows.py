@@ -13,8 +13,8 @@ def run(test, params, env):
     1) start vm
     2) check and install wireshark and winpcap
     3) enable netkvm driver TxLSO
-    4) start file transfer and use wireshark to log traffic,
-       some packets length should over 1514
+    4) start File Transfer and use WinDump to log traffic and Wireshark
+       for analysis, some packets should be over 1514 in length.
     5) disable TxLSO and set MTU to 1000
     6) start file transfer and log file transfer traffic again,
        no packet length should over 1014
@@ -39,41 +39,45 @@ def run(test, params, env):
             return False
         return process_name not in output
 
-    def _start_wireshark_session():
+    def _start_windump_session():
         """
-        Start a wireshark session and log network traffic to a file
+        Start a WinDump session and log network traffic to a file
         """
-        error_context.context("Start wireshark session", test.log.info)
+        error_context.context("Start WinDump session", test.log.info)
         session_serial = vm.wait_for_serial_login(timeout=timeout)
         guest_ip = vm.get_address()
         try:
-            run_wireshark_cmd = run_wireshark_temp % (host_ip, guest_ip)
+            run_windump_cmd = run_windump_temp % (host_ip, guest_ip)
             status, output = session_serial.cmd_status_output(
-                run_wireshark_cmd, timeout=timeout
+                run_windump_cmd, timeout=timeout
             )
-
             if status:
                 test.error(
-                    "Failed to start wireshark session, "
-                    "status=%s, output=%s" % (status, output)
+                    "Failed to start WinDump session, status=%s, output=%s"
+                    % (status, output)
                 )
             is_started = utils_misc.wait_for(
-                lambda: not _is_process_finished(session_serial, "tshark.exe"), 20, 5, 1
+                lambda: not _is_process_finished(
+                    session_serial, params.get("windump_name")
+                ),
+                20,
+                5,
+                1,
             )
             if not is_started:
-                test.error("Timeout when wait for wireshark start")
+                test.error("Timeout when waiting for WinDump to start")
         finally:
             session_serial.close()
 
-    def _stop_wireshark_session():
+    def _stop_windump_session():
         """
-        Stop the running wireshark session
+        Stop the running WinDump session
         """
-        error_context.context("Stop wireshark", test.log.info)
-        status, output = session.cmd_status_output(stop_wireshark_cmd, timeout=timeout)
+        error_context.context("Stop WinDump", test.log.info)
+        status, output = session.cmd_status_output(stop_windump_cmd, timeout=timeout)
         if status:
             test.error(
-                "Failed to stop wireshark: status=%s, output=%s" % (status, output)
+                "Failed to stop WinDump: status=%s, output=%s" % (status, output)
             )
 
     def _parse_log_file(packet_filter):
@@ -83,29 +87,29 @@ def run(test, params, env):
         param packet_filter: the filter to apply when dump packets
         return: the output of the parse result
         """
-        error_context.context("Parse wireshark log file", test.log.info)
+        error_context.context("Parse captured packets using Wireshark", test.log.info)
         parse_log_cmd = parse_log_temp % packet_filter
         status, output = session.cmd_status_output(parse_log_cmd, timeout=timeout)
-        if status:
+        if status != 0:
             test.error(
-                "Failed to parse session log file,"
-                " status=%s, output=%s" % (status, output)
+                "Failed to parse session log file, status=%s, output=%s"
+                % (status, output)
             )
         return output
 
     def _get_traffic_log(packet_filter):
         """
-        Use wireshark to log the file transfer network traffic,
-        and return the packets dump output.
+        Use WinDump to capture the file transfer network traffic,
+        and return the packet analysis output.
 
-        param packet_filter: the filter to apply when dump packets
-        return: the output of the parse result
+        :param packet_filter: The filter to apply when analyzing packets
+        :return: The output of the parse result
         """
-        _start_wireshark_session()
+        _start_windump_session()
         error_context.context("Start file transfer", test.log.info)
         utils_test.run_file_transfer(test, params, env)
         time.sleep(30)
-        _stop_wireshark_session()
+        _stop_windump_session()
         return _parse_log_file(packet_filter)
 
     def _set_driver_param(index):
@@ -129,11 +133,11 @@ def run(test, params, env):
         version = version_str.split(".")[-1][0:3]
         return int(version)
 
-    timeout = params.get("timeout", 360)
+    timeout = int(params.get("timeout", 360))
     driver_verifier = params["driver_verifier"]
-    wireshark_name = params.get("wireshark_name")
-    run_wireshark_temp = params.get("run_wireshark_temp")
-    stop_wireshark_cmd = params.get("stop_wireshark_cmd")
+    autoit_name = params.get("autoit_name")
+    run_windump_temp = params.get("run_windump_temp")
+    stop_windump_cmd = params.get("stop_windump_cmd")
     check_proc_temp = params.get("check_proc_temp")
     parse_log_temp = params.get("parse_log_temp")
     param_names = params.get("param_names").split()
@@ -143,7 +147,7 @@ def run(test, params, env):
     vm.verify_alive()
     host_ip = utils_net.get_host_ip_address(params)
 
-    session = vm.wait_for_login(timeout=timeout)
+    session = params.get("session")
     # make sure to enter desktop
     vm.send_key("meta_l-d")
     time.sleep(30)
@@ -172,28 +176,44 @@ def run(test, params, env):
         lambda: _is_process_finished(session, autoit_name), timeout, 20, 3
     )
 
-    error_context.context("Check if wireshark is installed", test.log.info)
-    check_installed_cmd = params.get("check_installed_cmd")
-    check_result = session.cmd_output(check_installed_cmd)
-    if "tshark" not in check_result:
-        error_context.context("Install wireshark", test.log.info)
-        install_wireshark_cmd = params.get("install_wireshark_cmd")
-        install_wireshark_cmd = utils_misc.set_winutils_letter(
-            session, install_wireshark_cmd
+    for tool in ["windump", "tshark"]:
+        check_cmd = params["check_%s_installed_cmd" % tool]
+        install_cmd = utils_misc.set_winutils_letter(
+            session, params["%s_install_cmd" % tool]
         )
-        status, output = session.cmd_status_output(
-            install_wireshark_cmd, timeout=timeout
-        )
-        if status:
-            test.error(
-                "Failed to install wireshark, status=%s, output=%s" % (status, output)
+        process_name = tool
+
+        is_installed = False
+        error_context.context("Check if %s is installed" % process_name, test.log.info)
+        check_result = session.cmd_output(check_cmd)
+        is_installed = process_name in check_result
+
+        if not is_installed:
+            error_context.context("Install %s" % process_name, test.log.info)
+            status, output = session.cmd_status_output(install_cmd, timeout=timeout)
+            if status != 0:
+                test.error(
+                    "Failed to install %s, status=%s, output=%s"
+                    % (process_name, status, output)
+                )
+
+            error_context.context(
+                "Wait for %s installation to complete" % process_name, test.log.info
             )
-        test.log.info("Wait for wireshark installation to complete")
-        utils_misc.wait_for(
-            lambda: _is_process_finished(session, wireshark_name), timeout, 20, 3
-        )
-    else:
-        test.log.info("Wireshark is already installed")
+            utils_misc.wait_for(
+                lambda: _is_process_finished(session, process_name),
+                timeout,
+                20,
+                3,
+            )
+            check_result = session.cmd_output(check_cmd)
+            check_result = check_result.lower()  # For Python to be case-sensitive
+            if process_name not in check_result:
+                test.error("%s installation failed to verify." % process_name)
+            test.log.info("%s installed successfully.", process_name)
+        else:
+            test.log.info("%s is already installed", process_name)
+
     session.close()
 
     virtio_win.prepare_netkvmco(vm)

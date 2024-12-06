@@ -20,6 +20,12 @@ def run(test, params, env):
 
     error_context.context("Boot guest with pvpanic device", test.log.info)
     vm = env.get_vm(params["main_vm"])
+    qemu_version = vm.devices.qemu_version
+    if LooseVersion(qemu_version) >= LooseVersion("9.1.0") and "q35" in params["machine_type"]:
+        params["expected_cap"] = 7
+        test.log.info("QEMU version is %s, setting expected_cap to %s" %
+                         (qemu_version, params["expected_cap"])
+                     )
     session = vm.wait_for_login()
 
     check_kdump_service = params["check_kdump_service"]

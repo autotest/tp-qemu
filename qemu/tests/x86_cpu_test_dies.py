@@ -28,14 +28,20 @@ def run(test, params, env):
         check_die_cpus_list = params["check_die_cpus_list"]
         vcpu_sockets = vm.cpuinfo.sockets
         vcpu_dies = vm.cpuinfo.dies
+        old_check = params.get("old_check", "no")
         dies_id = session.cmd_output(check_die_id).strip().split("\n")
         dies_cpus_list = session.cmd_output(check_die_cpus_list).strip().split("\n")
-        if len(dies_id) != int(vcpu_dies):
-            test.fail("die_id is not right: %d != %d" % (len(dies_id), int(vcpu_dies)))
-        if len(dies_cpus_list) != int(vcpu_sockets) * int(vcpu_dies):
+        if old_check == "yes":
+            dies_check = int(vcpu_dies)
+            dies_list_check = int(vcpu_sockets) * int(vcpu_dies)
+        else:
+            dies_check = dies_list_check = int(vcpu_sockets) * int(vcpu_dies)
+        if len(dies_id) != dies_check:
+            test.fail("die_id is not right: %d != %d" % (len(dies_id), dies_check))
+        if len(dies_cpus_list) != dies_list_check:
             test.fail(
                 "die_cpus_list is not right: %d != %d"
-                % (len(dies_cpus_list), int(vcpu_sockets) * int(vcpu_dies))
+                % (len(dies_cpus_list), dies_list_check)
             )
 
     vm.verify_kernel_crash()

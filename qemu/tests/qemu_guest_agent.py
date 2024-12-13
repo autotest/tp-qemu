@@ -1873,6 +1873,11 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         """
 
         if self.params.get("os_type") == "linux":
+            error_context.context(
+                "Set selinux policy to 'Permissive' mode in guest.", LOG_JOB.info
+            )
+            if session.cmd_output("getenforce").strip() == "Enforcing":
+                session.cmd("setenforce 0")
             cmd_blacklist_backup = self.params["black_file_backup"]
             session.cmd(cmd_blacklist_backup)
             full_qga_ver = self._get_qga_version(session, self.vm, main_ver=False)

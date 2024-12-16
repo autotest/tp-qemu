@@ -1417,10 +1417,10 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             op_func(guest_name, *keys, **kwargs)
             keys_ga = self.gagent.ssh_get_authorized_keys(guest_name)
 
-            add_line_at_end = params["add_line_at_end"]
+            if os_type == "linux":
+                add_line_at_end = params["add_line_at_end"]
+                session.cmd(add_line_at_end)
             cmd_guest_keys = params["cmd_get_guestkey"]
-
-            session.cmd(add_line_at_end)
             keys_guest = session.cmd_output(cmd_guest_keys).strip()
             _value_compared_ga_guest(keys_ga, keys_guest, operation)
             return keys_ga, keys_guest
@@ -1433,15 +1433,25 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             """
 
             if prepare:
-                output = session.cmd_output("getenforce")
-                if str(output) == "Permissive":
-                    session.cmd("setenforce 1")
-                session.cmd(params["set_sebool"])
-                if guest_user != "root":
-                    session.cmd(params["cmd_add_user_set_passwd"])
+                cmd_install_sshpass = self.params["cmd_install_sshpass"]
+                status = process.system(cmd_install_sshpass, shell=True)
+                if status:
+                    test.error("sshpass install failed, Please install it.")
+                if os_type == "linux":
+                    if session.cmd_output("getenforce") == "Permissive":
+                        session.cmd("setenforce 1")
+                    session.cmd(params["set_sebool"])
+                else:
+                    install_config_openssh_cmd = utils_misc.set_winutils_letter(
+                        session, self.params["install_config_openssh"]
+                    )
+                    session.cmd(install_config_openssh_cmd, timeout=720)
+                if guest_user not in ["root", "Administrator"]:
+                    session.cmd(params["cmd_add_user_set_passwd"] % guest_user_passwd)
             else:
-                session.cmd(params["cmd_del_key_file"])
-                if guest_user != "root":
+                if os_type == "linux":
+                    session.cmd(params["cmd_del_key_file"])
+                if guest_user not in ["root", "Administrator"]:
                     session.cmd(params["cmd_remove_user"])
 
         def _generate_host_keys():
@@ -1500,11 +1510,18 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         mac_addr = self.vm.get_mac_address()
         os_type = self.params["os_type"]
         guest_user = self.params["guest_user"]
+        guest_user_passwd = self.params["guest_user_passwd"]
         output_check_str = self.params["output_check_str"]
         guest_ip_ipv4 = utils_net.get_guest_ip_addr(session, mac_addr, os_type)
         _prepared_n_restore_env()
 
         error_context.context("Check the basic function ", LOG_JOB.info)
+        if os_type == "windows":
+            cmd_sshpass = params["cmd_sshpass"] % (
+                guest_user_passwd,
+                guest_ip_ipv4,
+            )
+            process.system(cmd_sshpass, shell=True)
         host_key1 = _generate_host_keys()
         ssh_key_test("add", guest_user, host_key1, reset=False)
         _login_guest_test(guest_ip_ipv4)

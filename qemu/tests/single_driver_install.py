@@ -4,7 +4,9 @@ import re
 from aexpect import ShellTimeoutError
 from virttest import error_context, utils_misc, utils_net
 from virttest.utils_test.qemu import windrv_verify_running
-from virttest.utils_windows import virtio_win, wmic
+from virttest.utils_windows import virtio_win
+
+from provider import win_driver_utils
 
 LOG_JOB = logging.getLogger("avocado.test")
 
@@ -29,16 +31,6 @@ def _add_cert(session, cert_path, store):
     add_cmd = "certutil -addstore -f %s %s"
     add_cmd %= (store, cert_path)
     session.cmd(add_cmd, timeout=OPERATION_TIMEOUT)
-
-
-def _pnpdrv_info(session, name_pattern, props=None):
-    cmd = wmic.make_query(
-        "path win32_pnpsigneddriver",
-        "DeviceName like '%s'" % name_pattern,
-        props=props,
-        get_swch=wmic.FMT_TYPE_LIST,
-    )
-    return wmic.parse_list(session.cmd(cmd, timeout=QUERY_TIMEOUT))
 
 
 def send_key(vm, key):
@@ -122,7 +114,9 @@ def run(test, params, env):
 
     if params.get("need_uninstall", "no") == "yes":
         error_context.context("Uninstalling previous installed driver", test.log.info)
-        for inf_name in _pnpdrv_info(session, device_name, ["InfName"]):
+        for inf_name in win_driver_utils._pnpdrv_info(
+            session, device_name, ["InfName"]
+        ):
             pnp_cmd = "pnputil /delete-driver %s /uninstall /force"
             uninst_store_cmd = params.get("uninst_store_cmd", pnp_cmd) % inf_name
             status, output = session.cmd_status_output(uninst_store_cmd, inst_timeout)
@@ -197,7 +191,7 @@ def run(test, params, env):
     session = vm.reboot(session)
     windrv_verify_running(session, test, driver_verifier)
 
-    ver_list = _pnpdrv_info(session, device_name, ["DriverVersion"])
+    ver_list = win_driver_utils._pnpdrv_info(session, device_name, ["DriverVersion"])
     if expected_ver not in ver_list:
         test.fail(
             "The expected driver version is '%s', but "

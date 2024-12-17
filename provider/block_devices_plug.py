@@ -64,8 +64,9 @@ def _verify_plugged_num(action):
                     step=1.5,
                 ):
                     disks_info_win = (
-                        "wmic logicaldisk get drivetype,name,description "
-                        "& wmic diskdrive list brief /format:list"
+                        'powershell -command "Get-CimInstance Win32_LogicalDisk | '
+                        "Select-Object DriveType, Name, Description;"
+                        'Get-CimInstance Win32_DiskDrive | Select-Object *"'
                     )
                     disks_info_linux = "lsblk -a"
                     _session = self.vm.wait_for_login(timeout=360)

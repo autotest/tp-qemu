@@ -495,7 +495,7 @@ class BallooningTestWin(BallooningTest):
 
         :param session: VM session.
         """
-        key = "VolumeName like 'virtio-win%'"
+        key = "VolumeName='virtio-win*'"
         try:
             return utils_misc.get_win_disk_vol(session, condition=key)
         except Exception:

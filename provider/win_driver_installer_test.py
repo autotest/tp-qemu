@@ -65,7 +65,7 @@ def install_gagent(session, test, qemu_ga_pkg, gagent_install_cmd, gagent_pkg_in
     :param gagent_pkg_info_cmd: guest agent pkg info check command.
     """
     LOG_JOB.info("Install 'qemu-guest-agent' package in guest.")
-    vol_virtio_key = "VolumeName like '%virtio-win%'"
+    vol_virtio_key = "VolumeName='virtio-win*'"
     vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
     qemu_ga_pkg_path = r"%s:\%s\%s" % (vol_virtio, "guest-agent", qemu_ga_pkg)
     gagent_install_cmd = gagent_install_cmd % qemu_ga_pkg_path

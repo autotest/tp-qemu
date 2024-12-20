@@ -21,7 +21,7 @@ def run(test, params, env):
         ip = vm.get_address()
         path = params.get("download_url")
         test.log.info("kernel path = %s", path)
-        get_kernel_cmd = "wget %s --progress=none" % path
+        get_kernel_cmd = "wget %s --progress=bar" % path
         install_status = utils_package.package_install("wget", session, timeout=60)
         if not install_status:
             test.error("Failed to install wget.")

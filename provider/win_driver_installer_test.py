@@ -6,8 +6,9 @@ import time
 
 from avocado.utils import process
 from virttest import error_context, utils_disk, utils_misc, utils_net
+from virttest.utils_misc import normalize_data_size
 
-from provider import virtio_fs_utils, win_driver_utils
+from provider import virtio_fs_utils, virtio_mem_utils, win_driver_utils
 from provider.storage_benchmark import generate_instance
 from qemu.tests.virtio_serial_file_transfer import transfer_data
 
@@ -25,6 +26,7 @@ driver_name_list = [
     "netkvm",
     "vioinput",
     "fwcfg",
+    "viomem",
 ]
 
 device_hwid_list = [
@@ -38,6 +40,7 @@ device_hwid_list = [
     '"PCI\\VEN_1AF4&DEV_1000" "PCI\\VEN_1AF4&DEV_1041"',
     '"PCI\\VEN_1AF4&DEV_1052"',
     '"ACPI\\VEN_QEMU&DEV_0002"',
+    r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"',
 ]
 
 device_name_list = [
@@ -51,6 +54,7 @@ device_name_list = [
     "Red Hat VirtIO Ethernet Adapter",
     "VirtIO Input Driver",
     "QEMU FwCfg Device",
+    "VirtIO Viomem Driver",
 ]
 
 
@@ -100,6 +104,10 @@ def win_uninstall_all_drivers(session, test, params):
     :param test: kvm test object
     :param params: the dict used for parameters.
     """
+    if not params.get("boot_with_viomem"):
+        driver_name_list.remove("viomem")
+        device_hwid_list.remove(r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"')
+        device_name_list.remove("VirtIO Viomem Driver")
     devcon_path = params["devcon_path"]
     for driver_name, device_name, device_hwid in zip(
         driver_name_list, device_name_list, device_hwid_list
@@ -414,3 +422,27 @@ def fwcfg_test(test, params, vm):
         process.system("rm -rf %s" % dump_file, shell=True)
         if dump_size == 0:
             test.fail("The dump file is empty")
+
+
+def viomem_test(test, params, vm):
+    """
+    Grow/shrink virtio-mem device.
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    """
+    threshold = params.get_numeric("threshold", target_type=float)
+    for i, vmem_dev in enumerate(
+        vm.devices.get_by_params({"driver": "virtio-mem-pci"})
+    ):
+        device_id = vmem_dev.get_qid()
+        requested_size_vmem = params.get("requested-size_test_vmem%d" % i)
+
+    for requested_size in requested_size_vmem.split():
+        req_size_normalized = int(float(normalize_data_size(requested_size, "B")))
+        vm.monitor.qom_set(device_id, "requested-size", req_size_normalized)
+        time.sleep(30)
+        virtio_mem_utils.check_memory_devices(
+            device_id, requested_size, threshold, vm, test
+        )

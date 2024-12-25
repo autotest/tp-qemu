@@ -157,8 +157,11 @@ class StorageVolume(object):
 
             backing = params.get("backing")
             if backing:
-                backing_node = "drive_%s" % backing
-                self.format.set_param("backing", backing_node)
+                if params.get("backing_null", "no") == "no":
+                    backing_node = "drive_%s" % backing
+                    self.format.set_param("backing", backing_node)
+                else:
+                    self.format.params["backing"] = None
 
             data_file_name = params.get("image_data_file")
             if data_file_name:

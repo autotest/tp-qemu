@@ -56,6 +56,10 @@ driver_info_dict = {
         "hwid": '"ACPI\\VEN_QEMU&DEV_0002" "ACPI\\QEMU0002"',
         "device_name": "QEMU FWCfg Device",
     },
+    "viomem": {
+        "hwid": r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"',
+        "device_name": "VirtIO Viomem Driver",
+    },
 }
 
 

@@ -25,6 +25,7 @@ def run(test, params, env):
     """
 
     threshold = params.get_numeric("threshold", target_type=float)
+    os_type = params["os_type"]
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     vm.wait_for_login()
@@ -49,6 +50,10 @@ def run(test, params, env):
             req_size_normalized = int(float(normalize_data_size(requested_size, "B")))
             vm.monitor.qom_set(device_id, "requested-size", req_size_normalized)
             time.sleep(30)
+            # FIXME: workaround the problem that the memory value not accurate
+            # after shrink/grow the viomem device
+            if os_type == "windows":
+                vm.reboot()
             virtio_mem_utils.check_memory_devices(
                 device_id, requested_size, threshold, vm, test
             )

@@ -1,7 +1,6 @@
 import json
-import re
 
-from virttest import data_dir, env_process, utils_misc, utils_numeric
+from virttest import data_dir, utils_misc, utils_numeric, utils_qemu
 from virttest.qemu_io import QemuIOSystem
 from virttest.qemu_storage import QemuImg
 from virttest.utils_version import VersionInterval
@@ -44,9 +43,7 @@ def run(test, params, env):
     def _verify_map_output(output):
         """ "Verify qemu map output."""
         qemu_path = utils_misc.get_qemu_binary(params)
-        qemu_version = env_process._get_qemu_version(qemu_path)
-        match = re.search(r"[0-9]+\.[0-9]+\.[0-9]+(\-[0-9]+)?", qemu_version)
-        host_qemu = match.group(0)
+        host_qemu = utils_qemu.get_qemu_version(qemu_path)[0]
         expected = {
             "length": int(utils_numeric.normalize_data_size(params["write_size"], "B")),
             "start": 0,

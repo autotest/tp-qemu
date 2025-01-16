@@ -1,7 +1,4 @@
-import os
-import re
-
-from virttest import env_process, utils_misc
+from virttest import env_process, utils_misc, utils_qemu
 from virttest.utils_version import VersionInterval
 
 
@@ -14,10 +11,8 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     qemu_path = utils_misc.get_qemu_binary(params)
-    qemu_version = env_process._get_qemu_version(qemu_path)
-    version_pattern = r"%s-(\d+\.\d+\.\d+)" % os.path.basename(qemu_path)
-    host_qemu = re.findall(version_pattern, qemu_version)[0]
-    if host_qemu in VersionInterval("[,5.2.0)"):
+    qemu_version = utils_qemu.get_qemu_version(qemu_path)[0]
+    if qemu_version in VersionInterval("[,5.2.0)"):
         params["numa_hmat_caches_size_hmat_cache1"] = "50K"
         params["numa_hmat_caches_size_hmat_cache2"] = "40K"
         params["numa_hmat_caches_size_hmat_cache3"] = "80K"

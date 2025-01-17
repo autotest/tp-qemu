@@ -5,7 +5,15 @@ import threading
 import time
 
 from avocado.utils import process
-from virttest import error_context, remote, utils_misc, utils_net, utils_test, virt_vm
+from virttest import (
+    env_process,
+    error_context,
+    remote,
+    utils_misc,
+    utils_net,
+    utils_test,
+    virt_vm,
+)
 
 from provider import netperf_base, win_driver_utils
 
@@ -136,8 +144,29 @@ def run(test, params, env):
                         "The ethenet device does not support jumbo," "cancel test"
                     )
 
-    vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
+    pinned_node = 0
+    host_numa = utils_misc.NumaInfo()
+    node_list = host_numa.online_nodes_withcpumem
+    mem = int(params["mem"])
+    mem_kb = mem * 1024
+    try:
+        for node in node_list:
+            node_mem_free = int(host_numa.read_from_node_meminfo(node, "MemFree"))
+            if node_mem_free > mem_kb:
+                pinned_node = node
+                break
+        params["qemu_command_prefix"] = f"numactl -m {pinned_node}"
+        vm_name = params["main_vm"]
+        env_process.process(
+            test, params, env, env_process.preprocess_image, env_process.preprocess_vm
+        )
+        vm = env.get_vm(vm_name)
+        vm.verify_alive()
+    except virt_vm.VMCreateError as e:
+        if f"node argument {pinned_node} is out of range" in str(e):
+            test.cancel(f"The node: {pinned_node} used for VM pinning is not valid")
+        test.error(e)
+
     login_timeout = int(params.get("login_timeout", 360))
 
     config_cmds = params.get("config_cmds")

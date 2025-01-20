@@ -1,10 +1,13 @@
 import logging
 import os
+import random
 import re
 import time
 
 from avocado.utils import process
-from virttest import data_dir, env_process, utils_misc, utils_net
+from virttest import data_dir, env_process, utils_misc, utils_net, utils_qemu
+
+from provider.cpu_utils import check_cpu_flags
 
 LOG_JOB = logging.getLogger("avocado.test")
 
@@ -27,6 +30,47 @@ class UEFIShellTest(object):
         self.params = params
         self.env = env
         self.session = None
+        self.vm = None
+
+    def set_cpu_model(self, cpu_model_list):
+        """
+        set cpu model by the given cpu model list
+
+        :param cpu_model_list: a list of cpu model
+        """
+        qemu_binary = "/usr/libexec/qemu-kvm"
+        cpu_list = utils_qemu.get_supported_devices_list(qemu_binary, "CPU")
+        cpu_list = list(map(lambda x: x.split("-")[0], cpu_list))
+        cpu_model_list = list(filter(lambda x: x in cpu_list, cpu_model_list))
+        self.params["cpu_model"] = random.choice(cpu_model_list)
+
+    def check_host_cpu_flags(self):
+        """
+        check if the host supports the cpu flags
+        """
+        check_host_flags = self.params.get_boolean("check_host_flags")
+        if check_host_flags:
+            check_cpu_flags(self.params, self.params["flags"], self.test)
+
+    def check_message_in_serial_log(self, msg):
+        """
+        check the given message in serial log
+
+        :param msg: the message to be checked in serial log
+        """
+        serial_output = self.vm.serial_console.get_output()
+        if not re.search(msg, serial_output, re.S):
+            self.test.fail("Can't find 'msg' in serial log.")
+
+    def check_message_in_edk2_log(self, msg):
+        """
+        check the given message in edk2 log
+
+        :param msg: the message to be checked in edk2 log
+        """
+        logs = self.vm.logsessions["seabios"].get_output()
+        if not re.search(msg, logs, re.S):
+            self.test.fail("Can't find 'msg' in edk2 log.")
 
     def setup(self, under_fs0):
         """
@@ -35,6 +79,9 @@ class UEFIShellTest(object):
 
         :param under_fs0: most uefi command executed under fs0:\
         """
+        if not self.params.get_boolean("auto_cpu_model"):
+            self.set_cpu_model(self.params.get_list("cpu_model_list"))
+        self.check_host_cpu_flags()
         params = self.params
         for cdrom in params.objects("cdroms"):
             boot_index = params.get("boot_index_%s" % cdrom)
@@ -60,8 +107,8 @@ class UEFIShellTest(object):
             env_process.preprocess_image,
             env_process.preprocess_vm,
         )
-        vm = self.env.get_vm(params["main_vm"])
-        self.session = vm.wait_for_serial_login()
+        self.vm = self.env.get_vm(params["main_vm"])
+        self.session = self.vm.wait_for_serial_login()
         if under_fs0 == "yes":
             self.send_command("fs0:")
 
@@ -250,6 +297,9 @@ def run(test, params, env):
     time_interval = float(params["time_interval"])
     under_fs0 = params.get("under_fs0", "yes")
     uefishell_test.setup(under_fs0)
+    if params.get("check_message"):
+        uefishell_test.check_message_in_serial_log(params["check_message"])
+        uefishell_test.check_message_in_edk2_log(params["check_message"])
     test_scenarios = params["test_scenarios"]
     for scenario in test_scenarios.split():
         command = params["command_%s" % scenario]

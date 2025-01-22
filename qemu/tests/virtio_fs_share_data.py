@@ -1016,20 +1016,24 @@ def run(test, params, env):
                                 vfsd_num += len(vfsd_ps.strip().splitlines())
                         return vfsd_num
 
+                    reboot_method = params.get("reboot_method")
+
                     error_context.context(
                         "Check virtiofs daemon before reboot vm.", test.log.info
                     )
                     vfsd_num_bf = get_vfsd_num()
+
                     error_context.context(
                         "Reboot guest and check virtiofs daemon.", test.log.info
                     )
-                    session = vm.reboot(session)
+                    session = vm.reboot(session, reboot_method)
                     if not vm.is_alive():
                         test.fail("After rebooting vm quit unexpectedly.")
                     vfsd_num_af = get_vfsd_num()
                     if vfsd_num_bf != vfsd_num_af:
                         test.fail(
-                            "Virtiofs daemon is different before and after reboot.\n"
+                            "Virtiofs daemon is different before "
+                            "and after reboot.\n"
                             "Before reboot: %s\n"
                             "After reboot: %s\n",
                             (vfsd_num_bf, vfsd_num_af),

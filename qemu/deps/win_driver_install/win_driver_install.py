@@ -122,8 +122,9 @@ def get_current_driver_ver(device_name):
     """
     key = r"\d*\.\d*\.\d*\.\d*"
     get_driver_ver_cmd = (
-        "wmic path win32_pnpsigneddriver where"
-        " Devicename='%s' get driverversion" % device_name
+        'powershell "Get-CimInstance Win32_PnPSignedDriver'
+        " | Where-Object {$_.DeviceName -eq %s}"
+        ' | Select-Object DriverVersion"'
     )
     driver_version = os.popen(get_driver_ver_cmd).read()
     if not driver_version.strip():

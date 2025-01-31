@@ -30,7 +30,7 @@ def run(test, params, env):
     session.cmd("cd %s" % kernel_path)
     session.cmd(
         "brew download-build --rpm kernel-selftests-internal-%s.rpm" % kernel_version,
-        180,
+        240,
     )
 
     error_context.context("Install the RPM", test.log.debug)
@@ -41,7 +41,9 @@ def run(test, params, env):
         s, o = session.cmd_status_output(tests_execution_cmd, 180)
         test.log.info("The selftests results: %s", o)
 
-        summary = re.findall(r"\# SUMMARY.+", o)
+        summary_pattern = params.get("summary_pattern")
+        pattern = rf"{summary_pattern}"
+        summary = re.findall(pattern, o)
         num_failed_tests = int(re.findall(r"FAIL\=\d+", str(summary))[0].split("=")[1])
         test.log.debug("Number of failed tests: %d", num_failed_tests)
 

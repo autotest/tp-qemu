@@ -1,7 +1,5 @@
-import re
-
 from avocado.utils import process
-from virttest import cpu, env_process, error_context, utils_misc
+from virttest import cpu, env_process, error_context, utils_misc, utils_qemu
 from virttest.utils_version import VersionInterval
 
 
@@ -45,9 +43,7 @@ def run(test, params, env):
     list(map(cpu_types.extend, list(cpu.CPU_TYPES.values())))
 
     qemu_path = utils_misc.get_qemu_binary(params)
-    qemu_version = env_process._get_qemu_version(qemu_path)
-    match = re.search(r"[0-9]+\.[0-9]+\.[0-9]+(\-[0-9]+)?", qemu_version)
-    host_qemu = match.group(0)
+    host_qemu = utils_qemu.get_qemu_version(qemu_path)[0]
     remove_list_deprecated = params.get("remove_list_deprecated", "")
     if host_qemu in VersionInterval("[7.0.0-8, )") and remove_list_deprecated:
         params["remove_list"] = remove_list_deprecated

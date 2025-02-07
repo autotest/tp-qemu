@@ -447,7 +447,21 @@ def run(test, params, env):
                         "Creating file under %s inside " "guest." % fs_dest,
                         test.log.info,
                     )
-                    session.cmd(cmd_dd % guest_file, io_timeout)
+
+                    # for windows, after virtiofs service start up, should wait
+                    #  for the volume active.
+                    if os_type == "windows":
+                        end_time = time.time() + io_timeout
+                        while time.time() < end_time:
+                            output = session.cmd_output(cmd_dd % guest_file)
+                            pattern = r"The system cannot find the file specified"
+                            if not re.findall(pattern, output, re.M | re.I):
+                                break
+                            else:
+                                test.log.info("Volume is not ready for io.")
+                            time.sleep(2)
+                    else:
+                        session.cmd(cmd_dd % guest_file, io_timeout)
 
                     if os_type == "linux":
                         cmd_md5_vm = cmd_md5 % guest_file

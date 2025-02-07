@@ -1,5 +1,7 @@
 import logging
 import os
+import re
+import time
 
 from avocado.utils import process
 from virttest import data_dir, error_context, utils_misc
@@ -67,7 +69,20 @@ def basic_io_test(test, params, session):
         error_context.context(
             "Creating file under %s inside guest." % fs_dest, LOG_JOB.info
         )
-        session.cmd(cmd_dd % guest_file, io_timeout)
+        # for windows, after virtiofs service start up, should wait several seconds
+        #  to make the volume active.
+        if windows:
+            end_time = time.time() + io_timeout
+            while time.time() < end_time:
+                output = session.cmd_output(cmd_dd % guest_file)
+                pattern = r"The system cannot find the file specified"
+                if not re.findall(pattern, output, re.M | re.I):
+                    break
+                else:
+                    test.log.info("Volume is not ready for io.")
+                time.sleep(2)
+        else:
+            session.cmd(cmd_dd % guest_file, io_timeout)
 
         if windows:
             guest_file_win = guest_file.replace("/", "\\")

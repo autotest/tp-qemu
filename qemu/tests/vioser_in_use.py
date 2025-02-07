@@ -46,6 +46,16 @@ def live_migration_guest(test, params, vm, session):
     vm.migrate()
 
 
+def subw_guest_pause_resume(test, params, vm, session):
+    vm.monitor.cmd("stop")
+    if not vm.monitor.verify_status("paused"):
+        test.error("VM is not paused Current status: %s" % vm.monitor.get_status())
+    time.sleep(float(params.get("wait_timeout", "1800")))
+    vm.monitor.cmd("cont")
+    if not vm.monitor.verify_status("running"):
+        test.error("VM is not running. Current status: %s" % vm.monitor.get_status())
+
+
 @error_context.context_aware
 def vcpu_hotplug_guest(test, params, vm, session):
     """

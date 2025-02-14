@@ -21,6 +21,33 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
 
+    def allocate_largepages_per_node():
+        """
+        The functions is inteded to set 1G hugepages per NUMA
+        node when the system has four or more of these nodes.
+        For this function to work the hugepage size should be 1G.
+        This way a QEMU failure could be avoided if it's unable
+        to allocate memory.
+        """
+        node_list = host_numa_node.online_nodes_withcpumem
+        if len(node_list) >= 4:
+            allocated_memory = False
+            try:
+                for node in node_list:
+                    node_mem_free = int(
+                        host_numa_node.read_from_node_meminfo(node, "MemFree")
+                    )
+                    if node_mem_free > (mem * 1024):
+                        hp_config.set_node_num_huge_pages(4, node, "1048576")
+                        allocated_memory = True
+                        break
+            except ValueError as e:
+                test.cancel(e)
+            if not allocated_memory:
+                test.fail(
+                    "There is no NUMA node with enough memory for running the test"
+                )
+
     def set_hugepage():
         """Set nr_hugepages"""
         try:
@@ -107,9 +134,9 @@ def run(test, params, env):
                 "No node on your host has sufficient free memory for " "this test."
             )
     hp_config = test_setup.HugePageConfig(params)
+    if params.get("on_numa_node"):
+        allocate_largepages_per_node()
     hp_config.target_hugepages = origin_nr
-    test.log.info("Setup hugepage number to %s", origin_nr)
-    hp_config.setup()
     hugepage_size = utils_memory.get_huge_page_size()
     params["hugepage_path"] = hp_config.hugepage_path
     params["start_vm"] = "yes"

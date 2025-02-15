@@ -28,7 +28,7 @@ def run(test, params, env):
         """
         if params["os_type"] == "windows":
             list_cmd = params.get("list_cmd", "wmic process get name")
-            output = session.cmd_output_safe(list_cmd, timeout=60)
+            output = session.cmd_output(list_cmd, timeout=60)
             process = re.findall("mplayer", output, re.M | re.I)
             return bool(process)
         else:

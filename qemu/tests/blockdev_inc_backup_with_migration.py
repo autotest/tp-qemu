@@ -64,6 +64,9 @@ class BlockdevIncbkWithMigration(blockdev_base.BlockdevBaseTest):
     def restart_vm_with_inc(self):
         images = self.params["images"]
         self.params["images"] = " ".join([images.split()[0]] + self.inc_backup_tags)
+        # fix me if data-file support for backup images are requested
+        if self.params.get("enable_data_file"):
+            del self.params["enable_data_file"]
         self.prepare_main_vm()
         self.clone_vm = self.main_vm
         self.params["images"] = images

@@ -91,6 +91,9 @@ class BlockdevIncbkIncSyncSuccBitmapTest(blockdev_base.BlockdevBaseTest):
         self.main_vm.destroy()
         imgs = [self.params["images"].split()[0]] + self.inc_backup_tags
         self.params["images"] = " ".join(imgs)
+        # fix me if data-file support for backup images are requested
+        if self.params.get("enable_data_file"):
+            del self.params["enable_data_file"]
         self.prepare_main_vm()
         self.clone_vm = self.main_vm
 

@@ -15,9 +15,11 @@ def run(test, params, env):
     """
 
     try:
+        orig_value = int(
+            process.system_output("sysctl -n vm.max_map_count", shell=True)
+        )
         max_map_value = params.get_numeric("max_map_value", 3072)
         test.log.info("Setting max_map_count to 3072")
-        orig_value = process.system_output("sysctl -n vm.max_map_count", shell=True)
         process.system(f"sysctl vm.max_map_count={max_map_value}", shell=True)
 
         extra_image_number = params.get_numeric("extra_image_number", 15)

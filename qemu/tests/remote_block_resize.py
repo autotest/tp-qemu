@@ -1,8 +1,17 @@
 import json
 
 from avocado.utils import wait
-from virttest import data_dir, error_context, qemu_storage, utils_disk, utils_test
+from virttest import (
+    data_dir,
+    error_context,
+    qemu_storage,
+    utils_disk,
+    utils_misc,
+    utils_qemu,
+    utils_test,
+)
 from virttest.qemu_capabilities import Flags
+from virttest.utils_version import VersionInterval
 from virttest.utils_windows import drive
 
 
@@ -51,8 +60,18 @@ def run(test, params, env):
     img = qemu_storage.QemuImg(data_image_params, data_dir.get_data_dir(), data_image)
     filters = {}
     data_image_dev = ""
+
+    qemu_binary = utils_misc.get_qemu_binary(params)
+    qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
+
+    img_format = data_image_params.get("image_format", "qcow2")
+
     if vm.check_capability(Flags.BLOCKDEV):
-        filters = {"driver": data_image_params.get("image_format", "qcow2")}
+        # Use image key for raw format with QEMU 9.1.0+
+        if qemu_version in VersionInterval("[9.1.0,)") and img_format == "raw":
+            filters = {"image": f"{data_image}.raw"}
+        else:
+            filters = {"driver": img_format}
     else:
         filters = {"file": img.image_filename}
 

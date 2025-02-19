@@ -30,7 +30,7 @@ def run(test, params, env):
     session.cmd("cd %s" % kernel_path)
     session.cmd(
         "brew download-build --rpm kernel-selftests-internal-%s.rpm" % kernel_version,
-        180,
+        240,
     )
 
     error_context.context("Install the RPM", test.log.debug)
@@ -41,14 +41,14 @@ def run(test, params, env):
         s, o = session.cmd_status_output(tests_execution_cmd, 180)
         test.log.info("The selftests results: %s", o)
 
-        summary = re.findall(r"\# SUMMARY.+", o)
-        num_failed_tests = int(re.findall(r"FAIL\=\d+", str(summary))[0].split("=")[1])
-        test.log.debug("Number of failed tests: %d", num_failed_tests)
+        matches = re.search(r"SUMMARY:.+SKIP=(?P<skip>\d+) FAIL=(?P<fail>\d+)", o)
 
+        num_failed_tests = int(matches.group("fail"))
+        test.log.debug("Number of failed tests: %d", num_failed_tests)
         if num_failed_tests != 0:
             test.fail("Failed selftests found in the execution")
 
-        num_skipped_tests = int(re.findall(r"SKIP\=\d+", str(summary))[0].split("=")[1])
+        num_skipped_tests = int(matches.group("skip"))
         test.log.debug("Number of skipped tests: %d", num_skipped_tests)
 
         skipped_list = []

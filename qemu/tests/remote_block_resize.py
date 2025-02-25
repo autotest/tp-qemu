@@ -51,8 +51,13 @@ def run(test, params, env):
     img = qemu_storage.QemuImg(data_image_params, data_dir.get_data_dir(), data_image)
     filters = {}
     data_image_dev = ""
+    img_format = data_image_params.get("image_format", "qcow2")
     if vm.check_capability(Flags.BLOCKDEV):
-        filters = {"driver": data_image_params.get("image_format", "qcow2")}
+        filters = (
+            {"image": f"{data_image}.raw"}
+            if img_format == "raw"
+            else {"driver": img_format}
+        )
     else:
         filters = {"file": img.image_filename}
 

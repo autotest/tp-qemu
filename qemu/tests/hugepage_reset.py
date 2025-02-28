@@ -90,8 +90,8 @@ def run(test, params, env):
             node_mem_free = host_numa_node.read_from_node_meminfo(
                 target_node, "MemFree"
             )
-            if int(node_mem_free) > mem:
-                params["target_nodes"] = target_node
+            if int(node_mem_free) > (mem * 1024):
+                params["target_nodes"] = str(target_node)
                 params["qemu_command_prefix"] = "numactl --membind=%s" % target_node
                 params["target_num_node%s" % target_node] = origin_nr
                 break
@@ -104,11 +104,9 @@ def run(test, params, env):
             )
         else:
             test.cancel(
-                "No node on your host has sufficient free memory for " "this test."
+                "No node on your host has sufficient free memory for this test."
             )
     hp_config = test_setup.HugePageConfig(params)
-    hp_config.target_hugepages = origin_nr
-    test.log.info("Setup hugepage number to %s", origin_nr)
     hp_config.setup()
     hugepage_size = utils_memory.get_huge_page_size()
     params["hugepage_path"] = hp_config.hugepage_path

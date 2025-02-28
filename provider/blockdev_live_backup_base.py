@@ -106,6 +106,9 @@ class BlockdevLiveBackupBaseTest(BlockdevBaseTest):
             self.main_vm.destroy()
 
         clone_params = self.main_vm.params.copy()
+        # fix me if data-file support for backup images are requested
+        if clone_params.get("enable_data_file"):
+            del clone_params["enable_data_file"]
         for s, t in zip(self._source_images, self._target_images):
             clone_params["images"] = clone_params["images"].replace(s, t)
 

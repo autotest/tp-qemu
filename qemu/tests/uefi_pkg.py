@@ -99,8 +99,10 @@ def run(test, params, env):
         # instead of flash
         if "memory" == content["mapping"]["device"]:
             filename = content["mapping"]["filename"]
+            mode = None
         else:
             filename = content["mapping"]["executable"]["filename"]
+            mode = content["mapping"]["mode"]
         check_element_filename(filename, output)
         # for inteltdx with secure boot, just need to check binary file,
         # no vars file, skip the 'nvram-template' element checking
@@ -109,14 +111,9 @@ def run(test, params, env):
         # skip the 'nvram-template' element checking
         # for other json files, if it has 'mode' element, check its
         # value is 'split'
-        if "inteltdx.secboot" in filename:
-            continue
-        elif "amdsev" in filename or "inteltdx" in filename:
-            mode = content["mapping"]["mode"]
+        if ("amdsev" in filename or "inteltdx" in filename) and mode:
             check_element_mode(mode, "stateless")
-            continue
-        elif "mode" in content["mapping"]:
-            mode = content["mapping"]["mode"]
+        elif mode:
             check_element_mode(mode, "split")
-        filename = content["mapping"]["nvram-template"]["filename"]
-        check_element_filename(filename, output)
+            filename = content["mapping"]["nvram-template"]["filename"]
+            check_element_filename(filename, output)

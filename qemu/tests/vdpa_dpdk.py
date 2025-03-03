@@ -6,7 +6,7 @@ import six
 from avocado.utils import process
 from virttest import remote, utils_misc, utils_net, utils_sriov
 
-from provider import dpdk_utils
+from provider import dpdk_utils, vdpa_utils
 
 LOG_JOB = logging.getLogger("avocado.test")
 
@@ -62,6 +62,7 @@ def run(test, params, env):
     guest_ver_cmd = params["guest_ver_cmd"]
     base = params.get("format_base", "12")
     fbase = params.get("format_fbase", "2")
+    add_flows = params.get("vdpa_ovs_add_flows", "yes") == "yes"
 
     session = vm.wait_for_login(timeout=login_timeout, restart_network=True)
 
@@ -74,6 +75,9 @@ def run(test, params, env):
     result_file.write("### kvm-userspace-ver : %s\n" % kvm_ver)
     result_file.write("### kvm_version : %s\n" % host_ver)
     result_file.write("### guest-kernel-ver :%s" % guest_ver)
+
+    ovs_handler = vdpa_utils.OVSHandler(vm)
+    ovs_handler.get_vdpa_ovs_info(add_flows=add_flows, return_ports=False)
 
     dpdk_utils.install_dpdk(params, session)
     dpdk_ver = session.cmd_output("rpm -qa |grep dpdk | head -n 1")

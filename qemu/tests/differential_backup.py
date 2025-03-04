@@ -23,7 +23,7 @@ class DifferentialBackupTest(live_backup_base.LiveBackup):
         """Initialize the data disk"""
         session = self.get_session()
         get_disk_cmd = self.params["get_disk_cmd"]
-        disk = session.cmd_output(get_disk_cmd).strip()
+        disk = session.cmd_output(get_disk_cmd).split("\n")[0]
         for item in ["format_disk_cmd", "mount_disk_cmd"]:
             cmd = self.params[item].replace("DISK", disk)
             session.cmd(cmd)

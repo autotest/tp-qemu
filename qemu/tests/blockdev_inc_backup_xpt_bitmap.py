@@ -30,9 +30,13 @@ class BlockdevIncBackupXptBitmapTest(BlockdevBaseTest):
         self.bitmaps.append("bitmap_%s" % tag)
         image_params["nbd_export_bitmaps"] = "bitmap_%s" % tag
         self.nbd_exports.append(QemuNBDExportImage(image_params, tag))
+        nbd_image_params = self.params.object_params(image_params["nbd_image_tag"])
+        # fix me if data_file is supported for nbd expose image
+        if nbd_image_params.get("enable_data_file"):
+            del nbd_image_params["enable_data_file"]
         self.nbd_images.append(
             qemu_storage.QemuImg(
-                self.params.object_params(image_params["nbd_image_tag"]),
+                nbd_image_params,
                 None,
                 image_params["nbd_image_tag"],
             )

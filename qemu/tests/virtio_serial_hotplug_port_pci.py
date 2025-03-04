@@ -1,4 +1,4 @@
-from virttest import env_process, error_context
+from virttest import env_process, error_context, qemu_migration
 from virttest.qemu_monitor import QMPCmdError
 
 from provider import win_driver_utils
@@ -32,6 +32,39 @@ def get_buses_and_serial_devices(vm, params, char_devices, serials):
             else:
                 serial_devices.append(device)
     return buses, serial_devices
+
+
+@error_context.context_aware
+def reboot_guest(test, params, vm, session):
+    """
+    Reboot guest from system_reset or shell.
+    """
+
+    vm.reboot(session, method=params["reboot_method"])
+
+
+@error_context.context_aware
+def shutdown_guest(test, params, vm, session):
+    """
+    Shutdown guest via system_powerdown or shell.
+    """
+
+    if params.get("shutdown_method") == "shell":
+        session.sendline(params["shutdown_command"])
+    elif params.get("shutdown_method") == "system_powerdown":
+        vm.monitor.system_powerdown()
+    if not vm.wait_for_shutdown(int(params.get("shutdown_timeout", 360))):
+        test.fail("guest refuses to go down")
+
+
+@error_context.context_aware
+def live_migration_guest(test, params, vm, session):
+    """
+    Run migrate_set_speed, then migrate guest.
+    """
+
+    qemu_migration.set_speed(vm, params.get("mig_speed", "1G"))
+    vm.migrate()
 
 
 @error_context.context_aware

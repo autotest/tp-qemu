@@ -108,7 +108,8 @@ class UEFIShellTest(object):
             env_process.preprocess_vm,
         )
         self.vm = self.env.get_vm(params["main_vm"])
-        self.session = self.vm.wait_for_serial_login()
+        timeout = self.params.get_numeric("timeout")
+        self.session = self.vm.wait_for_serial_login(timeout=timeout)
         if under_fs0 == "yes":
             self.send_command("fs0:")
 
@@ -154,7 +155,8 @@ class UEFIShellTest(object):
         :return if check_result is not None, return matched string list
         """
         LOG_JOB.info("Send uefishell command: %s", command)
-        output = self.session.cmd_output(command)
+        timeout = self.params.get_numeric("timeout")
+        output = self.session.cmd_output(command, timeout=timeout)
         time.sleep(interval)
         # Judge if cmd is run successfully via environment variable 'lasterror'
         last_error = self.params["last_error"]

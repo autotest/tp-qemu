@@ -1,7 +1,7 @@
 import re
 
 from avocado.core import exceptions
-from virttest import error_context
+from virttest import error_context, utils_package
 
 
 @error_context.context_aware
@@ -21,6 +21,10 @@ def run(test, params, env):
     kernel_path = params.get("kernel_path", "/tmp/kernel")
     tests_execution_cmd = params.get("tests_execution_cmd")
     whitelist = params.get("whitelist", "").split()
+
+    dependent_pkgs = params.get_list("dependent_pkgs")
+    if not utils_package.package_install(dependent_pkgs, session):
+        test.cancel("Installing dependent packages in VM failed")
 
     session.cmd("mkdir -p %s" % kernel_path)
     kernel_version = session.cmd_output("uname -r").strip().split("+")[0]

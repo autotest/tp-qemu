@@ -64,6 +64,7 @@ def vsock_listen(tool_bin, port, session):
     session.read_nonblocking(0, timeout=10)
     LOG_JOB.info("Listening to the vsock port from guest: %s", lstn_cmd)
     session.sendline(lstn_cmd)
+    time.sleep(5)
 
 
 def check_received_data(test, session, pattern):
@@ -207,6 +208,7 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
+    vm.verify_alive()
     session = vm.wait_for_login()
     vsock_dev = params["vsocks"].split()[0]
     guest_cid = vm.devices.get(vsock_dev).get_param("guest-cid")

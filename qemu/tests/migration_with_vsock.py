@@ -78,6 +78,7 @@ def run(test, params, env):
 
     vsock_test_tool = params["vsock_test_tool"]
     vm = env.get_vm(params["main_vm"])
+    vm.verify_alive()
     session = vm.wait_for_login()
     if vsock_test_tool == "nc_vsock":
         tool_bin = compile_nc_vsock(test, vm, session)

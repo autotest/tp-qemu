@@ -89,7 +89,6 @@ def run(test, params, env):
             session.cmd(
                 "chmod 600 /etc/NetworkManager/system-connections/*.nmconnection"
             )
-            session.cmd("nmcli connection reload")
         else:
             for ifname in ifname_list:
                 eth_config_path = ifcfg_path % ifname

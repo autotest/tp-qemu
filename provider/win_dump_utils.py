@@ -98,8 +98,8 @@ def check_windbg_installed(params, session):
     :param params: the dict used for parameters.
     :param session: The guest session object.
     """
-    check_cmd = params["chk_windbg_cmd"] % params["windbg_path"]
-    status, _ = session.cmd_status_output(check_cmd)
+    chk_windbg_cmd = params["chk_windbg_cmd"]
+    status, _ = session.cmd_status_output(chk_windbg_cmd)
     return False if status else True
 
 

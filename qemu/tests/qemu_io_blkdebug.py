@@ -1,10 +1,6 @@
 import os
 import re
-
-try:
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import ConfigParser
+from configparser import ConfigParser
 
 from avocado.utils import process
 from virttest import data_dir, error_context, qemu_io, utils_misc

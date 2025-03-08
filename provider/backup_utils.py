@@ -285,7 +285,7 @@ def blockdev_mirror_nowait(vm, source, target, **extra_options):
 
 @fail_on
 def blockdev_mirror(vm, source, target, **extra_options):
-    timeout = int(extra_options.pop("timeout", 600))
+    timeout = int(extra_options.pop("timeout", 900))
     job_id = blockdev_mirror_nowait(vm, source, target, **extra_options)
     job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
@@ -294,7 +294,7 @@ def blockdev_mirror(vm, source, target, **extra_options):
 def block_commit(vm, device, **extra_options):
     cmd, arguments = block_commit_qmp_cmd(device, **extra_options)
     set_default_block_job_options(vm, arguments)
-    timeout = int(extra_options.pop("timeout", 600))
+    timeout = int(extra_options.pop("timeout", 900))
     vm.monitor.cmd(cmd, arguments)
     job_id = arguments.get("job-id", device)
     job_utils.wait_until_block_job_completed(vm, job_id, timeout)
@@ -312,7 +312,7 @@ def blockdev_stream_nowait(vm, device, **extra_options):
 @fail_on
 def blockdev_stream(vm, device, **extra_options):
     """Do block-stream and wait stream completed"""
-    timeout = int(extra_options.pop("timeout", 600))
+    timeout = int(extra_options.pop("timeout", 900))
     job_id = blockdev_stream_nowait(vm, device, **extra_options)
     job_utils.wait_until_block_job_completed(vm, job_id, timeout)
 
@@ -320,7 +320,7 @@ def blockdev_stream(vm, device, **extra_options):
 @fail_on
 def blockdev_backup(vm, source, target, **extra_options):
     cmd, arguments = blockdev_backup_qmp_cmd(source, target, **extra_options)
-    timeout = int(extra_options.pop("timeout", 600))
+    timeout = int(extra_options.pop("timeout", 900))
     if "bitmap" in arguments:
         info = block_bitmap.get_bitmap_by_name(vm, source, arguments["bitmap"])
         assert info, "Bitmap '%s' not exists in device '%s'" % (
@@ -338,7 +338,7 @@ def blockdev_backup(vm, source, target, **extra_options):
 @fail_on
 def blockdev_batch_snapshot(vm, source_lst, target_lst, **extra_options):
     actions = []
-    timeout = int(extra_options.pop("timeout", 600))
+    timeout = int(extra_options.pop("timeout", 900))
     jobs_id = []
     for idx, src in enumerate(source_lst):
         snapshot_cmd, arguments = blockdev_snapshot_qmp_cmd(
@@ -357,7 +357,7 @@ def blockdev_batch_backup(vm, source_lst, target_lst, bitmap_lst, **extra_option
     actions = []
     jobs_id = []
     bitmap_add_cmd = "block-dirty-bitmap-add"
-    timeout = int(extra_options.pop("timeout", 600))
+    timeout = int(extra_options.pop("timeout", 900))
     completion_mode = extra_options.pop("completion_mode", None)
     sync_mode = extra_options.get("sync")
 

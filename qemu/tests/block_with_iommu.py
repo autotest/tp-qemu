@@ -1,4 +1,5 @@
 import re
+import time
 
 from virttest import cpu, error_context
 
@@ -57,14 +58,29 @@ def run(test, params, env):
         test.cancel("This case only support Intel platform.")
 
     vm = env.get_vm(params["main_vm"])
-    vm.verify_alive()
-    session = vm.wait_for_login(timeout=360)
-    verify_iommu_enabled()
+    logger = test.log
+    try:
+        logger.debug("Test Start")
+        vm.verify_alive()
+        session = vm.wait_for_login(timeout=360)
+        verify_iommu_enabled()
+        time.sleep(30)
+        logger.debug("Execute IO CMD")
+        session.cmd(params.get("dd_cmd"))
 
-    session.cmd(params.get("dd_cmd"))
-
-    if params.get("reload_kernel_cmd"):
-        reload_kernel(session)
-
-    session = vm.reboot(session, timeout=360)
-    session.cmd(params.get("dd_cmd"))
+        if params.get("reload_kernel_cmd"):
+            logger.debug("reload_kernel")
+            reload_kernel(session)
+        logger.debug("Before reboot")
+        session = vm.reboot(session, timeout=180)
+        logger.debug("Execute IO CMD after reboot")
+        session.cmd(params.get("dd_cmd"))
+        logger.debug("Test over")
+    finally:
+        logger.debug("Destroy VM ...")
+        vm.monitors = []
+        vm.destroy(gracefully=False)
+        logger.debug("Destroy VM End")
+        params["enable_guest_iommu"] = "no"
+        env.unregister_vm(params["main_vm"])
+        logger.debug("Finally block over ")

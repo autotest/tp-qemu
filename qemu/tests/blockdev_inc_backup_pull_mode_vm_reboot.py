@@ -27,6 +27,10 @@ class BlockdevIncBackupPullModeRebootVMTest(BlockdevLiveBackupBaseTest):
         # the fleecing image to be exported
         self.params["image_name_image1"] = self.params["image_name"]
         self.params["image_format_image1"] = self.params["image_format"]
+        # fix me if data-file for backup images are requested
+        if self.params.get("enable_data_file"):
+            del self.params["enable_data_file"]
+
         self._fleecing_image_obj = self.source_disk_define_by_params(
             self.params, self._full_bk_images[0]
         )

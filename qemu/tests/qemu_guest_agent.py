@@ -1513,6 +1513,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         guest_user_passwd = self.params["guest_user_passwd"]
         output_check_str = self.params["output_check_str"]
         guest_ip_ipv4 = utils_net.get_guest_ip_addr(session, mac_addr, os_type)
+        guest_ip_ipv4 = re.sub(r"\x1b\[[0-9;]*m", "", guest_ip_ipv4).strip()
         _prepared_n_restore_env()
 
         error_context.context("Check the basic function ", LOG_JOB.info)
@@ -1721,6 +1722,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             :param if_name: interface name
             """
             guest_ip_ipv4 = utils_net.get_guest_ip_addr(session, mac_addr, os_type)
+            guest_ip_ipv4 = re.sub(r"\x1b\[[0-9;]*m", "", guest_ip_ipv4).strip()
             guest_ip_ipv6 = utils_net.get_guest_ip_addr(
                 session, mac_addr, os_type, ip_version="ipv6", linklocal=True
             )

@@ -36,6 +36,9 @@ class BlockdevIncBackupPullModeTest(blockdev_base.BlockdevBaseTest):
         image_params = self.params.object_params(tag)
         bk_tags = image_params.objects("backup_images")
         self.source_images.append("drive_%s" % tag)
+        # fix me if data-file support for backup images are requested
+        if self.params.get("enable_data_file"):
+            del self.params["enable_data_file"]
 
         # fleecing image used for full backup, to be exported by nbd
         self.full_backups.append("drive_%s" % bk_tags[0])

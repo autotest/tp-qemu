@@ -92,6 +92,9 @@ class BlockdevIncbkAfterCommitTest(blockdev_base.BlockdevBaseTest):
         params["images"] = " ".join(images)
 
         self.clone_vm = self.main_vm.clone(params=params)
+        # fix me if data-file support for backup images are requested
+        if self.clone_vm.params.get("enable_data_file"):
+            del self.clone_vm.params["enable_data_file"]
         self.clone_vm.create()
         self.clone_vm.verify_alive()
 

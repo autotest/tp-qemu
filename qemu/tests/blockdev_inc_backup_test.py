@@ -100,6 +100,9 @@ class BlockdevIncreamentalBackupTest(blockdev_base.BlockdevBaseTest):
         self.main_vm.destroy()
         images = self.params["images"]
         clone_params = self.main_vm.params.copy()
+        # fix me if data-file support for backup images are requested
+        if clone_params.get("enable_data_file"):
+            del clone_params["enable_data_file"]
         for tag in self.params.objects("source_images"):
             img_params = self.params.object_params(tag)
             image_chain = img_params.objects("image_backup_chain")

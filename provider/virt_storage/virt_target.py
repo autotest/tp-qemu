@@ -1,3 +1,6 @@
+import os
+
+
 class PoolTarget(object):
     def __init__(self):
         self.path = None
@@ -6,7 +9,7 @@ class PoolTarget(object):
     @classmethod
     def target_define_by_params(cls, params):
         instance = cls()
-        instance.path = params.get("target_path")
+        instance.path = os.path.realpath(params.get("target_path"))
         instance.format = params.get("target_format")
         return instance
 

@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+# Check for the required CPU model parameter
+if [[ -z "$1" ]]; then
+    echo "Error: cpu_model parameter is required."
+    echo "Usage: $0 <cpu_model>"
+    exit 1
+fi
+
+cpu_model="$1"
+
 fetch_retry() {
     local command=$1
     local max_retries=3
@@ -23,11 +32,6 @@ fetch_retry() {
 snpguest report attestation-report.bin request-data.txt --random
 snpguest display report attestation-report.bin
 
-# Get cpu model
-cpu_familly_id=$(cat /proc/cpuinfo | grep 'cpu family' | head -1 | cut -d ":" -f 2 | tr -d " ")
-model_id=$(cat /proc/cpuinfo | grep 'model' | head -1 | cut -d ":" -f 2 | tr -d " ")
-dict_cpu=([251]="milan" [2517]="genoa" [2617]="turin")
-cpu_model=${dict_cpu[${cpu_familly_id}${model_id}]}
 
 # Fetch cert
 set +e

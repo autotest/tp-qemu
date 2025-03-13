@@ -4,6 +4,7 @@ from avocado.utils import process
 from virttest import data_dir as virttest_data_dir
 from virttest import error_context
 from virttest.utils_misc import verify_dmesg
+from virttest.vt_utils import cpu
 
 
 @error_context.context_aware
@@ -36,6 +37,13 @@ def run(test, params, env):
         if int(process.getoutput(socket_count_cmd, shell=True)) != 1:
             test.cancel("Host cpu has more than 1 socket, skip the case.")
 
+    family_id = cpu.get_cpu_family()
+    cpu_info = cpu.get_cpu_info()
+    model_id = cpu_info[0]["model"]
+    dict_cpu = {"251": "milan", "2517": "genoa", "2617": "turin"}
+    key = family_id + model_id
+    host_cpu_model = dict_cpu.get(key, "unknown")
+
     vm_name = params["main_vm"]
     vm = env.get_vm(vm_name)
     vm.create()
@@ -65,6 +73,7 @@ def run(test, params, env):
             session.cmd_output("chmod 755 %s" % guest_cmd)
         except Exception as e:
             test.fail("Guest test preperation fail: %s" % str(e))
+        guest_cmd = guest_cmd + " " + host_cpu_model
         s = session.cmd_status(guest_cmd, timeout=360)
         if s:
             test.fail("Guest script error")

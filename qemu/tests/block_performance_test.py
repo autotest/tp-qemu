@@ -1,7 +1,6 @@
 import copy
 import itertools
 import json
-import re
 import statistics as st
 import time
 
@@ -520,11 +519,8 @@ def run(test, params, env):
         check_default_mq_cmd = params["check_default_mq_cmd"]
         dev = preprcess_fio_filename("stg2").replace("/dev", "")
         check_default_mq_cmd %= dev
-        output = session.cmd_output(check_default_mq_cmd)
-        logger.debug(output)
-        output = output.split("\n")[0]
-
-        default_mq_nums = len(re.split(r"[ ]+", output))
+        default_mq_nums = int(session.cmd_output(check_default_mq_cmd))
+        logger.debug(default_mq_nums)
         if default_mq_nums != int(params["vcpu_maxcpus"]):
             test.fail(
                 "Default num-queue value(%s) not equal vcpu nums(%s)"

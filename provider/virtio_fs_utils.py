@@ -307,10 +307,19 @@ def get_viofs_exe_path(test, params, session):
     exe_middle_path = (
         "{name}\\{arch}" if media_type == "iso" else "{arch}\\{name}"
     ).format(name=guest_name, arch=guest_arch)
-    exe_file_name = "virtiofs.exe"
-    exe_find_cmd = 'dir /b /s %s\\%s | findstr "\\%s\\\\"'
-    exe_find_cmd %= (viowin_ltr, exe_file_name, exe_middle_path)
-    exe_path = session.cmd(exe_find_cmd).strip()
+
+    exe_file_name = params.get("exe_file_name", "virtiofs.exe")
+    formal_exe_find_cmd = (
+        'dir /b /s VIOWIN_LTR\\EXE_FILE_NAME | findstr "\\EXE_MID_PATH\\\\"'
+    )
+    exe_find_cmd = params.get("exe_find_cmd", formal_exe_find_cmd)
+
+    exe_find_cmd_new = exe_find_cmd.replace(
+        'VIOWIN_LTR', viowin_ltr).replace(
+        'EXE_FILE_NAME', exe_file_name).replace(
+        'EXE_MID_PATH', exe_middle_path)
+
+    exe_path = session.cmd(exe_find_cmd_new).strip()
     test.log.info("Found exe file '%s'", exe_path)
     return exe_path
 

@@ -194,6 +194,7 @@ def run_test(forward_mode, guest, host, dpdk_tool_path, queue, pkts, mac=None):
         dpdk_tool_path, guest["cpu"], guest["pci"], forward_mode, queue, pkts
     )
     testpmd_guest.show_port_stats_all()
+    time.sleep(2)
     output = testpmd_guest.show_port_stats_all()
     pps_value = testpmd_guest.extract_pps_value(output, forward_mode)
 

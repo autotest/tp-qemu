@@ -229,8 +229,10 @@ def run(test, params, env):
                 for func in pre_migrate:
                     func(vm, params, test)
                 if i % 2 == 0:
+                    dst_node = params.get("mig_dest_node")
                     test.log.info("Round %s ping...", str(i / 2))
                 else:
+                    dst_node = params.get("vm_node")
                     test.log.info("Round %s pong...", str(i / 2))
                 try:
                     vm.migrate(
@@ -239,6 +241,7 @@ def run(test, params, env):
                         mig_cancel_delay,
                         offline,
                         check,
+                        dest_host=dst_node,
                         migration_exec_cmd_src=mig_exec_cmd_src,
                         migration_exec_cmd_dst=mig_exec_cmd_dst,
                         migrate_capabilities=capabilities,

@@ -80,7 +80,7 @@ def run(test, params, env):
     def guest_stress_start(guest_stress_test):
         """
         Start a stress test in guest, Could be 'iozone', 'dd', 'stress'
-
+	Added testing info ------TEST------
         :param type: type of stress test.
         """
         from generic.tests import autotest_control

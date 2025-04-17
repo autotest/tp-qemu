@@ -362,11 +362,54 @@ class QemuGuestAgentTest(BaseVirtTest):
                     test.fail("Failed to get qga, details: %s" % output)
                 else:
                     self.qga_pkg_path = params["qga_rpm_path"]
-            if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
-                LOG_JOB.info("qemu-ga is already installed.")
+
+            # Default to non-url source type if not specified
+            gagent_src_type = params.get("gagent_src_type", "non-url")
+
+            if gagent_src_type != "url":
+                if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
+                    LOG_JOB.info("qemu-ga is already installed.")
+                else:
+                    LOG_JOB.info("qemu-ga is not installed or need to update.")
+                    self.gagent_install(session, self.vm)
             else:
-                LOG_JOB.info("qemu-ga is not installed or need to update.")
-                self.gagent_install(session, self.vm)
+                error_context.context(
+                    "Download qemu-guest-agent package from "
+                    "website and copy it to guest",
+                    logging.info,
+                )
+                gagentrpm_download_url = self.params["gagent_download_url"]
+                gagentrpm_guest_dir = self.params["gagentrpm_guest_dir"]
+                gagentrpm_tem_path = self.params["gagentrpm_tem_path"]
+                rpm_name = re.search(r"([^/]+\.rpm)$", gagentrpm_download_url).group(1)
+                process.system(
+                    f"wget -qP {gagentrpm_tem_path} {gagentrpm_download_url}"
+                )
+                rpm_path = "/".join((gagentrpm_tem_path, rpm_name))
+                if not os.path.isfile(rpm_path):
+                    self.test.error(
+                        "qemu-guest-agent rpm is not exist, "
+                        "maybe it is not successfully "
+                        "downloaded, please take a look "
+                    )
+                else:
+                    self.vm.copy_files_to(rpm_path, gagentrpm_guest_dir)
+                    s = session.cmd_status(
+                        f"rpm -Uvh --nodeps --force {gagentrpm_guest_dir}/{rpm_name}"
+                    )
+                    if s != 0:
+                        self.test.error(
+                            "qemu-guest-agent rpm couldn't be installed "
+                            "successfully, please take a look"
+                        )
+                    else:
+                        restart_cmd = self.params["gagent_restart_cmd"]
+                        s_rst, o_rst = session.cmd_status_output(restart_cmd)
+                        if s_rst != 0:
+                            self.test.fail(
+                                "qemu-guest-agent service restart failed,"
+                                " the detailed info:\n%s." % o_rst
+                            )
 
             error_context.context("Check qga service running status", LOG_JOB.info)
             if self._check_ga_service(session, params.get("gagent_status_cmd")):

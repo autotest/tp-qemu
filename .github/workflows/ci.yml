@@ -10,7 +10,7 @@ jobs:
   python-style-check:
 
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
@@ -42,7 +42,7 @@ jobs:
   commitlint:
 
     name: Commit lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Check out repository code
@@ -58,7 +58,7 @@ jobs:
   pr-check:
 
     name: PR title
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Check title length of pull request(${{github.event.pull_request.number}})
@@ -71,7 +71,7 @@ jobs:
   cfg-lint-check:
 
     name: Cfg lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
@@ -97,7 +97,7 @@ jobs:
   cartesian-syntax-check:
 
     name: Cartesian syntax
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     needs: cfg-lint-check
     if: ${{ needs.cfg-lint-check.outputs.matrix != '[]' }}
     strategy:

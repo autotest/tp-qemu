@@ -8,10 +8,10 @@ on:
 jobs:
   python-sanity-check:
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: [3.6, 3.9, 3.12]
+        python-version: [3.9, 3.12]
       fail-fast: false
     steps:
       - run: echo "Job triggered by a ${{ github.event_name }} event on branch is ${{ github.ref }} in repository is ${{ github.repository }}"
@@ -31,7 +31,7 @@ jobs:
 
   commitlint:
     name: Commitlint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
 
   pr-check:
     name: PR title
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check title length of pull request
         uses: actions/github-script@v7
@@ -62,7 +62,7 @@ jobs:
 
   changed-cfg-files:
     name: Changed cfg files
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.cfg-files.outputs.all_changed_files }}
     steps:
@@ -79,7 +79,7 @@ jobs:
 
   cartesian-syntax-check:
     name: Cartesian syntax
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     if: ${{ needs.changed-cfg-files.outputs.matrix != '[]' }}
     needs: changed-cfg-files
     strategy:

@@ -1,4 +1,4 @@
-name: GH Actions
+name: CI
 
 on:
   pull_request:
@@ -6,114 +6,95 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  python-style-check:
-
+  python-sanity-check:
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-20.04
-
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: [3.6, 3.9]
+        python-version: [3.9, 3.12]
       fail-fast: false
-
     steps:
       - run: echo "Job triggered by a ${{ github.event_name }} event on branch is ${{ github.ref }} in repository is ${{ github.repository }}"
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          pip install sphinx
-          pip install -r requirements-ci.txt
-      - name: Run inspekt
-        if: ${{ matrix.python-version > 3.6 }}
-        run: inspekt checkall --disable-style E203,E501,E265,W601,E402,E722,E741 --disable-lint=W,R,C,E0601,E1002,E1101,E1103,E1120,F0401,I0011,I1101 --enable-lint W0611,W1201 --no-license-check
-      - name: Run inspekt (py36)
-        if: ${{ matrix.python-version == 3.6 }}
-        run: inspekt checkall --disable-style E203,E501,E265,W601,E402,E722,E741 --disable-lint=W,R,C,E0012,E0601,E1002,E1101,E1103,E1120,F0401,I0011,I1101 --enable-lint W0611,W1201 --no-license-check
+      - name: Install pylint
+        run: pip install pylint
+      - name: Run pylint
+        run: pylint .
       - run: echo "This job's status is ${{ job.status }}."
 
   commitlint:
-
-    name: Commit lint
-    runs-on: ubuntu-20.04
-
+    name: Commitlint
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Lint commit messages
-        uses: wagoid/commitlint-github-action@v5
+        uses: wagoid/commitlint-github-action@v6
         with:
-          configFile: ./.ci/commitlint.config.ts
+          configFile: commitlint.config.mjs
           helpURL: https://avocado-framework.readthedocs.io/en/latest/guides/contributor/chapters/styleguides.html#commit-style-guide
 
   pr-check:
-
     name: PR title
-    runs-on: ubuntu-20.04
-
+    runs-on: ubuntu-24.04
     steps:
-      - name: Check title length of pull request(${{github.event.pull_request.number}})
-        run: |
-          if [ $(echo "${{ github.event.pull_request.title }}" | wc -L) -gt 72 ]; then
-            echo "Title of pull request(${{github.event.pull_request.number}}) is longer than 72 characters"
-            exit 1
-          fi
+      - name: Check title length of pull request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const prNumber = context.payload.pull_request.number;
+            const titleLength = title.length;
 
-  cfg-lint-check:
+            console.log(`Current title length for pull request(#${prNumber}): ${titleLength}`);
+            if (titleLength > 72) {
+              core.setFailed(`Title of pull request(#${prNumber}) is longer than 72 characters`);
+            }
 
-    name: Cfg lint
-    runs-on: ubuntu-20.04
+  changed-cfg-files:
+    name: Changed cfg files
+    runs-on: ubuntu-24.04
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-
+      matrix: ${{ steps.cfg-files.outputs.all_changed_files }}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Get changed files
+      - name: Detect changed cfg files
         id: cfg-files
-        uses: tj-actions/changed-files@v35
+        uses: tj-actions/changed-files@v46
         with:
-          files: |
-            */tests/cfg/*.cfg
-      - name: Set matrix
-        id: set-matrix
-        run: echo matrix=$(python3 -c 'print("${{ steps.cfg-files.outputs.all_changed_files }}".split())') >> $GITHUB_OUTPUT
-      - name: Check cfg files lint
-        if: steps.cfg-files.outputs.any_changed == 'true'
-        run: |
-          ./.ci/cfg-lint-check.py ${{ steps.cfg-files.outputs.all_changed_files }}
+          files: "*/tests/cfg/*.cfg"
+          matrix: true
 
   cartesian-syntax-check:
-
     name: Cartesian syntax
-    runs-on: ubuntu-20.04
-    needs: cfg-lint-check
-    if: ${{ needs.cfg-lint-check.outputs.matrix != '[]' }}
+    runs-on: ubuntu-24.04
+    if: ${{ needs.changed-cfg-files.outputs.matrix != '[]' }}
+    needs: changed-cfg-files
     strategy:
       matrix:
-        file: ${{ fromJson(needs.cfg-lint-check.outputs.matrix) }}
+        file: ${{ fromJSON(needs.changed-cfg-files.outputs.matrix) }}
       fail-fast: false
-
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Parse ${{ matrix.file }} into Cartesian configuration
+      - name: Parse file into Cartesian configuration
         env:
           CFG_FILE: ${{ matrix.file }}
         run: |
-          echo "Parse ${CFG_FILE} into Cartesian configuration"
-          sed -i '1s/^/variants:\n/' ${CFG_FILE}
-          curl -fsSL https://raw.githubusercontent.com/avocado-framework/avocado-vt/master/virttest/cartesian_config.py | python3 - -f ${CFG_FILE}
+          echo "Parsing ${CFG_FILE} into Cartesian configuration"
+          sed -i '1s/^/variants:\n/' "${CFG_FILE}"
+          curl -fsSL https://raw.githubusercontent.com/avocado-framework/avocado-vt/master/virttest/cartesian_config.py | python3 - -f "${CFG_FILE}"

@@ -1,5 +1,6 @@
 import os
 
+from avocado.utils import cpu
 from virttest import data_dir as virttest_data_dir
 from virttest import env_process, error_context
 from virttest.utils_misc import get_mem_info, normalize_data_size, verify_dmesg
@@ -22,6 +23,12 @@ def run(test, params, env):
 
     error_context.context("Start sev-snp test", test.log.info)
     timeout = params.get_numeric("login_timeout", 240)
+
+    family_id = cpu.get_family()
+    model_id = cpu.get_model()
+    dict_cpu = {"251": "milan", "2517": "genoa", "2617": "turin"}
+    key = str(family_id) + str(model_id)
+    host_cpu_model = dict_cpu.get(key, "unknown")
 
     snp_module_path = params["snp_module_path"]
     if os.path.exists(snp_module_path):
@@ -66,6 +73,7 @@ def run(test, params, env):
                 session.cmd_output("chmod 755 %s" % guest_cmd)
             except Exception as e:
                 test.fail("Guest test preperation fail: %s" % str(e))
+            guest_cmd = guest_cmd + " " + host_cpu_model
             s = session.cmd_status(guest_cmd, timeout=360)
             if s:
                 test.fail("Guest script error")

@@ -71,8 +71,9 @@ def run(test, params, env):
         repo_install_cmd = params.get("repo_install_cmd")
         if not repo_install_cmd:
             return
-        rhel_major_ver = _get_rhel_major_ver()
-        repo_install_cmd = repo_install_cmd % rhel_major_ver
+        # Set repo_install_cmd to fixed in cfg file, since RHEL10 need a workaroud.
+        # rhel_major_ver = _get_rhel_major_ver()
+        # repo_install_cmd = repo_install_cmd % rhel_major_ver
         session.cmd_output_safe(repo_install_cmd)
         time.sleep(5)
 

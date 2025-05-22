@@ -62,6 +62,7 @@ def run(test, params, env):
         server_mtu_cmd = params.get("server_mtu_cmd")
         client_mtu_cmd = params.get("client_mtu_cmd")
         host_mtu_cmd = params.get("host_mtu_cmd")
+        client_physical_nic = params.get("client_physical_nic")
         error_context.context("Changing the MTU of guest", test.log.info)
         if params.get("os_type") == "linux":
             ethname = utils_net.get_linux_ifname(server_ctl, mac)
@@ -73,9 +74,8 @@ def run(test, params, env):
             netperf_base.ssh_cmd(server_ctl, server_mtu_cmd % (connection_id, mtu))
 
         error_context.context("Changing the MTU of client", test.log.info)
-        netperf_base.ssh_cmd(
-            client, client_mtu_cmd % (params.get("client_physical_nic"), mtu)
-        )
+        if client_physical_nic:
+            netperf_base.ssh_cmd(client, client_mtu_cmd % (client_physical_nic, mtu))
 
         netdst = params.get("netdst", "switch")
         host_bridges = utils_net.Bridge()
@@ -300,6 +300,7 @@ def run(test, params, env):
     client = params.get("client", "localhost")
     client_ip = client
     clients = []
+    client_pub_ip = None
     # client session 1 for control, session 2 for data communication
     for i in range(2):
         if client in params.get("vms"):

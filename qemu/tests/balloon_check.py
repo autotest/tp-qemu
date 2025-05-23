@@ -649,7 +649,8 @@ def run(test, params, env):
             session = balloon_test.vm.wait_for_login()
             session.cmd_output_safe(memhog_cmd)
             res2 = float(normalize_data_size(process.getoutput(get_res_cmd)))
-            time.sleep(30)
+            release_time = int(params.get("balloon_release_time", 30))
+            time.sleep(release_time)
             res3 = float(normalize_data_size(process.getoutput(get_res_cmd)))
             test.log.info(
                 "The RES values are %sM, %sM, and %sM sequentially", res1, res2, res3
@@ -658,6 +659,10 @@ def run(test, params, env):
                 test.error("QEMU should consume more memory")
             if res3 - res1 > res1 * 0.1:
                 test.fail("QEMU should consume same memory as before memhog ")
+            catch_call_trace_cmd = params.get("catch_call_trace")
+            call_trace = session.cmd_output_safe(catch_call_trace_cmd)
+            if call_trace:
+                test.fail("There's a Call trace:%s" % call_trace)
         # for windows guest, disable/uninstall driver to get memory leak based on
         # driver verifier is enabled
         if params.get("os_type") == "windows":

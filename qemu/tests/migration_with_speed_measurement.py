@@ -141,7 +141,11 @@ def run(test, params, env):
         time.sleep(2)
 
         clonevm = vm.migrate(
-            mig_timeout, mig_protocol, not_wait_for_migration=True, env=env
+            mig_timeout,
+            mig_protocol,
+            not_wait_for_migration=True,
+            dest_host=params.get("mig_dest_node"),
+            env=env,
         )
 
         mig_speed = int(float(utils_misc.normalize_data_size(mig_speed, "M")))

@@ -98,7 +98,7 @@ def run(test, params, env):
     if max_mem < shared_mem:
         shared_mem = max_mem
     fill_timeout = int(shared_mem) / 10
-    query_cmd = params.get("query_cmd")
+    query_cmd = params.get("xquery_cmd")
     query_regex = params.get("query_regex")
     random_bits = params.get("random_bits")
     seed = random.randint(0, 255)

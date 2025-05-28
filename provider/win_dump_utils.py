@@ -83,12 +83,12 @@ def install_windbg(test, params, session, timeout=600):
     )
 
     session.cmd(windbg_install_cmd)
-    if not utils_misc.wait_for(
-        lambda: check_windbg_installed(params, session), timeout=timeout, step=5
-    ):
-        test.fail("windbg tool has not been installed")
-    else:
+    windbg_install_log = params.get("windbg_install_log", r"C:\WindbgInstall.log")
+    status, output = session.cmd_status_output("type %s" % windbg_install_log)
+    if "package_SDKDebuggers_x86_en_us, state: Present" in output:
         LOG_JOB.info("windbg tool installation completed")
+    else:
+        test.fail("windbg tool has not been installed")
 
 
 def check_windbg_installed(params, session):

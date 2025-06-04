@@ -4,6 +4,7 @@ Windows dump related utilities.
 
 import logging
 import os
+import time
 
 from avocado.utils import process
 from virttest import env_process, utils_misc

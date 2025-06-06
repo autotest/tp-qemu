@@ -76,9 +76,9 @@ def run(test, params, env):
         "crash",
         "gdb",
         "kernel-debuginfo*",
-        "qemu-kvm-debuginfo",
-        "qemu-kvm-debugsource",
-        "qemu-kvm-core-debuginfo",
+        "qemu-kvm*debuginfo",
+        "qemu-kvm*debugsource",
+        "qemu-kvm-core*debuginfo",
     ]
     utils_package.package_install(packages)
 

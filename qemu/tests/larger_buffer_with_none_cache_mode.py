@@ -46,6 +46,9 @@ def run(test, params, env):
     )
     with open(strace_output_file) as fd:
         for line in fd.readlines():
+            # Skip if none of the strace events are in the line
+            if not any(event in line for event in strace_events):
+                continue
             if int(line.split()[-1]) == 2097152:
                 break
         else:

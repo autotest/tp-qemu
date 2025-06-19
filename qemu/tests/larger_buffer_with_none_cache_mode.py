@@ -46,7 +46,7 @@ def run(test, params, env):
     )
     with open(strace_output_file) as fd:
         for line in fd.readlines():
-            if int(line.split()[-1]) == 2097152:
+            if line.split()[-1].isnumeric() and int(line.split()[-1]) == 2097152:
                 break
         else:
             test.fail(

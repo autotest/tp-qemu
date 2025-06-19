@@ -362,11 +362,54 @@ class QemuGuestAgentTest(BaseVirtTest):
                     test.fail("Failed to get qga, details: %s" % output)
                 else:
                     self.qga_pkg_path = params["qga_rpm_path"]
-            if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
-                LOG_JOB.info("qemu-ga is already installed.")
+
+            # Default to non-url source type if not specified
+            gagent_src_type = params.get("gagent_src_type", "non-url")
+
+            if gagent_src_type != "url":
+                if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
+                    LOG_JOB.info("qemu-ga is already installed.")
+                else:
+                    LOG_JOB.info("qemu-ga is not installed or need to update.")
+                    self.gagent_install(session, self.vm)
             else:
-                LOG_JOB.info("qemu-ga is not installed or need to update.")
-                self.gagent_install(session, self.vm)
+                error_context.context(
+                    "Download qemu-guest-agent package from "
+                    "website and copy it to guest",
+                    logging.info,
+                )
+                gagentrpm_download_url = self.params["gagent_download_url"]
+                gagentrpm_guest_dir = self.params["gagentrpm_guest_dir"]
+                gagentrpm_tem_path = self.params["gagentrpm_tem_path"]
+                rpm_name = re.search(r"([^/]+\.rpm)$", gagentrpm_download_url).group(1)
+                process.system(
+                    f"wget -qP {gagentrpm_tem_path} {gagentrpm_download_url}"
+                )
+                rpm_path = "/".join((gagentrpm_tem_path, rpm_name))
+                if not os.path.isfile(rpm_path):
+                    self.test.error(
+                        "qemu-guest-agent rpm is not exist, "
+                        "maybe it is not successfully "
+                        "downloaded, please take a look "
+                    )
+                else:
+                    self.vm.copy_files_to(rpm_path, gagentrpm_guest_dir)
+                    s = session.cmd_status(
+                        f"rpm -Uvh --nodeps --force {gagentrpm_guest_dir}/{rpm_name}"
+                    )
+                    if s != 0:
+                        self.test.error(
+                            "qemu-guest-agent rpm couldn't be installed "
+                            "successfully, please take a look"
+                        )
+                    else:
+                        restart_cmd = self.params["gagent_restart_cmd"]
+                        s_rst, o_rst = session.cmd_status_output(restart_cmd)
+                        if s_rst != 0:
+                            self.test.fail(
+                                "qemu-guest-agent service restart failed,"
+                                " the detailed info:\n%s." % o_rst
+                            )
 
             error_context.context("Check qga service running status", LOG_JOB.info)
             if self._check_ga_service(session, params.get("gagent_status_cmd")):
@@ -1851,6 +1894,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session_serial.close()
 
     @error_context.context_aware
+
     def gagent_check_get_load(self, test, params, env):
         """
         Test guest-get-load command functionality.
@@ -2009,6 +2053,187 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
             if errors := _verify_load_values(qga_vals, guest_vals, "decrease"):
                 test.fail("Post-stress load check failed:\n" + "\n".join(errors))
+
+    def gagent_check_get_network_route(self, test, params, env):
+        """
+        Execute "guest-network-get-route" command to guest agent
+
+        Steps:
+        1) Get route info from guest-agent API 'guest-network-get-route'
+        2) Get route info from inside the guest
+        3) Compare the route info from qga and guest
+
+        :param test: kvm test object
+        :param params: Dictionary with the test parameters
+        :param env: Dictionary with test environment.
+        """
+
+        import ipaddress
+
+        def parse_ipv4_route(route_output):
+            """
+            parse ipv4 route info and process the info.
+
+            :return: ipv4 route info
+            """
+            routes = route_output.strip().splitlines()
+            processed_routes = []
+
+            for line in routes:
+                # if 'default via' starts the line, handle specifically.
+                if line.startswith("default via"):
+                    parts = line.split()
+                    gateway = parts[2]
+                    gateway = re.sub(r"\x1b\[[0-9;]*m", "", gateway).strip()
+                    iface = parts[4]
+                    iface = re.sub(r"\x1b\[[0-9;]*m", "", iface).strip()
+                    metric = parts[-1] if "metric" in line else None
+                    destination = "0.0.0.0"
+                    mask = "0.0.0.0"
+                    processed_routes.append(
+                        {
+                            "iface": iface,
+                            "destination": destination,
+                            "mask": mask,
+                            "gateway": gateway,
+                            "metric": metric,
+                        }
+                    )
+                else:
+                    match = re.match(
+                        r"(?P<destination>[\d./]+)\s+dev\s+(?P<iface>\S+).*?\s+metric\s+(?P<metric>\d+)",
+                        line,
+                    )
+                    if match:
+                        destination = match.group("destination")
+                        iface = match.group("iface")
+                        metric = match.group("metric")
+
+                        if "/" in destination:
+                            ip, prefixlen = destination.split("/")
+                            mask = str(
+                                ipaddress.IPv4Network(f"0.0.0.0/{prefixlen}").netmask
+                            )
+                        else:
+                            ip = destination
+                            mask = "255.255.255.255"
+
+                        gateway = "0.0.0.0"
+
+                        processed_routes.append(
+                            {
+                                "iface": iface,
+                                "destination": ip,
+                                "mask": mask,
+                                "gateway": gateway,
+                                "metric": metric,
+                            }
+                        )
+
+            return processed_routes
+
+        def parse_ipv6_route(route_output):
+            """
+            parse ipv6 route info and process the info.
+
+            :return: ipv6 route info
+            """
+            routes = route_output.strip().splitlines()
+            processed_routes = []
+            route_pattern = re.compile(
+                r"(?P<destination>[\w:\/]+)\s+dev\s+(?P<iface>\S+)\s+proto\s+\S+\s+metric\s+(?P<metric>\d+)\s+pref\s+\S+"
+            )
+            for line in routes:
+                if line.startswith("default via"):
+                    line = line.replace("default via", "").strip()
+                    destination = "::"
+                    nexthop = line.split()[0]
+                    nexthop = re.sub(r"\x1b\[[0-9;]*m", "", nexthop).strip()
+                    iface = line.split()[2]
+                    iface = re.sub(r"\x1b\[[0-9;]*m", "", iface).strip()
+                    metric = line.split()[-3]
+                    desprefixlen = 0  # default desprefixlen should be 0
+                    processed_routes.append(
+                        {
+                            "iface": iface,
+                            "destination": destination,
+                            "desprefixlen": desprefixlen,
+                            "nexthop": nexthop,
+                            "metric": metric,
+                        }
+                    )
+                    continue
+                match = route_pattern.match(line)
+                if match:
+                    destination = match.group("destination")
+                    iface = match.group("iface")
+                    metric = match.group("metric")
+
+                    if "/" in destination:
+                        destination = destination.split("/")[0]
+                        desprefixlen = 64
+                    else:
+                        desprefixlen = 128
+                    nexthop = "::"
+                    processed_routes.append(
+                        {
+                            "iface": iface,
+                            "destination": destination,
+                            "desprefixlen": desprefixlen,
+                            "nexthop": nexthop,
+                            "metric": metric,
+                        }
+                    )
+            return processed_routes
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        error_context.context("Getting route info via guest-agent API.", LOG_JOB.info)
+        # Somehow this command will not return the result at the first time it is called
+        # so we need to call it twice.
+        self.gagent.get_network_route()
+        qga_route_info = self.gagent.get_network_route()
+
+        error_context.context("Getting route info from inside the guest.", LOG_JOB.info)
+        ipv4_routes = parse_ipv4_route(session.cmd_output(self.params["cmd_ipv4route"]))
+        ipv6_routes = parse_ipv6_route(session.cmd_output(self.params["cmd_ipv6route"]))
+        guest_route_info = ipv4_routes + ipv6_routes
+
+        error_context.context(
+            "Compare the route info from qga and guest.", LOG_JOB.info
+        )
+        ipv4_keys = list(self.params["ipv4_keys"])
+        ipv6_keys = list(self.params["ipv6_keys"])
+
+        for guest_entry in guest_route_info:
+            matched_qga_entry = None
+            for qga_entry in qga_route_info:
+                if all(
+                    guest_entry.get(key) == qga_entry.get(key)
+                    for key in ["iface", "destination"]
+                ):
+                    matched_qga_entry = qga_entry
+                    break
+
+            if matched_qga_entry:
+                keys_to_compare = ipv4_keys if "mask" in guest_entry else ipv6_keys
+                differences = {}
+                for key in keys_to_compare:
+                    guest_value = guest_entry.get(key)
+                    qga_value = matched_qga_entry.get(key)
+                    if str(guest_value) != str(qga_value):
+                        differences[key] = {"guest": guest_value, "qga": qga_value}
+
+                if differences:
+                    test.fail(f"There are differences found: {differences}")
+            else:
+                test.error(
+                    f"No matching QGA entry found for Guest entry: {guest_entry}"
+                )
+
+        if session:
+            session.close()
 
     @error_context.context_aware
     def gagent_check_reboot_shutdown(self, test, params, env):

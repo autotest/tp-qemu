@@ -15,7 +15,7 @@ from virttest import (
     virt_vm,
 )
 
-from provider import netperf_base, win_driver_utils
+from provider import netperf_base, vdpa_utils, win_driver_utils
 
 LOG_JOB = logging.getLogger("avocado.test")
 
@@ -62,6 +62,7 @@ def run(test, params, env):
         server_mtu_cmd = params.get("server_mtu_cmd")
         client_mtu_cmd = params.get("client_mtu_cmd")
         host_mtu_cmd = params.get("host_mtu_cmd")
+        client_physical_nic = params.get("client_physical_nic")
         error_context.context("Changing the MTU of guest", test.log.info)
         if params.get("os_type") == "linux":
             ethname = utils_net.get_linux_ifname(server_ctl, mac)
@@ -73,9 +74,8 @@ def run(test, params, env):
             netperf_base.ssh_cmd(server_ctl, server_mtu_cmd % (connection_id, mtu))
 
         error_context.context("Changing the MTU of client", test.log.info)
-        netperf_base.ssh_cmd(
-            client, client_mtu_cmd % (params.get("client_physical_nic"), mtu)
-        )
+        if client_physical_nic:
+            netperf_base.ssh_cmd(client, client_mtu_cmd % (client_physical_nic, mtu))
 
         netdst = params.get("netdst", "switch")
         host_bridges = utils_net.Bridge()
@@ -84,52 +84,13 @@ def run(test, params, env):
         if netdst in br_in_use:
             ifaces_in_use = host_bridges.list_iface()
             target_ifaces = list(ifaces_in_use + br_in_use)
-        if (
-            process.system(
-                "which ovs-vsctl && systemctl status openvswitch.service",
-                ignore_status=True,
-                shell=True,
-            )
-            == 0
-        ):
-            ovs_br_all = netperf_base.ssh_cmd(host, "ovs-vsctl list-br")
-            ovs_br = []
-            if ovs_br_all:
-                for nic in vm.virtnet:
-                    if nic.netdst in ovs_br_all:
-                        ovs_br.append(nic.netdst)
-                    elif nic.nettype == "vdpa":
-                        vf_pci = netperf_base.ssh_cmd(
-                            host,
-                            "vdpa dev show |grep %s | grep -o 'pci/[^[:space:]]*' | "
-                            "awk -F/ '{print $2}'" % nic.netdst,
-                        )
-                        pf_pci = netperf_base.ssh_cmd(
-                            host,
-                            "grep PCI_SLOT_NAME /sys/bus/pci/devices/%s/physfn/uevent |"
-                            " cut -d'=' -f2" % vf_pci,
-                        )
-                        port = netperf_base.ssh_cmd(
-                            host, "ls /sys/bus/pci/devices/%s/net/ | head -n 1" % pf_pci
-                        )
-                        ovs_br_vdpa = netperf_base.ssh_cmd(
-                            host, "ovs-vsctl port-to-br %s" % port
-                        )
-                        cmd = (
-                            f"ovs-ofctl add-flow {ovs_br_vdpa} '"
-                            "in_port=1,idle_timeout=0 actions=output:2'"
-                        )
-                        cmd += (
-                            f"&&  ovs-ofctl add-flow {ovs_br_vdpa} '"
-                            "in_port=2,idle_timeout=0 actions=output:1'"
-                        )
-                        cmd += "&&  ovs-ofctl dump-flows {}".format(ovs_br_vdpa)
-                        netperf_base.ssh_cmd(host, cmd)
-                        ovs_br.append(ovs_br_vdpa)
-                for br in ovs_br:
-                    ovs_list = "ovs-vsctl list-ports %s" % br
-                    ovs_port = netperf_base.ssh_cmd(host, ovs_list)
-                    target_ifaces.extend(ovs_port.split() + [br])
+
+        add_flows = params.get("vdpa_ovs_add_flows", "yes") == "yes"
+        ovs_handler = vdpa_utils.OVSHandler(vm)
+        target_ifaces.extend(
+            ovs_handler.get_vdpa_ovs_info(add_flows=add_flows, return_ports=True)
+        )
+
         if vm.virtnet[0].nettype == "macvtap":
             target_ifaces.extend([vm.virtnet[0].netdst, vm.get_ifname(0)])
         error_context.context("Change all Bridge NICs MTU to %s" % mtu, test.log.info)
@@ -339,6 +300,7 @@ def run(test, params, env):
     client = params.get("client", "localhost")
     client_ip = client
     clients = []
+    client_pub_ip = None
     # client session 1 for control, session 2 for data communication
     for i in range(2):
         if client in params.get("vms"):

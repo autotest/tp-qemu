@@ -124,10 +124,20 @@ def run(test, params, env):
         m_count = 0
         while netperf_client_h.is_netperf_running():
             m_count += 1
+            if m_count % 2 == 0:
+                dest_host = params.get("vm_node")
+            else:
+                dest_host = params.get("mig_dest_node")
             error_context.context(
                 "Start migration iterations: %s " % m_count, test.log.info
             )
-            vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
+            vm.migrate(
+                mig_timeout,
+                mig_protocol,
+                mig_cancel_delay,
+                dest_host=dest_host,
+                env=env,
+            )
     finally:
         if netperf_server_g:
             if netperf_server_g.is_server_running():

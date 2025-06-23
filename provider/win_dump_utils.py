@@ -78,9 +78,7 @@ def install_windbg(test, params, session, timeout=600):
     """
     LOG_JOB.info("Install Windows Debug Tools in guest.")
     windbg_install_cmd = params["windbg_install_cmd"]
-    windbg_install_cmd = utils_misc.set_winutils_letter(
-        session, windbg_install_cmd % params["feature"]
-    )
+    windbg_install_cmd = utils_misc.set_winutils_letter(session, windbg_install_cmd)
 
     session.cmd(windbg_install_cmd)
     if not utils_misc.wait_for(

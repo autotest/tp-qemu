@@ -77,12 +77,15 @@ def install_windbg(test, params, session, timeout=600):
     :param timeout: waiting debug tool install finish.
     """
     LOG_JOB.info("Install Windows Debug Tools in guest.")
-    windbg_install_cmd = params["windbg_install_cmd"]
-    windbg_install_cmd = utils_misc.set_winutils_letter(
-        session, windbg_install_cmd % params["feature"]
-    )
+    windbg_unzip_cmd = params["windbg_unzip_cmd"]
+    windbg_unzip_cmd = utils_misc.set_winutils_letter(session, windbg_unzip_cmd)
+    status, output = session.cmd_status_output(windbg_unzip_cmd, timeout=120)
+    if status:
+        test.error("unzip dump file failed as:\n%s" % output)
 
+    windbg_install_cmd = params["windbg_install_cmd"]
     session.cmd(windbg_install_cmd)
+
     if not utils_misc.wait_for(
         lambda: check_windbg_installed(params, session), timeout=timeout, step=5
     ):

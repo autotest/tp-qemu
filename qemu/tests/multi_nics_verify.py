@@ -51,7 +51,7 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     login_timeout = params.get_numeric("login_timeout")
-    session = vm.wait_for_login(timeout=login_timeout)
+    session = vm.wait_for_serial_login(timeout=login_timeout)
 
     test.log.info("[ %s ] NICs card specified in config file", nics_num)
 
@@ -121,6 +121,14 @@ def run(test, params, env):
     # Check all the interfaces in guest get ips
     session_srl = vm.wait_for_serial_login(
         timeout=int(params.get("login_timeout", 360))
+    )
+    nics_num_checking_cmd = params.get("nics_num_checking_cmd")
+    utils_misc.wait_for(
+        lambda: int(session.cmd_output(nics_num_checking_cmd, timeout=60)) == nics_num,
+        timeout=1620,
+        first=0,
+        step=60,
+        text="waiting for all nics to get ip",
     )
     if not utils_misc.wait_for(_check_ip_number, 1000, step=10):
         test.error("Timeout when wait for nics to get ip")

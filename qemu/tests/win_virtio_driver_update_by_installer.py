@@ -120,6 +120,9 @@ def run(test, params, env):
             win_driver_installer_test.device_name_list,
             win_driver_installer_test.device_hwid_list,
         ):
+            if params.get("boot_with_viomem", "no") == "no":
+                if driver_name == "viomem":
+                    continue
             win_driver_utils.install_driver_by_virtio_media(
                 session, test, devcon_path, media_type, driver_name, device_hwid
             )

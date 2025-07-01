@@ -27,6 +27,11 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=login_timeout)
     session2 = vm.wait_for_login(timeout=login_timeout)
 
+    check_cmd = (
+        "du --max-depth=1 --one-file-system --no-dereference "
+        "-cah /tmp /home /mnt|sort -h;df -H"
+    )
+    session.cmd_output(check_cmd, timeout=60)
     bg_cmd = params.get("background_cmd")
     error_context.context("Add IO workload for guest OS.", test.log.info)
     session.cmd_output(bg_cmd, timeout=60)
@@ -36,7 +41,7 @@ def run(test, params, env):
     session2.cmd(check_cmd, timeout=360)
 
     error_context.context("Sleep for a random time", test.log.info)
-    time.sleep(random.randrange(15, 30))
+    time.sleep(random.randrange(5, 10))
     session2.cmd(check_cmd, timeout=360)
 
     error_context.context("Kill the VM", test.log.info)

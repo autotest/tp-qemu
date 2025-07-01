@@ -107,9 +107,7 @@ def run(test, params, env):
                         qemu_img_check()
                         session = vm.reboot(method="system_reset")
                 else:
-                    test.fail(
-                        "VM has quit abnormally during " "%s: %s" % (wr_op, operand)
-                    )
+                    test.fail("VM has quit abnormally during %s: %s" % (wr_op, operand))
 
     login_timeout = float(params.get("login_timeout", 240))
     vm = env.get_vm(params["main_vm"])

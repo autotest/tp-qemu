@@ -137,7 +137,7 @@ class QemuImgTest(qemu_storage.QemuImg):
     def check_file(self, dst, md5):
         error_context.context("check file('%s') md5sum in guest" % dst, LOG_JOB.info)
         if md5 != self.__md5sum(dst):
-            err = "Md5 value does not match. " "Expected value: %s Actual value: %s" % (
+            err = "Md5 value does not match. Expected value: %s Actual value: %s" % (
                 md5,
                 self.__md5sum(dst),
             )
@@ -246,6 +246,6 @@ def generate_base_snapshot_pair(image_chain):
     image_chain = image_chain.split()
     n = len(image_chain)
     if n < 2:
-        raise ValueError("Image_chain should contain at" "least 2 items, got %s." % n)
+        raise ValueError("Image_chain should contain atleast 2 items, got %s." % n)
     for i in range(1, n):
         yield [image_chain[i - 1], image_chain[i]]

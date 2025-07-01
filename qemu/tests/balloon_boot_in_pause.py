@@ -85,8 +85,7 @@ class BallooningTestPause(BallooningTest):
         )
         if status is None:
             self.test.fail(
-                "Failed to balloon memory to expect value during "
-                "%ss" % balloon_timeout
+                "Failed to balloon memory to expect value during %ss" % balloon_timeout
             )
 
     def get_memory_boundary(self):
@@ -194,7 +193,7 @@ def run(test, params, env):
         vm = env.get_vm(params["main_vm"])
         if vm.monitor.verify_status("paused"):
             error_context.context(
-                "Running balloon %s test when" " the guest in paused status" % tag,
+                "Running balloon %s test when the guest in paused status" % tag,
                 test.log.info,
             )
         else:
@@ -230,11 +229,11 @@ def run(test, params, env):
         )
         if output is None:
             test.fail(
-                "Check memory status failed after subtest " "after %s seconds" % timeout
+                "Check memory status failed after subtest after %s seconds" % timeout
             )
 
     error_context.context(
-        "Reset guest memory to original one after all the " "test", test.log.info
+        "Reset guest memory to original one after all the test", test.log.info
     )
     balloon_test.reset_memory()
     # for windows guest, disable/uninstall driver to get memory leak based on

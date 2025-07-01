@@ -104,7 +104,7 @@ def run(test, params, env):
     time.sleep(660)
 
     error_context.context(
-        "check timedrift between guest and host after " "changing RTC time.",
+        "check timedrift between guest and host after changing RTC time.",
         test.log.info,
     )
     verify_timedrift(session)

@@ -18,7 +18,7 @@ def run(test, params, env):
     cache_sizes = params["cache_sizes"].split()
 
     test.log.info(
-        "Boot a guest up from initial image: %s, and create a" " file %s on the disk.",
+        "Boot a guest up from initial image: %s, and create a file %s on the disk.",
         initial_tag,
         file,
     )

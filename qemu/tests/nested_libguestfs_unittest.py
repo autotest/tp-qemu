@@ -45,13 +45,14 @@ def run(test, params, env):
 
     try:
         error_context.context(
-            "Execute the libguestfs-test-tool unittest " "directly launching qemu.",
+            "Execute the libguestfs-test-tool unittest directly launching qemu.",
             test.log.info,
         )
         stderr_file = "/tmp/lgf_stderr"
         lgf_cmd = (
-            "LIBGUESTFS_BACKEND=direct libguestfs-test-tool "
-            "--timeout {} 2> {}".format(unittest_timeout, stderr_file)
+            "LIBGUESTFS_BACKEND=direct libguestfs-test-tool --timeout {} 2> {}".format(
+                unittest_timeout, stderr_file
+            )
         )
         lgf_s, lgf_o = session.cmd_status_output(lgf_cmd, timeout=unittest_timeout)
         test.log.debug("libguestfs-test-tool stdout:\n%s", lgf_o)
@@ -77,17 +78,15 @@ def run(test, params, env):
             file_s, file_o = session.cmd_status_output("cat " + nested_file)
             if re.match(r"[1Y]", file_o) and is_kvm_mode:
                 test.log.info(
-                    "Guest runs with nested flag, the nested feature has "
-                    "been enabled."
+                    "Guest runs with nested flag, the nested feature has been enabled."
                 )
             elif file_s == 1 and not is_kvm_mode:
                 test.log.info(
-                    "Guest runs without nested flag, so the nested file "
-                    "does not exist."
+                    "Guest runs without nested flag, so the nested file does not exist."
                 )
             else:
                 test.log.error("Nested file status: %s, output: %s", file_s, file_o)
-                test.fail("Getting the status of nested file has unexpected " "result.")
+                test.fail("Getting the status of nested file has unexpected result.")
     finally:
         session.cmd("rm -f " + stderr_file, ignore_all_errors=True)
         session.close()

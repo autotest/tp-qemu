@@ -135,7 +135,7 @@ def run(test, params, env):
                         " returns: '%s'" % detail
                     )
             else:
-                test.fail("Hotplug operation in negative test" " should not succeed.")
+                test.fail("Hotplug operation in negative test should not succeed.")
         return
 
     usb_hostdev = params["usb_devices"].split()[-1]

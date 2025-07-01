@@ -68,7 +68,7 @@ def run(test, params, env):
                 vm.reboot(method="system_reset", serial=True)
         finally:
             error_context.context(
-                "Verify the VM is still alive without any " "faults", test.log.info
+                "Verify the VM is still alive without any faults", test.log.info
             )
             vm.verify_alive()
             vm.destroy()

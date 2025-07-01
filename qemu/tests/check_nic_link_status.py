@@ -72,7 +72,7 @@ def run(test, params, env):
     guest_interface_operstate_check(session, expect_down_status)
 
     error_context.context(
-        "Reboot guest by '%s' and recheck interface " "operstate" % reboot_method,
+        "Reboot guest by '%s' and recheck interface operstate" % reboot_method,
         test.log.info,
     )
     session = vm.reboot(method=reboot_method, serial=True, timeout=360, session=session)

@@ -152,7 +152,7 @@ def run(test, params, env):
                 test.fail("Path MTU is not as expected")
             if utils_test.get_loss_ratio(output) != 0:
                 test.log.error(output)
-                test.fail("Packet loss ratio during MTU " "verification is not zero")
+                test.fail("Packet loss ratio during MTU verification is not zero")
 
         def flood_ping():
             test.log.info("Flood with large frames")
@@ -192,7 +192,7 @@ def run(test, params, env):
                     fail_ratio = int(params.get("fail_ratio", 50))
                     if utils_test.get_loss_ratio(output) > fail_ratio:
                         test.fail(
-                            "Ping loss ratio is greater " "than 50% for size %s" % size
+                            "Ping loss ratio is greater than 50% for size %s" % size
                         )
 
         test.log.info("Waiting for the MTU to be OK")
@@ -203,7 +203,7 @@ def run(test, params, env):
                     "ifconfig -a", verbose=False, ignore_status=True, shell=True
                 )
             )
-            test.error("MTU is not as expected even after %s " "seconds" % wait_mtu_ok)
+            test.error("MTU is not as expected even after %s seconds" % wait_mtu_ok)
 
         # Functional Test
         error_context.context("Checking whether MTU change is ok", test.log.info)

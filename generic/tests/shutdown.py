@@ -47,7 +47,7 @@ def run(test, params, env):
             # Send a system_powerdown monitor command
             vm.monitor.system_powerdown()
             error_context.context(
-                "waiting VM to go down " "(system_powerdown monitor cmd)", test.log.info
+                "waiting VM to go down (system_powerdown monitor cmd)", test.log.info
             )
 
         if not vm.wait_for_shutdown(360):

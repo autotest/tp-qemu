@@ -43,11 +43,11 @@ def run(test, params, env):
     # running while the the foreground detecting is on going.
     error_context.context("run benchmark test in background", test.log.info)
     params["test_timeout"] = test_timeout * 2 + sec_per_day
-    test.log.info("set Yonit bitmap test timeout to" " %ss", params["test_timeout"])
+    test.log.info("set Yonit bitmap test timeout to %ss", params["test_timeout"])
     pid = guest_test.run_guest_test_background(test, params, env)
     if pid < 0:
         session.close()
-        test.error("Could not create child process to execute " "guest_test background")
+        test.error("Could not create child process to execute guest_test background")
 
     def is_yonit_benchmark_launched():
         if session.cmd_status('tasklist | find /I "compress_benchmark_loop"') != 0:
@@ -56,7 +56,7 @@ def run(test, params, env):
         return True
 
     error_context.context(
-        "Watching Yonit bitmap benchmark is" " running until timeout", test.log.info
+        "Watching Yonit bitmap benchmark is running until timeout", test.log.info
     )
     try:
         # Start detecting whether the benchmark is started a few mins

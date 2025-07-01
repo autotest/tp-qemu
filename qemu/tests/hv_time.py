@@ -42,7 +42,7 @@ def run(test, params, env):
             )
         use_pltck = re.search(r"useplatformclock\s+no", o, re.I | re.M)
         if not use_pltck:
-            test.error("The useplatfromclock isn't off after reboot, " "output=%s" % o)
+            test.error("The useplatfromclock isn't off after reboot, output=%s" % o)
 
         test.log.info("Copy the related files to the guest")
         for f in gettime_filenames:

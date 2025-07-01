@@ -77,9 +77,7 @@ def run(test, params, env):
                     id_pattern = (
                         ccw_id_pattern
                         + re.findall(
-                            "dev:virtio-scsi-ccw.*\n"
-                            '.*\n.*\n.*\ndev_id="'
-                            'fe.0.(.*?)"',
+                            'dev:virtio-scsi-ccw.*\n.*\n.*\n.*\ndev_id="fe.0.(.*?)"',
                             qtree_info.replace(" ", ""),
                         )[0]
                     )
@@ -102,7 +100,7 @@ def run(test, params, env):
                     msg = "bit string in guest: %s" % bitstr
                     msg += "expect bit string: %s" % properties[index]
                     test.log.debug(msg)
-                    test.fail("Properity bit for %s is wrong" " inside guest." % option)
-            test.log.info("Properity bit in qtree is right for %s" " in guest.", option)
+                    test.fail("Properity bit for %s is wrong inside guest." % option)
+            test.log.info("Properity bit in qtree is right for %s in guest.", option)
         session.close()
         vm.destroy()

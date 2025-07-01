@@ -87,7 +87,7 @@ def run(test, params, env):
                 )
             else:
                 test.log.info(
-                    "Floppy disk %s is Read-only and cannot be" " formatted",
+                    "Floppy disk %s is Read-only and cannot be formatted",
                     floppy_index,
                 )
 

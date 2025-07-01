@@ -194,7 +194,7 @@ def run(test, params, env):
                 machine_type_map[type_pair[0][0]] = type_pair[0][1]
             else:
                 test.log.warning(
-                    "Unexpect output from qemu-kvm -M " "?: '%s'", machine_type
+                    "Unexpect output from qemu-kvm -M ?: '%s'", machine_type
                 )
         try:
             expect_mtype = machine_type_map[params["machine_type"]].strip()
@@ -344,7 +344,7 @@ def run(test, params, env):
             n_fail.append("\n".join(qdisks.errors))
     else:
         test.log.info(
-            "Images check param skipped (qemu monitor doesn't " "support 'info qtree')"
+            "Images check param skipped (qemu monitor doesn't support 'info qtree')"
         )
 
     error_context.context("Network card MAC check", test.log.info)

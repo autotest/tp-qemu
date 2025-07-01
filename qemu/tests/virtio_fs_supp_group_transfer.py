@@ -63,7 +63,7 @@ def run(test, params, env):
             else:
                 cmd_dd = params.get(
                     "virtio_fs_cmd_dd",
-                    "dd if=/dev/urandom of=%s bs=1M " "count=100 iflag=fullblock",
+                    "dd if=/dev/urandom of=%s bs=1M count=100 iflag=fullblock",
                 )
             guest_file = os.path.join(fs_dest, test_file)
             error_context.context(
@@ -93,7 +93,7 @@ def run(test, params, env):
                 test.fail("The md5 value of host is not same to guest.")
             else:
                 error_context.context(
-                    "The md5 of host is as same as md5 of " "guest.", LOG_JOB.info
+                    "The md5 of host is as same as md5 of guest.", LOG_JOB.info
                 )
         finally:
             if not windows:
@@ -130,13 +130,13 @@ def run(test, params, env):
         guest_root_session = vm.wait_for_login()
 
         error_context.context(
-            "Create a destination directory %s " "inside guest." % fs_dest,
+            "Create a destination directory %s inside guest." % fs_dest,
             test.log.info,
         )
         if not utils_misc.make_dirs(fs_dest, session=guest_root_session):
             test.fail("Creating directory was failed!")
         error_context.context(
-            "Mount virtiofs target %s to %s inside" " guest." % (fs_target, fs_dest),
+            "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
             test.log.info,
         )
         if not utils_disk.mount(
@@ -150,7 +150,7 @@ def run(test, params, env):
         guest_root_session.cmd("usermod -G wheel %s" % username)
 
         error_context.context(
-            "Create a dir inside the virtiofs and " "change it's group to wheel",
+            "Create a dir inside the virtiofs and change it's group to wheel",
             test.log.info,
         )
         guest_root_session.cmd("cd %s && mkdir -m 770 %s" % (fs_dest, testdir))

@@ -329,7 +329,7 @@ def run(test, params, env):
         error_context.context("Creating %dMB file on host" % file_size, test.log.info)
         process.run(cmd)
         error_context.context(
-            "Transferring file host -> guest, " "timeout: %ss" % transfer_timeout,
+            "Transferring file host -> guest, timeout: %ss" % transfer_timeout,
             test.log.info,
         )
         shell_port = int(params.get("shell_port", 22))

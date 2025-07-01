@@ -41,7 +41,7 @@ def run(test, params, env):
     def set_block_write_threshold(monitor, node_name, size):
         """Set block write threshold for the block drive."""
         error_context.context(
-            "Set block write threshold to %s for the block " "drive in QMP." % size,
+            "Set block write threshold to %s for the block drive in QMP." % size,
             test.log.info,
         )
         monitor.cmd(

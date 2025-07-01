@@ -77,7 +77,7 @@ def run(test, params, env):
                     test.log.info("MSI-X is enabled")
         else:
             error_context.context(
-                "Check if the driver is installed and " "verified", test.log.info
+                "Check if the driver is installed and verified", test.log.info
             )
             driver_verifier = params["driver_verifier"]
             utils_test.qemu.windrv_check_running_verifier(
@@ -102,7 +102,7 @@ def run(test, params, env):
         if vectors == 0 or vectors == 1:
             if not (
                 re.findall(
-                    "IO-APIC.*fasteoi|XICS.*Level|XIVE.*Level|" "GIC.*Level", output
+                    "IO-APIC.*fasteoi|XICS.*Level|XIVE.*Level|GIC.*Level", output
                 )
             ):
                 msg = "Could not find interrupt controller for virito device"

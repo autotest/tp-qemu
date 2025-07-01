@@ -51,7 +51,7 @@ def run(test, params, env):
                 try:
                     drive_unplug_plug(drive, vm)
                 except Exception as e:
-                    test.fail("Failed to hotplug/unplug drive with error:" "%s") % e
+                    test.fail("Failed to hotplug/unplug drive with error:%s") % e
 
     error_context.context(
         "Check vm is alive after drive unplug/hotplug test", test.log.info

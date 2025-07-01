@@ -48,7 +48,7 @@ def run(test, params, env):
                 memory_sz_used_most = memory_status[index]
                 node_used_most = node_list[index]
             test.log.debug(
-                "Qemu used %s pages in node" " %s",
+                "Qemu used %s pages in node %s",
                 memory_status[index],
                 node_list[index],
             )

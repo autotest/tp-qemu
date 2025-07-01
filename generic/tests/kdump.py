@@ -296,7 +296,7 @@ def run(test, params, env):
 
         for vm in vm_list:
             error_context.context(
-                "Kdump Testing, force the Linux kernel" " to crash", test.log.info
+                "Kdump Testing, force the Linux kernel to crash", test.log.info
             )
             crash_cmd = params.get("crash_cmd", "echo c > /proc/sysrq-trigger")
 
@@ -315,7 +315,7 @@ def run(test, params, env):
 
         for i in range(len(vm_list)):
             error_context.context(
-                "Check the vmcore file after triggering" " a crash", test.log.info
+                "Check the vmcore file after triggering a crash", test.log.info
             )
             check_vmcore(test, vm_list[i], session_list[i], crash_timeout)
     finally:

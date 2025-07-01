@@ -47,7 +47,7 @@ def run(test, params, env):
             try:
                 while bg.is_alive():
                     test.log.info(
-                        "File transfer not ended, starting a round of " "migration..."
+                        "File transfer not ended, starting a round of migration..."
                     )
                     migration_exec_cmd_src = params.get("migration_exec_cmd_src")
                     migration_exec_cmd_dst = params.get("migration_exec_cmd_dst")

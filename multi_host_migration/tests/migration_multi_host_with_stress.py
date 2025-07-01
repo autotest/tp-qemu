@@ -69,7 +69,7 @@ def run(test, params, env):
                     s, o = session.cmd_status_output(kill_bg_stress_cmd)
                     if s:
                         raise error.TestFail(
-                            "Failed to kill the background" " test in guest: %s" % o
+                            "Failed to kill the background test in guest: %s" % o
                         )
                 session.close()
 

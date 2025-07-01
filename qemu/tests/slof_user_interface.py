@@ -114,7 +114,7 @@ def run(test, params, env):
             lambda: _send_key(_check_menu_info(menu_list), False), ack_timeout, step=0.0
         ):
             test.fail(
-                "Failed to load after selecting boot device " "in %s sec." % ack_timeout
+                "Failed to load after selecting boot device in %s sec." % ack_timeout
             )
 
     def _load_user_interface_test():

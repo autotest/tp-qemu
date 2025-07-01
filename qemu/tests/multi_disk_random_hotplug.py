@@ -134,7 +134,7 @@ def run(test, params, env):
             test.log.error("info qtree:\n%s", info_qtree)
             test.log.error("info block:\n%s", info_block)
             test.log.error(qdev.str_bus_long())
-            test.fail("%s errors occurred while verifying" " qtree vs. params" % err)
+            test.fail("%s errors occurred while verifying qtree vs. params" % err)
 
     def _create_params_matrix():
         matrix = {}
@@ -172,7 +172,7 @@ def run(test, params, env):
             # Set the format
             if len(formats) < 1:
                 if i == 0:
-                    test.error("Fail to add any disks, probably bad" " configuration.")
+                    test.error("Fail to add any disks, probably bad configuration.")
                 test.log.warning(
                     "Can't create desired number '%s' of disk types "
                     "'%s'. Using '%d' no disks.",
@@ -224,7 +224,7 @@ def run(test, params, env):
 
     def verify_qtree_unsupported(params, info_qtree, info_block, qdev):
         return test.log.warning(
-            "info qtree not supported. Can't verify qtree vs. " "guest disks."
+            "info qtree not supported. Can't verify qtree vs. guest disks."
         )
 
     def enable_driver_verifier(driver, timeout=300):
@@ -380,7 +380,7 @@ def run(test, params, env):
         if "I/O error" in out:
             test.log.warning(out)
             test.error(
-                "I/O error messages occured in dmesg, " "check the log for details."
+                "I/O error messages occured in dmesg, check the log for details."
             )
     except Exception as e:
         pid = vm.get_pid()

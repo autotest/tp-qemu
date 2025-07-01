@@ -34,7 +34,7 @@ def run(test, params, env):
             arg_list.append(args)
 
         error_context.context(
-            "Create multiple live snapshots simultaneously" " with transaction",
+            "Create multiple live snapshots simultaneously with transaction",
             test.log.info,
         )
         output = transaction_test.vm.monitor.transaction(arg_list)

@@ -36,7 +36,7 @@ def run(test, params, env):
     drive_letter = drive_letter_list[0]
 
     error_context.context(
-        "Check the maximum transfer length if " "VIRTIO_BLK_F_SEG_MAX flag is on",
+        "Check the maximum transfer length if VIRTIO_BLK_F_SEG_MAX flag is on",
         test.log.info,
     )
     output = session.cmd_output(check_cmd % drive_letter)

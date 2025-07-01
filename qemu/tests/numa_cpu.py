@@ -78,7 +78,7 @@ def run(test, params, env):
             if not utils_package.package_install("acpidump", session):
                 test.cancel("Please install acpidump in guest to proceed")
             content = session.cmd_output(
-                "cd /tmp && acpidump -n SRAT -b && " "iasl -d srat.dat && cat srat.dsl"
+                "cd /tmp && acpidump -n SRAT -b && iasl -d srat.dat && cat srat.dsl"
             )
             pattern = re.compile(
                 r"Proximity Domain Low\(8\)\s+:\s+([0-9A-Fa-f]+)"

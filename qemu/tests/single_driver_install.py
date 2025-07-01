@@ -139,8 +139,7 @@ def run(test, params, env):
         # acceptable status: OK(0), REBOOT(1)
         if status > 1:
             test.error(
-                "Failed to uninstall driver '%s', details:\n"
-                "%s" % (driver_name, output)
+                "Failed to uninstall driver '%s', details:\n%s" % (driver_name, output)
             )
 
         if params.get_boolean("need_destroy"):
@@ -191,7 +190,7 @@ def run(test, params, env):
 
         installed_any |= True
     if not installed_any:
-        test.error("Failed to find target devices " "by hwids: '%s'" % device_hwid)
+        test.error("Failed to find target devices by hwids: '%s'" % device_hwid)
 
     error_context.context("Verifying target driver", test.log.info)
     session = vm.reboot(session)

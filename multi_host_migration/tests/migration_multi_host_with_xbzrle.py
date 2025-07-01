@@ -94,7 +94,7 @@ def run(test, params, env):
             """
 
             error.context(
-                "Get total time, downtime and transferred ram " "after migration.",
+                "Get total time, downtime and transferred ram after migration.",
                 logging.info,
             )
             downtime = int(vm.monitor.info("migrate").get("downtime"))
@@ -122,8 +122,7 @@ def run(test, params, env):
 
             if self.is_src:
                 error.context(
-                    "Check total time, downtime and transferred ram"
-                    " after migration.",
+                    "Check total time, downtime and transferred ram after migration.",
                     logging.info,
                 )
                 logging.info("Total time list: %s", str(mig_total_time_list))
@@ -230,9 +229,7 @@ def run(test, params, env):
             try:
                 vm.wait_for_migration(self.migration_timeout)
             except virt_vm.VMMigrateTimeoutError:
-                raise error.TestFail(
-                    "Migration failed with setting " "xbzrle to false."
-                )
+                raise error.TestFail("Migration failed with setting xbzrle to false.")
             logging.info("Migration completed with xbzrle false")
             self.get_mig_totaltime_downtime_transferred_ram(vm)
             vm.destroy(gracefully=False)
@@ -273,9 +270,9 @@ def run(test, params, env):
                 vm.wait_for_migration(self.mig_timeout)
             except virt_vm.VMMigrateTimeoutError:
                 raise error.TestFail(
-                    "Migration failed with setting cache " "size to %s." % cache_size
+                    "Migration failed with setting cache size to %s." % cache_size
                 )
-            logging.info("Migration completed with cache size %s" "", cache_size)
+            logging.info("Migration completed with cache size %s", cache_size)
             self.get_mig_totaltime_downtime_transferred_ram(vm)
             vm.destroy(gracefully=False)
 
@@ -314,7 +311,7 @@ def run(test, params, env):
                 vm.wait_for_migration(5)
             except virt_vm.VMMigrateTimeoutError:
                 logging.info(
-                    "Set cache size to %s during migration" ".", self.cache_size[1]
+                    "Set cache size to %s during migration.", self.cache_size[1]
                 )
                 self.set_migration_cache_size(int(self.cache_size[1]))
             try:
@@ -324,9 +321,7 @@ def run(test, params, env):
                     "Migration failed with setting cache "
                     "size to %s." % self.cache_size[1]
                 )
-            logging.info(
-                "Migration completed with cache size %s" "", self.cache_size[1]
-            )
+            logging.info("Migration completed with cache size %s", self.cache_size[1])
             self.get_migration_cache_size(1)
             self.get_mig_totaltime_downtime_transferred_ram(vm)
             self.get_migration_info(vm)
@@ -360,11 +355,11 @@ def run(test, params, env):
                         if vm.is_paused():
                             vm.resume()
                         if not utils_test.qemu.guest_active(vm):
-                            raise error.TestFail("Guest not active " "after migration")
+                            raise error.TestFail("Guest not active after migration")
                     if self.need_cleanup:
                         self.clean_up(self.kill_bg_stress_cmd, vm)
                     else:
-                        logging.info("No need to kill the background " "test in guest.")
+                        logging.info("No need to kill the background test in guest.")
                     vm.reboot()
                     vm.destroy()
 

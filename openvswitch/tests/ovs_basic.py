@@ -256,6 +256,4 @@ def run(test, params, env):
         tests_group = locals()[test_type]
         tests_group(test, params, env)
     else:
-        test.fail(
-            "Test type '%s' is not defined in" " OpenVSwitch basic test" % test_type
-        )
+        test.fail("Test type '%s' is not defined in OpenVSwitch basic test" % test_type)

@@ -199,7 +199,7 @@ def run(test, params, env):
         try:
             check_command = params.get("migration_bg_check_command", "")
             error_context.context(
-                "Checking the background command in the " "guest pre migration",
+                "Checking the background command in the guest pre migration",
                 test.log.info,
             )
             if session2.cmd_status(check_command, timeout=30) != 0:
@@ -266,7 +266,7 @@ def run(test, params, env):
 
             # Make sure the background process is still running
             error_context.context(
-                "Checking the background command in the " "guest post migration",
+                "Checking the background command in the guest post migration",
                 test.log.info,
             )
             session2.cmd(check_command, timeout=30)
@@ -310,7 +310,7 @@ def run(test, params, env):
                             raise
                     except aexpect.ShellTimeoutError:
                         test.log.debug(
-                            "Remote session not responsive, " "shutting down VM %s",
+                            "Remote session not responsive, shutting down VM %s",
                             vm.name,
                         )
                         vm.destroy(gracefully=True)

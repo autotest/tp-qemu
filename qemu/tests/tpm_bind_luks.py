@@ -154,14 +154,14 @@ def run(test, params, env):
     test.log.info("The LUKs device is bound to TPM:\n%s", clevis_list)
 
     error_context.context(
-        "Open the LUKs device using clevis and check the md5" " of the file",
+        "Open the LUKs device using clevis and check the md5 of the file",
         test.log.info,
     )
     session.cmd(clevis_unlock_cmd % extra_disk)
     compare_md5sum()
 
     error_context.context(
-        "Modify crypttab and fstab to enable automatic boot " "unlocking", test.log.info
+        "Modify crypttab and fstab to enable automatic boot unlocking", test.log.info
     )
     auto_boot_unlocking()
     session.cmd(cryptsetup_close_cmd)

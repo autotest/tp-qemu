@@ -145,7 +145,7 @@ def disk_hotplug(test, params, vm, session, image_name, drive_format, parent_bus
     for dev in devices:
         ret = vm.devices.simple_hotplug(dev, vm.monitor)
         if ret[1] is False:
-            test.fail("Failed to hotplug device '%s'." "Output:\n%s" % (dev, ret[0]))
+            test.fail("Failed to hotplug device '%s'.Output:\n%s" % (dev, ret[0]))
 
     if drive_format == "usb3":
         usb_serial = params["blk_extra_params_%s" % image_name].split("=")[1]
@@ -310,7 +310,7 @@ def run(test, params, env):
         for dev in device_list:
             ret = vm.devices.simple_unplug(dev, vm.monitor)
             if ret[1] is False:
-                test.fail("Failed to unplug device '%s'." "Output:\n%s" % (dev, ret[0]))
+                test.fail("Failed to unplug device '%s'.Output:\n%s" % (dev, ret[0]))
     elif opr == "with_migration":
         error_context.context("Migrating...", test.log.info)
         vm.migrate(float(params.get("mig_timeout", "3600")))

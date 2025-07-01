@@ -43,7 +43,7 @@ def run_whql_hck_client_install(test, params, env):
     # Join the server's workgroup
     if params.get("join_domain") == "yes":
         error_context.context("Join the workgroup", LOG_JOB.info)
-        cmd = "netdom join %s /domain:%s /UserD:%s " "/PasswordD:%s" % (
+        cmd = "netdom join %s /domain:%s /UserD:%s /PasswordD:%s" % (
             client_name,
             server_domname,
             client_username,

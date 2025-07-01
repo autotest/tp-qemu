@@ -61,7 +61,7 @@ def run(test, params, env):
                 "the error message is '%s'." % six.text_type(e)
             )
     else:
-        test.log.info("Run the test with package " "'python3-virt-firmware-tests'.")
+        test.log.info("Run the test with package 'python3-virt-firmware-tests'.")
         virt_firmware_dirname = params["virt_firmware_test_package_dir"]
         test_file_black_list = []
     test_file_pattern = params["test_file_pattern"]

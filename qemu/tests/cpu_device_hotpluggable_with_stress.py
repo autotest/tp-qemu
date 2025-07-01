@@ -125,7 +125,7 @@ def run(test, params, env):
                 # Drift the running stress task to other vCPUs
                 time.sleep(random.randint(5, 10))
             if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
-                test.fail("Actual number of guest CPUs is not equal to " "expected")
+                test.fail("Actual number of guest CPUs is not equal to expected")
         stress_tool.unload_stress()
         stress_tool.clean()
     else:

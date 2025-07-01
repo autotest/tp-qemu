@@ -113,7 +113,7 @@ def run(test, params, env):
                 )
 
             logging.info(
-                "Migration completed with downtime " "is %s seconds.", self.mig_downtime
+                "Migration completed with downtime is %s seconds.", self.mig_downtime
             )
 
             self.check_mig_downtime(vm)
@@ -145,12 +145,12 @@ def run(test, params, env):
                 vm.wait_for_migration(self.mig_timeout)
             except virt_vm.VMMigrateTimeoutError:
                 raise error.TestFail(
-                    "Migration failed with setting " " downtime to %ds." % downtime
+                    "Migration failed with setting  downtime to %ds." % downtime
                 )
 
             self.mig_downtime = downtime - 1
             logging.info(
-                "Migration completed with downtime " "is %s seconds.", self.mig_downtime
+                "Migration completed with downtime is %s seconds.", self.mig_downtime
             )
 
             self.check_mig_downtime(vm)
@@ -182,7 +182,7 @@ def run(test, params, env):
                 vm.wait_for_migration(self.mig_timeout)
             except virt_vm.VMMigrateTimeoutError:
                 raise error.TestFail(
-                    "Migration failed with setting " " mig_speed to %sB." % mig_speed
+                    "Migration failed with setting  mig_speed to %sB." % mig_speed
                 )
 
             logging.debug("Migration passed with mig_speed %sB", mig_speed)

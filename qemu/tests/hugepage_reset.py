@@ -96,8 +96,7 @@ def run(test, params, env):
                 params["target_num_node%s" % target_node] = origin_nr
                 break
             test.log.info(
-                "The free memory of node %s is %s, is not enough for"
-                " guest memory: %s",
+                "The free memory of node %s is %s, is not enough for guest memory: %s",
                 target_node,
                 node_mem_free,
                 mem,

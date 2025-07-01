@@ -33,8 +33,8 @@ def run(test, params, env):
         vm_output = session.cmd_status_output(check_cmd)[1][:35]
         outputs.append(vm_output)
         vm.destroy()
-    assert outputs.count(outputs[0]) == len(
-        outputs
-    ), "Host: {} and VM 1: {} and VM 2: {} are not the same".format(
-        outputs[0], outputs[1], outputs[2]
+    assert outputs.count(outputs[0]) == len(outputs), (
+        "Host: {} and VM 1: {} and VM 2: {} are not the same".format(
+            outputs[0], outputs[1], outputs[2]
+        )
     )

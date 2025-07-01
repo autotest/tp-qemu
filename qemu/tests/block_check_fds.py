@@ -30,9 +30,9 @@ def run(test, params, env):
         """Hot plug then unplug block devices repeatedly."""
         vm_pid = vm.get_pid()
         plug = BlockDevicesPlug(vm)
-        info = "The number of AIO file descriptors is %s " "after %s block device."
+        info = "The number of AIO file descriptors is %s after %s block device."
         for i in range(times):
-            test.log.info("Iteration %d: Hot plug then unplug " "block device.", i)
+            test.log.info("Iteration %d: Hot plug then unplug block device.", i)
             plug.hotplug_devs_serial()
             orig_fds_num = _get_aio_fds_num(vm_pid)
             test.log.info(info, orig_fds_num, "hot plugging")

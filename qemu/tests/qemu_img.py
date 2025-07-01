@@ -361,13 +361,11 @@ def run(test, params, env):
         img_info = _info(cmd, image_name)
         test.log.info("Info of image '%s':\n%s", image_name, img_info)
         if image_format not in img_info:
-            test.fail(
-                "Got unexpected format of image '%s'" " in info test" % image_name
-            )
+            test.fail("Got unexpected format of image '%s' in info test" % image_name)
         if not re.search(
             r"%s\s+bytes" % normalize_data_size(image_size, "B"), img_info
         ):
-            test.fail("Got unexpected size of image '%s'" " in info test" % image_name)
+            test.fail("Got unexpected size of image '%s' in info test" % image_name)
 
     def snapshot_test(cmd):
         """
@@ -398,9 +396,7 @@ def run(test, params, env):
         cmd_result = process.run(listcmd, verbose=False, ignore_status=True)
         status, out = cmd_result.exit_status, cmd_result.stdout.decode()
         if not ("snapshot0" in out and "snapshot1" in out and status == 0):
-            test.fail(
-                "Snapshot created failed or missed;" "snapshot list is: \n%s" % out
-            )
+            test.fail("Snapshot created failed or missed;snapshot list is: \n%s" % out)
         for i in range(2):
             sn_name = "snapshot%d" % i
             delcmd = cmd
@@ -480,7 +476,7 @@ def run(test, params, env):
                 test.log.info("Output of %s: %s", file_info_cmd, output)
             except Exception as err:
                 test.fail(
-                    "Could not create commit_testfile in the " "overlay file %s" % err
+                    "Could not create commit_testfile in the overlay file %s" % err
                 )
             vm.destroy()
 
@@ -557,7 +553,7 @@ def run(test, params, env):
             not in process.system_output(cmd + " --help", ignore_status=True).decode()
         ):
             test.cancel(
-                "Current kvm user space version does not" " support 'rebase' subcommand"
+                "Current kvm user space version does not support 'rebase' subcommand"
             )
         sn_fmt = params.get("snapshot_format", "qcow2")
         sn1 = params["image_name_snapshot1"]
@@ -602,7 +598,7 @@ def run(test, params, env):
         status, output = _check(cmd, sn2)
         if not status:
             test.fail(
-                "Check image '%s' failed after rebase;" "got error: %s" % (sn2, output)
+                "Check image '%s' failed after rebase;got error: %s" % (sn2, output)
             )
         remove(sn2)
         remove(sn1)
@@ -659,7 +655,7 @@ def run(test, params, env):
         status, output = _check(cmd, img)
         if not status:
             test.fail(
-                "Check image '%s' failed after rebase;" "got error: %s" % (img, output)
+                "Check image '%s' failed after rebase;got error: %s" % (img, output)
             )
 
     def _boot(img_name, img_fmt):

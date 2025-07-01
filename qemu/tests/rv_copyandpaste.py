@@ -86,7 +86,7 @@ def place_img_in_clipboard(
         test.fail("Copying to the clipboard failed")
 
     LOG_JOB.debug(
-        "------------ End of script output of the Copying" " Session ------------"
+        "------------ End of script output of the Copying Session ------------"
     )
 
 
@@ -124,7 +124,7 @@ def verify_img_paste(
         test.fail("Copying to the clipboard failed")
 
     LOG_JOB.debug(
-        "------------ End of script output of the Copying" " Session ------------"
+        "------------ End of script output of the Copying Session ------------"
     )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_image_path)
@@ -137,7 +137,7 @@ def verify_img_paste(
         test.fail("Couldn't get the size of the file")
 
     LOG_JOB.debug(
-        "------------ End of script output of the Copying" " Session ------------"
+        "------------ End of script output of the Copying Session ------------"
     )
     # Get the size of the copied image, this will be used for
     # verification on the other session that the paste was successful
@@ -179,7 +179,7 @@ def verify_img_paste_success(
             test.fail("Copying to the clipboard failed. %s" % output)
     finally:
         LOG_JOB.info(
-            "------------ End of script output of the Pasting" " Session ------------"
+            "------------ End of script output of the Pasting Session ------------"
         )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_image_path)
@@ -192,7 +192,7 @@ def verify_img_paste_success(
         test.fail("Copying to the clipboard failed.")
 
     LOG_JOB.info(
-        "------------ End of script output of the Pasting" " Session ------------"
+        "------------ End of script output of the Pasting Session ------------"
     )
     img_checksum = output.split()[0]
     if img_checksum == expected_checksum:
@@ -235,7 +235,7 @@ def verify_img_paste_fails(
         test.fail("Copying to the clipboard failed")
 
     LOG_JOB.debug(
-        "------------ End of script output of the Pasting" " Session ------------"
+        "------------ End of script output of the Pasting Session ------------"
     )
 
 
@@ -276,7 +276,7 @@ def verify_text_copy(
         test.fail("Copying to the clipboard failed")
 
     LOG_JOB.debug(
-        "------------ End of script output of the Copying" " Session ------------"
+        "------------ End of script output of the Copying Session ------------"
     )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_text_path)
@@ -289,7 +289,7 @@ def verify_text_copy(
         test.fail("Couldn't get the size of the file")
 
     LOG_JOB.debug(
-        "------------ End of script output of the Copying" " Session ------------"
+        "------------ End of script output of the Copying Session ------------"
     )
     # Get the size of the copied image, this will be used for
     # verification on the other session that the paste was successful
@@ -330,7 +330,7 @@ def verify_txt_paste_success(
             test.fail("Copying to the clipboard failed. %s" % output)
     finally:
         LOG_JOB.info(
-            "------------ End of script output of the Pasting" " Session ------------"
+            "------------ End of script output of the Pasting Session ------------"
         )
     # Get the checksum of the file
     cmd = "md5sum %s" % (final_text_path)
@@ -343,7 +343,7 @@ def verify_txt_paste_success(
         test.fail("Copying to the clipboard failed.")
 
     LOG_JOB.info(
-        "------------ End of script output of the Pasting" " Session ------------"
+        "------------ End of script output of the Pasting Session ------------"
     )
     file_checksum = output.split()[0]
     if file_checksum == textfile_checksum:
@@ -386,7 +386,7 @@ def place_text_in_clipboard(
         test.fail("Copying to the clipboard failed")
 
     LOG_JOB.debug(
-        "------------ End of script output of the Copying" " Session ------------"
+        "------------ End of script output of the Copying Session ------------"
     )
 
     # Verify the clipboard of the session that is being copied from,
@@ -436,7 +436,7 @@ def verify_paste_fails(
             )
         else:
             LOG_JOB.info(
-                "PASS: Pasting from the clipboard was not" " successful, as EXPECTED"
+                "PASS: Pasting from the clipboard was not successful, as EXPECTED"
             )
     except aexpect.ShellCmdError:
         test.fail("Pasting from the clipboard failed.")
@@ -468,8 +468,7 @@ def verify_paste_successful(
             LOG_JOB.info("Pasting from the clipboard is successful")
         else:
             test.fail(
-                "Pasting from the clipboard failed, "
-                "nothing copied from other session",
+                "Pasting from the clipboard failed, nothing copied from other session",
                 output,
             )
     except aexpect.ShellCmdError:
@@ -1428,7 +1427,7 @@ def run(test, params, env):
                     )
                 else:
                     test.log.info(
-                        "Copying a String of size %s" " from the Client to Guest",
+                        "Copying a String of size %s from the Client to Guest",
                         testing_text,
                     )
                     copy_and_paste_largetext(
@@ -1469,7 +1468,7 @@ def run(test, params, env):
                     )
                 else:
                     test.log.info(
-                        "Copying a String of size %s" " from the Guest to Client",
+                        "Copying a String of size %s from the Guest to Client",
                         testing_text,
                     )
                     copy_and_paste_largetext(
@@ -1492,7 +1491,7 @@ def run(test, params, env):
         if "client_to_guest" in test_type:
             if "image" in test_type:
                 test.log.info(
-                    "Negative Test Case: Copying an Image from the " "Client to Guest"
+                    "Negative Test Case: Copying an Image from the Client to Guest"
                 )
                 copy_and_paste_image_neg(
                     test, client_session, guest_session, guest_root_session, params
@@ -1508,7 +1507,7 @@ def run(test, params, env):
         if "guest_to_client" in test_type:
             if "image" in test_type:
                 test.log.info(
-                    "Negative Test Case: Copying an Image from the " "Guest to Client"
+                    "Negative Test Case: Copying an Image from the Guest to Client"
                 )
                 copy_and_paste_image_neg(
                     test, guest_session, client_session, guest_root_session, params

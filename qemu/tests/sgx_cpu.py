@@ -31,7 +31,7 @@ def run(test, params, env):
                 session.cmd_status("yum -y install %s" % cpuid_pkg)
             except Exception:
                 test.cancel(
-                    "Fail to install package cpuid, please retest" "this case again."
+                    "Fail to install package cpuid, please retestthis case again."
                 )
 
         error_context.context("Check the sgx CPUID features", test.log.info)
@@ -43,7 +43,7 @@ def run(test, params, env):
                 test.fail("Fail to verify sgx feature %s " % i)
         if params.get("cpuid_entry_cmd"):
             error_context.context(
-                "Check the corresponding CPUID entries with" "sgx cpu flags",
+                "Check the corresponding CPUID entries withsgx cpu flags",
                 test.log.info,
             )
             output = session.cmd_output(check_cpuid_entry_cmd)

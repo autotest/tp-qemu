@@ -146,9 +146,7 @@ class QemuNBDExportImage(NBDExportImage):
             try:
                 os.kill(self._nbd_server_pid, signal.SIGSTOP)
             except Exception as e:
-                LOG_JOB.warning(
-                    "Error occurred when suspending" "nbd server: %s", str(e)
-                )
+                LOG_JOB.warning("Error occurred when suspendingnbd server: %s", str(e))
 
     def resume_export(self):
         if self._nbd_server_pid is not None:

@@ -91,8 +91,7 @@ def run(test, params, env):
         lambda: not session.cmd_status(driver_check_cmd), 600, 60, 10
     ):
         test.fail(
-            "%s Driver can not be installed correctly from "
-            "windows update" % driver_name
+            "%s Driver can not be installed correctly from windows update" % driver_name
         )
 
     error_context.context("%s Driver Check" % driver_name, test.log.info)

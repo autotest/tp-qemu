@@ -47,7 +47,7 @@ def run(test, params, env):
         if ostype == "windows":
             if not utils_disk.update_windows_disk_attributes(session, did):
                 test.fail(
-                    "Failed to clear readonly for all disks and online " "them in guest"
+                    "Failed to clear readonly for all disks and online them in guest"
                 )
         partition = utils_disk.configure_empty_disk(
             session, did, stg_image_size, ostype

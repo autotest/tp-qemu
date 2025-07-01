@@ -262,7 +262,7 @@ def run(test, params, env):
             ip_dst = vm_ds.get_address()
             process.run("iscsiadm -m discovery -t st -p %s" % (ip_dst))
 
-            server_ident = 'iscsiadm -m node --targetname "%s:dev01"' " --portal %s" % (
+            server_ident = 'iscsiadm -m node --targetname "%s:dev01" --portal %s' % (
                 self.server_name,
                 ip_dst,
             )
@@ -347,9 +347,7 @@ def run(test, params, env):
                 timeout=ro_timeout,
                 first=2,
             ):
-                test.fail(
-                    "The Read-only file system warning not" " come in time limit."
-                )
+                test.fail("The Read-only file system warning not come in time limit.")
 
         def clean(self):
             if os.path.exists(mig_dst):

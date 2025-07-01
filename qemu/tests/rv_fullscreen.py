@@ -45,13 +45,9 @@ def run(test, params, env):
         client_res_raw = client_session.cmd("cat /tmp/res|awk '{print $1}'")
         client_res = client_res_raw.split()[0]
     except ShellCmdError:
-        test.fail(
-            "Could not get guest resolution, xrandr output:" " %s" % client_res_raw
-        )
+        test.fail("Could not get guest resolution, xrandr output: %s" % client_res_raw)
     except IndexError:
-        test.fail(
-            "Could not get guest resolution, xrandr output:" " %s" % client_res_raw
-        )
+        test.fail("Could not get guest resolution, xrandr output: %s" % client_res_raw)
 
     test.log.info("Getting the Resolution on the guest")
     guest_session.cmd("export DISPLAY=:0.0")
@@ -61,13 +57,9 @@ def run(test, params, env):
         guest_res_raw = guest_session.cmd("cat /tmp/res|awk '{print $1}'")
         guest_res = guest_res_raw.split()[0]
     except ShellCmdError:
-        test.fail(
-            "Could not get guest resolution, xrandr output:" " %s" % guest_res_raw
-        )
+        test.fail("Could not get guest resolution, xrandr output: %s" % guest_res_raw)
     except IndexError:
-        test.fail(
-            "Could not get guest resolution, xrandr output:" " %s" % guest_res_raw
-        )
+        test.fail("Could not get guest resolution, xrandr output: %s" % guest_res_raw)
 
     test.log.info("Here's the information I have: ")
     test.log.info("\nClient Resolution: %s", client_res)

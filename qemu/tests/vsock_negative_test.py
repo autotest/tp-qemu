@@ -77,7 +77,7 @@ def run(test, params, env):
         raise ValueError(f"unexpected test tool: {vsock_test_tool}")
     connected_str = "Connection reset by peer"
     error_context.context(
-        "Connect vsock from host without" " listening on guest.", test.log.info
+        "Connect vsock from host without listening on guest.", test.log.info
     )
     try:
         process.system_output(conn_cmd)

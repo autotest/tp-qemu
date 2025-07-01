@@ -70,8 +70,7 @@ def run(test, params, env):
     if tsc_cnt or tod_cnt or clk_cnt:
         msg = output.splitlines()[-5:]
         test.fail(
-            "Get error when running time-warp-test."
-            " Output (last 5 lines): '%s'" % msg
+            "Get error when running time-warp-test. Output (last 5 lines): '%s'" % msg
         )
 
     try:
@@ -81,7 +80,7 @@ def run(test, params, env):
         process.system(cmd, shell=True)
 
         error_context.context(
-            "Run time-warp-test after change the host" " clock source", test.log.info
+            "Run time-warp-test after change the host clock source", test.log.info
         )
         cmd = "$(sleep %d; pkill time-warp-test) &"
         session.sendline(cmd % test_run_timeout)
@@ -90,7 +89,7 @@ def run(test, params, env):
 
         fail_cnt = re.findall(re_str, output)
         if not fail_cnt:
-            test.error("Could not get correct test output." " Output: '%s'" % output)
+            test.error("Could not get correct test output. Output: '%s'" % output)
 
         tsc_cnt, tod_cnt, clk_cnt = [int(_) for _ in fail_cnt[-1]]
         if tsc_cnt or tod_cnt or clk_cnt:
@@ -110,4 +109,4 @@ def run(test, params, env):
         try:
             process.system(cmd, shell=True)
         except Exception as detail:
-            test.log.error("Failed to restore host clocksource." "Detail: %s", detail)
+            test.log.error("Failed to restore host clocksource.Detail: %s", detail)

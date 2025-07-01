@@ -36,7 +36,7 @@ def run(test, params, env):
                 func()
         except Exception as e:
             test.log.warning(
-                "Failed to execute function '%s'." " error message:\n%s",
+                "Failed to execute function '%s'. error message:\n%s",
                 func.__name__,
                 e,
             )
@@ -90,8 +90,7 @@ def run(test, params, env):
         session.cmd("echo 3 >/proc/sys/vm/drop_caches")
 
         error_context.context(
-            "test %s size block read performance in guest"
-            " using dd commands" % blk_size,
+            "test %s size block read performance in guest using dd commands" % blk_size,
             test.log.info,
         )
         dd_cmd = "dd"
@@ -110,7 +109,7 @@ def run(test, params, env):
 
     if not hasattr(test, "write_perf_keyval"):
         test.cancel(
-            "There is no 'write_perf_keyval' method in" " test object, skip this test"
+            "There is no 'write_perf_keyval' method in test object, skip this test"
         )
 
     error_context.context("boot guest over virtio driver", test.log.info)
@@ -164,9 +163,7 @@ def run(test, params, env):
 
     if (not nfs_server) or (not nfs_path) or (not mnt_point):
         _clean_up(STEP_2)
-        test.error(
-            "Missing configuration for nfs partition." " Check your config files"
-        )
+        test.error("Missing configuration for nfs partition. Check your config files")
 
     try:
         session.cmd("mkdir -p %s" % mnt_point)
@@ -197,7 +194,7 @@ def run(test, params, env):
         result_file.write("### %s\n" % mnt_cmd_out)
         result_file.write("Category:ALL\n")
     except (IOError, ValueError) as e:
-        test.log.error("Failed to write to result file," " error message:\n%s", e)
+        test.log.error("Failed to write to result file, error message:\n%s", e)
 
     result_list = ["%s|%016s|%016s" % ("blk_size", "Write", "Read")]
     speed_pattern = r"(\d+ bytes).*?([\d\.]+ s).*?([\d\.]+ [KkMmGgTt])B/s"
@@ -213,7 +210,7 @@ def run(test, params, env):
             if not tmp_list:
                 _clean_up(STEP_5)
                 test.error(
-                    "Could not get correct write result." " dd cmd output:\n%s" % out
+                    "Could not get correct write result. dd cmd output:\n%s" % out
                 )
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
@@ -226,7 +223,7 @@ def run(test, params, env):
             if not tmp_list:
                 _clean_up(STEP_6)
                 test.error(
-                    "Could not get correct read result." " dd cmd output:\n%s" % out
+                    "Could not get correct read result. dd cmd output:\n%s" % out
                 )
             _, _, speed = tmp_list[0]
             speed = utils_misc.normalize_data_size(speed)
@@ -238,6 +235,6 @@ def run(test, params, env):
         try:
             result_file.write("\n".join(result_list))
         except (IOError, ValueError) as e:
-            test.log.error("Failed to write to result file," " error message:\n%s", e)
+            test.log.error("Failed to write to result file, error message:\n%s", e)
 
     _clean_up(STEP_6)

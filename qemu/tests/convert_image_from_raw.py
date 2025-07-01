@@ -63,7 +63,7 @@ def run(test, params, env):
     c_tag = params["convert_target"]
 
     test.log.info(
-        "Boot a guest up from initial image: %s, and create a" " file %s on the disk.",
+        "Boot a guest up from initial image: %s, and create a file %s on the disk.",
         initial_tag,
         file,
     )
@@ -96,8 +96,7 @@ def run(test, params, env):
     c_qit.start_vm()
     if not c_qit.check_file(file, md5):
         test.fail(
-            "The file %s's md5 on initial image and"
-            " target file are different." % file
+            "The file %s's md5 on initial image and target file are different." % file
         )
     c_qit.destroy_vm()
 

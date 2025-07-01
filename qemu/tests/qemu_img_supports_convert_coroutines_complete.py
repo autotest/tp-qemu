@@ -36,7 +36,7 @@ def run(test, params, env):
     def _create_error_cfg(file):
         test.log.info("Create error cfg %s.", file)
         error_cfg = (
-            '[inject-error]\nevent = "write_aio"\n' 'sector = "819200"\nonce = "on"'
+            '[inject-error]\nevent = "write_aio"\nsector = "819200"\nonce = "on"'
         )
         with open(file, "w") as cfg:
             cfg.write(error_cfg)

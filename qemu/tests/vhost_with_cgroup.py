@@ -40,7 +40,7 @@ def run(test, params, env):
     cgroup.initialize(modules)
 
     error_context.context(
-        "Boot guest and attach vhost to cgroup your" " setting(cpu)", test.log.info
+        "Boot guest and attach vhost to cgroup your setting(cpu)", test.log.info
     )
     params["start_vm"] = "yes"
     preprocess(test, params, env)
@@ -60,7 +60,7 @@ def run(test, params, env):
         cgroup.set_cgroup(int(vhost_pid))
 
     error_context.context(
-        "Check whether vhost attached to" " cgroup successfully", test.log.info
+        "Check whether vhost attached to cgroup successfully", test.log.info
     )
     cgroup_tasks = " ".join(cgroup.get_property("tasks"))
     for vhost_pid in vhost_pids.strip().split():

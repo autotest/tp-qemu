@@ -25,7 +25,7 @@ def run(test, params, env):
     :param env: Dictionary with the test environment.
     """
     error_context.context(
-        "boot the vm, with '-smp X,maxcpus=Y' option," "thus allow hotplug vcpu",
+        "boot the vm, with '-smp X,maxcpus=Y' option,thus allow hotplug vcpu",
         test.log.info,
     )
     vm = env.get_vm(params["main_vm"])
@@ -47,7 +47,7 @@ def run(test, params, env):
         total_cpus = current_cpus + n_cpus_add
 
     error_context.context(
-        "check if CPUs in guest matches qemu cmd " "before hot-plug", test.log.info
+        "check if CPUs in guest matches qemu cmd before hot-plug", test.log.info
     )
     if not cpu.check_if_vm_vcpu_match(current_cpus, vm):
         test.error("CPU quantity mismatch cmd before hotplug !")
@@ -68,8 +68,7 @@ def run(test, params, env):
         )
     # Windows is a little bit lazy that needs more secs to recognize.
     error_context.context(
-        "hotplugging finished, let's wait a few sec and"
-        " check CPUs quantity in guest.",
+        "hotplugging finished, let's wait a few sec and check CPUs quantity in guest.",
         test.log.info,
     )
     if not utils_misc.wait_for(

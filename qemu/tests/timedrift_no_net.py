@@ -39,7 +39,7 @@ def subw_guest_suspend(test, params, vm, session):
         gs.guest_suspend_disk(params)
     else:
         test.error(
-            "Unknown guest suspend type, Check your" " 'guest_suspend_type' config."
+            "Unknown guest suspend type, Check your 'guest_suspend_type' config."
         )
 
 
@@ -107,7 +107,7 @@ def run(test, params, env):
     error_context.context("Check clock source on guest VM", test.log.info)
     session = vm.wait_for_serial_login(timeout=login_timeout)
     out = session.cmd_output(
-        "cat /sys/devices/system/clocksource/" "clocksource0/current_clocksource"
+        "cat /sys/devices/system/clocksource/clocksource0/current_clocksource"
     )
     if guest_clock_source not in out:
         test.fail(

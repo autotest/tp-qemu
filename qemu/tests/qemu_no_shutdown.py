@@ -41,14 +41,14 @@ def run(test, params, env):
             session.close()
         # Check the qemu id is not change
         if not utils_misc.wait_for(lambda: vm.is_alive(), 5, 0, 1):
-            test.fail("VM not responsive after system_powerdown " "with -no-shutdown!")
+            test.fail("VM not responsive after system_powerdown with -no-shutdown!")
         if vm.get_pid() != qemu_process_id:
             test.fail("Qemu pid changed after system_powerdown!")
         test.log.info("Round %s -> System_powerdown successfully.", str(i + 1))
 
         # Send monitor command system_reset and cont
         error_context.context(
-            "Round %s : Send monitor command system_reset " "and cont." % str(i + 1),
+            "Round %s : Send monitor command system_reset and cont." % str(i + 1),
             test.log.info,
         )
         vm.monitor.cmd("system_reset")

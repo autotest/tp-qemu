@@ -111,7 +111,7 @@ def run(test, params, env):
         session.cmd(ntp_sync_cmd)
 
     error_context.context(
-        "Check if cpus in guest match qemu " "cmd before hotplug", test.log.info
+        "Check if cpus in guest match qemu cmd before hotplug", test.log.info
     )
     qemu_guest_cpu_match(vm)
 

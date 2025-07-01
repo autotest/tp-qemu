@@ -41,9 +41,7 @@ def setup_basic_root_fs(test, params):
     install_file_system_cmd = params["install_file_system_cmd"] % virtiofs_root_path
     status, output = process.getstatusoutput(install_file_system_cmd)
     if status:
-        test.fail(
-            "Failed to install basic root file system." "Error message: %s" % output
-        )
+        test.fail("Failed to install basic root file system.Error message: %s" % output)
     return virtiofs_root_path
 
 

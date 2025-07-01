@@ -13,7 +13,7 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     error_context.context(
-        "Query supported HyperV Enlightenments " "by host", test.log.info
+        "Query supported HyperV Enlightenments by host", test.log.info
     )
     missing = []
     args = {

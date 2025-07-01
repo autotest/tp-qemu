@@ -71,7 +71,7 @@ def run(test, params, env):
                 # Check whether all previous shell sessions are responsive
                 for i, se in enumerate(sessions):
                     error_context.context(
-                        "checking responsiveness of guest" " #%d" % (i + 1),
+                        "checking responsiveness of guest #%d" % (i + 1),
                         test.log.debug,
                     )
                     se.cmd(params.get("alive_test_cmd"))

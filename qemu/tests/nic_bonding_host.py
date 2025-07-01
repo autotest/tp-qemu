@@ -113,7 +113,7 @@ def run(test, params, env):
     )
 
     error_context.context(
-        "Disable and enable physical " "interfaces in %s" % bond_br_name, test.log.info
+        "Disable and enable physical interfaces in %s" % bond_br_name, test.log.info
     )
     while True:
         for op_iface in op_ifaces:

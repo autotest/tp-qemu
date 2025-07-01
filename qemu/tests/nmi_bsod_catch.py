@@ -68,7 +68,7 @@ def run(test, params, env):
         # Wait guest create dump file.
         if manual_reboot_cmd:
             bsod_time = params.get("bsod_time", 160)
-            test.log.info("Waiting guest for creating dump file" " (%ssec)", bsod_time)
+            test.log.info("Waiting guest for creating dump file (%ssec)", bsod_time)
             time.sleep(bsod_time)
             error_context.context("Send a system_reset monitor command", test.log.info)
             vm.monitor.send_args_cmd(manual_reboot_cmd)
@@ -77,7 +77,7 @@ def run(test, params, env):
 
         if check_dump_cmd:
             error_context.context(
-                "Verify whether the dump files are " "generated", test.log.info
+                "Verify whether the dump files are generated", test.log.info
             )
             s, o = session.cmd_status_output(check_dump_cmd, 360)
             test.log.debug("Output for check_dump_cmd command: %s", o)

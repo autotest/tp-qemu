@@ -122,9 +122,7 @@ def run(test, params, env):
         check_speed_cmd = params["check_speed_cmd"] % ethname
         status, output = session.cmd_status_output(check_speed_cmd)
         if status:
-            test.fail(
-                "Failed to get speed info," "status=%s, ouput=%s" % (status, output)
-            )
+            test.fail("Failed to get speed info,status=%s, ouput=%s" % (status, output))
         test.log.info(output)
         result = re.findall(r"(?:Speed:\s+(\d+)Mb/s)|(?:Duplex:\s+(\w+))", output)
         if len(result) < 2:

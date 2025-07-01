@@ -34,7 +34,7 @@ def run(test, params, env):
         """
         test.log.debug("Starting guest script on guest %s", vm.name)
         session.sendline(
-            "$(command -v python python3 | head -1) " "/tmp/ksm_overcommit_guest.py"
+            "$(command -v python python3 | head -1) /tmp/ksm_overcommit_guest.py"
         )
         try:
             _ = session.read_until_last_line_matches(["PASS:", "FAIL:"], timeout)
@@ -56,7 +56,7 @@ def run(test, params, env):
         :return: Tuple (match index, data)
         """
         test.log.debug(
-            "Executing '%s' on guest script loop, vm: %s, timeout: " "%s",
+            "Executing '%s' on guest script loop, vm: %s, timeout: %s",
             command,
             vm.name,
             timeout,
@@ -67,7 +67,7 @@ def run(test, params, env):
                 ["PASS:", "FAIL:"], timeout
             )
         except aexpect.ExpectProcessTerminatedError as exc:
-            e_str = "Failed to execute command '%s' on guest script, " "vm '%s': %s" % (
+            e_str = "Failed to execute command '%s' on guest script, vm '%s': %s" % (
                 command,
                 vm.name,
                 str(exc),

@@ -26,10 +26,10 @@ class MemoryHotplugSimple(MemoryHotplugTest):
             abs(vm_mem_size + sev_rom_size - assigned_vm_mem_size)
             > assigned_vm_mem_size * threshold
         ):
-            msg = (
-                "Assigned '%s MB' memory to '%s'"
-                "but, '%s MB' memory detect by OS"
-                % (assigned_vm_mem_size, vm.name, vm_mem_size)
+            msg = "Assigned '%s MB' memory to '%s'but, '%s MB' memory detect by OS" % (
+                assigned_vm_mem_size,
+                vm.name,
+                vm_mem_size,
             )
             raise TestError(msg)
 

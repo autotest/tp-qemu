@@ -129,7 +129,7 @@ def run(test, params, env):
         plug_image, plug_image_params, "disk"
     )
     error_context.context(
-        "Hot-plug the Drive/BlockdevNode first, " "will be used by virtio-blk-pci",
+        "Hot-plug the Drive/BlockdevNode first, will be used by virtio-blk-pci",
         test.log.info,
     )
     for image_dev in image_devs[:-1]:

@@ -53,7 +53,7 @@ def io_test(session, disk_op_cmd, disks, windows=False, image_size=None):
         if windows:
             if not utils_disk.update_windows_disk_attributes(session, disk):
                 raise exceptions.TestError(
-                    "Failed to clear readonly for all" " disks and online them in guest"
+                    "Failed to clear readonly for all disks and online them in guest"
                 )
             partition = utils_disk.configure_empty_windows_disk(
                 session, disk, image_size

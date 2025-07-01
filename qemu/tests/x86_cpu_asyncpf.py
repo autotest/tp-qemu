@@ -56,7 +56,7 @@ def run(test, params, env):
         old_ver = re.findall(r"\d+\.\d+", old_machine)[0]
         if latest_ver <= old_ver:
             test.cancel(
-                "The latest supported machine type does not" " support this test case."
+                "The latest supported machine type does not support this test case."
             )
 
     old_machine = params["old_machine"]

@@ -184,7 +184,7 @@ def run(test, params, env):
         except Exception as e:
             _clean_up_tmp_files(_tmp_file_list)
             session.close()
-            test.fail("Fail to restore to default kernel," " error message:\n '%s'" % e)
+            test.fail("Fail to restore to default kernel, error message:\n '%s'" % e)
         vm.reboot()
 
     session = vm.wait_for_login(timeout=timeout)

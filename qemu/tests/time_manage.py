@@ -77,7 +77,7 @@ def run(test, params, env):
             test.log.info("Guest #%d booted up successfully", num)
 
             # Check whether all previous shell sessions are responsive
-            error_context.context("checking responsiveness of the booted" " guest")
+            error_context.context("checking responsiveness of the booted guest")
             for se in sessions:
                 se.cmd(params["alive_test_cmd"])
             num += 1

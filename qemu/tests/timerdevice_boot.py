@@ -118,7 +118,7 @@ def run(test, params, env):
             status, output = session.cmd_status_output(clksrc_cmd, safe=True)
             if status:
                 test.fail(
-                    "fail to update guest's clocksource to %s," "details: %s" % clksrc,
+                    "fail to update guest's clocksource to %s,details: %s" % clksrc,
                     output,
                 )
         else:
@@ -201,7 +201,7 @@ def run(test, params, env):
             time.sleep(sleep_time)
 
         error_context.context(
-            "Check timedrift between guest and host " "after reboot.", test.log.info
+            "Check timedrift between guest and host after reboot.", test.log.info
         )
         vm.reboot(timeout=timeout, serial=True)
         verify_timedrift(session)

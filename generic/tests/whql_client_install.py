@@ -33,7 +33,7 @@ def run(test, params, env):
     server_file_transfer_port = int(params.get("server_file_transfer_port"))
     server_studio_path = params.get(
         "server_studio_path",
-        "%programfiles%\\ " "Microsoft Driver Test Manager\\Studio",
+        "%programfiles%\\ Microsoft Driver Test Manager\\Studio",
     )
     server_username = params.get("server_username")
     server_password = params.get("server_password")

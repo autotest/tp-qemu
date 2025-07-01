@@ -24,7 +24,7 @@ def run(test, params, env):
                 cpu_types.remove(model)
             except ValueError:
                 test.log.warning(
-                    "The model to be removed is not" " in the list: %s", model
+                    "The model to be removed is not in the list: %s", model
                 )
                 continue
 
@@ -81,7 +81,7 @@ def run(test, params, env):
     missing = dict.fromkeys(output_list.keys(), [])
     for cpu_model in cpu_types:
         test.log.info(
-            "Check cpu model %s from qemu command output and" " qemu monitor output",
+            "Check cpu model %s from qemu command output and qemu monitor output",
             cpu_model,
         )
         for key, value in output_list.items():
@@ -113,7 +113,7 @@ def run(test, params, env):
     model_name = model.get("name")
     if model_name != vm.cpuinfo.model:
         test.fail(
-            "Command query-cpu-model-expansion return" " wrong model: %s" % model_name
+            "Command query-cpu-model-expansion return wrong model: %s" % model_name
         )
     model_prop = model.get("props")
     for flag in cpu.CPU_TYPES_RE.get(model_name).split(","):
@@ -128,7 +128,7 @@ def run(test, params, env):
     # Check if the flags in qmp output matches qemu command output
     missing = []
     test.log.info(
-        "Check if the flags in qemu monitor output matches" " qemu command output"
+        "Check if the flags in qemu monitor output matches qemu command output"
     )
     for flag in cpu_flags_binary:
         if flag not in str(output):

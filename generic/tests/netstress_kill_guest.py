@@ -133,7 +133,7 @@ def run(test, params, env):
 
         try:
             error_context.context(
-                ("Run subtest netperf_stress between" " host and guest.", test.log.info)
+                ("Run subtest netperf_stress between host and guest.", test.log.info)
             )
             stress_thread = None
             wait_time = int(params.get("wait_bg_time", 60))

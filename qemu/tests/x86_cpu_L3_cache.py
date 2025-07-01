@@ -32,7 +32,7 @@ def run(test, params, env):
             params["smp"] = params["vcpu_maxcpus"] = "128"
         L3_existence = "present" if check_L3 else "not present"
         test.log.info(
-            "Boot guest with machine type %s and expect L3 cache %s" " inside guest",
+            "Boot guest with machine type %s and expect L3 cache %s inside guest",
             machine_type,
             L3_existence,
         )
@@ -60,7 +60,7 @@ def run(test, params, env):
         old_ver = re.findall(r"\d+\.\d+", old_machine)[0]
         if latest_ver <= old_ver:
             test.cancel(
-                "The latest supported machine type does not" " support this test case."
+                "The latest supported machine type does not support this test case."
             )
 
     old_machine = params["old_machine"]

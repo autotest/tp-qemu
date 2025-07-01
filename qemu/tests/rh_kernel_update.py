@@ -205,7 +205,7 @@ def run(test, params, env):
         updated = False
     else:
         test.log.info(
-            "Guest current kernel does not match the " "requirement, processing upgrade"
+            "Guest current kernel does not match the requirement, processing upgrade"
         )
         for pkg in kernel_deps_pkgs:
             pkg_params = params.object_params(pkg)

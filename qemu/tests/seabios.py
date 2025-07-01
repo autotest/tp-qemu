@@ -102,7 +102,7 @@ def run(test, params, env):
             vm.send_key(str(i))
             break
     else:
-        test.fail("Could not get any boot entry match " "pattern '%s'" % boot_device)
+        test.fail("Could not get any boot entry match pattern '%s'" % boot_device)
 
     error_context.context("Log into the guest to verify it's up")
     session = vm.wait_for_login(timeout=timeout)

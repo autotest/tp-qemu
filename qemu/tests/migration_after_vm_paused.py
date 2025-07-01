@@ -82,7 +82,7 @@ class MigrationAfterVmPaused(object):
             # process is running
             session2 = self.vm.wait_for_login(timeout=self.login_timeout)
             error_context.context(
-                "Checking the background command in " "the guest pre migration",
+                "Checking the background command in the guest pre migration",
                 LOG_JOB.info,
             )
             session2.cmd(self.bg_check_command, timeout=30)
@@ -90,7 +90,7 @@ class MigrationAfterVmPaused(object):
         else:
             # Just migrate on a living guest OS
             self.test.fail(
-                "The guest is not alive," " this test must on a living guest OS."
+                "The guest is not alive, this test must on a living guest OS."
             )
 
     @error_context.context_aware
@@ -99,7 +99,7 @@ class MigrationAfterVmPaused(object):
         session2 = self.vm.wait_for_login(timeout=self.login_timeout)
         LOG_JOB.info("Logged in after migration")
         error_context.context(
-            "Checking the background command in the guest " "post migration",
+            "Checking the background command in the guest post migration",
             LOG_JOB.info,
         )
         session2.cmd(self.bg_check_command, timeout=30)

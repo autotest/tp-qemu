@@ -20,14 +20,14 @@ def run(test, params, env):
     hotplug_cmd = "cpu_set %s online"
 
     error_context.context(
-        "boot the vm, with '-smp X,maxcpus=Y' option," "thus allow hotplug vcpu",
+        "boot the vm, with '-smp X,maxcpus=Y' option,thus allow hotplug vcpu",
         test.log.info,
     )
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 
     error_context.context(
-        "check if CPUs in guest matches qemu cmd " "before hot-plug", test.log.info
+        "check if CPUs in guest matches qemu cmd before hot-plug", test.log.info
     )
     smp_by_cmd = int(params.get("smp"))
     if not cpu.check_if_vm_vcpu_match(smp_by_cmd, vm):
@@ -43,8 +43,7 @@ def run(test, params, env):
             error_context.context("output from monitor is: %s" % output, test.log.info)
     # Windows is a little bit lazy that needs more secs to recognize.
     error_context.context(
-        "hotplugging finished, let's wait a few sec and"
-        " check cpus quantity in guest.",
+        "hotplugging finished, let's wait a few sec and check cpus quantity in guest.",
         test.log.info,
     )
     if not utils_misc.wait_for(

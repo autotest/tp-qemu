@@ -40,7 +40,7 @@ def run(test, params, env):
             error_flag = True
 
     if not params.get("master_images_clone"):
-        test.cancel("provide the param `master_images_clone` to clone" "images for vms")
+        test.cancel("provide the param `master_images_clone` to cloneimages for vms")
 
     trigger_time = int(params.get("install_trigger_time", 0))
     random_trigger = params.get("random_trigger", "no") == "yes"

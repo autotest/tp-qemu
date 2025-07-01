@@ -79,7 +79,7 @@ def run(test, params, env):
                         s = current_clocksource != "kvm-clock"
                     if not s:
                         raise error.TestFail(
-                            "Guest didn't use '%s' " "clocksource" % clocksource
+                            "Guest didn't use '%s' clocksource" % clocksource
                         )
 
                 error.context("Check the system time on guest and host.", logging.info)
@@ -110,7 +110,7 @@ def run(test, params, env):
             if time_drifted:
                 difs = ""
                 for vm in mig_data.vms:
-                    difs += "\n            VM=%s  HOST=%ss  GUEST=%ss" " DIFF=%s" % (
+                    difs += "\n            VM=%s  HOST=%ss  GUEST=%ss DIFF=%s" % (
                         vm.name,
                         self.diff_ht[vm.name],
                         self.diff_gt[vm.name],

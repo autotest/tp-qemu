@@ -197,4 +197,4 @@ def run(test, params, env):
                 session, os_type, vm.cpuinfo, test, vm.devices
             ):
                 session.close()
-                test.fail("CPU topology of guest is inconsistent with " "expectations.")
+                test.fail("CPU topology of guest is inconsistent with expectations.")

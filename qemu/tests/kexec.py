@@ -69,7 +69,7 @@ def run(test, params, env):
         if cur_kernel_version not in kernel:
             new_kernel = kernel[7:]
     if not new_kernel:
-        test.error("Could not find new kernel, " "command line output: %s" % output)
+        test.error("Could not find new kernel, command line output: %s" % output)
     msg = "Reboot to kernel %s through kexec" % new_kernel
     error_context.context(msg, test.log.info)
     cmd = params.get("get_kernel_image") % new_kernel

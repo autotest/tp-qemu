@@ -52,14 +52,14 @@ def run(test, params, env):
         stream_test.create_snapshots()
         backingfile = stream_test.get_backingfile()
         if not backingfile:
-            test.fail("Backing file is not available in the " "backdrive image")
+            test.fail("Backing file is not available in the backdrive image")
         test.log.info("Image file: %s", stream_test.get_image_file())
         test.log.info("Backing file: %s", backingfile)
         stream_test.start()
         stream_test.wait_for_finished()
         backingfile = stream_test.get_backingfile()
         if backingfile:
-            test.fail("Backing file is still available in the " "backdrive image")
+            test.fail("Backing file is still available in the backdrive image")
         target_file = stream_test.get_image_file()
         target_size = stream_test.get_image_size(target_file)
         error_context.context("Compare image size", test.log.info)

@@ -24,10 +24,10 @@ def run(test, params, env):
 
     def verify_elapsed_time():
         sleep_cmd = r'echo "for n in \$(seq 1000);'
-        sleep_cmd += ' do sleep 0.01; done"' " > /tmp/sleep.sh"
+        sleep_cmd += ' do sleep 0.01; done" > /tmp/sleep.sh'
         session.cmd(sleep_cmd)
 
-        guest_cpu = session.cmd_output("grep 'processor' " "/proc/cpuinfo | wc -l")
+        guest_cpu = session.cmd_output("grep 'processor' /proc/cpuinfo | wc -l")
         get_time_cmd = "for (( i=0; i<%s; i+=1 ));" % guest_cpu
         get_time_cmd += ' do /usr/bin/time -f"%e"'
         get_time_cmd += " taskset -c $i sh /tmp/sleep.sh; done"
@@ -99,7 +99,7 @@ def run(test, params, env):
     session.cmd(ntp_sync_cmd, timeout=timeout)
 
     error_context.context(
-        "Sleep a while and check the time drift on guest" " (without any pinned vcpu)",
+        "Sleep a while and check the time drift on guest (without any pinned vcpu)",
         test.log.info,
     )
     verify_elapsed_time()
@@ -116,15 +116,14 @@ def run(test, params, env):
         process.system("taskset -p -c %s %s" % (pcpu, vcpu))
         if not check_one_cpu_pinned:
             error_context.context(
-                "Sleep a while and check the time drift on"
-                "guest (with one pinned vcpu)",
+                "Sleep a while and check the time drift onguest (with one pinned vcpu)",
                 test.log.info,
             )
             verify_elapsed_time()
             check_one_cpu_pinned = True
 
     error_context.context(
-        "Sleep a while and check the time drift on" "guest (with all pinned vcpus)",
+        "Sleep a while and check the time drift onguest (with all pinned vcpus)",
         test.log.info,
     )
     verify_elapsed_time()

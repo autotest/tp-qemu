@@ -116,17 +116,16 @@ def run(test, params, env):
         phys_bits_msg = params["phys_bits_msg"] % expected_phys_bits
         logs = vm.logsessions["seabios"].get_output()
         error_context.context(
-            "Check the phys-bits message in " "virt firmware log.", test.log.info
+            "Check the phys-bits message in virt firmware log.", test.log.info
         )
         if not re.search(phys_bits_msg, logs, re.S | re.I):
             test.fail(
-                "Not found phys-bits message '%s' in "
-                "virt firmware log." % phys_bits_msg
+                "Not found phys-bits message '%s' in virt firmware log." % phys_bits_msg
             )
         limitation = params.get_numeric("limitation_from_ovmf")
         if limitation and expected_phys_bits > limitation:
             error_context.context(
-                "Check the limitation message in virt " "firmware log.", test.log.info
+                "Check the limitation message in virt firmware log.", test.log.info
             )
             if not re.search(params["limitation_msg"], logs, re.S | re.I):
-                test.fail("Not found the limitation " "message in virt firmware log.")
+                test.fail("Not found the limitation message in virt firmware log.")

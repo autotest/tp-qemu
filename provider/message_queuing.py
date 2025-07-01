@@ -17,7 +17,7 @@ class MessageNotFoundError(Exception):
         self.output = output
 
     def __str__(self):
-        return 'No matching message("{}") was found. ' "Output: {}".format(
+        return 'No matching message("{}") was found. Output: {}'.format(
             self.message, self.output
         )
 

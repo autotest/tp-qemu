@@ -51,7 +51,7 @@ def run(test, params, env):
         if params.get("fixed_interval", "yes") != "yes":
             interval_tmp = random.randint(0, interval * 1000) / 1000.0
 
-        test.log.debug("Reset the system by monitor cmd" " after %ssecs", interval_tmp)
+        test.log.debug("Reset the system by monitor cmd after %ssecs", interval_tmp)
         time.sleep(interval_tmp)
 
     error_context.context("Try to login guest after reset", test.log.info)

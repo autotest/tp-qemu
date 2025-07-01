@@ -71,13 +71,13 @@ def run(test, params, env):
         unload_stress(session)
 
     error_context.context(
-        "Ping test after flood ping," " Check if the network is still alive",
+        "Ping test after flood ping, Check if the network is still alive",
         test.log.info,
     )
     count = params["count"]
     timeout = float(count) * 2
     status, output = utils_net.ping(guest_ip, count, timeout=timeout)
     if status != 0:
-        test.fail("Ping failed, status: %s," " output: %s" % (status, output))
+        test.fail("Ping failed, status: %s, output: %s" % (status, output))
 
     session.close()

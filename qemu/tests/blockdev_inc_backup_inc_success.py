@@ -82,7 +82,7 @@ class BlockdevIncbkIncSyncSuccBitmapTest(blockdev_base.BlockdevBaseTest):
 
         refresh_timeout = self.params.get_numeric("refresh_timeout", 10)
         if not utils_misc.wait_for(lambda: _check_bitmaps(), refresh_timeout, 0, 1):
-            self.test.fail("count of bitmap should be 0 " "after incremental backup")
+            self.test.fail("count of bitmap should be 0 after incremental backup")
 
     def check_images(self):
         self.verify_data_files()

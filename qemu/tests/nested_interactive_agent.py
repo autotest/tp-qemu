@@ -40,7 +40,7 @@ def run(test, params, env):
 
     try:
         error_context.context(
-            'Receive the "APPROVE" message from MQ publisher ' "to continue the test.",
+            'Receive the "APPROVE" message from MQ publisher to continue the test.',
             test.log.info,
         )
         try:

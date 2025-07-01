@@ -34,7 +34,7 @@ def run(test, params, env):
             if params.get("shutdown_method") == "shell":
                 # Send a shutdown command to the guest's shell
                 vm_session.sendline(vm.get_params().get("shutdown_command"))
-                error_context.context("waiting VM to go down " "(shutdown shell cmd)")
+                error_context.context("waiting VM to go down (shutdown shell cmd)")
             elif params.get("shutdown_method") == "system_powerdown":
                 # Sleep for a while -- give the guest a chance to finish
                 # booting
@@ -42,7 +42,7 @@ def run(test, params, env):
                 # Send a system_powerdown monitor command
                 vm.monitor.system_powerdown()
                 error_context.context(
-                    "waiting VM to go down " "(system_powerdown monitor cmd)"
+                    "waiting VM to go down (system_powerdown monitor cmd)"
                 )
 
             if not utils_misc.wait_for(vm.is_dead, 240, 0, 1):

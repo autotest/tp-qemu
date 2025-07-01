@@ -96,7 +96,7 @@ def run(test, params, env):
     file_checksum = crypto.hash_file(host_path, algorithm="md5")
 
     error_context.context(
-        "Guest test file prepare, Copy file %s from host to " "guest" % host_path,
+        "Guest test file prepare, Copy file %s from host to guest" % host_path,
         test.log.info,
     )
     vm.copy_files_to(host_path, guest_path, timeout=transfer_timeout)
@@ -135,7 +135,7 @@ def run(test, params, env):
 
         time.sleep(5)
         error_context.context(
-            "Repeatedly unload/load NIC driver during file " "transfer", test.log.info
+            "Repeatedly unload/load NIC driver during file transfer", test.log.info
         )
         while not all_threads_done(threads):
             error_context.context(

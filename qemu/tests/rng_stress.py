@@ -64,8 +64,7 @@ def run(test, params, env):
         rng_attached = get_rng_list(vm)
         if len(rng_devices) != len(rng_attached):
             test.fail(
-                "The devices get from rng_arriable"
-                " don't match the rng devices attached"
+                "The devices get from rng_arriable don't match the rng devices attached"
             )
 
         if len(rng_devices) > 1:

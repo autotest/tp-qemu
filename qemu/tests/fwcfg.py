@@ -43,7 +43,7 @@ def run(test, params, env):
 
     try:
         error_context.context(
-            "Copy the Memory.dmp.zip file " "from host to guest", test.log.info
+            "Copy the Memory.dmp.zip file from host to guest", test.log.info
         )
         vm.copy_files_to(dump_zip_file, "%s:\\Memory.dmp.zip" % disk_letter)
         unzip_cmd = params["unzip_cmd"] % (disk_letter, disk_letter)

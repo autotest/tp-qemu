@@ -64,7 +64,7 @@ def run(test, params, env):
         diff_num = len(orig_mount_points) - len(new_mount_points)
         if diff_num != 0:
             test.error(
-                "No found the corresponding drive letters " "in %s disks." % diff_num
+                "No found the corresponding drive letters in %s disks." % diff_num
             )
         return new_mount_points
 

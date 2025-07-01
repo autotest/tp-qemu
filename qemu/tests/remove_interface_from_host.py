@@ -51,7 +51,7 @@ def run(test, params, env):
     time.sleep(secs_after_iplink_action)
 
     error_context.context(
-        "After disable the ifname, " "Ping test from host to guest, should fail.",
+        "After disable the ifname, Ping test from host to guest, should fail.",
         test.log.info,
     )
     status, output = utils_test.ping(guest_ip, 30, timeout=20)
@@ -64,7 +64,7 @@ def run(test, params, env):
     time.sleep(secs_after_iplink_action)
 
     error_context.context(
-        "After enable the ifname, " "Ping test from host to guest, should work",
+        "After enable the ifname, Ping test from host to guest, should work",
         test.log.info,
     )
     status, output = utils_test.ping(guest_ip, 30, timeout=20)
@@ -78,7 +78,7 @@ def run(test, params, env):
     time.sleep(secs_after_iplink_action)
 
     error_context.context(
-        "After delete the ifname, " "VM and qemu should not crash, ping should fail",
+        "After delete the ifname, VM and qemu should not crash, ping should fail",
         test.log.info,
     )
     vm.verify_alive()

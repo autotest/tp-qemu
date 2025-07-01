@@ -26,7 +26,7 @@ def run(test, params, env):
     pkg_status = process.getstatusoutput(params["rpm_install_chk_cmd"], shell=True)[0]
     if pkg_status:
         test.cancel(
-            "Pls check the test env: whether virtio-win pkg is " "installed on host."
+            "Pls check the test env: whether virtio-win pkg is installed on host."
         )
 
     pkg_ver = (

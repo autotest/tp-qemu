@@ -71,9 +71,7 @@ def install_gagent(session, test, qemu_ga_pkg, gagent_install_cmd, gagent_pkg_in
     gagent_install_cmd = gagent_install_cmd % qemu_ga_pkg_path
     s_inst, o_inst = session.cmd_status_output(gagent_install_cmd)
     if s_inst != 0:
-        test.fail(
-            "qemu-guest-agent install failed," " the detailed info:\n%s." % o_inst
-        )
+        test.fail("qemu-guest-agent install failed, the detailed info:\n%s." % o_inst)
     gagent_version = session.cmd_output(gagent_pkg_info_cmd).split()[-2]
     return gagent_version
 
@@ -148,7 +146,7 @@ def win_installer_test(session, test, params):
     :param params: the dict used for parameters.
     """
     error_context.context(
-        "Check if virtio-win-guest-too.exe " "is signed by redhat", LOG_JOB.info
+        "Check if virtio-win-guest-too.exe is signed by redhat", LOG_JOB.info
     )
     status = session.cmd_status(params["signed_check_cmd"])
     if status != 0:
@@ -259,7 +257,7 @@ def rng_test(test, params, vm):
     error_context.context("Read virtio-rng device to get random number", LOG_JOB.info)
     output = session.cmd_output(read_rng_cmd)
     if len(re.findall(r"0x\w", output, re.M)) < 2:
-        test.fail("Unable to read random numbers " "from guest: %s" % output)
+        test.fail("Unable to read random numbers from guest: %s" % output)
 
 
 @error_context.context_aware

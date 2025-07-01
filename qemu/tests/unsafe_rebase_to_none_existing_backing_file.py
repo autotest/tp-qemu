@@ -38,7 +38,7 @@ def run(test, params, env):
         test.log.info("Verify snapshot's backing file information.")
         res = json.loads(output)
         if res["backing-filename-format"] != b_fmt or res["backing-filename"] != b_name:
-            test.fail("Backing file information is not correct," " got %s." % b_name)
+            test.fail("Backing file information is not correct, got %s." % b_name)
         compat = res["format-specific"]["data"]["compat"]
         expected = _get_compat_version()
         if compat != expected:

@@ -58,8 +58,7 @@ def run(test, params, env):
         if os_type == "linux":
             utils_misc.make_dirs(fs_dest, session)
             error_context.context(
-                "Mount virtiofs target %s to %s inside"
-                " guest." % (fs_target, fs_dest),
+                "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
                 test.log.info,
             )
             if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):

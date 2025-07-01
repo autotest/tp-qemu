@@ -94,7 +94,7 @@ def run(test, params, env):
         error_context.context("Check backing-file of sn2", test.log.info)
         verify_backingfile(None)
         error_context.context(
-            "check sn1 and base are not opening " "by qemu process", test.log.info
+            "check sn1 and base are not opening by qemu process", test.log.info
         )
         if set([snapshots[0], image_file]).issubset(get_openingfiles()):
             test.fail("%s is opening by qemu" % set([snapshots[0], image_file]))

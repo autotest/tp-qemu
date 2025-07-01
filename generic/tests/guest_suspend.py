@@ -133,5 +133,5 @@ def run(test, params, env):
         gs.guest_suspend_disk(params)
     else:
         test.error(
-            "Unknown guest suspend type, Check your" " 'guest_suspend_type' config."
+            "Unknown guest suspend type, Check your 'guest_suspend_type' config."
         )

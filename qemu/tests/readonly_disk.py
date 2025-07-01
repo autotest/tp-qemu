@@ -31,9 +31,7 @@ def run(test, params, env):
     data_image_num = int(
         params.get("data_image_num", len(params.objects("images")) - 1)
     )
-    error_context.context(
-        "Get windows disk index that to " "be formatted", test.log.info
-    )
+    error_context.context("Get windows disk index that to be formatted", test.log.info)
     disk_index_list = utils_disk.get_windows_disks_index(session, data_image_size)
     if len(disk_index_list) < data_image_num:
         test.fail(
@@ -45,7 +43,7 @@ def run(test, params, env):
         session, params["src_file"], label="WIN_UTILS"
     )
     error_context.context(
-        "Clear readonly for all disks and online " "them in guest.", test.log.info
+        "Clear readonly for all disks and online them in guest.", test.log.info
     )
     if not utils_disk.update_windows_disk_attributes(session, disk_index_list):
         test.fail("Failed to update windows disk attributes.")
@@ -75,8 +73,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
 
     error_context.context(
-        "TEST STEPS 4: Write to the readonly disk expect:"
-        "The media is write protected",
+        "TEST STEPS 4: Write to the readonly disk expect:The media is write protected",
         test.log.info,
     )
     dst_file_readonly = params["dst_file_readonly"] % drive_letter[0]

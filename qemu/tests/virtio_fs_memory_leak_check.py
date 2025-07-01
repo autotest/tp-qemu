@@ -28,7 +28,7 @@ def run(test, params, env):
         """Record Mmdi tag memory info in pool monitor to C: volume"""
         status = session.cmd_status(poolmon_mmdi_cmd)
         if status:
-            test.fail("Fail to get Mmdi pool tag memory " "info in pool monitor.")
+            test.fail("Fail to get Mmdi pool tag memory info in pool monitor.")
 
     driver = params["driver_name"]
     driver_verifier = params.get("driver_verifier", driver)
@@ -86,4 +86,4 @@ def run(test, params, env):
     diff_befor = result.split("\n")[0].split()[4]
     diff_aft = result.split("\n")[1].split()[4]
     if int(diff_aft) - int(diff_befor) > 100:
-        test.fail("There are memory leak on virtiofs," " the result is %s" % result)
+        test.fail("There are memory leak on virtiofs, the result is %s" % result)

@@ -104,7 +104,7 @@ def run(test, params, env):
                 test.fail("KSM should be running")
         else:
             if free_mem_host < ksm_thres:
-                test.error("Host memory is consumed too much more than " "expected")
+                test.error("Host memory is consumed too much more than expected")
             if ksm_status:
                 test.fail("KSM should not be running")
 

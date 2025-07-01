@@ -19,7 +19,7 @@ def mount_lv(lv_path, session):
 @error_context.context_aware
 def umount_lv(lv_path, session):
     error_context.context(
-        "umounting filesystem made on logical volume " "%s" % os.path.basename(lv_path),
+        "umounting filesystem made on logical volume %s" % os.path.basename(lv_path),
         LOG_JOB.info,
     )
     session.cmd("umount %s" % lv_path)
@@ -86,15 +86,14 @@ def run(test, params, env):
             )
             session.cmd("lvcreate -L2000 -n %s %s" % (lv_name, vg_name))
             error_context.context(
-                "creating %s filesystem on logical volume" " %s" % (fs_type, lv_name),
+                "creating %s filesystem on logical volume %s" % (fs_type, lv_name),
                 test.log.info,
             )
             session.cmd("yes | mkfs.%s %s" % (fs_type, lv_path), timeout=int(timeout))
             mount_lv(lv_path, session)
             umount_lv(lv_path, session)
             error_context.context(
-                "checking %s filesystem made on logical "
-                "volume %s" % (fs_type, lv_name),
+                "checking %s filesystem made on logical volume %s" % (fs_type, lv_name),
                 test.log.info,
             )
             session.cmd("fsck %s" % lv_path, timeout=int(timeout))

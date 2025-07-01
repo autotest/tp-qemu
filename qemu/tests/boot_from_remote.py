@@ -112,7 +112,7 @@ def run(test, params, env):
             single_img_memory = _get_memory(vm.get_pid())
             if not single_img_memory:
                 raise exceptions.TestError(
-                    "Failed to get memory when " "booting with one remote image."
+                    "Failed to get memory when booting with one remote image."
                 )
             test.log.debug(
                 "memory consumption(only one remote image): %s", single_img_memory
@@ -130,7 +130,7 @@ def run(test, params, env):
             multi_img_memory = _get_memory(vm.get_pid())
             if not multi_img_memory:
                 raise exceptions.TestError(
-                    "Failed to get memory when booting" " with several remote images."
+                    "Failed to get memory when booting with several remote images."
                 )
             test.log.debug(
                 "memory consumption(total 4 remote images): %s", multi_img_memory

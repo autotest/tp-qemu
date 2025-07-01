@@ -34,7 +34,7 @@ class BlockStreamCheckBackingfile(blk_stream.BlockStream):
             )
             fail |= bool(backingfile)
         if fail:
-            msg = "Unexpected backing file found, there should be " "no backing file"
+            msg = "Unexpected backing file found, there should be no backing file"
             self.test.fail(msg)
 
     def check_backingfile_exist(self):

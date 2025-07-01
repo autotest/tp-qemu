@@ -30,7 +30,7 @@ def run(test, params, env):
             output = detail.output
         if error_msg not in output:
             test.fail(
-                "Error message is not expected! " "Expected: {} Actual: {}".format(
+                "Error message is not expected! Expected: {} Actual: {}".format(
                     error_msg, output
                 )
             )

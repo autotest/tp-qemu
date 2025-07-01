@@ -35,7 +35,7 @@ def run(test, params, env):
     sync_bin = params.get("sync_bin", "sync")
 
     test.log.info(
-        "Boot a guest up from base image: %s, and create a" " file %s on the disk.",
+        "Boot a guest up from base image: %s, and create a file %s on the disk.",
         base.tag,
         guest_temp_file,
     )

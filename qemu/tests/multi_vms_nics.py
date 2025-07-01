@@ -68,7 +68,7 @@ def run(test, params, env):
             if strict_check:
                 ratio = utils_test.get_loss_ratio(output)
                 if ratio != 0:
-                    test.fail("Loss ratio is %s for packet size" " %s" % (ratio, size))
+                    test.fail("Loss ratio is %s for packet size %s" % (ratio, size))
             else:
                 if status != 0:
                     test.fail("Ping returns non-zero value %s" % output)

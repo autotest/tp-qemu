@@ -135,26 +135,24 @@ def run(test, params, env):
     def _get_data_disks():
         if ostype == "windows":
             error_context.context(
-                "Get windows disk index that to " "be formatted", test.log.info
+                "Get windows disk index that to be formatted", test.log.info
             )
             data_disks = _get_windows_disks_index(stg_image_size)
             if len(data_disks) < stg_image_num:
                 test.fail(
-                    "Fail to list all the volumes" ", %s" % err_msg % len(data_disks)
+                    "Fail to list all the volumes, %s" % err_msg % len(data_disks)
                 )
             if len(data_disks) > drive_letters:
                 black_list.extend(utils_misc.get_winutils_vol(session))
                 data_disks = random.sample(data_disks, drive_letters - len(black_list))
             error_context.context(
-                "Clear readonly for all disks and online " "them in windows guest.",
+                "Clear readonly for all disks and online them in windows guest.",
                 test.log.info,
             )
             if not utils_disk.update_windows_disk_attributes(session, data_disks):
                 test.fail("Failed to update windows disk attributes.")
         else:
-            error_context.context(
-                "Get linux disk that to be " "formatted", test.log.info
-            )
+            error_context.context("Get linux disk that to be formatted", test.log.info)
             data_disks = []
             all_disks = utils_disk.get_linux_disks(session, True)
             for kname, attr in all_disks.items():
@@ -162,7 +160,7 @@ def run(test, params, env):
                     data_disks.append(kname)
             if len(data_disks) < stg_image_num:
                 test.fail(
-                    "Fail to list all the volumes" ", %s" % err_msg % len(data_disks)
+                    "Fail to list all the volumes, %s" % err_msg % len(data_disks)
                 )
         return sorted(data_disks)
 
@@ -314,7 +312,7 @@ def run(test, params, env):
         err += tmp1 + tmp2
 
         if err:
-            test.fail("%s errors occurred while verifying qtree vs." " params" % err)
+            test.fail("%s errors occurred while verifying qtree vs. params" % err)
         if params.get("multi_disk_only_qtree") == "yes":
             return
     try:
@@ -357,7 +355,7 @@ def run(test, params, env):
                     else:
                         partition = partition.split("/")[-1]
                     error_context.context(
-                        "Copy file into / out of partition:" " %s..." % partition,
+                        "Copy file into / out of partition: %s..." % partition,
                         test.log.info,
                     )
                     for cmd_l in cmd_list.split():

@@ -33,7 +33,7 @@ def run(test, params, env):
                 test.log.error(output)
                 test.fail("Fail to download the kernel in %s" % vm_name)
             else:
-                test.log.info("Completed download the kernel src" " in %s", vm_name)
+                test.log.info("Completed download the kernel src in %s", vm_name)
             test_cmd = params.get("test_cmd")
             status, output = session.cmd_status_output(test_cmd, timeout=1200)
             if status != 0:
@@ -48,7 +48,7 @@ def run(test, params, env):
 
     if guest_number < 1:
         test.log.warning(
-            "At least boot up one guest for this test," " set up guest number to 1"
+            "At least boot up one guest for this test, set up guest number to 1"
         )
         guest_number = 1
 

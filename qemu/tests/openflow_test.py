@@ -27,8 +27,7 @@ def run(test, params, env):
         if tcpdump_is_alive(bg_session):
             bg_session.cmd("killall -9 tcpdump")
         tcpdump_cmd = (
-            "setsid tcpdump -iany -n -v %s and 'src %s and dst %s'"
-            " -c 1 >/dev/null 2>&1"
+            "setsid tcpdump -iany -n -v %s and 'src %s and dst %s' -c 1 >/dev/null 2>&1"
         )
         bg_session.sendline(tcpdump_cmd % (dump_protocol, addresses[0], addresses[1]))
         if not utils_misc.wait_for(
@@ -300,7 +299,7 @@ def run(test, params, env):
                 br_name, "dump-flows"
             ).stdout.decode()
             if not acl_rules_check(acl_rules, f_options):
-                test.fail("Can not find the rules from" " ovs-ofctl: %s" % acl_rules)
+                test.fail("Can not find the rules from ovs-ofctl: %s" % acl_rules)
 
             error_context.context(
                 "Run tcpdump in guest %s" % vms[1].name, test.log.info

@@ -89,7 +89,7 @@ def run(test, params, env):
     mq_publisher = message_queuing.MQPublisher(mq_listen_port)
     try:
         error_context.base_context(
-            "Confirm remote subscriber has accessed to " "activate migrating guests.",
+            "Confirm remote subscriber has accessed to activate migrating guests.",
             test.log.info,
         )
         try:

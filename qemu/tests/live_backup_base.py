@@ -98,7 +98,7 @@ class LiveBackup(block_copy.BlockCopy):
                 }
                 self.transaction_add(args_list, "drive-backup", backup_args)
                 LOG_JOB.info(
-                    "Create bitmap and drive-backup with transaction " "for %s",
+                    "Create bitmap and drive-backup with transaction for %s",
                     drive_name,
                 )
                 self.vm.monitor.transaction(args_list)

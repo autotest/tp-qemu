@@ -83,8 +83,7 @@ def run(test, params, env):
             s, o = session.cmd_status_output(check_op, timeout=op_timeout)
             if s != 0:
                 test.fail(
-                    "Something wrong after stop continue, "
-                    "check command report: %s" % o
+                    "Something wrong after stop continue, check command report: %s" % o
                 )
     finally:
         try:

@@ -104,7 +104,7 @@ def run(test, params, env):
                 break
         else:
             raise exceptions.TestFail(
-                "Failed to move all VM threads to new cgroup" " in %d trials" % i
+                "Failed to move all VM threads to new cgroup in %d trials" % i
             )
 
     def distance(actual, reference):
@@ -184,7 +184,7 @@ def run(test, params, env):
         for name in params["vms"].split(" "):
             disk_name = "scsi-debug-" + name
             process.system(
-                "echo 1 > /sys/bus/pseudo/drivers/scsi_debug/" "add_host", shell=True
+                "echo 1 > /sys/bus/pseudo/drivers/scsi_debug/add_host", shell=True
             )
             time.sleep(1)  # Wait for device init
             dev = process.getoutput("ls /dev/sd* | tail -n 1", shell=True)
@@ -559,12 +559,10 @@ def run(test, params, env):
                 no_speeds = len(speeds[0])
                 for speed in speeds:
                     if type(speed) is not list:
-                        test.log.error("One of cgroup_speeds sublists is not " "list")
+                        test.log.error("One of cgroup_speeds sublists is not list")
                         raise TypeError
                     if len(speed) != no_speeds:
-                        test.log.error(
-                            "cgroup_speeds sublists have different " "lengths"
-                        )
+                        test.log.error("cgroup_speeds sublists have different lengths")
                         raise TypeError
             except TypeError:
                 raise exceptions.TestError(
@@ -1206,7 +1204,7 @@ def run(test, params, env):
 
         if len(vcpus) != vm_cpus:
             raise exceptions.TestFail(
-                "Incorrect number of vcpu PIDs; smp=%s vcpus=" "%s" % (vm_cpus, vcpus)
+                "Incorrect number of vcpu PIDs; smp=%s vcpus=%s" % (vm_cpus, vcpus)
             )
 
         if not cpusets:
@@ -1326,8 +1324,7 @@ def run(test, params, env):
             test_time = int(params.get("cgroup_test_time", 60))
         except ValueError:
             raise exceptions.TestError(
-                "Incorrect configuration: param "
-                "cgroup_test_time have to be an integer"
+                "Incorrect configuration: param cgroup_test_time have to be an integer"
             )
 
         test.log.info("Prepare")
@@ -1344,7 +1341,7 @@ def run(test, params, env):
         cpus = SparseRange(cgroup.get_property("cpuset.cpus")[0])
         if len(cpus) < 2:
             raise exceptions.TestFail(
-                "This test needs at least 2 CPUs on " "host, cpuset=%s" % cpus
+                "This test needs at least 2 CPUs on host, cpuset=%s" % cpus
             )
         # Comments are for vm_cpus=2, no_cpus=4, _SC_CLK_TCK=100
         cgroup.mk_cgroup()  # oooo
@@ -1371,8 +1368,7 @@ def run(test, params, env):
                 sessions[i].sendline(cmd)
 
             test.log.info(
-                "Some harmless IOError messages of non-existing "
-                "processes might occur."
+                "Some harmless IOError messages of non-existing processes might occur."
             )
             i = 0
             t_stop = time.time() + test_time  # run for $test_time seconds
@@ -1435,7 +1431,7 @@ def run(test, params, env):
         mems = SparseRange(cgroup.get_property("cpuset.mems")[0])
         if len(mems) < 2:
             raise exceptions.TestSkipError(
-                "This test needs at least 2 memory nodes, " "detected mems %s" % mems
+                "This test needs at least 2 memory nodes, detected mems %s" % mems
             )
         # Create cgroups
         all_cpus = cgroup.get_property("cpuset.cpus")[0]
@@ -1459,11 +1455,10 @@ def run(test, params, env):
         err = ""
         try:
             test.log.info(
-                "Some harmless IOError messages of non-existing "
-                "processes might occur."
+                "Some harmless IOError messages of non-existing processes might occur."
             )
             sessions[0].sendline(
-                "dd if=/dev/zero of=/dev/null bs=%dM " "iflag=fullblock" % size
+                "dd if=/dev/zero of=/dev/null bs=%dM iflag=fullblock" % size
             )
 
             i = 0
@@ -1819,8 +1814,7 @@ def run(test, params, env):
             test_time = int(params.get("cgroup_test_time", 60))
         except ValueError:
             raise exceptions.TestError(
-                "Incorrect configuration: param "
-                "cgroup_test_time have to be an integer"
+                "Incorrect configuration: param cgroup_test_time have to be an integer"
             )
 
         timeout = int(params.get("login_timeout", 360))
@@ -1978,8 +1972,7 @@ def run(test, params, env):
                     details,
                 )
                 raise exceptions.TestSkipError(
-                    "System doesn't support memory.memsw.*"
-                    " or swapaccount is disabled."
+                    "System doesn't support memory.memsw.* or swapaccount is disabled."
                 )
             cgroup.set_property_h("memory.memsw.limit_in_bytes", "%dK" % mem_limit, 0)
 
@@ -2015,7 +2008,7 @@ def run(test, params, env):
             * Checking every 0.1s
             """
             session.sendline(
-                "dd if=/dev/zero of=/dev/null bs=%dK count=1 " "iflag=fullblock" % mem
+                "dd if=/dev/zero of=/dev/null bs=%dK count=1 iflag=fullblock" % mem
             )
 
             max_rss = 0
@@ -2056,7 +2049,7 @@ def run(test, params, env):
                             "Output:%s\n" % (detail, out)
                         )
                     else:
-                        err = "dd command died (should pass): %s\nOutput:" "\n%s" % (
+                        err = "dd command died (should pass): %s\nOutput:\n%s" % (
                             detail,
                             out,
                         )
@@ -2079,9 +2072,9 @@ def run(test, params, env):
                         137,
                     )
                 else:
-                    out = (
-                        "VM terminated as expected. Used rss+swap: %d, "
-                        "limit %s" % (max_rssswap, mem_limit)
+                    out = "VM terminated as expected. Used rss+swap: %d, limit %s" % (
+                        max_rssswap,
+                        mem_limit,
                     )
                     test.log.info(out)
             else:  # only RSS limit
@@ -2171,11 +2164,10 @@ def run(test, params, env):
         try:
             test.log.info("Test")
             test.log.info(
-                "Some harmless IOError messages of non-existing "
-                "processes might occur."
+                "Some harmless IOError messages of non-existing processes might occur."
             )
             sessions[0].sendline(
-                "dd if=/dev/zero of=/dev/null bs=%dM " "iflag=fullblock" % size
+                "dd if=/dev/zero of=/dev/null bs=%dM iflag=fullblock" % size
             )
 
             i = 0
@@ -2298,8 +2290,7 @@ def run(test, params, env):
         fce = locals()[_fce]
     except KeyError:
         raise exceptions.TestSkipError(
-            "Test %s doesn't exist. Check 'cgroup_test' "
-            "variable in subtest.cfg" % _fce
+            "Test %s doesn't exist. Check 'cgroup_test' variable in subtest.cfg" % _fce
         )
     else:
         return fce()

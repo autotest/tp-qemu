@@ -70,7 +70,7 @@ def run(test, params, env):
                 # Send a carriage return for PIN for token
                 listcerts_output = guest_session.cmd("")
             except:
-                test.fail("Test failed trying to get the output" " of pkcs11_listcerts")
+                test.fail("Test failed trying to get the output of pkcs11_listcerts")
 
         test.log.info("Listing Certs available on the guest:  %s", listcerts_output)
 
@@ -97,7 +97,7 @@ def run(test, params, env):
                 # Send a carriage return for PIN for token
                 certsinfo_output = guest_session.cmd("", ok_status=[0, 1])
             except:
-                test.fail("Test failed trying to get the output" " of pklogin_finder")
+                test.fail("Test failed trying to get the output of pklogin_finder")
         testindex = certsinfo_output.find(searchstr)
         if testindex >= 0:
             string_aftercheck = certsinfo_output[testindex:]
@@ -144,12 +144,10 @@ def run(test, params, env):
                         )
 
                 else:
-                    test.fail(
-                        checkstr + " not found in output of " "pklogin on the guest"
-                    )
+                    test.fail(checkstr + " not found in output of pklogin on the guest")
 
         else:
-            test.fail(searchstr + " not found in output of pklogin" " on the guest")
+            test.fail(searchstr + " not found in output of pklogin on the guest")
 
         test.log.info("Certs Info on the guest:  %s", certsinfo_output)
     else:

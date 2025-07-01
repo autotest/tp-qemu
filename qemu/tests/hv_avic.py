@@ -54,7 +54,7 @@ def run(test, params, env):
         if status:
             test.error("Fail to install target cpuid")
     error_context.context(
-        "Check the corresponding CPUID entries with " "the flag 'hv-avic'",
+        "Check the corresponding CPUID entries with the flag 'hv-avic'",
         test.log.info,
     )
     output = session.cmd_output(check_cpuid_entry_cmd)

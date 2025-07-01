@@ -58,9 +58,9 @@ def run(test, params, env):
             self.kernel_param_cmd = params.get(
                 "kernel_param_cmd", self.def_kernel_param_cmd
             )
-            def_kdump_enable_cmd = "chkconfig kdump on &&" " service kdump restart"
+            def_kdump_enable_cmd = "chkconfig kdump on && service kdump restart"
             self.kdump_enable_cmd = params.get("kdump_enable_cmd", def_kdump_enable_cmd)
-            def_crash_kernel_prob_cmd = "grep -q 1 /sys/kernel/" "kexec_crash_loaded"
+            def_crash_kernel_prob_cmd = "grep -q 1 /sys/kernel/kexec_crash_loaded"
             self.crash_kernel_prob_cmd = params.get(
                 "crash_kernel_prob_cmd", def_crash_kernel_prob_cmd
             )
@@ -124,12 +124,12 @@ def run(test, params, env):
                     if vm.is_paused():
                         vm.resume()
                     if not utils_test.qemu.guest_active(vm):
-                        raise error.TestFail("Guest not active " "after migration")
-                    logging.info("Logging into migrated guest after " "migration")
+                        raise error.TestFail("Guest not active after migration")
+                    logging.info("Logging into migrated guest after migration")
                     session = vm.wait_for_login(timeout=self.login_timeout)
                     error.context("Checking vmcore file in guest", logging.info)
                     if session is not None:
-                        logging.info("kdump completed, no need ping-pong" " migration")
+                        logging.info("kdump completed, no need ping-pong migration")
                         self.stop_migrate = True
                     output = session.cmd_output(vmcore_chk_cmd)
                     session.close()

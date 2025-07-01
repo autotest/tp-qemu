@@ -87,5 +87,5 @@ def run(test, params, env):
                 test_failures.append(msg)
     if test_failures:
         test.fail(
-            "Some baselines didn't return as expected." " Details: %s" % test_failures
+            "Some baselines didn't return as expected. Details: %s" % test_failures
         )

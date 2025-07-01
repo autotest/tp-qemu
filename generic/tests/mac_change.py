@@ -148,7 +148,7 @@ def run(test, params, env):
                 test.error("The new session is not responsive.")
             if params.get("reboot_vm_after_mac_changed") == "yes":
                 error_context.context(
-                    "Reboot guest and check the the mac address by " "monitor",
+                    "Reboot guest and check the the mac address by monitor",
                     test.log.info,
                 )
                 mac_check = new_mac

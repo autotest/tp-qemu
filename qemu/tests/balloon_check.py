@@ -28,7 +28,7 @@ class BallooningTest(MemoryBaseTest):
             else:
                 sleep_time = 90
             self.test.log.info(
-                "Waiting %d seconds for guest's " "applications up", sleep_time
+                "Waiting %d seconds for guest's applications up", sleep_time
             )
             time.sleep(sleep_time)
             self.params["balloon_test_setup_ready"] = True
@@ -56,7 +56,7 @@ class BallooningTest(MemoryBaseTest):
                     ballooned_mem = ballooned_mem / (1024**2)
             else:
                 self.test.log.info(
-                    "could not get balloon_memory, cause " "vm.monitor is None"
+                    "could not get balloon_memory, cause vm.monitor is None"
                 )
                 return 0
         except qemu_monitor.MonitorError as emsg:
@@ -145,7 +145,7 @@ class BallooningTest(MemoryBaseTest):
         check_mem_ratio = float(self.params.get("check_mem_ratio", 0.1))
         check_mem_diff = float(self.params.get("check_mem_diff", 150))
         error_context.context(
-            "Get memory from guest aligned" " with %s." % keyname, self.test.log.info
+            "Get memory from guest aligned with %s." % keyname, self.test.log.info
         )
         if keyname == "stat-free-memory":
             guest_mem = self.get_guest_free_mem(self.vm)
@@ -187,7 +187,7 @@ class BallooningTest(MemoryBaseTest):
 
         stat_enabled = memory_stat_qmp != mem_stat_disabled
         if stat_enabled != enabled:
-            self.test.fail("Memory statistics reporting is not working as" " expected")
+            self.test.fail("Memory statistics reporting is not working as expected")
         elif enabled:
             self._memory_stats_compare(keyname, memory_stat_qmp)
 
@@ -211,7 +211,7 @@ class BallooningTest(MemoryBaseTest):
                 and new_mem != self.get_ballooned_memory()
             ):
                 raise exceptions.TestFail(
-                    "Balloon memory fail with error" " message: %s" % e
+                    "Balloon memory fail with error message: %s" % e
                 )
         if new_mem > self.ori_mem:
             compare_mem = self.ori_mem
@@ -229,8 +229,7 @@ class BallooningTest(MemoryBaseTest):
         )
         if status is None:
             raise exceptions.TestFail(
-                "Failed to balloon memory to expect"
-                " value during %ss" % balloon_timeout
+                "Failed to balloon memory to expect value during %ss" % balloon_timeout
             )
 
     def run_balloon_sub_test(self, test, params, env, test_tag):
@@ -538,7 +537,7 @@ class BallooningTestWin(BallooningTest):
                           uninstall/stop
         """
         error_context.context(
-            "Check Balloon Service status before install" "service", self.test.log.info
+            "Check Balloon Service status before installservice", self.test.log.info
         )
         output = self.operate_balloon_service(session, "status")
         if re.search("running", output.lower(), re.M):

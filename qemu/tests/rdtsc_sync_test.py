@@ -42,7 +42,7 @@ def run(test, params, env):
     )
     time.sleep(5)
     process.run(
-        'echo -e \'{"execute":"qmp_capabilities"}' '{"execute":"quit"}\'|nc -U /tmp/mm',
+        'echo -e \'{"execute":"qmp_capabilities"}{"execute":"quit"}\'|nc -U /tmp/mm',
         shell=True,
         verbose=True,
     )

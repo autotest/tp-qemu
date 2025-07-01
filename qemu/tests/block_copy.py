@@ -225,7 +225,7 @@ class BlockCopy(object):
         )
         if not reseted:
             self.test.fail(
-                "No RESET event received after" "execute system_reset %ss" % timeout
+                "No RESET event received afterexecute system_reset %ss" % timeout
             )
         self.vm.monitor.clear_event("RESET")
         return None

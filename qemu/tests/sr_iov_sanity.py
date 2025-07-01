@@ -205,9 +205,7 @@ def run(test, params, env):
                     utils_net.set_guest_ip_addr(session, mac, IP_addr_VF)
                     rc, output = utils_test.ping(str(IP_addr_VF), 30, timeout=60)
                     if rc != 0:
-                        test.fail(
-                            "New nic failed ping test" "with output:\n %s" % output
-                        )
+                        test.fail("New nic failed ping testwith output:\n %s" % output)
                     IP_addr_VF = IP_addr_VF + 1
             else:
                 test.fail(

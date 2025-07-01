@@ -83,7 +83,7 @@ def run(test, params, env):
         output = process.run(iocmd1, shell=True)
 
     error_context.context(
-        "Do one operations to the image and " "measure the time", test.log.info
+        "Do one operations to the image and measure the time", test.log.info
     )
 
     if op_type == "read":

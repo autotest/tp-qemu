@@ -20,7 +20,7 @@ def get_virtiofs_driver_letter(test, fs_target, session):
     :return driver_letter: the driver letter of the virtiofs
     """
     error_context.context(
-        "Get driver letter of virtio fs target, " "the driver label is %s." % fs_target,
+        "Get driver letter of virtio fs target, the driver label is %s." % fs_target,
         LOG_JOB.info,
     )
     driver_letter = utils_misc.get_winutils_vol(session, fs_target)
@@ -59,7 +59,7 @@ def basic_io_test(test, params, session):
         else:
             cmd_dd = params.get(
                 "virtio_fs_cmd_dd",
-                "dd if=/dev/urandom of=%s bs=1M " "count=100 iflag=fullblock",
+                "dd if=/dev/urandom of=%s bs=1M count=100 iflag=fullblock",
             )
             fs_dest = params.get("fs_dest", "/mnt/" + fs_target)
         guest_file = os.path.join(fs_dest, test_file)
@@ -106,7 +106,7 @@ def basic_io_test(test, params, session):
             test.fail("The md5 value of host is not same to guest.")
         else:
             error_context.context(
-                "The md5 of host is as same as md5 of " "guest.", LOG_JOB.info
+                "The md5 of host is as same as md5 of guest.", LOG_JOB.info
             )
     finally:
         if not windows:
@@ -128,7 +128,7 @@ def create_sub_folder_test(params, session, guest_dest, host_dir):
     folder_name = params.get("sub_folder_name", "virtio_fs_folder_test")
     try:
         error_context.context(
-            "Create the sub folder on shared directory " "of guest: ", LOG_JOB.info
+            "Create the sub folder on shared directory of guest: ", LOG_JOB.info
         )
         if os_type == "linux":
             session.cmd("mkdir -p %s" % (guest_dest + "/" + folder_name + "/a"))
@@ -137,7 +137,7 @@ def create_sub_folder_test(params, session, guest_dest, host_dir):
             session.cmd("md %s" % (fs_dest + "\\" + folder_name + "\\a"))
 
         error_context.context(
-            "Check the sub folder on shared directory " "of host: ", LOG_JOB.info
+            "Check the sub folder on shared directory of host: ", LOG_JOB.info
         )
         if os.path.exists(host_dir + "/" + folder_name + "/a"):
             error_context.context(
@@ -148,7 +148,7 @@ def create_sub_folder_test(params, session, guest_dest, host_dir):
             LOG_JOB.error("Do NOT find the sub folder on the host.")
     finally:
         error_context.context(
-            "Delete the sub folder on shared directory " "of guest: ", LOG_JOB.info
+            "Delete the sub folder on shared directory of guest: ", LOG_JOB.info
         )
         if os_type == "linux":
             session.cmd("rm -rf %s" % (guest_dest + "/" + folder_name))
@@ -183,7 +183,7 @@ def basic_io_test_via_psexec(test, params, vm, usernm, pwd):
         error_context.context("Running viofs basic io test via psexec", LOG_JOB.info)
         cmd_dd_win = params.get(
             "virtio_fs_cmd_dd_win",
-            "C:\\tools\\dd.exe if=/dev/random of=%s " "bs=1M count=100",
+            "C:\\tools\\dd.exe if=/dev/random of=%s bs=1M count=100",
         )
         test_file = params.get("virtio_fs_test_file", "virtio_fs_test_file")
         io_timeout = params.get_numeric("fs_io_timeout", 120)
@@ -201,7 +201,7 @@ def basic_io_test_via_psexec(test, params, vm, usernm, pwd):
         cmd_io_test = "%systemdrive%\\cmd_io_test.bat"
 
         error_context.context(
-            "Creating the test file(cmd_io_test.bat) " "on guest", LOG_JOB.info
+            "Creating the test file(cmd_io_test.bat) on guest", LOG_JOB.info
         )
         session.cmd("echo " + cmd_dd_win % guest_file + " > " + cmd_io_test, io_timeout)
 
@@ -236,7 +236,7 @@ def basic_io_test_via_psexec(test, params, vm, usernm, pwd):
                 test.fail("The md5 value of host is not same to guest.")
             else:
                 error_context.context(
-                    "The md5 of host is as same as md5 of " "guest.", LOG_JOB.info
+                    "The md5 of host is as same as md5 of guest.", LOG_JOB.info
                 )
         finally:
             error_context.context("Delete the test file from host.", LOG_JOB.info)
@@ -249,7 +249,7 @@ def basic_io_test_via_psexec(test, params, vm, usernm, pwd):
         try:
             session.cmd("echo " + cmd_create_folder + " > " + bat_create_folder_test)
             error_context.context(
-                "Create the sub folder on shared directory " "of guest: ", LOG_JOB.info
+                "Create the sub folder on shared directory of guest: ", LOG_JOB.info
             )
             session.cmd(
                 psexec_path
@@ -262,7 +262,7 @@ def basic_io_test_via_psexec(test, params, vm, usernm, pwd):
                 + bat_create_folder_test
             )
             error_context.context(
-                "Check the sub folder on shared directory " "of host: ", LOG_JOB.info
+                "Check the sub folder on shared directory of host: ", LOG_JOB.info
             )
             if os.path.exists(fs_source + "/" + folder_name + "/a"):
                 error_context.context(
@@ -273,7 +273,7 @@ def basic_io_test_via_psexec(test, params, vm, usernm, pwd):
                 LOG_JOB.error("Do NOT find the sub folder on the host.")
         finally:
             error_context.context(
-                "Delete the sub folder on shared directory " "of guest: ", LOG_JOB.info
+                "Delete the sub folder on shared directory of guest: ", LOG_JOB.info
             )
             session.cmd("rmdir /s /q %s" % (fs_dest + "\\" + folder_name))
 
@@ -328,7 +328,7 @@ def create_viofs_service(test, params, session, service="VirtioFsSvc"):
     viofs_exe_copy_cmd = params.get("viofs_exe_copy_cmd", viofs_exe_copy_cmd_default)
     if service == "VirtioFsSvc":
         error_context.context(
-            "Create virtiofs own service in" " Windows guest.", test.log.info
+            "Create virtiofs own service in Windows guest.", test.log.info
         )
         output = query_viofs_service(test, params, session)
         if "not exist as an installed service" in output:
@@ -346,11 +346,11 @@ def create_viofs_service(test, params, session, service="VirtioFsSvc"):
             sc_create_s, sc_create_o = session.cmd_status_output(viofs_sc_create_cmd)
             if sc_create_s != 0:
                 test.fail(
-                    "Failed to create virtiofs service, " "output is %s" % sc_create_o
+                    "Failed to create virtiofs service, output is %s" % sc_create_o
                 )
     if service == "WinFSP.Launcher":
         error_context.context(
-            "Stop virtiofs own service, " "using WinFsp.Launcher service instead.",
+            "Stop virtiofs own service, using WinFsp.Launcher service instead.",
             test.log.info,
         )
         stop_viofs_service(test, params, session)
@@ -359,7 +359,7 @@ def create_viofs_service(test, params, session, service="VirtioFsSvc"):
         output = session.cmd_output(params["viofs_sc_create_cmd"])
         if "completed successfully" not in output.lower():
             test.fail(
-                "MultiFS: Config WinFsp.Launcher failed, " "the output is %s." % output
+                "MultiFS: Config WinFsp.Launcher failed, the output is %s." % output
             )
 
 
@@ -375,7 +375,7 @@ def delete_viofs_serivce(test, params, session):
     output = query_viofs_service(test, params, session)
     if "not exist as an installed service" in output:
         test.log.info(
-            "The viofs service was NOT found at the guest." " Skipping delete..."
+            "The viofs service was NOT found at the guest. Skipping delete..."
         )
     else:
         status = session.cmd_status(viofs_sc_delete_cmd)

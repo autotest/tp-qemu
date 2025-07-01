@@ -70,9 +70,7 @@ def run(test, params, env):
         for dev in devs:
             ret = vm.devices.simple_hotplug(dev, vm.monitor)
             if ret[1] is False:
-                test.fail(
-                    "Failed to hotplug device '%s'." "Output:\n%s" % (dev, ret[0])
-                )
+                test.fail("Failed to hotplug device '%s'.Output:\n%s" % (dev, ret[0]))
         dtype = (
             qdevices.QBlockdevNode
             if vm.check_capability(Flags.BLOCKDEV)
@@ -206,9 +204,7 @@ def run(test, params, env):
         for item in index_sizes:
             drive_indexs.append(item.split()[0])
         if not utils_disk.update_windows_disk_attributes(session, drive_indexs):
-            test.fail(
-                "Failed to clear readonly for all disks and online " "them in guest"
-            )
+            test.fail("Failed to clear readonly for all disks and online them in guest")
         error_context.context("Format disk", test.log.info)
         for item in index_sizes:
             did, size = item.split()
@@ -243,7 +239,7 @@ def run(test, params, env):
                 test_cmd, timeout=disk_op_timeout
             )
             if status:
-                test.fail("Check for block device rw failed." "Output: %s" % output)
+                test.fail("Check for block device rw failed.Output: %s" % output)
 
     blk_num = int(params.get("blk_num", 1))
     repeat_times = int(params.get("repeat_times", 3))
@@ -261,7 +257,7 @@ def run(test, params, env):
         device_list = []
         if params.get("need_plug") == "yes":
             error_context.context(
-                "Run block hotplug/unplug for iteration:" "%d" % iteration,
+                "Run block hotplug/unplug for iteration:%d" % iteration,
                 test.log.info,
             )
             error_context.context("Plug device", test.log.info)

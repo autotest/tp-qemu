@@ -19,7 +19,7 @@ class LiveSnapshotNegative(LiveSnapshot):
         Generate a non-existed path of snapshot file.
         """
         error_context.context(
-            "Generate a non-existed path of" " snapshot file", LOG_JOB.info
+            "Generate a non-existed path of snapshot file", LOG_JOB.info
         )
         tmp_name = utils_misc.generate_random_string(5)
         dst = os.path.join(data_dir.get_tmp_dir(), tmp_name)

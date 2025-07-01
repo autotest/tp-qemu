@@ -32,7 +32,7 @@ def run(test, params, env):
     c_tag = params["convert_target"]
 
     test.log.info(
-        "Boot a guest up with initial image: %s, and create a" " file %s on the disk.",
+        "Boot a guest up with initial image: %s, and create a file %s on the disk.",
         initial_tag,
         file,
     )
@@ -58,7 +58,7 @@ def run(test, params, env):
     sn_qit.start_vm()
     if not sn_qit.check_file(file, md5):
         test.fail(
-            "The file %s's md5 on initial image and" " snapshot are different." % file
+            "The file %s's md5 on initial image and snapshot are different." % file
         )
     for qit in (base_qit, sn_qit):
         qit.clean()

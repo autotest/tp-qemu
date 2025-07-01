@@ -135,8 +135,7 @@ def run(test, params, env):
                     md5_source = md5_source.split(" ")[0]
                 except IndexError:
                     test.error(
-                        "Failed to get md5 from source file,"
-                        " output: '%s'" % md5_source
+                        "Failed to get md5 from source file, output: '%s'" % md5_source
                     )
             else:
                 md5_source = None
@@ -144,14 +143,14 @@ def run(test, params, env):
             self.session.cmd("%s %s %s" % (params["copy_cmd"], source_file, dest_file))
             test.log.info("Succeed to copy file '%s' into floppy disk", source_file)
 
-            error_context.context("Checking if the file is unchanged " "after copy")
+            error_context.context("Checking if the file is unchanged after copy")
             if md5_cmd:
                 md5_dest = self.session.cmd("%s %s" % (md5_cmd, dest_file))
                 try:
                     md5_dest = md5_dest.split(" ")[0]
                 except IndexError:
                     test.error(
-                        "Failed to get md5 from dest file," " output: '%s'" % md5_dest
+                        "Failed to get md5 from dest file, output: '%s'" % md5_dest
                     )
                 if md5_source != md5_dest:
                     test.fail("File changed after copy to floppy")
@@ -282,7 +281,7 @@ def run(test, params, env):
                 status = session.cmd_status("kill %s" % pid, timeout=copy_timeout)
                 if status != 0:
                     test.fail(
-                        "Copy process was terminatted with" " error code %s" % (status)
+                        "Copy process was terminatted with error code %s" % (status)
                     )
 
                 session.cmd_status("kill -s SIGINT %s" % (pid), timeout=copy_timeout)
@@ -303,8 +302,7 @@ def run(test, params, env):
                         md5_check = md5_check.split(" ")[0]
                     except IndexError:
                         test.error(
-                            "Failed to get md5 from dst file,"
-                            " output: '%s'" % md5_floppy
+                            "Failed to get md5 from dst file, output: '%s'" % md5_floppy
                         )
                     if md5_check != md5_floppy:
                         test.fail(

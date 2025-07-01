@@ -38,7 +38,7 @@ def run(test, params, env):
     sub_test = params.get("sub_test")
     if sub_test:
         error_context.context(
-            "Run sub test '%s' after checking" " clock resolution" % sub_test,
+            "Run sub test '%s' after checking clock resolution" % sub_test,
             test.log.info,
         )
         utils_test.run_virt_sub_test(test, params, env, sub_test)

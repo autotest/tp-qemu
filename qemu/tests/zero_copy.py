@@ -49,7 +49,7 @@ def run(test, params, env):
 
     error_context.context("Boot vm with 'vhost=on'", test.log.info)
     if params.get("nettype") == "user":
-        test.cancel("Unable start test with user networking, please " "change nettype.")
+        test.cancel("Unable start test with user networking, please change nettype.")
     params["vhost"] = "vhost=on"
     params["start_vm"] = "yes"
     login_timeout = int(params.get("login_timeout", 360))

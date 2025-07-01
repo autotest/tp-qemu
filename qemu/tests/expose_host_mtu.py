@@ -110,7 +110,7 @@ def run(test, params, env):
         guest_mtu_value = line_value[index]
         test.log.info("MTU is %s", guest_mtu_value)
         if not int(guest_mtu_value) == mtu_value:
-            test.fail("Host mtu %s is not exposed to " "guest!" % params["mtu_value"])
+            test.fail("Host mtu %s is not exposed to guest!" % params["mtu_value"])
 
     test.log.info("Ping from guest to host with packet size 3972")
     status, output = utils_test.ping(

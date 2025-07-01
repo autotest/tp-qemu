@@ -30,7 +30,7 @@ def run(test, params, env):
     process.system(params["add_user_cmd"], shell=True)
 
     error_context.context(
-        "Switch to the common user and create the" " shared dir in home dir.",
+        "Switch to the common user and create the shared dir in home dir.",
         test.log.info,
     )
     # set fs shared dir
@@ -90,13 +90,12 @@ def run(test, params, env):
         if not is_windows:
             # mount virtiofs
             error_context.context(
-                "Create a destination directory %s " "inside guest." % fs_dest,
+                "Create a destination directory %s inside guest." % fs_dest,
                 test.log.info,
             )
             utils_misc.make_dirs(fs_dest, session)
             error_context.context(
-                "Mount virtiofs target %s to %s inside"
-                " guest." % (fs_target, fs_dest),
+                "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
                 test.log.info,
             )
             if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):

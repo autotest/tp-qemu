@@ -149,7 +149,7 @@ def run(test, params, env):
         test.log.debug("Got CPUID serial output: %r", test_output)
         if test_output is None:
             test.fail(
-                "Test output signature not found in " "output:\n %s",
+                "Test output signature not found in output:\n %s",
                 vm.serial_console.get_output(),
             )
         vm.destroy(gracefully=False)
